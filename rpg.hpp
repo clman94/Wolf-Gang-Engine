@@ -17,6 +17,7 @@
 #include "dictionary.hpp"
 #include <set>
 #include <map>
+#include "return.hpp"
 
 
 namespace rpg
@@ -175,13 +176,14 @@ public:
 
 	game();
 	void trigger_control(control_type key);
-	int load_character(std::string path);
+	utility::error load_character(std::string path);
 	int set_maincharacter(std::string name);
 	void set_renderer(engine::renderer& r);
-	int load_textures(std::string path);
-	int load_scene(std::string path);
-	int trigger_event(std::string name);
-	int trigger_event(interpretor::job_list* jl);
+	utility::error load_textures(std::string path);
+	utility::error load_scene(std::string path);
+	utility::error load_game(std::string path);
+	utility::error trigger_event(std::string name);
+	utility::error trigger_event(interpretor::job_list* jl);
 	int tick(engine::renderer& _r);
 	engine::node& get_root();
 	texture_manager& get_texture_manager();

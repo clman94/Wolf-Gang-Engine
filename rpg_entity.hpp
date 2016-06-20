@@ -5,6 +5,7 @@
 #include <string>
 #include "renderer.hpp"
 #include "dictionary.hpp"
+#include "return.hpp"
 
 namespace rpg
 {
@@ -37,7 +38,7 @@ public:
 	entity();
 	std::string get_name();
 	void set_name(std::string _name);
-	void set_cycle_animation(std::string name, cycle_type type);
+	utility::error set_cycle_animation(std::string name, cycle_type type);
 	void set_cycle(int cycle);
 	engine::fvector get_activate_point();
 

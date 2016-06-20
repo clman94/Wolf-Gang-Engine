@@ -38,18 +38,16 @@ entity::get_animation()
 	return &world_animation[c_cycle]->node;
 }
 
-void
+utility::error
 entity::set_cycle_animation(std::string _name, cycle_type cycle)
 {
 	auto a = find_animation(_name);
 	if (!a)
-	{
-		std::cout << "Error: entity animation '" << _name 
-			<< "' in entity '" << name <<"' does not exist.\n";
-		return;
-	}
+		return "Entity animation '" + _name + 
+			"' in entity '" + name + "' does not exist";
 	a->node.set_relative_position(a->node.get_size() * engine::fvector(0.5, 1) * (-1)); // Anchor at bottom
 	world_animation[cycle] = a;
+	return 0;
 }
 
 int

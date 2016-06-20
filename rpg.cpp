@@ -63,7 +63,7 @@ game::switch_scene(scene* nscene)
 	c_scene = nscene;
 }
 
-int
+utility::error
 game::load_scene(std::string path)
 {
 	clean_scene();
@@ -73,16 +73,10 @@ game::load_scene(std::string path)
 
 	XMLDocument doc;
 	if (doc.LoadFile(path.c_str()))
-	{
-		if (auto errstr = doc.GetErrorStr1())
-			std::cout << "Error: xml parse error : '"
-			<< errstr << "'\n";
-		return 1;
-	}
+		return "Could not load scene file from '" + path + "' in file '" + path + "'.";
 
 	XMLElement* main_e = doc.FirstChildElement("scene");
-	if (!main_e)
-		return 2;
+	if (!main_e) return "Please add root node 'scene'. <scene>...</scene>";
 
 	// Get name and check if scene is already loaded
 	if (auto name = main_e->Attribute("name"))
@@ -99,10 +93,7 @@ game::load_scene(std::string path)
 		}
 	}
 	else
-	{
-		printf("Error: Please provide scene name.\n");
-		return 1;
-	}
+		return "Error: Please provide scene name.\n";
 
 	// Load collision boxes
 	// Only loads once so the collision boxes that
@@ -131,9 +122,11 @@ game::load_scene(std::string path)
 	// Set main character of scene
 	if (auto mc = main_e->FirstChildElement("maincharacter"))
 	{
-		if (auto name = mc->GetText())
-			set_maincharacter(name);
+		auto name = mc->GetText();
+		if (!name) return "Name of entity for main character not specified.";
+		set_maincharacter(name);
 	}
+	else return "Please specify main character by <maincharacter>...</maincharacter>";
 
 	// Load tilemap
 	if (auto enviro_tex = main_e->FirstChildElement("tilemap_texture"))
@@ -155,7 +148,7 @@ game::load_scene(std::string path)
 	return 0;
 }
 
-int 
+utility::error
 game::trigger_event(std::string name)
 {
 	// Find event
@@ -169,11 +162,10 @@ game::trigger_event(std::string name)
 			return 0;
 		}
 	}
-	std::cout << "Error: Event '" << name << "' not found.\n";
-	return 1;
+	return "Event '" + name + "' not found";
 }
 
-int
+utility::error
 game::trigger_event(interpretor::job_list* jl)
 {
 	c_event = jl;
@@ -500,11 +492,11 @@ game::tick_interpretor()
 		case job_op::SETCHARACTER:
 		{
 			JOB_setcharacter* j = (JOB_setcharacter*)job;
+			next_job();
 			entity* nentity = find_entity(j->name);
 			if (!nentity) return 1;
 			if (narrative.speaker) narrative.expression.set_visible(false);
 			narrative.speaker = nentity;
-			next_job();
 			break;
 		}
 		case job_op::MOVECHARACTER:
@@ -600,6 +592,7 @@ game::tick_interpretor()
 		{
 			JOB_newscene* j = (JOB_newscene*)job;
 			load_scene(j->path);
+			next_job();
 			return 0;
 			break;
 		}
@@ -656,7 +649,7 @@ game::wait_job()
 	job_start = false;
 }
 
-int
+utility::error
 game::load_textures(std::string path)
 {
 	if (!renderer) return 1;
@@ -664,7 +657,7 @@ game::load_textures(std::string path)
 	
 	{ // Narrative Box
 		engine::texture *narrativebox_tx = tm.get_texture("NarrativeBox");
-		if (!narrativebox_tx) return 2;
+		if (!narrativebox_tx) return "Failed to load Narrative Box";
 		narrative.box.set_texture(*narrativebox_tx,"NarrativeBox");
 		narrative.box.set_position({ 32, 150 });
 		narrative.box.set_visible(false);
@@ -673,7 +666,7 @@ game::load_textures(std::string path)
 	}
 	{ // Narrative Cursor (the arrow thing)
 		engine::texture *cursor_tx = tm.get_texture("NarrativeBox");
-		if (!cursor_tx) return 2;
+		if (!cursor_tx) return "Failed to load Narrative cursor";
 		narrative.cursor.set_texture(*cursor_tx, "SelectCursor");
 		narrative.cursor.set_parent(narrative.box);
 		narrative.cursor.set_relative_position({ 235, 55 });
@@ -800,7 +793,7 @@ game::load_entity_anim(
 
 
 // Old character loading code (before entities)
-int
+utility::error
 game::load_character(std::string path)
 {
 	using namespace tinyxml2;
@@ -822,11 +815,12 @@ game::load_character(std::string path)
 		load_entity_anim(world_e, nentity);
 
 	// Set character defaults
-	nentity.set_cycle_animation("left", entity::LEFT);
-	nentity.set_cycle_animation("right", entity::RIGHT);
-	nentity.set_cycle_animation("up", entity::UP);
-	nentity.set_cycle_animation("down", entity::DOWN);
-	nentity.set_cycle_animation("default", entity::DEFAULT);
+	nentity.set_cycle_animation("left", entity::LEFT).handle_error();
+	nentity.set_cycle_animation("right", entity::RIGHT).handle_error();
+	nentity.set_cycle_animation("up", entity::UP).handle_error();
+	nentity.set_cycle_animation("down", entity::DOWN).handle_error();
+	if (nentity.set_cycle_animation("default", entity::DEFAULT))
+		return "Default animation/sprite is required";
 	nentity.set_cycle(entity::DEFAULT);
 	nentity.set_depth(1);
 
@@ -982,5 +976,35 @@ game::load_tilemap(tinyxml2::XMLElement* e, size_t layer)
 		}
 		c = c->NextSiblingElement();
 	}
+	return 0;
+}
+
+
+utility::error
+game::load_game(std::string path)
+{
+	using namespace tinyxml2;
+
+	bool scene_exists = false;
+
+	XMLDocument doc;
+	if (doc.LoadFile(path.c_str()))
+		return "Parse error";
+
+	XMLElement* main_e = doc.FirstChildElement("game");
+	if (!main_e)
+		return "Please add root node named 'game'";
+
+	XMLElement* tex_e = main_e->FirstChildElement("textures");
+	if (!tex_e)
+		return "Error: Please specify the texture file. '<textures path=""/>'\n";
+
+	auto texture_path = tex_e->Attribute("path");
+	load_textures(texture_path);
+
+	XMLElement* start_e = main_e->FirstChildElement("start_scene");
+	if (!start_e)
+		return "Please specify the starting scene. '<start_scene path=""/>'\n";
+	load_scene(start_e->Attribute("path"));
 	return 0;
 }
