@@ -104,12 +104,6 @@ game::load_scene(std::string path)
 		return 1;
 	}
 
-	// Load the extra stuff
-	if (auto entities = main_e->FirstChildElement("entities"))
-	{
-		load_entities(entities);
-	}
-
 	// Load collision boxes
 	// Only loads once so the collision boxes that
 	// have been used are preserved
@@ -384,9 +378,9 @@ game::tick_interpretor()
 				{
 					if (!j->expression.empty())
 					{
-						auto expr = narrative.speaker->get_expression(j->expression);
-						narrative.expression.bind_client(expr);
-						expr->start();
+						auto expr = expressions.find(j->expression);
+						narrative.expression.bind_client(&expr->second);
+						expr->second.start();
 						narrative.text.set_relative_position({ 64, 5 });
 					}
 
@@ -541,14 +535,14 @@ game::tick_interpretor()
 		case job_op::SETGLOBAL:
 		{
 			JOB_setglobal* j = (JOB_setglobal*)job;
-			globals.push_back(j->name);
+			globals.insert(j->name);
 			next_job();
 			break;
 		}
 		case job_op::IFGLOBAL:
 		{
 			JOB_ifglobal* j = (JOB_ifglobal*)job;
-			if (has_global(j->name))
+			if (globals.find(j->name) != globals.end())
 			{
 				if (j->inline_event.size())
 					trigger_event(&j->inline_event);
@@ -761,17 +755,15 @@ game::set_renderer(engine::renderer& r)
 int
 game::load_entity_anim(
 	tinyxml2::XMLElement* e,
-	entity& c,
-	std::list<entity::animation>& list,
-	engine::node *n)
+	entity& c)
 {
 	if (!renderer) return 1;
 
 	auto ele = e->FirstChildElement();
 	while (ele)
 	{
-		list.emplace_back();
-		entity::animation& na = list.back();
+		c.world.emplace_back();
+		entity::animation& na = c.world.back();
 
 		na.node.set_visible(true);
 
@@ -782,7 +774,7 @@ game::load_entity_anim(
 		auto tex     = ele->Attribute("tex");
 		if (!atlas || !tex)
 		{
-			printf("Error: Failed to load character sprite/animation.\n");
+			printf("Error: Failed to load entity sprite/animation.\n");
 			return 2;
 		}
 
@@ -796,9 +788,10 @@ game::load_entity_anim(
 			(frames <= 0 ? 1 : frames), // Default one frame
 			*t,
 			atlas);
-		na.name = ele->Name();
 
-		if (n) na.node.set_parent(*n);
+		na.node.set_parent(c);
+
+		na.name = ele->Name();
 
 		ele = ele->NextSiblingElement();
 	}
@@ -825,8 +818,8 @@ game::load_character(std::string path)
 	if (auto _char_name = main_e->FirstChildElement("name"))
 		nentity.set_name(_char_name->GetText());
 	
-	if (auto world_e = main_e->FirstChildElement("world"))
-		load_entity_anim(world_e, nentity, nentity.world, &nentity);
+	if (auto world_e = main_e->FirstChildElement("animations"))
+		load_entity_anim(world_e, nentity);
 
 	// Set character defaults
 	nentity.set_cycle_animation("left", entity::LEFT);
@@ -913,6 +906,7 @@ game::load_tilemap_individual(tinyxml2::XMLElement* e, size_t layer)
 	return 0;
 }
 
+// Will be replaced with one above, just backwords compatability right now...
 int
 game::load_tilemap(tinyxml2::XMLElement* e, size_t layer)
 {
@@ -985,56 +979,6 @@ game::load_tilemap(tinyxml2::XMLElement* e, size_t layer)
 				ground.set_tile(pos, name, rot);
 				++pos.x;
 			}
-		}
-		c = c->NextSiblingElement();
-	}
-	return 0;
-}
-
-int
-game::load_entities(tinyxml2::XMLElement* e)
-{
-	using namespace tinyxml2;
-	auto &list = tile_system.misc; // Convenience
-	list.clear_all();
-	XMLElement* c = e->FirstChildElement();
-	while (c)
-	{
-		std::string name = c->Name();
-		if (name == "sprite")
-		{
-			engine::sprite_node* sprite = new engine::sprite_node;
-			auto tex_name = c->Attribute("texture");
-			auto atlas_name = c->Attribute("atlas");
-			if (!tex_name || !atlas_name) return 1;
-			if (auto tex = tm.get_texture(tex_name))
-				sprite->set_texture(*tex, atlas_name);
-			int x = c->IntAttribute("x");
-			int y = c->IntAttribute("y");
-			sprite->set_depth(99);
-			list.bind_tile(sprite, { x, y });
-			renderer->add_client(sprite);
-		}
-		if (name == "animation")
-		{
-			engine::animated_sprite_node* anim = new engine::animated_sprite_node;
-			auto tex_name = c->Attribute("texture");
-			auto atlas_name = c->Attribute("atlas");
-			int frames = c->IntAttribute("frames");
-			int interval = c->IntAttribute("interval");
-			if (!tex_name || !atlas_name) return 1;
-			if (auto tex = tm.get_texture(tex_name))
-			{
-				anim->set_texture(*tex);
-				anim->generate_sequence(frames, *tex, atlas_name);
-			}
-			anim->set_interval(interval);
-			anim->start();
-			int x = c->IntAttribute("x");
-			int y = c->IntAttribute("y");
-			anim->set_depth(99);
-			list.bind_tile(anim, { x, y });
-			renderer->add_client(anim);
 		}
 		c = c->NextSiblingElement();
 	}

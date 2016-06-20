@@ -4,6 +4,7 @@
 #include <list>
 #include <string>
 #include "renderer.hpp"
+#include "dictionary.hpp"
 
 namespace rpg
 {
@@ -15,11 +16,11 @@ class entity :
 	{
 		engine::animated_sprite_node node;
 		std::string name;
-		bool speach;
+		bool speech;
 	};
 	std::list<animation> world;
+	animation* find_animation(std::string name);
 	animation* c_anim;
-	animation* find_animation(std::string name, std::list<animation>& list);
 	std::string name;
 	animation* world_animation[5];
 	int c_cycle;
@@ -40,9 +41,7 @@ public:
 	void set_cycle(int cycle);
 	engine::fvector get_activate_point();
 
-	void start_animation();
-	void end_animation();
-	void tick_animation();
+	engine::animated_sprite_node* get_animation();
 
 	void move_left(float delta);
 	void move_right(float delta);

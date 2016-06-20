@@ -1,17 +1,6 @@
 #include "rpg_entity.hpp"
 using namespace rpg;
 
-entity::animation*
-entity::find_animation(std::string name, std::list<animation>& list)
-{
-	for (auto& i : list)
-	{
-		if (i.name == name)
-			return &i;
-	}
-	return nullptr;
-}
-
 entity::entity()
 {
 	for (int i = 0; i < 5; i++)
@@ -32,17 +21,34 @@ entity::set_name(std::string _name)
 	name = _name;
 }
 
+entity::animation*
+entity::find_animation(std::string name)
+{
+	for (auto &i : world)
+	{
+		if (i.name == name)
+			return &i;
+	}
+	return nullptr;
+}
+
+engine::animated_sprite_node*
+entity::get_animation()
+{
+	return &world_animation[c_cycle]->node;
+}
+
 void
 entity::set_cycle_animation(std::string _name, cycle_type cycle)
 {
-	auto a = find_animation(_name, world);
+	auto a = find_animation(_name);
 	if (!a)
 	{
 		std::cout << "Error: entity animation '" << _name 
 			<< "' in entity '" << name <<"' does not exist.\n";
 		return;
 	}
-	a->node.set_relative_position(a->node.get_size() * -engine::fvector(0.5, 1)); // Anchor at bottom
+	a->node.set_relative_position(a->node.get_size() * engine::fvector(0.5, 1) * (-1)); // Anchor at bottom
 	world_animation[cycle] = a;
 }
 

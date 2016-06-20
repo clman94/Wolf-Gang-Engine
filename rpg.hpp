@@ -14,6 +14,9 @@
 #include "audio.hpp"
 #include "rpg_scene.hpp"
 #include "rpg_config.hpp"
+#include "dictionary.hpp"
+#include <set>
+#include <map>
 
 
 namespace rpg
@@ -92,8 +95,7 @@ class game
 
 	int load_entity_anim(
 		tinyxml2::XMLElement* e,
-		entity& c, std::list<entity::animation>& list,
-		engine::node *n = nullptr);
+		entity& c);
 
 	std::list<entity> entities;
 	entity* find_entity(std::string name);
@@ -128,7 +130,9 @@ class game
 	bool is_mc_moving();
 	int mc_movement();
 
-	std::vector<std::string> globals;
+	std::map<std::string, engine::animated_sprite_node> expressions;
+
+	std::set<std::string> globals;
 	bool has_global(std::string name);
 
 	bool control[CONTROL_COUNT];

@@ -4,7 +4,7 @@
 #include <string>
 #include "time.hpp"
 #include "tinyxml2\tinyxml2.h"
-#include "rpg_character.hpp"
+#include "rpg_entity.hpp"
 
 namespace rpg
 {
