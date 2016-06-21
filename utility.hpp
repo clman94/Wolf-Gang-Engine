@@ -1,5 +1,5 @@
-#ifndef UTILITY_RETURN_HPP
-#define UTILITY_RETURN_HPP
+#ifndef UTILITY_UTILITY_HPP
+#define UTILITY_UTILITY_HPP
 
 #include <string>
 #include <iostream>
@@ -8,6 +8,26 @@
 
 namespace utility
 {
+
+// Allows one class to dominate and hides a hidden item that
+// can be retrived for shady stuff.
+template<typename T1, typename T2_S>
+class shadow_pair
+	: public T1
+{
+	T2_S shadow;
+public:
+	template<class T1, typename T2_S>
+	friend T2_S& get_shadow(shadow_pair<T1, T2_S>& A);
+};
+
+
+// Get reference of shadow in the shadow pair.
+template<class T1, typename T2_S>
+static T2_S& get_shadow(shadow_pair<T1, T2_S>& A)
+{
+	return A.shadow;
+}
 
 // Gives error handling in the form a return.
 // Simply provide an error message and it will print the message
@@ -119,17 +139,25 @@ public:
 		has_return = false;
 	}
 	
-	T& operator=(const ret& A)
+	ret& operator=(const ret& A)
 	{
-		return A.item;
+		item = A.item;
+		err = A.err;
+		has_return = A.has_return;
+		return *this;
 	}
 
-	T& get()
+	ret(const ret& A)
+	{
+		*this = A;
+	}
+
+	T& get_return()
 	{
 		return item;
 	}
 	
-	const error& get_error()
+	error& get_error()
 	{
 	    return err;
 	}
@@ -142,9 +170,9 @@ public:
 };
 
 template<typename T>
-static T& get_ret(ret<T> r)
+static T& get_return(ret<T> r)
 {
-	return r.get();
+	return r.get_return();
 }
 
 }

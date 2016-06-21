@@ -17,7 +17,7 @@
 #include "dictionary.hpp"
 #include <set>
 #include <map>
-#include "return.hpp"
+#include "utility.hpp"
 
 
 namespace rpg
@@ -98,8 +98,10 @@ class game
 		tinyxml2::XMLElement* e,
 		entity& c);
 
-	std::list<entity> entities;
+	// Contains shadow pair of is_global_entity bool value
+	std::list<utility::shadow_pair<entity, bool>> entities;
 	entity* find_entity(std::string name);
+	void clear_entities();
 
 	rpg::texture_manager tm;
 	panning_node root;
@@ -158,7 +160,7 @@ class game
 
 	int load_tilemap(tinyxml2::XMLElement* e, size_t layer = 0);
 	int load_tilemap_individual(tinyxml2::XMLElement* e, size_t layer = 0);
-	int load_entities(tinyxml2::XMLElement* e);
+	utility::error load_entities(tinyxml2::XMLElement* e, bool is_global_entity = false);
 
 	void clean_scene();
 public:
@@ -176,7 +178,7 @@ public:
 
 	game();
 	void trigger_control(control_type key);
-	utility::error load_character(std::string path);
+	utility::error load_entity(std::string path, bool is_global_entity = false);
 	int set_maincharacter(std::string name);
 	void set_renderer(engine::renderer& r);
 	utility::error load_textures(std::string path);

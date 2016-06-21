@@ -5,7 +5,7 @@
 #include <string>
 #include "renderer.hpp"
 #include "dictionary.hpp"
-#include "return.hpp"
+#include "utility.hpp"
 
 namespace rpg
 {

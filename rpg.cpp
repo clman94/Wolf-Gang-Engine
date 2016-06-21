@@ -32,6 +32,16 @@ game::find_entity(std::string name)
 	return nullptr;
 }
 
+void
+game::clear_entities()
+{
+	for (auto &i = entities.begin(); i != entities.end(); i++)
+	{
+		if (!utility::get_shadow(*i))
+			entities.erase(i);
+	}
+}
+
 engine::node&
 game::get_root()
 {
@@ -118,6 +128,12 @@ game::load_scene(std::string path)
 
 	// Trigger start event
 	trigger_event("_start_");
+
+	if (auto entit = main_e->FirstChildElement("entities"))
+	{
+		clear_entities();
+		load_entities(entit);
+	}
 	
 	// Set main character of scene
 	if (auto mc = main_e->FirstChildElement("maincharacter"))
@@ -138,7 +154,8 @@ game::load_scene(std::string path)
 		}
 	tile_system.ground.clear_all();
 	XMLElement *tm_e = main_e->FirstChildElement("tilemap");
-	while (tm_e){
+	while (tm_e)
+	{
 		if (tm_e->BoolAttribute("set"))
 			load_tilemap_individual(tm_e, tm_e->IntAttribute("layer"));
 		else
@@ -203,7 +220,7 @@ game::has_global(std::string name)
 void
 game::open_narrative_box()
 {
-	narrative.box.set_visible(true);
+	narrative.box .set_visible(true);
 	narrative.text.set_visible(true);
 	lock_mc_movement = true;
 	narrative.expression.set_visible(true);
@@ -212,9 +229,9 @@ game::open_narrative_box()
 void
 game::close_narrative_box()
 {
-	narrative.box.set_visible(false);
-	narrative.cursor.set_visible(false);
-	narrative.text.set_visible(false);
+	narrative.box       .set_visible(false);
+	narrative.cursor    .set_visible(false);
+	narrative.text      .set_visible(false);
 	narrative.expression.set_visible(false);
 	narrative.expression.bind_client(nullptr);
 	narrative.expression.set_visible(false);
@@ -593,7 +610,6 @@ game::tick_interpretor()
 			JOB_newscene* j = (JOB_newscene*)job;
 			load_scene(j->path);
 			next_job();
-			return 0;
 			break;
 		}
 		case job_op::REPLACETILE:
@@ -794,19 +810,20 @@ game::load_entity_anim(
 
 // Old character loading code (before entities)
 utility::error
-game::load_character(std::string path)
+game::load_entity(std::string path, bool is_global_entity)
 {
 	using namespace tinyxml2;
 
 	entities.emplace_back();
-	entity& nentity = entities.back();
+	auto &nentity = entities.back();
+	utility::get_shadow(nentity) = is_global_entity;
 
 	XMLDocument doc;
 	if (doc.LoadFile(path.c_str()))
 		return "Faield to load entity file at '" + path + "'";
 
-	XMLElement* main_e = doc.FirstChildElement("character");
-	if (!main_e) return "Please add root node. <character>...</character>";
+	XMLElement* main_e = doc.FirstChildElement("entity");
+	if (!main_e) return "Please add root node. <entity>...</entity>";
 
 	if (auto _char_name = main_e->FirstChildElement("name"))
 		nentity.set_name(_char_name->GetText());
@@ -858,7 +875,7 @@ game::load_tilemap_individual(tinyxml2::XMLElement* e, size_t layer)
 
 		int rfill = c->IntAttribute("f");
 		int dfill = c->IntAttribute("fd");
-		int rot = c->IntAttribute("r") % 4;
+		int rot = c->IntAttribute("r");
 
 		engine::ivector pos(
 			c->IntAttribute("x"),
@@ -887,11 +904,10 @@ game::load_tilemap_individual(tinyxml2::XMLElement* e, size_t layer)
 		// Fill column
 		else if (dfill)
 		{
-			engine::ivector fpos = pos;
 			for (int i = 0; i < dfill; i++)
 			{
-				ground.set_tile(fpos, name, rot);
-				++fpos.y;
+				ground.set_tile(pos, name, rot);
+				++pos.y;
 			}
 		}
 		else
@@ -939,7 +955,7 @@ game::load_tilemap(tinyxml2::XMLElement* e, size_t layer)
 		{
 			int rfill    = c->IntAttribute("f");
 			int dfill    = c->IntAttribute("fd");
-			int rot      = c->IntAttribute("r")%4;
+			int rot      = c->IntAttribute("r");
 
 			// Is wall
 			if (c->BoolAttribute("w"))
@@ -983,6 +999,23 @@ game::load_tilemap(tinyxml2::XMLElement* e, size_t layer)
 	return 0;
 }
 
+utility::error
+game::load_entities(tinyxml2::XMLElement* e, bool is_global_entity)
+{
+	using namespace tinyxml2;
+
+	auto ele = e->FirstChildElement();
+	while (ele)
+	{
+		auto name = ele->Name();
+		if (!name) return "Please specify name of entity";
+		auto path = ele->Attribute("path");
+		if (!path) return "Please specify path to entity file";
+		load_entity(path, is_global_entity);
+		ele = ele->NextSiblingElement();
+	}
+	return 0;
+}
 
 utility::error
 game::load_game(std::string path)
@@ -1010,5 +1043,9 @@ game::load_game(std::string path)
 	if (!start_e)
 		return "Please specify the starting scene. '<start_scene path=""/>'\n";
 	if (load_scene(start_e->Attribute("path"))) return "Failed to load starting scene";
+
+	XMLElement* global_entities = main_e->FirstChildElement("global_entities");
+	if (global_entities)
+		load_entities(global_entities, true);
 	return 0;
 }

@@ -61,24 +61,32 @@ entity::draw(engine::renderer &_r)
 void
 entity::move_left(float delta)
 {
+	if (world_animation[c_cycle])
+		world_animation[c_cycle]->node.tick_animation();
 	set_relative_position(get_relative_position() + engine::fvector(-delta));
 }
 
 void
 entity::move_right(float delta)
 {
+	if (world_animation[c_cycle])
+		world_animation[c_cycle]->node.tick_animation();
 	set_relative_position(get_relative_position() + engine::fvector(delta));
 }
 
 void
 entity::move_up(float delta)
 {
+	if (world_animation[c_cycle])
+		world_animation[c_cycle]->node.tick_animation();
 	set_relative_position(get_relative_position() + engine::fvector(0, -delta));
 }
 
 void
 entity::move_down(float delta)
 {
+	if (world_animation[c_cycle])
+		world_animation[c_cycle]->node.tick_animation();
 	set_relative_position(get_relative_position() + engine::fvector(0, delta));
 }
 
