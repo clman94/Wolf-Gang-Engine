@@ -67,15 +67,15 @@ interpretor::JOB_selection::JOB_selection(tinyxml2::XMLElement* e)
 	op = SELECTION;
 }
 
-interpretor::JOB_setcharacter::JOB_setcharacter(tinyxml2::XMLElement* e)
+interpretor::JOB_entity_current::JOB_entity_current(tinyxml2::XMLElement* e)
 {
 	using namespace tinyxml2;
 	if (auto _name = e->Attribute("name"))
 		name = _name;
-	op = SETCHARACTER;
+	op = ENTITY_CURRENT;
 }
 
-interpretor::JOB_movecharacter::JOB_movecharacter(tinyxml2::XMLElement* e)
+interpretor::JOB_entity_move::JOB_entity_move(tinyxml2::XMLElement* e)
 {
 	using namespace tinyxml2;
 	move.x = e->FloatAttribute("x");
@@ -86,7 +86,7 @@ interpretor::JOB_movecharacter::JOB_movecharacter(tinyxml2::XMLElement* e)
 	if (auto _character = e->Attribute("character"))
 		t_character_name = _character;
 	set = e->BoolAttribute("set");
-	op = MOVECHARACTER;
+	op = ENTITY_MOVE;
 }
 
 interpretor::JOB_setglobal::JOB_setglobal(tinyxml2::XMLElement* e)
@@ -118,12 +118,12 @@ interpretor::JOB_ifglobalexit::JOB_ifglobalexit(tinyxml2::XMLElement* e)
 	op = IFGLOBALEXIT;
 }
 
-interpretor::JOB_setmusic::JOB_setmusic(tinyxml2::XMLElement* e)
+interpretor::JOB_music_set::JOB_music_set(tinyxml2::XMLElement* e)
 {
 	if (auto _path = e->Attribute("path"))
 		path = _path;
 	loop = e->BoolAttribute("loop");
-	op = SETMUSIC;
+	op = MUSIC_SET;
 }
 
 interpretor::JOB_newscene::JOB_newscene(tinyxml2::XMLElement* e)
@@ -133,7 +133,7 @@ interpretor::JOB_newscene::JOB_newscene(tinyxml2::XMLElement* e)
 	op = NEWSCENE;
 }
 
-interpretor::JOB_replacetile::JOB_replacetile(tinyxml2::XMLElement* e)
+interpretor::JOB_tile_replace::JOB_tile_replace(tinyxml2::XMLElement* e)
 {
 	using namespace tinyxml2;
 	pos1.x   = e->IntAttribute("x");
@@ -145,14 +145,23 @@ interpretor::JOB_replacetile::JOB_replacetile(tinyxml2::XMLElement* e)
 	layer = e->IntAttribute("layer");
 	if (auto _name = e->Attribute("name"))
 		name = _name;
-	op = REPLACETILE;
+	op = TILE_REPLACE;
 }
 
-interpretor::JOB_setcyclegroup::JOB_setcyclegroup(tinyxml2::XMLElement* e)
+interpretor::JOB_entity_setcyclegroup::JOB_entity_setcyclegroup(tinyxml2::XMLElement* e)
 {
 	if (auto _name = e->Attribute("name"))
 		group_name = _name;
-	op = SETCYCLEGROUP;
+	op = ENTITY_SETCYCLEGROUP;
+}
+
+interpretor::JOB_entity_spawn::JOB_entity_spawn(tinyxml2::XMLElement* e)
+{
+	if (auto _as = e->Attribute("as"))
+		as = _as;
+	if (auto _path = e->Attribute("path"))
+		path = _path;
+	op = ENTITY_SPAWN;
 }
 
 #define ADD_JOB(A) jobs_ret.push_back(new A)
@@ -184,27 +193,27 @@ interpretor::parse_jobs_xml(tinyxml2::XMLElement* e)
 		else if (name == "selection")
 			ADD_JOB(JOB_selection(j));
 		else if (name == "entity:current")
-			ADD_JOB(JOB_setcharacter(j));
+			ADD_JOB(JOB_entity_current(j));
 		else if (name == "entity:move")
-			ADD_JOB(JOB_movecharacter(j));
+			ADD_JOB(JOB_entity_move(j));
 		else if (name == "entity:setcyclegroup")
-			ADD_JOB(JOB_setcyclegroup(j));
+			ADD_JOB(JOB_entity_setcyclegroup(j));
 		else if (name == "setglobal")
 			ADD_JOB(JOB_setglobal(j));
 		else if (name == "ifglobal")
 			ADD_JOB(JOB_ifglobal(j));
 		else if (name == "music:set")
-			ADD_JOB(JOB_setmusic(j));
+			ADD_JOB(JOB_music_set(j));
 		else if (name == "music:pause")
-			ADD_JOB(job_entry(PAUSEMUSIC));
+			ADD_JOB(job_entry(MUSIC_PAUSE));
 		else if (name == "music:play")
-			ADD_JOB(job_entry(PLAYMUSIC));
+			ADD_JOB(job_entry(MUSIC_PLAY));
 		else if (name == "music:stop")
-			ADD_JOB(job_entry(STOPMUSIC));
+			ADD_JOB(job_entry(MUSIC_STOP));
 		else if (name == "newscene")
 			ADD_JOB(JOB_newscene(j));
 		else if (name == "tile:replace")
-			ADD_JOB(JOB_replacetile(j));
+			ADD_JOB(JOB_tile_replace(j));
 		else if (name == "ifglobalexit")
 			ADD_JOB(JOB_ifglobalexit(j));
 

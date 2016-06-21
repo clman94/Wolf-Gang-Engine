@@ -506,9 +506,9 @@ game::tick_interpretor()
 				wait_job();
 			break;
 		}
-		case job_op::SETCHARACTER:
+		case job_op::ENTITY_CURRENT:
 		{
-			JOB_setcharacter* j = (JOB_setcharacter*)job;
+			JOB_entity_current* j = (JOB_entity_current*)job;
 			next_job();
 			entity* nentity = find_entity(j->name);
 			if (!nentity) return 1;
@@ -516,9 +516,9 @@ game::tick_interpretor()
 			narrative.speaker = nentity;
 			break;
 		}
-		case job_op::MOVECHARACTER:
+		case job_op::ENTITY_MOVE:
 		{
-			JOB_movecharacter* j = (JOB_movecharacter*)job;
+			JOB_entity_move* j = (JOB_entity_move*)job;
 			if (!narrative.speaker)
 			{
 				next_job();
@@ -572,9 +572,9 @@ game::tick_interpretor()
 				next_job();
 			break;
 		}
-		case job_op::SETMUSIC:
+		case job_op::MUSIC_SET:
 		{
-			JOB_setmusic* j = (JOB_setmusic*)job;
+			JOB_music_set* j = (JOB_music_set*)job;
 			if (j->path != utility::get_shadow(sound.bg_music))
 			{
 				if (sound.bg_music.is_playing())
@@ -587,19 +587,19 @@ game::tick_interpretor()
 			next_job();
 			break;
 		}
-		case job_op::STOPMUSIC:
+		case job_op::MUSIC_STOP:
 		{
 			sound.bg_music.stop();
 			next_job();
 			break;
 		}
-		case job_op::PAUSEMUSIC:
+		case job_op::MUSIC_PAUSE:
 		{
 			sound.bg_music.pause();
 			next_job();
 			break;
 		}
-		case job_op::PLAYMUSIC:
+		case job_op::MUSIC_PLAY:
 		{
 			sound.bg_music.play();
 			next_job();
@@ -612,9 +612,9 @@ game::tick_interpretor()
 			next_job();
 			break;
 		}
-		case job_op::REPLACETILE:
+		case job_op::TILE_REPLACE:
 		{
-			JOB_replacetile* j = (JOB_replacetile*)job;
+			JOB_tile_replace* j = (JOB_tile_replace*)job;
 			engine::ivector pos;
 			tile_system.ground.set_layer(j->layer);
 			for (pos.x = j->pos1.x; pos.x < j->pos2.x; pos.x++)
@@ -627,11 +627,11 @@ game::tick_interpretor()
 			next_job();
 			break;
 		}
-		case job_op::SETCYCLEGROUP:
+		case job_op::ENTITY_SETCYCLEGROUP:
 		{
 			if (narrative.speaker)
 			{
-				JOB_setcyclegroup* j = (JOB_setcyclegroup*)job;
+				JOB_entity_setcyclegroup* j = (JOB_entity_setcyclegroup*)job;
 				narrative.speaker->set_cycle_group(j->group_name);
 			}
 			next_job();
@@ -1041,7 +1041,7 @@ game::load_game(std::string path)
 
 	XMLElement* tex_e = main_e->FirstChildElement("textures");
 	if (!tex_e)
-		return "Error: Please specify the texture file. '<textures path=""/>'\n";
+		return "Error: Please specify the texture file. '<textures path=\"\"/>'\n";
 
 	auto texture_path = tex_e->Attribute("path");
 	if (load_textures(texture_path)) return "Failed to load textures";
@@ -1052,7 +1052,7 @@ game::load_game(std::string path)
 
 	XMLElement* start_e = main_e->FirstChildElement("start_scene");
 	if (!start_e)
-		return "Please specify the starting scene. '<start_scene path=""/>'\n";
+		return "Please specify the starting scene. '<start_scene path=\"\"/>'\n";
 	if (load_scene(start_e->Attribute("path"))) return "Failed to load starting scene";
 
 

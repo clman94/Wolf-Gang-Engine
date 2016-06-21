@@ -22,7 +22,7 @@ texture_manager::load_settings(std::string path)
 	if (doc.LoadFile(path.c_str()))
 		return 1;
 
-	XMLElement* texbank_e = doc.FirstChildElement("texturebank");
+	XMLElement* texbank_e = doc.FirstChildElement("textures");
 	if (!texbank_e)
 		return 2;
 

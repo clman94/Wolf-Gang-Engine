@@ -19,18 +19,19 @@ enum job_op
 	WAITFORKEY,
 	HIDEBOX,
 	SELECTION,
-	MOVECHARACTER,
-	SETCHARACTER,
+	ENTITY_MOVE,
+	ENTITY_CURRENT,
 	SETGLOBAL,
 	IFGLOBAL,
 	IFGLOBALEXIT,
-	SETMUSIC,
+	MUSIC_SET,
 	NEWSCENE,
-	REPLACETILE,
-	PAUSEMUSIC,
-	PLAYMUSIC,
-	STOPMUSIC,
-	SETCYCLEGROUP
+	TILE_REPLACE,
+	MUSIC_PAUSE,
+	MUSIC_PLAY,
+	MUSIC_STOP,
+	ENTITY_SETCYCLEGROUP,
+	ENTITY_SPAWN
 };
 
 struct job_entry
@@ -66,13 +67,13 @@ struct JOB_selection : public job_entry
 	JOB_selection(tinyxml2::XMLElement* e);
 };
 
-struct JOB_setcharacter : public job_entry
+struct JOB_entity_current : public job_entry
 {
 	std::string name;
-	JOB_setcharacter(tinyxml2::XMLElement* e);
+	JOB_entity_current(tinyxml2::XMLElement* e);
 };
 
-struct JOB_movecharacter : public job_entry
+struct JOB_entity_move : public job_entry
 {
 	std::string anim, t_character_name;
 	entity* t_character;
@@ -87,7 +88,7 @@ struct JOB_movecharacter : public job_entry
 		return{ speed*delta, speed*delta };
 	}
 
-	JOB_movecharacter(tinyxml2::XMLElement* e);
+	JOB_entity_move(tinyxml2::XMLElement* e);
 };
 
 struct JOB_setglobal : public job_entry
@@ -110,11 +111,11 @@ struct JOB_ifglobalexit : public job_entry
 	JOB_ifglobalexit(tinyxml2::XMLElement* e);
 };
 
-struct JOB_setmusic : public job_entry
+struct JOB_music_set : public job_entry
 {
 	bool loop;
 	std::string path;
-	JOB_setmusic(tinyxml2::XMLElement* e);
+	JOB_music_set(tinyxml2::XMLElement* e);
 };
 
 struct JOB_newscene : public job_entry
@@ -123,19 +124,25 @@ struct JOB_newscene : public job_entry
 	JOB_newscene(tinyxml2::XMLElement* e);
 };
 
-struct JOB_replacetile : public job_entry
+struct JOB_tile_replace : public job_entry
 {
 	std::string name;
 	bool is_wall;
 	int rot, layer;
 	engine::ivector pos1, pos2;
-	JOB_replacetile(tinyxml2::XMLElement* e);
+	JOB_tile_replace(tinyxml2::XMLElement* e);
 };
 
-struct JOB_setcyclegroup : public job_entry
+struct JOB_entity_setcyclegroup : public job_entry
 {
 	std::string group_name;
-	JOB_setcyclegroup(tinyxml2::XMLElement* e);
+	JOB_entity_setcyclegroup(tinyxml2::XMLElement* e);
+};
+
+struct JOB_entity_spawn : public job_entry
+{
+	std::string as, path;
+	JOB_entity_spawn(tinyxml2::XMLElement* e);
 };
 
 job_list parse_jobs_xml(tinyxml2::XMLElement* e);

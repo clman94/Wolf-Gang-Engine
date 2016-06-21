@@ -171,8 +171,6 @@ class game
 
 	int load_tilemap(tinyxml2::XMLElement* e, size_t layer = 0);
 	int load_tilemap_individual(tinyxml2::XMLElement* e, size_t layer = 0);
-	
-
 	void clean_scene();
 public:
 	enum control_type
