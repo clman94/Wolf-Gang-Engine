@@ -29,7 +29,8 @@ enum job_op
 	REPLACETILE,
 	PAUSEMUSIC,
 	PLAYMUSIC,
-	STOPMUSIC
+	STOPMUSIC,
+	SETCYCLEGROUP
 };
 
 struct job_entry
@@ -129,6 +130,12 @@ struct JOB_replacetile : public job_entry
 	int rot, layer;
 	engine::ivector pos1, pos2;
 	JOB_replacetile(tinyxml2::XMLElement* e);
+};
+
+struct JOB_setcyclegroup : public job_entry
+{
+	std::string group_name;
+	JOB_setcyclegroup(tinyxml2::XMLElement* e);
 };
 
 job_list parse_jobs_xml(tinyxml2::XMLElement* e);

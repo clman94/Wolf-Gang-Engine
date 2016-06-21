@@ -148,6 +148,13 @@ interpretor::JOB_replacetile::JOB_replacetile(tinyxml2::XMLElement* e)
 	op = REPLACETILE;
 }
 
+interpretor::JOB_setcyclegroup::JOB_setcyclegroup(tinyxml2::XMLElement* e)
+{
+	if (auto _name = e->Attribute("name"))
+		group_name = _name;
+	op = SETCYCLEGROUP;
+}
+
 #define ADD_JOB(A) jobs_ret.push_back(new A)
 job_list
 interpretor::parse_jobs_xml(tinyxml2::XMLElement* e)
@@ -176,28 +183,31 @@ interpretor::parse_jobs_xml(tinyxml2::XMLElement* e)
 			ADD_JOB(job_entry(HIDEBOX));
 		else if (name == "selection")
 			ADD_JOB(JOB_selection(j));
-		else if (name == "setcharacter")
+		else if (name == "entity:current")
 			ADD_JOB(JOB_setcharacter(j));
-		else if (name == "movecharacter")
+		else if (name == "entity:move")
 			ADD_JOB(JOB_movecharacter(j));
+		else if (name == "entity:setcyclegroup")
+			ADD_JOB(JOB_setcyclegroup(j));
 		else if (name == "setglobal")
 			ADD_JOB(JOB_setglobal(j));
 		else if (name == "ifglobal")
 			ADD_JOB(JOB_ifglobal(j));
-		else if (name == "setmusic")
+		else if (name == "music:set")
 			ADD_JOB(JOB_setmusic(j));
-		else if (name == "pausemusic")
+		else if (name == "music:pause")
 			ADD_JOB(job_entry(PAUSEMUSIC));
-		else if (name == "playmusic")
+		else if (name == "music:play")
 			ADD_JOB(job_entry(PLAYMUSIC));
-		else if (name == "stopmusic")
+		else if (name == "music:stop")
 			ADD_JOB(job_entry(STOPMUSIC));
 		else if (name == "newscene")
 			ADD_JOB(JOB_newscene(j));
-		else if (name == "replacetile")
+		else if (name == "tile:replace")
 			ADD_JOB(JOB_replacetile(j));
 		else if (name == "ifglobalexit")
 			ADD_JOB(JOB_ifglobalexit(j));
+
 		else
 			std::cout << "Error: Invalid command '" << name << "'\n";
 		j = j->NextSiblingElement();

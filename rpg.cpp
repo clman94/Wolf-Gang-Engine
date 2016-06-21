@@ -349,7 +349,7 @@ game::mc_movement()
 
 	if (is_mc_moving())
 		check_event_collisionbox();
-	else
+	else if (main_character->get_animation())
 		main_character->get_animation()->restart();
 	
 	// Update pan
@@ -627,6 +627,16 @@ game::tick_interpretor()
 			next_job();
 			break;
 		}
+		case job_op::SETCYCLEGROUP:
+		{
+			if (narrative.speaker)
+			{
+				JOB_setcyclegroup* j = (JOB_setcyclegroup*)job;
+				narrative.speaker->set_cycle_group(j->group_name);
+			}
+			next_job();
+			break;
+		}
 		default:
 		{
 			std::cout << "Error: Unsupported opcode has been requested (Means bad!). '" << job->op << "'\n";
@@ -820,7 +830,7 @@ game::load_entity(std::string path, bool is_global_entity)
 
 	XMLDocument doc;
 	if (doc.LoadFile(path.c_str()))
-		return "Faield to load entity file at '" + path + "'";
+		return "Failed to load entity file at '" + path + "'";
 
 	XMLElement* main_e = doc.FirstChildElement("entity");
 	if (!main_e) return "Please add root node. <entity>...</entity>";
@@ -836,12 +846,9 @@ game::load_entity(std::string path, bool is_global_entity)
 		return "Please add animations section. <animations>...</animations>";
 
 	// Set character defaults
-	nentity.set_cycle_animation("left", entity::LEFT).handle_error();
-	nentity.set_cycle_animation("right", entity::RIGHT).handle_error();
-	nentity.set_cycle_animation("up", entity::UP).handle_error();
-	nentity.set_cycle_animation("down", entity::DOWN).handle_error();
-	if (nentity.set_cycle_animation("default", entity::DEFAULT))
-		return "Default animation/sprite is required";
+	auto _err = nentity.set_cycle_group("default");
+	if (_err) return _err;
+
 	nentity.set_cycle(entity::DEFAULT);
 	nentity.set_depth(1);
 

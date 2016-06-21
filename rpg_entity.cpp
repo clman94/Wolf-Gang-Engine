@@ -42,6 +42,7 @@ utility::error
 entity::set_cycle_animation(std::string _name, cycle_type cycle)
 {
 	auto a = find_animation(_name);
+	world_animation[cycle] = nullptr;
 	if (!a)
 		return "Entity animation '" + _name + 
 			"' in entity '" + name + "' does not exist";
@@ -53,40 +54,40 @@ entity::set_cycle_animation(std::string _name, cycle_type cycle)
 int
 entity::draw(engine::renderer &_r)
 {
-	if (world_animation[c_cycle])
-		world_animation[c_cycle]->node.draw(_r);
+	if (c_anim)
+		c_anim->node.draw(_r);
 	return 0;
 }
 
 void
 entity::move_left(float delta)
 {
-	if (world_animation[c_cycle])
-		world_animation[c_cycle]->node.tick_animation();
+	if (c_anim)
+		c_anim->node.tick_animation();
 	set_relative_position(get_relative_position() + engine::fvector(-delta));
 }
 
 void
 entity::move_right(float delta)
 {
-	if (world_animation[c_cycle])
-		world_animation[c_cycle]->node.tick_animation();
+	if (c_anim)
+		c_anim->node.tick_animation();
 	set_relative_position(get_relative_position() + engine::fvector(delta));
 }
 
 void
 entity::move_up(float delta)
 {
-	if (world_animation[c_cycle])
-		world_animation[c_cycle]->node.tick_animation();
+	if (c_anim)
+		c_anim->node.tick_animation();
 	set_relative_position(get_relative_position() + engine::fvector(0, -delta));
 }
 
 void
 entity::move_down(float delta)
 {
-	if (world_animation[c_cycle])
-		world_animation[c_cycle]->node.tick_animation();
+	if (c_anim)
+		c_anim->node.tick_animation();
 	set_relative_position(get_relative_position() + engine::fvector(0, delta));
 }
 
@@ -96,6 +97,8 @@ entity::set_cycle(int cycle)
 	c_cycle = cycle;
 	if (world_animation[cycle])
 		c_anim = world_animation[cycle];
+	else
+		c_anim = world_animation[DEFAULT];
 }
 
 engine::fvector
@@ -114,4 +117,16 @@ entity::get_activate_point()
 		return get_relative_position() + fvector(0, 32);
 	}
 	return get_relative_position();
+}
+
+utility::error
+entity::set_cycle_group(std::string name)
+{
+	set_cycle_animation(name + ":left",  entity::LEFT ).handle_error(); // The directional walk cycles are optional
+	set_cycle_animation(name + ":right", entity::RIGHT).handle_error();
+	set_cycle_animation(name + ":up",    entity::UP   ).handle_error();
+	set_cycle_animation(name + ":down",  entity::DOWN ).handle_error();
+	if (set_cycle_animation(name + ":default", entity::DEFAULT).handle_error())      // default is required though...
+		return "Default animation/sprite is required for cycle group '" + name + "'";
+	return 0;
 }

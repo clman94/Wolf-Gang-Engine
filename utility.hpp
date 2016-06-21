@@ -10,7 +10,7 @@ namespace utility
 {
 
 // Allows one class to dominate and hides a hidden item that
-// can be retrived for shady stuff.
+// can be retrieved for shady stuff.
 template<typename T1, typename T2_S>
 class shadow_pair
 	: public T1

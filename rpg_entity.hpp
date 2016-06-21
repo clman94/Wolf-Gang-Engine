@@ -23,7 +23,7 @@ class entity :
 	animation* find_animation(std::string name);
 	animation* c_anim;
 	std::string name;
-	animation* world_animation[5];
+	animation* world_animation[6];
 	int c_cycle;
 public:
 	enum cycle_type
@@ -32,13 +32,15 @@ public:
 		RIGHT,
 		UP,
 		DOWN,
-		DEFAULT
+		DEFAULT,
+		MISC
 	};
 
 	entity();
 	std::string get_name();
 	void set_name(std::string _name);
 	utility::error set_cycle_animation(std::string name, cycle_type type);
+	utility::error set_cycle_group(std::string name);
 	void set_cycle(int cycle);
 	engine::fvector get_activate_point();
 

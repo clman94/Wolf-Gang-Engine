@@ -133,6 +133,8 @@ class game
 	bool    lock_mc_movement; // Locks the movement of the main character is true.
 	bool    is_mc_moving();   // Simply checks for the directional controls.
 	int     mc_movement();    // Calculates the movement and animation of character
+	utility::error load_entity(std::string path, bool is_global_entity = false);
+	utility::error load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity = false);
 
 	// The map of expression animations all identified by a string.
 	std::map<std::string, engine::animated_sprite_node> expressions;
@@ -145,6 +147,7 @@ class game
 	// The control is simply a bool array that 
 	// tracks what control (not the key pressed)
 	// is activated.
+	// Could have used std::set but it simply to heavy for this.
 	bool control[CONTROL_COUNT];
 	void reset_control(); // Resets all controls to false.
 
@@ -168,7 +171,7 @@ class game
 
 	int load_tilemap(tinyxml2::XMLElement* e, size_t layer = 0);
 	int load_tilemap_individual(tinyxml2::XMLElement* e, size_t layer = 0);
-	utility::error load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity = false);
+	
 
 	void clean_scene();
 public:
@@ -186,7 +189,7 @@ public:
 
 	game();
 	void trigger_control(control_type key);
-	utility::error load_entity(std::string path, bool is_global_entity = false);
+	
 	int set_maincharacter(std::string name);
 	void set_renderer(engine::renderer& r);
 	utility::error load_textures(std::string path);
