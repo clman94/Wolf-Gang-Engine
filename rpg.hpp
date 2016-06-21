@@ -88,11 +88,11 @@ class game
 	bool check_button_collisionbox();
 
 	interpretor::job_list* c_event; //current event
-	int c_job; // current job of event
+	int  c_job; // current job of event
 	bool job_start;
 	void next_job();
 	void wait_job();
-	int tick_interpretor();
+	int  tick_interpretor();
 
 	int load_entity_anim(
 		tinyxml2::XMLElement* e,
@@ -110,10 +110,10 @@ class game
 	struct{
 		engine::sprite_node box;
 		engine::sprite_node cursor;
-		engine::text_node text;
-		engine::text_node option1;
-		engine::text_node option2;
-		entity *speaker;
+		engine::text_node   text;
+		engine::text_node   option1;
+		engine::text_node   option2;
+		entity             *speaker;
 		engine::render_client_special
 			<engine::animated_sprite_node> expression;
 	} narrative;
@@ -128,26 +128,34 @@ class game
 	engine::font font;
 	engine::renderer* renderer;
 	
-	entity *main_character;
-	bool lock_mc_movement;
-	bool is_mc_moving();
-	int mc_movement();
 
+	entity *main_character;   // Main character pointer
+	bool    lock_mc_movement; // Locks the movement of the main character is true.
+	bool    is_mc_moving();   // Simply checks for the directional controls.
+	int     mc_movement();    // Calculates the movement and animation of character
+
+	// The map of expression animations all identified by a string.
 	std::map<std::string, engine::animated_sprite_node> expressions;
 
+	// The set of globals. All defined by a string.
+	// These define the flow of the game.
 	std::set<std::string> globals;
 	bool has_global(std::string name);
 
+	// The control is simply a bool array that 
+	// tracks what control (not the key pressed)
+	// is activated.
 	bool control[CONTROL_COUNT];
-	void reset_control();
+	void reset_control(); // Resets all controls to false.
 
 	struct{
-		struct{ // structures inside structures... because organization
+		struct{ // Structures inside structures... because organization
 			engine::sound_buffer dialog_click_buf;
 		}buffers;
 
-		std::string current_bg_music; // Allows checking for same song
-		engine::sound_stream bg_music;
+		// The sound stream for the background music.
+		// Its shadow pair is the path of the current file.
+		utility::shadow_pair<engine::sound_stream, std::string> bg_music;
 
 		engine::sound FX_dialog_click;
 		engine::sound_spawner spawner;
@@ -160,7 +168,7 @@ class game
 
 	int load_tilemap(tinyxml2::XMLElement* e, size_t layer = 0);
 	int load_tilemap_individual(tinyxml2::XMLElement* e, size_t layer = 0);
-	utility::error load_entities(tinyxml2::XMLElement* e, bool is_global_entity = false);
+	utility::error load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity = false);
 
 	void clean_scene();
 public:

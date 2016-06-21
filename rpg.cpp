@@ -132,7 +132,7 @@ game::load_scene(std::string path)
 	if (auto entit = main_e->FirstChildElement("entities"))
 	{
 		clear_entities();
-		load_entities(entit);
+		load_entities_list(entit);
 	}
 	
 	// Set main character of scene
@@ -575,14 +575,14 @@ game::tick_interpretor()
 		case job_op::SETMUSIC:
 		{
 			JOB_setmusic* j = (JOB_setmusic*)job;
-			if (j->path != sound.current_bg_music)
+			if (j->path != utility::get_shadow(sound.bg_music))
 			{
 				if (sound.bg_music.is_playing())
 					sound.bg_music.stop();
 				sound.bg_music.open(j->path);
 				sound.bg_music.play();
 				sound.bg_music.set_loop(j->loop);
-				sound.current_bg_music = j->path;
+				utility::get_shadow(sound.bg_music) = j->path;
 			}
 			next_job();
 			break;
@@ -1000,7 +1000,7 @@ game::load_tilemap(tinyxml2::XMLElement* e, size_t layer)
 }
 
 utility::error
-game::load_entities(tinyxml2::XMLElement* e, bool is_global_entity)
+game::load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity)
 {
 	using namespace tinyxml2;
 
@@ -1039,13 +1039,15 @@ game::load_game(std::string path)
 	auto texture_path = tex_e->Attribute("path");
 	if (load_textures(texture_path)) return "Failed to load textures";
 
+	XMLElement* global_entities = main_e->FirstChildElement("global_entities");
+	if (global_entities)
+		load_entities_list(global_entities, true);
+
 	XMLElement* start_e = main_e->FirstChildElement("start_scene");
 	if (!start_e)
 		return "Please specify the starting scene. '<start_scene path=""/>'\n";
 	if (load_scene(start_e->Attribute("path"))) return "Failed to load starting scene";
 
-	XMLElement* global_entities = main_e->FirstChildElement("global_entities");
-	if (global_entities)
-		load_entities(global_entities, true);
+
 	return 0;
 }
