@@ -28,7 +28,7 @@ game::find_entity(std::string name)
 		if (i.get_name() == name)
 			return &i;
 	}
-	std::cout << "Error : Character '" << name << "' does not exist.\n";
+	utility::error("Character '" + name + "' does not exist.");
 	return nullptr;
 }
 
@@ -73,7 +73,7 @@ game::load_scene(std::string path)
 
 	XMLDocument doc;
 	if (doc.LoadFile(path.c_str()))
-		return "Could not load scene file from '" + path + "' in file '" + path + "'.";
+		return "Could not load scene file at '" + path + "'";
 
 	XMLElement* main_e = doc.FirstChildElement("scene");
 	if (!main_e) return "Please add root node 'scene'. <scene>...</scene>";
@@ -803,16 +803,20 @@ game::load_character(std::string path)
 
 	XMLDocument doc;
 	if (doc.LoadFile(path.c_str()))
-		return 1;
+		return "Faield to load entity file at '" + path + "'";
 
 	XMLElement* main_e = doc.FirstChildElement("character");
-	if (!main_e) return 2;
+	if (!main_e) return "Please add root node. <character>...</character>";
 
 	if (auto _char_name = main_e->FirstChildElement("name"))
 		nentity.set_name(_char_name->GetText());
+	else
+		return "Please specify name or entity. <name>...</name>";
 	
 	if (auto world_e = main_e->FirstChildElement("animations"))
 		load_entity_anim(world_e, nentity);
+	else
+		return "Please add animations section. <animations>...</animations>";
 
 	// Set character defaults
 	nentity.set_cycle_animation("left", entity::LEFT).handle_error();
@@ -1000,11 +1004,11 @@ game::load_game(std::string path)
 		return "Error: Please specify the texture file. '<textures path=""/>'\n";
 
 	auto texture_path = tex_e->Attribute("path");
-	load_textures(texture_path);
+	if (load_textures(texture_path)) return "Failed to load textures";
 
 	XMLElement* start_e = main_e->FirstChildElement("start_scene");
 	if (!start_e)
 		return "Please specify the starting scene. '<start_scene path=""/>'\n";
-	load_scene(start_e->Attribute("path"));
+	if (load_scene(start_e->Attribute("path"))) return "Failed to load starting scene";
 	return 0;
 }
