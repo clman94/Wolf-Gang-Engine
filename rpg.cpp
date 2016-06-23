@@ -646,9 +646,9 @@ game::tick_interpretor()
 			next_job();
 			break;
 		}
-		case job_op::NEWSCENE:
+		case job_op::SCENE_LOAD:
 		{
-			JOB_newscene* j = (JOB_newscene*)job;
+			JOB_scene_load* j = (JOB_scene_load*)job;
 			load_scene(j->path);
 			next_job();
 			break;
@@ -866,7 +866,6 @@ utility::error
 game::load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity)
 {
 	using namespace tinyxml2;
-
 	auto ele = e->FirstChildElement();
 	while (ele)
 	{
@@ -875,6 +874,7 @@ game::load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity)
 		auto path = ele->Attribute("path");
 		if (!path) return "Please specify path to entity file";
 		load_entity(path, is_global_entity);
+		entities.back().set_name(name);
 		ele = ele->NextSiblingElement();
 	}
 	return 0;
@@ -896,10 +896,10 @@ game::load_entity(std::string path, bool is_global_entity)
 	XMLElement* main_e = doc.FirstChildElement("entity");
 	if (!main_e) return "Please add root node. <entity>...</entity>";
 
-	if (auto _char_name = main_e->FirstChildElement("name"))
+	/*if (auto _char_name = main_e->FirstChildElement("name"))
 		nentity.set_name(_char_name->GetText());
 	else
-		return "Please specify name or entity. <name>...</name>";
+		return "Please specify name or entity. <name>...</name>";*/
 	
 	if (auto world_e = main_e->FirstChildElement("animations"))
 		load_entity_anim(world_e, nentity);

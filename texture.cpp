@@ -30,11 +30,11 @@ texture::load_atlas(const std::string path)
 		return 2;
 
 	// Iterate though each item and load their values into the atlas
-	XMLElement* crop_param = atlas_e->FirstChildElement("subtexture");
+	XMLElement* crop_param = atlas_e->FirstChildElement();
 	while (crop_param)
 	{
 		texture_crop ncrop;
-		ncrop.name = crop_param->Attribute("name");
+		ncrop.name = crop_param->Name();
 		ncrop.id   = crop_param->IntAttribute("id");
 		ncrop.x    = crop_param->IntAttribute("x");
 		ncrop.y    = crop_param->IntAttribute("y");
@@ -42,7 +42,7 @@ texture::load_atlas(const std::string path)
 		ncrop.h    = crop_param->IntAttribute("h");
 		atlas.push_back(ncrop);
 
-		crop_param = crop_param->NextSiblingElement("subtexture");
+		crop_param = crop_param->NextSiblingElement();
 	}
 	return 0;
 }

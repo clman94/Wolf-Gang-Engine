@@ -23,7 +23,7 @@ enum job_op
 	FLAG_IF,
 	FLAG_EXITIF,
 	FLAG_ONCE,
-	NEWSCENE,
+	SCENE_LOAD,
 	TILE_REPLACE,
 	MUSIC_PAUSE,
 	MUSIC_SET,
@@ -127,10 +127,10 @@ struct JOB_music_set : public job_entry
 	JOB_music_set(tinyxml2::XMLElement* e);
 };
 
-struct JOB_newscene : public job_entry
+struct JOB_scene_load : public job_entry
 {
 	std::string path;
-	JOB_newscene(tinyxml2::XMLElement* e);
+	JOB_scene_load(tinyxml2::XMLElement* e);
 };
 
 struct JOB_tile_replace : public job_entry

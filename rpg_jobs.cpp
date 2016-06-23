@@ -134,11 +134,11 @@ interpretor::JOB_music_set::JOB_music_set(tinyxml2::XMLElement* e)
 	op = MUSIC_SET;
 }
 
-interpretor::JOB_newscene::JOB_newscene(tinyxml2::XMLElement* e)
+interpretor::JOB_scene_load::JOB_scene_load(tinyxml2::XMLElement* e)
 {
 	if (auto _path = e->Attribute("path"))
 		path = _path;
-	op = NEWSCENE;
+	op = SCENE_LOAD;
 }
 
 interpretor::JOB_tile_replace::JOB_tile_replace(tinyxml2::XMLElement* e)
@@ -244,8 +244,8 @@ interpretor::parse_jobs_xml(tinyxml2::XMLElement* e)
 			ADD_JOB(job_entry(MUSIC_PLAY));
 		else if (name == "music:stop")
 			ADD_JOB(job_entry(MUSIC_STOP));
-		else if (name == "newscene")
-			ADD_JOB(JOB_newscene(j));
+		else if (name == "scene:load")
+			ADD_JOB(JOB_scene_load(j));
 		else if (name == "tile:replace")
 			ADD_JOB(JOB_tile_replace(j));
 
