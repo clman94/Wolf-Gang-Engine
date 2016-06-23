@@ -62,7 +62,7 @@ entity::draw(engine::renderer &_r)
 void
 entity::move_left(float delta)
 {
-	if (c_anim)
+	if (c_anim && c_anim->type == WALK)
 		c_anim->node.tick_animation();
 	set_relative_position(get_relative_position() + engine::fvector(-delta));
 }
@@ -70,7 +70,7 @@ entity::move_left(float delta)
 void
 entity::move_right(float delta)
 {
-	if (c_anim)
+	if (c_anim && c_anim->type == WALK)
 		c_anim->node.tick_animation();
 	set_relative_position(get_relative_position() + engine::fvector(delta));
 }
@@ -78,7 +78,7 @@ entity::move_right(float delta)
 void
 entity::move_up(float delta)
 {
-	if (c_anim)
+	if (c_anim && c_anim->type == WALK)
 		c_anim->node.tick_animation();
 	set_relative_position(get_relative_position() + engine::fvector(0, -delta));
 }
@@ -86,7 +86,7 @@ entity::move_up(float delta)
 void
 entity::move_down(float delta)
 {
-	if (c_anim)
+	if (c_anim && c_anim->type == WALK)
 		c_anim->node.tick_animation();
 	set_relative_position(get_relative_position() + engine::fvector(0, delta));
 }

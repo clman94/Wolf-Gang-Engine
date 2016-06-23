@@ -347,7 +347,7 @@ game::mc_movement()
 			main_character->move_down(delta);
 	}
 
-	if (is_mc_moving())
+	if (is_mc_moving() && !lock_mc_movement)
 		check_event_collisionbox();
 	else if (main_character->get_animation())
 		main_character->get_animation()->restart();
@@ -397,6 +397,8 @@ game::tick_interpretor()
 						expr->start();
 					else
 						narrative.text.set_relative_position({ 10, 5 });
+
+					narrative.speaker->animation_start(entity::SPEECH);
 				}
 
 				// Setup narrative box
@@ -439,6 +441,8 @@ game::tick_interpretor()
 				next_job();
 				if (auto expr = narrative.expression.get_client())
 					expr->stop();
+				if (narrative.speaker)
+					narrative.speaker->animation_stop(entity::SPEECH);
 			}
 			break;
 		}
@@ -510,6 +514,13 @@ game::tick_interpretor()
 		{
 			JOB_entity_current* j = (JOB_entity_current*)job;
 			next_job();
+
+			if (j->name.empty())
+			{
+				narrative.speaker = nullptr;
+				break;
+			}
+
 			entity* nentity = find_entity(j->name);
 			if (!nentity) return 1;
 			if (narrative.speaker) narrative.expression.set_visible(false);
@@ -541,6 +552,26 @@ game::tick_interpretor()
 			next_job();
 			break;
 		}
+		case job_op::ENTITY_SETCYCLEGROUP:
+		{
+			if (narrative.speaker)
+			{
+				JOB_entity_setcyclegroup* j = (JOB_entity_setcyclegroup*)job;
+				narrative.speaker->set_cycle_group(j->group_name);
+			}
+			next_job();
+			break;
+		}
+		case job_op::ENTITY_SETDIRECTION:
+		{
+			if (narrative.speaker)
+			{
+				JOB_entity_setdirection* j = (JOB_entity_setdirection*)job;
+				narrative.speaker->set_cycle(j->direction);
+			}
+			next_job();
+			break;
+		}
 		case job_op::SETGLOBAL:
 		{
 			JOB_setglobal* j = (JOB_setglobal*)job;
@@ -551,11 +582,11 @@ game::tick_interpretor()
 		case job_op::IFGLOBAL:
 		{
 			JOB_ifglobal* j = (JOB_ifglobal*)job;
-			if (globals.find(j->name) != globals.end())
+			if (globals.find(j->name) != globals.end()) // Check global existance
 			{
 				if (j->inline_event.size())
-					trigger_event(&j->inline_event);
-				else if (trigger_event(j->event)) return 1;
+					trigger_event(&j->inline_event); // Trigger inline event
+				else if (trigger_event(j->event)) return 1; // Trigger external event
 			}
 			else
 				next_job();
@@ -565,9 +596,7 @@ game::tick_interpretor()
 		{
 			JOB_ifglobal* j = (JOB_ifglobal*)job;
 			if (has_global(j->name))
-			{
 				c_event = nullptr;
-			}
 			else
 				next_job();
 			break;
@@ -627,16 +656,7 @@ game::tick_interpretor()
 			next_job();
 			break;
 		}
-		case job_op::ENTITY_SETCYCLEGROUP:
-		{
-			if (narrative.speaker)
-			{
-				JOB_entity_setcyclegroup* j = (JOB_entity_setcyclegroup*)job;
-				narrative.speaker->set_cycle_group(j->group_name);
-			}
-			next_job();
-			break;
-		}
+
 		default:
 		{
 			std::cout << "Error: Unsupported opcode has been requested (Means bad!). '" << job->op << "'\n";
@@ -756,7 +776,7 @@ game::load_textures(std::string path)
 		sound.buffers.dialog_click_buf.load("data/sound/dialog.ogg");
 		sound.FX_dialog_click.set_buffer(sound.buffers.dialog_click_buf);
 	}
-	return 0;
+	return utility::error::NOERROR;
 }
 
 texture_manager& 
@@ -771,7 +791,7 @@ game::set_renderer(engine::renderer& r)
 	renderer = &r;
 }
 
-int
+utility::error
 game::load_entity_anim(
 	tinyxml2::XMLElement* e,
 	entity& c)
@@ -786,19 +806,32 @@ game::load_entity_anim(
 
 		na.node.set_visible(true);
 
-		int frames   = ele->IntAttribute("frames");
-		int interval = ele->IntAttribute("interval");
-		bool loop    = ele->BoolAttribute("loop");
-		auto atlas   = ele->Attribute("atlas");
-		auto tex     = ele->Attribute("tex");
-		if (!atlas || !tex)
+		int frames    = ele->IntAttribute("frames");
+		int interval  = ele->IntAttribute("interval");
+		bool loop     = ele->BoolAttribute("loop");
+		auto atlas    = ele->Attribute("atlas");
+		auto tex      = ele->Attribute("tex");
+		auto type     = ele->Attribute("type");
+
+		if (!tex) return "Please provide texture attibute for character";
+		if (!atlas) return "Please provide atlas attribute for character";
+
+		if (type)
 		{
-			printf("Error: Failed to load entity sprite/animation.\n");
-			return 2;
-		}
+			std::string play_type = type;
+			if(play_type       == "constant")
+				na.type = entity::CONSTANT;
+			else if (play_type == "speech")
+				na.type = entity::SPEECH;
+			else if (play_type == "walk")
+				na.type = entity::WALK;
+			else
+				return "Invalid play type '" + play_type + "'";
+		}else
+			na.type = entity::WALK; // Default walk
 
 		auto t = tm.get_texture(tex);
-		if (!t) return 3;
+		if (!t) return "Texture '" + std::string(tex) + "' not found";
 
 		na.node.set_interval(interval);
 		na.node.set_loop(loop);
@@ -814,11 +847,27 @@ game::load_entity_anim(
 
 		ele = ele->NextSiblingElement();
 	}
+	return utility::error::NOERROR;
+}
+
+utility::error
+game::load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity)
+{
+	using namespace tinyxml2;
+
+	auto ele = e->FirstChildElement();
+	while (ele)
+	{
+		auto name = ele->Name();
+		if (!name) return "Please specify name of entity";
+		auto path = ele->Attribute("path");
+		if (!path) return "Please specify path to entity file";
+		load_entity(path, is_global_entity);
+		ele = ele->NextSiblingElement();
+	}
 	return 0;
 }
 
-
-// Old character loading code (before entities)
 utility::error
 game::load_entity(std::string path, bool is_global_entity)
 {
@@ -1007,24 +1056,6 @@ game::load_tilemap(tinyxml2::XMLElement* e, size_t layer)
 }
 
 utility::error
-game::load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity)
-{
-	using namespace tinyxml2;
-
-	auto ele = e->FirstChildElement();
-	while (ele)
-	{
-		auto name = ele->Name();
-		if (!name) return "Please specify name of entity";
-		auto path = ele->Attribute("path");
-		if (!path) return "Please specify path to entity file";
-		load_entity(path, is_global_entity);
-		ele = ele->NextSiblingElement();
-	}
-	return 0;
-}
-
-utility::error
 game::load_game(std::string path)
 {
 	using namespace tinyxml2;
@@ -1037,24 +1068,25 @@ game::load_game(std::string path)
 
 	XMLElement* main_e = doc.FirstChildElement("game");
 	if (!main_e)
-		return "Please add root node named 'game'";
+		return "Please add root element named 'game'. <game>...</game>";
 
+	// Textures
 	XMLElement* tex_e = main_e->FirstChildElement("textures");
 	if (!tex_e)
 		return "Error: Please specify the texture file. '<textures path=\"\"/>'\n";
-
 	auto texture_path = tex_e->Attribute("path");
 	if (load_textures(texture_path)) return "Failed to load textures";
 
+	// Global Entities
 	XMLElement* global_entities = main_e->FirstChildElement("global_entities");
 	if (global_entities)
 		load_entities_list(global_entities, true);
 
+	// Start scene
 	XMLElement* start_e = main_e->FirstChildElement("start_scene");
 	if (!start_e)
 		return "Please specify the starting scene. '<start_scene path=\"\"/>'\n";
 	if (load_scene(start_e->Attribute("path"))) return "Failed to load starting scene";
-
 
 	return 0;
 }

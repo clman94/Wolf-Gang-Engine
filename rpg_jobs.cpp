@@ -164,6 +164,26 @@ interpretor::JOB_entity_spawn::JOB_entity_spawn(tinyxml2::XMLElement* e)
 	op = ENTITY_SPAWN;
 }
 
+interpretor::JOB_entity_setdirection::JOB_entity_setdirection(tinyxml2::XMLElement* e)
+{
+	if (auto _dir = e->Attribute("direction"))
+	{
+		if (!strcmp(_dir, "left"))
+			direction = entity::LEFT;
+		else if (!strcmp(_dir, "right"))
+			direction = entity::RIGHT;
+		else if (!strcmp(_dir, "up"))
+			direction = entity::UP;
+		else if (!strcmp(_dir, "down"))
+			direction = entity::DOWN;
+		else
+			utility::error("Invalid direction : Use left, right, up, down");
+	}
+	else
+		utility::error("Please Provide direction attribute");
+	op = ENTITY_SETDIRECTION;
+}
+
 #define ADD_JOB(A) jobs_ret.push_back(new A)
 job_list
 interpretor::parse_jobs_xml(tinyxml2::XMLElement* e)
@@ -198,6 +218,8 @@ interpretor::parse_jobs_xml(tinyxml2::XMLElement* e)
 			ADD_JOB(JOB_entity_move(j));
 		else if (name == "entity:setcyclegroup")
 			ADD_JOB(JOB_entity_setcyclegroup(j));
+		else if (name == "entity:setdirection")
+			ADD_JOB(JOB_entity_setdirection(j));
 		else if (name == "setglobal")
 			ADD_JOB(JOB_setglobal(j));
 		else if (name == "ifglobal")
@@ -216,7 +238,6 @@ interpretor::parse_jobs_xml(tinyxml2::XMLElement* e)
 			ADD_JOB(JOB_tile_replace(j));
 		else if (name == "ifglobalexit")
 			ADD_JOB(JOB_ifglobalexit(j));
-
 		else
 			std::cout << "Error: Invalid command '" << name << "'\n";
 		j = j->NextSiblingElement();

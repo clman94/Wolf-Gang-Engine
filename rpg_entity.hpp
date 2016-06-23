@@ -17,7 +17,7 @@ class entity :
 	{
 		engine::animated_sprite_node node;
 		std::string name;
-		bool speech;
+		int type;
 	};
 	std::list<animation> world;
 	animation* find_animation(std::string name);
@@ -35,6 +35,12 @@ public:
 		DEFAULT,
 		MISC
 	};
+	enum animation_type
+	{
+		WALK,
+		SPEECH,
+		CONSTANT
+	};
 
 	entity();
 	std::string get_name();
@@ -45,6 +51,18 @@ public:
 	engine::fvector get_activate_point();
 
 	engine::animated_sprite_node* get_animation();
+
+	void animation_start(animation_type type)
+	{
+		if (c_anim && c_anim->type == type)
+			c_anim->node.start();
+	}
+
+	void animation_stop(animation_type type)
+	{
+		if (c_anim && c_anim->type == type)
+			c_anim->node.stop();
+	}
 
 	void move_left(float delta);
 	void move_right(float delta);

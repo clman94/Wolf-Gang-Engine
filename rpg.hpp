@@ -94,10 +94,6 @@ class game
 	void wait_job();
 	int  tick_interpretor();
 
-	int load_entity_anim(
-		tinyxml2::XMLElement* e,
-		entity& c);
-
 	// Contains shadow pair of is_global_entity bool value
 	std::list<utility::shadow_pair<entity, bool>> entities;
 	entity* find_entity(std::string name);
@@ -128,13 +124,13 @@ class game
 	engine::font font;
 	engine::renderer* renderer;
 	
-
 	entity *main_character;   // Main character pointer
 	bool    lock_mc_movement; // Locks the movement of the main character is true.
 	bool    is_mc_moving();   // Simply checks for the directional controls.
 	int     mc_movement();    // Calculates the movement and animation of character
 	utility::error load_entity(std::string path, bool is_global_entity = false);
 	utility::error load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity = false);
+	utility::error load_entity_anim(tinyxml2::XMLElement* e, entity& c);
 
 	// The map of expression animations all identified by a string.
 	std::map<std::string, engine::animated_sprite_node> expressions;

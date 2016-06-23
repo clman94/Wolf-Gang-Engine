@@ -31,7 +31,8 @@ enum job_op
 	ENTITY_MOVE,
 	ENTITY_CURRENT,
 	ENTITY_SETCYCLEGROUP,
-	ENTITY_SPAWN
+	ENTITY_SPAWN,
+	ENTITY_SETDIRECTION
 };
 
 struct job_entry
@@ -143,6 +144,12 @@ struct JOB_entity_spawn : public job_entry
 {
 	std::string as, path;
 	JOB_entity_spawn(tinyxml2::XMLElement* e);
+};
+
+struct JOB_entity_setdirection : public job_entry
+{
+	int direction;
+	JOB_entity_setdirection(tinyxml2::XMLElement* e);
 };
 
 job_list parse_jobs_xml(tinyxml2::XMLElement* e);
