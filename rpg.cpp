@@ -207,9 +207,9 @@ game::reset_control()
 }
 
 bool
-game::has_global(std::string name)
+game::has_flag(std::string name)
 {
-	for (auto &i : globals)
+	for (auto &i : flags)
 	{
 		if (i == name)
 			return true;
@@ -572,17 +572,17 @@ game::tick_interpretor()
 			next_job();
 			break;
 		}
-		case job_op::SETGLOBAL:
+		case job_op::FLAG_SET:
 		{
-			JOB_setglobal* j = (JOB_setglobal*)job;
-			globals.insert(j->name);
+			JOB_flag_set* j = (JOB_flag_set*)job;
+			flags.insert(j->name);
 			next_job();
 			break;
 		}
-		case job_op::IFGLOBAL:
+		case job_op::FLAG_IF:
 		{
-			JOB_ifglobal* j = (JOB_ifglobal*)job;
-			if (globals.find(j->name) != globals.end()) // Check global existance
+			JOB_flag_if* j = (JOB_flag_if*)job;
+			if (flags.find(j->name) != flags.end()) // Check global existance
 			{
 				if (j->inline_event.size())
 					trigger_event(&j->inline_event); // Trigger inline event
@@ -592,10 +592,10 @@ game::tick_interpretor()
 				next_job();
 			break;
 		}
-		case job_op::IFGLOBALEXIT:
+		case job_op::FLAG_EXITIF:
 		{
-			JOB_ifglobal* j = (JOB_ifglobal*)job;
-			if (has_global(j->name))
+			JOB_flag_exitif* j = (JOB_flag_exitif*)job;
+			if (has_flag(j->name))
 				c_event = nullptr;
 			else
 				next_job();

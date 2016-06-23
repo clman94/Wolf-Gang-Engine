@@ -19,9 +19,9 @@ enum job_op
 	WAITFORKEY,
 	HIDEBOX,
 	SELECTION,
-	SETGLOBAL,
-	IFGLOBAL,
-	IFGLOBALEXIT,
+	FLAG_SET,
+	FLAG_IF,
+	FLAG_EXITIF,
 	NEWSCENE,
 	TILE_REPLACE,
 	MUSIC_PAUSE,
@@ -92,24 +92,24 @@ struct JOB_entity_move : public job_entry
 	JOB_entity_move(tinyxml2::XMLElement* e);
 };
 
-struct JOB_setglobal : public job_entry
+struct JOB_flag_set : public job_entry
 {
 	std::string name;
-	JOB_setglobal(tinyxml2::XMLElement* e);
+	JOB_flag_set(tinyxml2::XMLElement* e);
 };
 
-struct JOB_ifglobal : public job_entry
+struct JOB_flag_if : public job_entry
 {
 	std::string name, event;
 	job_list inline_event;
 	bool remove;
-	JOB_ifglobal(tinyxml2::XMLElement* e);
+	JOB_flag_if(tinyxml2::XMLElement* e);
 };
 
-struct JOB_ifglobalexit : public job_entry
+struct JOB_flag_exitif : public job_entry
 {
 	std::string name;
-	JOB_ifglobalexit(tinyxml2::XMLElement* e);
+	JOB_flag_exitif(tinyxml2::XMLElement* e);
 };
 
 struct JOB_music_set : public job_entry

@@ -11,6 +11,7 @@ namespace utility
 
 // Allows one class to dominate and hides a hidden item that
 // can be retrieved for shady stuff.
+// Why have such a strangely shady class? Convienence, of course!
 template<typename T1, typename T2_S>
 class shadow_pair
 	: public T1
@@ -20,7 +21,6 @@ public:
 	template<class T1, typename T2_S>
 	friend T2_S& get_shadow(shadow_pair<T1, T2_S>& A);
 };
-
 
 // Get reference of shadow in the shadow pair.
 template<class T1, typename T2_S>
@@ -40,7 +40,7 @@ static T2_S& get_shadow(shadow_pair<T1, T2_S>& A)
 class error
 {
 	struct handler{
-		bool unhandled;
+		bool unhandled; 
 		std::string message;
 		int code;
 	};
@@ -84,8 +84,6 @@ public:
 		}
 	}
 
-	// Specify not to print message.
-	// Returns whether or not it had an error.
 	error& handle_error()
 	{
 		err->unhandled = false;
@@ -111,6 +109,11 @@ public:
 	bool has_error()
 	{
 		return err->code != NOERROR;
+	}
+
+	bool is_handled()
+	{
+		return !err->unhandled;
 	}
 
 	explicit operator bool()

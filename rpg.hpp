@@ -137,8 +137,8 @@ class game
 
 	// The set of globals. All defined by a string.
 	// These define the flow of the game.
-	std::set<std::string> globals;
-	bool has_global(std::string name);
+	std::set<std::string> flags;
+	bool has_flag(std::string name);
 
 	// The control is simply a bool array that 
 	// tracks what control (not the key pressed)

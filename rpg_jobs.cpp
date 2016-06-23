@@ -89,15 +89,15 @@ interpretor::JOB_entity_move::JOB_entity_move(tinyxml2::XMLElement* e)
 	op = ENTITY_MOVE;
 }
 
-interpretor::JOB_setglobal::JOB_setglobal(tinyxml2::XMLElement* e)
+interpretor::JOB_flag_set::JOB_flag_set(tinyxml2::XMLElement* e)
 {
 	using namespace tinyxml2;
 	if (auto _name = e->Attribute("name"))
 		name = _name;
-	op = SETGLOBAL;
+	op = FLAG_SET;
 }
 
-interpretor::JOB_ifglobal::JOB_ifglobal(tinyxml2::XMLElement* e)
+interpretor::JOB_flag_if::JOB_flag_if(tinyxml2::XMLElement* e)
 {
 	using namespace tinyxml2;
 	if (auto _name = e->Attribute("name"))
@@ -107,15 +107,15 @@ interpretor::JOB_ifglobal::JOB_ifglobal(tinyxml2::XMLElement* e)
 		event = _event;
 	else
 		inline_event = parse_jobs_xml(e);
-	op = IFGLOBAL;
+	op = FLAG_IF;
 }
 
-interpretor::JOB_ifglobalexit::JOB_ifglobalexit(tinyxml2::XMLElement* e)
+interpretor::JOB_flag_exitif::JOB_flag_exitif(tinyxml2::XMLElement* e)
 {
 	using namespace tinyxml2;
 	if (auto _name = e->Attribute("name"))
 		name = _name;
-	op = IFGLOBALEXIT;
+	op = FLAG_EXITIF;
 }
 
 interpretor::JOB_music_set::JOB_music_set(tinyxml2::XMLElement* e)
@@ -220,10 +220,12 @@ interpretor::parse_jobs_xml(tinyxml2::XMLElement* e)
 			ADD_JOB(JOB_entity_setcyclegroup(j));
 		else if (name == "entity:setdirection")
 			ADD_JOB(JOB_entity_setdirection(j));
-		else if (name == "setglobal")
-			ADD_JOB(JOB_setglobal(j));
-		else if (name == "ifglobal")
-			ADD_JOB(JOB_ifglobal(j));
+		else if (name == "flag:set")
+			ADD_JOB(JOB_flag_set(j));
+		else if (name == "flag:if")
+			ADD_JOB(JOB_flag_if(j));
+		else if (name == "flag:exitif")
+			ADD_JOB(JOB_flag_exitif(j));
 		else if (name == "music:set")
 			ADD_JOB(JOB_music_set(j));
 		else if (name == "music:pause")
@@ -236,8 +238,7 @@ interpretor::parse_jobs_xml(tinyxml2::XMLElement* e)
 			ADD_JOB(JOB_newscene(j));
 		else if (name == "tile:replace")
 			ADD_JOB(JOB_tile_replace(j));
-		else if (name == "ifglobalexit")
-			ADD_JOB(JOB_ifglobalexit(j));
+
 		else
 			std::cout << "Error: Invalid command '" << name << "'\n";
 		j = j->NextSiblingElement();
