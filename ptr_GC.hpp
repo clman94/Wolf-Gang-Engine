@@ -136,6 +136,11 @@ public:
 		return *this;
 	}
 
+	void release()
+	{
+		_owner = false;
+	}
+
 	// Get direct pointer
 	T* get()
 	{
@@ -168,6 +173,11 @@ public:
 	T& operator*()
 	{
 		return *_ptr.get();
+	}
+
+	explicit operator bool()
+	{
+		return _ptr != nullptr;
 	}
 
 	template <typename>

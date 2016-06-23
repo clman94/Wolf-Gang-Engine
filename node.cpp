@@ -18,7 +18,7 @@ node::~node()
 void
 node::update_position()
 {
-	if (!parent.is_null())
+	if (parent)
 		position = relative_position + parent->get_position();
 
 	for (auto &i : children)
@@ -49,7 +49,7 @@ node::set_relative_position(fvector pos)
 void
 node::set_position(fvector pos)
 {
-	if (!parent.is_null())
+	if (parent)
 		relative_position = pos - parent->position;
 	else
 		position = pos;
@@ -59,7 +59,7 @@ node::set_position(fvector pos)
 node_ref
 node::detach_parent()
 {
-	if (parent.is_null()) return nullptr;
+	if (!parent) return nullptr;
 	node_ref temp = parent->children[child_index];
 	parent->children.erase(parent->children.begin() + child_index);
 	for (size_t i = 0; i < parent->children.size(); i++)
@@ -105,7 +105,7 @@ node::set_parent(node_ref obj)
 int
 node::add_child(node_ref obj)
 {
-	if (!obj->parent.is_null()) obj->detach_parent();
+	if (obj->parent) obj->detach_parent();
 	obj->child_index = children.size();
 	obj->parent = *this;
 	children.push_back(obj);
