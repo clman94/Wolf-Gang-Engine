@@ -118,6 +118,14 @@ interpretor::JOB_flag_exitif::JOB_flag_exitif(tinyxml2::XMLElement* e)
 	op = FLAG_EXITIF;
 }
 
+interpretor::JOB_flag_once::JOB_flag_once(tinyxml2::XMLElement* e)
+{
+	using namespace tinyxml2;
+	if (auto _name = e->Attribute("name"))
+		name = _name;
+	op = FLAG_ONCE;
+}
+
 interpretor::JOB_music_set::JOB_music_set(tinyxml2::XMLElement* e)
 {
 	if (auto _path = e->Attribute("path"))
@@ -226,6 +234,8 @@ interpretor::parse_jobs_xml(tinyxml2::XMLElement* e)
 			ADD_JOB(JOB_flag_if(j));
 		else if (name == "flag:exitif")
 			ADD_JOB(JOB_flag_exitif(j));
+		else if (name == "flag:once")
+			ADD_JOB(JOB_flag_once(j));
 		else if (name == "music:set")
 			ADD_JOB(JOB_music_set(j));
 		else if (name == "music:pause")

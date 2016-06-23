@@ -22,6 +22,7 @@ enum job_op
 	FLAG_SET,
 	FLAG_IF,
 	FLAG_EXITIF,
+	FLAG_ONCE,
 	NEWSCENE,
 	TILE_REPLACE,
 	MUSIC_PAUSE,
@@ -111,6 +112,13 @@ struct JOB_flag_exitif : public job_entry
 	std::string name;
 	JOB_flag_exitif(tinyxml2::XMLElement* e);
 };
+
+struct JOB_flag_once : public job_entry
+{
+	std::string name;
+	JOB_flag_once(tinyxml2::XMLElement* e);
+};
+
 
 struct JOB_music_set : public job_entry
 {

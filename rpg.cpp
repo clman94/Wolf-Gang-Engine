@@ -582,7 +582,7 @@ game::tick_interpretor()
 		case job_op::FLAG_IF:
 		{
 			JOB_flag_if* j = (JOB_flag_if*)job;
-			if (flags.find(j->name) != flags.end()) // Check global existance
+			if (flags.find(j->name) != flags.end()) // Check flag existance
 			{
 				if (j->inline_event.size())
 					trigger_event(&j->inline_event); // Trigger inline event
@@ -599,6 +599,18 @@ game::tick_interpretor()
 				c_event = nullptr;
 			else
 				next_job();
+			break;
+		}
+		case job_op::FLAG_ONCE:
+		{
+			JOB_flag_once* j = (JOB_flag_once*)job;
+			if (has_flag(j->name))
+				c_event = nullptr;
+			else
+			{
+				flags.insert(j->name);
+				next_job();
+			}
 			break;
 		}
 		case job_op::MUSIC_SET:
