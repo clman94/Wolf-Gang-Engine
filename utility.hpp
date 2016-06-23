@@ -34,78 +34,88 @@ static T2_S& get_shadow(shadow_pair<T1, T2_S>& A)
 // if the error is not handled by handle_error().
 // Ex: return "Failed to do thing!";
 // Error codes can be provided as well.
-// To specify no error, simply return 0.
+// To specify no error, simply return error::NOERROR or return 0.
 // The main purpose was to rid of all the std::cout and make
 // error handling simply one liners.
 class error
 {
-	std::shared_ptr<bool> err;
-	std::string error_str;
-	int error_code;
+	struct handler{
+		bool unhandled;
+		std::string message;
+		int code;
+	};
+	std::shared_ptr<handler> err;
 public:
+
+	static const int NOERROR = 0, ERROR = 1;
+
 	error()
 	{
-		err.reset(new bool(false));
-		error_code = 0;
+		err.reset(new handler);
+		err->code = NOERROR;
+		err->unhandled = false;
 	}
 	error(const error& A)
 	{
 		err = A.err;
-		error_str = A.error_str;
-		error_code = A.error_code;
 	}
 	error(const std::string& message)
 	{
-		err.reset(new bool(true));
-		error_str = message;
+		err.reset(new handler);
+		err->unhandled = true;
+		err->message = message;
+		err->code = ERROR;
 	}
 	error(int code)
 	{
-		error_code = code;
-		err.reset(new bool(code != 0));
+		err.reset(new handler);
+		err->unhandled = (code != NOERROR);
+		err->code = code;
 	}
 
 	~error()
 	{
-		if (*err && err.unique())
-			std::cout << "Error : " << error_str << " : \n";
+		if (err->unhandled && err.unique())
+		{
+			if (err->message.empty())
+				std::cout << "Error Code :" << err->code << "\n";
+			else
+				std::cout << "Error : " << err->message << "\n";
+		}
 	}
 
 	// Specify not to print message.
 	// Returns whether or not it had an error.
-	bool handle_error()
+	error& handle_error()
 	{
-		bool prev = *err;
-		*err = false;
-		return prev;
+		err->unhandled = false;
+		return *this;
 	}
 
 	const std::string& get_message()
 	{
-	    return error_str;
+	    return err->message;
 	}
 	
 	int get_error_code()
 	{
-		return error_code;
+		return err->code;
 	}
 
 	error& operator=(const error& A)
 	{
 		err = A.err;
-		error_str = A.error_str;
-		error_code = A.error_code;
 		return *this;
 	}
 	
 	bool has_error()
 	{
-	    return *err;
+		return err->code != NOERROR;
 	}
 
 	explicit operator bool()
 	{
-		return *err;
+		return err->code != NOERROR;
 	}
 };
 
