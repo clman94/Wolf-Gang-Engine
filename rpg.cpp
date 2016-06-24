@@ -5,9 +5,6 @@ using namespace rpg;
 game::game()
 {
 	renderer = nullptr;
-	c_event = nullptr;
-	c_job = 0;
-	job_start = false;
 	lock_mc_movement = false;
 	root.set_viewport_size({ 320, 256 });
 }
@@ -126,8 +123,10 @@ game::load_scene(std::string path)
 	if (!c_scene->events.size())
 		c_scene->parse_events_xml(main_e);
 
-	// Trigger start event
-	trigger_event("_start_");
+	// Trigger start event (optional)
+	auto start_event = find_event("_start_");
+	if (start_event)
+		tracker.interrupt(start_event);
 
 	if (auto entit = main_e->FirstChildElement("entities"))
 	{
@@ -165,30 +164,18 @@ game::load_scene(std::string path)
 	return 0;
 }
 
-utility::error
-game::trigger_event(std::string name)
+interpretor::job_list*
+game::find_event(std::string name)
 {
 	// Find event
 	for (auto& i : c_scene->events)
 	{
 		if (i.name == name)
 		{
-			c_event = &i.jobs;
-			c_job = 0;
-			job_start = true;
-			return 0;
+			return &i.jobs;
 		}
 	}
-	return "Event '" + name + "' not found";
-}
-
-utility::error
-game::trigger_event(interpretor::job_list* jl)
-{
-	c_event = jl;
-	c_job = 0;
-	job_start = true;
-	return 0;
+	return nullptr;
 }
 
 void
@@ -252,9 +239,13 @@ game::check_event_collisionbox()
 			pos.y <= i.pos.y + i.size.y)
 		{
 			if (i.name.empty())
-				trigger_event(&i.inline_event);
+				tracker.call_event(&i.inline_event);
 			else
-				trigger_event(i.name);
+			{
+				auto nevent = find_event(i.name);
+				if (nevent)
+					tracker.call_event(nevent);
+			}
 
 			i.triggered = i.once;
 			return true;
@@ -292,9 +283,13 @@ game::check_button_collisionbox()
 			pos.y <= i.pos.y + i.size.y)
 		{
 			if (i.name.empty())
-				trigger_event(&i.inline_event);
+				tracker.call_event(&i.inline_event);
 			else
-				trigger_event(i.name);
+			{
+				auto nevent = find_event(i.name);
+				if (nevent)
+					tracker.call_event(nevent);
+			}
 
 			i.triggered = i.once;
 			return true;
@@ -363,23 +358,23 @@ game::tick_interpretor()
 	// This is the insane interpretor for xml scenes :D
 	do
 	{
-		if (!c_event) return 1;
-		if (c_job >= (int)c_event->size())
+		using namespace rpg::interpretor;
+
+		job_entry* job = tracker.get_job();
+
+		if (!job)
 		{
-			c_event = nullptr;
 			close_narrative_box();
 			return 1;
 		}
 
-		using namespace rpg::interpretor;
-		job_entry* job = c_event->at(c_job).get();
 		switch (job->op)
 		{
 		case job_op::SAY:
 		{
 			JOB_say* j = (JOB_say*)job;
 
-			if (job_start)
+			if (tracker.is_start())
 			{
 				// Setup expression
 				// Moves narrative text to make room for expression
@@ -419,7 +414,7 @@ game::tick_interpretor()
 					narrative.text.set_text(narrative.text.get_text() + j->text);
 				else
 					narrative.text.set_text(j->text);
-				next_job();
+				tracker.next_job();
 				break;
 			}
 
@@ -433,12 +428,12 @@ game::tick_interpretor()
 				j->clock.restart();
 			}
 
-			wait_job();
+			tracker.wait_job();
 
 			// Text Reveal has finished
 			if (j->c_char >= j->text.size())
 			{
-				next_job();
+				tracker.next_job();
 				if (auto expr = narrative.expression.get_client())
 					expr->stop();
 				if (narrative.speaker)
@@ -449,36 +444,36 @@ game::tick_interpretor()
 		case job_op::WAIT:
 		{
 			JOB_wait* j = (JOB_wait*)job;
-			if (job_start)
+			if (tracker.is_start())
 				j->clock.restart();
-			wait_job();
+			tracker.wait_job();
 
 			if (j->clock.get_elapse().ms() >= j->ms)
-				next_job();
+				tracker.next_job();
 			break;
 		}
 		case job_op::WAITFORKEY:
 		{
-			if (job_start)
+			if (tracker.is_start())
 				narrative.cursor.set_visible(true);
-			wait_job();
+			tracker.wait_job();
 			if (control[control_type::ACTIVATE])
 			{
 				narrative.cursor.set_visible(false);
-				next_job();
+				tracker.next_job();
 			}
 			break;
 		}
 		case job_op::HIDEBOX:
 		{
 			close_narrative_box();
-			next_job();
+			tracker.next_job();
 			break;
 		}
 		case job_op::SELECTION:
 		{
 			JOB_selection* j = (JOB_selection*)job;
-			if (job_start)
+			if (tracker.is_start())
 			{
 				narrative.option1.set_text("*" + j->opt1 + "   " + j->opt2);
 				narrative.option1.set_visible(true);
@@ -504,16 +499,20 @@ game::tick_interpretor()
 			{
 				narrative.option1.set_visible(false);
 				narrative.option2.set_visible(false);
-				if (trigger_event(j->event[j->sel])) return 1;
+				auto nevent = find_event(j->event[j->sel]);
+				if (nevent)
+					tracker.call_event(nevent);
+				else
+					utility::error("Event '" + j->event[j->sel] + "' not found");
 			}
 			else
-				wait_job();
+				tracker.wait_job();
 			break;
 		}
 		case job_op::ENTITY_CURRENT:
 		{
 			JOB_entity_current* j = (JOB_entity_current*)job;
-			next_job();
+			tracker.next_job();
 
 			if (j->name.empty())
 			{
@@ -532,24 +531,24 @@ game::tick_interpretor()
 			JOB_entity_move* j = (JOB_entity_move*)job;
 			if (!narrative.speaker)
 			{
-				next_job();
+				tracker.next_job();
 				break;
 			}
 			if (j->set)
 			{
 				narrative.speaker->set_relative_position(j->move * 32);
-				next_job();
+				tracker.next_job();
 				break;
 			}
 
-			if (job_start)
+			if (tracker.is_start())
 				j->clock.restart();
 
 			j->calculate();
 
 			// todo
 
-			next_job();
+			tracker.next_job();
 			break;
 		}
 		case job_op::ENTITY_SETCYCLEGROUP:
@@ -559,7 +558,7 @@ game::tick_interpretor()
 				JOB_entity_setcyclegroup* j = (JOB_entity_setcyclegroup*)job;
 				narrative.speaker->set_cycle_group(j->group_name);
 			}
-			next_job();
+			tracker.next_job();
 			break;
 		}
 		case job_op::ENTITY_SETDIRECTION:
@@ -569,14 +568,14 @@ game::tick_interpretor()
 				JOB_entity_setdirection* j = (JOB_entity_setdirection*)job;
 				narrative.speaker->set_cycle(j->direction);
 			}
-			next_job();
+			tracker.next_job();
 			break;
 		}
 		case job_op::FLAG_SET:
 		{
 			JOB_flag_set* j = (JOB_flag_set*)job;
 			flags.insert(j->name);
-			next_job();
+			tracker.next_job();
 			break;
 		}
 		case job_op::FLAG_IF:
@@ -585,31 +584,32 @@ game::tick_interpretor()
 			if (flags.find(j->name) != flags.end()) // Check flag existance
 			{
 				if (j->inline_event.size())
-					trigger_event(&j->inline_event); // Trigger inline event
-				else if (trigger_event(j->event)) return 1; // Trigger external event
+					tracker.call_event(&j->inline_event); // Trigger inline event
+				else if (auto nevent = find_event(j->event)) // Trigger external event
+					tracker.call_event(nevent);
 			}
 			else
-				next_job();
+				tracker.next_job();
 			break;
 		}
 		case job_op::FLAG_EXITIF:
 		{
 			JOB_flag_exitif* j = (JOB_flag_exitif*)job;
 			if (has_flag(j->name))
-				c_event = nullptr;
+				tracker.cancel_event();
 			else
-				next_job();
+				tracker.next_job();
 			break;
 		}
 		case job_op::FLAG_ONCE:
 		{
 			JOB_flag_once* j = (JOB_flag_once*)job;
 			if (has_flag(j->name))
-				c_event = nullptr;
+				tracker.cancel_event();
 			else
 			{
 				flags.insert(j->name);
-				next_job();
+				tracker.next_job();
 			}
 			break;
 		}
@@ -625,32 +625,31 @@ game::tick_interpretor()
 				sound.bg_music.set_loop(j->loop);
 				utility::get_shadow(sound.bg_music) = j->path;
 			}
-			next_job();
+			tracker.next_job();
 			break;
 		}
 		case job_op::MUSIC_STOP:
 		{
 			sound.bg_music.stop();
-			next_job();
+			tracker.next_job();
 			break;
 		}
 		case job_op::MUSIC_PAUSE:
 		{
 			sound.bg_music.pause();
-			next_job();
+			tracker.next_job();
 			break;
 		}
 		case job_op::MUSIC_PLAY:
 		{
 			sound.bg_music.play();
-			next_job();
+			tracker.next_job();
 			break;
 		}
 		case job_op::SCENE_LOAD:
 		{
 			JOB_scene_load* j = (JOB_scene_load*)job;
 			load_scene(j->path);
-			next_job();
 			break;
 		}
 		case job_op::TILE_REPLACE:
@@ -665,18 +664,18 @@ game::tick_interpretor()
 					tile_system.ground.set_tile(pos, j->name, j->rot);
 				}
 			}
-			next_job();
+			tracker.next_job();
 			break;
 		}
 
 		default:
 		{
 			std::cout << "Error: Unsupported opcode has been requested (Means bad!). '" << job->op << "'\n";
-			next_job();
+			tracker.next_job();
 			break; 
 		}
 		}
-	} while (job_start);
+	} while (tracker.is_start());
 	return 0;
 }
 
@@ -692,19 +691,6 @@ game::tick(engine::renderer& _r)
 	frame_clock.restart();
 	reset_control();
 	return 0;
-}
-
-void 
-game::next_job()
-{
-	++c_job;
-	job_start = true;
-}
-
-void 
-game::wait_job()
-{
-	job_start = false;
 }
 
 utility::error

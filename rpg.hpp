@@ -18,6 +18,7 @@
 #include <set>
 #include <map>
 #include "utility.hpp"
+#include <deque>
 
 
 namespace rpg
@@ -76,6 +77,80 @@ public:
 	}
 };
 
+class event_tracker
+{
+	struct entry
+	{
+		size_t c_job;
+		interpretor::job_list* c_event;
+		entry(interpretor::job_list* e)
+			: c_event(e), c_job(0){}
+	};
+	typedef std::deque<entry> event_hierarchy;	
+	
+	event_hierarchy events;
+	bool job_start;
+
+public:
+	event_tracker()
+	{
+		job_start = true;
+	}
+
+	bool is_start()
+	{
+		return job_start;
+	}
+
+	void next_job()
+	{
+		if (events.size())
+		{
+			++events.back().c_job;
+			job_start = true;
+		}
+	}
+
+	void wait_job()
+	{
+		job_start = false;
+	}
+
+	interpretor::job_entry* get_job()
+	{
+		if (!events.size()) return nullptr;
+		while (events.back().c_job >= events.back().c_event->size())
+		{
+			events.pop_back();
+			if (!events.size()) return nullptr;
+			next_job();
+		}
+		return events.back().c_event->at(events.back().c_job).get();
+	}
+
+	void call_event(interpretor::job_list* e)
+	{
+		events.emplace_back(e);
+		job_start = true;
+	}
+
+	void cancel_event()
+	{
+		events.pop_back();
+	}
+
+	void cancel_all()
+	{
+		events.clear();
+	}
+
+	void interrupt(interpretor::job_list* e)
+	{
+		cancel_all();
+		call_event(e);
+	}
+};
+
 class game
 {
 	std::list<scene> scenes;
@@ -87,12 +162,8 @@ class game
 	bool check_wall_collisionbox(engine::fvector pos, engine::fvector size);
 	bool check_button_collisionbox();
 
-	interpretor::job_list* c_event; //current event
-	int  c_job; // current job of event
-	bool job_start;
-	void next_job();
-	void wait_job();
-	int  tick_interpretor();
+	event_tracker tracker;
+	int           tick_interpretor();
 
 	// Contains shadow pair of is_global_entity bool value
 	std::list<utility::shadow_pair<entity, bool>> entities;
@@ -189,8 +260,7 @@ public:
 	utility::error load_textures(std::string path);
 	utility::error load_scene(std::string path);
 	utility::error load_game(std::string path);
-	utility::error trigger_event(std::string name);
-	utility::error trigger_event(interpretor::job_list* jl);
+	interpretor::job_list* find_event(std::string name);
 	int tick(engine::renderer& _r);
 	engine::node& get_root();
 	texture_manager& get_texture_manager();

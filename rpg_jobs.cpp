@@ -248,7 +248,6 @@ interpretor::parse_jobs_xml(tinyxml2::XMLElement* e)
 			ADD_JOB(JOB_scene_load(j));
 		else if (name == "tile:replace")
 			ADD_JOB(JOB_tile_replace(j));
-
 		else
 			std::cout << "Error: Invalid command '" << name << "'\n";
 		j = j->NextSiblingElement();
