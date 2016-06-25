@@ -14,6 +14,7 @@ const int TILE_DEPTH_RANGE_MIN = 1;
 const int TILE_DEPTH_RANGE_MAX = 100;
 const engine::time_t DEFAULT_DIALOG_SPEED = 30;
 const size_t CONTROL_COUNT = 8;
+const engine::time_t FADE_DURATION = 0.2;
 
 }
 #endif

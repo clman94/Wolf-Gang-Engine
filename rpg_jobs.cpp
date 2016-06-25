@@ -248,6 +248,10 @@ interpretor::parse_jobs_xml(tinyxml2::XMLElement* e)
 			ADD_JOB(JOB_scene_load(j));
 		else if (name == "tile:replace")
 			ADD_JOB(JOB_tile_replace(j));
+		else if (name == "fx:fadein")
+			ADD_JOB(JOB_fx_fade(FX_FADEIN));
+		else if (name == "fx:fadeout")
+			ADD_JOB(JOB_fx_fade(FX_FADEOUT));
 		else
 			std::cout << "Error: Invalid command '" << name << "'\n";
 		j = j->NextSiblingElement();

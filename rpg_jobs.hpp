@@ -33,7 +33,9 @@ enum job_op
 	ENTITY_CURRENT,
 	ENTITY_SETCYCLEGROUP,
 	ENTITY_SPAWN,
-	ENTITY_SETDIRECTION
+	ENTITY_SETDIRECTION,
+	FX_FADEIN,
+	FX_FADEOUT
 };
 
 struct job_entry
@@ -158,6 +160,13 @@ struct JOB_entity_setdirection : public job_entry
 {
 	int direction;
 	JOB_entity_setdirection(tinyxml2::XMLElement* e);
+};
+
+struct JOB_fx_fade : public job_entry
+{
+	engine::clock clock;
+	JOB_fx_fade(job_op _op = INVALID){ op = _op; }
+
 };
 
 job_list parse_jobs_xml(tinyxml2::XMLElement* e);

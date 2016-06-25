@@ -131,7 +131,8 @@ game::load_scene(std::string path)
 	if (auto entit = main_e->FirstChildElement("entities"))
 	{
 		clear_entities();
-		load_entities_list(entit);
+		if (load_entities_list(entit))
+			return "Failed to load entities for scene";
 	}
 	
 	// Set main character of scene
@@ -346,9 +347,6 @@ game::mc_movement()
 		check_event_collisionbox();
 	else if (main_character->get_animation())
 		main_character->get_animation()->restart();
-	
-	// Update pan
-	root.update_origin(main_character->get_relative_position() - engine::fvector(0, 16));
 	return 0;
 }
 
@@ -667,6 +665,54 @@ game::tick_interpretor()
 			tracker.next_job();
 			break;
 		}
+		case job_op::FX_FADEIN:
+		{
+			JOB_fx_fade* j = (JOB_fx_fade*)job;
+			if (tracker.is_start())
+			{
+				lock_mc_movement = true;
+				j->clock.restart();
+			}
+			engine::color c = fade_overlap.get_color();
+			engine::time_t t = j->clock.get_elapse().s();
+			if (t < FADE_DURATION)
+			{
+				c.a = 255 * (1 - (t / FADE_DURATION));
+				fade_overlap.set_color(c);
+				tracker.wait_job();
+			}
+			else
+			{
+				fade_overlap.set_color((c.a = 0, c));
+				lock_mc_movement = false;
+				tracker.next_job();
+			}
+			break;
+		}
+		case job_op::FX_FADEOUT:
+		{
+			JOB_fx_fade* j = (JOB_fx_fade*)job;
+			if (tracker.is_start())
+			{
+				lock_mc_movement = true;
+				j->clock.restart();
+			}
+			engine::color c = fade_overlap.get_color();
+			engine::time_t t = j->clock.get_elapse().s();
+			if (t < FADE_DURATION)
+			{
+				c.a = 255 * (t / FADE_DURATION);
+				fade_overlap.set_color(c);
+				tracker.wait_job();
+			}
+			else
+			{
+				fade_overlap.set_color((c.a = 255, c));
+				tracker.next_job();
+				lock_mc_movement = false;
+			}
+			break;
+		}
 
 		default:
 		{
@@ -687,6 +733,9 @@ game::tick(engine::renderer& _r)
 	if (control[ACTIVATE] && !lock_mc_movement)
 		check_button_collisionbox();
 	tick_interpretor();
+
+	// Update pan
+	root.update_origin(main_character->get_relative_position() - engine::fvector(0, 16));
 
 	frame_clock.restart();
 	reset_control();
@@ -765,7 +814,7 @@ game::load_textures(std::string path)
 		renderer->add_client(&narrative.expression);
 	}
 	{
-		fade_overlap.set_color({ 0, 0, 0, 255 });
+		fade_overlap.set_color({ 0, 0, 0, 0 });
 		fade_overlap.set_size(renderer->get_size());
 		fade_overlap.set_depth(-100);
 		renderer->add_client(&fade_overlap);
@@ -877,7 +926,7 @@ game::load_entity(std::string path, bool is_global_entity)
 
 	XMLDocument doc;
 	if (doc.LoadFile(path.c_str()))
-		return "Failed to load entity file at '" + path + "'";
+		return "Failed to load entity file '" + path + "'";
 
 	XMLElement* main_e = doc.FirstChildElement("entity");
 	if (!main_e) return "Please add root node. <entity>...</entity>";
@@ -1062,7 +1111,7 @@ game::load_game(std::string path)
 
 	XMLDocument doc;
 	if (doc.LoadFile(path.c_str()))
-		return "Parse error";
+		return "Failed to open game.xml";
 
 	XMLElement* main_e = doc.FirstChildElement("game");
 	if (!main_e)

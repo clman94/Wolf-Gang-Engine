@@ -88,6 +88,16 @@ class event_tracker
 	};
 	typedef std::deque<entry> event_hierarchy;	
 	
+	/*struct thread_entry   // TO THINK ABOUT
+	{
+		event_hierarchy events;
+		bool job_start;
+		thread_entry()
+			: job_start(true){}
+	};
+	typedef std::deque<thread_entry> thread_list;
+	thread_list threads;*/
+
 	event_hierarchy events;
 	bool job_start;
 

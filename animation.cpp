@@ -82,8 +82,7 @@ animated_sprite_node::draw(renderer &_r)
 	texture_crop crop = frames[c_frame];
 	_sprite.setTextureRect({ crop.x, crop.y, crop.w, crop.h });
 	fvector loc = get_position();
-	_sprite.setPosition({ loc.x, loc.y });
-
+	_sprite.setPosition(loc.x, loc.y);
 	_r.window.draw(_sprite);
 	return 0;
 }

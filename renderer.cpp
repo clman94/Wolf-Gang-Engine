@@ -100,8 +100,8 @@ renderer::get_size()
 {
 	return
 	{
-		window.getView().getViewport().width, 
-		window.getView().getViewport().height 
+		window.getView().getSize().x,
+		window.getView().getSize().y
 	};
 }
 

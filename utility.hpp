@@ -12,7 +12,7 @@ namespace utility
 // Allows one class to dominate and hides a hidden item that
 // can be retrieved for shady stuff.
 // Why have such a strangely shady class? Convienence, of course!
-template<typename T1, typename T2_S>
+template<class T1, typename T2_S>
 class shadow_pair
 	: public T1
 {

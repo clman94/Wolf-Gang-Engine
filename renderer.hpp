@@ -147,7 +147,7 @@ class rectangle_node :
 {
 	sf::RectangleShape shape;
 public:
-	void set_color(color c)
+	void set_color(const color& c)
 	{
 		shape.setFillColor(sf::Color(c.r, c.g, c.b, c.a));
 	}
@@ -156,14 +156,14 @@ public:
 		auto c = shape.getFillColor();
 		return{ c.r, c.g, c.b, c.a };
 	}
-	void set_size(fvector s)
+	void set_size(const fvector& s)
 	{
 		shape.setSize({ s.x, s.y });
 	}
 	virtual int draw(renderer &_r)
 	{
 		fvector loc = get_position();
-		shape.setPosition(sf::Vector2f((float)loc.x, (float)loc.y));
+		shape.setPosition(loc.x, loc.y);
 		_r.window.draw(shape);
 		return 0;
 	}
