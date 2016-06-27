@@ -559,6 +559,36 @@ game::tick_interpretor()
 			tracker.next_job();
 			break;
 		}
+		case job_op::ENTITY_SETANIMATION:
+		{
+			if (narrative.speaker)
+			{
+				JOB_entity_setanimation* j = (JOB_entity_setanimation*)job;
+				narrative.speaker->set_cycle_animation(j->name, entity::MISC);
+				narrative.speaker->set_cycle(entity::MISC);
+			}
+			tracker.next_job();
+			break;
+		}
+		case job_op::ENTITY_ANIMATIONSTART:
+		{
+			if (narrative.speaker)
+			{
+				JOB_entity_animationstart* j = (JOB_entity_animationstart*)job;
+				narrative.speaker->animation_start(entity::USER_TRIGGERED, j->loop);
+			}
+			tracker.next_job();
+			break;
+		}
+		case job_op::ENTITY_ANIMATIONSTOP:
+		{
+			if (narrative.speaker)
+			{
+				narrative.speaker->animation_stop(entity::USER_TRIGGERED);
+			}
+			tracker.next_job();
+			break;
+		}
 		case job_op::ENTITY_SETDIRECTION:
 		{
 			if (narrative.speaker)
@@ -673,17 +703,17 @@ game::tick_interpretor()
 				lock_mc_movement = true;
 				j->clock.restart();
 			}
-			engine::color c = fade_overlap.get_color();
+			engine::color c = graphic_fx.fade_overlap.get_color();
 			engine::time_t t = j->clock.get_elapse().s();
-			if (t < FADE_DURATION)
+			if (t < FADE_DURATION && c.a > 0)
 			{
 				c.a = 255 * (1 - (t / FADE_DURATION));
-				fade_overlap.set_color(c);
+				graphic_fx.fade_overlap.set_color(c);
 				tracker.wait_job();
 			}
 			else
 			{
-				fade_overlap.set_color((c.a = 0, c));
+				graphic_fx.fade_overlap.set_color((c.a = 0, c));
 				lock_mc_movement = false;
 				tracker.next_job();
 			}
@@ -697,17 +727,17 @@ game::tick_interpretor()
 				lock_mc_movement = true;
 				j->clock.restart();
 			}
-			engine::color c = fade_overlap.get_color();
+			engine::color c = graphic_fx.fade_overlap.get_color();
 			engine::time_t t = j->clock.get_elapse().s();
-			if (t < FADE_DURATION)
+			if (t < FADE_DURATION && c.a < 255)
 			{
 				c.a = 255 * (t / FADE_DURATION);
-				fade_overlap.set_color(c);
+				graphic_fx.fade_overlap.set_color(c);
 				tracker.wait_job();
 			}
 			else
 			{
-				fade_overlap.set_color((c.a = 255, c));
+				graphic_fx.fade_overlap.set_color((c.a = 255, c));
 				tracker.next_job();
 				lock_mc_movement = false;
 			}
@@ -754,7 +784,7 @@ game::load_textures(std::string path)
 		narrative.box.set_texture(*narrativebox_tx,"NarrativeBox");
 		narrative.box.set_position({ 32, 150 });
 		narrative.box.set_visible(false);
-		narrative.box.set_depth(0);
+		narrative.box.set_depth(NARRATIVE_BOX_DEPTH);
 		renderer->add_client(&narrative.box);
 	}
 	{ // Narrative Cursor (the arrow thing)
@@ -771,8 +801,8 @@ game::load_textures(std::string path)
 	font.load("data/font.ttf"); // Font
 	
 	{ // Narrative text and option elements
-		narrative.text.set_depth(-1);
-		narrative.option1.set_depth(-1);
+		narrative.text.set_depth(NARRATIVE_TEXT_DEPTH);
+		narrative.option1.set_depth(NARRATIVE_TEXT_DEPTH);
 
 		narrative.text.set_font(font);
 		narrative.option1.set_font(font);
@@ -801,7 +831,7 @@ game::load_textures(std::string path)
 
 	{ // Setup tile system
 		tile_system.ground.set_tile_size({ 32, 32 });
-		tile_system.ground.set_depth(100);
+		tile_system.ground.set_depth(TILE_DEPTH_RANGE_MAX);
 		root.add_child(tile_system.ground);
 		renderer->add_client(&tile_system.ground);
 
@@ -810,14 +840,29 @@ game::load_textures(std::string path)
 	}
 	{
 		narrative.expression.set_visible(false);
-		narrative.expression.set_depth(-1);
+		narrative.expression.set_depth(NARRATIVE_TEXT_DEPTH);
 		renderer->add_client(&narrative.expression);
 	}
 	{
-		fade_overlap.set_color({ 0, 0, 0, 0 });
-		fade_overlap.set_size(renderer->get_size());
-		fade_overlap.set_depth(-100);
-		renderer->add_client(&fade_overlap);
+		graphic_fx.fade_overlap.set_color({ 0, 0, 0, 0 });
+		graphic_fx.fade_overlap.set_size(renderer->get_size());
+		graphic_fx.fade_overlap.set_depth(ABSOLUTE_OVERLAP_DEPTH);
+		renderer->add_client(&graphic_fx.fade_overlap);
+	}
+	{
+		auto& nf0 = graphic_fx.narrow_focus[0];
+		auto& nf1 = graphic_fx.narrow_focus[1];
+		nf0.set_color({ 0, 0, 0, 255 });
+		nf1.set_color({ 0, 0, 0, 255 });
+		nf0.set_size({ renderer->get_size().x, 100 });
+		nf1.set_size({ renderer->get_size().x, 100 });
+		nf1.set_position({ 0, renderer->get_size().y - 100 });
+		nf0.set_visible(false);
+		nf1.set_visible(false);
+		nf0.set_depth(FX_DEPTH);
+		nf1.set_depth(FX_DEPTH);
+		renderer->add_client(&nf0);
+		renderer->add_client(&nf1);
 	}
 	{
 		sound.buffers.dialog_click_buf.load("data/sound/dialog.ogg");
@@ -866,12 +911,14 @@ game::load_entity_anim(
 		if (type)
 		{
 			std::string play_type = type;
-			if(play_type       == "constant")
+			if (play_type       == "constant")
 				na.type = entity::CONSTANT;
 			else if (play_type == "speech")
 				na.type = entity::SPEECH;
 			else if (play_type == "walk")
 				na.type = entity::WALK;
+			else if (play_type == "user")
+				na.type = entity::USER_TRIGGERED;
 			else
 				return "Invalid play type '" + play_type + "'";
 		}else
@@ -946,7 +993,7 @@ game::load_entity(std::string path, bool is_global_entity)
 	if (_err) return _err;
 
 	nentity.set_cycle(entity::DEFAULT);
-	nentity.set_depth(1);
+	nentity.set_depth(CHARACTER_DEPTH);
 
 	root.add_child(nentity);
 	nentity.set_relative_position({ 100, 50 });

@@ -159,6 +159,11 @@ public:
 		cancel_all();
 		call_event(e);
 	}
+
+	void queue_event(interpretor::job_list* e)
+	{
+		events.emplace_front(e);
+	}
 };
 
 class game
@@ -179,10 +184,22 @@ class game
 	std::list<utility::shadow_pair<entity, bool>> entities;
 	entity* find_entity(std::string name);
 	void clear_entities();
+	utility::error load_entity(std::string path, bool is_global_entity = false);
+	utility::error load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity = false);
+	utility::error load_entity_anim(tinyxml2::XMLElement* e, entity& c);
+
+	entity *main_character;   // Main character pointer
+	bool    lock_mc_movement; // Locks the movement of the main character is true.
+	bool    is_mc_moving();   // Simply checks for the directional controls.
+	int     mc_movement();    // Calculates the movement and animation of character
 
 	rpg::texture_manager tm;
 	panning_node root;
-	engine::rectangle_node fade_overlap;
+
+	struct{
+		engine::rectangle_node fade_overlap;
+		engine::rectangle_node narrow_focus[2];
+	} graphic_fx;
 
 	struct{
 		engine::sprite_node box;
@@ -205,19 +222,12 @@ class game
 	engine::font font;
 	engine::renderer* renderer;
 	
-	entity *main_character;   // Main character pointer
-	bool    lock_mc_movement; // Locks the movement of the main character is true.
-	bool    is_mc_moving();   // Simply checks for the directional controls.
-	int     mc_movement();    // Calculates the movement and animation of character
-	utility::error load_entity(std::string path, bool is_global_entity = false);
-	utility::error load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity = false);
-	utility::error load_entity_anim(tinyxml2::XMLElement* e, entity& c);
-
 	// The map of expression animations all identified by a string.
 	std::map<std::string, engine::animated_sprite_node> expressions;
 
-	// The set of globals. All defined by a string.
-	// These define the flow of the game.
+	// The set of flags. All defined by a string.
+	// These define the flow of the gam and various other things.
+	// They are very important and are recorded in the game save.
 	std::set<std::string> flags;
 	bool has_flag(std::string name);
 

@@ -5,7 +5,7 @@ entity::entity()
 {
 	for (int i = 0; i < 5; i++)
 	{
-		world_animation[i] = nullptr;
+		cycles[i] = nullptr;
 	}
 }
 
@@ -35,19 +35,19 @@ entity::find_animation(std::string name)
 engine::animated_sprite_node*
 entity::get_animation()
 {
-	return &world_animation[c_cycle]->node;
+	return &cycles[c_cycle]->node;
 }
 
 utility::error
 entity::set_cycle_animation(std::string _name, cycle_type cycle)
 {
 	auto a = find_animation(_name);
-	world_animation[cycle] = nullptr;
+	cycles[cycle] = nullptr;
 	if (!a)
 		return "Entity animation '" + _name + 
 			"' in entity '" + name + "' does not exist";
 	a->node.set_relative_position(a->node.get_size() * engine::fvector(0.5, 1) * (-1)); // Anchor at bottom
-	world_animation[cycle] = a;
+	cycles[cycle] = a;
 	return 0;
 }
 
@@ -57,6 +57,31 @@ entity::draw(engine::renderer &_r)
 	if (c_anim)
 		c_anim->node.draw(_r);
 	return 0;
+}
+
+void
+entity::animation_start(animation_type type, bool loop)
+{
+	if (c_anim && c_anim->type == type)
+	{
+		c_anim->node.set_loop(loop);
+		c_anim->node.start();
+	}
+}
+
+void
+entity::animation_stop(animation_type type)
+{
+	if (c_anim && c_anim->type == type)
+		c_anim->node.stop();
+}
+
+bool
+entity::is_animation_done()
+{
+	if (c_anim)
+		return c_anim->node.is_playing();
+	return true;
 }
 
 void
@@ -95,10 +120,12 @@ void
 entity::set_cycle(int cycle)
 {
 	c_cycle = cycle;
-	if (world_animation[cycle])
-		c_anim = world_animation[cycle];
+	if (cycles[cycle])
+		c_anim = cycles[cycle];
 	else
-		c_anim = world_animation[DEFAULT];
+		c_anim = cycles[DEFAULT];
+
+	animation_start(CONSTANT);
 }
 
 engine::fvector

@@ -98,10 +98,12 @@ renderer::~renderer()
 fvector
 renderer::get_size()
 {
+	auto px = window.getView().getSize();
+	auto scale = window.getView().getViewport();
 	return
 	{
-		window.getView().getSize().x,
-		window.getView().getSize().y
+		px.x / scale.width,
+		px.y / scale.height
 	};
 }
 

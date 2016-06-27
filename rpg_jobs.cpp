@@ -163,6 +163,13 @@ interpretor::JOB_entity_setcyclegroup::JOB_entity_setcyclegroup(tinyxml2::XMLEle
 	op = ENTITY_SETCYCLEGROUP;
 }
 
+interpretor::JOB_entity_setanimation::JOB_entity_setanimation(tinyxml2::XMLElement* e)
+{
+	if (auto _name = e->Attribute("name"))
+		name = _name;
+	op = ENTITY_SETANIMATION;
+}
+
 interpretor::JOB_entity_spawn::JOB_entity_spawn(tinyxml2::XMLElement* e)
 {
 	if (auto _as = e->Attribute("as"))
@@ -170,6 +177,13 @@ interpretor::JOB_entity_spawn::JOB_entity_spawn(tinyxml2::XMLElement* e)
 	if (auto _path = e->Attribute("path"))
 		path = _path;
 	op = ENTITY_SPAWN;
+}
+
+interpretor::JOB_entity_animationstart::JOB_entity_animationstart(tinyxml2::XMLElement* e)
+{
+	if (auto _loop = e->BoolAttribute("loop"))
+		loop = _loop;
+	op = ENTITY_ANIMATIONSTART;
 }
 
 interpretor::JOB_entity_setdirection::JOB_entity_setdirection(tinyxml2::XMLElement* e)
@@ -226,6 +240,12 @@ interpretor::parse_jobs_xml(tinyxml2::XMLElement* e)
 			ADD_JOB(JOB_entity_move(j));
 		else if (name == "entity:setcyclegroup")
 			ADD_JOB(JOB_entity_setcyclegroup(j));
+		else if (name == "entity:animation:set")
+			ADD_JOB(JOB_entity_setanimation(j));
+		else if (name == "entity:animation:start")
+			ADD_JOB(JOB_entity_animationstart(j));
+		else if (name == "entity:animation:stop")
+			ADD_JOB(job_entry(ENTITY_ANIMATIONSTOP));
 		else if (name == "entity:setdirection")
 			ADD_JOB(JOB_entity_setdirection(j));
 		else if (name == "flag:set")

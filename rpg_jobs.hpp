@@ -32,7 +32,10 @@ enum job_op
 	ENTITY_MOVE,
 	ENTITY_CURRENT,
 	ENTITY_SETCYCLEGROUP,
+	ENTITY_SETANIMATION,
 	ENTITY_SPAWN,
+	ENTITY_ANIMATIONSTART,
+	ENTITY_ANIMATIONSTOP,
 	ENTITY_SETDIRECTION,
 	FX_FADEIN,
 	FX_FADEOUT
@@ -150,10 +153,22 @@ struct JOB_entity_setcyclegroup : public job_entry
 	JOB_entity_setcyclegroup(tinyxml2::XMLElement* e);
 };
 
+struct JOB_entity_setanimation : public job_entry
+{
+	std::string name;
+	JOB_entity_setanimation(tinyxml2::XMLElement* e);
+};
+
 struct JOB_entity_spawn : public job_entry
 {
 	std::string as, path;
 	JOB_entity_spawn(tinyxml2::XMLElement* e);
+};
+
+struct JOB_entity_animationstart : public job_entry
+{
+	bool loop;
+	JOB_entity_animationstart(tinyxml2::XMLElement* e);
 };
 
 struct JOB_entity_setdirection : public job_entry
@@ -166,7 +181,6 @@ struct JOB_fx_fade : public job_entry
 {
 	engine::clock clock;
 	JOB_fx_fade(job_op _op = INVALID){ op = _op; }
-
 };
 
 job_list parse_jobs_xml(tinyxml2::XMLElement* e);

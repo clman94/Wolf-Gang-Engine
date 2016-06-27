@@ -23,7 +23,7 @@ class entity :
 	animation* find_animation(std::string name);
 	animation* c_anim;
 	std::string name;
-	animation* world_animation[6];
+	animation* cycles[6];
 	int c_cycle;
 public:
 	enum cycle_type
@@ -39,7 +39,8 @@ public:
 	{
 		WALK,
 		SPEECH,
-		CONSTANT
+		CONSTANT,
+		USER_TRIGGERED
 	};
 
 	entity();
@@ -52,17 +53,9 @@ public:
 
 	engine::animated_sprite_node* get_animation();
 
-	void animation_start(animation_type type)
-	{
-		if (c_anim && c_anim->type == type)
-			c_anim->node.start();
-	}
-
-	void animation_stop(animation_type type)
-	{
-		if (c_anim && c_anim->type == type)
-			c_anim->node.stop();
-	}
+	bool is_animation_done();
+	void animation_start(animation_type type, bool loop = true);
+	void animation_stop(animation_type type);
 
 	void move_left(float delta);
 	void move_right(float delta);
