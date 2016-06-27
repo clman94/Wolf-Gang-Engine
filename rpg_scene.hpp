@@ -4,6 +4,7 @@
 #include <list>
 #include "rpg_jobs.hpp"
 #include "tinyxml2\tinyxml2.h"
+#include "utility.hpp"
 
 namespace rpg
 {
@@ -34,11 +35,12 @@ struct scene
 		std::string name;
 		engine::fvector pos, size;
 		int type;
-		bool once, triggered;
+		bool triggered;
+		std::string bind_flag, if_flag;
 		interpretor::job_list inline_event;
 	};
 	std::list<collisionbox> collisionboxes;
-	int parse_collisionbox_xml(tinyxml2::XMLElement* e);
+	utility::error parse_collisionbox_xml(tinyxml2::XMLElement* e);
 };
 }
 

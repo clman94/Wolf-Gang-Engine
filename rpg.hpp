@@ -166,6 +166,8 @@ public:
 	}
 };
 
+
+// I know, I know Its a VERY large class.
 class game
 {
 	std::list<scene> scenes;
@@ -173,9 +175,8 @@ class game
 	scene* find_scene(const std::string name);
 	void switch_scene(scene* nscene);
 
-	bool check_event_collisionbox();
+	bool check_event_collisionbox(int type, engine::fvector pos);
 	bool check_wall_collisionbox(engine::fvector pos, engine::fvector size);
-	bool check_button_collisionbox();
 
 	event_tracker tracker;
 	int           tick_interpretor();

@@ -126,7 +126,7 @@ game::load_scene(std::string path)
 	// Trigger start event (optional)
 	auto start_event = find_event("_start_");
 	if (start_event)
-		tracker.interrupt(start_event);
+		tracker.queue_event(start_event);
 
 	if (auto entit = main_e->FirstChildElement("entities"))
 	{
@@ -227,18 +227,26 @@ game::close_narrative_box()
 }
 
 bool
-game::check_event_collisionbox()
+game::check_event_collisionbox(int type, engine::fvector pos)
 {
 	for (auto &i : c_scene->collisionboxes)
 	{
-		engine::fvector pos = main_character->get_relative_position();
-		if (i.type == i.TOUCH_EVENT &&
-			!i.triggered &&
+		if (i.type == type &&
 			pos.x >= i.pos.x &&
 			pos.y >= i.pos.y &&
 			pos.x <= i.pos.x + i.size.x &&
 			pos.y <= i.pos.y + i.size.y)
 		{
+			// Skip if flag does not exist
+			if (!i.if_flag.empty() &&
+				flags.find(i.if_flag) == flags.end())
+				continue;
+
+			// Skip if flag exist, otherwise create the flag and continue
+			if (!i.bind_flag.empty() &&
+				!flags.insert(i.bind_flag).second)
+				continue;
+
 			if (i.name.empty())
 				tracker.call_event(&i.inline_event);
 			else
@@ -247,8 +255,6 @@ game::check_event_collisionbox()
 				if (nevent)
 					tracker.call_event(nevent);
 			}
-
-			i.triggered = i.once;
 			return true;
 		}
 	}
@@ -266,35 +272,6 @@ game::check_wall_collisionbox(engine::fvector pos, engine::fvector size)
 			pos.x <= i.pos.x + i.size.x &&
 			pos.y <= i.pos.y + i.size.y)
 			return true;
-	}
-	return false;
-}
-
-bool 
-game::check_button_collisionbox()
-{
-	for (auto &i : c_scene->collisionboxes)
-	{
-		engine::fvector pos = main_character->get_activate_point();
-		if (i.type == i.BUTTON &&
-			!i.triggered &&
-			pos.x >= i.pos.x &&
-			pos.y >= i.pos.y &&
-			pos.x <= i.pos.x + i.size.x &&
-			pos.y <= i.pos.y + i.size.y)
-		{
-			if (i.name.empty())
-				tracker.call_event(&i.inline_event);
-			else
-			{
-				auto nevent = find_event(i.name);
-				if (nevent)
-					tracker.call_event(nevent);
-			}
-
-			i.triggered = i.once;
-			return true;
-		}
 	}
 	return false;
 }
@@ -342,9 +319,9 @@ game::mc_movement()
 		if (!check_wall_collisionbox(mc_pos - fvector(8, 0), { 16, 4 }))
 			main_character->move_down(delta);
 	}
-
+	
 	if (is_mc_moving() && !lock_mc_movement)
-		check_event_collisionbox();
+		check_event_collisionbox(scene::collisionbox::TOUCH_EVENT, mc_pos);
 	else if (main_character->get_animation())
 		main_character->get_animation()->restart();
 	return 0;
@@ -419,7 +396,7 @@ game::tick_interpretor()
 			// Reveal text one by one
 			if (j->clock.get_elapse().ms() >= j->char_interval)
 			{
-				if (j->c_char % 2 == 0) sound.FX_dialog_click.play(); // Play FX every other character
+				if (j->c_char % DIALOG_FX_INTERVAL == 0) sound.FX_dialog_click.play(); // Play FX
 				int amnt = 1 + (j->text[j->c_char] == ' ' ? 1 : 0); // Jump spaces (smoother to look at)
 				narrative.text.append_text(j->text.substr(j->c_char, amnt));
 				j->c_char += amnt;
@@ -606,6 +583,15 @@ game::tick_interpretor()
 			tracker.next_job();
 			break;
 		}
+		case job_op::FLAG_UNSET:
+		{
+			JOB_flag_unset* j = (JOB_flag_unset*)job;
+			auto & c = flags.find(j->name);
+			if (c != flags.end())
+				flags.erase(c);
+			tracker.next_job();
+			break;
+		}
 		case job_op::FLAG_IF:
 		{
 			JOB_flag_if* j = (JOB_flag_if*)job;
@@ -678,6 +664,7 @@ game::tick_interpretor()
 		{
 			JOB_scene_load* j = (JOB_scene_load*)job;
 			load_scene(j->path);
+			tracker.next_job();
 			break;
 		}
 		case job_op::TILE_REPLACE:
@@ -761,7 +748,8 @@ game::tick(engine::renderer& _r)
 	mc_movement();
 
 	if (control[ACTIVATE] && !lock_mc_movement)
-		check_button_collisionbox();
+		check_event_collisionbox(scene::collisionbox::BUTTON, main_character->get_activate_point());
+
 	tick_interpretor();
 
 	// Update pan

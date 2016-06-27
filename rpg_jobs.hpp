@@ -20,6 +20,7 @@ enum job_op
 	HIDEBOX,
 	SELECTION,
 	FLAG_SET,
+	FLAG_UNSET,
 	FLAG_IF,
 	FLAG_EXITIF,
 	FLAG_ONCE,
@@ -102,6 +103,12 @@ struct JOB_flag_set : public job_entry
 {
 	std::string name;
 	JOB_flag_set(tinyxml2::XMLElement* e);
+};
+
+struct JOB_flag_unset : public job_entry
+{
+	std::string name;
+	JOB_flag_unset(tinyxml2::XMLElement* e);
 };
 
 struct JOB_flag_if : public job_entry

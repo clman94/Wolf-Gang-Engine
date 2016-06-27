@@ -3,6 +3,8 @@
 
 namespace engine
 {
+
+// Template expects POD types like int, double, float, etc...
 template<typename T>
 struct vector
 {
@@ -37,6 +39,8 @@ struct vector
 		return{ x * (T)A.x, y * (T)A.y};
 	}
 
+	// No division, Very error prone.
+
 	template<typename T1>
 	vector operator * (const T1& A)
 	{
@@ -62,6 +66,33 @@ struct vector
 		y = (T)A.y;
 		return *this;
 	}
+
+
+	template<typename T1>
+	vector& operator += (const vector<T1>& A)
+	{
+		x += (T)A.x;
+		y += (T)A.y;
+		return *this;
+	}
+
+	template<typename T1>
+	vector& operator -= (const vector<T1>& A)
+	{
+		x -= (T)A.x;
+		y -= (T)A.y;
+		return *this;
+	}
+
+	template<typename T1>
+	vector& operator *= (const vector<T1>& A)
+	{
+		x *= (T)A.x;
+		y *= (T)A.y;
+		return *this;
+	}
+
+	// No division, Very error prone.
 
 	template<typename>
 	friend struct vector;

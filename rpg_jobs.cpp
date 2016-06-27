@@ -97,6 +97,14 @@ interpretor::JOB_flag_set::JOB_flag_set(tinyxml2::XMLElement* e)
 	op = FLAG_SET;
 }
 
+interpretor::JOB_flag_unset::JOB_flag_unset(tinyxml2::XMLElement* e)
+{
+	using namespace tinyxml2;
+	if (auto _name = e->Attribute("name"))
+		name = _name;
+	op = FLAG_UNSET;
+}
+
 interpretor::JOB_flag_if::JOB_flag_if(tinyxml2::XMLElement* e)
 {
 	using namespace tinyxml2;
@@ -217,61 +225,91 @@ interpretor::parse_jobs_xml(tinyxml2::XMLElement* e)
 		std::string name = j->Name();
 		if (name == "fsay")
 			ADD_JOB(JOB_say(j));
+
 		else if (name == "say")
 		{
 			ADD_JOB(JOB_say(j));
 			ADD_JOB(job_entry(WAITFORKEY));
 		}
+
 		else if (name == "append")
 			ADD_JOB(JOB_say(j, true));
+
 		else if (name == "nl")
 			ADD_JOB(JOB_say(j, true, true));
+
 		else if (name == "wait")
 			ADD_JOB(JOB_wait(j));
+
 		else if (name == "keywait")
 			ADD_JOB(job_entry(WAITFORKEY));
+
 		else if (name == "hidebox")
 			ADD_JOB(job_entry(HIDEBOX));
+
 		else if (name == "selection")
 			ADD_JOB(JOB_selection(j));
+
 		else if (name == "entity:current")
 			ADD_JOB(JOB_entity_current(j));
+
 		else if (name == "entity:move")
 			ADD_JOB(JOB_entity_move(j));
+
 		else if (name == "entity:setcyclegroup")
 			ADD_JOB(JOB_entity_setcyclegroup(j));
+
 		else if (name == "entity:animation:set")
 			ADD_JOB(JOB_entity_setanimation(j));
+
 		else if (name == "entity:animation:start")
 			ADD_JOB(JOB_entity_animationstart(j));
+
 		else if (name == "entity:animation:stop")
 			ADD_JOB(job_entry(ENTITY_ANIMATIONSTOP));
+
 		else if (name == "entity:setdirection")
 			ADD_JOB(JOB_entity_setdirection(j));
+
 		else if (name == "flag:set")
 			ADD_JOB(JOB_flag_set(j));
+
+		else if (name == "flag:unset")
+			ADD_JOB(JOB_flag_unset(j));
+
 		else if (name == "flag:if")
 			ADD_JOB(JOB_flag_if(j));
+
 		else if (name == "flag:exitif")
 			ADD_JOB(JOB_flag_exitif(j));
+
 		else if (name == "flag:once")
 			ADD_JOB(JOB_flag_once(j));
+
 		else if (name == "music:set")
 			ADD_JOB(JOB_music_set(j));
+
 		else if (name == "music:pause")
 			ADD_JOB(job_entry(MUSIC_PAUSE));
+
 		else if (name == "music:play")
 			ADD_JOB(job_entry(MUSIC_PLAY));
+
 		else if (name == "music:stop")
 			ADD_JOB(job_entry(MUSIC_STOP));
+
 		else if (name == "scene:load")
 			ADD_JOB(JOB_scene_load(j));
+
 		else if (name == "tile:replace")
 			ADD_JOB(JOB_tile_replace(j));
+
 		else if (name == "fx:fadein")
 			ADD_JOB(JOB_fx_fade(FX_FADEIN));
+
 		else if (name == "fx:fadeout")
 			ADD_JOB(JOB_fx_fade(FX_FADEOUT));
+
 		else
 			std::cout << "Error: Invalid command '" << name << "'\n";
 		j = j->NextSiblingElement();

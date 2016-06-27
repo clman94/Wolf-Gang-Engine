@@ -1,4 +1,5 @@
 #include "rpg_scene.hpp"
+#include "rpg_config.hpp"
 
 using namespace rpg;
 
@@ -15,7 +16,7 @@ scene::parse_events_xml(tinyxml2::XMLElement* e)
 	return 0;
 }
 
-int
+utility::error
 scene::parse_collisionbox_xml(tinyxml2::XMLElement* e)
 {
 	using namespace tinyxml2;
@@ -28,7 +29,8 @@ scene::parse_collisionbox_xml(tinyxml2::XMLElement* e)
 		std::string name = c->Name();
 		if (name == "box")
 		{
-			collisionbox nbox;
+			collisionboxes.emplace_back();
+			collisionbox& nbox = collisionboxes.back();
 			nbox.pos.x = c->FloatAttribute("x") * 32;
 			nbox.pos.y = c->FloatAttribute("y") * 32;
 			nbox.size.x = c->FloatAttribute("w") * 32;
@@ -37,41 +39,44 @@ scene::parse_collisionbox_xml(tinyxml2::XMLElement* e)
 				nbox.name = eventname;
 			else
 				nbox.inline_event = interpretor::parse_jobs_xml(c);
-			nbox.once = c->BoolAttribute("once");
-			nbox.type = nbox.TOUCH_EVENT;
-			nbox.triggered = false;
-			collisionboxes.push_back(nbox);
+			if (auto f = c->Attribute("bind"))
+				nbox.bind_flag = f;
+			if (auto f = c->Attribute("if"))
+				nbox.if_flag = f;
+			nbox.type = collisionbox::box_type::TOUCH_EVENT;
 		}
 		else if (name == "button")
 		{
-			collisionbox nbox;
-			nbox.pos.x = c->FloatAttribute("x") * 32;
-			nbox.pos.y = c->FloatAttribute("y") * 32;
-			nbox.size.x = c->FloatAttribute("w") * 32;
-			nbox.size.y = c->FloatAttribute("h") * 32;
+			collisionboxes.emplace_back();
+			collisionbox& nbox = collisionboxes.back();
+			nbox.pos.x = c->FloatAttribute("x");
+			nbox.pos.y = c->FloatAttribute("y");
+			nbox.pos *= TILE_SIZE;
+			nbox.size.x = c->FloatAttribute("w");
+			nbox.size.y = c->FloatAttribute("h");
+			nbox.size *= TILE_SIZE;
 			if (auto eventname = c->Attribute("event"))
 				nbox.name = eventname;
 			else
 				nbox.inline_event = interpretor::parse_jobs_xml(c);
-			nbox.once = c->BoolAttribute("once");
-			nbox.type = nbox.BUTTON;
-			nbox.triggered = false;
-			collisionboxes.push_back(nbox);
+			if (auto f = c->Attribute("bind"))
+				nbox.bind_flag = f;
+			if (auto f = c->Attribute("if"))
+				nbox.if_flag = f;
+			nbox.type = collisionbox::box_type::BUTTON;
 		}
 		else if (name == "wall")
 		{
-			collisionbox nbox;
+			collisionboxes.emplace_back();
+			collisionbox& nbox = collisionboxes.back();
 			nbox.pos.x = c->FloatAttribute("x") * 32;
 			nbox.pos.y = c->FloatAttribute("y") * 32;
 			nbox.size.x = c->FloatAttribute("w") * 32;
 			nbox.size.y = c->FloatAttribute("h") * 32;
-			nbox.type = nbox.WALL;
-			collisionboxes.push_back(nbox);
+			nbox.type = collisionbox::box_type::WALL;
 		}
 		else
-		{
-			std::cout << "Error: Invalid collisionbox type '" << name << "'\n";
-		}
+			return "Invalid collisionbox type '" + name + "'\n";
 		c = c->NextSiblingElement();
 	}
 	return 0;
