@@ -31,10 +31,12 @@ scene::parse_collisionbox_xml(tinyxml2::XMLElement* e)
 		{
 			collisionboxes.emplace_back();
 			collisionbox& nbox = collisionboxes.back();
-			nbox.pos.x = c->FloatAttribute("x") * 32;
-			nbox.pos.y = c->FloatAttribute("y") * 32;
-			nbox.size.x = c->FloatAttribute("w") * 32;
-			nbox.size.y = c->FloatAttribute("h") * 32;
+			nbox.pos.x  = c->FloatAttribute("x");
+			nbox.pos.y  = c->FloatAttribute("y");
+			nbox.pos   *= TILE_SIZE;
+			nbox.size.x = c->FloatAttribute("w");
+			nbox.size.y = c->FloatAttribute("h");
+			nbox.size  *= TILE_SIZE;
 			if (auto eventname = c->Attribute("event"))
 				nbox.name = eventname;
 			else
@@ -49,12 +51,12 @@ scene::parse_collisionbox_xml(tinyxml2::XMLElement* e)
 		{
 			collisionboxes.emplace_back();
 			collisionbox& nbox = collisionboxes.back();
-			nbox.pos.x = c->FloatAttribute("x");
-			nbox.pos.y = c->FloatAttribute("y");
-			nbox.pos *= TILE_SIZE;
+			nbox.pos.x  = c->FloatAttribute("x");
+			nbox.pos.y  = c->FloatAttribute("y");
+			nbox.pos   *= TILE_SIZE;
 			nbox.size.x = c->FloatAttribute("w");
 			nbox.size.y = c->FloatAttribute("h");
-			nbox.size *= TILE_SIZE;
+			nbox.size  *= TILE_SIZE;
 			if (auto eventname = c->Attribute("event"))
 				nbox.name = eventname;
 			else
@@ -69,11 +71,13 @@ scene::parse_collisionbox_xml(tinyxml2::XMLElement* e)
 		{
 			collisionboxes.emplace_back();
 			collisionbox& nbox = collisionboxes.back();
-			nbox.pos.x = c->FloatAttribute("x") * 32;
-			nbox.pos.y = c->FloatAttribute("y") * 32;
-			nbox.size.x = c->FloatAttribute("w") * 32;
-			nbox.size.y = c->FloatAttribute("h") * 32;
-			nbox.type = collisionbox::box_type::WALL;
+			nbox.pos.x  = c->FloatAttribute("x");
+			nbox.pos.y  = c->FloatAttribute("y");
+			nbox.pos   *= TILE_SIZE;
+			nbox.size.x = c->FloatAttribute("w");
+			nbox.size.y = c->FloatAttribute("h");
+			nbox.size  *= TILE_SIZE;
+			nbox.type   = collisionbox::box_type::WALL;
 		}
 		else
 			return "Invalid collisionbox type '" + name + "'\n";

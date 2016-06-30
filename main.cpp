@@ -50,6 +50,8 @@ int main(int argc, char* argv[])
 			game.trigger_control(game.SELECT_PREV);
 		if (r.is_key_pressed(engine::renderer::key_type::Right))
 			game.trigger_control(game.SELECT_NEXT);
+		if (r.is_key_held(engine::renderer::key_type::Escape))
+			working = false;
 
 		game.tick(r);
 		r.draw();

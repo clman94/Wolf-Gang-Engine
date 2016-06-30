@@ -139,7 +139,15 @@ interpretor::JOB_music_set::JOB_music_set(tinyxml2::XMLElement* e)
 	if (auto _path = e->Attribute("path"))
 		path = _path;
 	loop = e->BoolAttribute("loop");
+	float vol = e->FloatAttribute("volume");
+	volume = vol ? vol : 100; // defualt max volume
 	op = MUSIC_SET;
+}
+
+interpretor::JOB_music_volume::JOB_music_volume(tinyxml2::XMLElement* e)
+{
+	volume = e->FloatAttribute("set");
+	op = MUSIC_VOLUME;
 }
 
 interpretor::JOB_scene_load::JOB_scene_load(tinyxml2::XMLElement* e)
@@ -214,7 +222,10 @@ interpretor::JOB_entity_setdirection::JOB_entity_setdirection(tinyxml2::XMLEleme
 	op = ENTITY_SETDIRECTION;
 }
 
+
+
 #define ADD_JOB(A) jobs_ret.push_back(new A)
+
 job_list
 interpretor::parse_jobs_xml(tinyxml2::XMLElement* e)
 {
@@ -288,6 +299,9 @@ interpretor::parse_jobs_xml(tinyxml2::XMLElement* e)
 
 		else if (name == "music:set")
 			ADD_JOB(JOB_music_set(j));
+
+		else if (name == "music:volume")
+			ADD_JOB(JOB_music_volume(j));
 
 		else if (name == "music:pause")
 			ADD_JOB(job_entry(MUSIC_PAUSE));

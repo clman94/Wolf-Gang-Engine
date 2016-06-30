@@ -125,7 +125,7 @@ entity::set_cycle(int cycle)
 	else
 		c_anim = cycles[DEFAULT];
 
-	animation_start(CONSTANT);
+	animation_start(CONSTANT, true);
 }
 
 engine::fvector

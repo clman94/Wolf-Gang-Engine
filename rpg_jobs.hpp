@@ -28,6 +28,7 @@ enum job_op
 	TILE_REPLACE,
 	MUSIC_PAUSE,
 	MUSIC_SET,
+	MUSIC_VOLUME,
 	MUSIC_PLAY,
 	MUSIC_STOP,
 	ENTITY_MOVE,
@@ -135,9 +136,17 @@ struct JOB_flag_once : public job_entry
 struct JOB_music_set : public job_entry
 {
 	bool loop;
+	float volume;
 	std::string path;
 	JOB_music_set(tinyxml2::XMLElement* e);
 };
+
+struct JOB_music_volume : public job_entry
+{
+	float volume;
+	JOB_music_volume(tinyxml2::XMLElement* e);
+};
+
 
 struct JOB_scene_load : public job_entry
 {
@@ -189,6 +198,7 @@ struct JOB_fx_fade : public job_entry
 	engine::clock clock;
 	JOB_fx_fade(job_op _op = INVALID){ op = _op; }
 };
+
 
 job_list parse_jobs_xml(tinyxml2::XMLElement* e);
 

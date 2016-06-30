@@ -118,6 +118,10 @@ namespace engine
 		{
 			s.setLoop(loop);
 		}
+		void set_volume(float volume)
+		{
+			s.setVolume(volume);
+		}
 		bool is_playing()
 		{
 			return s.getStatus() == s.Playing;

@@ -35,7 +35,6 @@ struct scene
 		std::string name;
 		engine::fvector pos, size;
 		int type;
-		bool triggered;
 		std::string bind_flag, if_flag;
 		interpretor::job_list inline_event;
 	};

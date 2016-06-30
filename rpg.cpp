@@ -322,8 +322,8 @@ game::mc_movement()
 	
 	if (is_mc_moving() && !lock_mc_movement)
 		check_event_collisionbox(scene::collisionbox::TOUCH_EVENT, mc_pos);
-	else if (main_character->get_animation())
-		main_character->get_animation()->restart();
+	else
+		main_character->animation_stop(entity::animation_type::WALK);
 	return 0;
 }
 
@@ -637,8 +637,16 @@ game::tick_interpretor()
 				sound.bg_music.open(j->path);
 				sound.bg_music.play();
 				sound.bg_music.set_loop(j->loop);
+				sound.bg_music.set_volume(j->volume);
 				utility::get_shadow(sound.bg_music) = j->path;
 			}
+			tracker.next_job();
+			break;
+		}
+		case job_op::MUSIC_VOLUME:
+		{
+			JOB_music_volume* j = (JOB_music_volume*)job;
+			sound.bg_music.set_volume(j->volume);
 			tracker.next_job();
 			break;
 		}
