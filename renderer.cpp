@@ -40,14 +40,14 @@ render_client::~render_client()
 }
 
 void
-render_client::set_depth(int d)
+render_client::set_depth(float d)
 {
 	depth = d;
 	if (renderer_)
 		renderer_->sort_clients();
 }
 
-int
+float
 render_client::get_depth()
 {
 	return depth;

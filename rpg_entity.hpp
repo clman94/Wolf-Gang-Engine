@@ -25,6 +25,11 @@ class entity :
 	std::string name;
 	animation* cycles[6];
 	int c_cycle;
+
+	void update_depth();
+
+	float last_y; // for depth automation
+	int depth_automation;
 public:
 	enum cycle_type
 	{
@@ -43,6 +48,12 @@ public:
 		USER_TRIGGERED
 	};
 
+	enum depth_auto
+	{
+		DEPTH_AUTO_NONE,
+		DEPTH_AUTO_TO_Y
+	};
+
 	entity();
 	std::string get_name();
 	void set_name(std::string _name);
@@ -50,6 +61,8 @@ public:
 	utility::error set_cycle_group(std::string name);
 	void set_cycle(int cycle);
 	engine::fvector get_activate_point();
+
+	void set_auto_depth(int set);
 
 	engine::animated_sprite_node* get_animation();
 
@@ -66,108 +79,6 @@ public:
 	friend class game;
 };
 
-
-/* I was trying to improve the class above and ended up only rewritting the same thing
-class entity
-	:public engine::render_client
-{
-	struct animation
-	{
-		engine::animated_sprite_node n;
-		std::string name;
-		int type;
-	};
-	std::list<animation> animations;
-	animation* find_animation(std::string name)
-	{
-		for (auto& i : animations)
-		{
-			if (i.name == name)
-				return &i;
-		}
-		return nullptr;
-	}
-	animation* cycles[5];
-	int c_cycle;
-
-	std::string name;
-public:
-
-	const std::string& get_name()
-	{
-		return name;
-	}
-
-	int get_entity_type(){ return TYPE_CHARACTER; }
-
-	enum animation_cycle
-	{
-		LEFT,
-		RIGHT,
-		UP,
-		DOWN,
-		MISC
-	};
-
-	enum animation_type
-	{
-		TYPE_WORLD_WALK,
-		TYPE_WORLD_SPEECH
-	};
-
-	int set_cycle(int cycle)
-	{
-		c_cycle = cycle;
-	}
-
-	int set_cycle_animation(int cycle, std::string name)
-	{
-		auto anim = find_animation(name);
-		if (!anim) return 1;
-		cycles[cycle] = anim;
-		return 0;
-	}
-
-	void move_up(engine::fvector offset)
-	{
-
-	}
-
-	// Only relevant to the main character
-	engine::fvector get_activate_point()
-	{
-		using namespace engine;
-		auto pos = get_relative_position();
-		switch (c_cycle)
-		{
-		case LEFT:
-			return pos - fvector(32, 0);
-		case RIGHT:
-			return pos + fvector(32, 0);
-		case UP:
-			return pos - fvector(0, 32);
-		case DOWN:
-			return pos + fvector(0, 32);
-		}
-		return pos;
-	}
-
-	// game class contains everything that loads this class
-	friend class game;
-};*/
-
 }
 
 #endif
-
-
-
-/*
-GOALS
-
-- Render 2 animations; one on the world, one as the expression
-- The world animation should be able to "speek" as well with the
-  expression if the currnt animation is set too.
-
-*/
-

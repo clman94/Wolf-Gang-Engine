@@ -32,10 +32,13 @@ game::find_entity(std::string name)
 void
 game::clear_entities()
 {
-	for (auto &i = entities.begin(); i != entities.end(); i++)
+	for (auto i = entities.begin(); i != entities.end(); i++)
 	{
 		if (!utility::get_shadow(*i))
+		{
 			entities.erase(i);
+			i = entities.begin();
+		}
 	}
 }
 
@@ -621,10 +624,8 @@ game::tick_interpretor()
 			if (has_flag(j->name))
 				tracker.cancel_event();
 			else
-			{
 				flags.insert(j->name);
-				tracker.next_job();
-			}
+			tracker.next_job();
 			break;
 		}
 		case job_op::MUSIC_SET:
@@ -790,7 +791,7 @@ game::load_textures(std::string path)
 		narrative.cursor.set_parent(narrative.box);
 		narrative.cursor.set_relative_position({ 235, 55 });
 		narrative.cursor.set_visible(false);
-		narrative.cursor.set_depth(-1);
+		narrative.cursor.set_depth(NARRATIVE_TEXT_DEPTH);
 		renderer->add_client(&narrative.cursor);
 	}
 
@@ -827,7 +828,7 @@ game::load_textures(std::string path)
 
 	{ // Setup tile system
 		tile_system.ground.set_tile_size({ 32, 32 });
-		tile_system.ground.set_depth(TILE_DEPTH_RANGE_MAX);
+		tile_system.ground.set_depth(TILES_DEPTH);
 		root.add_child(tile_system.ground);
 		renderer->add_client(&tile_system.ground);
 
@@ -842,7 +843,7 @@ game::load_textures(std::string path)
 	{
 		graphic_fx.fade_overlap.set_color({ 0, 0, 0, 0 });
 		graphic_fx.fade_overlap.set_size(renderer->get_size());
-		graphic_fx.fade_overlap.set_depth(ABSOLUTE_OVERLAP_DEPTH);
+		graphic_fx.fade_overlap.set_depth(FX_DEPTH);
 		renderer->add_client(&graphic_fx.fade_overlap);
 	}
 	{
@@ -892,21 +893,20 @@ game::load_entity_anim(
 		c.world.emplace_back();
 		entity::animation& na = c.world.back();
 
-		na.node.set_visible(true);
+		int  atr_frames   = ele->IntAttribute("frames");
+		int  atr_interval = ele->IntAttribute("interval");
+		bool atr_loop     = ele->BoolAttribute("loop");
+		bool atr_pingpong = ele->BoolAttribute("pingpong");
+		auto atr_atlas    = ele->Attribute("atlas");
+		auto atr_tex      = ele->Attribute("tex");
+		auto atr_type     = ele->Attribute("type");
 
-		int frames    = ele->IntAttribute("frames");
-		int interval  = ele->IntAttribute("interval");
-		bool loop     = ele->BoolAttribute("loop");
-		auto atlas    = ele->Attribute("atlas");
-		auto tex      = ele->Attribute("tex");
-		auto type     = ele->Attribute("type");
+		if (!atr_tex) return "Please provide texture attibute for character";
+		if (!atr_atlas) return "Please provide atlas attribute for character";
 
-		if (!tex) return "Please provide texture attibute for character";
-		if (!atlas) return "Please provide atlas attribute for character";
-
-		if (type)
+		if (atr_type)
 		{
-			std::string play_type = type;
+			std::string play_type = atr_type;
 			if (play_type       == "constant")
 				na.type = entity::CONSTANT;
 			else if (play_type == "speech")
@@ -920,16 +920,20 @@ game::load_entity_anim(
 		}else
 			na.type = entity::WALK; // Default walk
 
-		auto t = tm.get_texture(tex);
-		if (!t) return "Texture '" + std::string(tex) + "' not found";
+		auto t = tm.get_texture(atr_tex);
+		if (!t) return "Texture '" + std::string(atr_tex) + "' not found";
 
-		na.node.set_interval(interval);
-		na.node.set_loop(loop);
+		int loop_type = na.node.LOOP_NONE;
+		if (atr_loop)     loop_type = na.node.LOOP_LINEAR;
+		if (atr_pingpong) loop_type = na.node.LOOP_PING_PONG;
+		na.node.set_loop(loop_type);
+
+		na.node.set_interval(atr_interval);
 		na.node.set_texture(*t);
 		na.node.generate_sequence(
-			(frames <= 0 ? 1 : frames), // Default one frame
+			(atr_frames <= 0 ? 1 : atr_frames), // Default one frame
 			*t,
-			atlas);
+			atr_atlas);
 
 		na.node.set_parent(c);
 
@@ -949,10 +953,15 @@ game::load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity)
 	{
 		auto name = ele->Name();
 		if (!name) return "Please specify name of entity";
-		auto path = ele->Attribute("path");
-		if (!path) return "Please specify path to entity file";
-		load_entity(path, is_global_entity);
+
+		auto atr_path = ele->Attribute("path");
+		if (!atr_path) return "Please specify path to entity file";
+		load_entity(atr_path, is_global_entity);
 		entities.back().set_name(name);
+
+		engine::fvector npos = { ele->FloatAttribute("x"), ele->FloatAttribute("y")};
+		entities.back().set_relative_position(npos * TILE_SIZE);
+
 		ele = ele->NextSiblingElement();
 	}
 	return 0;
@@ -989,7 +998,7 @@ game::load_entity(std::string path, bool is_global_entity)
 	if (_err) return _err;
 
 	nentity.set_cycle(entity::DEFAULT);
-	nentity.set_depth(CHARACTER_DEPTH);
+	//nentity.set_depth(CHARACTER_DEPTH);
 
 	root.add_child(nentity);
 	nentity.set_relative_position({ 100, 50 });
@@ -1019,9 +1028,9 @@ game::load_tilemap_individual(tinyxml2::XMLElement* e, size_t layer)
 	{
 		std::string name = c->Name();
 
-		int rfill = c->IntAttribute("f");
-		int dfill = c->IntAttribute("fd");
-		int rot = c->IntAttribute("r");
+		int atr_rf = c->IntAttribute("f");
+		int atr_df = c->IntAttribute("fd");
+		int atr_rot = c->IntAttribute("r");
 
 		engine::ivector pos(
 			c->IntAttribute("x"),
@@ -1032,33 +1041,33 @@ game::load_tilemap_individual(tinyxml2::XMLElement* e, size_t layer)
 		{
 			scene::collisionbox nbox;
 			nbox.pos = pos * TILE_SIZE;
-			nbox.size = engine::ivector(rfill ? rfill : 1, dfill ? dfill : 1) * TILE_SIZE; // Default at one; convert to pixels
+			nbox.size = engine::ivector(atr_rf ? atr_rf : 1, atr_df ? atr_df : 1) * TILE_SIZE; // Default at one; convert to pixels
 			nbox.type = nbox.WALL;
 			c_scene->collisionboxes.push_back(nbox);
 		}
 
 		// Fill row
-		if (rfill)
+		if (atr_rf)
 		{
-			for (int i = 0; i < rfill; i++)
+			for (int i = 0; i < atr_rf; i++)
 			{
-				ground.set_tile(pos, name, rot);
+				ground.set_tile(pos, name, atr_rot);
 				++pos.x;
 			}
 		}
 
 		// Fill column
-		else if (dfill)
+		else if (atr_df)
 		{
-			for (int i = 0; i < dfill; i++)
+			for (int i = 0; i < atr_df; i++)
 			{
-				ground.set_tile(pos, name, rot);
+				ground.set_tile(pos, name, atr_rot);
 				++pos.y;
 			}
 		}
 		else
 		{  // No fill
-			ground.set_tile(pos, name, rot);
+			ground.set_tile(pos, name, atr_rot);
 		}
 
 		c = c->NextSiblingElement();

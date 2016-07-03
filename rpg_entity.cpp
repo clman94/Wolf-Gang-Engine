@@ -1,8 +1,10 @@
 #include "rpg_entity.hpp"
+#include "rpg_config.hpp"
 using namespace rpg;
 
 entity::entity()
 {
+	last_y = -1;
 	for (int i = 0; i < 5; i++)
 	{
 		cycles[i] = nullptr;
@@ -51,11 +53,30 @@ entity::set_cycle_animation(std::string _name, cycle_type cycle)
 	return 0;
 }
 
+void
+entity::update_depth()
+{
+	if (c_anim)
+	{
+		if (last_y != get_relative_position().y)
+		{
+			last_y = get_relative_position().y;
+			set_depth(utility::clamp(
+				TILE_DEPTH_RANGE_MAX - (last_y / 32),
+				TILE_DEPTH_RANGE_MIN,
+				TILE_DEPTH_RANGE_MAX));
+		}
+	}
+}
+
 int
 entity::draw(engine::renderer &_r)
 {
 	if (c_anim)
+	{
+		update_depth();
 		c_anim->node.draw(_r);
+	}
 	return 0;
 }
 
@@ -156,4 +177,10 @@ entity::set_cycle_group(std::string name)
 	if (set_cycle_animation(name + ":default", entity::DEFAULT).handle_error())      // default is required though...
 		return "Default animation/sprite is required for cycle group '" + name + "'";
 	return 0;
+}
+
+void
+entity::set_auto_depth(int set)
+{
+	depth_automation = set;
 }

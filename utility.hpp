@@ -9,6 +9,14 @@
 namespace utility
 {
 
+template<typename T>
+T clamp(T v, T min, T max)
+{
+	if (v < min) return min;
+	if (v > max) return max;
+	return v;
+}
+
 // Allows one class to dominate and hides a hidden item that
 // can be retrieved for shady stuff.
 // Why have such a strangely shady class? Convienence, of course!
@@ -28,6 +36,98 @@ static T2_S& get_shadow(shadow_pair<T1, T2_S>& A)
 {
 	return A.shadow;
 }
+
+// Meant for arrays
+template<typename T>
+T pingpong_value(T v, T end)
+{
+	return ((v/2)%2) ? end - (v%end) : (v%end);
+}
+
+// Iterate through sequences but with features like pingponging and looping
+template<typename T>
+class seq_tracker
+{
+	T counter;
+	T proc;
+	T start, end;
+	int type;
+
+	void calculate_counter()
+	{
+		if (type == LINEAR_LOOP)
+			proc = (counter % (end - start)) + start;
+		if (type == LINEAR_CLAMP)
+			proc = clamp(counter, start, end - 1);
+		if (type == PING_PONG)
+		{
+			proc = counter%end;
+			if ((counter / end) % 2)
+				proc = end - proc;
+		}
+	}
+
+public:
+
+	enum count_type
+	{
+		LINEAR_LOOP,
+		LINEAR_CLAMP,
+		PING_PONG
+	};
+
+	seq_tracker()
+	{
+		counter = 0;
+		proc = 0;
+		type = LINEAR_LOOP;
+	}
+
+	operator T()
+	{
+		return proc;
+	}
+
+	void set_count(T n)
+	{
+		counter = n;
+		calculate_counter();
+	}
+
+	T get_count()
+	{
+		return proc;
+	}
+
+	void set_type(int a)
+	{
+		type = a;
+		calculate_counter();
+	}
+
+	void set_start(T n)
+	{
+		start = n;
+	}
+
+	void set_end(T n)
+	{
+		end = n;
+	}
+
+	// Only useful with type=LINEAR_CLAMP
+	bool is_finished()
+	{
+		return proc == end;
+	}
+
+	T step(T amount)
+	{
+		counter += amount;
+		calculate_counter();
+		return proc;
+	}
+};
 
 // Gives error handling in the form a return.
 // Simply provide an error message and it will print the message

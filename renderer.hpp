@@ -70,12 +70,12 @@ class render_client
 	renderer* renderer_;
 	int client_index;
 	bool visible;
-	int depth;
+	float depth;
 public:
 	render_client();
 	~render_client();
-	void set_depth(int d);
-	int get_depth();
+	void set_depth(float d);
+	float get_depth();
 	bool is_visible();
 	void set_visible(bool a);
 	virtual int draw(renderer &_r) = 0;
@@ -194,8 +194,16 @@ class animated_sprite_node :
 	std::vector<texture_crop> frames;
 	int interval;
 	size_t c_frame;
-	bool playing, loop;
+	bool playing;
+	int loop;
 public:
+	enum loop_type
+	{
+		LOOP_NONE,
+		LOOP_LINEAR,
+		LOOP_PING_PONG
+	};
+
 	animated_sprite_node();
 	virtual int draw(renderer &_r);
 	int set_texture(texture& tex);
@@ -211,7 +219,7 @@ public:
 	void restart();
 	void set_frame();
 	void set_default_frame();
-	void set_loop(bool a);
+	void set_loop(int a);
 	bool is_playing();
 };
 

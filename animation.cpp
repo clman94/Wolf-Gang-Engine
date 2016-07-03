@@ -1,6 +1,7 @@
 #define ENGINE_INTERNAL
 
 #include "renderer.hpp"
+#include "utility.hpp"
 
 using namespace engine;
 
@@ -9,7 +10,7 @@ animated_sprite_node::animated_sprite_node()
 	c_frame = 0;
 	interval = 0;
 	playing = false;
-	loop = true;
+	loop = LOOP_LINEAR;
 }
 
 int 
@@ -62,12 +63,10 @@ animated_sprite_node::tick_animation()
 	{
 		c_clock.restart();
 
-		// Allows frames to be skipped
+		// Calculate the next frame
 		c_frame += time / interval;
 
-		if (loop)
-			c_frame %= frames.size(); // loop
-		else if (c_frame >= frames.size() - 1)
+		if (!loop && c_frame >= frames.size() - 1)
 		{
 			playing = false; // stop
 			c_frame = frames.size() - 1;
@@ -79,7 +78,14 @@ int
 animated_sprite_node::draw(renderer &_r)
 {
 	if (playing) tick_animation();
-	texture_crop crop = frames[c_frame];
+
+	texture_crop crop;
+	if (loop == LOOP_LINEAR)
+		crop = frames[c_frame%frames.size()];
+	else if (loop == LOOP_PING_PONG)
+		crop = frames[utility::pingpong_value(c_frame, frames.size())];
+	else
+		crop = frames[c_frame];
 	_sprite.setTextureRect({ crop.x, crop.y, crop.w, crop.h });
 	fvector loc = get_position();
 	_sprite.setPosition(loc.x, loc.y);
@@ -133,7 +139,7 @@ animated_sprite_node::is_playing()
 }
 
 void
-animated_sprite_node::set_loop(bool a)
+animated_sprite_node::set_loop(int a)
 {
 	loop = a;
 }
