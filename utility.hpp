@@ -4,6 +4,7 @@
 #include <string>
 #include <iostream>
 #include <memory>
+#include <list>
 
 
 namespace utility
@@ -44,7 +45,7 @@ T pingpong_value(T v, T end)
 	return ((v/2)%2) ? end - (v%end) : (v%end);
 }
 
-// Iterate through sequences but with features like pingponging and looping
+// Iterate through sequences with features like pingponging and looping
 template<typename T>
 class seq_tracker
 {

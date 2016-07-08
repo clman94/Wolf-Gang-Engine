@@ -128,7 +128,7 @@ public:
 	}
 };
 
-enum anchor
+enum struct anchor
 {
 	top,
 	topleft,
@@ -140,6 +140,40 @@ enum anchor
 	right,
 	center
 };
+
+template<typename T>
+static vector<T> center_offset(const vector<T> size, anchor type)
+{
+	switch (type)
+	{
+	case anchor::top:
+		return{ size.x*0.5f, 0 };
+	case anchor::topleft:
+		return{ 0, 0 };
+	case anchor::topright:
+		return{ size.x, 0 };
+	case anchor::bottom:
+		return{ size.x*0.5f, size.y };
+	case anchor::bottomleft:
+		return{ 0, size.y };
+	case anchor::bottomright:
+		return{ size.x, size.y };
+	case anchor::left:
+		return{ 0, size.y*0.5f };
+	case anchor::right:
+		return{ size.x, size.y*0.5f };
+	case anchor::center:
+		return{ size.x*0.5f, size.y*0.5f };
+	} 
+	return 0;
+}
+
+template<typename T>
+static vector<T> anchor_offset(const vector<T> size, anchor type)
+{
+	return center_offset(size, type) * -1;
+}
+
 
 class rectangle_node :
 	public render_client,
@@ -211,6 +245,7 @@ public:
 	int generate_sequence(int frames, int width, int height, fvector offset = { 0 });
 	int generate_sequence(int frames, texture& tex, std::string atlas);
 	fvector get_size();
+	void set_anchor(anchor type);
 	void set_interval(int _interval);
 	void tick_animation();
 	void start();

@@ -21,6 +21,8 @@ int main(int argc, char* argv[])
 	// Load default location
 	game.load_game("data/game.xml");
 
+	std::cout << "Size of the freakin game: " << sizeof(game) << "\n";
+
 	std::cout << "Load time : " << load_clock.get_elapse().s() << " seconds\n";
 
 	// This clock will calculate own framerate

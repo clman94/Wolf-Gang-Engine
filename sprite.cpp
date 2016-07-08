@@ -35,17 +35,10 @@ int sprite_node::set_texture(texture& tex, std::string atlas)
 }
 
 void 
-sprite_node::set_anchor(anchor _anchor)
+sprite_node::set_anchor(anchor type)
 {
-	sf::IntRect rect = _sprite.getTextureRect();
-
-	switch (_anchor)
-	{
-	case topleft:
-		return;
-	case bottomleft:
-		_sprite.setOrigin(sf::Vector2f(0, (float)rect.height));
-	}
+	auto node_offset = engine::center_offset(get_size(), type);
+	_sprite.setOrigin({ node_offset.x, node_offset.y });
 }
 
 fvector 

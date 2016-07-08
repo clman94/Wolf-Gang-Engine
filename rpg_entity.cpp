@@ -48,7 +48,7 @@ entity::set_cycle_animation(std::string _name, cycle_type cycle)
 	if (!a)
 		return "Entity animation '" + _name + 
 			"' in entity '" + name + "' does not exist";
-	a->node.set_relative_position(a->node.get_size() * engine::fvector(0.5, 1) * (-1)); // Anchor at bottom
+	a->node.set_anchor(engine::anchor::bottom);
 	cycles[cycle] = a;
 	return 0;
 }
@@ -56,16 +56,13 @@ entity::set_cycle_animation(std::string _name, cycle_type cycle)
 void
 entity::update_depth()
 {
-	if (c_anim)
+	if (c_anim && last_y != get_relative_position().y)
 	{
-		if (last_y != get_relative_position().y)
-		{
-			last_y = get_relative_position().y;
-			set_depth(utility::clamp(
-				TILE_DEPTH_RANGE_MAX - (last_y / 32),
-				TILE_DEPTH_RANGE_MIN,
-				TILE_DEPTH_RANGE_MAX));
-		}
+		last_y = get_relative_position().y;
+		set_depth(utility::clamp(
+			TILE_DEPTH_RANGE_MAX - (last_y / 32),
+			TILE_DEPTH_RANGE_MIN,
+			TILE_DEPTH_RANGE_MAX));
 	}
 }
 

@@ -78,7 +78,6 @@ int
 animated_sprite_node::draw(renderer &_r)
 {
 	if (playing) tick_animation();
-
 	texture_crop crop;
 	if (loop == LOOP_LINEAR)
 		crop = frames[c_frame%frames.size()];
@@ -98,6 +97,13 @@ animated_sprite_node::get_size()
 {
 	if (frames.size() <= 0) return{ 0 };
 	return{ (float)frames[0].w, (float)frames[0].h };
+}
+
+void
+animated_sprite_node::set_anchor(anchor type)
+{
+	auto node_offset = engine::center_offset(get_size(), type);
+	_sprite.setOrigin({ node_offset.x, node_offset.y });
 }
 
 void 

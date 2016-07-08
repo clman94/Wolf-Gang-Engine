@@ -400,9 +400,8 @@ game::tick_interpretor()
 			if (j->clock.get_elapse().ms() >= j->char_interval)
 			{
 				if (j->c_char % DIALOG_FX_INTERVAL == 0) sound.FX_dialog_click.play(); // Play FX
-				int amnt = 1 + (j->text[j->c_char] == ' ' ? 1 : 0); // Jump spaces (smoother to look at)
-				narrative.text.append_text(j->text.substr(j->c_char, amnt));
-				j->c_char += amnt;
+				narrative.text.append_text(j->text.substr(j->c_char, 1));
+				j->c_char += 1;
 				j->clock.restart();
 			}
 
@@ -754,6 +753,7 @@ game::tick_interpretor()
 int
 game::tick(engine::renderer& _r)
 {
+
 	mc_movement();
 
 	if (control[ACTIVATE] && !lock_mc_movement)
@@ -893,21 +893,21 @@ game::load_entity_anim(
 		c.world.emplace_back();
 		entity::animation& na = c.world.back();
 
-		int  atr_frames   = ele->IntAttribute("frames");
-		int  atr_interval = ele->IntAttribute("interval");
-		bool atr_loop     = ele->BoolAttribute("loop");
-		bool atr_pingpong = ele->BoolAttribute("pingpong");
-		auto atr_atlas    = ele->Attribute("atlas");
-		auto atr_tex      = ele->Attribute("tex");
-		auto atr_type     = ele->Attribute("type");
+		int  att_frames   = ele->IntAttribute("frames");
+		int  att_interval = ele->IntAttribute("interval");
+		bool att_loop     = ele->BoolAttribute("loop");
+		bool att_pingpong = ele->BoolAttribute("pingpong");
+		auto att_atlas    = ele->Attribute("atlas");
+		auto att_tex      = ele->Attribute("tex");
+		auto att_type     = ele->Attribute("type");
 
-		if (!atr_tex) return "Please provide texture attibute for character";
-		if (!atr_atlas) return "Please provide atlas attribute for character";
+		if (!att_tex)   return "Please provide texture attibute for character";
+		if (!att_atlas) return "Please provide atlas attribute for character";
 
-		if (atr_type)
+		if (att_type)
 		{
-			std::string play_type = atr_type;
-			if (play_type       == "constant")
+			std::string play_type = att_type;
+			if (play_type      == "constant")
 				na.type = entity::CONSTANT;
 			else if (play_type == "speech")
 				na.type = entity::SPEECH;
@@ -920,20 +920,20 @@ game::load_entity_anim(
 		}else
 			na.type = entity::WALK; // Default walk
 
-		auto t = tm.get_texture(atr_tex);
-		if (!t) return "Texture '" + std::string(atr_tex) + "' not found";
+		auto t = tm.get_texture(att_tex);
+		if (!t) return "Texture '" + std::string(att_tex) + "' not found";
 
 		int loop_type = na.node.LOOP_NONE;
-		if (atr_loop)     loop_type = na.node.LOOP_LINEAR;
-		if (atr_pingpong) loop_type = na.node.LOOP_PING_PONG;
+		if (att_loop)     loop_type = na.node.LOOP_LINEAR;
+		if (att_pingpong) loop_type = na.node.LOOP_PING_PONG;
 		na.node.set_loop(loop_type);
 
-		na.node.set_interval(atr_interval);
+		na.node.set_interval(att_interval);
 		na.node.set_texture(*t);
 		na.node.generate_sequence(
-			(atr_frames <= 0 ? 1 : atr_frames), // Default one frame
+			(att_frames <= 0 ? 1 : att_frames), // Default one frame
 			*t,
-			atr_atlas);
+			att_atlas);
 
 		na.node.set_parent(c);
 
@@ -956,7 +956,9 @@ game::load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity)
 
 		auto atr_path = ele->Attribute("path");
 		if (!atr_path) return "Please specify path to entity file";
-		load_entity(atr_path, is_global_entity);
+		entities.emplace_back();
+		utility::get_shadow(entities.back()) = is_global_entity;
+		load_entity(atr_path, entities.back());
 		entities.back().set_name(name);
 
 		engine::fvector npos = { ele->FloatAttribute("x"), ele->FloatAttribute("y")};
@@ -968,13 +970,9 @@ game::load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity)
 }
 
 utility::error
-game::load_entity(std::string path, bool is_global_entity)
+game::load_entity(std::string path, entity& ne)
 {
 	using namespace tinyxml2;
-
-	entities.emplace_back();
-	auto &nentity = entities.back();
-	utility::get_shadow(nentity) = is_global_entity;
 
 	XMLDocument doc;
 	if (doc.LoadFile(path.c_str()))
@@ -989,20 +987,20 @@ game::load_entity(std::string path, bool is_global_entity)
 		return "Please specify name or entity. <name>...</name>";*/
 	
 	if (auto world_e = main_e->FirstChildElement("animations"))
-		load_entity_anim(world_e, nentity);
+		load_entity_anim(world_e, ne);
 	else
 		return "Please add animations section. <animations>...</animations>";
 
 	// Set character defaults
-	auto _err = nentity.set_cycle_group("default");
+	auto _err = ne.set_cycle_group("default");
 	if (_err) return _err;
 
-	nentity.set_cycle(entity::DEFAULT);
+	ne.set_cycle(entity::DEFAULT);
 	//nentity.set_depth(CHARACTER_DEPTH);
 
-	root.add_child(nentity);
-	nentity.set_relative_position({ 100, 50 });
-	renderer->add_client(&nentity);
+	root.add_child(ne);
+	ne.set_relative_position({ 100, 50 });
+	renderer->add_client(&ne);
 	return 0;
 }
 
@@ -1028,46 +1026,32 @@ game::load_tilemap_individual(tinyxml2::XMLElement* e, size_t layer)
 	{
 		std::string name = c->Name();
 
-		int atr_rf = c->IntAttribute("f");
-		int atr_df = c->IntAttribute("fd");
-		int atr_rot = c->IntAttribute("r");
+		int att_w = c->IntAttribute("w"); att_w = (att_w > 0 ? att_w : 1); // Default at one
+		int att_h = c->IntAttribute("h"); att_h = (att_h > 0 ? att_h : 1);
+		int att_r = c->IntAttribute("r");
 
 		engine::ivector pos(
 			c->IntAttribute("x"),
 			c->IntAttribute("y"));
 
-		// Is wall
-		if (c->BoolAttribute("w"))
+		// Create wall (obsticle)
+		if (c->BoolAttribute("o"))
 		{
-			scene::collisionbox nbox;
+			c_scene->collisionboxes.emplace_back();
+			scene::collisionbox& nbox = c_scene->collisionboxes.back();
 			nbox.pos = pos * TILE_SIZE;
-			nbox.size = engine::ivector(atr_rf ? atr_rf : 1, atr_df ? atr_df : 1) * TILE_SIZE; // Default at one; convert to pixels
+			nbox.size = engine::ivector(att_w, att_h) * TILE_SIZE;
 			nbox.type = nbox.WALL;
-			c_scene->collisionboxes.push_back(nbox);
 		}
 
-		// Fill row
-		if (atr_rf)
+		// Fill
+		for (int x = 0; x < att_w; x++)
 		{
-			for (int i = 0; i < atr_rf; i++)
+			for (int y = 0; y < att_h; y++)
 			{
-				ground.set_tile(pos, name, atr_rot);
-				++pos.x;
+				engine::ivector fill_pos(x, y);
+				ground.set_tile(pos + fill_pos, name, att_r);
 			}
-		}
-
-		// Fill column
-		else if (atr_df)
-		{
-			for (int i = 0; i < atr_df; i++)
-			{
-				ground.set_tile(pos, name, atr_rot);
-				++pos.y;
-			}
-		}
-		else
-		{  // No fill
-			ground.set_tile(pos, name, atr_rot);
 		}
 
 		c = c->NextSiblingElement();

@@ -131,7 +131,7 @@ int
 renderer::initualize(int _width, int _height, int fps)
 {
 	window.create(sf::VideoMode(_width, _height), "The Amazing Window", sf::Style::Titlebar | sf::Style::Close);
-	window.setFramerateLimit(fps);
+	//window.setFramerateLimit(fps);
 	return 0;
 }
 

@@ -166,8 +166,24 @@ public:
 	}
 };
 
+struct character_stats
+{
+	std::string name;
+	int level;
+	int health;
+	int experience;
+};
 
-// I know, I know Its a VERY large class.
+class battle
+{
+	std::vector<character_stats> enemies;
+	std::vector<character_stats> party;
+public:
+
+};
+
+
+// I know I know Its a VERY large class.
 class game
 {
 	std::list<scene> scenes;
@@ -181,11 +197,13 @@ class game
 	event_tracker tracker;
 	int           tick_interpretor();
 
+	character_stats player_stats;
+
 	// Contains shadow pair of is_global_entity bool value
 	std::list<utility::shadow_pair<entity, bool>> entities;
 	entity* find_entity(std::string name);
 	void clear_entities();
-	utility::error load_entity(std::string path, bool is_global_entity = false);
+	utility::error load_entity(std::string path, entity& ne);
 	utility::error load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity = false);
 	utility::error load_entity_anim(tinyxml2::XMLElement* e, entity& c);
 
@@ -227,7 +245,7 @@ class game
 	std::map<std::string, engine::animated_sprite_node> expressions;
 
 	// The set of flags. All defined by a string.
-	// These define the flow of the gam and various other things.
+	// These define the flow of the game and various other things.
 	// They are very important and are recorded in the game save.
 	std::set<std::string> flags;
 	bool has_flag(std::string name);
@@ -260,6 +278,13 @@ class game
 	int load_tilemap(tinyxml2::XMLElement* e, size_t layer = 0);
 	int load_tilemap_individual(tinyxml2::XMLElement* e, size_t layer = 0);
 	void clean_scene();
+
+	struct
+	{
+		bool battle_mode;
+		
+	} battle_system;
+
 public:
 	enum control_type
 	{
