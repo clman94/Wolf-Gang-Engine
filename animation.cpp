@@ -56,6 +56,30 @@ animated_sprite_node::generate_sequence(int c, texture &tex, std::string atlas)
 }
 
 void
+animated_sprite_node::set_seq_interval()
+{
+	int h = 0;
+	for (auto &i : seq_interval)
+	{
+		if (c_frame >= i.from_frame)
+			h = i.interval;
+	}
+	interval = h;
+}
+
+void
+animated_sprite_node::add_sequence_interval(int i, size_t from)
+{
+	seq_interval_entry ne;
+	ne.interval = i;
+	ne.from_frame = from;
+	seq_interval.push_back(ne);
+
+	// Set first frame interval
+	if (from == 0) interval = i;
+}
+
+void
 animated_sprite_node::tick_animation()
 {
 	int time = c_clock.get_elapse().ms_i();
@@ -66,6 +90,9 @@ animated_sprite_node::tick_animation()
 		// Calculate the next frame
 		c_frame += time / interval;
 
+		if (seq_interval.size())
+			set_seq_interval();
+
 		if (!loop && c_frame >= frames.size() - 1)
 		{
 			playing = false; // stop
@@ -74,17 +101,22 @@ animated_sprite_node::tick_animation()
 	}
 }
 
+engine::texture_crop&
+animated_sprite_node::calculate_crop()
+{
+	if (loop == LOOP_LINEAR)
+		return frames[c_frame%frames.size()];
+	else if (loop == LOOP_PING_PONG)
+		return frames[utility::pingpong_value(c_frame, frames.size())];
+	return frames[c_frame];
+}
+
 int 
 animated_sprite_node::draw(renderer &_r)
 {
+	if (!frames.size()) return 1;
 	if (playing) tick_animation();
-	texture_crop crop;
-	if (loop == LOOP_LINEAR)
-		crop = frames[c_frame%frames.size()];
-	else if (loop == LOOP_PING_PONG)
-		crop = frames[utility::pingpong_value(c_frame, frames.size())];
-	else
-		crop = frames[c_frame];
+	texture_crop &crop = calculate_crop();
 	_sprite.setTextureRect({ crop.x, crop.y, crop.w, crop.h });
 	fvector loc = get_position();
 	_sprite.setPosition(loc.x, loc.y);

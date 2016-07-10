@@ -230,6 +230,17 @@ class animated_sprite_node :
 	size_t c_frame;
 	bool playing;
 	int loop;
+
+	struct seq_interval_entry
+	{
+		int interval;
+		size_t from_frame;
+	};
+	std::vector<seq_interval_entry> seq_interval;
+	void set_seq_interval();
+
+	engine::texture_crop& calculate_crop();
+
 public:
 	enum loop_type
 	{
@@ -244,6 +255,7 @@ public:
 	int add_frame(std::string name, texture& tex, std::string atlas);
 	int generate_sequence(int frames, int width, int height, fvector offset = { 0 });
 	int generate_sequence(int frames, texture& tex, std::string atlas);
+	void add_sequence_interval(int i, size_t from);
 	fvector get_size();
 	void set_anchor(anchor type);
 	void set_interval(int _interval);

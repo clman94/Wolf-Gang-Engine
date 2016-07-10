@@ -355,7 +355,7 @@ game::tick_interpretor()
 			if (tracker.is_start())
 			{
 				// Setup expression
-				// Moves narrative text to make room for expression
+				// Move narrative text to make room for expression
 				if (narrative.speaker)
 				{
 					if (!j->expression.empty())
@@ -938,6 +938,15 @@ game::load_entity_anim(
 		na.node.set_parent(c);
 
 		na.name = ele->Name();
+
+		auto *ele_seq = ele->FirstChildElement("seq");
+		while (ele_seq)
+		{
+			na.node.add_sequence_interval(
+				ele_seq->IntAttribute("interval"), 
+				(size_t)ele_seq->IntAttribute("frame"));
+			ele_seq = ele_seq->NextSiblingElement();
+		}
 
 		ele = ele->NextSiblingElement();
 	}

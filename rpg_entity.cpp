@@ -142,7 +142,6 @@ entity::set_cycle(int cycle)
 		c_anim = cycles[cycle];
 	else
 		c_anim = cycles[DEFAULT];
-
 	animation_start(CONSTANT, true);
 }
 
