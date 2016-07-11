@@ -77,101 +77,11 @@ public:
 	}
 };
 
-class event_tracker
-{
-	struct entry
-	{
-		size_t c_job;
-		interpretor::job_list* c_event;
-		entry(interpretor::job_list* e)
-			: c_event(e), c_job(0){}
-	};
-	typedef std::deque<entry> event_hierarchy;	
-	
-	/*struct thread_entry   // TO THINK ABOUT
-	{
-		event_hierarchy events;
-		bool job_start;
-		thread_entry()
-			: job_start(true){}
-	};
-	typedef std::deque<thread_entry> thread_list;
-	thread_list threads;*/
-
-	event_hierarchy events;
-	bool job_start;
-
-public:
-	event_tracker()
-	{
-		job_start = true;
-	}
-
-	bool is_start()
-	{
-		return job_start;
-	}
-
-	void next_job()
-	{
-		if (events.size())
-		{
-			++events.back().c_job;
-			job_start = true;
-		}
-	}
-
-	void wait_job()
-	{
-		job_start = false;
-	}
-
-	interpretor::job_entry* get_job()
-	{
-		if (!events.size()) return nullptr;
-		while (events.back().c_job >= events.back().c_event->size())
-		{
-			events.pop_back();
-			if (!events.size()) return nullptr;
-			next_job();
-		}
-		return events.back().c_event->at(events.back().c_job).get();
-	}
-
-	void call_event(interpretor::job_list* e)
-	{
-		events.emplace_back(e);
-		job_start = true;
-	}
-
-	void cancel_event()
-	{
-		events.pop_back();
-	}
-
-	void cancel_all()
-	{
-		events.clear();
-	}
-
-	void interrupt(interpretor::job_list* e)
-	{
-		cancel_all();
-		call_event(e);
-	}
-
-	void queue_event(interpretor::job_list* e)
-	{
-		events.emplace_front(e);
-	}
-};
 
 struct character_stats
 {
-	std::string name;
-	int level;
-	int health;
-	int experience;
+	std::string character_name;
+
 };
 
 class battle
@@ -194,8 +104,8 @@ class game
 	bool check_event_collisionbox(int type, engine::fvector pos);
 	bool check_wall_collisionbox(engine::fvector pos, engine::fvector size);
 
-	event_tracker tracker;
-	int           tick_interpretor();
+	interpretor::event_tracker tracker;
+	int tick_interpretor();
 
 	character_stats player_stats;
 

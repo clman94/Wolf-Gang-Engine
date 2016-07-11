@@ -40,7 +40,7 @@ render_client::~render_client()
 }
 
 void
-render_client::set_depth(float d)
+render_client::set_depth(depth_t d)
 {
 	depth = d;
 	if (renderer_)
@@ -89,9 +89,7 @@ renderer::renderer()
 renderer::~renderer()
 {
 	for (auto i : clients)
-	{
 		i->client_index = -1;
-	}
 	close();
 }
 
@@ -120,7 +118,7 @@ renderer::is_key_pressed(key_type k)
 }
 
 bool
-renderer::is_key_held(key_type k)
+renderer::is_key_down(key_type k)
 {
 	if (!window.hasFocus())
 		return false;
@@ -149,10 +147,8 @@ int
 renderer::draw_clients()
 {
 	for (auto i : clients)
-	{
 		if (i->is_visible())
 			i->draw(*this);
-	}
 	return 0;
 }
 
@@ -187,9 +183,7 @@ void
 renderer::refresh_clients()
 {
 	for (size_t i = 0; i < clients.size(); i++)
-	{
 		clients[i]->client_index = i;
-	}
 }
 
 // Sort items that have a higher depth to be farther behind

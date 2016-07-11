@@ -2,6 +2,7 @@
 #define RPG_JOBS_HPP
 
 #include <string>
+#include <deque>
 #include "time.hpp"
 #include "tinyxml2\tinyxml2.h"
 #include "rpg_entity.hpp"
@@ -199,8 +200,44 @@ struct JOB_fx_fade : public job_entry
 	JOB_fx_fade(job_op _op = INVALID){ op = _op; }
 };
 
-
 job_list parse_jobs_xml(tinyxml2::XMLElement* e);
+
+class event_tracker
+{
+	struct entry
+	{
+		size_t c_job;
+		job_list* c_event;
+		entry(interpretor::job_list* e)
+			: c_event(e), c_job(0){}
+	};
+	typedef std::deque<entry> event_hierarchy;
+
+	/*struct thread_entry   // TO THINK ABOUT
+	{
+	event_hierarchy events;
+	bool job_start;
+	thread_entry()
+	: job_start(true){}
+	};
+	typedef std::deque<thread_entry> thread_list;
+	thread_list threads;*/
+
+	event_hierarchy events;
+	bool job_start;
+
+public:
+	event_tracker();
+	bool is_start();
+	void next_job();
+	void wait_job();
+	interpretor::job_entry* get_job();
+	void call_event(interpretor::job_list* e);
+	void cancel_event();
+	void cancel_all();
+	void interrupt(interpretor::job_list* e);
+	void queue_event(interpretor::job_list* e);
+};
 
 }
 }

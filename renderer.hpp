@@ -11,22 +11,24 @@
 #include <memory>
 #include <vector>
 #include <string>
-#include <stdint.h>
+#include <cstdint>
 #include <list>
 #include <map>
 #include <unordered_map>
+
+#include "types.hpp"
 
 namespace engine
 {
 
 struct color
 {
-	uint8_t r, g, b, a;
+	color_t r, g, b, a;
 	color(
-		uint8_t _r = 0,
-		uint8_t _g = 0,
-		uint8_t _b = 0,
-		uint8_t _a = 255)
+		color_t _r = 0,
+		color_t _g = 0,
+		color_t _b = 0,
+		color_t _a = 255)
 		: r(_r), g(_g), b(_b), a(_a)
 	{}
 };
@@ -54,7 +56,7 @@ public:
 	int remove_client(render_client* _client);
 	void set_pixel_scale(float a);
 	bool is_key_pressed(key_type k);
-	bool is_key_held(key_type k);
+	bool is_key_down(key_type k);
 	fvector get_size();
 	void sort_clients();
 
@@ -70,11 +72,11 @@ class render_client
 	renderer* renderer_;
 	int client_index;
 	bool visible;
-	float depth;
+	depth_t depth;
 public:
 	render_client();
 	~render_client();
-	void set_depth(float d);
+	void set_depth(depth_t d);
 	float get_depth();
 	bool is_visible();
 	void set_visible(bool a);
@@ -218,12 +220,14 @@ public:
 	fvector get_size();
 };
 
+
+
 class animated_sprite_node :
 	public render_client,
 	public node
 {
 	sf::Sprite _sprite;
-	bool play;
+
 	engine::clock c_clock;
 	std::vector<texture_crop> frames;
 	int interval;
@@ -234,7 +238,7 @@ class animated_sprite_node :
 	struct seq_interval_entry
 	{
 		int interval;
-		size_t from_frame;
+		frame_t from_frame;
 	};
 	std::vector<seq_interval_entry> seq_interval;
 	void set_seq_interval();
@@ -253,9 +257,9 @@ public:
 	virtual int draw(renderer &_r);
 	int set_texture(texture& tex);
 	int add_frame(std::string name, texture& tex, std::string atlas);
-	int generate_sequence(int frames, int width, int height, fvector offset = { 0 });
-	int generate_sequence(int frames, texture& tex, std::string atlas);
-	void add_sequence_interval(int i, size_t from);
+	int generate_sequence(frame_t frames, int width, int height, fvector offset = { 0 });
+	int generate_sequence(frame_t frames, texture& tex, std::string atlas);
+	void add_sequence_interval(int i, frame_t from);
 	fvector get_size();
 	void set_anchor(anchor type);
 	void set_interval(int _interval);

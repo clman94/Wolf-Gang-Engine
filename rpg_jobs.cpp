@@ -330,3 +330,75 @@ interpretor::parse_jobs_xml(tinyxml2::XMLElement* e)
 	}
 	return jobs_ret;
 }
+
+event_tracker::event_tracker()
+{
+	job_start = true;
+}
+
+bool
+event_tracker::is_start()
+{
+	return job_start;
+}
+
+void
+event_tracker::next_job()
+{
+	if (events.size())
+	{
+		++events.back().c_job;
+		job_start = true;
+	}
+}
+
+void
+event_tracker::wait_job()
+{
+	job_start = false;
+}
+
+interpretor::job_entry*
+event_tracker::get_job()
+{
+	if (!events.size()) return nullptr;
+	while (events.back().c_job >= events.back().c_event->size())
+	{
+		events.pop_back();
+		if (!events.size()) return nullptr;
+		next_job();
+	}
+	return events.back().c_event->at(events.back().c_job).get();
+}
+
+void
+event_tracker::call_event(interpretor::job_list* e)
+{
+	events.emplace_back(e);
+	job_start = true;
+}
+
+void
+event_tracker::cancel_event()
+{
+	events.pop_back();
+}
+
+void
+event_tracker::cancel_all()
+{
+	events.clear();
+}
+
+void
+event_tracker::interrupt(interpretor::job_list* e)
+{
+	cancel_all();
+	call_event(e);
+}
+
+void
+event_tracker::queue_event(interpretor::job_list* e)
+{
+	events.emplace_front(e);
+}

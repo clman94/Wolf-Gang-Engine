@@ -22,6 +22,8 @@ int main(int argc, char* argv[])
 	game.load_game("data/game.xml");
 
 	std::cout << "Size of the freakin game: " << sizeof(game) << "\n";
+	std::cout << "Size of the animated_sprite_node: " << sizeof(engine::animated_sprite_node) << "\n";
+	std::cout << "Size of the sprite_node: " << sizeof(engine::sprite_node) << "\n";
 
 	std::cout << "Load time : " << load_clock.get_elapse().s() << " seconds\n";
 
@@ -40,19 +42,19 @@ int main(int argc, char* argv[])
 		if (r.is_key_pressed(engine::renderer::key_type::Z) ||
 			r.is_key_pressed(engine::renderer::key_type::Return))
 			game.trigger_control(game.ACTIVATE);
-		if (r.is_key_held(engine::renderer::key_type::Left))
+		if (r.is_key_down(engine::renderer::key_type::Left))
 			game.trigger_control(game.LEFT);
-		if (r.is_key_held(engine::renderer::key_type::Right))
+		if (r.is_key_down(engine::renderer::key_type::Right))
 			game.trigger_control(game.RIGHT);
-		if (r.is_key_held(engine::renderer::key_type::Up))
+		if (r.is_key_down(engine::renderer::key_type::Up))
 			game.trigger_control(game.UP);
-		if (r.is_key_held(engine::renderer::key_type::Down))
+		if (r.is_key_down(engine::renderer::key_type::Down))
 			game.trigger_control(game.DOWN);
 		if (r.is_key_pressed(engine::renderer::key_type::Left))
 			game.trigger_control(game.SELECT_PREV);
 		if (r.is_key_pressed(engine::renderer::key_type::Right))
 			game.trigger_control(game.SELECT_NEXT);
-		if (r.is_key_held(engine::renderer::key_type::Escape))
+		if (r.is_key_down(engine::renderer::key_type::Escape))
 			working = false;
 
 		game.tick(r);

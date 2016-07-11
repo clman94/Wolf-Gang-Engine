@@ -32,9 +32,9 @@ animated_sprite_node::add_frame(std::string name, texture& tex, std::string atla
 }
 
 int 
-animated_sprite_node::generate_sequence(int c, int width, int height, fvector offset)
+animated_sprite_node::generate_sequence(frame_t c, int width, int height, fvector offset)
 {
-	for (int i = 0; i < c; i++)
+	for (frame_t i = 0; i < c; i++)
 	{
 		texture_crop crop;
 		crop.x = i*width + (int)offset.x;
@@ -47,7 +47,7 @@ animated_sprite_node::generate_sequence(int c, int width, int height, fvector of
 }
 
 int 
-animated_sprite_node::generate_sequence(int c, texture &tex, std::string atlas)
+animated_sprite_node::generate_sequence(frame_t c, texture &tex, std::string atlas)
 {
 	texture_crop crop;
 	if (!tex.find_atlas(atlas, crop))
@@ -68,7 +68,7 @@ animated_sprite_node::set_seq_interval()
 }
 
 void
-animated_sprite_node::add_sequence_interval(int i, size_t from)
+animated_sprite_node::add_sequence_interval(int i, frame_t from)
 {
 	seq_interval_entry ne;
 	ne.interval = i;
@@ -83,6 +83,8 @@ void
 animated_sprite_node::tick_animation()
 {
 	int time = c_clock.get_elapse().ms_i();
+	if (seq_interval.size())
+		set_seq_interval();
 	if (time >= interval && interval > 0)
 	{
 		c_clock.restart();
