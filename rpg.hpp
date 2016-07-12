@@ -214,6 +214,7 @@ public:
 	int set_maincharacter(std::string name);
 	void set_renderer(engine::renderer& r);
 	utility::error load_textures(std::string path);
+	utility::error setup();
 	utility::error load_scene(std::string path);
 	utility::error load_game(std::string path);
 	interpretor::job_list* find_event(std::string name);

@@ -197,8 +197,6 @@ interpretor::JOB_entity_spawn::JOB_entity_spawn(tinyxml2::XMLElement* e)
 
 interpretor::JOB_entity_animationstart::JOB_entity_animationstart(tinyxml2::XMLElement* e)
 {
-	if (auto _loop = e->BoolAttribute("loop"))
-		loop = _loop;
 	op = ENTITY_ANIMATIONSTART;
 }
 

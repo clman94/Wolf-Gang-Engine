@@ -109,10 +109,8 @@ game::load_scene(std::string path)
 	// Only loads once so the collision boxes that
 	// have been used are preserved
 	if (!scene_exists)
-	{
 		if (auto thing = main_e->FirstChildElement("collisionboxes"))
 			c_scene->parse_collisionbox_xml(thing);
-	}
 
 	// Set Boundary
 	if (auto b = main_e->FirstChildElement("boundary"))
@@ -173,12 +171,8 @@ game::find_event(std::string name)
 {
 	// Find event
 	for (auto& i : c_scene->events)
-	{
 		if (i.name == name)
-		{
 			return &i.jobs;
-		}
-	}
 	return nullptr;
 }
 
@@ -192,19 +186,15 @@ void
 game::reset_control()
 {
 	for (int i = 0; i < CONTROL_COUNT; i++)
-	{
 		control[i] = false;
-	}
 }
 
 bool
 game::has_flag(std::string name)
 {
 	for (auto &i : flags)
-	{
 		if (i == name)
 			return true;
-	}
 	return false;
 }
 
@@ -545,6 +535,7 @@ game::tick_interpretor()
 				JOB_entity_setanimation* j = (JOB_entity_setanimation*)job;
 				narrative.speaker->set_cycle_animation(j->name, entity::MISC);
 				narrative.speaker->set_cycle(entity::MISC);
+				narrative.speaker->animation_stop();
 			}
 			tracker.next_job();
 			break;
@@ -553,8 +544,7 @@ game::tick_interpretor()
 		{
 			if (narrative.speaker)
 			{
-				JOB_entity_animationstart* j = (JOB_entity_animationstart*)job;
-				narrative.speaker->animation_start(entity::USER_TRIGGERED, j->loop);
+				narrative.speaker->animation_start(entity::USER_TRIGGERED);
 			}
 			tracker.next_job();
 			break;
@@ -770,15 +760,12 @@ game::tick(engine::renderer& _r)
 }
 
 utility::error
-game::load_textures(std::string path)
+game::setup()
 {
-	if (!renderer) return 1;
-	tm.load_settings(path);
-	
 	{ // Narrative Box
 		engine::texture *narrativebox_tx = tm.get_texture("NarrativeBox");
 		if (!narrativebox_tx) return "Failed to load Narrative Box";
-		narrative.box.set_texture(*narrativebox_tx,"NarrativeBox");
+		narrative.box.set_texture(*narrativebox_tx, "NarrativeBox");
 		narrative.box.set_position({ 32, 150 });
 		narrative.box.set_visible(false);
 		narrative.box.set_depth(NARRATIVE_BOX_DEPTH);
@@ -796,7 +783,7 @@ game::load_textures(std::string path)
 	}
 
 	font.load("data/font.ttf"); // Font
-	
+
 	{ // Narrative text and option elements
 		narrative.text.set_depth(NARRATIVE_TEXT_DEPTH);
 		narrative.option1.set_depth(NARRATIVE_TEXT_DEPTH);
@@ -813,8 +800,10 @@ game::load_textures(std::string path)
 		narrative.box.add_child(narrative.option1);
 		narrative.box.add_child(narrative.option2);
 
+		narrative.option1.set_anchor(engine::anchor::topright);
+
 		narrative.text.set_relative_position({ 64, 5 });
-		narrative.option1.set_relative_position({ 70, 50 });
+		narrative.option1.set_relative_position({ 290, 50 });
 		narrative.option2.set_relative_position({ 130, 55 });
 
 		narrative.text.set_visible(false);
@@ -861,11 +850,15 @@ game::load_textures(std::string path)
 		renderer->add_client(&nf0);
 		renderer->add_client(&nf1);
 	}
-	{
-		sound.buffers.dialog_click_buf.load("data/sound/dialog.ogg");
-		sound.FX_dialog_click.set_buffer(sound.buffers.dialog_click_buf);
-	}
-	return utility::error::NOERROR;
+	return 0;
+}
+
+utility::error
+game::load_textures(std::string path)
+{
+	if (!renderer) return 1;
+	tm.load_settings(path);
+	return 0;
 }
 
 texture_manager& 
@@ -895,6 +888,8 @@ game::load_entity_anim(
 
 		int  att_frames   = ele->IntAttribute("frames");
 		int  att_interval = ele->IntAttribute("interval");
+		int  att_start    = ele->IntAttribute("start");
+		int  att_default  = ele->IntAttribute("default");
 		bool att_loop     = ele->BoolAttribute("loop");
 		bool att_pingpong = ele->BoolAttribute("pingpong");
 		auto att_atlas    = ele->Attribute("atlas");
@@ -927,13 +922,17 @@ game::load_entity_anim(
 		if (att_loop)     loop_type = na.node.LOOP_LINEAR;
 		if (att_pingpong) loop_type = na.node.LOOP_PING_PONG;
 		na.node.set_loop(loop_type);
-
+		
 		na.node.set_interval(att_interval);
 		na.node.set_texture(*t);
 		na.node.generate_sequence(
 			(att_frames <= 0 ? 1 : att_frames), // Default one frame
 			*t,
 			att_atlas);
+
+		na.node.set_default_frame(att_default);
+		na.node.set_frame(att_start);
+		na.node.restart();
 
 		na.node.set_parent(c);
 
@@ -944,7 +943,7 @@ game::load_entity_anim(
 		{
 			na.node.add_sequence_interval(
 				ele_seq->IntAttribute("interval"), 
-				(size_t)ele_seq->IntAttribute("frame"));
+				(engine::frame_t)ele_seq->IntAttribute("from"));
 			ele_seq = ele_seq->NextSiblingElement();
 		}
 
@@ -1163,22 +1162,35 @@ game::load_game(std::string path)
 		return "Please add root element named 'game'. <game>...</game>";
 
 	// Textures
-	XMLElement* tex_e = main_e->FirstChildElement("textures");
-	if (!tex_e)
-		return "Error: Please specify the texture file. '<textures path=\"\"/>'\n";
-	auto texture_path = tex_e->Attribute("path");
+	XMLElement* ele_tex = main_e->FirstChildElement("textures");
+	if (!ele_tex)
+		return "Please specify the texture file. '<textures path=\"\"/>'\n";
+	auto texture_path = ele_tex->Attribute("path");
 	if (load_textures(texture_path)) return "Failed to load textures";
+	
+	setup();
+
+	XMLElement* ele_dialog_sound = main_e->FirstChildElement("dialog_sound");
+	if (ele_dialog_sound)
+	{
+		auto path = ele_dialog_sound->Attribute("path");
+		if (!path) return "Please provide path attribute for default dialog sound (dialog_sound).";
+		sound.buffers.dialog_click_buf.load(path);
+		sound.FX_dialog_click.set_buffer(sound.buffers.dialog_click_buf);
+	}
+	else
+		return "Please provide a default dialod sound. <dialog_sound path=\"\">";
 
 	// Global Entities
-	XMLElement* global_entities = main_e->FirstChildElement("global_entities");
-	if (global_entities)
-		load_entities_list(global_entities, true);
+	XMLElement* ele_global_entities = main_e->FirstChildElement("global_entities");
+	if (ele_global_entities)
+		load_entities_list(ele_global_entities, true);
 
 	// Start scene
-	XMLElement* start_e = main_e->FirstChildElement("start_scene");
-	if (!start_e)
+	XMLElement* ele_start = main_e->FirstChildElement("start_scene");
+	if (!ele_start)
 		return "Please specify the starting scene. '<start_scene path=\"\"/>'\n";
-	if (load_scene(start_e->Attribute("path"))) return "Failed to load starting scene";
+	if (load_scene(ele_start->Attribute("path"))) return "Failed to load starting scene";
 
 	return 0;
 }

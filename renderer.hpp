@@ -40,9 +40,17 @@ class renderer
 	sf::RenderWindow window;
 	std::vector<render_client*> clients;
 	int draw_clients();
-	
+
+	sf::Event event;
+
 	std::unordered_map<int, bool> pressed_keys;
 	void refresh_clients();
+
+	struct{
+		bool enable;
+		std::string text;
+	} text_record;
+
 public:
 	typedef sf::Keyboard::Key key_type;
 
@@ -59,6 +67,9 @@ public:
 	bool is_key_down(key_type k);
 	fvector get_size();
 	void sort_clients();
+	void start_text_record();
+	void end_text_record();
+	const std::string& get_recorded_text();
 
 	friend class sprite_node;
 	friend class tile_node;
@@ -144,28 +155,28 @@ enum struct anchor
 };
 
 template<typename T>
-static vector<T> center_offset(const vector<T> size, anchor type)
+static vector<T> center_offset(const vector<T>& size, anchor type)
 {
 	switch (type)
 	{
 	case anchor::top:
-		return{ size.x*0.5f, 0 };
+		return{ size.x/2, 0 };
 	case anchor::topleft:
 		return{ 0, 0 };
 	case anchor::topright:
 		return{ size.x, 0 };
 	case anchor::bottom:
-		return{ size.x*0.5f, size.y };
+		return{ size.x/2, size.y };
 	case anchor::bottomleft:
 		return{ 0, size.y };
 	case anchor::bottomright:
 		return{ size.x, size.y };
 	case anchor::left:
-		return{ 0, size.y*0.5f };
+		return{ 0, size.y/2 };
 	case anchor::right:
-		return{ size.x, size.y*0.5f };
+		return{ size.x, size.y/2 };
 	case anchor::center:
-		return{ size.x*0.5f, size.y*0.5f };
+		return{ size.x/2, size.y/2 };
 	} 
 	return 0;
 }
@@ -231,7 +242,9 @@ class animated_sprite_node :
 	engine::clock c_clock;
 	std::vector<texture_crop> frames;
 	int interval;
-	size_t c_frame;
+	frame_t c_frame;
+	frame_t c_actualframe;
+	frame_t default_frame;
 	bool playing;
 	int loop;
 
@@ -243,7 +256,7 @@ class animated_sprite_node :
 	std::vector<seq_interval_entry> seq_interval;
 	void set_seq_interval();
 
-	engine::texture_crop& calculate_crop();
+	void calculate_frameloop();
 
 public:
 	enum loop_type
@@ -268,7 +281,8 @@ public:
 	void pause();
 	void stop();
 	void restart();
-	void set_frame();
+	void set_frame(frame_t frame);
+	void set_default_frame(frame_t frame);
 	void set_default_frame();
 	void set_loop(int a);
 	bool is_playing();
@@ -288,12 +302,15 @@ class text_node :
 {
 	sf::Text text;
 	std::string c_text; // Avoids reliance on sfml
+	engine::anchor c_anchor;
 public:
+	text_node();
 	void set_font(font& f);
 	void set_text(const std::string s);
 	void append_text(const std::string s);
 	std::string get_text();
 	void set_size(int s);
+	void set_anchor(engine::anchor a);
 	void set_color(int r, int g, int b);
 	void set_scale(float a);
 	virtual int draw(renderer &_r);

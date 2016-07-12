@@ -8,6 +8,8 @@ using namespace engine;
 animated_sprite_node::animated_sprite_node()
 {
 	c_frame = 0;
+	c_actualframe = 0;
+	default_frame = 0;
 	interval = 0;
 	playing = false;
 	loop = LOOP_LINEAR;
@@ -34,6 +36,8 @@ animated_sprite_node::add_frame(std::string name, texture& tex, std::string atla
 int 
 animated_sprite_node::generate_sequence(frame_t c, int width, int height, fvector offset)
 {
+	frames.clear();
+	frames.reserve(c);
 	for (frame_t i = 0; i < c; i++)
 	{
 		texture_crop crop;
@@ -61,7 +65,7 @@ animated_sprite_node::set_seq_interval()
 	int h = 0;
 	for (auto &i : seq_interval)
 	{
-		if (c_frame >= i.from_frame)
+		if (c_actualframe >= i.from_frame)
 			h = i.interval;
 	}
 	interval = h;
@@ -90,10 +94,8 @@ animated_sprite_node::tick_animation()
 		c_clock.restart();
 
 		// Calculate the next frame
+		// Overflowing is not a concern
 		c_frame += time / interval;
-
-		if (seq_interval.size())
-			set_seq_interval();
 
 		if (!loop && c_frame >= frames.size() - 1)
 		{
@@ -101,16 +103,18 @@ animated_sprite_node::tick_animation()
 			c_frame = frames.size() - 1;
 		}
 	}
+	
 }
 
-engine::texture_crop&
-animated_sprite_node::calculate_crop()
+void
+animated_sprite_node::calculate_frameloop()
 {
 	if (loop == LOOP_LINEAR)
-		return frames[c_frame%frames.size()];
+		c_actualframe = c_frame%frames.size();
 	else if (loop == LOOP_PING_PONG)
-		return frames[utility::pingpong_value(c_frame, frames.size())];
-	return frames[c_frame];
+		c_actualframe = utility::pingpong_value(c_frame, frames.size() - 1);
+	else
+		c_actualframe = c_frame;
 }
 
 int 
@@ -118,7 +122,8 @@ animated_sprite_node::draw(renderer &_r)
 {
 	if (!frames.size()) return 1;
 	if (playing) tick_animation();
-	texture_crop &crop = calculate_crop();
+	calculate_frameloop();
+	texture_crop &crop = frames[c_actualframe];
 	_sprite.setTextureRect({ crop.x, crop.y, crop.w, crop.h });
 	fvector loc = get_position();
 	_sprite.setPosition(loc.x, loc.y);
@@ -129,7 +134,7 @@ animated_sprite_node::draw(renderer &_r)
 fvector
 animated_sprite_node::get_size()
 {
-	if (frames.size() <= 0) return{ 0 };
+	if (!frames.size()) return{ 0 };
 	return{ (float)frames[0].w, (float)frames[0].h };
 }
 
@@ -162,7 +167,8 @@ animated_sprite_node::pause()
 void 
 animated_sprite_node::restart()
 {
-	c_frame = 0;
+	c_clock.restart();
+	c_frame = default_frame;
 }
 
 void
@@ -182,4 +188,16 @@ void
 animated_sprite_node::set_loop(int a)
 {
 	loop = a;
+}
+
+void
+animated_sprite_node::set_frame(frame_t frame)
+{
+	c_frame = frame;
+}
+
+void
+animated_sprite_node::set_default_frame(frame_t frame)
+{
+	default_frame = frame;
 }

@@ -2,6 +2,11 @@
 
 using namespace engine;
 
+text_node::text_node()
+{
+	c_anchor = anchor::topleft;
+}
+
 int
 font::load(std::string path)
 {
@@ -19,6 +24,9 @@ text_node::set_text(const std::string s)
 {
 	text.setString(s);
 	c_text = s;
+
+	auto center = center_offset<float>({ text.getLocalBounds().width, text.getLocalBounds().height }, c_anchor);
+	text.setOrigin(sf::Vector2f(center.x, center.y));
 }
 
 void
@@ -46,6 +54,12 @@ void
 text_node::set_size(int s)
 {
 	text.setCharacterSize(s);
+}
+
+void
+text_node::set_anchor(engine::anchor a)
+{
+	c_anchor = a;
 }
 
 void

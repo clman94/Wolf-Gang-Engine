@@ -51,22 +51,38 @@ public:
 
 class clock
 {
-	std::chrono::time_point<std::chrono::system_clock> start, end;
+	bool play;
+	std::chrono::time_point<std::chrono::system_clock> 
+		start_point, 
+		end_point, 
+		pause_point;
 public:
 	clock()
 	{
-		start = std::chrono::system_clock::now();
+		play = true;
+		start_point = std::chrono::system_clock::now();
 	}
 	utime get_elapse()
 	{
-		end = std::chrono::system_clock::now();
-		std::chrono::duration<time_t> elapsed_seconds = end - start;
+		end_point = std::chrono::system_clock::now();
+		std::chrono::duration<time_t> elapsed_seconds = end_point - start_point;
 		return elapsed_seconds.count();
+	}
+	void start()
+	{
+		if (!play)
+			end_point += std::chrono::system_clock::now() - pause_point;
+		play = true;
+	}
+	void pause()
+	{
+		play = false;
+		pause_point = std::chrono::system_clock::now();
 	}
 	utime restart()
 	{
 		utime elapse_time = get_elapse();
-		start = std::chrono::system_clock::now();
+		start_point = std::chrono::system_clock::now();
 		return elapse_time;
 	}
 };

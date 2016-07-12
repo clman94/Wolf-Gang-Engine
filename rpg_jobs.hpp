@@ -184,7 +184,6 @@ struct JOB_entity_spawn : public job_entry
 
 struct JOB_entity_animationstart : public job_entry
 {
-	bool loop;
 	JOB_entity_animationstart(tinyxml2::XMLElement* e);
 };
 

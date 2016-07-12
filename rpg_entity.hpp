@@ -67,8 +67,10 @@ public:
 	engine::animated_sprite_node* get_animation();
 
 	bool is_animation_done();
-	void animation_start(animation_type type, bool loop = true);
+	void animation_start(animation_type type);
 	void animation_stop(animation_type type);
+	void animation_start();
+	void animation_stop();
 
 	void move_left(float delta);
 	void move_right(float delta);

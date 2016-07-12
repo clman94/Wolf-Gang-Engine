@@ -78,19 +78,30 @@ entity::draw(engine::renderer &_r)
 }
 
 void
-entity::animation_start(animation_type type, bool loop)
+entity::animation_start(animation_type type)
 {
 	if (c_anim && c_anim->type == type)
-	{
-		c_anim->node.set_loop(loop);
 		c_anim->node.start();
-	}
 }
 
 void
 entity::animation_stop(animation_type type)
 {
 	if (c_anim && c_anim->type == type)
+		c_anim->node.stop();
+}
+
+void
+entity::animation_start()
+{
+	if (c_anim)
+		c_anim->node.start();
+}
+
+void
+entity::animation_stop()
+{
+	if (c_anim)
 		c_anim->node.stop();
 }
 
@@ -142,7 +153,7 @@ entity::set_cycle(int cycle)
 		c_anim = cycles[cycle];
 	else
 		c_anim = cycles[DEFAULT];
-	animation_start(CONSTANT, true);
+	animation_start(CONSTANT);
 }
 
 engine::fvector

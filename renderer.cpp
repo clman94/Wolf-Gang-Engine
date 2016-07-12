@@ -167,17 +167,36 @@ renderer::update_events()
 	if (!window.isOpen())
 		return 1;
 
-	sf::Event event;
 	while (window.pollEvent(event))
 	{
 		//if (event.type == sf::Event::KeyPressed)
 		//	pressed_keys.push_back(event.key.code);
 		if (event.type == sf::Event::Closed)
 			return 1;
+
+		if (text_record.enable && event.type == sf::Event::TextEntered){
+			if (event.KeyPressed == sf::Keyboard::BackSpace &&
+				text_record.text.size() != 0)
+				text_record.text.pop_back();
+			else if (event.text.unicode < 128)
+				text_record.text.push_back((char)event.text.unicode);
+		}
 	}
 	return 0;
 }
 
+void
+renderer::start_text_record()
+{
+	text_record.enable = true;
+	text_record.text.clear();
+}
+
+void
+renderer::end_text_record()
+{
+	text_record.enable = false;
+}
 
 void
 renderer::refresh_clients()

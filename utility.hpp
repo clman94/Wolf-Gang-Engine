@@ -18,6 +18,80 @@ T clamp(T v, T min, T max)
 	return v;
 }
 
+
+template<typename T1,typename T2>
+class template_map
+{
+	std::map<T1, T2> map_keys;
+public:
+
+	void set_key(T1 k)
+	{
+		map_keys[k];
+	}
+
+	void set_key(T1 k, T2 def)
+	{
+		map_keys[k] = def;
+	}
+
+	bool remove_key(T1 key)
+	{
+		if (map_keys.find(key) == map_keys.end())
+			return false;
+		map_keys.erase(key);
+		return true;
+	}
+
+	void copy_map(std::map<T1, T2>& m)
+	{
+		m = map_keys;
+	}
+};
+
+template<typename T1, typename T2>
+class static_map
+{
+	std::map<T1, T2> map;
+public:
+	static_map(){}
+	
+	static_map(const template_map& temp)
+	{
+		temp.setup_map(map);
+	}
+
+	void set_template(const template_map& temp)
+	{
+		map.clear();
+		temp.setup_map(map);
+	}
+
+	static_map& operator = (const template_map& temp)
+	{
+		map.clear();
+		temp.setup_map(map);
+		return *this;
+	}
+
+	bool is_exist(const T1& key)
+	{
+		return map.find(key) != map.end();
+	}
+
+	T2* get(const T1& key)
+	{
+		if (!is_exist(key))
+			return nullptr;
+		return &map[key];
+	}
+
+	T2* operator [](const T1& key)
+	{
+		return get(key);
+	}
+};
+
 // Allows one class to dominate and hides a hidden item that
 // can be retrieved for shady stuff.
 // Why have such a strangely shady class? Convienence, of course!
@@ -42,7 +116,8 @@ static T2_S& get_shadow(shadow_pair<T1, T2_S>& A)
 template<typename T>
 T pingpong_value(T v, T end)
 {
-	return ((v/2)%2) ? end - (v%end) : (v%end);
+	assert(end != 0);
+	return ((v / end) % 2) ? end - (v%end) : (v%end);
 }
 
 // Iterate through sequences with features like pingponging and looping
