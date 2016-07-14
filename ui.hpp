@@ -53,7 +53,19 @@ class button_simple :
 	public render_client
 {
 	rectangle_node rect;
+	text_node text;
 public:
+
+	text_node& get_text_node()
+	{
+		return text;
+	}
+
+	void set_text(std::string str)
+	{
+		text.set_text(str);
+	}
+
 	virtual int draw(renderer &_r)
 	{
 		update(_r);
@@ -73,9 +85,18 @@ public:
 			rect.set_color({ 50, 50, 50 });
 		rect.set_size({ get_size().x, get_size().y });
 		rect.set_position(get_position());
+		text.set_position(get_position());
 		rect.draw(_r);
+		text.draw(_r);
 		return 0;
 	}
+};
+
+struct text_format
+{
+	engine::color color;
+	engine::font *font;
+	int size;
 };
 
 class input_box :

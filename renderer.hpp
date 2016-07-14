@@ -3,6 +3,7 @@
 
 #include <SFML\Graphics.hpp>
 
+
 #include "node.hpp"
 #include "texture.hpp"
 #include "ptr_GC.hpp"

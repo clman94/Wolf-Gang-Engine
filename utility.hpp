@@ -18,7 +18,6 @@ T clamp(T v, T min, T max)
 	return v;
 }
 
-
 template<typename T1,typename T2>
 class template_map
 {
