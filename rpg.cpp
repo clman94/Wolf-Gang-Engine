@@ -12,8 +12,8 @@ game::game()
 void 
 game::set_text_default(engine::text_node& n)
 {
-	n.set_color(255, 255, 255);
-	n.set_size(32);
+	n.set_color({ 255, 255, 255 });
+	n.set_character_size(32);
 	n.set_scale(0.5);
 }
 

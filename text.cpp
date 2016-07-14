@@ -51,7 +51,7 @@ text_node::draw(renderer &_r)
 }
 
 void
-text_node::set_size(int s)
+text_node::set_character_size(int s)
 {
 	text.setCharacterSize(s);
 }
@@ -70,7 +70,7 @@ text_node::set_scale(float a)
 
 
 void 
-text_node::set_color(int r, int g, int b)
+text_node::set_color(const color c)
 {
-	text.setColor(sf::Color(r, g, b, 255));
+	text.setColor(sf::Color(c.r, c.g, c.b, c.a));
 }

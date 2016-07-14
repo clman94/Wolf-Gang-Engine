@@ -44,15 +44,25 @@ class renderer
 	sf::Event event;
 
 	std::unordered_map<int, bool> pressed_keys;
+	std::unordered_map<int, bool> pressed_buttons;
 	void refresh_clients();
 
 	struct{
 		bool enable;
 		std::string text;
+		std::string* ptr;
+		bool multi_line;
 	} text_record;
 
 public:
 	typedef sf::Keyboard::Key key_type;
+
+	enum mouse_button
+	{
+		mouse_left,
+		mouse_right,
+		mouse_middle
+	};
 
 	renderer();
 	~renderer();
@@ -65,11 +75,17 @@ public:
 	void set_pixel_scale(float a);
 	bool is_key_pressed(key_type k);
 	bool is_key_down(key_type k);
+	bool is_mouse_pressed(mouse_button b);
+	bool is_mouse_down(mouse_button b);
 	fvector get_size();
 	void sort_clients();
-	void start_text_record();
+	void start_text_record(bool multi_line = false);
+	void start_text_record(std::string& ptr, bool multi_line = false);
+	bool is_text_recording();
+	bool is_text_recording(std::string& ptr);
 	void end_text_record();
 	const std::string& get_recorded_text();
+	fvector get_mouse_position();
 
 	friend class sprite_node;
 	friend class tile_node;
@@ -228,6 +244,7 @@ public:
 	void set_scale(fvector s);
 	int set_texture(texture& tex);
 	int set_texture(texture& tex, std::string atlas);
+	void set_texture_crop(const texture_crop& crop);
 	fvector get_size();
 };
 
@@ -309,9 +326,9 @@ public:
 	void set_text(const std::string s);
 	void append_text(const std::string s);
 	std::string get_text();
-	void set_size(int s);
+	void set_character_size(int s);
 	void set_anchor(engine::anchor a);
-	void set_color(int r, int g, int b);
+	void set_color(const color c);
 	void set_scale(float a);
 	virtual int draw(renderer &_r);
 };

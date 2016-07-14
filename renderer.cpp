@@ -1,7 +1,6 @@
 
 #include "renderer.hpp"
 
-
 using namespace engine;
 
 // ##########
@@ -83,7 +82,8 @@ render_client_wrapper::get_client()
 
 renderer::renderer()
 {
-
+	text_record.multi_line = false;
+	text_record.enable = false;
 }
 
 renderer::~renderer()
@@ -123,6 +123,26 @@ renderer::is_key_down(key_type k)
 	if (!window.hasFocus())
 		return false;
 	return sf::Keyboard::isKeyPressed(k);
+}
+
+bool
+renderer::is_mouse_pressed(mouse_button b)
+{
+	if (!window.hasFocus())
+		return false;
+	bool is_pressed = sf::Mouse::isButtonPressed((sf::Mouse::Button)b);
+	if (pressed_buttons[b] && is_pressed)
+		return false;
+	pressed_buttons[b] = is_pressed;
+	return is_pressed;
+}
+
+bool
+renderer::is_mouse_down(mouse_button b)
+{
+	if (!window.hasFocus())
+		return false;
+	return sf::Mouse::isButtonPressed((sf::Mouse::Button)b);
 }
 
 int
@@ -169,33 +189,71 @@ renderer::update_events()
 
 	while (window.pollEvent(event))
 	{
-		//if (event.type == sf::Event::KeyPressed)
-		//	pressed_keys.push_back(event.key.code);
 		if (event.type == sf::Event::Closed)
 			return 1;
 
-		if (text_record.enable && event.type == sf::Event::TextEntered){
-			if (event.KeyPressed == sf::Keyboard::BackSpace &&
-				text_record.text.size() != 0)
-				text_record.text.pop_back();
+		if (text_record.enable && event.type == sf::Event::TextEntered)
+		{
+			std::string *text = &text_record.text;
+			if (text_record.ptr)
+				text = text_record.ptr;
+
+			if (event.text.unicode == '\b')
+			{
+				if (text->size() != 0)
+					text->pop_back();
+			}
+			else if (event.text.unicode == '\r')
+			{
+				if (text_record.multi_line)
+					text->push_back('\n');
+			}
 			else if (event.text.unicode < 128)
-				text_record.text.push_back((char)event.text.unicode);
+				text->push_back(event.text.unicode);
 		}
 	}
 	return 0;
 }
 
 void
-renderer::start_text_record()
+renderer::start_text_record(bool multi_line)
 {
+	text_record.multi_line = multi_line;
 	text_record.enable = true;
 	text_record.text.clear();
+}
+
+void
+renderer::start_text_record(std::string& ptr, bool multi_line)
+{
+	text_record.multi_line = multi_line;
+	text_record.enable = true;
+	text_record.ptr = &ptr;
+	text_record.text.clear();
+}
+
+bool
+renderer::is_text_recording()
+{
+	return text_record.enable;
+}
+
+bool
+renderer::is_text_recording(std::string& ptr)
+{
+	return text_record.ptr == &ptr;
 }
 
 void
 renderer::end_text_record()
 {
 	text_record.enable = false;
+	text_record.ptr = nullptr;
+}
+const std::string& 
+renderer::get_recorded_text()
+{
+	return text_record.text;
 }
 
 void
@@ -248,4 +306,12 @@ renderer::set_pixel_scale(float a)
 	fr.height *= a;
 	view.setViewport(fr);
 	window.setView(view);
+}
+
+fvector
+renderer::get_mouse_position()
+{
+	auto pos = sf::Mouse::getPosition(window);
+	auto wpos = window.mapPixelToCoords(pos);
+	return{ wpos.x, wpos.y };
 }
