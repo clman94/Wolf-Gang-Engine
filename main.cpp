@@ -60,12 +60,6 @@ int game()
 		if (r.is_key_down(engine::renderer::key_type::Escape))
 			working = false;
 
-		if (r.is_key_pressed(engine::renderer::key_type::U))
-		{
-			std::cout << r.get_recorded_text() << "\n";
-			r.end_text_record();
-		}
-
 		game.tick(r);
 		r.draw();
 
@@ -80,72 +74,93 @@ int game()
 	return 0;
 }
 
-int atlas_editor(std::string open)
+class editor_mode
 {
+	std::string path;
 	engine::renderer r;
-	r.initualize(640, 512, 120); // Tiles fit nicely in this space
-	r.set_pixel_scale(2);
-
-	engine::ui::ui_instance instance;
-
-	engine::ui::button_simple b1;
-	b1.set_instance(instance);
-	b1.set_size({ 30, 50 });
-	b1.set_depth(-1000);
-	r.add_client(&b1);
-
-	engine::ui::button_simple b2;
-	b2.set_instance(instance);
-	b2.set_position({ 0, 100 });
-	b2.set_enable(false);
-	b2.set_size({ 30, 50 });
-	b2.set_depth(-1000);
-	r.add_client(&b2);
-
-	engine::font font;
-	if (!font.load("data/font.ttf"))
-		std::cout << "nooo";
-
-	engine::ui::input_box tb1;
-	auto& text_node = tb1.get_text_node();
-	text_node.set_font(font);
-	text_node.set_color({ 255, 255, 255 });
-	text_node.set_scale(0.5f);
-	tb1.set_instance(instance);
-	tb1.set_size({ 100, 20 });
-	tb1.set_position({ 100, 13 });
-	tb1.set_message("Thing");
-	tb1.set_text(100.32f);
-	r.add_client(&tb1);
 	
-	bool working = true;
-	while (working)
+	engine::ui::ui_instance instance;
+	
+	int initualize_renderer()
 	{
-		if (r.update_events())
-		{
-			working = false;
-			break;
-		}
-
-		r.draw();
+		r.initualize(640, 512, 20);
+		r.set_pixel_scale(2);
+		return 0;
 	}
-	return 0;
-}
+
+public:
+	void set_path(std::string str)
+	{
+		path = str;
+	}
+	int start()
+	{
+		initualize_renderer();
+
+		engine::ui::button_simple b1;
+		b1.set_instance(instance);
+		b1.set_size({ 30, 50 });
+		b1.set_depth(-1000);
+		r.add_client(&b1);
+
+		engine::ui::button_simple b2;
+		b2.set_instance(instance);
+		b2.set_position({ 0, 100 });
+		b2.set_enable(false);
+		b2.set_size({ 30, 50 });
+		b2.set_depth(-1000);
+		r.add_client(&b2);
+
+		engine::font font;
+		if (!font.load("data/font.ttf"))
+			std::cout << "nooo";
+
+		engine::ui::input_box tb1;
+		auto& text_node = tb1.get_text_node();
+		text_node.set_font(font);
+		text_node.set_color({ 255, 255, 255 });
+		text_node.set_scale(0.5f);
+		tb1.set_instance(instance);
+		tb1.set_size({ 100, 20 });
+		tb1.set_position({ 100, 13 });
+		tb1.set_message("Thing");
+		tb1.set_text(100.32f);
+		r.add_client(&tb1);
+
+		bool working = true;
+		while (working)
+		{
+			if (r.update_events())
+			{
+				working = false;
+				break;
+			}
+			
+			if ((r.is_key_down(engine::renderer::key_type::LControl) ||
+				r.is_key_down(engine::renderer::key_type::RControl)) &&
+				r.is_key_pressed(engine::renderer::key_type::P))
+			{
+				std::cout << "########## Starting game\n";
+				r.set_visible(false);
+				int status = game();
+
+				std::cout << "########## Returning to editor\n"
+					      << "Game exited with errorcode: " << status << "\n";
+				r.set_visible(true);
+			}
+
+			r.draw();
+		}
+		return 0;
+	}
+};
 
 int main(int argc, char* argv[])
 {
-	std::string editor;
-	std::string path;
-	if (argc == 1)
+	if (argc == 2)
 	{
-
-	}
-	if (argc >= 2)
-	{
-		editor = argv[1];
-		path = argv[2];
-		if (editor == "atlas")
-			return atlas_editor(path);
+			editor_mode e;
+			return e.start();
 	}
 	return game();
 }

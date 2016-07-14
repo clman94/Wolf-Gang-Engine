@@ -86,6 +86,7 @@ public:
 	void end_text_record();
 	const std::string& get_recorded_text();
 	fvector get_mouse_position();
+	void set_visible(bool is_visible);
 
 	friend class sprite_node;
 	friend class tile_node;
