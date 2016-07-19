@@ -55,6 +55,8 @@ class renderer
 		bool multi_line;
 	} text_record;
 
+	color background_color;
+
 public:
 	typedef sf::Keyboard::Key key_type;
 
@@ -88,6 +90,7 @@ public:
 	const std::string& get_recorded_text();
 	fvector get_mouse_position();
 	void set_visible(bool is_visible);
+	void set_bg_color(color c);
 
 	friend class sprite_node;
 	friend class tile_node;
@@ -195,7 +198,7 @@ static vector<T> center_offset(const vector<T>& size, anchor type)
 		return{ size.x, size.y/2 };
 	case anchor::center:
 		return{ size.x/2, size.y/2 };
-	} 
+	}
 	return 0;
 }
 

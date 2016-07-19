@@ -13,7 +13,7 @@ const engine::ivector TILE_SIZE              = { TILE_WIDTH_PX, TILE_HEIGHT_PX }
 const engine::time_t  DEFAULT_DIALOG_SPEED   = 25;
 const size_t          DIALOG_FX_INTERVAL     = 2;
 const size_t          CONTROL_COUNT          = 8;
-const engine::time_t  FADE_DURATION          = 0.2;
+const engine::time_t  FADE_DURATION          = 0.2f;
 
 const float           TILES_DEPTH = 101;
 const float           TILE_DEPTH_RANGE_MIN   = 1;

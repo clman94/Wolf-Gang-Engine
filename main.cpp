@@ -30,7 +30,7 @@ int game()
 
 	std::cout << "Load time : " << load_clock.get_elapse().s() << " seconds\n";
 
-	// This clock will calculate own framerate
+	// This clock will calculate the framerate
 	engine::clock fpsclock;
 	unsigned int frames_clocked = 0;
 
@@ -79,11 +79,11 @@ int game()
 
 int main(int argc, char* argv[])
 {
-	//if (argc == 2)
-	//{
+	if (argc == 2)
+	{
 			editor::editor_mode e;
 			return e.start(game);
-	//}
+	}
 	return game();
 }
 

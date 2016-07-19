@@ -4,7 +4,7 @@
 namespace engine
 {
 
-// Template expects POD types like int, double, float, etc...
+// Template expects  int, double, float, etc...
 template<typename T>
 struct vector
 {
@@ -39,7 +39,7 @@ struct vector
 		return{ x * (T)A.x, y * (T)A.y};
 	}
 
-	// No division, Very error prone.
+	// No division, high chance of dividing by zero.
 
 	template<typename T1>
 	vector operator * (const T1& A)
@@ -92,7 +92,7 @@ struct vector
 		return *this;
 	}
 
-	// No division, Very error prone.
+	// No division, high chance of dividing by zero.
 
 	template<typename>
 	friend struct vector;

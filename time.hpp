@@ -5,7 +5,7 @@
 
 namespace engine
 {
-typedef double time_t;
+typedef float time_t;
 
 // Universal time converter for clock
 class utime

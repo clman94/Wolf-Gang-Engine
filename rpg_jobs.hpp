@@ -32,6 +32,7 @@ enum job_op
 	MUSIC_VOLUME,
 	MUSIC_PLAY,
 	MUSIC_STOP,
+	MUSIC_WAIT,
 	ENTITY_MOVE,
 	ENTITY_CURRENT,
 	ENTITY_SETCYCLEGROUP,
@@ -148,6 +149,11 @@ struct JOB_music_volume : public job_entry
 	JOB_music_volume(tinyxml2::XMLElement* e);
 };
 
+struct JOB_music_wait : public job_entry
+{
+	float until_sec;
+	JOB_music_wait(tinyxml2::XMLElement* e);
+};
 
 struct JOB_scene_load : public job_entry
 {

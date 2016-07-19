@@ -63,9 +63,7 @@ node::detach_parent()
 	node_ref temp = parent->children[child_index];
 	parent->children.erase(parent->children.begin() + child_index);
 	for (size_t i = 0; i < parent->children.size(); i++)
-	{
 		parent->children[i]->child_index = i;
-	}
 	child_index = -1;
 	parent.reset();
 	return temp;
@@ -77,9 +75,7 @@ node::detach_children()
 	if (!children.size()) return node_arr();
 	node_arr temp = children;
 	for (auto i : children)
-	{
 		i->parent.reset();
-	}
 	children.clear();
 	return temp;
 }

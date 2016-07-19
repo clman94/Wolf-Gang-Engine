@@ -5,7 +5,7 @@ using namespace rpg;
 texture_manager::texture_entry*
 texture_manager::find_entry(std::string name)
 {
-	for (auto& i : texturebank)
+	for (auto& i : textures)
 	{
 		if (i.name == name)
 			return &i;
@@ -44,7 +44,7 @@ texture_manager::load_settings(std::string path)
 			nentry.has_atlas = false;
 
 		nentry.is_loaded = false;
-		texturebank.push_back(nentry);
+		textures.push_back(nentry);
 		entry = entry->NextSiblingElement();
 	}
 	return 0;
@@ -67,4 +67,14 @@ texture_manager::get_texture(std::string name)
 		entry->is_loaded = true;
 	}
 	return &entry->tex;
+}
+
+
+std::vector<std::string>
+texture_manager::construct_list()
+{
+	std::vector<std::string> list;
+	for (auto& i : textures)
+		list.push_back(i.name);
+	return std::move(list);
 }

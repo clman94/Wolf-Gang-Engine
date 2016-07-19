@@ -92,13 +92,6 @@ public:
 	}
 };
 
-struct text_format
-{
-	engine::color color;
-	engine::font *font;
-	int size;
-};
-
 class input_box :
 	public button_area,
 	public render_client

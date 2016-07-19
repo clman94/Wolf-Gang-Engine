@@ -9,7 +9,7 @@ using namespace engine::ui;
 
 ui_instance::ui_instance()
 {
-	focus = 0;
+	focus = -1;
 }
 
 // #########
@@ -44,7 +44,7 @@ ui_client::request_focus()
 void
 ui_client::loose_focus()
 {
-	if (instance)
+	if (is_focused())
 		instance->focus = -1;
 }
 
@@ -52,7 +52,7 @@ bool
 ui_client::is_focused()
 {
 	if (!instance)
-		return true; // Defaults
+		return false; // Defaults
 	return instance->focus == client_index;
 }
 
@@ -138,9 +138,9 @@ button_area::update(renderer &_r)
 	}
 }
 
-// ########
-// text_box
-// ########
+// #########
+// input_box
+// #########
 
 text_node&
 input_box::get_text_node()
@@ -194,7 +194,7 @@ int
 input_box::draw(renderer &_r)
 {
 	update(_r);
-	if (_r.is_mouse_pressed(_r.mouse_left) && is_pressed())
+	if (is_pressed())
 	{
 		request_focus();
 		_r.start_text_record(str);

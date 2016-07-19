@@ -150,6 +150,13 @@ interpretor::JOB_music_volume::JOB_music_volume(tinyxml2::XMLElement* e)
 	op = MUSIC_VOLUME;
 }
 
+interpretor::JOB_music_wait::JOB_music_wait(tinyxml2::XMLElement* e)
+{
+	until_sec = e->FloatAttribute("until");
+	op = MUSIC_WAIT;
+}
+
+
 interpretor::JOB_scene_load::JOB_scene_load(tinyxml2::XMLElement* e)
 {
 	if (auto _path = e->Attribute("path"))
@@ -220,15 +227,14 @@ interpretor::JOB_entity_setdirection::JOB_entity_setdirection(tinyxml2::XMLEleme
 	op = ENTITY_SETDIRECTION;
 }
 
-
-
-#define ADD_JOB(A) jobs_ret.push_back(new A)
+#define ADD_JOB(A) jobs_ret.push_back(ptr_GC<job_entry>::take(new A))
 
 job_list
 interpretor::parse_jobs_xml(tinyxml2::XMLElement* e)
 {
 	job_list jobs_ret;
 	auto j = e->FirstChildElement();
+
 	while (j)
 	{
 		std::string name = j->Name();
@@ -309,6 +315,9 @@ interpretor::parse_jobs_xml(tinyxml2::XMLElement* e)
 
 		else if (name == "music:stop")
 			ADD_JOB(job_entry(MUSIC_STOP));
+
+		else if (name == "music:wait")
+			ADD_JOB(JOB_music_wait(j));
 
 		else if (name == "scene:load")
 			ADD_JOB(JOB_scene_load(j));

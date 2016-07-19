@@ -105,6 +105,7 @@ renderer::get_size()
 	};
 }
 
+// TODO : RETHINK
 bool
 renderer::is_key_pressed(key_type k)
 {
@@ -125,6 +126,7 @@ renderer::is_key_down(key_type k)
 	return sf::Keyboard::isKeyPressed(k);
 }
 
+// TODO : RETHINK
 bool
 renderer::is_mouse_pressed(mouse_button b)
 {
@@ -175,7 +177,10 @@ renderer::draw_clients()
 int
 renderer::draw()
 {
-	window.clear(sf::Color::Black);
+	{
+		auto &c = background_color;
+		window.clear(sf::Color(c.r, c.g, c.b, c.a));
+	}
 	draw_clients();
 	window.display();
 	return 0;
@@ -229,7 +234,6 @@ renderer::start_text_record(std::string& ptr, bool multi_line)
 	text_record.multi_line = multi_line;
 	text_record.enable = true;
 	text_record.ptr = &ptr;
-	text_record.text.clear();
 }
 
 bool
@@ -316,9 +320,14 @@ renderer::get_mouse_position()
 	return{ wpos.x, wpos.y };
 }
 
-
 void
 renderer::set_visible(bool is_visible)
 {
 	window.setVisible(is_visible);
+}
+
+void
+renderer::set_bg_color(color c)
+{
+	background_color = c;
 }

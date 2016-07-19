@@ -22,8 +22,6 @@ struct scene
 	std::list<event_entry> events;
 	int parse_events_xml(tinyxml2::XMLElement* e);
 
-	interpretor::job_list* find_event(std::string name);
-
 	struct collisionbox
 	{
 		enum box_type

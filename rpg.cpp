@@ -646,6 +646,26 @@ game::tick_interpretor()
 			tracker.next_job();
 			break;
 		}
+		case job_op::MUSIC_WAIT:
+		{
+			JOB_music_wait* j = (JOB_music_wait*)job;
+
+			if (!sound.bg_music.is_valid())
+			{
+				utility::error("No music is loaded");
+				tracker.next_job();
+				break;
+			}
+
+			if (!sound.bg_music.is_playing())
+				sound.bg_music.play();
+
+			if (sound.bg_music.get_position() < j->until_sec)
+				tracker.wait_job();
+			else
+				tracker.next_job();
+			break;
+		}
 		case job_op::MUSIC_PAUSE:
 		{
 			sound.bg_music.pause();

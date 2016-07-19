@@ -13,9 +13,6 @@ namespace engine
 // All owners are unified under an instance of shared_ptr.
 // All non-owners are each seperate and do not delete pointer.
 
-// Automatically takes ownership when given a pointer.
-// Automatically prevents deletion if not a pointer.
-
 template<typename T>
 class ptr_GC
 {
@@ -49,18 +46,18 @@ public:
 		_owner = false;
 	}
 
-	ptr_GC(T& obj, bool own = false)
+	ptr_GC(T& obj)
 	{
 		reset();
 		_ptr.reset(&obj, D<T>());
-		_owner = own;
+		_owner = false;
 	}
 
-	ptr_GC(T* obj, bool own = true)
+	ptr_GC(T* obj)
 	{
 		reset();
 		_ptr.reset(obj, D<T>());
-		_owner = own;
+		_owner = false;
 	}
 
 	template<typename T1>
@@ -103,17 +100,15 @@ public:
 		_ptr.reset();
 	}
 
-	// Take ownership of object R
 	template<typename T1>
 	ptr_GC& operator=(T1* R)
 	{
 		reset();
 		_ptr.reset(R, D<T>());
-		_owner = true;
+		_owner = false;
 		return *this;
 	}
 
-	// Ownership of original object is preserved
 	template<typename T1>
 	ptr_GC& operator=(T1& R)
 	{
@@ -149,10 +144,7 @@ public:
 
 	ptr_GC<T> protect()
 	{
-		ptr_GC<T> temp;
-		temp._ptr = _ptr;
-		temp._owner = false;
-		return temp;
+		return ptr_GC<T>(_ptr.get());
 	}
 
 	bool is_owner()
@@ -178,6 +170,13 @@ public:
 	explicit operator bool()
 	{
 		return _ptr != nullptr;
+	}
+
+	static ptr_GC take(T* obj)
+	{
+		ptr_GC<T> ptr(obj);
+		ptr._owner = true;
+		return ptr;
 	}
 
 	template <typename>

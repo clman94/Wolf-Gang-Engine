@@ -31,12 +31,13 @@ class texture_manager
 		bool is_loaded, has_atlas;
 		engine::texture tex;
 	};
-	std::list<texture_entry> texturebank;
+	std::list<texture_entry> textures;
 	texture_entry* find_entry(std::string name);
 
 public:
 	int load_settings(std::string path);
 	engine::texture* get_texture(std::string name);
+	std::vector<std::string> construct_list();
 };
 
 class panning_node :
@@ -173,7 +174,7 @@ class game
 		}buffers;
 
 		// The sound stream for the background music.
-		// Its shadow pair is the path of the current file.
+		// Its pair is the path of the current file.
 		utility::shadow_pair<engine::sound_stream, std::string> bg_music;
 
 		engine::sound FX_dialog_click;
