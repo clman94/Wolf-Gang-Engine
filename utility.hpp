@@ -12,7 +12,7 @@ namespace utility
 {
 
 template<typename T>
-T clamp(T v, T min, T max)
+static inline T clamp(T v, T min, T max)
 {
 	if (v < min) return min;
 	if (v > max) return max;

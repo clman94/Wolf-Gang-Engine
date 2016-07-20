@@ -204,7 +204,6 @@ game::open_narrative_box()
 	narrative.box .set_visible(true);
 	narrative.text.set_visible(true);
 	lock_mc_movement = true;
-	narrative.expression.set_visible(true);
 }
 
 void
@@ -213,8 +212,6 @@ game::close_narrative_box()
 	narrative.box       .set_visible(false);
 	narrative.cursor    .set_visible(false);
 	narrative.text      .set_visible(false);
-	narrative.expression.set_visible(false);
-	narrative.expression.bind_client(nullptr);
 	narrative.expression.set_visible(false);
 	lock_mc_movement = false;
 }
@@ -350,15 +347,12 @@ game::tick_interpretor()
 				{
 					if (!j->expression.empty())
 					{
-						auto expr = expressions.find(j->expression);
-						narrative.expression.bind_client(&expr->second);
-						expr->second.start();
+						auto &expr = expressions.find(j->expression);
+						narrative.expression.set_animation(expr->second);
+						narrative.expression.start();
+						narrative.expression.set_visible(true);
 						narrative.text.set_relative_position({ 64, 5 });
-					}
-
-					if (auto expr = narrative.expression.get_client())
-						expr->start();
-					else
+					}else
 						narrative.text.set_relative_position({ 10, 5 });
 
 					narrative.speaker->animation_start(entity::SPEECH);
@@ -389,7 +383,7 @@ game::tick_interpretor()
 			// Reveal text one by one
 			if (j->clock.get_elapse().ms() >= j->char_interval)
 			{
-				if (j->c_char % DIALOG_FX_INTERVAL == 0) sound.FX_dialog_click.play(); // Play FX
+				if (j->c_char != ' ') sound.FX_dialog_click.play(); // Play FX
 				narrative.text.append_text(j->text.substr(j->c_char, 1));
 				j->c_char += 1;
 				j->clock.restart();
@@ -401,8 +395,7 @@ game::tick_interpretor()
 			if (j->c_char >= j->text.size())
 			{
 				tracker.next_job();
-				if (auto expr = narrative.expression.get_client())
-					expr->stop();
+				narrative.expression.stop();
 				if (narrative.speaker)
 					narrative.speaker->animation_stop(entity::SPEECH);
 			}
@@ -938,32 +931,34 @@ game::load_entity_anim(
 		auto t = tm.get_texture(att_tex);
 		if (!t) return "Texture '" + std::string(att_tex) + "' not found";
 
-		int loop_type = na.node.LOOP_NONE;
-		if (att_loop)     loop_type = na.node.LOOP_LINEAR;
-		if (att_pingpong) loop_type = na.node.LOOP_PING_PONG;
-		na.node.set_loop(loop_type);
+		int loop_type = na.anim.LOOP_NONE;
+		if (att_loop)     loop_type = na.anim.LOOP_LINEAR;
+		if (att_pingpong) loop_type = na.anim.LOOP_PING_PONG;
+		na.anim.set_loop(loop_type);
 		
-		na.node.set_interval(att_interval);
-		na.node.set_texture(*t);
-		na.node.generate_sequence(
-			(att_frames <= 0 ? 1 : att_frames), // Default one frame
-			*t,
-			att_atlas);
+		na.anim.add_interval(0, att_interval);
+		na.anim.set_texture(*t);
 
-		na.node.set_default_frame(att_default);
-		na.node.set_frame(att_start);
-		na.node.restart();
+		{
+			auto atlas = t->get_entry(att_atlas);
+			if (atlas.w == 0)
+				return "Atlas '" + std::string(att_atlas) + "' does not exist";
 
-		na.node.set_parent(c);
+			na.anim.generate(
+				(att_frames <= 0 ? 1 : att_frames), // Default one frame
+				atlas);
+		}
+
+		na.anim.set_default_frame(att_default);
 
 		na.name = ele->Name();
 
-		auto *ele_seq = ele->FirstChildElement("seq");
+		auto ele_seq = ele->FirstChildElement("seq");
 		while (ele_seq)
 		{
-			na.node.add_sequence_interval(
-				ele_seq->IntAttribute("interval"), 
-				(engine::frame_t)ele_seq->IntAttribute("from"));
+			na.anim.add_interval(
+				(engine::frame_t)ele_seq->IntAttribute("from"),
+				ele_seq->IntAttribute("interval"));
 			ele_seq = ele_seq->NextSiblingElement();
 		}
 

@@ -25,7 +25,6 @@ int game()
 	game.load_game("data/game.xml");
 
 	std::cout << "Size of the freakin game: " << sizeof(game) << "\n";
-	std::cout << "Size of the animated_sprite_node: " << sizeof(engine::animated_sprite_node) << "\n";
 	std::cout << "Size of the sprite_node: " << sizeof(engine::sprite_node) << "\n";
 
 	std::cout << "Load time : " << load_clock.get_elapse().s() << " seconds\n";

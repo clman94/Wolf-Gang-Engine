@@ -10,6 +10,7 @@ typedef size_t  frame_t;
 typedef float   depth_t;
 typedef uint8_t color_t;
 
+
 }
 
 #endif

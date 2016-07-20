@@ -16,6 +16,7 @@
 #include <list>
 #include <map>
 #include <unordered_map>
+#include "rect.hpp"
 
 #include "types.hpp"
 
@@ -94,9 +95,9 @@ public:
 
 	friend class sprite_node;
 	friend class tile_node;
-	friend class animated_sprite_node;
 	friend class text_node;
 	friend class rectangle_node;
+	friend class uni_container;
 };
 
 class render_client
@@ -249,66 +250,10 @@ public:
 	void set_scale(fvector s);
 	int set_texture(texture& tex);
 	int set_texture(texture& tex, std::string atlas);
-	void set_texture_crop(const texture_crop& crop);
+	void set_texture_rect(const engine::irect& crop);
 	fvector get_size();
 };
 
-
-
-class animated_sprite_node :
-	public render_client,
-	public node
-{
-	sf::Sprite _sprite;
-
-	engine::clock c_clock;
-	std::vector<texture_crop> frames;
-	int interval;
-	frame_t c_frame;
-	frame_t c_actualframe;
-	frame_t default_frame;
-	bool playing;
-	int loop;
-
-	struct seq_interval_entry
-	{
-		int interval;
-		frame_t from_frame;
-	};
-	std::vector<seq_interval_entry> seq_interval;
-	void set_seq_interval();
-
-	void calculate_frameloop();
-
-public:
-	enum loop_type
-	{
-		LOOP_NONE,
-		LOOP_LINEAR,
-		LOOP_PING_PONG
-	};
-
-	animated_sprite_node();
-	virtual int draw(renderer &_r);
-	int set_texture(texture& tex);
-	int add_frame(std::string name, texture& tex, std::string atlas);
-	int generate_sequence(frame_t frames, int width, int height, fvector offset = { 0 });
-	int generate_sequence(frame_t frames, texture& tex, std::string atlas);
-	void add_sequence_interval(int i, frame_t from);
-	fvector get_size();
-	void set_anchor(anchor type);
-	void set_interval(int _interval);
-	void tick_animation();
-	void start();
-	void pause();
-	void stop();
-	void restart();
-	void set_frame(frame_t frame);
-	void set_default_frame(frame_t frame);
-	void set_default_frame();
-	void set_loop(int a);
-	bool is_playing();
-};
 
 class font
 {
@@ -408,6 +353,91 @@ public:
 	void set_tile(ivector pos, std::string atlas, int rot = 0, bool replace = true);
 	void clear_all();
 	virtual int draw(renderer &_r);
+};
+
+class uni_animation
+{
+	struct sequence_frame
+	{
+		int     interval;
+		frame_t from;
+	};
+	std::vector<sequence_frame> sequence;
+	std::vector<engine::irect>  frames;
+	engine::texture*            opt_texture;
+	frame_t                     default_frame;
+	int                         loop;
+public:
+	uni_animation();
+
+	enum loop_type
+	{
+		LOOP_NONE,
+		LOOP_LINEAR,
+		LOOP_PING_PONG
+	};
+
+	void set_loop(int a);
+	int  get_loop();
+
+	void add_frame(engine::irect frame, int interval = 0);
+	void add_interval(frame_t from, int interval);
+
+	int  get_interval(frame_t at = 0);
+
+	frame_t get_frame_count();
+
+	const engine::irect& get_frame(frame_t frame);
+
+	ivector get_size();
+
+	void set_default_frame(frame_t frame);
+	int  get_default_frame();
+
+	void set_texture(engine::texture& texture);
+	engine::texture* get_texture();
+
+	void generate(frame_t frame_count, engine::irect first_frame, engine::ivector scan = {1, 0});
+};
+
+class uni_container :
+	public render_client,
+	public node
+{
+	sf::Sprite sfml_sprite;
+
+	engine::clock  clock;
+
+	uni_animation* animation;
+
+	frame_t        c_count;
+	frame_t        c_frame;
+
+	engine::anchor c_anchor;
+	
+	int            interval;
+	bool           playing;
+
+	frame_t calculate_frame();
+
+public:
+	uni_container();
+
+	void set_frame(frame_t frame);
+	void set_animation(uni_animation& a);
+	void set_texture(texture& tex);
+
+	int tick();
+
+	bool is_playing();
+	void start();
+	void pause();
+	void stop();
+	void restart();
+
+	void set_anchor(engine::anchor a);
+
+	int draw(renderer &_r);
 };
 
 }

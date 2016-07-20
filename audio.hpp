@@ -173,6 +173,7 @@ public:
 class sample_buffer
 {
 	std::vector<sf::Int16> samples;
+
 public:
 	sample_buffer();
 	sample_buffer(sample_buffer& m);

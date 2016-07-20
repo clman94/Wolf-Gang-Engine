@@ -200,12 +200,7 @@ tile_node::set_tile_size(ivector s)
 void
 tile_node::set_tile(ivector pos, std::string atlas, int rot, bool replace)
 {
-	texture_crop crop;
-	if (c_tex->find_atlas(atlas, crop))
-	{
-		std::cout << "Error: Failed to find texture atlas '" << atlas << "'\n";
-		return;
-	}
+	auto crop = c_tex->get_entry(atlas);
 
 	int width = tile_size.x;
 	int height = tile_size.x;

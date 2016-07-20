@@ -138,8 +138,7 @@ class game
 		engine::text_node   option1;
 		engine::text_node   option2;
 		entity             *speaker;
-		engine::render_client_special
-			<engine::animated_sprite_node> expression;
+		engine::uni_container expression;
 	} narrative;
 	void open_narrative_box();
 	void close_narrative_box();
@@ -151,9 +150,9 @@ class game
 
 	engine::font font;
 	engine::renderer* renderer;
-	
+
 	// The map of expression animations all identified by a string.
-	std::map<std::string, engine::animated_sprite_node> expressions;
+	std::map<std::string, engine::uni_animation> expressions;
 
 	// The set of flags. All defined by a string.
 	// These define the flow of the game and various other things.

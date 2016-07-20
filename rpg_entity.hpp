@@ -15,11 +15,14 @@ class entity :
 {
 	struct animation
 	{
-		engine::animated_sprite_node node;
+		engine::uni_animation anim;
 		std::string name;
 		int type;
 	};
 	std::list<animation> world;
+
+	engine::uni_container animation_node;
+
 	animation* find_animation(std::string name);
 	animation* c_anim;
 	std::string name;
@@ -64,7 +67,7 @@ public:
 
 	void set_auto_depth(int set);
 
-	engine::animated_sprite_node* get_animation();
+	engine::uni_animation* get_animation();
 
 	bool is_animation_done();
 	void animation_start(animation_type type);
@@ -78,6 +81,7 @@ public:
 	void move_down(float delta);
 
 	int draw(engine::renderer &_r);
+
 	friend class game;
 };
 

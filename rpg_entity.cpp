@@ -9,6 +9,7 @@ entity::entity()
 	{
 		cycles[i] = nullptr;
 	}
+	animation_node.set_anchor(engine::anchor::bottom);
 }
 
 std::string 
@@ -34,10 +35,10 @@ entity::find_animation(std::string name)
 	return nullptr;
 }
 
-engine::animated_sprite_node*
+engine::uni_animation*
 entity::get_animation()
 {
-	return &cycles[c_cycle]->node;
+	return &cycles[c_cycle]->anim;
 }
 
 utility::error
@@ -48,7 +49,7 @@ entity::set_cycle_animation(std::string _name, cycle_type cycle)
 	if (!a)
 		return "Entity animation '" + _name + 
 			"' in entity '" + name + "' does not exist";
-	a->node.set_anchor(engine::anchor::bottom);
+	//a->node.set_anchor(engine::anchor::bottom);
 	cycles[cycle] = a;
 	return 0;
 }
@@ -72,7 +73,8 @@ entity::draw(engine::renderer &_r)
 	if (c_anim)
 	{
 		update_depth();
-		c_anim->node.draw(_r);
+		animation_node.set_position(get_position());
+		animation_node.draw(_r);
 	}
 	return 0;
 }
@@ -81,35 +83,33 @@ void
 entity::animation_start(animation_type type)
 {
 	if (c_anim && c_anim->type == type)
-		c_anim->node.start();
+		animation_node.start();
 }
 
 void
 entity::animation_stop(animation_type type)
 {
 	if (c_anim && c_anim->type == type)
-		c_anim->node.stop();
+		animation_node.stop();
 }
 
 void
 entity::animation_start()
 {
-	if (c_anim)
-		c_anim->node.start();
+	animation_node.start();
 }
 
 void
 entity::animation_stop()
 {
-	if (c_anim)
-		c_anim->node.stop();
+	animation_node.stop();
 }
 
 bool
 entity::is_animation_done()
 {
 	if (c_anim)
-		return c_anim->node.is_playing();
+		return animation_node.is_playing();
 	return true;
 }
 
@@ -117,7 +117,7 @@ void
 entity::move_left(float delta)
 {
 	if (c_anim && c_anim->type == WALK)
-		c_anim->node.tick_animation();
+		animation_node.tick();
 	set_relative_position(get_relative_position() + engine::fvector(-delta));
 }
 
@@ -125,7 +125,7 @@ void
 entity::move_right(float delta)
 {
 	if (c_anim && c_anim->type == WALK)
-		c_anim->node.tick_animation();
+		animation_node.tick();
 	set_relative_position(get_relative_position() + engine::fvector(delta));
 }
 
@@ -133,7 +133,7 @@ void
 entity::move_up(float delta)
 {
 	if (c_anim && c_anim->type == WALK)
-		c_anim->node.tick_animation();
+		animation_node.tick();
 	set_relative_position(get_relative_position() + engine::fvector(0, -delta));
 }
 
@@ -141,7 +141,7 @@ void
 entity::move_down(float delta)
 {
 	if (c_anim && c_anim->type == WALK)
-		c_anim->node.tick_animation();
+		animation_node.tick();
 	set_relative_position(get_relative_position() + engine::fvector(0, delta));
 }
 
@@ -153,6 +153,7 @@ entity::set_cycle(int cycle)
 		c_anim = cycles[cycle];
 	else
 		c_anim = cycles[DEFAULT];
+	animation_node.set_animation(c_anim->anim);
 	animation_start(CONSTANT);
 }
 

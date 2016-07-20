@@ -27,10 +27,8 @@ int sprite_node::set_texture(texture& tex, std::string atlas)
 {
 	sf::Texture& sf_texture = tex.sfml_get_texture();
 	_sprite.setTexture(sf_texture);
-	texture_crop crop;
-	if (tex.find_atlas(atlas, crop))
-		return 1;
-	set_texture_crop(crop);
+	auto crop = tex.get_entry(atlas);
+	set_texture_rect(crop);
 	return 0;
 }
 
@@ -49,7 +47,7 @@ sprite_node::get_size()
 }
 
 void
-sprite_node::set_texture_crop(const texture_crop& crop)
+sprite_node::set_texture_rect(const engine::irect& crop)
 {
 	_sprite.setTextureRect(sf::IntRect(crop.x, crop.y, crop.w, crop.h));
 }

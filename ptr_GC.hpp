@@ -81,7 +81,7 @@ public:
 	{
 		if (_ptr)
 			reset();
-		_ptr.reset(new T);
+		_ptr.reset(new T, D<T>());
 		_owner = true;
 	}
 
@@ -109,15 +109,6 @@ public:
 		return *this;
 	}
 
-	template<typename T1>
-	ptr_GC& operator=(T1& R)
-	{
-		reset();
-		_ptr.reset(&R, D<T>());
-		_owner = false;
-		return *this;
-	}
-
 	// Share ownership if allowed
 	template<typename T1>
 	ptr_GC& operator=(const ptr_GC<T1>& R)
@@ -130,6 +121,17 @@ public:
 			_ptr.reset(obj._ptr.get(), D<T>());
 		return *this;
 	}
+
+	/*template<typename T1>
+	ptr_GC& operator=(T1& R)
+	{
+		reset();
+		_ptr.reset(&R, D<T>());
+		_owner = false;
+		return *this;
+	}*/
+
+
 
 	void release()
 	{
