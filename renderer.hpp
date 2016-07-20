@@ -97,7 +97,7 @@ public:
 	friend class tile_node;
 	friend class text_node;
 	friend class rectangle_node;
-	friend class uni_container;
+	friend class animation_node;
 };
 
 class render_client
@@ -355,7 +355,7 @@ public:
 	virtual int draw(renderer &_r);
 };
 
-class uni_animation
+class animation
 {
 	struct sequence_frame
 	{
@@ -368,7 +368,7 @@ class uni_animation
 	frame_t                     default_frame;
 	int                         loop;
 public:
-	uni_animation();
+	animation();
 
 	enum loop_type
 	{
@@ -400,7 +400,7 @@ public:
 	void generate(frame_t frame_count, engine::irect first_frame, engine::ivector scan = {1, 0});
 };
 
-class uni_container :
+class animation_node :
 	public render_client,
 	public node
 {
@@ -408,7 +408,7 @@ class uni_container :
 
 	engine::clock  clock;
 
-	uni_animation* animation;
+	animation*     c_animation;
 
 	frame_t        c_count;
 	frame_t        c_frame;
@@ -421,10 +421,10 @@ class uni_container :
 	frame_t calculate_frame();
 
 public:
-	uni_container();
+	animation_node();
 
 	void set_frame(frame_t frame);
-	void set_animation(uni_animation& a);
+	void set_animation(animation& a);
 	void set_texture(texture& tex);
 
 	int tick();

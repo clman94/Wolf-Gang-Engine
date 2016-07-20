@@ -35,7 +35,7 @@ entity::find_animation(std::string name)
 	return nullptr;
 }
 
-engine::uni_animation*
+engine::animation*
 entity::get_animation()
 {
 	return &cycles[c_cycle]->anim;
