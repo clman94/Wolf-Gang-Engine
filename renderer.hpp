@@ -45,8 +45,10 @@ class renderer
 
 	sf::Event event;
 
-	std::unordered_map<int, bool> pressed_keys;
-	std::unordered_map<int, bool> pressed_buttons;
+	std::unordered_map<int, int> pressed_keys;
+	std::unordered_map<int, int> pressed_buttons;
+	void refresh_pressed();
+
 	void refresh_clients();
 
 	struct{

@@ -105,16 +105,15 @@ renderer::get_size()
 	};
 }
 
-// TODO : RETHINK
 bool
 renderer::is_key_pressed(key_type k)
 {
 	if (!window.hasFocus())
 		return false;
 	bool is_pressed = sf::Keyboard::isKeyPressed(k);
-	if (pressed_keys[k] && is_pressed)
+	if (pressed_keys[k] == -1 && is_pressed)
 		return false;
-	pressed_keys[k] = is_pressed;
+	pressed_keys[k] = is_pressed ? 1 : 0;
 	return is_pressed;
 }
 
@@ -126,16 +125,15 @@ renderer::is_key_down(key_type k)
 	return sf::Keyboard::isKeyPressed(k);
 }
 
-// TODO : RETHINK
 bool
 renderer::is_mouse_pressed(mouse_button b)
 {
 	if (!window.hasFocus())
 		return false;
 	bool is_pressed = sf::Mouse::isButtonPressed((sf::Mouse::Button)b);
-	if (pressed_buttons[b] && is_pressed)
+	if (pressed_buttons[b] == -1 && is_pressed)
 		return false;
-	pressed_buttons[b] = is_pressed;
+	pressed_buttons[b] = is_pressed ? 1 : 0;
 	return is_pressed;
 }
 
@@ -145,6 +143,22 @@ renderer::is_mouse_down(mouse_button b)
 	if (!window.hasFocus())
 		return false;
 	return sf::Mouse::isButtonPressed((sf::Mouse::Button)b);
+}
+
+void
+renderer::refresh_pressed()
+{
+	for (auto &i : pressed_keys)
+	{
+		if (i.second == 1)
+			i.second = -1;
+	}
+
+	for (auto &i : pressed_buttons)
+	{
+		if (i.second == 1)
+			i.second = -1;
+	}
 }
 
 int
@@ -177,10 +191,8 @@ renderer::draw_clients()
 int
 renderer::draw()
 {
-	{
-		auto &c = background_color;
-		window.clear(sf::Color(c.r, c.g, c.b, c.a));
-	}
+	auto &c = background_color;
+	window.clear(sf::Color(c.r, c.g, c.b, c.a));
 	draw_clients();
 	window.display();
 	return 0;
@@ -189,6 +201,8 @@ renderer::draw()
 int 
 renderer::update_events()
 {
+	refresh_pressed();
+
 	if (!window.isOpen())
 		return 1;
 

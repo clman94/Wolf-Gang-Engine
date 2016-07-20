@@ -157,6 +157,12 @@ entity::set_cycle(int cycle)
 	animation_start(CONSTANT);
 }
 
+int
+entity::get_cycle()
+{
+	return c_cycle;
+}
+
 engine::fvector
 entity::get_activate_point()
 {

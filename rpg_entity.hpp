@@ -63,6 +63,7 @@ public:
 	utility::error set_cycle_animation(std::string name, cycle_type type);
 	utility::error set_cycle_group(std::string name);
 	void set_cycle(int cycle);
+	int  get_cycle();
 	engine::fvector get_activate_point();
 
 	void set_auto_depth(int set);

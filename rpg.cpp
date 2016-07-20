@@ -383,7 +383,7 @@ game::tick_interpretor()
 			// Reveal text one by one
 			if (j->clock.get_elapse().ms() >= j->char_interval)
 			{
-				if (j->c_char != ' ') sound.FX_dialog_click.play(); // Play FX
+				if (j->c_char%2 == 0) sound.FX_dialog_click.play(); // Play FX
 				narrative.text.append_text(j->text.substr(j->c_char, 1));
 				j->c_char += 1;
 				j->clock.restart();
@@ -1041,6 +1041,14 @@ game::load_tilemap_individual(tinyxml2::XMLElement* e, size_t layer)
 {
 	using namespace tinyxml2;
 	auto &ground = tile_system.ground; // Convenience
+
+	if (auto path = e->Attribute("path"))
+	{
+		XMLDocument doc;
+		doc.LoadFile(path);
+		load_tilemap_individual(doc.RootElement(), layer);
+		return 0;
+	}
 
 	ground.set_layer(layer);
 
