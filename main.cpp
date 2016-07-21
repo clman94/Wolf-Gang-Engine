@@ -4,6 +4,7 @@
 #include "rpg.hpp"
 #include "time.hpp"
 #include "ui.hpp"
+#include "rpg_config.hpp"
 
 #include "editor\editor.hpp"
 
@@ -12,7 +13,7 @@
 int game()
 {
 	engine::renderer r;
-	r.initualize(640, 512, 120); // Tiles fit nicely in this space
+	r.initualize(rpg::SCREEN_SIZE, 120); // Tiles fit nicely in this space
 	r.set_pixel_scale(2); // Set the pixels to be 2x2
 
 	engine::clock load_clock;

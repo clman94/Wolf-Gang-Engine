@@ -142,6 +142,11 @@ public:
 	}
 };
 
+
+// ################
+// Experimentation
+// ################
+
 // Calculate frequency of note from C5
 static float note_freq(int halfsteps)
 {
@@ -208,10 +213,9 @@ class sample_mix
 	sf::Sound output, output2;
 	int c_section;
 
-	void generate_section();
-
 public:
-
+	void generate_section(size_t start, size_t duration);
+	const std::vector<signed short>& get_buffer();
 	sample_mix();
 	void add_mix(freq_sequence& seq, int wave, int voice);
 	void setup();

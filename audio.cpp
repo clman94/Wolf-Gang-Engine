@@ -205,14 +205,14 @@ sample_mix::add_mix(freq_sequence& seq, int wave, int voice)
 }
 
 void
-sample_mix::generate_section()
+sample_mix::generate_section(size_t start, size_t duration)
 {
 	for (auto& i : mix.samples)
 		i = 0;
 
 	for (auto& i : channels)
 	{
-		engine::freq_sequence s = i.seq->snip(c_section * 44100, 44100);
+		engine::freq_sequence s = i.seq->snip(start, duration);
 		sample_buffer::generate(mix, i.wave, s, i.voice);
 	}
 }
@@ -220,11 +220,17 @@ sample_mix::generate_section()
 void
 sample_mix::setup()
 {
-	generate_section();
+	//generate_section();
 	//buffer.loadFromSamples(&mix.samples[0], mix.samples.size(), 1, 44100);
 	output.setBuffer(buffer);
 	output2.setBuffer(buffer);
 	++c_section;
+}
+
+const std::vector<signed short>&
+sample_mix::get_buffer()
+{
+	return mix.samples;
 }
 
 void
@@ -238,10 +244,48 @@ sample_mix::play()
 		else
 			output.play();
 
-		generate_section();
 		++c_section;
 	}
 }
+
+class teststream : public sf::InputStream
+{
+	sample_mix* mix;
+	size_t loc;
+public:
+	teststream()
+	{
+		loc = 0;
+	}
+	bool open(sample_mix& nmix)
+	{
+		mix = &nmix;
+		return false;
+	}
+	sf::Int64 read(void* data, sf::Int64 size)
+	{
+		mix->generate_section(loc, size/2);
+		for (size_t i = 0; i < size/2; i++)
+		{
+			((unsigned short*)data)[i] = mix->get_buffer().at(i);
+		}
+		loc += size;
+		return size;
+	}
+	sf::Int64 seek(sf::Int64 position)
+	{
+		loc = position;
+		return position;
+	}
+	sf::Int64 tell()
+	{
+		return loc;
+	}
+	sf::Int64 getSize()
+	{
+		return 10000;
+	}
+};
 
 void
 sample_mix::test_song()
@@ -309,14 +353,16 @@ sample_mix::test_song()
 	gen.add_mix(seq, engine::sample_buffer::wave_saw, 3);
 	gen.add_mix(seq, engine::sample_buffer::wave_noise, 4);
 
+	teststream s;
+	s.open(gen);
+
+	sf::Music m;
+	m.openFromStream(s);
+
 	printf("play\n");
 	std::getchar();
-	gen.setup();
-	while (true)
-	{
-		gen.play();
-	}
-	printf("stopped\n");
+
+	m.play();
 	std::getchar();
 }
 

@@ -9,7 +9,7 @@ using namespace editor;
 int
 editor_mode::initualize()
 {
-	r.initualize(640, 512, 30);
+	r.initualize({ 640, 512 }, 30);
 	r.set_pixel_scale(2);
 	r.set_bg_color({ 255, 204, 153 });
 	if (!font.load("editorfont.ttf"))

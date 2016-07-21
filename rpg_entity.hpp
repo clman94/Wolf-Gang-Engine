@@ -33,6 +33,10 @@ class entity :
 
 	float last_y; // for depth automation
 	int depth_automation;
+
+	float move_speed;
+
+	float parallax;
 public:
 	enum cycle_type
 	{
@@ -53,8 +57,8 @@ public:
 
 	enum depth_auto
 	{
-		DEPTH_AUTO_NONE,
-		DEPTH_AUTO_TO_Y
+		DEPTH_STATIC,
+		DEPTH_AUTO_Y
 	};
 
 	entity();
@@ -66,7 +70,7 @@ public:
 	int  get_cycle();
 	engine::fvector get_activate_point();
 
-	void set_auto_depth(int set);
+	void set_depth_automation(int set);
 
 	engine::animation* get_animation();
 

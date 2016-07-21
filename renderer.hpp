@@ -72,7 +72,7 @@ public:
 
 	renderer();
 	~renderer();
-	int initualize(int _width, int _height, int fps = 30);
+	int initualize(ivector size, int fps = 30);
 	int draw();
 	int update_events();
 	int close();

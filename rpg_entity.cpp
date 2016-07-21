@@ -4,7 +4,9 @@ using namespace rpg;
 
 entity::entity()
 {
+	depth_automation = DEPTH_STATIC;
 	last_y = -1;
+	parallax = 0;
 	for (int i = 0; i < 5; i++)
 	{
 		cycles[i] = nullptr;
@@ -72,8 +74,12 @@ entity::draw(engine::renderer &_r)
 {
 	if (c_anim)
 	{
-		update_depth();
-		animation_node.set_position(get_position());
+		if(depth_automation == DEPTH_AUTO_Y)
+			update_depth();
+		if (parallax != 0)
+			animation_node.set_position(get_relative_position() - engine::fvector(0, -get_position().y));
+		else
+			animation_node.set_position(get_position());
 		animation_node.draw(_r);
 	}
 	return 0;
@@ -194,7 +200,7 @@ entity::set_cycle_group(std::string name)
 }
 
 void
-entity::set_auto_depth(int set)
+entity::set_depth_automation(int set)
 {
 	depth_automation = set;
 }

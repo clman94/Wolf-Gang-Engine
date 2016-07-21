@@ -1020,6 +1020,7 @@ game::load_entity(std::string path, entity& ne)
 
 	ne.set_cycle(entity::DEFAULT);
 	//nentity.set_depth(CHARACTER_DEPTH);
+	ne.set_depth_automation(ne.DEPTH_AUTO_Y);
 
 	root.add_child(ne);
 	ne.set_relative_position({ 100, 50 });

@@ -42,7 +42,8 @@ enum job_op
 	ENTITY_ANIMATIONSTOP,
 	ENTITY_SETDIRECTION,
 	FX_FADEIN,
-	FX_FADEOUT
+	FX_FADEOUT,
+	FX_SOUND
 };
 
 struct job_entry
@@ -203,6 +204,13 @@ struct JOB_fx_fade : public job_entry
 {
 	engine::clock clock;
 	JOB_fx_fade(job_op _op = INVALID){ op = _op; }
+};
+
+struct JOB_fx_sound : public job_entry
+{
+	std::string name;
+	float volume;
+	JOB_fx_sound(){}
 };
 
 job_list parse_jobs_xml(tinyxml2::XMLElement* e);
