@@ -95,6 +95,13 @@ public:
 	void set_visible(bool is_visible);
 	void set_bg_color(color c);
 
+#ifdef ENGINE_INTERNAL
+
+	sf::RenderWindow& get_sfml_window()
+	{ return window; }
+
+#endif
+
 	friend class sprite_node;
 	friend class tile_node;
 	friend class text_node;
@@ -118,6 +125,21 @@ public:
 	virtual int draw(renderer &_r) = 0;
 	int is_rendered();
 	friend class renderer;
+};
+
+class sprite_batch :
+	public render_client,
+	public node
+{
+	std::vector<sf::Vertex> vertices;
+	texture *c_texture;
+public:
+	void set_texture(texture &t);
+	size_t add_sprite(fvector pos, frect tex_rect);
+	void set_sprite_position(size_t index, fvector pos, frect tex_rect);
+	void set_sprite_texture(size_t index, frect tex_rect);
+	fvector get_sprite_position(size_t index);
+	int draw(renderer &_r);
 };
 
 // Wraps a client. Allows the client to be swapped in runtime.

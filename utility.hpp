@@ -11,6 +11,141 @@
 namespace utility
 {
 
+
+// Stores two vectors that will always be the same size.
+// Provides an interface "somewhat" similar to a vector.
+template<typename T1, typename T2>
+class vector_pair
+{
+public:
+	typedef std::vector<T1> first_vector;
+	typedef std::vector<T2> second_vector;
+	typedef std::pair<T1*, T2*> pair_ptr;
+
+	void resize(size_t a)
+	{
+		vec1.resize(a);
+		vec2.resize(a);
+		assert(vec1.size() == vec2.size());
+	}
+
+	void reserve(size_t a)
+	{
+		vec1.reserve(a);
+		vec2.reserve(a);
+	}
+
+	pair_ptr at(size_t i)
+	{
+		assert(size() > 0);
+		assert(i < size());
+
+		T1 *t1 = &vec1[i];
+		T2 *t2 = &vec2[i];
+		return{ t1, t2 };
+	}
+
+	pair_ptr operator[](size_t i)
+	{
+		return at(i);
+	}
+
+	size_t size()
+	{
+		assert(vec1.size() == vec2.size());
+		return vec1.size();
+	}
+
+	template<class... TV1, class... TV2>
+	pair_ptr emplace_back(TV1&&... V1, TV2&&... V2)
+	{
+		vec1.emplace_back(std::forward<TV1>(V1)...);
+		vec2.emplace_back(std::forward<TV2>(V2)...);
+		assert(vec1.size() == vec2.size());
+		return at(vec1.size() - 1);
+	}
+
+	pair_ptr emplace_back()
+	{
+		vec1.emplace_back();
+		vec2.emplace_back();
+		assert(vec1.size() == vec2.size());
+		return at(vec1.size() - 1);
+	}
+
+	template<class TV1, class TV2>
+	pair_ptr push_back(TV1&& V1, TV2&& V2)
+	{
+		vec1.push_back(std::forward<TV1>(V1));
+		vec2.push_back(std::forward<TV2>(V2));
+		assert(vec1.size() == vec2.size());
+		return at(vec1.size() - 1);
+	}
+
+	pair_ptr push_back()
+	{
+		vec1.push_back();
+		vec2.push_back();
+		assert(vec1.size() == vec2.size());
+		return at(vec1.size() - 1);
+	}
+
+	void erase(size_t pos)
+	{
+		vec1.erase(vec1.begin() + pos);
+		vec2.erase(vec2.begin() + pos);
+		assert(vec1.size() == vec2.size());
+	}
+
+	/*void erase(first_vector::iterator &pos)
+	{
+		vec1.erase(pos);
+		vec2.erase(pos);
+		assert(vec1.size() == vec2.size());
+	}
+
+	void erase(second_vector::iterator &pos)
+	{
+		vec1.erase(pos);
+		vec2.erase(pos);
+		assert(vec1.size() == vec2.size());
+	}
+
+	first_vector::iterator& first_begin()
+	{
+		return vec1.begin();
+	}
+
+	first_vector::iterator& first_end()
+	{
+		return vec1.end();
+	}
+
+	second_vector::iterator& second_begin()
+	{
+		return vec2.begin();
+	}
+
+	second_vector::iterator& second_end()
+	{
+		return vec2.end();
+	}*/
+
+	const first_vector& first()
+	{
+		return vec1;
+	}
+
+	const second_vector& second()
+	{
+		return vec2;
+	}
+
+private:
+	first_vector  vec1;
+	second_vector vec2;
+};
+
 template<typename T>
 static inline T clamp(T v, T min, T max)
 {
@@ -41,7 +176,7 @@ static T2_S& get_shadow(shadow_pair<T1, T2_S>& A)
 
 // Pingpong array
 template<typename T>
-T pingpong_value(T v, T end)
+T pingpong_index(T v, T end)
 {
 	assert(end != 0);
 	return ((v / end) % 2) ? end - (v%end) : (v%end);

@@ -69,7 +69,6 @@ texture_manager::get_texture(std::string name)
 	return &entry->tex;
 }
 
-
 std::vector<std::string>
 texture_manager::construct_list()
 {

@@ -161,6 +161,8 @@ interpretor::JOB_scene_load::JOB_scene_load(tinyxml2::XMLElement* e)
 {
 	if (auto _path = e->Attribute("path"))
 		path = _path;
+	if (auto _door = e->Attribute("door"))
+		door = _door;
 	op = SCENE_LOAD;
 }
 
@@ -200,11 +202,6 @@ interpretor::JOB_entity_spawn::JOB_entity_spawn(tinyxml2::XMLElement* e)
 	if (auto _path = e->Attribute("path"))
 		path = _path;
 	op = ENTITY_SPAWN;
-}
-
-interpretor::JOB_entity_animationstart::JOB_entity_animationstart(tinyxml2::XMLElement* e)
-{
-	op = ENTITY_ANIMATIONSTART;
 }
 
 interpretor::JOB_entity_setdirection::JOB_entity_setdirection(tinyxml2::XMLElement* e)
@@ -278,7 +275,7 @@ interpretor::parse_jobs_xml(tinyxml2::XMLElement* e)
 			ADD_JOB(JOB_entity_setanimation(j));
 
 		else if (name == "entity:animation:start")
-			ADD_JOB(JOB_entity_animationstart(j));
+			ADD_JOB(job_entry(ENTITY_ANIMATIONSTART));
 
 		else if (name == "entity:animation:stop")
 			ADD_JOB(job_entry(ENTITY_ANIMATIONSTOP));

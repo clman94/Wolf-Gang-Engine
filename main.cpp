@@ -5,8 +5,9 @@
 #include "time.hpp"
 #include "ui.hpp"
 #include "rpg_config.hpp"
-
 #include "editor\editor.hpp"
+
+#include "particle_engine.hpp"
 
 // http://www.grinninglizard.com/tinyxmldocs/tutorial0.html
 
@@ -33,6 +34,18 @@ int game()
 	// This clock will calculate the framerate
 	engine::clock fpsclock;
 	unsigned int frames_clocked = 0;
+
+	engine::particle_system p1;
+	p1.set_region({ 10,10 });
+	p1.set_life(4);
+	p1.set_acceleration({ 0, 5 });
+	p1.set_depth(-100);
+	p1.set_velocity({ 0.2f,0.2f });
+	p1.set_rate(1);
+	p1.set_texture(*game.get_texture_manager().get_texture("somedude1"));
+	p1.set_texture_rect({ 0,0,32,32 });
+
+	r.add_client(&p1);
 
 	r.start_text_record(true);
 

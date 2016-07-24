@@ -22,15 +22,21 @@ struct scene
 	std::list<event_entry> events;
 	int parse_events_xml(tinyxml2::XMLElement* e);
 
+	std::map<std::string, engine::fvector> points;
+
 	struct collisionbox
 	{
 		enum box_type
 		{
 			TOUCH_EVENT,
 			WALL,
-			BUTTON
+			BUTTON,
+			DOOR
 		};
 		std::string name;
+		std::string event;
+		std::string destination;
+
 		engine::fvector pos, size;
 		int type;
 		std::string bind_flag, if_flag;

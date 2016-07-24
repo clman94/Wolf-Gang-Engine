@@ -54,8 +54,7 @@ class clock
 {
 	bool play;
 	std::chrono::time_point<std::chrono::system_clock> 
-		start_point, 
-		end_point, 
+		start_point,
 		pause_point;
 public:
 	clock()
@@ -65,14 +64,14 @@ public:
 	}
 	utime get_elapse()
 	{
-		end_point = std::chrono::system_clock::now();
+		std::chrono::time_point<std::chrono::system_clock> end_point = std::chrono::system_clock::now();
 		std::chrono::duration<time_t> elapsed_seconds = end_point - start_point;
 		return elapsed_seconds.count();
 	}
 	void start()
 	{
 		if (!play)
-			end_point += std::chrono::system_clock::now() - pause_point;
+			start_point += std::chrono::system_clock::now() - pause_point;
 		play = true;
 	}
 	void pause()

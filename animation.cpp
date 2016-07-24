@@ -88,9 +88,9 @@ animation::get_default_frame()
 }
 
 void
-animation::set_texture(engine::texture& texture)
+animation::set_texture(texture& _texture)
 {
-	opt_texture = &texture;
+	opt_texture = &_texture;
 }
 
 engine::texture*
@@ -100,7 +100,7 @@ animation::get_texture()
 }
 
 void
-animation::generate(frame_t frame_count, engine::irect first_frame, engine::ivector scan)
+animation::generate(frame_t frame_count, irect first_frame, ivector scan)
 {
 	auto offset = first_frame.get_offset();
 	auto size = first_frame.get_size();
@@ -121,11 +121,14 @@ frame_t
 animation_node::calculate_frame()
 {
 	assert(c_animation != nullptr);
+	if (c_animation->get_frame_count() == 0)
+		return 0;
+
 	if (c_animation->get_loop() == animation::LOOP_LINEAR)
 		return c_count%c_animation->get_frame_count();
 
 	if (c_animation->get_loop() == animation::LOOP_PING_PONG)
-		return utility::pingpong_value(c_count, c_animation->get_frame_count() - 1);
+		return utility::pingpong_index(c_count, c_animation->get_frame_count() - 1);
 
 	return c_count%c_animation->get_frame_count();
 }
@@ -214,6 +217,7 @@ int
 animation_node::draw(renderer &_r)
 {
 	if (!c_animation) return 1;
+	if (!c_animation->get_frame_count()) return 1;
 	if (playing) tick();
 	const engine::irect &crop = c_animation->get_frame(c_frame);
 	sfml_sprite.setTextureRect({ crop.x, crop.y, crop.w, crop.h });

@@ -1,25 +1,27 @@
 #ifndef RPG_HPP
 #define RPG_HPP
 
-#include <vector>
+#include "tinyxml2\tinyxml2.h"
 
 #include "node.hpp"
 #include "renderer.hpp"
 #include "texture.hpp"
 #include "time.hpp"
-#include "tinyxml2\tinyxml2.h"
-#include <list>
 #include "rpg_entity.hpp"
 #include "rpg_jobs.hpp"
 #include "audio.hpp"
+#include "your_soul.hpp"
 #include "rpg_scene.hpp"
 #include "rpg_config.hpp"
-#include "dictionary.hpp"
+#include "utility.hpp"
+#include "particle_engine.hpp"
+
+
+#include <vector>
+#include <list>
+#include <deque>
 #include <set>
 #include <map>
-#include "utility.hpp"
-#include <deque>
-
 
 namespace rpg
 {
@@ -38,6 +40,34 @@ public:
 	int load_settings(std::string path);
 	engine::texture* get_texture(std::string name);
 	std::vector<std::string> construct_list();
+};
+
+class fx_manager
+{
+public:
+	int load_settings(std::string path)
+	{
+
+	}
+};
+
+
+class flag_container
+{
+	std::set<std::string> flags;
+public:
+	bool set_flag(std::string name)
+	{
+		return flags.emplace(name).second;
+	}
+	bool unset_flag(std::string name)
+	{
+		return flags.erase(name) == 1;
+	}
+	bool has_flag(std::string name)
+	{
+		return flags.find(name) != flags.end();
+	}
 };
 
 class panning_node :
@@ -93,7 +123,6 @@ public:
 
 };
 
-
 // I know I know Its a VERY large class.
 class game
 {
@@ -116,7 +145,8 @@ class game
 	void clear_entities();
 	utility::error load_entity(std::string path, entity& ne);
 	utility::error load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity = false);
-	utility::error load_entity_anim(tinyxml2::XMLElement* e, entity& c);
+	utility::error load_entity_animations(tinyxml2::XMLElement* e, entity& c);
+	utility::error load_xml_animation(tinyxml2::XMLElement* e, engine::animation &anim);
 
 	entity *main_character;   // Main character pointer
 	bool    lock_mc_movement; // Locks the movement of the main character is true.
@@ -151,14 +181,16 @@ class game
 	engine::font font;
 	engine::renderer* renderer;
 
+	std::list<engine::particle_system> particles;
+
+
 	// The map of expression animations all identified by a string.
 	std::map<std::string, engine::animation> expressions;
 
 	// The set of flags. All defined by a string.
 	// These define the flow of the game and various other things.
 	// They are very important and are recorded in the game save.
-	std::set<std::string> flags;
-	bool has_flag(std::string name);
+	flag_container flags;
 
 	// The control is simply a bool array that 
 	// tracks what control (not the key pressed)

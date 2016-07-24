@@ -135,6 +135,18 @@ game::load_scene(std::string path)
 		if (load_entities_list(entit))
 			return "Failed to load entities for scene";
 	}
+
+	if (auto door_entries = main_e->FirstChildElement("doors"))
+	{
+		XMLElement *ele_entry = door_entries->FirstChildElement();
+		while (ele_entry)
+		{
+			auto & pos = c_scene->points[ele_entry->Name()];
+			pos.x = ele_entry->FloatAttribute("x");
+			pos.y = ele_entry->FloatAttribute("y");
+			ele_entry = ele_entry->NextSiblingElement();
+		}
+	}
 	
 	// Set main character of scene
 	if (auto mc = main_e->FirstChildElement("maincharacter"))
@@ -189,15 +201,6 @@ game::reset_control()
 		control[i] = false;
 }
 
-bool
-game::has_flag(std::string name)
-{
-	for (auto &i : flags)
-		if (i == name)
-			return true;
-	return false;
-}
-
 void
 game::open_narrative_box()
 {
@@ -229,19 +232,19 @@ game::check_event_collisionbox(int type, engine::fvector pos)
 		{
 			// Skip if flag does not exist
 			if (!i.if_flag.empty() &&
-				flags.find(i.if_flag) == flags.end())
+				flags.has_flag(i.if_flag))
 				continue;
 
 			// Skip if flag exist, otherwise create the flag and continue
 			if (!i.bind_flag.empty() &&
-				!flags.insert(i.bind_flag).second)
+				!flags.set_flag(i.bind_flag))
 				continue;
 
-			if (i.name.empty())
-				tracker.call_event(&i.inline_event);
+			if (i.inline_event.size())
+				tracker.call_event(&i.inline_event); // Inline event
 			else
 			{
-				auto nevent = find_event(i.name);
+				auto nevent = find_event(i.event); // Call event
 				if (nevent)
 					tracker.call_event(nevent);
 			}
@@ -564,23 +567,21 @@ game::tick_interpretor()
 		case job_op::FLAG_SET:
 		{
 			JOB_flag_set* j = (JOB_flag_set*)job;
-			flags.insert(j->name);
+			flags.set_flag(j->name);
 			tracker.next_job();
 			break;
 		}
 		case job_op::FLAG_UNSET:
 		{
 			JOB_flag_unset* j = (JOB_flag_unset*)job;
-			auto & c = flags.find(j->name);
-			if (c != flags.end())
-				flags.erase(c);
+			flags.unset_flag(j->name);
 			tracker.next_job();
 			break;
 		}
 		case job_op::FLAG_IF:
 		{
 			JOB_flag_if* j = (JOB_flag_if*)job;
-			if (flags.find(j->name) != flags.end()) // Check flag existance
+			if (flags.has_flag(j->name)) // Check flag existance
 			{
 				if (j->inline_event.size())
 					tracker.call_event(&j->inline_event); // Trigger inline event
@@ -594,7 +595,7 @@ game::tick_interpretor()
 		case job_op::FLAG_EXITIF:
 		{
 			JOB_flag_exitif* j = (JOB_flag_exitif*)job;
-			if (has_flag(j->name))
+			if (flags.has_flag(j->name))
 				tracker.cancel_event();
 			else
 				tracker.next_job();
@@ -603,10 +604,10 @@ game::tick_interpretor()
 		case job_op::FLAG_ONCE:
 		{
 			JOB_flag_once* j = (JOB_flag_once*)job;
-			if (has_flag(j->name))
+			if (flags.has_flag(j->name))
 				tracker.cancel_event();
 			else
-				flags.insert(j->name);
+				flags.set_flag(j->name);
 			tracker.next_job();
 			break;
 		}
@@ -675,6 +676,11 @@ game::tick_interpretor()
 		{
 			JOB_scene_load* j = (JOB_scene_load*)job;
 			load_scene(j->path);
+			if (j->door.empty())
+			{
+				auto &pos = c_scene->points[j->door];
+				main_character->set_relative_position(pos * TILE_SIZE);
+			}
 			tracker.next_job();
 			break;
 		}
@@ -684,12 +690,8 @@ game::tick_interpretor()
 			engine::ivector pos;
 			tile_system.ground.set_layer(j->layer);
 			for (pos.x = j->pos1.x; pos.x < j->pos2.x; pos.x++)
-			{
 				for (pos.y = j->pos1.y; pos.y < j->pos2.y; pos.y++)
-				{
 					tile_system.ground.set_tile(pos, j->name, j->rot);
-				}
-			}
 			tracker.next_job();
 			break;
 		}
@@ -853,13 +855,17 @@ game::setup()
 		auto& nf1 = graphic_fx.narrow_focus[1];
 		nf0.set_color({ 0, 0, 0, 255 });
 		nf1.set_color({ 0, 0, 0, 255 });
+
 		nf0.set_size({ renderer->get_size().x, 100 });
 		nf1.set_size({ renderer->get_size().x, 100 });
 		nf1.set_position({ 0, renderer->get_size().y - 100 });
+
 		nf0.set_visible(false);
 		nf1.set_visible(false);
+
 		nf0.set_depth(FX_DEPTH);
 		nf1.set_depth(FX_DEPTH);
+
 		renderer->add_client(&nf0);
 		renderer->add_client(&nf1);
 	}
@@ -887,7 +893,57 @@ game::set_renderer(engine::renderer& r)
 }
 
 utility::error
-game::load_entity_anim(
+game::load_xml_animation(tinyxml2::XMLElement* ele, engine::animation &anim)
+{
+	int  att_frames   = ele->IntAttribute("frames");
+	int  att_interval = ele->IntAttribute("interval");
+	int  att_default  = ele->IntAttribute("default");
+	bool att_loop     = ele->BoolAttribute("loop");
+	bool att_pingpong = ele->BoolAttribute("pingpong");
+	auto att_atlas    = ele->Attribute("atlas");
+	auto att_tex      = ele->Attribute("tex");
+	auto att_type     = ele->Attribute("type");
+
+	if (!att_tex)   return "Please provide texture attibute for character";
+	if (!att_atlas) return "Please provide atlas attribute for character";
+
+	auto t = tm.get_texture(att_tex);
+	if (!t) return "Texture '" + std::string(att_tex) + "' not found";
+
+	int loop_type = anim.LOOP_NONE;
+	if (att_loop)     loop_type = anim.LOOP_LINEAR;
+	if (att_pingpong) loop_type = anim.LOOP_PING_PONG;
+	anim.set_loop(loop_type);
+
+	anim.add_interval(0, att_interval);
+	anim.set_texture(*t);
+
+	{
+		auto atlas = t->get_entry(att_atlas);
+		if (atlas.w == 0)
+			return "Atlas '" + std::string(att_atlas) + "' does not exist";
+
+		anim.generate(
+			(att_frames <= 0 ? 1 : att_frames), // Default one frame
+			atlas);
+	}
+
+	anim.set_default_frame(att_default);
+
+	auto ele_seq = ele->FirstChildElement("seq");
+	while (ele_seq)
+	{
+		anim.add_interval(
+			(engine::frame_t)ele_seq->IntAttribute("from"),
+			ele_seq->IntAttribute("interval"));
+		ele_seq = ele_seq->NextSiblingElement();
+	}
+
+	return 0;
+}
+
+utility::error
+game::load_entity_animations(
 	tinyxml2::XMLElement* e,
 	entity& c)
 {
@@ -899,19 +955,9 @@ game::load_entity_anim(
 		c.world.emplace_back();
 		entity::animation& na = c.world.back();
 
-		int  att_frames   = ele->IntAttribute("frames");
-		int  att_interval = ele->IntAttribute("interval");
-		int  att_start    = ele->IntAttribute("start");
-		int  att_default  = ele->IntAttribute("default");
-		bool att_loop     = ele->BoolAttribute("loop");
-		bool att_pingpong = ele->BoolAttribute("pingpong");
-		auto att_atlas    = ele->Attribute("atlas");
-		auto att_tex      = ele->Attribute("tex");
-		auto att_type     = ele->Attribute("type");
+		load_xml_animation(ele, na.anim);
 
-		if (!att_tex)   return "Please provide texture attibute for character";
-		if (!att_atlas) return "Please provide atlas attribute for character";
-
+		auto att_type = ele->Attribute("type");
 		if (att_type)
 		{
 			std::string play_type = att_type;
@@ -928,39 +974,7 @@ game::load_entity_anim(
 		}else
 			na.type = entity::WALK; // Default walk
 
-		auto t = tm.get_texture(att_tex);
-		if (!t) return "Texture '" + std::string(att_tex) + "' not found";
-
-		int loop_type = na.anim.LOOP_NONE;
-		if (att_loop)     loop_type = na.anim.LOOP_LINEAR;
-		if (att_pingpong) loop_type = na.anim.LOOP_PING_PONG;
-		na.anim.set_loop(loop_type);
-		
-		na.anim.add_interval(0, att_interval);
-		na.anim.set_texture(*t);
-
-		{
-			auto atlas = t->get_entry(att_atlas);
-			if (atlas.w == 0)
-				return "Atlas '" + std::string(att_atlas) + "' does not exist";
-
-			na.anim.generate(
-				(att_frames <= 0 ? 1 : att_frames), // Default one frame
-				atlas);
-		}
-
-		na.anim.set_default_frame(att_default);
-
 		na.name = ele->Name();
-
-		auto ele_seq = ele->FirstChildElement("seq");
-		while (ele_seq)
-		{
-			na.anim.add_interval(
-				(engine::frame_t)ele_seq->IntAttribute("from"),
-				ele_seq->IntAttribute("interval"));
-			ele_seq = ele_seq->NextSiblingElement();
-		}
 
 		ele = ele->NextSiblingElement();
 	}
@@ -979,13 +993,15 @@ game::load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity)
 
 		auto atr_path = ele->Attribute("path");
 		if (!atr_path) return "Please specify path to entity file";
+
 		entities.emplace_back();
-		utility::get_shadow(entities.back()) = is_global_entity;
-		load_entity(atr_path, entities.back());
-		entities.back().set_name(name);
+		auto &ne = entities.back();
+		utility::get_shadow(ne) = is_global_entity;
+		load_entity(atr_path, ne);
+		ne.set_name(name);
 
 		engine::fvector npos = { ele->FloatAttribute("x"), ele->FloatAttribute("y")};
-		entities.back().set_relative_position(npos * TILE_SIZE);
+		ne.set_relative_position(npos * TILE_SIZE);
 
 		ele = ele->NextSiblingElement();
 	}
@@ -1004,13 +1020,8 @@ game::load_entity(std::string path, entity& ne)
 	XMLElement* main_e = doc.FirstChildElement("entity");
 	if (!main_e) return "Please add root node. <entity>...</entity>";
 
-	/*if (auto _char_name = main_e->FirstChildElement("name"))
-		nentity.set_name(_char_name->GetText());
-	else
-		return "Please specify name or entity. <name>...</name>";*/
-	
 	if (auto world_e = main_e->FirstChildElement("animations"))
-		load_entity_anim(world_e, ne);
+		load_entity_animations(world_e, ne);
 	else
 		return "Please add animations section. <animations>...</animations>";
 
@@ -1019,7 +1030,6 @@ game::load_entity(std::string path, entity& ne)
 	if (_err) return _err;
 
 	ne.set_cycle(entity::DEFAULT);
-	//nentity.set_depth(CHARACTER_DEPTH);
 	ne.set_depth_automation(ne.DEPTH_AUTO_Y);
 
 	root.add_child(ne);
@@ -1066,8 +1076,8 @@ game::load_tilemap_individual(tinyxml2::XMLElement* e, size_t layer)
 			c->IntAttribute("x"),
 			c->IntAttribute("y"));
 
-		// Create wall (obsticle)
-		if (c->BoolAttribute("o"))
+		// Create wall (collision)
+		if (c->BoolAttribute("c"))
 		{
 			c_scene->collisionboxes.emplace_back();
 			scene::collisionbox& nbox = c_scene->collisionboxes.back();
