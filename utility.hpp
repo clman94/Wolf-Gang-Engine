@@ -8,7 +8,7 @@
 #include <cassert>
 
 
-namespace utility
+namespace util
 {
 
 

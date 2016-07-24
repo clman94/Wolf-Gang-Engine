@@ -43,7 +43,7 @@ struct scene
 		interpretor::job_list inline_event;
 	};
 	std::list<collisionbox> collisionboxes;
-	utility::error parse_collisionbox_xml(tinyxml2::XMLElement* e);
+	util::error parse_collisionbox_xml(tinyxml2::XMLElement* e);
 };
 }
 

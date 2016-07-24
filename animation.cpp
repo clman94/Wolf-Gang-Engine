@@ -128,7 +128,7 @@ animation_node::calculate_frame()
 		return c_count%c_animation->get_frame_count();
 
 	if (c_animation->get_loop() == animation::LOOP_PING_PONG)
-		return utility::pingpong_index(c_count, c_animation->get_frame_count() - 1);
+		return util::pingpong_index(c_count, c_animation->get_frame_count() - 1);
 
 	return c_count%c_animation->get_frame_count();
 }

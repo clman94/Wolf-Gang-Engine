@@ -17,7 +17,7 @@ scene::parse_events_xml(tinyxml2::XMLElement* e)
 	return 0;
 }
 
-utility::error
+util::error
 scene::parse_collisionbox_xml(tinyxml2::XMLElement* e)
 {
 	using namespace tinyxml2;

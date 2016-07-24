@@ -217,10 +217,10 @@ interpretor::JOB_entity_setdirection::JOB_entity_setdirection(tinyxml2::XMLEleme
 		else if (!strcmp(_dir, "down"))
 			direction = entity::DOWN;
 		else
-			utility::error("Invalid direction : Use left, right, up, down");
+			util::error("Invalid direction : Use left, right, up, down");
 	}
 	else
-		utility::error("Please Provide direction attribute");
+		util::error("Please Provide direction attribute");
 	op = ENTITY_SETDIRECTION;
 }
 

@@ -51,7 +51,6 @@ public:
 	}
 };
 
-
 class flag_container
 {
 	std::set<std::string> flags;
@@ -140,13 +139,13 @@ class game
 	character_stats player_stats;
 
 	// Contains shadow pair of is_global_entity bool value
-	std::list<utility::shadow_pair<entity, bool>> entities;
+	std::list<util::shadow_pair<entity, bool>> entities;
 	entity* find_entity(std::string name);
 	void clear_entities();
-	utility::error load_entity(std::string path, entity& ne);
-	utility::error load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity = false);
-	utility::error load_entity_animations(tinyxml2::XMLElement* e, entity& c);
-	utility::error load_xml_animation(tinyxml2::XMLElement* e, engine::animation &anim);
+	util::error load_entity(std::string path, entity& ne);
+	util::error load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity = false);
+	util::error load_entity_animations(tinyxml2::XMLElement* e, entity& c);
+	util::error load_xml_animation(tinyxml2::XMLElement* e, engine::animation &anim);
 
 	entity *main_character;   // Main character pointer
 	bool    lock_mc_movement; // Locks the movement of the main character is true.
@@ -183,7 +182,6 @@ class game
 
 	std::list<engine::particle_system> particles;
 
-
 	// The map of expression animations all identified by a string.
 	std::map<std::string, engine::animation> expressions;
 
@@ -206,7 +204,7 @@ class game
 
 		// The sound stream for the background music.
 		// Its pair is the path of the current file.
-		utility::shadow_pair<engine::sound_stream, std::string> bg_music;
+		util::shadow_pair<engine::sound_stream, std::string> bg_music;
 
 		engine::sound FX_dialog_click;
 		engine::sound_spawner spawner;
@@ -245,10 +243,10 @@ public:
 	
 	int set_maincharacter(std::string name);
 	void set_renderer(engine::renderer& r);
-	utility::error load_textures(std::string path);
-	utility::error setup();
-	utility::error load_scene(std::string path);
-	utility::error load_game(std::string path);
+	util::error load_textures(std::string path);
+	util::error setup();
+	util::error load_scene(std::string path);
+	util::error load_game(std::string path);
 	interpretor::job_list* find_event(std::string name);
 	int tick(engine::renderer& _r);
 	engine::node& get_root();

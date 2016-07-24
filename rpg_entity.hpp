@@ -64,8 +64,8 @@ public:
 	entity();
 	std::string get_name();
 	void set_name(std::string _name);
-	utility::error set_cycle_animation(std::string name, cycle_type type);
-	utility::error set_cycle_group(std::string name);
+	util::error set_cycle_animation(std::string name, cycle_type type);
+	util::error set_cycle_group(std::string name);
 	void set_cycle(int cycle);
 	int  get_cycle();
 	engine::fvector get_activate_point();

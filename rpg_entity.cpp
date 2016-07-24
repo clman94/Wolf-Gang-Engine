@@ -43,7 +43,7 @@ entity::get_animation()
 	return &cycles[c_cycle]->anim;
 }
 
-utility::error
+util::error
 entity::set_cycle_animation(std::string _name, cycle_type cycle)
 {
 	auto a = find_animation(_name);
@@ -62,7 +62,7 @@ entity::update_depth()
 	if (c_anim && last_y != get_relative_position().y)
 	{
 		last_y = get_relative_position().y;
-		set_depth(utility::clamp(
+		set_depth(util::clamp(
 			TILE_DEPTH_RANGE_MAX - (last_y / 32),
 			TILE_DEPTH_RANGE_MIN,
 			TILE_DEPTH_RANGE_MAX));
@@ -187,7 +187,7 @@ entity::get_activate_point()
 	return get_relative_position();
 }
 
-utility::error
+util::error
 entity::set_cycle_group(std::string name)
 {
 	set_cycle_animation(name + ":left",  entity::LEFT ).handle_error(); // The directional walk cycles are optional

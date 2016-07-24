@@ -25,7 +25,7 @@ game::find_entity(std::string name)
 		if (i.get_name() == name)
 			return &i;
 	}
-	utility::error("Character '" + name + "' does not exist.");
+	util::error("Character '" + name + "' does not exist.");
 	return nullptr;
 }
 
@@ -34,7 +34,7 @@ game::clear_entities()
 {
 	for (auto i = entities.begin(); i != entities.end(); i++)
 	{
-		if (!utility::get_shadow(*i))
+		if (!util::get_shadow(*i))
 		{
 			entities.erase(i);
 			i = entities.begin();
@@ -73,7 +73,7 @@ game::switch_scene(scene* nscene)
 	c_scene = nscene;
 }
 
-utility::error
+util::error
 game::load_scene(std::string path)
 {
 	clean_scene();
@@ -466,7 +466,7 @@ game::tick_interpretor()
 				if (nevent)
 					tracker.call_event(nevent);
 				else
-					utility::error("Event '" + j->event[j->sel] + "' not found");
+					util::error("Event '" + j->event[j->sel] + "' not found");
 			}
 			else
 				tracker.wait_job();
@@ -614,7 +614,7 @@ game::tick_interpretor()
 		case job_op::MUSIC_SET:
 		{
 			JOB_music_set* j = (JOB_music_set*)job;
-			if (j->path != utility::get_shadow(sound.bg_music))
+			if (j->path != util::get_shadow(sound.bg_music))
 			{
 				if (sound.bg_music.is_playing())
 					sound.bg_music.stop();
@@ -622,7 +622,7 @@ game::tick_interpretor()
 				sound.bg_music.play();
 				sound.bg_music.set_loop(j->loop);
 				sound.bg_music.set_volume(j->volume);
-				utility::get_shadow(sound.bg_music) = j->path;
+				util::get_shadow(sound.bg_music) = j->path;
 			}
 			tracker.next_job();
 			break;
@@ -646,7 +646,7 @@ game::tick_interpretor()
 
 			if (!sound.bg_music.is_valid())
 			{
-				utility::error("No music is loaded");
+				util::error("No music is loaded");
 				tracker.next_job();
 				break;
 			}
@@ -774,7 +774,7 @@ game::tick(engine::renderer& _r)
 	return 0;
 }
 
-utility::error
+util::error
 game::setup()
 {
 	{ // Narrative Box
@@ -872,7 +872,7 @@ game::setup()
 	return 0;
 }
 
-utility::error
+util::error
 game::load_textures(std::string path)
 {
 	if (!renderer) return 1;
@@ -892,7 +892,7 @@ game::set_renderer(engine::renderer& r)
 	renderer = &r;
 }
 
-utility::error
+util::error
 game::load_xml_animation(tinyxml2::XMLElement* ele, engine::animation &anim)
 {
 	int  att_frames   = ele->IntAttribute("frames");
@@ -942,7 +942,7 @@ game::load_xml_animation(tinyxml2::XMLElement* ele, engine::animation &anim)
 	return 0;
 }
 
-utility::error
+util::error
 game::load_entity_animations(
 	tinyxml2::XMLElement* e,
 	entity& c)
@@ -978,10 +978,10 @@ game::load_entity_animations(
 
 		ele = ele->NextSiblingElement();
 	}
-	return utility::error::NOERROR;
+	return util::error::NOERROR;
 }
 
-utility::error
+util::error
 game::load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity)
 {
 	using namespace tinyxml2;
@@ -996,7 +996,7 @@ game::load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity)
 
 		entities.emplace_back();
 		auto &ne = entities.back();
-		utility::get_shadow(ne) = is_global_entity;
+		util::get_shadow(ne) = is_global_entity;
 		load_entity(atr_path, ne);
 		ne.set_name(name);
 
@@ -1008,7 +1008,7 @@ game::load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity)
 	return 0;
 }
 
-utility::error
+util::error
 game::load_entity(std::string path, entity& ne)
 {
 	using namespace tinyxml2;
@@ -1056,7 +1056,11 @@ game::load_tilemap_individual(tinyxml2::XMLElement* e, size_t layer)
 	if (auto path = e->Attribute("path"))
 	{
 		XMLDocument doc;
-		doc.LoadFile(path);
+		if (doc.LoadFile(path))
+		{
+			util::error("Path to tilemap is invalid");
+			return 1;
+		}
 		load_tilemap_individual(doc.RootElement(), layer);
 		return 0;
 	}
@@ -1067,6 +1071,13 @@ game::load_tilemap_individual(tinyxml2::XMLElement* e, size_t layer)
 	while (c)
 	{
 		std::string name = c->Name();
+
+		if (auto nflag = c->Attribute("nflag"))
+			if (flags.has_flag(nflag))
+			{
+				c = c->NextSiblingElement();
+				continue;
+			}
 
 		int att_w = c->IntAttribute("w"); att_w = (att_w > 0 ? att_w : 1); // Default at one
 		int att_h = c->IntAttribute("h"); att_h = (att_h > 0 ? att_h : 1);
@@ -1180,7 +1191,7 @@ game::load_tilemap(tinyxml2::XMLElement* e, size_t layer)
 	return 0;
 }
 
-utility::error
+util::error
 game::load_game(std::string path)
 {
 	using namespace tinyxml2;
