@@ -6,11 +6,62 @@
 #include <memory>
 #include <list>
 #include <cassert>
+#include <type_traits>
 
 
 namespace util
 {
 
+
+template<typename T>
+static T to_numeral(const std::string& str, size_t *i = nullptr)
+{
+	static_assert(std::is_arithmetic<T>::value, "Requires arithmetic type");
+	return 0;
+}
+
+template<>
+static char to_numeral<char>(const std::string& str, size_t *i)
+{
+	return (char)std::stoi(str, i);
+}
+
+template<>
+static int to_numeral<int>(const std::string& str, size_t *i)
+{
+	return std::stoi(str, i);
+}
+
+template<>
+static float to_numeral<float>(const std::string& str, size_t *i)
+{
+	return std::stof(str, i);
+}
+
+template<>
+static double to_numeral<double>(const std::string& str, size_t *i)
+{
+	return std::stod(str, i);
+}
+
+
+template<typename T>
+static T to_numeral(const std::string& str, std::string::iterator& iter)
+{
+	size_t i = 0;
+	T val = to_numeral<T>(std::string(iter, str.end()), &i);
+	iter += i;
+	return val;
+}
+
+template<typename T>
+static T to_numeral(const std::string& str, std::string::const_iterator& iter)
+{
+	size_t i = 0;
+	T val = to_numeral<T>(std::string(iter, str.end()), &i);
+	iter += i;
+	return val;
+}
 
 // Stores two vectors that will always be the same size.
 // Provides an interface "somewhat" similar to a vector.

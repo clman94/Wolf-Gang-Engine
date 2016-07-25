@@ -6,6 +6,7 @@
 #include "ui.hpp"
 #include "rpg_config.hpp"
 #include "editor\editor.hpp"
+#include "parsers.hpp"
 
 #include "particle_engine.hpp"
 
@@ -35,6 +36,8 @@ int game()
 	engine::clock fpsclock;
 	unsigned int frames_clocked = 0;
 
+	// TEST particle system
+
 	engine::particle_system p1;
 	p1.set_region({ 10,10 });
 	p1.set_life(4);
@@ -48,6 +51,13 @@ int game()
 	r.add_client(&p1);
 
 	r.start_text_record(true);
+
+	// TEST parser
+
+	{
+		auto v = parsers::parse_vector<int>("2, 5");
+		std::cout << v.x << " " << v.y << "\n";
+	}
 
 	bool working = true;
 	while (working)
