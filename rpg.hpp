@@ -1,256 +1,225 @@
 #ifndef RPG_HPP
 #define RPG_HPP
 
-#include "tinyxml2\tinyxml2.h"
-
-#include "node.hpp"
 #include "renderer.hpp"
-#include "texture.hpp"
-#include "time.hpp"
-#include "rpg_entity.hpp"
-#include "rpg_jobs.hpp"
-#include "audio.hpp"
-#include "your_soul.hpp"
-#include "rpg_scene.hpp"
-#include "rpg_config.hpp"
 #include "utility.hpp"
-#include "particle_engine.hpp"
+#include "rpg_managers.hpp"
+#include "rpg_config.hpp"
+#include "your_soul.hpp"
+#include "tinyxml2\tinyxml2.h"
+#include "rpg_interpreter.hpp"
 
-
-#include <vector>
-#include <list>
-#include <deque>
 #include <set>
-#include <map>
+#include <list>
+#include <string>
+#include <array>
 
-namespace rpg
-{
-class texture_manager
-{
-	struct texture_entry
-	{
-		std::string name, path, atlas;
-		bool is_loaded, has_atlas;
-		engine::texture tex;
-	};
-	std::list<texture_entry> textures;
-	texture_entry* find_entry(std::string name);
-
-public:
-	int load_settings(std::string path);
-	engine::texture* get_texture(std::string name);
-	std::vector<std::string> construct_list();
-};
-
-class fx_manager
-{
-public:
-	int load_settings(std::string path)
-	{
-
-	}
-};
+namespace rpg{
 
 class flag_container
 {
 	std::set<std::string> flags;
 public:
-	bool set_flag(std::string name)
-	{
-		return flags.emplace(name).second;
-	}
-	bool unset_flag(std::string name)
-	{
-		return flags.erase(name) == 1;
-	}
-	bool has_flag(std::string name)
-	{
-		return flags.find(name) != flags.end();
-	}
+	bool set_flag(std::string name);
+	bool unset_flag(std::string name);
+	bool has_flag(std::string name);
 };
 
-class panning_node :
-	public engine::node
+class entity :
+	public engine::render_client,
+	public engine::node,
+	public   util::named
 {
-	engine::fvector size, viewport;
-public:
-	void set_bounds_size(engine::fvector s)
+	struct entity_animation :
+		public util::named
 	{
-		size = s;
-	}
-
-	void set_viewport_size(engine::fvector s)
-	{
-		viewport = s;
-	}
-
-	void update_origin(engine::fvector pos)
-	{
-		engine::fvector npos = pos - (viewport*0.5f);
-
-		if (size.x < viewport.x)
-			npos.x = size.x*0.5f - (viewport.x*0.5f);
-		else
-		{
-			if (npos.x < 0) npos.x = 0;
-			if (npos.x + viewport.x > size.x) npos.x = size.x - viewport.x;
-		}
-
-		if (size.y < viewport.y)
-			npos.y = size.y*0.5f - (viewport.y*0.5f);
-		else
-		{
-			if (npos.y < 0) npos.y = 0;
-			if (npos.y + viewport.y > size.y) npos.y = size.y - viewport.y;
-		}
-		set_position(-npos);
-	}
-};
-
-
-struct character_stats
-{
-	std::string character_name;
-
-};
-
-class battle
-{
-	std::vector<character_stats> enemies;
-	std::vector<character_stats> party;
-public:
-
-};
-
-// I know I know Its a VERY large class.
-class game
-{
-	std::list<scene> scenes;
-	scene* c_scene;
-	scene* find_scene(const std::string name);
-	void switch_scene(scene* nscene);
-
-	bool check_event_collisionbox(int type, engine::fvector pos);
-	bool check_wall_collisionbox(engine::fvector pos, engine::fvector size);
-
-	interpretor::event_tracker tracker;
-	int tick_interpretor();
-
-	character_stats player_stats;
-
-	// Contains shadow pair of is_global_entity bool value
-	std::list<util::shadow_pair<entity, bool>> entities;
-	entity* find_entity(std::string name);
-	void clear_entities();
-	util::error load_entity(std::string path, entity& ne);
-	util::error load_entities_list(tinyxml2::XMLElement* e, bool is_global_entity = false);
-	util::error load_entity_animations(tinyxml2::XMLElement* e, entity& c);
-	util::error load_xml_animation(tinyxml2::XMLElement* e, engine::animation &anim);
-
-	entity *main_character;   // Main character pointer
-	bool    lock_mc_movement; // Locks the movement of the main character is true.
-	bool    is_mc_moving();   // Simply checks for the directional controls.
-	int     mc_movement();    // Calculates the movement and animation of character
-
-	rpg::texture_manager tm;
-	panning_node root;
-
-	struct{
-		engine::rectangle_node fade_overlap;
-		engine::rectangle_node narrow_focus[2];
-	} graphic_fx;
-
-	struct{
-		engine::sprite_node box;
-		engine::sprite_node cursor;
-		engine::text_node   text;
-		engine::text_node   option1;
-		engine::text_node   option2;
-		entity             *speaker;
-		engine::animation_node expression;
-	} narrative;
-	void open_narrative_box();
-	void close_narrative_box();
-
-	struct{
-		engine::tile_bind_node misc;
-		engine::tile_node ground;
-	}tile_system;
-
-	engine::font font;
-	engine::renderer* renderer;
-
-	std::list<engine::particle_system> particles;
-
-	// The map of expression animations all identified by a string.
-	std::map<std::string, engine::animation> expressions;
-
-	// The set of flags. All defined by a string.
-	// These define the flow of the game and various other things.
-	// They are very important and are recorded in the game save.
-	flag_container flags;
-
-	// The control is simply a bool array that 
-	// tracks what control (not the key pressed)
-	// is activated.
-	// Could have used std::set but it simply to heavy for this.
-	bool control[CONTROL_COUNT];
-	void reset_control(); // Resets all controls to false.
-
-	struct{
-		struct{ // Structures inside structures... because organization
-			engine::sound_buffer dialog_click_buf;
-		}buffers;
-
-		// The sound stream for the background music.
-		// Its pair is the path of the current file.
-		util::shadow_pair<engine::sound_stream, std::string> bg_music;
-
-		engine::sound FX_dialog_click;
-		engine::sound_spawner spawner;
-	} sound;
-
-	// Convenience function
-	void set_text_default(engine::text_node& n);
-
-	engine::clock frame_clock;
-
-	int load_tilemap(tinyxml2::XMLElement* e, size_t layer = 0);
-	int load_tilemap_individual(tinyxml2::XMLElement* e, size_t layer = 0);
-	void clean_scene();
-
-	struct
-	{
-		bool battle_mode;
-		
-	} battle_system;
-
-public:
-	enum control_type
-	{
-		LEFT,
-		RIGHT,
-		UP,
-		DOWN,
-		SELECT_PREV,
-		SELECT_NEXT,
-		ACTIVATE,
-		EXIT
+		engine::animation anim;
+		int type;
 	};
 
-	game();
-	void trigger_control(control_type key);
+	engine::animation_node node;
+	std::list<entity_animation> animations;
+	entity_animation *c_animation;
+
+public:
+	enum e_type
+	{
+		constant,
+		speech,
+		user,
+		movement
+	};
+	entity();
+	void play_withtype(e_type type);
+	void stop_withtype(e_type type);
+	void tick_withtype(e_type type);
+	bool set_animation(std::string name);
+	int draw(engine::renderer &_r);
+	util::error load_animations(tinyxml2::XMLElement* e, texture_manager& tm);
+};
+
+class character :
+	public entity
+{
+	std::string cyclegroup;
+	std::string cycle;
+public:
+
+	enum struct e_cycle
+	{
+		left,
+		right,
+		up,
+		down,
+		idle
+	};
+
+	character();
+	void set_cycle_group(std::string name);
+	void set_cycle(std::string name);
+	void set_cycle(e_cycle type);
+};
+
+class narrative
+{
+	engine::sprite_node box;
+	engine::sprite_node cursor;
+	engine::text_node   text;
+};
+
+class tilemap :
+	public engine::render_client,
+	public engine::node
+{
+	engine::tile_node node;
+public:
+
+	tilemap();
+	void set_texture(engine::texture& t);
+	util::error load_tilemap(tinyxml2::XMLElement* e, size_t layer);
+	void clear();
+	int draw(engine::renderer &_r);
+};
+
+class collision_system
+{
+public:
+	struct collision_box
+		: engine::frect
+	{
+		std::string invalid_on_flag;
+		bool valid;
+	};
+
+	struct trigger : public collision_box
+	{
+		std::string event;
+		interpreter::event inline_event;
+		std::string spawn_flag;
+	};
+
+	struct door : public collision_box
+	{
+		std::string name;
+		std::string scene_path;
+		std::string destination;
+	};
+
+	collision_box* wall_collision(const engine::frect& r)
+	{
+		for (auto &i : walls)
+		{
+			if (i.valid && i.is_intersect(r))
+				return &i;
+		}
+		return nullptr;
+	}
+
+	door* door_collision(const engine::frect& r)
+	{
+		for (auto &i : doors)
+		{
+			if (i.valid && i.is_intersect(r))
+				return &i;
+		}
+		return nullptr;
+	}
+
+	util::error load_collision_boxes(tinyxml2::XMLElement* e, flag_container& flags);
+
+private:
+	std::list<collision_box> walls;
+	std::list<door> doors;
+	std::list<trigger> triggers;
+	std::list<trigger> buttons;
+};
+
+class player_character :
+	public character
+{
+public:
+	engine::fvector get_activation_point();
+
+};
+
+class scene_interpreter
+{
+	std::list<interpreter::event> events;
+public:
+
+};
+
+class scene :
+	public engine::render_proxy
+{
+	tilemap tilemap;
 	
-	int set_maincharacter(std::string name);
-	void set_renderer(engine::renderer& r);
-	util::error load_textures(std::string path);
-	util::error setup();
-	util::error load_scene(std::string path);
+	collision_system collision;
+
+	std::list<character> characters;
+	std::list<entity> entities;
+public:
+	character* find_character(std::string name);
+	entity* find_entity(std::string name);
+
+	util::error load_scene(std::string path, engine::renderer& r, texture_manager& tm);
+
+protected:
+	void refresh_renderer(engine::renderer& _r);
+};
+
+class controls
+{
+	std::array<bool, 7> c_controls;
+public:
+	enum class control
+	{
+		activate,
+		left,
+		right,
+		up,
+		down,
+		select_next,
+		select_previous
+	};
+
+	void trigger_control(control c);
+	bool is_triggered(control c);
+	void reset();
+};
+
+class game :
+	public engine::render_proxy
+{
+	rpg::scene scene;
+	player_character player;
+	texture_manager textures;
+public:
 	util::error load_game(std::string path);
-	interpretor::job_list* find_event(std::string name);
-	int tick(engine::renderer& _r);
-	engine::node& get_root();
-	texture_manager& get_texture_manager();
+	void tick();
+
+protected:
+	void refresh_renderer(engine::renderer& _r);
 };
 
 }

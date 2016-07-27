@@ -38,7 +38,7 @@ int game()
 
 	// TEST particle system
 
-	engine::particle_system p1;
+	/*engine::particle_system p1;
 	p1.set_region({ 10,10 });
 	p1.set_life(4);
 	p1.set_acceleration({ 0, 5 });
@@ -48,7 +48,7 @@ int game()
 	p1.set_texture(*game.get_texture_manager().get_texture("somedude1"));
 	p1.set_texture_rect({ 0,0,32,32 });
 
-	r.add_client(&p1);
+	r.add_client(&p1);*/
 
 	r.start_text_record(true);
 
@@ -67,7 +67,7 @@ int game()
 			working = false;
 			break;
 		}
-		if (r.is_key_pressed(engine::renderer::key_type::Z) ||
+		/*if (r.is_key_pressed(engine::renderer::key_type::Z) ||
 			r.is_key_pressed(engine::renderer::key_type::Return))
 			game.trigger_control(game.ACTIVATE);
 		if (r.is_key_down(engine::renderer::key_type::Left))
@@ -81,11 +81,11 @@ int game()
 		if (r.is_key_pressed(engine::renderer::key_type::Left))
 			game.trigger_control(game.SELECT_PREV);
 		if (r.is_key_pressed(engine::renderer::key_type::Right))
-			game.trigger_control(game.SELECT_NEXT);
+			game.trigger_control(game.SELECT_NEXT);*/
 		if (r.is_key_down(engine::renderer::key_type::Escape))
 			working = false;
 
-		game.tick(r);
+		game.tick();
 		r.draw();
 
 		++frames_clocked;

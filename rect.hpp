@@ -19,6 +19,23 @@ struct rect
 		h = a.h;
 	}
 
+	rect(const vector<T>& a, const vector<T>& b)
+	{
+		x = a.x;
+		y = a.y;
+		w = b.x;
+		h = b.y;
+	}
+
+	rect& operator=(const rect& r)
+	{
+		x = r.x;
+		y = r.y;
+		w = r.w;
+		h = r.h;
+		return *this;
+	}
+
 	void set_rect(const rect& a)
 	{
 		x = a.x;
@@ -47,6 +64,36 @@ struct rect
 	{
 		w = v.x;
 		h = v.y;
+	}
+
+	static bool is_intersect(const rect& a, const rect& b)
+	{
+		if    (a.x <= b.x + b.w
+			&& a.y <= b.y + b.h
+			&& a.x + a.w >= b.x
+			&& a.y + a.h >= b.y)
+			return true;
+		return false;
+	}
+
+	static bool is_intersect(const rect& a, const vector<T>& b)
+	{
+		if    (a.x <= b.x
+			&& a.y <= b.y
+			&& a.x + a.w >= b.x
+			&& a.y + a.h >= b.y)
+			return true;
+		return false;
+	}
+
+	bool is_intersect(const rect& a)
+	{
+		return is_intersect(*this, a);
+	}
+
+	bool is_intersect(const vector<T>& a)
+	{
+		return is_intersect(*this, a);
 	}
 };
 

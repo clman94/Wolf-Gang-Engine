@@ -12,6 +12,57 @@
 namespace util
 {
 
+static std::string safe_string(const char* str)
+{
+	if (str == nullptr)
+		return "";
+	return str;
+}
+
+/*
+class light_string
+{
+	char* str;
+public:
+	light_string()
+	{
+		str = nullptr;
+	}
+	~light_string()
+	{
+		clear();
+	}
+
+	void clear()
+	{
+		if (str)
+			delete str;
+	}
+
+	light_string& operator=(const char* s)
+	{
+		if (s == nullptr)
+		{
+			clear();
+			return *this;
+		}
+		size_t len = std::strlen(s);
+		str = new char[len + 1];
+		std::strcpy(str, s);
+		return *this;
+	}
+
+	size_t get_length()
+	{
+		if (str == nullptr) return 0;
+		return std::strlen(str);
+	}
+
+	explicit operator bool()
+	{
+		return str != nullptr;
+	}
+};*/
 
 template<typename T>
 static T to_numeral(const std::string& str, size_t *i = nullptr)
@@ -62,6 +113,20 @@ static T to_numeral(const std::string& str, std::string::const_iterator& iter)
 	iter += i;
 	return val;
 }
+
+class named
+{
+	std::string name;
+public:
+	void set_name(const std::string& str)
+	{
+		name = str;
+	}
+	const std::string& get_name()
+	{
+		return name;
+	}
+};
 
 // Stores two vectors that will always be the same size.
 // Provides an interface "somewhat" similar to a vector.

@@ -163,7 +163,6 @@ tile_bind_node::clear_all()
 
 tile_node::tile_node()
 {
-	c_layer = 0;
 }
 
 void
@@ -173,11 +172,11 @@ tile_node::set_texture(texture& tex)
 }
 
 int
-tile_node::find_tile(ivector pos)
+tile_node::find_tile(ivector pos, size_t layer)
 {
 	for (size_t i = 0; i < entries.size(); i++)
 	{
-		if (entries[i].layer == c_layer &&
+		if (entries[i].layer == layer &&
 			entries[i].pos.x == pos.x &&
 			entries[i].pos.y == pos.y)
 			return entries[i].index;
@@ -185,11 +184,6 @@ tile_node::find_tile(ivector pos)
 	return -1;
 }
 
-void
-tile_node::set_layer(size_t layer)
-{
-	c_layer = layer;
-}
 
 void
 tile_node::set_tile_size(ivector s)
@@ -198,7 +192,7 @@ tile_node::set_tile_size(ivector s)
 }
 
 void
-tile_node::set_tile(ivector pos, std::string atlas, int rot, bool replace)
+tile_node::set_tile(ivector pos, std::string atlas, size_t layer, int rot, bool replace)
 {
 	auto crop = c_tex->get_entry(atlas);
 
@@ -218,8 +212,8 @@ tile_node::set_tile(ivector pos, std::string atlas, int rot, bool replace)
 	int index = find_tile(pos);
 	if (index == -1)
 	{
-		auto &vertices = *layers[c_layer];
-		entries.push_back({ pos, vertices.size(), c_layer });
+		auto &vertices = *layers[layer];
+		entries.push_back({ pos, vertices.size(), layer });
 		vertices.push_back(v[0]);
 		vertices.push_back(v[1]);
 		vertices.push_back(v[2]);
@@ -227,7 +221,7 @@ tile_node::set_tile(ivector pos, std::string atlas, int rot, bool replace)
 	}
 	else if (replace)
 	{
-		auto &vertices = *layers[c_layer];
+		auto &vertices = *layers[layer];
 		vertices[index]     = v[0];
 		vertices[index + 1] = v[1];
 		vertices[index + 2] = v[2];

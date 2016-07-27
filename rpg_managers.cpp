@@ -1,4 +1,5 @@
 #include "rpg.hpp"
+#include "rpg_managers.hpp"
 
 using namespace rpg;
 
@@ -73,6 +74,7 @@ std::vector<std::string>
 texture_manager::construct_list()
 {
 	std::vector<std::string> list;
+	list.reserve(textures.size());
 	for (auto& i : textures)
 		list.push_back(i.name);
 	return std::move(list);

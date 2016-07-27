@@ -127,6 +127,23 @@ public:
 	friend class renderer;
 };
 
+class render_proxy
+{
+	renderer* r;
+public:
+	void set_renderer(renderer& _r)
+	{
+		r = &_r;
+		refresh_renderer(_r);
+	}
+	renderer* get_renderer()
+	{
+		return r;
+	}
+protected:
+	virtual void refresh_renderer(renderer& _r){}
+};
+
 class sprite_batch :
 	public render_client,
 	public node
@@ -364,17 +381,15 @@ class tile_node :
 			: pos(_pos), index(_index), layer(_layer){}
 	};
 	std::vector<tile_entry> entries;
-	int find_tile(ivector pos);
+	int find_tile(ivector pos, size_t layer = 0);
 	ivector tile_size;
 	std::map<size_t, ptr_GC_owner<std::vector<sf::Vertex>>> layers;
 	texture* c_tex;
-	size_t c_layer;
 public:
 	tile_node();
-	void set_layer(size_t layer);
 	void set_tile_size(ivector s);
 	void set_texture(texture& tex);
-	void set_tile(ivector pos, std::string atlas, int rot = 0, bool replace = true);
+	void set_tile(ivector pos, std::string atlas, size_t layer = 0, int rot = 0, bool replace = true);
 	void clear_all();
 	virtual int draw(renderer &_r);
 };

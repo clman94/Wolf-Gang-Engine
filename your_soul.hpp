@@ -1,4 +1,4 @@
 static void soul()
 {
-	void* emptyness = NULL;
+	void* emptyness = nullptr;
 }

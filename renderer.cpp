@@ -172,7 +172,8 @@ renderer::initualize(ivector size, int fps)
 int 
 renderer::remove_client(render_client* _client)
 {
-	if (_client->client_index < 0) return 1;
+	if (_client->client_index < 0
+		|| _client->renderer_ != this) return 1;
 	clients.erase(clients.begin() + _client->client_index);
 	refresh_clients();
 	_client->client_index = -1;
