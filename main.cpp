@@ -59,6 +59,8 @@ int game()
 		std::cout << v.x << " " << v.y << "\n";
 	}
 
+	rpg::controls controls;
+
 	bool working = true;
 	while (working)
 	{
@@ -67,25 +69,32 @@ int game()
 			working = false;
 			break;
 		}
-		/*if (r.is_key_pressed(engine::renderer::key_type::Z) ||
+		if (r.is_key_pressed(engine::renderer::key_type::Z) ||
 			r.is_key_pressed(engine::renderer::key_type::Return))
-			game.trigger_control(game.ACTIVATE);
+			controls.trigger(rpg::controls::control::activate);
+
 		if (r.is_key_down(engine::renderer::key_type::Left))
-			game.trigger_control(game.LEFT);
+			controls.trigger(rpg::controls::control::left);
+
 		if (r.is_key_down(engine::renderer::key_type::Right))
-			game.trigger_control(game.RIGHT);
+			controls.trigger(rpg::controls::control::right);
+
 		if (r.is_key_down(engine::renderer::key_type::Up))
-			game.trigger_control(game.UP);
+			controls.trigger(rpg::controls::control::up);
+
 		if (r.is_key_down(engine::renderer::key_type::Down))
-			game.trigger_control(game.DOWN);
+			controls.trigger(rpg::controls::control::down);
+
 		if (r.is_key_pressed(engine::renderer::key_type::Left))
-			game.trigger_control(game.SELECT_PREV);
+			controls.trigger(rpg::controls::control::select_previous);
+
 		if (r.is_key_pressed(engine::renderer::key_type::Right))
-			game.trigger_control(game.SELECT_NEXT);*/
+			controls.trigger(rpg::controls::control::select_next);
+
 		if (r.is_key_down(engine::renderer::key_type::Escape))
 			working = false;
 
-		game.tick();
+		game.tick(controls);
 		r.draw();
 
 		++frames_clocked;
@@ -95,16 +104,16 @@ int game()
 			frames_clocked = 0;
 			fpsclock.restart();
 		}
+		controls.reset();
 	}
 	return 0;
 }
-
 
 int main(int argc, char* argv[])
 {
 	if (argc == 2)
 	{
-			editor::editor_mode e;
+			editors::editor_mode e;
 			return e.start(game);
 	}
 	return game();

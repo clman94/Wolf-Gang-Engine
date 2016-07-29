@@ -35,7 +35,7 @@ tile_sprite_node::create_tile(int x, int y)
 	tile = &tiles.back();
 	tile->sprite = ptr_GC<sprite_node>(new sprite_node);
 	tile->sprite->set_parent(*this);
-	tile->sprite->set_relative_position({ x*width, (y + 1)*height/* anchor it on bottom left*/ });
+	tile->sprite->set_position({ x*width, (y + 1)*height/* anchor it on bottom left*/ });
 	tile->pos.x = x;
 	tile->pos.y = y;
 	return tile;
@@ -135,7 +135,7 @@ tile_bind_node::bind_tile(ptr_GC<node> n, ivector pos, bool replace)
 	if (te == -1 && replace)
 		unbind_tile(pos);
 	n->set_parent(*this);
-	n->set_relative_position(tile_size*pos);
+	n->set_position(tile_size*pos);
 	tiles.push_back({ pos, n });
 	return 0;
 }
@@ -236,7 +236,8 @@ tile_node::draw(renderer &_r)
 	if (!layers.size()) return 1;
 
 	sf::RenderStates rs;
-	rs.transform.translate({ get_position().x, get_position().y });
+	auto pos = get_exact_position();
+	rs.transform.translate({ pos.x, pos.y });
 	rs.texture = &c_tex->sfml_get_texture();
 
 	for (auto &i : layers){

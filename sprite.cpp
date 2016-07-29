@@ -6,7 +6,7 @@ using namespace engine;
 
 int sprite_node::draw(renderer &_r)
 {
-	fvector loc = get_position();
+	fvector loc = get_exact_position();
 	_sprite.setPosition(sf::Vector2f((float)loc.x, (float)loc.y) + offset);
 	_r.window.draw(_sprite);
 	return 0;

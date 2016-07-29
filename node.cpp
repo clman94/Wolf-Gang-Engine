@@ -15,22 +15,11 @@ node::~node()
 	detach_parent();
 }
 
-void
-node::update_position()
-{
-	if (parent)
-		position = relative_position + parent->get_position();
-
-	for (auto &i : children)
-	{
-		i->update_position();
-	}
-}
-
 fvector
-node::get_relative_position()
+node::get_exact_position()
 {
-	return relative_position;
+	if (!parent) return position;
+	return position + parent->get_exact_position();
 }
 
 fvector
@@ -40,20 +29,15 @@ node::get_position()
 }
 
 void
-node::set_relative_position(fvector pos)
+node::set_exact_position(fvector pos)
 {
-	relative_position = pos;
-	update_position();
+
 }
 
 void
 node::set_position(fvector pos)
 {
-	if (parent)
-		relative_position = pos - parent->position;
-	else
-		position = pos;
-	update_position();
+	position = pos;
 }
 
 node_ref

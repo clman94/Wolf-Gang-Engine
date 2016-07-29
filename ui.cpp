@@ -115,7 +115,7 @@ button_area::update(renderer &_r)
 	if (enable)
 	{
 		auto mouse_pos = _r.get_mouse_position();
-		auto pos = get_position();
+		auto pos = get_exact_position();
 		if (mouse_pos.x >= pos.x &&
 			mouse_pos.y >= pos.y &&
 			mouse_pos.x <= pos.x + size.x &&
@@ -215,7 +215,7 @@ input_box::draw(renderer &_r)
 			_r.end_text_record();
 		text.set_text(message + ":[" + str + "]");
 	}
-	text.set_position(get_position());
+	text.set_position(get_exact_position());
 	text.draw(_r);
 	return 0;
 }

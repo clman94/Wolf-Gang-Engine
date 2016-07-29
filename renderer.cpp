@@ -305,6 +305,7 @@ renderer::add_client(render_client* _client)
 	_client->renderer_ = this;
 	_client->client_index = clients.size();
 	clients.push_back(_client);
+	_client->refresh_renderer(*this);
 	sort_clients();
 	return 0;
 }
@@ -335,6 +336,18 @@ renderer::get_mouse_position()
 	return{ wpos.x, wpos.y };
 }
 
+fvector
+renderer::get_mouse_position(fvector relative)
+{
+	return get_mouse_position() - relative;
+}
+
+bool
+renderer::is_focused()
+{
+	return window.hasFocus();
+}
+
 void
 renderer::set_visible(bool is_visible)
 {
@@ -345,4 +358,20 @@ void
 renderer::set_bg_color(color c)
 {
 	background_color = c;
+}
+
+void
+events::refresh_pressed()
+{
+	for (auto &i : pressed_keys)
+	{
+		if (i.second == 1)
+			i.second = -1;
+	}
+
+	for (auto &i : pressed_buttons)
+	{
+		if (i.second == 1)
+			i.second = -1;
+	}
 }

@@ -70,7 +70,8 @@ sprite_batch::draw(renderer &_r)
 		return 1;
 
 	sf::RenderStates rs;
-	rs.transform.translate({ get_position().x, get_position().y });
+	auto pos = get_exact_position();
+	rs.transform.translate({ pos.x, pos.y });
 	rs.texture = &c_texture->sfml_get_texture();
 	_r.get_sfml_window().draw(&vertices[0], vertices.size(), sf::Quads, rs);
 	return 0;

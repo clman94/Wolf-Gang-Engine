@@ -84,8 +84,8 @@ public:
 		else
 			rect.set_color({ 50, 50, 50 });
 		rect.set_size({ get_size().x, get_size().y });
-		rect.set_position(get_position());
-		text.set_position(get_position());
+		rect.set_position(get_exact_position());
+		text.set_position(get_exact_position());
 		rect.draw(_r);
 		text.draw(_r);
 		return 0;

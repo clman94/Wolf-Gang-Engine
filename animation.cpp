@@ -115,6 +115,7 @@ animation::generate(frame_t frame_count, irect first_frame, ivector scan)
 animation_node::animation_node()
 {
 	c_anchor = anchor::topleft;
+	playing = false;
 }
 
 frame_t
@@ -142,11 +143,14 @@ animation_node::set_frame(frame_t frame)
 }
 
 void
-animation_node::set_animation(animation& a)
+animation_node::set_animation(animation& a, bool swap)
 {
 	c_animation = &a;
 	interval = a.get_interval();
-	set_frame (a.get_default_frame());
+
+	if (swap) c_frame = calculate_frame();
+	else set_frame(a.get_default_frame());
+
 	if(a.get_texture())
 		set_texture(*a.get_texture());
 }
@@ -169,6 +173,8 @@ animation_node::tick()
 		c_frame = calculate_frame();
 
 		interval = c_animation->get_interval(c_frame);
+
+		clock.restart();
 	}
 	return 0;
 }
@@ -221,7 +227,7 @@ animation_node::draw(renderer &_r)
 	if (playing) tick();
 	const engine::irect &crop = c_animation->get_frame(c_frame);
 	sfml_sprite.setTextureRect({ crop.x, crop.y, crop.w, crop.h });
-	fvector loc = get_position() + anchor_offset(c_animation->get_size(), c_anchor);
+	fvector loc = get_exact_position() + anchor_offset(c_animation->get_size(), c_anchor);
 	sfml_sprite.setPosition(loc.x, loc.y);
 	_r.window.draw(sfml_sprite);
 	return 0;

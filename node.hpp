@@ -27,9 +27,8 @@ class node
 	// parent's children vector.
 	int child_index; 
 
-	fvector relative_position, position;
+	fvector position;
 
-	void update_position();
 
 public:
 
@@ -38,15 +37,15 @@ public:
 	virtual ~node();
 
 	// Set relative position.
-	void set_relative_position(fvector pos);
+	void set_exact_position(fvector pos);
 
 	// Set exact position
 	void set_position(fvector pos);
 
-	// The offset to the parent.
-	fvector get_relative_position();
+	// The exact position.
+	fvector get_exact_position();
 	
-	// Returns exact position
+	// Returns position
 	fvector get_position();
 
 	// Returns pointer to the current instance.

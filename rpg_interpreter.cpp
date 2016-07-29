@@ -48,7 +48,15 @@ event::load_xml_event(tinyxml2::XMLElement* e)
 		std::string cmd = ele->Name();
 
 		if (cmd == "say")
+		{
 			create_op(e_opcode::say)->load_xml(ele);
+			create_op(e_opcode::waitforkey)->load_xml(ele);
+		}
+
+		else if (cmd == "fsay")
+		{
+			create_op(e_opcode::say)->load_xml(ele);
+		}
 		
 		else if (cmd == "nl")
 		{
@@ -155,4 +163,39 @@ void
 event_tracker::queue_event(event* e)
 {
 	events.emplace_front(e);
+}
+
+// ##########
+// Operations Load XML
+// ##########
+
+int
+OP_say::load_xml(tinyxml2::XMLElement * e)
+{
+	using namespace tinyxml2;
+
+	if (auto _expression = e->Attribute("expression"))
+		expression = _expression;
+
+	if (auto _interval = e->IntAttribute("interval"))
+		interval = _interval;
+	else interval = DEFAULT_DIALOG_SPEED;
+
+	auto ele_text = e->FirstChild();
+	while (ele_text)
+	{
+		if (auto t = ele_text->ToText())
+			text += t->Value();
+		if (auto ele = ele_text->ToElement())
+			text += (std::string(ele->Name()) == "nl" ? "\n" : "");
+		ele_text = ele_text->NextSibling();
+	}
+	return 0;
+}
+
+int
+OP_wait::load_xml(tinyxml2::XMLElement * e)
+{
+	seconds = e->FloatAttribute("sec");
+	return 0;
 }

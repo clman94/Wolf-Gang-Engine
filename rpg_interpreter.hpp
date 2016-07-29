@@ -116,34 +116,15 @@ struct OP_say : public OP<e_opcode::say>
 	size_t c_char;
 	engine::time_t interval;
 
-	int load_xml(tinyxml2::XMLElement* e)
-	{
-		using namespace tinyxml2;
-
-		if (auto _expression = e->Attribute("expression"))
-			expression = _expression;
-
-		if (auto _interval = e->IntAttribute("interval"))
-			interval = _interval;
-		else interval = DEFAULT_DIALOG_SPEED;
-
-		auto ele_text = e->FirstChild();
-		while (ele_text)
-		{
-			if (auto t = ele_text->ToText())
-				text += t->Value();
-			if (auto ele = ele_text->ToElement())
-				text += (std::string(ele->Name()) == "nl" ? "\n" : "");
-			ele_text = ele_text->NextSibling();
-		}
-		return 0;
-	}
+	int load_xml(tinyxml2::XMLElement* e);
 };
 
 struct OP_wait : public OP<e_opcode::wait>
 {
 	float seconds;
 	engine::clock clock;
+
+	int load_xml(tinyxml2::XMLElement* e);
 };
 
 

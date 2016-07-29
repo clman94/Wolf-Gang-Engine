@@ -90,7 +90,7 @@ int
 particle_system::draw(renderer &_r)
 {
 	step();
-	sprites.set_position(get_position());
+	sprites.set_position(get_exact_position());
 	sprites.draw(_r);
 	return 0;
 }

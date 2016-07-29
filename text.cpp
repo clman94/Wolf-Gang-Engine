@@ -44,7 +44,7 @@ text_node::get_text()
 int
 text_node::draw(renderer &_r)
 {
-	fvector loc = get_position();
+	fvector loc = get_exact_position();
 	text.setPosition({ (float)loc.x, (float)loc.y });
 	_r.window.draw(text);
 	return 0;

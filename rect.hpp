@@ -97,6 +97,18 @@ struct rect
 	}
 };
 
+template<typename T1, typename T2>
+static rect<T1> scale(rect<T1> a, T2 b)
+{
+	return{ a.get_offset()*b, a.get_size()*b };
+}
+
+template<typename T1, typename T2>
+static rect<T1> scale(rect<T1> a, vector<T2> b)
+{
+	return{ a.x*b.x,a.y*b.y, a.w*b.x, a.h*b.y };
+}
+
 typedef rect<float> frect;
 typedef rect<int> irect;
 

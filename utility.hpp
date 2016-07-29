@@ -8,7 +8,6 @@
 #include <cassert>
 #include <type_traits>
 
-
 namespace util
 {
 

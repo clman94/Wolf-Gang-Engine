@@ -37,6 +37,29 @@ struct color
 
 class render_client;
 
+class events
+{
+	sf::Event event;
+
+	std::unordered_map<int, int> pressed_keys;
+	std::unordered_map<int, int> pressed_buttons;
+	void refresh_pressed();
+public:
+	typedef sf::Keyboard::Key key_type;
+
+	enum mouse_button
+	{
+		mouse_left,
+		mouse_right,
+		mouse_middle
+	};
+
+	bool is_key_pressed(key_type k);
+	bool is_key_down(key_type k);
+	bool is_mouse_pressed(mouse_button b);
+	bool is_mouse_down(mouse_button b);
+};
+
 class renderer
 {
 	sf::RenderWindow window;
@@ -79,19 +102,28 @@ public:
 	int add_client(render_client* _client);
 	int remove_client(render_client* _client);
 	void set_pixel_scale(float a);
+
 	bool is_key_pressed(key_type k);
 	bool is_key_down(key_type k);
 	bool is_mouse_pressed(mouse_button b);
 	bool is_mouse_down(mouse_button b);
+
 	fvector get_size();
 	void sort_clients();
+
 	void start_text_record(bool multi_line = false);
 	void start_text_record(std::string& ptr, bool multi_line = false);
 	bool is_text_recording();
 	bool is_text_recording(std::string& ptr);
 	void end_text_record();
+
 	const std::string& get_recorded_text();
+
 	fvector get_mouse_position();
+	fvector get_mouse_position(fvector relative);
+
+	bool is_focused();
+
 	void set_visible(bool is_visible);
 	void set_bg_color(color c);
 
@@ -125,6 +157,9 @@ public:
 	virtual int draw(renderer &_r) = 0;
 	int is_rendered();
 	friend class renderer;
+
+protected:
+	virtual void refresh_renderer(renderer& _r) {}
 };
 
 class render_proxy
@@ -272,7 +307,7 @@ public:
 	}
 	virtual int draw(renderer &_r)
 	{
-		fvector loc = get_position();
+		fvector loc = get_exact_position();
 		shape.setPosition(loc.x, loc.y);
 		_r.window.draw(shape);
 		return 0;
@@ -463,7 +498,7 @@ public:
 	animation_node();
 
 	void set_frame(frame_t frame);
-	void set_animation(animation& a);
+	void set_animation(animation& a, bool swap = false);
 	void set_texture(texture& tex);
 
 	int tick();
