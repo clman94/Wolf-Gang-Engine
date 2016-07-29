@@ -39,11 +39,14 @@ class render_client;
 
 class events
 {
+	sf::RenderWindow *window;
+
 	sf::Event event;
 
 	std::unordered_map<int, int> pressed_keys;
 	std::unordered_map<int, int> pressed_buttons;
 	void refresh_pressed();
+
 public:
 	typedef sf::Keyboard::Key key_type;
 
@@ -58,19 +61,19 @@ public:
 	bool is_key_down(key_type k);
 	bool is_mouse_pressed(mouse_button b);
 	bool is_mouse_down(mouse_button b);
+
+	int update_events();
+
+protected:
+	void events_update_sfml_window(sf::RenderWindow& window);
 };
 
-class renderer
+class renderer :
+	public events
 {
 	sf::RenderWindow window;
 	std::vector<render_client*> clients;
 	int draw_clients();
-
-	sf::Event event;
-
-	std::unordered_map<int, int> pressed_keys;
-	std::unordered_map<int, int> pressed_buttons;
-	void refresh_pressed();
 
 	void refresh_clients();
 
@@ -84,29 +87,16 @@ class renderer
 	color background_color;
 
 public:
-	typedef sf::Keyboard::Key key_type;
-
-	enum mouse_button
-	{
-		mouse_left,
-		mouse_right,
-		mouse_middle
-	};
 
 	renderer();
 	~renderer();
 	int initualize(ivector size, int fps = 30);
 	int draw();
-	int update_events();
+	
 	int close();
 	int add_client(render_client* _client);
 	int remove_client(render_client* _client);
 	void set_pixel_scale(float a);
-
-	bool is_key_pressed(key_type k);
-	bool is_key_down(key_type k);
-	bool is_mouse_pressed(mouse_button b);
-	bool is_mouse_down(mouse_button b);
 
 	fvector get_size();
 	void sort_clients();
@@ -178,6 +168,8 @@ public:
 protected:
 	virtual void refresh_renderer(renderer& _r){}
 };
+
+
 
 class sprite_batch :
 	public render_client,

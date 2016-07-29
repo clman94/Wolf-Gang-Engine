@@ -82,6 +82,7 @@ render_client_wrapper::get_client()
 
 renderer::renderer()
 {
+	events_update_sfml_window(window);
 	text_record.multi_line = false;
 	text_record.enable = false;
 }
@@ -105,62 +106,6 @@ renderer::get_size()
 	};
 }
 
-bool
-renderer::is_key_pressed(key_type k)
-{
-	if (!window.hasFocus())
-		return false;
-	bool is_pressed = sf::Keyboard::isKeyPressed(k);
-	if (pressed_keys[k] == -1 && is_pressed)
-		return false;
-	pressed_keys[k] = is_pressed ? 1 : 0;
-	return is_pressed;
-}
-
-bool
-renderer::is_key_down(key_type k)
-{
-	if (!window.hasFocus())
-		return false;
-	return sf::Keyboard::isKeyPressed(k);
-}
-
-bool
-renderer::is_mouse_pressed(mouse_button b)
-{
-	if (!window.hasFocus())
-		return false;
-	bool is_pressed = sf::Mouse::isButtonPressed((sf::Mouse::Button)b);
-	if (pressed_buttons[b] == -1 && is_pressed)
-		return false;
-	pressed_buttons[b] = is_pressed ? 1 : 0;
-	return is_pressed;
-}
-
-bool
-renderer::is_mouse_down(mouse_button b)
-{
-	if (!window.hasFocus())
-		return false;
-	return sf::Mouse::isButtonPressed((sf::Mouse::Button)b);
-}
-
-void
-renderer::refresh_pressed()
-{
-	for (auto &i : pressed_keys)
-	{
-		if (i.second == 1)
-			i.second = -1;
-	}
-
-	for (auto &i : pressed_buttons)
-	{
-		if (i.second == 1)
-			i.second = -1;
-	}
-}
-
 int
 renderer::initualize(ivector size, int fps)
 {
@@ -169,16 +114,6 @@ renderer::initualize(ivector size, int fps)
 	return 0;
 }
 
-int 
-renderer::remove_client(render_client* _client)
-{
-	if (_client->client_index < 0
-		|| _client->renderer_ != this) return 1;
-	clients.erase(clients.begin() + _client->client_index);
-	refresh_clients();
-	_client->client_index = -1;
-	return 0;
-}
 
 int
 renderer::draw_clients()
@@ -199,41 +134,7 @@ renderer::draw()
 	return 0;
 }
 
-int 
-renderer::update_events()
-{
-	refresh_pressed();
 
-	if (!window.isOpen())
-		return 1;
-
-	while (window.pollEvent(event))
-	{
-		if (event.type == sf::Event::Closed)
-			return 1;
-
-		if (text_record.enable && event.type == sf::Event::TextEntered)
-		{
-			std::string *text = &text_record.text;
-			if (text_record.ptr)
-				text = text_record.ptr;
-
-			if (event.text.unicode == '\b')
-			{
-				if (text->size() != 0)
-					text->pop_back();
-			}
-			else if (event.text.unicode == '\r')
-			{
-				if (text_record.multi_line)
-					text->push_back('\n');
-			}
-			else if (event.text.unicode < 128)
-				text->push_back(event.text.unicode);
-		}
-	}
-	return 0;
-}
 
 void
 renderer::start_text_record(bool multi_line)
@@ -301,12 +202,26 @@ int
 renderer::add_client(render_client* _client)
 {
 	if (_client->client_index >= 0)
-		return 1;
+	{
+		return remove_client(_client);
+	}
 	_client->renderer_ = this;
 	_client->client_index = clients.size();
 	clients.push_back(_client);
 	_client->refresh_renderer(*this);
 	sort_clients();
+	return 0;
+}
+
+int 
+renderer::remove_client(render_client* _client)
+{
+	if (_client->client_index < 0
+		|| _client->renderer_ != this) return 1;
+	clients.erase(clients.begin() + _client->client_index);
+	refresh_clients();
+	_client->client_index = -1;
+	_client->renderer_ = nullptr;
 	return 0;
 }
 
@@ -374,4 +289,86 @@ events::refresh_pressed()
 		if (i.second == 1)
 			i.second = -1;
 	}
+}
+
+bool
+events::is_key_pressed(key_type k)
+{
+	if (!window->hasFocus())
+		return false;
+	bool is_pressed = sf::Keyboard::isKeyPressed(k);
+	if (pressed_keys[k] == -1 && is_pressed)
+		return false;
+	pressed_keys[k] = is_pressed ? 1 : 0;
+	return is_pressed;
+}
+
+bool
+events::is_key_down(key_type k)
+{
+	if (!window->hasFocus())
+		return false;
+	return sf::Keyboard::isKeyPressed(k);
+}
+
+bool
+events::is_mouse_pressed(mouse_button b)
+{
+	if (!window->hasFocus())
+		return false;
+	bool is_pressed = sf::Mouse::isButtonPressed((sf::Mouse::Button)b);
+	if (pressed_buttons[b] == -1 && is_pressed)
+		return false;
+	pressed_buttons[b] = is_pressed ? 1 : 0;
+	return is_pressed;
+}
+
+bool
+events::is_mouse_down(mouse_button b)
+{
+	if (!window->hasFocus())
+		return false;
+	return sf::Mouse::isButtonPressed((sf::Mouse::Button)b);
+}
+
+void
+events::events_update_sfml_window(sf::RenderWindow& w)
+{
+	window = &w;
+}
+
+int
+events::update_events()
+{
+	refresh_pressed();
+
+	if (!window->isOpen())
+		return 1;
+
+	while (window->pollEvent(event))
+	{
+		if (event.type == sf::Event::Closed)
+			return 1;
+
+		/*if (text_record.enable && event.type == sf::Event::TextEntered)
+		{
+			std::string *text = &text_record.text;
+			if (text_record.ptr)
+				text = text_record.ptr;
+
+			if (event.text.unicode == '\b')
+			{
+				if (text->size() != 0)
+					text->pop_back();
+			}
+			else if (event.text.unicode == '\r')
+			{
+				if (text_record.multi_line)
+					text->push_back('\n');
+			}
+			else if (event.text.unicode < 128)
+				text->push_back(event.text.unicode);
+		}*/
+	}
+	return 0;
 }

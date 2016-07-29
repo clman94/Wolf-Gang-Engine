@@ -454,6 +454,11 @@ collision_system::load_collision_boxes(tinyxml2::XMLElement* e, flag_container& 
 // player_character
 // #########
 
+player_character::player_character()
+{
+	facing_direction = direction::other;
+}
+
 void
 player_character::set_locked(bool l)
 {
@@ -482,6 +487,7 @@ player_character::movement(controls& c, collision_system& collision, float delta
 	{
 		if (!collision.wall_collision({ pos - engine::fvector(10, 8), { 10, 8 } }))
 			move.x -= get_speed();
+		facing_direction = direction::left;
 		set_cycle(character::e_cycle::left);
 	}
 
@@ -489,6 +495,7 @@ player_character::movement(controls& c, collision_system& collision, float delta
 	{
 		if (!collision.wall_collision({ pos - engine::fvector(0, 8), { 10, 8 } }))
 			move.x += get_speed();
+		facing_direction = direction::right;
 		set_cycle(character::e_cycle::right);
 	}
 
@@ -496,6 +503,7 @@ player_character::movement(controls& c, collision_system& collision, float delta
 	{
 		if (!collision.wall_collision({ pos - engine::fvector(8, 16), { 16, 16 } }))
 			move.y -= get_speed();
+		facing_direction = direction::up;
 		set_cycle(character::e_cycle::up);
 	}
 
@@ -503,6 +511,7 @@ player_character::movement(controls& c, collision_system& collision, float delta
 	{
 		if (!collision.wall_collision({ pos - engine::fvector(8, 0), { 16, 4 } }))
 			move.y += get_speed();
+		facing_direction = direction::down;
 		set_cycle(character::e_cycle::down);
 	}
 
@@ -516,9 +525,17 @@ player_character::movement(controls& c, collision_system& collision, float delta
 }
 
 engine::fvector
-player_character::get_activation_point()
+player_character::get_activation_point(float distance)
 {
-	return{ 0,0 };
+	switch (facing_direction)
+	{
+	case direction::other: return get_position();
+	case direction::left:  return get_position() + engine::fvector(-distance, 0);
+	case direction::right: return get_position() + engine::fvector(distance, 0);
+	case direction::up:    return get_position() + engine::fvector(0, -distance);
+	case direction::down:  return get_position() + engine::fvector(0, distance);
+	}
+	return{ 0, 0 };
 }
 
 // #########
@@ -560,6 +577,13 @@ scene_events::load_event(tinyxml2::XMLElement * e)
 // scene
 // #########
 
+scene::scene()
+{
+	add_child(tilemap);
+	add_child(characters);
+	add_child(entities);
+}
+
 collision_system&
 scene::get_collision_system()
 {
@@ -600,6 +624,7 @@ scene::load_scene(std::string path, flag_container& flags, engine::renderer& r, 
 	if (ele_collisionboxes)
 		collision.load_collision_boxes(ele_collisionboxes, flags);
 
+	// Load tilemap texture
 	if (auto ele_tilemap_tex = root->FirstChildElement("tilemap_texture"))
 	{
 		auto tex = tm.get_texture(ele_tilemap_tex->GetText());
@@ -663,6 +688,12 @@ controls::reset()
 	c_controls.assign(false);
 }
 
+game::game()
+{
+	root_node.add_child(player);
+	root_node.add_child(game_scene);
+}
+
 scene& game::get_scene()
 {
 	return game_scene;
@@ -707,6 +738,8 @@ game::tick(controls& con)
 	float delta = frameclock.get_elapse().s();
 	player.movement(con, game_scene.get_collision_system(), delta);
 
+	if (!player.is_locked()) root_node.set_focus(player.get_position());
+
 	frameclock.restart();
 }
 
@@ -715,4 +748,32 @@ game::refresh_renderer(engine::renderer & _r)
 {
 	game_scene.set_renderer(_r);
 	_r.add_client(&player);
+	root_node.set_viewport(_r.get_size());
+	root_node.set_boundary({ 11*32, 11*32 });
+}
+
+// ##########
+// panning_node
+// ##########
+
+void
+panning_node::set_boundary(engine::fvector a)
+{
+	boundary = a;
+}
+
+void
+panning_node::set_viewport(engine::fvector a)
+{
+	viewport = a;
+}
+
+void
+panning_node::set_focus(engine::fvector pos)
+{
+
+	engine::fvector npos = pos - (viewport * 0.5f);
+	npos.x = util::clamp(npos.x, 0.f, boundary.x - viewport.x);
+	npos.y = util::clamp(npos.y, 0.f, boundary.y - viewport.y);
+	set_position(-npos);
 }

@@ -11,8 +11,6 @@ namespace engine
 
 class node;
 
-// These are used for referencing nodes.
-// They provide a garbage collection.
 typedef ptr_GC<node> node_ref;
 typedef std::vector<node_ref> node_arr;
 
@@ -28,7 +26,6 @@ class node
 	int child_index; 
 
 	fvector position;
-
 
 public:
 

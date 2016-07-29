@@ -14,10 +14,11 @@
 
 int game()
 {
+	
 	engine::renderer r;
 	r.initualize(rpg::SCREEN_SIZE, 120); // Tiles fit nicely in this space
 	r.set_pixel_scale(2); // Set the pixels to be 2x2
-
+	
 	engine::clock load_clock;
 
 	// The humungous class that is the rpg game engine :D
@@ -69,29 +70,29 @@ int game()
 			working = false;
 			break;
 		}
-		if (r.is_key_pressed(engine::renderer::key_type::Z) ||
-			r.is_key_pressed(engine::renderer::key_type::Return))
+		if (r.is_key_pressed(engine::events::key_type::Z) ||
+			r.is_key_pressed(engine::events::key_type::Return))
 			controls.trigger(rpg::controls::control::activate);
 
-		if (r.is_key_down(engine::renderer::key_type::Left))
+		if (r.is_key_down(engine::events::key_type::Left))
 			controls.trigger(rpg::controls::control::left);
 
-		if (r.is_key_down(engine::renderer::key_type::Right))
+		if (r.is_key_down(engine::events::key_type::Right))
 			controls.trigger(rpg::controls::control::right);
 
-		if (r.is_key_down(engine::renderer::key_type::Up))
+		if (r.is_key_down(engine::events::key_type::Up))
 			controls.trigger(rpg::controls::control::up);
 
-		if (r.is_key_down(engine::renderer::key_type::Down))
+		if (r.is_key_down(engine::events::key_type::Down))
 			controls.trigger(rpg::controls::control::down);
 
-		if (r.is_key_pressed(engine::renderer::key_type::Left))
+		if (r.is_key_pressed(engine::events::key_type::Left))
 			controls.trigger(rpg::controls::control::select_previous);
 
-		if (r.is_key_pressed(engine::renderer::key_type::Right))
+		if (r.is_key_pressed(engine::events::key_type::Right))
 			controls.trigger(rpg::controls::control::select_next);
 
-		if (r.is_key_down(engine::renderer::key_type::Escape))
+		if (r.is_key_down(engine::events::key_type::Escape))
 			working = false;
 
 		game.tick(controls);

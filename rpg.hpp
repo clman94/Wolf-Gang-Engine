@@ -21,25 +21,51 @@ class panning_node :
 {
 	engine::fvector boundary, viewport;
 public:
-	void set_boundary(engine::fvector a)
+	void set_boundary(engine::fvector a);
+	void set_viewport(engine::fvector a);
+	void set_focus(engine::fvector pos);
+};
+
+template<typename T>
+class node_list :
+	public engine::node
+{
+	std::list<T> items;
+public:
+
+	void clear()
 	{
-		boundary = a;
+		items.clear();
 	}
 
-	void set_viewport(engine::fvector a)
+	template<class... T_ARG>
+	auto add_item(T_ARG&&... arg)
 	{
-		viewport = a;
+		items.emplace_back(std::forward<T_ARG>(arg)...);
+		add_child(items.back());
+		return items.back();
 	}
 
-	void set_focus(engine::fvector pos)
+	auto add_item()
 	{
-		engine::fvector screen_offset = viewport * 0.5f;
-		engine::fvector npos = pos - screen_offset;
+		items.emplace_back();
+		add_child(items.back());
+		return items.back();
+	}
 
-		npos.x = util::clamp(npos.x, 0.f, boundary.x - screen_offset.x);
-		npos.y = util::clamp(npos.y, 0.f, boundary.y - screen_offset.y);
+	auto begin()
+	{
+		return items.begin();
+	}
 
-		set_position(-npos);
+	auto end()
+	{
+		return items.end();
+	}
+
+	auto back()
+	{
+		return items.back();
 	}
 };
 
@@ -141,6 +167,8 @@ class narrative
 	engine::sprite_node box;
 	engine::sprite_node cursor;
 	engine::text_node   text;
+public:
+
 };
 
 class collision_system
@@ -203,12 +231,25 @@ public:
 class player_character :
 	public character
 {
-	bool locked;
 public:
+	enum class direction
+	{
+		other,
+		up,
+		down,
+		left,
+		right
+	};
+
+	player_character();
 	void set_locked(bool l);
 	bool is_locked();
 	void movement(controls &c, collision_system& collision, float delta);
-	engine::fvector get_activation_point();
+	engine::fvector get_activation_point(float distance = 16);
+
+private:
+	bool locked;
+	direction facing_direction;
 };
 
 class scene_events
@@ -228,16 +269,18 @@ public:
 };
 
 class scene :
-	public engine::render_proxy
+	public engine::render_proxy,
+	public engine::node
 {
 	tilemap tilemap;
 	collision_system collision;
 	scene_events events;
 
-	std::list<character> characters;
-	std::list<entity> entities;
+	node_list<character> characters;
+	node_list<entity> entities;
 
 public:
+	scene();
 	collision_system& get_collision_system();
 	character* find_character(std::string name);
 	entity* find_entity(std::string name);
@@ -256,9 +299,12 @@ class game :
 	texture_manager textures;
 	flag_container flags;
 
+	panning_node root_node;
+
 	engine::clock frameclock;
 
 public:
+	game();
 	scene& get_scene();
 	util::error load_game(std::string path);
 	void tick(controls& con);

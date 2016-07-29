@@ -31,7 +31,10 @@ node::get_position()
 void
 node::set_exact_position(fvector pos)
 {
-
+	if (parent)
+		position = pos - parent->get_exact_position();
+	else
+		position = pos;
 }
 
 void
