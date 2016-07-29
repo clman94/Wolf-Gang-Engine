@@ -3,12 +3,6 @@
 
 #include <SFML\Graphics.hpp>
 
-
-#include "node.hpp"
-#include "texture.hpp"
-#include "ptr_GC.hpp"
-#include "time.hpp"
-
 #include <memory>
 #include <vector>
 #include <string>
@@ -16,8 +10,13 @@
 #include <list>
 #include <map>
 #include <unordered_map>
-#include "rect.hpp"
+#include <cassert>
 
+#include "node.hpp"
+#include "texture.hpp"
+#include "ptr_GC.hpp"
+#include "time.hpp"
+#include "rect.hpp"
 #include "types.hpp"
 
 namespace engine
@@ -163,6 +162,7 @@ public:
 	}
 	renderer* get_renderer()
 	{
+		assert(r != nullptr);
 		return r;
 	}
 protected:

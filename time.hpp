@@ -87,6 +87,22 @@ public:
 	}
 };
 
+class timer :
+	public clock
+{
+	time_t duration;
+public:
+	void set_seconds(time_t t)
+	{
+		duration = t;
+	}
+
+	bool is_reached()
+	{
+		return get_elapse().s() >= duration;
+	}
+};
+
 }
 
 #endif

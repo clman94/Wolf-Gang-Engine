@@ -545,7 +545,17 @@ player_character::get_activation_point(float distance)
 void
 scene_events::clear()
 {
+	tracker.cancel_all();
 	events.clear();
+}
+
+int
+scene_events::trigger_event(std::string name)
+{
+	auto e = find_event(name);
+	if (!e) return 1;
+	tracker.call_event(e);
+	return 0;
 }
 
 interpreter::event*
@@ -584,6 +594,12 @@ scene::scene()
 	add_child(entities);
 }
 
+scene_events&
+scene::get_events()
+{
+	return events;
+}
+
 collision_system&
 scene::get_collision_system()
 {
@@ -608,8 +624,60 @@ scene::find_entity(std::string name)
 	return nullptr;
 }
 
+void
+scene::clean_scene()
+{
+	tilemap.clear();
+	collision.clear();
+	events.clear();
+	characters.clear();
+	entities.clear();
+}
+
 util::error
-scene::load_scene(std::string path, flag_container& flags, engine::renderer& r, texture_manager& tm)
+scene::load_entities(tinyxml2::XMLElement * e, texture_manager& tm)
+{
+	auto ele = e->FirstChildElement();
+	while (ele)
+	{
+		std::string name = ele->Name();
+		std::string att_path = ele->Attribute("path");
+		float x = ele->FloatAttribute("x");
+		float y = ele->FloatAttribute("y");
+
+		auto& ne = entities.add_item();
+		ne.load_entity(att_path, tm);
+		ne.set_position({ x, y });
+		get_renderer()->add_client(&ne);
+
+		ele = ele->NextSiblingElement();
+	}
+	return 0;
+}
+
+util::error
+scene::load_characters(tinyxml2::XMLElement * e, texture_manager& tm)
+{
+	auto ele = e->FirstChildElement();
+	while (ele)
+	{
+		std::string name = ele->Name();
+		std::string att_path = ele->Attribute("path");
+		float x = ele->FloatAttribute("x");
+		float y = ele->FloatAttribute("y");
+
+		auto& ne = characters.add_item();
+		ne.load_entity(att_path, tm);
+		ne.set_position({ x, y });
+		get_renderer()->add_client(&ne);
+
+		ele = ele->NextSiblingElement();
+	}
+	return 0;
+}
+
+util::error
+scene::load_scene(std::string path, flag_container& flags, texture_manager& tm)
 {
 	using namespace tinyxml2;
 
@@ -618,8 +686,9 @@ scene::load_scene(std::string path, flag_container& flags, engine::renderer& r, 
 
 	auto root = doc.RootElement();
 
+	clean_scene();
+
 	// Load collision boxes
-	collision.clear();
 	auto ele_collisionboxes = root->FirstChildElement("collisionboxes");
 	if (ele_collisionboxes)
 		collision.load_collision_boxes(ele_collisionboxes, flags);
@@ -636,7 +705,6 @@ scene::load_scene(std::string path, flag_container& flags, engine::renderer& r, 
 		return "Tilemap texture is not defined";
 
 	// Load all tilemap layers
-	tilemap.clear();
 	auto ele_tilemap = root->FirstChildElement("tilemap");
 	while (ele_tilemap)
 	{
@@ -652,6 +720,8 @@ scene::load_scene(std::string path, flag_container& flags, engine::renderer& r, 
 		events.load_event(ele_event);
 		ele_event = ele_event->NextSiblingElement("event");
 	}
+	events.trigger_event("_start_");
+
 	return 0;
 }
 
@@ -687,6 +757,10 @@ controls::reset()
 {
 	c_controls.assign(false);
 }
+
+// #########
+// game
+// #########
 
 game::game()
 {
@@ -728,7 +802,64 @@ game::load_game(std::string path)
 	player.set_position({ 10, 10 });
 	player.set_cycle(character::e_cycle::default);
 
-	game_scene.load_scene(scene_path, flags, *get_renderer(), textures);
+	game_scene.load_scene(scene_path, flags, textures);
+
+	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
+	{
+		narrative.load_narrative(ele_narrative, textures);
+	}
+	return 0;
+}
+
+int
+game::tick_interpretor(controls& con, scene_events& events)
+{
+	auto& tracker = events.get_tracker();
+
+	do {
+		auto op = tracker.get_current_op();
+
+		if (!op)
+		{
+			narrative.hide_box();
+			return 0;
+		}
+
+		using namespace interpreter;
+		switch (op->get_opcode())
+		{
+		case e_opcode::say:
+		{
+			auto _op = op->cast_to<OP_say>();
+			if (tracker.is_start())
+			{
+				narrative.show_box();
+				narrative.reveal_text(_op->text, _op->append);
+			}
+			tracker.wait_until(!narrative.is_revealing());
+			break;
+		}
+		case e_opcode::waitforkey:
+		{
+			bool is_triggered = con.is_triggered(controls::control::activate);
+			tracker.wait_until(is_triggered);
+			break;
+		}
+		case e_opcode::wait:
+		{
+			auto _op = op->cast_to<OP_wait>();
+			if (tracker.is_start())
+			{
+				_op->clock.restart();
+			}
+			bool is_reached = _op->clock.get_elapse().s() >= _op->seconds;
+			tracker.wait_until(is_reached);
+			break;
+		}
+		}
+
+	} while (tracker.is_start());
+
 	return 0;
 }
 
@@ -737,19 +868,22 @@ game::tick(controls& con)
 {
 	float delta = frameclock.get_elapse().s();
 	player.movement(con, game_scene.get_collision_system(), delta);
-
 	if (!player.is_locked()) root_node.set_focus(player.get_position());
+
+	tick_interpretor(con, game_scene.get_events());
 
 	frameclock.restart();
 }
 
 void
-game::refresh_renderer(engine::renderer & _r)
+game::refresh_renderer(engine::renderer & r)
 {
-	game_scene.set_renderer(_r);
-	_r.add_client(&player);
-	root_node.set_viewport(_r.get_size());
+	game_scene.set_renderer(r);
+	r.add_client(&player);
+	root_node.set_viewport(r.get_size());
 	root_node.set_boundary({ 11*32, 11*32 });
+
+	r.add_client(&narrative);
 }
 
 // ##########
@@ -771,9 +905,160 @@ panning_node::set_viewport(engine::fvector a)
 void
 panning_node::set_focus(engine::fvector pos)
 {
-
 	engine::fvector npos = pos - (viewport * 0.5f);
 	npos.x = util::clamp(npos.x, 0.f, boundary.x - viewport.x);
 	npos.y = util::clamp(npos.y, 0.f, boundary.y - viewport.y);
 	set_position(-npos);
+}
+
+// ##########
+// narrative
+// ##########
+
+util::error
+narrative_dialog::load_box(tinyxml2::XMLElement* e, texture_manager& tm)
+{
+	auto ele_box = e->FirstChildElement("box");
+
+	std::string att_box_tex = ele_box->Attribute("tex");
+	std::string att_box_atlas = ele_box->Attribute("atlas");
+
+	auto tex = tm.get_texture(att_box_tex);
+	if (!tex) return "Texture does not exist";
+	box.set_texture(*tex, att_box_atlas);
+
+	set_box_position(position::bottom);
+
+	return 0;
+}
+
+util::error
+narrative_dialog::load_font(tinyxml2::XMLElement* e)
+{
+	auto ele_font = e->FirstChildElement("font");
+
+	std::string att_font_path = ele_font->Attribute("path");
+
+	font.load(att_font_path);
+	text.set_font(font);
+	text.set_scale(0.5f);
+	return 0;
+}
+
+narrative_dialog::narrative_dialog()
+{
+	revealing = false;
+	hide_box();
+
+	interval = 100;
+
+	box.add_child(text);
+}
+
+void
+narrative_dialog::set_box_position(position pos)
+{
+	float offx = (DISPLAY_SIZE.x - box.get_size().x) / 2;
+
+	switch (pos)
+	{
+	case position::top:
+	{
+		box.set_position({ offx, 10 });
+		break;
+	}
+	case position::bottom:
+	{
+		box.set_position({ offx, DISPLAY_SIZE.y - box.get_size().y - 10 });
+		break;
+	}
+	}
+}
+
+bool
+narrative_dialog::is_revealing()
+{
+	return revealing;
+}
+
+void
+narrative_dialog::reveal_text(std::string str, bool append)
+{
+	timer.restart();
+	revealing = true;
+
+	if (append)
+		full_text += str;
+	else
+	{
+		full_text = str;
+		text.set_text("");
+		c_char = 0;
+	}
+}
+
+void
+narrative_dialog::instant_text(std::string str, bool append)
+{
+	revealing = false;
+	if (append)
+		full_text += str;
+	else
+	{
+		full_text = str;
+		text.set_text("");
+	}
+}
+
+void
+narrative_dialog::show_box()
+{
+	text.set_visible(true);
+	box.set_visible(true);
+}
+
+void
+narrative_dialog::hide_box()
+{
+	revealing = false;
+	text.set_visible(false);
+	text.set_text("");
+	box.set_visible(false);
+}
+
+util::error
+narrative_dialog::load_narrative(tinyxml2::XMLElement* e, texture_manager& tm)
+{
+	load_box(e, tm);
+	load_font(e);
+	return 0;
+}
+
+int
+narrative_dialog::draw(engine::renderer& r)
+{
+	if (!revealing) return 0;
+
+	float time = timer.get_elapse().ms();
+	if (time >= interval)
+	{
+		c_char += (size_t)time / (size_t)interval;
+		c_char  = util::clamp<size_t>(c_char, 0, full_text.size());
+
+		std::string display(full_text.begin(), full_text.begin() + c_char);
+		text.set_text(display);
+
+		if (c_char >= full_text.size())
+			revealing = false;
+
+		timer.restart();
+	}
+	return 0;
+}
+
+void
+narrative_dialog::refresh_renderer(engine::renderer& r)
+{
+	r.add_client(&box);
+	r.add_client(&text);
 }

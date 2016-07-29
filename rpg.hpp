@@ -53,20 +53,9 @@ public:
 		return items.back();
 	}
 
-	auto begin()
-	{
-		return items.begin();
-	}
-
-	auto end()
-	{
-		return items.end();
-	}
-
-	auto back()
-	{
-		return items.back();
-	}
+	auto begin() { return items.begin(); }
+	auto end()   { return items.end();   }
+	auto back()  { return items.back();  }
 };
 
 class flag_container
@@ -162,13 +151,48 @@ public:
 	float get_speed();
 };
 
-class narrative
+class narrative_dialog :
+	public engine::render_client
 {
 	engine::sprite_node box;
 	engine::sprite_node cursor;
 	engine::text_node   text;
-public:
+	engine::font        font;
+	engine::clock       timer;
 
+	bool        revealing;
+	size_t      c_char;
+	std::string full_text;
+	float       interval;
+
+	util::error load_box(tinyxml2::XMLElement* e, texture_manager& tm);
+	util::error load_font(tinyxml2::XMLElement* e);
+
+public:
+	enum class position
+	{
+		top,
+		bottom
+	};
+
+	narrative_dialog();
+
+	void set_box_position(position pos);
+
+	bool is_revealing();
+
+	void reveal_text(std::string str, bool append = false);
+	void instant_text(std::string str, bool append = false);
+
+	void show_box();
+	void hide_box();
+
+	util::error load_narrative(tinyxml2::XMLElement* e, texture_manager& tm);
+
+	int draw(engine::renderer &r);
+
+protected:
+	void refresh_renderer(engine::renderer& r);
 };
 
 class collision_system
@@ -180,6 +204,7 @@ public:
 		std::string invalid_on_flag;
 		std::string spawn_flag;
 		bool valid;
+		collision_box() : valid(true){}
 	};
 
 	struct trigger : public collision_box
@@ -263,6 +288,7 @@ class scene_events
 	interpreter::event_tracker tracker;
 public:
 	void clear();
+	int  trigger_event(std::string name);
 	interpreter::event* find_event(std::string name);
 	interpreter::event_tracker& get_tracker();
 	util::error load_event(tinyxml2::XMLElement *e);
@@ -281,11 +307,15 @@ class scene :
 
 public:
 	scene();
+	scene_events& get_events();
 	collision_system& get_collision_system();
 	character* find_character(std::string name);
 	entity* find_entity(std::string name);
 
-	util::error load_scene(std::string path, flag_container& flags, engine::renderer& r, texture_manager& tm);
+	void clean_scene();
+	util::error load_entities(tinyxml2::XMLElement* e, texture_manager& tm);
+	util::error load_characters(tinyxml2::XMLElement* e, texture_manager& tm);
+	util::error load_scene(std::string path, flag_container& flags, texture_manager& tm);
 
 protected:
 	void refresh_renderer(engine::renderer& _r);
@@ -298,6 +328,7 @@ class game :
 	player_character player;
 	texture_manager textures;
 	flag_container flags;
+	narrative_dialog narrative;
 
 	panning_node root_node;
 
@@ -307,10 +338,12 @@ public:
 	game();
 	scene& get_scene();
 	util::error load_game(std::string path);
+
+	int  tick_interpretor(controls& con, scene_events& events);
 	void tick(controls& con);
 
 protected:
-	void refresh_renderer(engine::renderer& _r);
+	void refresh_renderer(engine::renderer& r);
 };
 
 }

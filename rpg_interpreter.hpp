@@ -19,7 +19,7 @@ enum class e_opcode
 	say,
 	wait,
 	waitforkey,
-	hidebox,
+	narrative_hide,
 	selection,
 	flag_set,
 	flag_unset,
@@ -56,10 +56,18 @@ public:
 	{
 		op = _op;
 	}
-	e_opcode get_op()
+	e_opcode get_opcode()
 	{
 		return op;
 	}
+	template<class T>
+	T* cast_to()
+	{
+		T* retval = dynamic_cast<T*>(this);
+		assert(retval != nullptr);
+		return retval;
+	}
+
 	virtual int load_xml(tinyxml2::XMLElement* e) { return 1; }
 };
 
@@ -92,6 +100,7 @@ public:
 	bool is_start();
 	void next();
 	void wait();
+	void wait_until(bool cond);
 	operation* get_current_op();
 	void call_event(event* e);
 	void cancel_event();
@@ -112,8 +121,6 @@ struct OP_say : public OP<e_opcode::say>
 {
 	std::string character, expression, text;
 	bool append;
-	engine::clock clock;
-	size_t c_char;
 	engine::time_t interval;
 
 	int load_xml(tinyxml2::XMLElement* e);

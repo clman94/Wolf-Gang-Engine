@@ -78,8 +78,11 @@ event::load_xml_event(tinyxml2::XMLElement* e)
 		else if (cmd == "wait")
 			create_op(e_opcode::wait)->load_xml(ele);
 
-		else if (cmd == "keywait")
-			create_op(e_opcode::waitforkey)->load_xml(ele);
+		else if (cmd == "waitforkey")
+			create_op(e_opcode::waitforkey);
+
+		else if (cmd == "narrative:hide")
+			create_op(e_opcode::narrative_hide);
 
 		else
 			util::error("Invalid command '" + cmd + "'");
@@ -118,6 +121,15 @@ void
 event_tracker::wait()
 {
 	job_start = false;
+}
+
+void
+event_tracker::wait_until(bool cond)
+{
+	if (cond)
+		next();
+	else
+		wait();
 }
 
 operation*
