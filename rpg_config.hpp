@@ -4,8 +4,8 @@
 #include "vector.hpp"
 #include "time.hpp"
 
-namespace rpg
-{
+namespace rpg{ namespace defs{
+
 const engine::fvector SCREEN_SIZE            = { 640, 512 };
 const engine::fvector DISPLAY_SIZE           = { 320, 256 };
 const int             TILE_WIDTH_PX          = 32;
@@ -23,5 +23,6 @@ const float           NARRATIVE_TEXT_DEPTH = -3;
 const float           NARRATIVE_BOX_DEPTH = -2;
 const float           FX_DEPTH = -1;
 const float           ABSOLUTE_OVERLAP_DEPTH = -100000;
+}
 }
 #endif

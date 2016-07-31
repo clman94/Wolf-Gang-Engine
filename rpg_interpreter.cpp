@@ -191,7 +191,7 @@ OP_say::load_xml(tinyxml2::XMLElement * e)
 
 	if (auto _interval = e->IntAttribute("interval"))
 		interval = _interval;
-	else interval = DEFAULT_DIALOG_SPEED;
+	else interval = defs::DEFAULT_DIALOG_SPEED;
 
 	auto ele_text = e->FirstChild();
 	while (ele_text)
@@ -209,5 +209,19 @@ int
 OP_wait::load_xml(tinyxml2::XMLElement * e)
 {
 	seconds = e->FloatAttribute("sec");
+	return 0;
+}
+
+int
+OP_flag_set::load_xml(tinyxml2::XMLElement * e)
+{
+	flag = util::safe_string(e->Attribute("name"));
+	return 0;
+}
+
+int
+OP_flag_unset::load_xml(tinyxml2::XMLElement * e)
+{
+	flag = util::safe_string(e->Attribute("name"));
 	return 0;
 }

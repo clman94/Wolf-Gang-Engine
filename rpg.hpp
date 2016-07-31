@@ -103,6 +103,7 @@ class entity :
 	std::list<entity_animation> animations;
 	entity_animation *c_animation;
 
+	bool dynamic_depth;
 public:
 	enum e_type
 	{
@@ -118,7 +119,7 @@ public:
 	bool set_animation(std::string name);
 	int draw(engine::renderer &_r);
 	util::error load_entity(std::string path, texture_manager& tm);
-
+	void set_dynamic_depth(bool a);
 protected:
 	util::error load_animations(tinyxml2::XMLElement* e, texture_manager& tm);
 	util::error load_xml_animation(tinyxml2::XMLElement* ele, engine::animation &anim, texture_manager& tm);
@@ -186,6 +187,9 @@ public:
 
 	void show_box();
 	void hide_box();
+	bool is_box_open();
+
+	void set_interval(float ms);
 
 	util::error load_narrative(tinyxml2::XMLElement* e, texture_manager& tm);
 
@@ -244,11 +248,11 @@ class tilemap :
 	public engine::node
 {
 	engine::tile_node node;
+	util::error load_tilemap(tinyxml2::XMLElement* e, collision_system& collision, size_t layer);
 public:
 	tilemap();
-
 	void set_texture(engine::texture& t);
-	util::error load_tilemap(tinyxml2::XMLElement* e, collision_system& collision, size_t layer);
+	util::error load_scene_tilemap(tinyxml2::XMLElement* e, collision_system& collision);
 	void clear();
 	int draw(engine::renderer &_r);
 };
@@ -286,12 +290,14 @@ class scene_events
 	};
 	std::list<entry> events;
 	interpreter::event_tracker tracker;
+	util::error load_event(tinyxml2::XMLElement *e);
 public:
 	void clear();
-	int  trigger_event(std::string name);
+	int trigger_event(std::string name);
 	interpreter::event* find_event(std::string name);
 	interpreter::event_tracker& get_tracker();
-	util::error load_event(tinyxml2::XMLElement *e);
+
+	util::error load_scene_events(tinyxml2::XMLElement *e);
 };
 
 class scene :
@@ -305,12 +311,17 @@ class scene :
 	node_list<character> characters;
 	node_list<entity> entities;
 
+	void activate_trigger(collision_system::trigger& trigger, flag_container& flags);
+	
 public:
 	scene();
 	scene_events& get_events();
 	collision_system& get_collision_system();
 	character* find_character(std::string name);
 	entity* find_entity(std::string name);
+
+	bool player_button_activate(engine::fvector pos, flag_container& flags);
+	bool player_trigger_activate(engine::fvector pos, flag_container& flags);
 
 	void clean_scene();
 	util::error load_entities(tinyxml2::XMLElement* e, texture_manager& tm);
@@ -333,6 +344,8 @@ class game :
 	panning_node root_node;
 
 	engine::clock frameclock;
+
+	void player_scene_interact(controls& con);
 
 public:
 	game();

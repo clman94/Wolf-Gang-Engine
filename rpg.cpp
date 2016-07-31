@@ -41,8 +41,15 @@ entity::load_entity(std::string path, texture_manager & tm)
 	return 0;
 }
 
+void
+entity::set_dynamic_depth(bool a)
+{
+	dynamic_depth = a;
+}
+
 entity::entity()
 {
+	dynamic_depth = true;
 	node.set_anchor(engine::anchor::bottom);
 }
 
@@ -88,6 +95,13 @@ entity::set_animation(std::string name)
 int
 entity::draw(engine::renderer &_r)
 {
+	if (dynamic_depth)
+	{
+		float ndepth = util::clamp(get_position().y / 32, 
+			defs::TILE_DEPTH_RANGE_MIN, defs::TILE_DEPTH_RANGE_MAX);
+		if (ndepth != get_depth())
+			set_depth(ndepth);
+	}
 	node.set_position(get_exact_position());
 	node.draw(_r);
 	return 0;
@@ -186,7 +200,7 @@ entity::load_xml_animation(tinyxml2::XMLElement* ele, engine::animation &anim, t
 character::character()
 {
 	cyclegroup = "default";
-	move_speed = 3*TILE_SIZE.x;
+	move_speed = 3* defs::TILE_SIZE.x;
 }
 
 void
@@ -237,7 +251,7 @@ character::get_speed()
 
 tilemap::tilemap()
 {
-	node.set_tile_size(TILE_SIZE);
+	node.set_tile_size(defs::TILE_SIZE);
 }
 
 
@@ -278,7 +292,7 @@ tilemap::load_tilemap(tinyxml2::XMLElement* e, collision_system &collision, size
 		int r = i->IntAttribute("r") % 4;
 
 		if (i->BoolAttribute("c"))
-			collision.add_wall({ pos*TILE_SIZE, fill*TILE_SIZE });
+			collision.add_wall({ pos*defs::TILE_SIZE, fill*defs::TILE_SIZE });
 
 		engine::ivector off;
 		for (off.x = 0; off.x < fill.x; off.x++)
@@ -290,6 +304,19 @@ tilemap::load_tilemap(tinyxml2::XMLElement* e, collision_system &collision, size
 		}
 
 		i = i->NextSiblingElement();
+	}
+	return 0;
+}
+
+util::error
+tilemap::load_scene_tilemap(tinyxml2::XMLElement * e, collision_system & collision)
+{
+	auto ele_tilemap = e->FirstChildElement("tilemap");
+	while (ele_tilemap)
+	{
+		int att_layer = ele_tilemap->IntAttribute("layer");
+		load_tilemap(ele_tilemap, collision, att_layer);
+		ele_tilemap = ele_tilemap->NextSiblingElement("tilemap");
 	}
 	return 0;
 }
@@ -398,11 +425,7 @@ collision_system::load_collision_boxes(tinyxml2::XMLElement* e, flag_container& 
 		std::string box_type = util::safe_string(ele->Name());
 
 		std::string invalid_on_flag = util::safe_string(ele->Attribute("invalid"));
-		if (flags.has_flag(invalid_on_flag))
-		{
-			ele = ele->NextSiblingElement();
-			continue;
-		}
+		bool is_valid = !flags.has_flag(invalid_on_flag);
 
 		std::string spawn_flag = util::safe_string(ele->Attribute("spawn"));
 
@@ -411,7 +434,10 @@ collision_system::load_collision_boxes(tinyxml2::XMLElement* e, flag_container& 
 		rect.y = ele->FloatAttribute("y");
 		rect.w = ele->FloatAttribute("w");
 		rect.h = ele->FloatAttribute("h");
-		rect = engine::scale(rect, TILE_SIZE);
+		rect = engine::scale(rect, defs::TILE_SIZE);
+		
+
+		// ##### TODO: Refactor #####
 
 		if (box_type == "wall")
 		{
@@ -419,6 +445,7 @@ collision_system::load_collision_boxes(tinyxml2::XMLElement* e, flag_container& 
 			nw.set_rect(rect);
 			nw.invalid_on_flag = invalid_on_flag;
 			nw.spawn_flag = spawn_flag;
+			nw.valid = is_valid;
 			walls.emplace_back(nw);
 		}
 
@@ -428,6 +455,7 @@ collision_system::load_collision_boxes(tinyxml2::XMLElement* e, flag_container& 
 			nd.set_rect(rect);
 			nd.invalid_on_flag = invalid_on_flag;
 			nd.spawn_flag = spawn_flag;
+			nd.valid = is_valid;
 			nd.name = util::safe_string(ele->Attribute("name"));
 			nd.destination = util::safe_string(ele->Attribute("dest"));
 			nd.scene_path = util::safe_string(ele->Attribute("scene"));
@@ -440,9 +468,22 @@ collision_system::load_collision_boxes(tinyxml2::XMLElement* e, flag_container& 
 			nt.set_rect(rect);
 			nt.invalid_on_flag = invalid_on_flag;
 			nt.spawn_flag = spawn_flag;
+			nt.valid = is_valid;
 			nt.inline_event.load_xml_event(ele);
 			nt.event = util::safe_string(ele->Attribute("event"));
 			triggers.push_back(std::move(nt));
+		}
+
+		if (box_type == "button")
+		{
+			trigger nt;
+			nt.set_rect(rect);
+			nt.invalid_on_flag = invalid_on_flag;
+			nt.spawn_flag = spawn_flag;
+			nt.valid = is_valid;
+			nt.inline_event.load_xml_event(ele);
+			nt.event = util::safe_string(ele->Attribute("event"));
+			buttons.push_back(std::move(nt));
 		}
 
 		ele = ele->NextSiblingElement();
@@ -583,12 +624,52 @@ scene_events::load_event(tinyxml2::XMLElement * e)
 	return 0;
 }
 
+util::error
+scene_events::load_scene_events(tinyxml2::XMLElement * e)
+{
+	auto ele_event = e->FirstChildElement("event");
+	while (ele_event)
+	{
+		load_event(ele_event);
+		ele_event = ele_event->NextSiblingElement("event");
+	}
+	return 0;
+}
+
 // #########
 // scene
 // #########
 
+void
+scene::activate_trigger(collision_system::trigger& trigger, flag_container& flags)
+{
+	if (trigger.inline_event.get_op_count())
+		events.get_tracker().call_event(&trigger.inline_event);
+	events.trigger_event(trigger.event);
+	collision.validate_collisionbox(trigger, flags);
+}
+
+bool
+scene::player_button_activate(engine::fvector pos, flag_container& flags)
+{
+	auto hit = collision.button_collision(pos);
+	if (!hit) return false;
+	activate_trigger(*hit, flags);
+	return true;
+}
+
+bool
+scene::player_trigger_activate(engine::fvector pos, flag_container& flags)
+{
+	auto hit = collision.trigger_collision(pos);
+	if (!hit) return false;
+	activate_trigger(*hit, flags);
+	return false;
+}
+
 scene::scene()
 {
+	tilemap.set_depth(defs::TILES_DEPTH);
 	add_child(tilemap);
 	add_child(characters);
 	add_child(entities);
@@ -623,6 +704,8 @@ scene::find_entity(std::string name)
 			return &i;
 	return nullptr;
 }
+
+
 
 void
 scene::clean_scene()
@@ -705,21 +788,10 @@ scene::load_scene(std::string path, flag_container& flags, texture_manager& tm)
 		return "Tilemap texture is not defined";
 
 	// Load all tilemap layers
-	auto ele_tilemap = root->FirstChildElement("tilemap");
-	while (ele_tilemap)
-	{
-		int att_layer = ele_tilemap->IntAttribute("layer");
-		tilemap.load_tilemap(ele_tilemap, collision, att_layer);
-		ele_tilemap = ele_tilemap->NextSiblingElement("tilemap");
-	}
+	tilemap.load_scene_tilemap(root, collision);
 
 	// Load all events
-	auto ele_event = root->FirstChildElement("event");
-	while (ele_event)
-	{
-		events.load_event(ele_event);
-		ele_event = ele_event->NextSiblingElement("event");
-	}
+	events.load_scene_events(root);
 	events.trigger_event("_start_");
 
 	return 0;
@@ -766,6 +838,14 @@ game::game()
 {
 	root_node.add_child(player);
 	root_node.add_child(game_scene);
+}
+
+void
+game::player_scene_interact(controls& con)
+{
+	if (con.is_triggered(controls::control::activate))
+		game_scene.player_button_activate(player.get_activation_point(), flags);
+	game_scene.player_trigger_activate(player.get_position(), flags);
 }
 
 scene& game::get_scene()
@@ -818,10 +898,10 @@ game::tick_interpretor(controls& con, scene_events& events)
 
 	do {
 		auto op = tracker.get_current_op();
-
 		if (!op)
 		{
 			narrative.hide_box();
+			player.set_locked(false);
 			return 0;
 		}
 
@@ -833,7 +913,9 @@ game::tick_interpretor(controls& con, scene_events& events)
 			auto _op = op->cast_to<OP_say>();
 			if (tracker.is_start())
 			{
+				player.set_locked(true);
 				narrative.show_box();
+				narrative.set_interval(_op->interval);
 				narrative.reveal_text(_op->text, _op->append);
 			}
 			tracker.wait_until(!narrative.is_revealing());
@@ -841,8 +923,14 @@ game::tick_interpretor(controls& con, scene_events& events)
 		}
 		case e_opcode::waitforkey:
 		{
+			if (tracker.is_start())
+			{
+				player.set_locked(true);
+			}
 			bool is_triggered = con.is_triggered(controls::control::activate);
 			tracker.wait_until(is_triggered);
+			if (is_triggered)
+				player.set_locked(false);
 			break;
 		}
 		case e_opcode::wait:
@@ -856,6 +944,20 @@ game::tick_interpretor(controls& con, scene_events& events)
 			tracker.wait_until(is_reached);
 			break;
 		}
+		case e_opcode::flag_set:
+		{
+			auto _op = op->cast_to<OP_flag_set>();
+			flags.set_flag(_op->flag);
+			tracker.next();
+			break;
+		}
+		case e_opcode::flag_unset:
+		{
+			auto _op = op->cast_to<OP_flag_unset>();
+			flags.unset_flag(_op->flag);
+			tracker.next();
+			break;
+		}
 		}
 
 	} while (tracker.is_start());
@@ -867,8 +969,14 @@ void
 game::tick(controls& con)
 {
 	float delta = frameclock.get_elapse().s();
+
 	player.movement(con, game_scene.get_collision_system(), delta);
-	if (!player.is_locked()) root_node.set_focus(player.get_position());
+
+	if (!player.is_locked())
+	{
+		root_node.set_focus(player.get_position());
+		player_scene_interact(con);
+	}
 
 	tick_interpretor(con, game_scene.get_events());
 
@@ -958,7 +1066,7 @@ narrative_dialog::narrative_dialog()
 void
 narrative_dialog::set_box_position(position pos)
 {
-	float offx = (DISPLAY_SIZE.x - box.get_size().x) / 2;
+	float offx = (defs::DISPLAY_SIZE.x - box.get_size().x) / 2;
 
 	switch (pos)
 	{
@@ -969,7 +1077,7 @@ narrative_dialog::set_box_position(position pos)
 	}
 	case position::bottom:
 	{
-		box.set_position({ offx, DISPLAY_SIZE.y - box.get_size().y - 10 });
+		box.set_position({ offx, defs::DISPLAY_SIZE.y - box.get_size().y - 10 });
 		break;
 	}
 	}
@@ -1004,10 +1112,8 @@ narrative_dialog::instant_text(std::string str, bool append)
 	if (append)
 		full_text += str;
 	else
-	{
 		full_text = str;
-		text.set_text("");
-	}
+	text.set_text(full_text);
 }
 
 void
@@ -1024,6 +1130,17 @@ narrative_dialog::hide_box()
 	text.set_visible(false);
 	text.set_text("");
 	box.set_visible(false);
+}
+
+bool rpg::narrative_dialog::is_box_open()
+{
+	return box.is_visible();
+}
+
+void
+narrative_dialog::set_interval(float ms)
+{
+	interval = ms;
 }
 
 util::error

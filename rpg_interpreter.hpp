@@ -18,8 +18,8 @@ enum class e_opcode
 	invalid,
 	say,
 	wait,
-	waitforkey,
-	narrative_hide,
+	waitforkey,     //*
+	narrative_hide, //*
 	selection,
 	flag_set,
 	flag_unset,
@@ -28,11 +28,11 @@ enum class e_opcode
 	flag_once,
 	scene_load,
 	tile_replace,
-	music_pause,
+	music_pause,  //*
 	music_set,
 	music_volume,
-	music_play,
-	music_stop,
+	music_play,   //*
+	music_stop,   //*
 	music_wait,
 	entity_move,
 	entity_current,
@@ -42,8 +42,8 @@ enum class e_opcode
 	entity_animationstart,
 	entity_animationstop,
 	entity_setdirection,
-	fx_fadein,
-	fx_fadeout,
+	fx_fadein,   //*
+	fx_fadeout,  //*
 	fx_sound
 };
 
@@ -117,12 +117,20 @@ public:
 	OP() : operation(_OP){}
 };
 
+/* TEMPLATE
+struct OP_ : public OP<e_opcode::>
+{
+	int load_xml(tinyxml2::XMLElement* e);
+};
+*/
+
 struct OP_say : public OP<e_opcode::say>
 {
 	std::string character, expression, text;
 	bool append;
 	engine::time_t interval;
 
+	OP_say() : append(false){}
 	int load_xml(tinyxml2::XMLElement* e);
 };
 
@@ -134,6 +142,17 @@ struct OP_wait : public OP<e_opcode::wait>
 	int load_xml(tinyxml2::XMLElement* e);
 };
 
+struct OP_flag_set : public OP<e_opcode::flag_set>
+{
+	std::string flag;
+	int load_xml(tinyxml2::XMLElement* e);
+};
+
+struct OP_flag_unset : public OP<e_opcode::flag_set>
+{
+	std::string flag;
+	int load_xml(tinyxml2::XMLElement* e);
+};
 
 
 }}

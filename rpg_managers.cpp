@@ -23,19 +23,19 @@ texture_manager::load_settings(std::string path)
 	if (doc.LoadFile(path.c_str()))
 		return 1;
 
-	XMLElement* texbank_e = doc.FirstChildElement("textures");
-	if (!texbank_e)
+	XMLElement* ele_textures = doc.FirstChildElement("textures");
+	if (!ele_textures)
 		return 2;
 
-	XMLElement* entry = texbank_e->FirstChildElement();
-	while (entry)
+	XMLElement* ele_entry = ele_textures->FirstChildElement();
+	while (ele_entry)
 	{
 		texture_entry nentry;
-		nentry.name = entry->Name();
-		nentry.path = entry->Attribute("path");
+		nentry.name = ele_entry->Name();
+		nentry.path = ele_entry->Attribute("path");
 
 		// the optional atlas path
-		const char* opt_atlas = entry->Attribute("atlas");
+		const char* opt_atlas = ele_entry->Attribute("atlas");
 		if (opt_atlas)
 		{
 			nentry.atlas = opt_atlas;
@@ -46,7 +46,7 @@ texture_manager::load_settings(std::string path)
 
 		nentry.is_loaded = false;
 		textures.push_back(nentry);
-		entry = entry->NextSiblingElement();
+		ele_entry = ele_entry->NextSiblingElement();
 	}
 	return 0;
 }
@@ -73,9 +73,9 @@ texture_manager::get_texture(std::string name)
 std::vector<std::string>
 texture_manager::construct_list()
 {
-	std::vector<std::string> list;
-	list.reserve(textures.size());
+	std::vector<std::string> retval;
+	retval.reserve(textures.size());
 	for (auto& i : textures)
-		list.push_back(i.name);
-	return std::move(list);
+		retval.push_back(i.name);
+	return std::move(retval);
 }
