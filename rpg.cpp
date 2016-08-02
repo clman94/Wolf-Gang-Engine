@@ -1,4 +1,6 @@
 #include "rpg.hpp"
+#include <angelscript/add_on/scriptstdstring/scriptstdstring.h>
+#include <angelscript/add_on/scriptmath/scriptmath.h>
 
 using namespace rpg;
 
@@ -343,10 +345,8 @@ collision_system::collision_box*
 collision_system::wall_collision(const engine::frect & r)
 {
 	for (auto &i : walls)
-	{
-		if (i.is_intersect(r))
+		if (i.valid && i.is_intersect(r))
 			return &i;
-	}
 	return nullptr;
 }
 
@@ -354,10 +354,8 @@ collision_system::door*
 collision_system::door_collision(const engine::fvector & r)
 {
 	for (auto &i : doors)
-	{
 		if (i.valid && i.is_intersect(r))
 			return &i;
-	}
 	return nullptr;
 }
 
@@ -379,11 +377,23 @@ collision_system::button_collision(const engine::fvector & pos)
 	return nullptr;
 }
 
+engine::fvector
+collision_system::get_door_entry(std::string name)
+{
+	for (auto& i : doors)
+	{
+		if (i.name == name)
+		{
+			return i.get_offset() + (i.get_size()*0.5f);
+		}
+	}
+	return{ -1, -1};
+}
+
 void
 collision_system::validate_collisionbox(collision_box & cb, flag_container & flags)
 {
-	if (flags.has_flag(cb.invalid_on_flag))
-		cb.valid = false;
+	cb.valid = !flags.has_flag(cb.invalid_on_flag);
 	if (!cb.spawn_flag.empty())
 		flags.set_flag(cb.spawn_flag);
 }
@@ -831,6 +841,20 @@ controls::reset()
 }
 
 // #########
+// angelscript
+// #########
+
+util::error
+angelscript::load_engine()
+{
+	as_engine = asCreateScriptEngine();
+	RegisterStdString(as_engine);
+
+
+	return 0;
+}
+
+// #########
 // game
 // #########
 
@@ -878,8 +902,9 @@ game::load_game(std::string path)
 
 	textures.load_settings(textures_path);
 
+
 	player.load_entity(player_path, textures);
-	player.set_position({ 10, 10 });
+	player.set_position({ 20, 120 });
 	player.set_cycle(character::e_cycle::default);
 
 	game_scene.load_scene(scene_path, flags, textures);
@@ -948,6 +973,7 @@ game::tick_interpretor(controls& con, scene_events& events)
 		{
 			auto _op = op->cast_to<OP_flag_set>();
 			flags.set_flag(_op->flag);
+			game_scene.get_collision_system().validate_all(flags);
 			tracker.next();
 			break;
 		}
@@ -955,6 +981,37 @@ game::tick_interpretor(controls& con, scene_events& events)
 		{
 			auto _op = op->cast_to<OP_flag_unset>();
 			flags.unset_flag(_op->flag);
+			game_scene.get_collision_system().validate_all(flags);
+			tracker.next();
+			break;
+		}
+		case e_opcode::entity_setanimation:
+		{
+			auto _op = op->cast_to<OP_entity_setanimation>();
+			entity* e = nullptr;
+
+			if (_op->type == entity_action::entity_type::noncharacter)
+				e = game_scene.find_entity(_op->entity_name);
+			else if (_op->type == entity_action::entity_type::character)
+				e = game_scene.find_character(_op->entity_name);
+			else if (_op->type == entity_action::entity_type::player)
+				e = &player;
+
+			e->set_animation(_op->name);
+
+			tracker.next();
+			break;
+		}
+		case e_opcode::scene_load:
+		{
+			auto _op = op->cast_to<OP_scene_load>();
+			game_scene.load_scene(_op->path, flags, textures);
+			if (!_op->door.empty())
+			{
+				auto& colli = game_scene.get_collision_system();
+				auto pos = colli.get_door_entry(_op->door);
+				player.set_position(pos);
+			}
 			tracker.next();
 			break;
 		}
@@ -990,7 +1047,6 @@ game::refresh_renderer(engine::renderer & r)
 	r.add_client(&player);
 	root_node.set_viewport(r.get_size());
 	root_node.set_boundary({ 11*32, 11*32 });
-
 	r.add_client(&narrative);
 }
 
@@ -1096,7 +1152,9 @@ narrative_dialog::reveal_text(std::string str, bool append)
 	revealing = true;
 
 	if (append)
+	{
 		full_text += str;
+	}
 	else
 	{
 		full_text = str;

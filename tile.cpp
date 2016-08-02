@@ -209,7 +209,7 @@ tile_node::set_tile(ivector pos, std::string atlas, size_t layer, int rot, bool 
 	v[2].position              = sf::Vector2f(pos.x*width + crop.w, pos.y*height + crop.h);
 	v[3].position              = sf::Vector2f(pos.x*width         , pos.y*height + crop.h);
 
-	int index = find_tile(pos);
+	int index = find_tile(pos, layer);
 	if (index == -1)
 	{
 		auto &vertices = *layers[layer];

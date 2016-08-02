@@ -14,6 +14,9 @@
 #include <string>
 #include <array>
 
+#include <angelscript.h>
+#include <angelscript/add_on/scriptbuilder/scriptbuilder.h>
+
 namespace rpg{
 
 class panning_node :
@@ -229,6 +232,8 @@ public:
 	trigger*       trigger_collision(const engine::fvector& pos);
 	trigger*       button_collision(const engine::fvector& pos);
 
+	engine::fvector get_door_entry(std::string name);
+
 	void validate_collisionbox(collision_box& cb, flag_container& flags);
 	void validate_all(flag_container& flags);
 
@@ -330,6 +335,13 @@ public:
 
 protected:
 	void refresh_renderer(engine::renderer& _r);
+};
+
+class angelscript
+{
+	asIScriptEngine* as_engine;
+public:
+	util::error load_engine();
 };
 
 class game :

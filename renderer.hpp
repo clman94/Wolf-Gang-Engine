@@ -312,6 +312,7 @@ class sprite_node :
 {
 	sf::Sprite _sprite;
 	sf::Vector2f offset;
+
 public:
 	void set_anchor(anchor _anchor);
 	virtual int draw(renderer &_r);

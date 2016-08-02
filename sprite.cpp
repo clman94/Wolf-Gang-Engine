@@ -32,7 +32,7 @@ int sprite_node::set_texture(texture& tex, std::string atlas)
 	return 0;
 }
 
-void 
+void
 sprite_node::set_anchor(anchor type)
 {
 	auto node_offset = engine::center_offset(get_size(), type);

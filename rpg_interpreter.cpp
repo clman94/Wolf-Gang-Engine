@@ -84,6 +84,30 @@ event::load_xml_event(tinyxml2::XMLElement* e)
 		else if (cmd == "narrative:hide")
 			create_op(e_opcode::narrative_hide);
 
+		else if (cmd == "scene:load")
+			create_op(e_opcode::scene_load)->load_xml(ele);
+
+		/*else if (cmd == "entity:move")
+		{
+			auto op = create_op(e_opcode::entity_move)->cast_to<OP_entity_move>();
+			op->load_xml(ele);
+			op->type = entity_action::entity_type::noncharacter;
+		}
+
+		else if (cmd == "character:move")
+		{
+			auto op = create_op(e_opcode::entity_move)->cast_to<OP_entity_move>();
+			op->load_xml(ele);
+			op->type = entity_action::entity_type::character;
+		}
+
+		else if (cmd == "player:move")
+		{
+			auto op = create_op(e_opcode::entity_move)->cast_to<OP_entity_move>();
+			op->load_xml(ele);
+			op->type = entity_action::entity_type::player;
+		}*/
+
 		else
 			util::error("Invalid command '" + cmd + "'");
 
@@ -223,5 +247,40 @@ int
 OP_flag_unset::load_xml(tinyxml2::XMLElement * e)
 {
 	flag = util::safe_string(e->Attribute("name"));
+	return 0;
+}
+
+int
+OP_scene_load::load_xml(tinyxml2::XMLElement * e)
+{
+	path = util::safe_string(e->Attribute("path"));
+	door = util::safe_string(e->Attribute("door"));
+	return 0;
+}
+
+void
+entity_action::load_entity_name(tinyxml2::XMLElement* e)
+{
+	entity_name = util::safe_string(e->Attribute("name"));
+}
+
+int
+OP_entity_move::load_xml(tinyxml2::XMLElement * e)
+{
+	to.x = e->FloatAttribute("x") * 32;
+	to.y = e->FloatAttribute("y") * 32;
+	return 0;
+}
+
+int
+OP_entity_setanimation::load_xml(tinyxml2::XMLElement * e)
+{
+	name = util::safe_string(e->Attribute("name"));
+	return 0;
+}
+
+int 
+OP_entity_setcyclegroup::load_xml(tinyxml2::XMLElement * e)
+{
 	return 0;
 }

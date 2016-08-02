@@ -8,6 +8,7 @@
 #include <vector>
 #include <memory>
 #include <deque>
+#include <cassert>
 
 #include "tinyxml2/tinyxml2.h"
 
@@ -151,6 +152,58 @@ struct OP_flag_set : public OP<e_opcode::flag_set>
 struct OP_flag_unset : public OP<e_opcode::flag_set>
 {
 	std::string flag;
+	int load_xml(tinyxml2::XMLElement* e);
+};
+
+struct entity_action
+{
+	enum class entity_type
+	{
+		noncharacter,
+		character,
+		player
+	};
+	entity_type type;
+	std::string entity_name;
+
+	void load_entity_name(tinyxml2::XMLElement* e);
+};
+
+struct OP_entity_move :
+	public entity_action,
+	public OP<e_opcode::entity_move>
+{
+	engine::fvector to;
+	int load_xml(tinyxml2::XMLElement* e);
+};
+
+struct OP_entity_setanimation :
+	public entity_action,
+	public OP<e_opcode::entity_setanimation>
+{
+	std::string name;
+	int load_xml(tinyxml2::XMLElement* e);
+};
+
+struct OP_entity_setcyclegroup :
+	public entity_action,
+	public OP<e_opcode::entity_setcyclegroup>
+{
+	std::string name;
+	int load_xml(tinyxml2::XMLElement* e);
+};
+
+struct OP_entity_setcycle :
+	public entity_action,
+	public OP<e_opcode::entity_setdirection>
+{
+	std::string name;
+	int load_xml(tinyxml2::XMLElement* e);
+};
+
+struct OP_scene_load : public OP<e_opcode::scene_load>
+{
+	std::string path, door;
 	int load_xml(tinyxml2::XMLElement* e);
 };
 

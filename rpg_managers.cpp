@@ -79,3 +79,23 @@ texture_manager::construct_list()
 		retval.push_back(i.name);
 	return std::move(retval);
 }
+
+sound_manager::soundbuffer_entry*
+sound_manager::find_buffer(std::string name)
+{
+	for (auto& i : buffers)
+		if (i.name == name)
+			return &i;
+	return nullptr;
+}
+
+util::error rpg::sound_manager::load_sounds(std::string path)
+{
+	return 0;
+}
+
+int
+sound_manager::spawn_sound(std::string name)
+{
+	return 0;
+}
