@@ -1,6 +1,7 @@
 #include "rpg_interpreter.hpp"
 #include "utility.hpp"
 
+
 #include <cassert>
 
 using namespace rpg::interpreter;
@@ -199,6 +200,63 @@ void
 event_tracker::queue_event(event* e)
 {
 	events.emplace_front(e);
+}
+
+// #########
+// scene_events
+// #########
+
+void
+scene_events::clear()
+{
+	tracker.cancel_all();
+	events.clear();
+}
+
+int
+scene_events::trigger_event(std::string name)
+{
+	auto e = find_event(name);
+	if (!e) return 1;
+	tracker.call_event(e);
+	return 0;
+}
+
+event*
+scene_events::find_event(std::string name)
+{
+	for (auto &i : events)
+		if (i.name == name)
+			return &i.event;
+	return nullptr;
+}
+
+event_tracker&
+scene_events::get_tracker()
+{
+	return tracker;
+}
+
+util::error
+scene_events::load_event(tinyxml2::XMLElement * e)
+{
+	events.emplace_back();
+	auto &nevent = events.back();
+	nevent.event.load_xml_event(e);
+	nevent.name = util::safe_string(e->Attribute("name"));
+	return 0;
+}
+
+util::error
+scene_events::load_scene_events(tinyxml2::XMLElement * e)
+{
+	auto ele_event = e->FirstChildElement("event");
+	while (ele_event)
+	{
+		load_event(ele_event);
+		ele_event = ele_event->NextSiblingElement("event");
+	}
+	return 0;
 }
 
 // ##########

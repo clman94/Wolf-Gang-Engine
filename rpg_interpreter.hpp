@@ -9,7 +9,9 @@
 #include <memory>
 #include <deque>
 #include <cassert>
+#include <list>
 
+#include "utility.hpp"
 #include "tinyxml2/tinyxml2.h"
 
 namespace rpg{ namespace interpreter{
@@ -108,6 +110,25 @@ public:
 	void cancel_all();
 	void interrupt(event* e);
 	void queue_event(event* e);
+};
+
+class scene_events
+{
+	struct entry
+	{
+		std::string name;
+		event event;
+	};
+	std::list<entry> events;
+	event_tracker tracker;
+	util::error load_event(tinyxml2::XMLElement *e);
+public:
+	void clear();
+	int trigger_event(std::string name);
+	event* find_event(std::string name);
+	event_tracker& get_tracker();
+
+	util::error load_scene_events(tinyxml2::XMLElement *e);
 };
 
 

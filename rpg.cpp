@@ -479,7 +479,6 @@ collision_system::load_collision_boxes(tinyxml2::XMLElement* e, flag_container& 
 			nt.invalid_on_flag = invalid_on_flag;
 			nt.spawn_flag = spawn_flag;
 			nt.valid = is_valid;
-			nt.inline_event.load_xml_event(ele);
 			nt.event = util::safe_string(ele->Attribute("event"));
 			triggers.push_back(std::move(nt));
 		}
@@ -491,7 +490,6 @@ collision_system::load_collision_boxes(tinyxml2::XMLElement* e, flag_container& 
 			nt.invalid_on_flag = invalid_on_flag;
 			nt.spawn_flag = spawn_flag;
 			nt.valid = is_valid;
-			nt.inline_event.load_xml_event(ele);
 			nt.event = util::safe_string(ele->Attribute("event"));
 			buttons.push_back(std::move(nt));
 		}
@@ -589,93 +587,12 @@ player_character::get_activation_point(float distance)
 	return{ 0, 0 };
 }
 
-// #########
-// scene_events
-// #########
 
-void
-scene_events::clear()
-{
-	tracker.cancel_all();
-	events.clear();
-}
-
-int
-scene_events::trigger_event(std::string name)
-{
-	auto e = find_event(name);
-	if (!e) return 1;
-	tracker.call_event(e);
-	return 0;
-}
-
-interpreter::event*
-scene_events::find_event(std::string name)
-{
-	for (auto &i : events)
-		if (i.name == name)
-			return &i.event;
-	return nullptr;
-}
-
-interpreter::event_tracker&
-scene_events::get_tracker()
-{
-	return tracker;
-}
-
-util::error
-scene_events::load_event(tinyxml2::XMLElement * e)
-{
-	events.emplace_back();
-	auto &nevent = events.back();
-	nevent.event.load_xml_event(e);
-	nevent.name = util::safe_string(e->Attribute("name"));
-	return 0;
-}
-
-util::error
-scene_events::load_scene_events(tinyxml2::XMLElement * e)
-{
-	auto ele_event = e->FirstChildElement("event");
-	while (ele_event)
-	{
-		load_event(ele_event);
-		ele_event = ele_event->NextSiblingElement("event");
-	}
-	return 0;
-}
 
 // #########
 // scene
 // #########
 
-void
-scene::activate_trigger(collision_system::trigger& trigger, flag_container& flags)
-{
-	if (trigger.inline_event.get_op_count())
-		events.get_tracker().call_event(&trigger.inline_event);
-	events.trigger_event(trigger.event);
-	collision.validate_collisionbox(trigger, flags);
-}
-
-bool
-scene::player_button_activate(engine::fvector pos, flag_container& flags)
-{
-	auto hit = collision.button_collision(pos);
-	if (!hit) return false;
-	activate_trigger(*hit, flags);
-	return true;
-}
-
-bool
-scene::player_trigger_activate(engine::fvector pos, flag_container& flags)
-{
-	auto hit = collision.trigger_collision(pos);
-	if (!hit) return false;
-	activate_trigger(*hit, flags);
-	return false;
-}
 
 scene::scene()
 {
@@ -683,12 +600,6 @@ scene::scene()
 	add_child(tilemap);
 	add_child(characters);
 	add_child(entities);
-}
-
-scene_events&
-scene::get_events()
-{
-	return events;
 }
 
 collision_system&
@@ -722,7 +633,6 @@ scene::clean_scene()
 {
 	tilemap.clear();
 	collision.clear();
-	events.clear();
 	characters.clear();
 	entities.clear();
 }
@@ -800,10 +710,6 @@ scene::load_scene(std::string path, flag_container& flags, texture_manager& tm)
 	// Load all tilemap layers
 	tilemap.load_scene_tilemap(root, collision);
 
-	// Load all events
-	events.load_scene_events(root);
-	events.trigger_event("_start_");
-
 	return 0;
 }
 
@@ -867,9 +773,6 @@ game::game()
 void
 game::player_scene_interact(controls& con)
 {
-	if (con.is_triggered(controls::control::activate))
-		game_scene.player_button_activate(player.get_activation_point(), flags);
-	game_scene.player_trigger_activate(player.get_position(), flags);
 }
 
 scene& game::get_scene()
@@ -916,112 +819,6 @@ game::load_game(std::string path)
 	return 0;
 }
 
-int
-game::tick_interpretor(controls& con, scene_events& events)
-{
-	auto& tracker = events.get_tracker();
-
-	do {
-		auto op = tracker.get_current_op();
-		if (!op)
-		{
-			narrative.hide_box();
-			player.set_locked(false);
-			return 0;
-		}
-
-		using namespace interpreter;
-		switch (op->get_opcode())
-		{
-		case e_opcode::say:
-		{
-			auto _op = op->cast_to<OP_say>();
-			if (tracker.is_start())
-			{
-				player.set_locked(true);
-				narrative.show_box();
-				narrative.set_interval(_op->interval);
-				narrative.reveal_text(_op->text, _op->append);
-			}
-			tracker.wait_until(!narrative.is_revealing());
-			break;
-		}
-		case e_opcode::waitforkey:
-		{
-			if (tracker.is_start())
-			{
-				player.set_locked(true);
-			}
-			bool is_triggered = con.is_triggered(controls::control::activate);
-			tracker.wait_until(is_triggered);
-			if (is_triggered)
-				player.set_locked(false);
-			break;
-		}
-		case e_opcode::wait:
-		{
-			auto _op = op->cast_to<OP_wait>();
-			if (tracker.is_start())
-			{
-				_op->clock.restart();
-			}
-			bool is_reached = _op->clock.get_elapse().s() >= _op->seconds;
-			tracker.wait_until(is_reached);
-			break;
-		}
-		case e_opcode::flag_set:
-		{
-			auto _op = op->cast_to<OP_flag_set>();
-			flags.set_flag(_op->flag);
-			game_scene.get_collision_system().validate_all(flags);
-			tracker.next();
-			break;
-		}
-		case e_opcode::flag_unset:
-		{
-			auto _op = op->cast_to<OP_flag_unset>();
-			flags.unset_flag(_op->flag);
-			game_scene.get_collision_system().validate_all(flags);
-			tracker.next();
-			break;
-		}
-		case e_opcode::entity_setanimation:
-		{
-			auto _op = op->cast_to<OP_entity_setanimation>();
-			entity* e = nullptr;
-
-			if (_op->type == entity_action::entity_type::noncharacter)
-				e = game_scene.find_entity(_op->entity_name);
-			else if (_op->type == entity_action::entity_type::character)
-				e = game_scene.find_character(_op->entity_name);
-			else if (_op->type == entity_action::entity_type::player)
-				e = &player;
-
-			e->set_animation(_op->name);
-
-			tracker.next();
-			break;
-		}
-		case e_opcode::scene_load:
-		{
-			auto _op = op->cast_to<OP_scene_load>();
-			game_scene.load_scene(_op->path, flags, textures);
-			if (!_op->door.empty())
-			{
-				auto& colli = game_scene.get_collision_system();
-				auto pos = colli.get_door_entry(_op->door);
-				player.set_position(pos);
-			}
-			tracker.next();
-			break;
-		}
-		}
-
-	} while (tracker.is_start());
-
-	return 0;
-}
-
 void
 game::tick(controls& con)
 {
@@ -1034,8 +831,6 @@ game::tick(controls& con)
 		root_node.set_focus(player.get_position());
 		player_scene_interact(con);
 	}
-
-	tick_interpretor(con, game_scene.get_events());
 
 	frameclock.restart();
 }

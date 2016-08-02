@@ -7,7 +7,6 @@
 #include "rpg_config.hpp"
 #include "your_soul.hpp"
 #include "tinyxml2\tinyxml2.h"
-#include "rpg_interpreter.hpp"
 
 #include <set>
 #include <list>
@@ -217,7 +216,6 @@ public:
 	struct trigger : public collision_box
 	{
 		std::string event;
-		interpreter::event inline_event;
 	};
 
 	struct door : public collision_box
@@ -286,24 +284,7 @@ private:
 	direction facing_direction;
 };
 
-class scene_events
-{
-	struct entry
-	{
-		std::string name;
-		interpreter::event event;
-	};
-	std::list<entry> events;
-	interpreter::event_tracker tracker;
-	util::error load_event(tinyxml2::XMLElement *e);
-public:
-	void clear();
-	int trigger_event(std::string name);
-	interpreter::event* find_event(std::string name);
-	interpreter::event_tracker& get_tracker();
 
-	util::error load_scene_events(tinyxml2::XMLElement *e);
-};
 
 class scene :
 	public engine::render_proxy,
@@ -311,22 +292,15 @@ class scene :
 {
 	tilemap tilemap;
 	collision_system collision;
-	scene_events events;
 
 	node_list<character> characters;
 	node_list<entity> entities;
 
-	void activate_trigger(collision_system::trigger& trigger, flag_container& flags);
-	
 public:
 	scene();
-	scene_events& get_events();
 	collision_system& get_collision_system();
 	character* find_character(std::string name);
 	entity* find_entity(std::string name);
-
-	bool player_button_activate(engine::fvector pos, flag_container& flags);
-	bool player_trigger_activate(engine::fvector pos, flag_container& flags);
 
 	void clean_scene();
 	util::error load_entities(tinyxml2::XMLElement* e, texture_manager& tm);
@@ -363,8 +337,6 @@ public:
 	game();
 	scene& get_scene();
 	util::error load_game(std::string path);
-
-	int  tick_interpretor(controls& con, scene_events& events);
 	void tick(controls& con);
 
 protected:
