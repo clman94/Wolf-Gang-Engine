@@ -314,15 +314,6 @@ protected:
 
 class angelscript
 {
-	typedef void(angelscript::loopfunc_t)();
-	std::function<loopfunc_t> loop_function;
-	template<typename... T_args>
-	void registerloop(void(angelscript::*func)(T_args...), T_args&&... args)
-	{
-		loop_function = std::bind(func, this, std::forward<T_args>(args)...);
-	}
-
-	void tick_wait();
 
 	asIScriptEngine* as_engine;
 	void message_callback(const asSMessageInfo * msg);
@@ -331,12 +322,7 @@ class angelscript
 	asIScriptModule *scene_module;
 
 	void dprint(std::string &msg);
-
-	void cmd_say(std::string &message);
-	void cmd_wait(float seconds);
-	void cmd_keywait();
-
-	void cmd_yield();
+	void yield();
 
 public:
 	angelscript();
@@ -345,7 +331,6 @@ public:
 	void add_function(const char* decl, const asSFuncPtr & ptr, void* instance);
 	void add_function(const char* decl, const asSFuncPtr & ptr);
 	void call_event_function(std::string name);
-	void wait();
 	int tick();
 };
 

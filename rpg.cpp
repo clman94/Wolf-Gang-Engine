@@ -770,23 +770,7 @@ angelscript::dprint(std::string &msg)
 }
 
 void
-angelscript::cmd_say(std::string& message)
-{
-	if (!loop_function)
-	{
-		ctx->Suspend();
-		registerloop(&angelscript::cmd_say, message);
-		//loop_function = std::bind(&angelscript::cmd_say, this, message);
-		std::printf("pie");
-	}
-	else
-	{
-		
-	}
-}
-
-void
-angelscript::cmd_yield()
+angelscript::yield()
 {
 	ctx->Suspend();
 }
@@ -802,7 +786,7 @@ angelscript::angelscript()
 	RegisterScriptMath(as_engine);
 
 	add_function("void dprint(const string &in)", asMETHOD(angelscript, dprint),    this);
-	add_function("void _yield()",                 asMETHOD(angelscript, cmd_yield), this);
+	add_function("void _yield()",                 asMETHOD(angelscript, yield), this);
 }
 
 angelscript::~angelscript()
