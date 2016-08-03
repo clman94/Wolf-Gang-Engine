@@ -12,6 +12,7 @@
 #include <list>
 #include <string>
 #include <array>
+#include <functional>
 
 #include <angelscript.h>
 #include <angelscript/add_on/scriptbuilder/scriptbuilder.h>
@@ -64,9 +65,9 @@ class flag_container
 {
 	std::set<std::string> flags;
 public:
-	bool set_flag(std::string name);
-	bool unset_flag(std::string name);
-	bool has_flag(std::string name);
+	bool set_flag(const std::string& name);
+	bool unset_flag(const std::string& name);
+	bool has_flag(const std::string& name);
 };
 
 class controls
@@ -184,7 +185,7 @@ public:
 
 	bool is_revealing();
 
-	void reveal_text(std::string str, bool append = false);
+	void reveal_text(const std::string& str, bool append = false);
 	void instant_text(std::string str, bool append = false);
 
 	void show_box();
@@ -313,9 +314,39 @@ protected:
 
 class angelscript
 {
+	typedef void(angelscript::loopfunc_t)();
+	std::function<loopfunc_t> loop_function;
+	template<typename... T_args>
+	void registerloop(void(angelscript::*func)(T_args...), T_args&&... args)
+	{
+		loop_function = std::bind(func, this, std::forward<T_args>(args)...);
+	}
+
+	void tick_wait();
+
 	asIScriptEngine* as_engine;
+	void message_callback(const asSMessageInfo * msg);
+
+	asIScriptContext *ctx;
+	asIScriptModule *scene_module;
+
+	void dprint(std::string &msg);
+
+	void cmd_say(std::string &message);
+	void cmd_wait(float seconds);
+	void cmd_keywait();
+
+	void cmd_yield();
+
 public:
-	util::error load_engine();
+	angelscript();
+	~angelscript();
+	util::error load_scene_script(std::string path);
+	void add_function(const char* decl, const asSFuncPtr & ptr, void* instance);
+	void add_function(const char* decl, const asSFuncPtr & ptr);
+	void call_event_function(std::string name);
+	void wait();
+	int tick();
 };
 
 class game :
@@ -323,15 +354,17 @@ class game :
 {
 	scene game_scene;
 	player_character player;
-	texture_manager textures;
-	flag_container flags;
+	texture_manager  textures;
+	flag_container   flags;
 	narrative_dialog narrative;
-
-	panning_node root_node;
-
-	engine::clock frameclock;
+	panning_node     root_node;
+	engine::clock    frameclock;
+	angelscript      scripting;
+	controls         c_controls;
 
 	void player_scene_interact(controls& con);
+
+	void load_script_functions();
 
 public:
 	game();

@@ -1,6 +1,7 @@
 #include "rpg.hpp"
 #include <angelscript/add_on/scriptstdstring/scriptstdstring.h>
 #include <angelscript/add_on/scriptmath/scriptmath.h>
+#include <functional>
 
 using namespace rpg;
 
@@ -8,15 +9,15 @@ using namespace rpg;
 // flag_container
 // #########
 
-bool flag_container::set_flag(std::string name)
+bool flag_container::set_flag(const std::string& name)
 {
 	return flags.emplace(name).second;
 }
-bool flag_container::unset_flag(std::string name)
+bool flag_container::unset_flag(const std::string& name)
 {
 	return flags.erase(name) == 1;
 }
-bool flag_container::has_flag(std::string name)
+bool flag_container::has_flag(const std::string& name)
 {
 	return flags.find(name) != flags.end();
 }
@@ -750,13 +751,110 @@ controls::reset()
 // angelscript
 // #########
 
-util::error
-angelscript::load_engine()
+
+void angelscript::message_callback(const asSMessageInfo * msg)
+{
+	std::string type = "ERROR";
+	if (msg->type == asEMsgType::asMSGTYPE_INFORMATION)
+		type = "INFO";
+	else if(msg->type == asEMsgType::asMSGTYPE_WARNING)
+		type = "WARNING";
+	std::cout << msg->section << "( " << msg->row << ", " << msg->col << " ) : "
+		 << type << " : " << msg->message << "\n";
+}
+
+void
+angelscript::dprint(std::string &msg)
+{
+	std::cout << "Debug : " << msg << "\n";
+}
+
+void
+angelscript::cmd_say(std::string& message)
+{
+	if (!loop_function)
+	{
+		ctx->Suspend();
+		registerloop(&angelscript::cmd_say, message);
+		//loop_function = std::bind(&angelscript::cmd_say, this, message);
+		std::printf("pie");
+	}
+	else
+	{
+		
+	}
+}
+
+void
+angelscript::cmd_yield()
+{
+	ctx->Suspend();
+}
+
+angelscript::angelscript()
 {
 	as_engine = asCreateScriptEngine();
+	ctx = as_engine->CreateContext();
+
+	as_engine->SetMessageCallback(asMETHOD(angelscript, message_callback), this, asCALL_THISCALL);
+
 	RegisterStdString(as_engine);
+	RegisterScriptMath(as_engine);
 
+	add_function("void dprint(const string &in)", asMETHOD(angelscript, dprint),    this);
+	add_function("void _yield()",                 asMETHOD(angelscript, cmd_yield), this);
+}
 
+angelscript::~angelscript()
+{
+	ctx->Release();
+	as_engine->ShutDownAndRelease();
+}
+
+util::error
+angelscript::load_scene_script(std::string path)
+{
+	CScriptBuilder builder;
+	builder.StartNewModule(as_engine, "scene");
+	builder.AddSectionFromMemory("scene_commands", "#include 'data/scene_commands.as'");
+	builder.AddSectionFromFile(path.c_str());
+	builder.BuildModule();
+
+	scene_module = builder.GetModule();
+	auto func = scene_module->GetFunctionByDecl("void start()");
+
+	ctx->Prepare(func);
+	ctx->Execute();
+	return 0;
+}
+
+void
+angelscript::add_function(const char * decl, const asSFuncPtr & ptr, void * instance)
+{
+	int r = as_engine->RegisterGlobalFunction(decl, ptr, asCALL_THISCALL_ASGLOBAL, instance);
+	assert(r >= 0);
+}
+
+void
+angelscript::add_function(const char * decl, const asSFuncPtr & ptr)
+{
+	int r = as_engine->RegisterGlobalFunction(decl, ptr, asCALL_CDECL);
+	assert(r >= 0);
+}
+
+void
+angelscript::call_event_function(std::string name)
+{
+	auto func = scene_module->GetFunctionByName(name.c_str());
+	ctx->Prepare(func);
+	ctx->Execute();
+}
+
+int
+angelscript::tick()
+{
+	if (ctx->GetState() == asEContextState::asEXECUTION_SUSPENDED)
+		ctx->Execute();
 	return 0;
 }
 
@@ -768,11 +866,28 @@ game::game()
 {
 	root_node.add_child(player);
 	root_node.add_child(game_scene);
+	narrative.is_revealing();
+	load_script_functions();
 }
 
 void
 game::player_scene_interact(controls& con)
 {
+}
+
+void
+game::load_script_functions()
+{
+	scripting.add_function("bool has_flag(const string &in)", asMETHOD(flag_container, has_flag), &flags);
+	scripting.add_function("bool set_flag(const string &in)", asMETHOD(flag_container, set_flag), &flags);
+	scripting.add_function("bool unset_flag(const string &in)", asMETHOD(flag_container, unset_flag), &flags);
+
+	scripting.add_function("void _lockplayer(bool)", asMETHOD(player_character, set_locked), &player);
+	scripting.add_function("void _say(const string &in, bool)", asMETHOD(narrative_dialog, reveal_text), &narrative);
+	scripting.add_function("bool _is_revealing()", asMETHOD(narrative_dialog, is_revealing), &narrative);
+	scripting.add_function("void _showbox()", asMETHOD(narrative_dialog, show_box), &narrative);
+	scripting.add_function("void _hidebox()", asMETHOD(narrative_dialog, hide_box), &narrative);
+	scripting.add_function("bool _is_triggered(int)", asMETHOD(controls, is_triggered), &c_controls);
 }
 
 scene& game::get_scene()
@@ -805,12 +920,13 @@ game::load_game(std::string path)
 
 	textures.load_settings(textures_path);
 
-
 	player.load_entity(player_path, textures);
 	player.set_position({ 20, 120 });
 	player.set_cycle(character::e_cycle::default);
 
 	game_scene.load_scene(scene_path, flags, textures);
+
+	scripting.load_scene_script("test.as");
 
 	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
 	{
@@ -831,6 +947,9 @@ game::tick(controls& con)
 		root_node.set_focus(player.get_position());
 		player_scene_interact(con);
 	}
+
+	c_controls = con;
+	scripting.tick();
 
 	frameclock.restart();
 }
@@ -941,7 +1060,7 @@ narrative_dialog::is_revealing()
 }
 
 void
-narrative_dialog::reveal_text(std::string str, bool append)
+narrative_dialog::reveal_text(const std::string& str, bool append)
 {
 	timer.restart();
 	revealing = true;
