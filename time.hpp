@@ -87,19 +87,20 @@ public:
 	}
 };
 
-class timer :
-	public clock
+class timer
 {
-	time_t duration;
+	engine::clock clock;
+	time_t seconds;
 public:
-	void set_seconds(time_t t)
+	void start_timer(float sec)
 	{
-		duration = t;
+		seconds = sec;
+		clock.restart();
 	}
 
 	bool is_reached()
 	{
-		return get_elapse().s() >= duration;
+		return clock.get_elapse().s() >= seconds;
 	}
 };
 

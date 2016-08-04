@@ -11,6 +11,15 @@
 namespace util
 {
 
+
+class nocopy {
+public:
+	nocopy(){}
+private:
+	nocopy(const nocopy&) = delete;
+	nocopy& operator=(const nocopy&) = delete;
+};
+
 static std::string safe_string(const char* str)
 {
 	if (str == nullptr)

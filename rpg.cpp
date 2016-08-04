@@ -4,9 +4,11 @@
 #include <angelscript/add_on/scriptmath/scriptmath.h>
 #include <angelscript/add_on/scriptarray/scriptarray.h>
 
+
 #include <functional>
 
 using namespace rpg;
+using namespace AS;
 
 // #########
 // flag_container
@@ -476,28 +478,6 @@ collision_system::load_collision_boxes(tinyxml2::XMLElement* e, flag_container& 
 			doors.push_back(nd);
 		}
 
-		if (box_type == "trigger")
-		{
-			trigger nt;
-			nt.set_rect(rect);
-			nt.invalid_on_flag = invalid_on_flag;
-			nt.spawn_flag = spawn_flag;
-			nt.valid = is_valid;
-			nt.event = util::safe_string(ele->Attribute("event"));
-			triggers.push_back(std::move(nt));
-		}
-
-		if (box_type == "button")
-		{
-			trigger nt;
-			nt.set_rect(rect);
-			nt.invalid_on_flag = invalid_on_flag;
-			nt.spawn_flag = spawn_flag;
-			nt.valid = is_valid;
-			nt.event = util::safe_string(ele->Attribute("event"));
-			buttons.push_back(std::move(nt));
-		}
-
 		ele = ele->NextSiblingElement();
 	}
 	return 0;
@@ -754,7 +734,6 @@ controls::reset()
 // angelscript
 // #########
 
-
 void angelscript::message_callback(const asSMessageInfo * msg)
 {
 	std::string type = "ERROR";
@@ -772,42 +751,36 @@ angelscript::dprint(std::string &msg)
 	std::cout << "Debug : " << msg << "\n";
 }
 
-void
-angelscript::yield()
-{
-	ctx->Suspend();
-}
-
 angelscript::angelscript()
 {
 	as_engine = asCreateScriptEngine();
-	ctx = as_engine->CreateContext();
 
 	as_engine->SetMessageCallback(asMETHOD(angelscript, message_callback), this, asCALL_THISCALL);
 
 	RegisterStdString(as_engine);
 	RegisterScriptMath(as_engine);
 	RegisterScriptArray(as_engine, true);
+	ctxmgr.RegisterCoRoutineSupport(as_engine);
 
 	as_engine->RegisterObjectType("pieptr", sizeof(pie*), asOBJ_VALUE | asOBJ_APP_PRIMITIVE | asOBJ_POD);
-	add_function("pieptr get_pie()", asMETHOD(angelscript, get_pie), this);
-	add_function("void set_pie(pieptr, int)", asMETHOD(angelscript, set_pie), this);
-	add_function("void printpie(pieptr)", asMETHOD(angelscript, printpie), this);
+	add_function("pieptr get_pie()",              asMETHOD(angelscript, get_pie), this);
+	add_function("void set_pie(pieptr, int)",     asMETHOD(angelscript, set_pie), this);
+	add_function("void printpie(pieptr)",         asMETHOD(angelscript, printpie), this);
+
+	add_function("void _timer_start(float)",      asMETHOD(engine::timer, start_timer), &main_timer);
+	add_function("bool _timer_reached()",         asMETHOD(engine::timer, is_reached), &main_timer);
 
 	add_function("void dprint(const string &in)", asMETHOD(angelscript, dprint), this);
-	add_function("void _yield()",                 asMETHOD(angelscript, yield),  this);
 }
 
 angelscript::~angelscript()
 {
-	ctx->Release();
 	as_engine->ShutDownAndRelease();
 }
 
 util::error
 angelscript::load_scene_script(std::string path)
 {
-	CScriptBuilder builder;
 	builder.StartNewModule(as_engine, "scene");
 	builder.AddSectionFromMemory("scene_commands", "#include 'data/scene_commands.as'");
 	builder.AddSectionFromFile(path.c_str());
@@ -815,9 +788,7 @@ angelscript::load_scene_script(std::string path)
 
 	scene_module = builder.GetModule();
 	auto func = scene_module->GetFunctionByDecl("void start()");
-
-	ctx->Prepare(func);
-	ctx->Execute();
+	ctxmgr.AddContext(as_engine, func);
 	return 0;
 }
 
@@ -845,15 +816,24 @@ void
 angelscript::call_event_function(std::string name)
 {
 	auto func = scene_module->GetFunctionByName(name.c_str());
-	ctx->Prepare(func);
-	ctx->Execute();
+	ctxmgr.AddContext(as_engine, func);
+}
+
+void
+angelscript::setup_triggers(collision_system& collision)
+{
+	size_t func_count = as_engine->GetGlobalFunctionCount();
+	for (size_t i = 0; i < func_count; i++)
+	{
+		auto func = as_engine->GetGlobalFunctionByIndex(i);
+		
+	}
 }
 
 int
 angelscript::tick()
 {
-	if (ctx->GetState() == asEContextState::asEXECUTION_SUSPENDED)
-		ctx->Execute();
+	ctxmgr.ExecuteScripts();
 	return 0;
 }
 
@@ -888,14 +868,16 @@ game::load_script_functions()
 	script.add_function("bool _is_revealing()", asMETHOD(narrative_dialog, is_revealing), &narrative);
 	script.add_function("void _showbox()", asMETHOD(narrative_dialog, show_box), &narrative);
 	script.add_function("void _hidebox()", asMETHOD(narrative_dialog, hide_box), &narrative);
-	script.add_function("void _set_box_position(int)", asMETHOD(narrative_dialog, set_box_position), &narrative);
-	script.add_function("void _set_interval(float)", asMETHOD(narrative_dialog, set_interval), &narrative);
-	script.add_function("void _set_selection(const string &in)", asMETHOD(narrative_dialog, set_selection), &narrative);
 	script.add_function("void _show_selection()", asMETHOD(narrative_dialog, show_selection), &narrative);
+	script.add_function("void _set_interval(float)", asMETHOD(narrative_dialog, set_interval), &narrative);
+	script.add_function("void _set_box_position(int)", asMETHOD(narrative_dialog, set_box_position), &narrative);
+	script.add_function("void _set_selection(const string &in)", asMETHOD(narrative_dialog, set_selection), &narrative);
 
 	script.add_function("void _music_play()", asMETHOD(engine::sound_stream, play), &bg_music);
 	script.add_function("void _music_stop()", asMETHOD(engine::sound_stream, stop), &bg_music);
 	script.add_function("void _music_pause()", asMETHOD(engine::sound_stream, pause), &bg_music);
+	script.add_function("float _music_position()", asMETHOD(engine::sound_stream, get_position), &bg_music);
+	script.add_function("void _music_volume(float)", asMETHOD(engine::sound_stream, set_volume), &bg_music);
 	script.add_function("void _music_set_loop(bool)", asMETHOD(engine::sound_stream, set_loop), &bg_music);
 	script.add_function("int _music_open(const string &in)", asMETHOD(engine::sound_stream, open), &bg_music);
 
@@ -1184,3 +1166,5 @@ narrative_dialog::refresh_renderer(engine::renderer& r)
 	r.add_client(&text);
 	r.add_client(&selection);
 }
+
+

@@ -14,8 +14,11 @@
 #include <array>
 #include <functional>
 
-#include <angelscript.h>
+#include <angelscript.h> // AS_USE_NAMESPACE will need to be defined
+#include <angelscript/add_on/contextmgr/contextmgr.h>
 #include <angelscript/add_on/scriptbuilder/scriptbuilder.h>
+
+namespace AS = AngelScript;
 
 namespace rpg{
 
@@ -42,14 +45,14 @@ public:
 	}
 
 	template<class... T_ARG>
-	auto add_item(T_ARG&&... arg)
+	auto& add_item(T_ARG&&... arg)
 	{
 		items.emplace_back(std::forward<T_ARG>(arg)...);
 		add_child(items.back());
 		return items.back();
 	}
 
-	auto add_item()
+	auto& add_item()
 	{
 		items.emplace_back();
 		add_child(items.back());
@@ -206,6 +209,33 @@ protected:
 	void refresh_renderer(engine::renderer& r);
 };
 
+class quick_function
+{
+	AS::asIScriptEngine *as_engine;
+	AS::asIScriptFunction *func;
+	AS::CContextMgr *ctx;
+public:
+	void set_engine(AS::asIScriptEngine * e)
+	{
+		as_engine = e;
+	}
+
+	void set_function(AS::asIScriptFunction * f)
+	{
+		func = f;
+	}
+
+	void set_context_manager(AS::CContextMgr * cm)
+	{
+		ctx = cm;
+	}
+
+	void call()
+	{
+		ctx->AddContext(as_engine, func);
+	}
+};
+
 class collision_system
 {
 public:
@@ -220,7 +250,7 @@ public:
 
 	struct trigger : public collision_box
 	{
-		std::string event;
+		quick_function func;
 	};
 
 	struct door : public collision_box
@@ -316,12 +346,14 @@ protected:
 
 class angelscript
 {
+private:
+	AS::asIScriptEngine* as_engine;
+	void message_callback(const AS::asSMessageInfo * msg);
 
-	asIScriptEngine* as_engine;
-	void message_callback(const asSMessageInfo * msg);
+	AS::CContextMgr ctxmgr;
+	AS::asIScriptModule *scene_module;
 
-	asIScriptContext *ctx;
-	asIScriptModule *scene_module;
+	AS::CScriptBuilder builder;
 
 	struct pie
 	{
@@ -347,22 +379,25 @@ class angelscript
 		std::cout << p->b;
 	}
 
+	engine::timer main_timer;
+
 	void dprint(std::string &msg);
-	void yield();
 
 public:
 	angelscript();
 	~angelscript();
 	util::error load_scene_script(std::string path);
-	void add_function(const char* decl, const asSFuncPtr & ptr, void* instance);
-	void add_function(const char* decl, const asSFuncPtr & ptr);
+	void add_function(const char* decl, const AS::asSFuncPtr & ptr, void* instance);
+	void add_function(const char* decl, const AS::asSFuncPtr & ptr);
 	void add_pointer_type(const char* name);
 	void call_event_function(std::string name);
+	void setup_triggers(collision_system& collision);
 	int tick();
 };
 
 class game :
-	public engine::render_proxy
+	public engine::render_proxy,
+	public util::nocopy
 {
 	scene game_scene;
 	player_character player;

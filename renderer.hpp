@@ -18,6 +18,7 @@
 #include "time.hpp"
 #include "rect.hpp"
 #include "types.hpp"
+#include "utility.hpp"
 
 namespace engine
 {
@@ -68,7 +69,8 @@ protected:
 };
 
 class renderer :
-	public events
+	public events,
+	public util::nocopy
 {
 	sf::RenderWindow window;
 	std::vector<render_client*> clients;
@@ -130,7 +132,8 @@ public:
 	friend class animation_node;
 };
 
-class render_client
+class render_client :
+	public util::nocopy
 {
 	renderer* renderer_;
 	int client_index;
