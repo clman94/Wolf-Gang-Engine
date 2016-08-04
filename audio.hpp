@@ -99,7 +99,7 @@ public:
 	{
 		valid = false;
 	}
-	int open(const std::string path)
+	int open(const std::string& path)
 	{
 		valid = s.openFromFile(path);
 		return !valid;

@@ -1,6 +1,9 @@
 #include "rpg.hpp"
+
 #include <angelscript/add_on/scriptstdstring/scriptstdstring.h>
 #include <angelscript/add_on/scriptmath/scriptmath.h>
+#include <angelscript/add_on/scriptarray/scriptarray.h>
+
 #include <functional>
 
 using namespace rpg;
@@ -784,9 +787,15 @@ angelscript::angelscript()
 
 	RegisterStdString(as_engine);
 	RegisterScriptMath(as_engine);
+	RegisterScriptArray(as_engine, true);
 
-	add_function("void dprint(const string &in)", asMETHOD(angelscript, dprint),    this);
-	add_function("void _yield()",                 asMETHOD(angelscript, yield), this);
+	as_engine->RegisterObjectType("pieptr", sizeof(pie*), asOBJ_VALUE | asOBJ_APP_PRIMITIVE | asOBJ_POD);
+	add_function("pieptr get_pie()", asMETHOD(angelscript, get_pie), this);
+	add_function("void set_pie(pieptr, int)", asMETHOD(angelscript, set_pie), this);
+	add_function("void printpie(pieptr)", asMETHOD(angelscript, printpie), this);
+
+	add_function("void dprint(const string &in)", asMETHOD(angelscript, dprint), this);
+	add_function("void _yield()",                 asMETHOD(angelscript, yield),  this);
 }
 
 angelscript::~angelscript()
@@ -813,7 +822,7 @@ angelscript::load_scene_script(std::string path)
 }
 
 void
-angelscript::add_function(const char * decl, const asSFuncPtr & ptr, void * instance)
+angelscript::add_function(const char* decl, const asSFuncPtr& ptr, void* instance)
 {
 	int r = as_engine->RegisterGlobalFunction(decl, ptr, asCALL_THISCALL_ASGLOBAL, instance);
 	assert(r >= 0);
@@ -824,6 +833,12 @@ angelscript::add_function(const char * decl, const asSFuncPtr & ptr)
 {
 	int r = as_engine->RegisterGlobalFunction(decl, ptr, asCALL_CDECL);
 	assert(r >= 0);
+}
+
+void
+angelscript::add_pointer_type(const char* name)
+{
+	as_engine->RegisterObjectType(name, sizeof(void*), asOBJ_VALUE | asOBJ_APP_PRIMITIVE | asOBJ_POD);
 }
 
 void
@@ -855,23 +870,36 @@ game::game()
 }
 
 void
-game::player_scene_interact(controls& con)
+game::player_scene_interact()
 {
+
 }
 
 void
 game::load_script_functions()
 {
-	scripting.add_function("bool has_flag(const string &in)", asMETHOD(flag_container, has_flag), &flags);
-	scripting.add_function("bool set_flag(const string &in)", asMETHOD(flag_container, set_flag), &flags);
-	scripting.add_function("bool unset_flag(const string &in)", asMETHOD(flag_container, unset_flag), &flags);
+	script.add_function("bool has_flag(const string &in)", asMETHOD(flag_container, has_flag), &flags);
+	script.add_function("bool set_flag(const string &in)", asMETHOD(flag_container, set_flag), &flags);
+	script.add_function("bool unset_flag(const string &in)", asMETHOD(flag_container, unset_flag), &flags);
 
-	scripting.add_function("void _lockplayer(bool)", asMETHOD(player_character, set_locked), &player);
-	scripting.add_function("void _say(const string &in, bool)", asMETHOD(narrative_dialog, reveal_text), &narrative);
-	scripting.add_function("bool _is_revealing()", asMETHOD(narrative_dialog, is_revealing), &narrative);
-	scripting.add_function("void _showbox()", asMETHOD(narrative_dialog, show_box), &narrative);
-	scripting.add_function("void _hidebox()", asMETHOD(narrative_dialog, hide_box), &narrative);
-	scripting.add_function("bool _is_triggered(int)", asMETHOD(controls, is_triggered), &c_controls);
+	script.add_function("void _lockplayer(bool)", asMETHOD(player_character, set_locked), &player);
+
+	script.add_function("void _say(const string &in, bool)", asMETHOD(narrative_dialog, reveal_text), &narrative);
+	script.add_function("bool _is_revealing()", asMETHOD(narrative_dialog, is_revealing), &narrative);
+	script.add_function("void _showbox()", asMETHOD(narrative_dialog, show_box), &narrative);
+	script.add_function("void _hidebox()", asMETHOD(narrative_dialog, hide_box), &narrative);
+	script.add_function("void _set_box_position(int)", asMETHOD(narrative_dialog, set_box_position), &narrative);
+	script.add_function("void _set_interval(float)", asMETHOD(narrative_dialog, set_interval), &narrative);
+	script.add_function("void _set_selection(const string &in)", asMETHOD(narrative_dialog, set_selection), &narrative);
+	script.add_function("void _show_selection()", asMETHOD(narrative_dialog, show_selection), &narrative);
+
+	script.add_function("void _music_play()", asMETHOD(engine::sound_stream, play), &bg_music);
+	script.add_function("void _music_stop()", asMETHOD(engine::sound_stream, stop), &bg_music);
+	script.add_function("void _music_pause()", asMETHOD(engine::sound_stream, pause), &bg_music);
+	script.add_function("void _music_set_loop(bool)", asMETHOD(engine::sound_stream, set_loop), &bg_music);
+	script.add_function("int _music_open(const string &in)", asMETHOD(engine::sound_stream, open), &bg_music);
+
+	script.add_function("bool _is_triggered(int)", asMETHOD(controls, is_triggered), &c_controls);
 }
 
 scene& game::get_scene()
@@ -910,7 +938,7 @@ game::load_game(std::string path)
 
 	game_scene.load_scene(scene_path, flags, textures);
 
-	scripting.load_scene_script("test.as");
+	script.load_scene_script("test.as");
 
 	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
 	{
@@ -924,16 +952,18 @@ game::tick(controls& con)
 {
 	float delta = frameclock.get_elapse().s();
 
+	c_controls = con;
+
 	player.movement(con, game_scene.get_collision_system(), delta);
 
 	if (!player.is_locked())
 	{
 		root_node.set_focus(player.get_position());
-		player_scene_interact(con);
+		player_scene_interact();
 	}
 
-	c_controls = con;
-	scripting.tick();
+	
+	script.tick();
 
 	frameclock.restart();
 }
@@ -1004,6 +1034,9 @@ narrative_dialog::load_font(tinyxml2::XMLElement* e)
 	font.load(att_font_path);
 	text.set_font(font);
 	text.set_scale(0.5f);
+
+	selection.copy_format(text);
+
 	return 0;
 }
 
@@ -1011,10 +1044,9 @@ narrative_dialog::narrative_dialog()
 {
 	revealing = false;
 	hide_box();
-
-	interval = 100;
-
+	interval = defs::DEFAULT_DIALOG_SPEED;
 	box.add_child(text);
+	box.add_child(selection);
 }
 
 void
@@ -1086,6 +1118,7 @@ narrative_dialog::hide_box()
 	text.set_visible(false);
 	text.set_text("");
 	box.set_visible(false);
+	selection.set_visible(false);
 }
 
 bool rpg::narrative_dialog::is_box_open()
@@ -1097,6 +1130,21 @@ void
 narrative_dialog::set_interval(float ms)
 {
 	interval = ms;
+}
+
+void
+narrative_dialog::show_selection()
+{
+	if (box.is_visible())
+	{
+		selection.set_visible(true);
+	}
+}
+
+void
+narrative_dialog::set_selection(const std::string & str)
+{
+	selection.set_text(str);
 }
 
 util::error
@@ -1134,4 +1182,5 @@ narrative_dialog::refresh_renderer(engine::renderer& r)
 {
 	r.add_client(&box);
 	r.add_client(&text);
+	r.add_client(&selection);
 }

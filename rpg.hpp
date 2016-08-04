@@ -161,6 +161,7 @@ class narrative_dialog :
 	engine::sprite_node box;
 	engine::sprite_node cursor;
 	engine::text_node   text;
+	engine::text_node   selection;
 	engine::font        font;
 	engine::clock       timer;
 
@@ -193,6 +194,9 @@ public:
 	bool is_box_open();
 
 	void set_interval(float ms);
+
+	void show_selection();
+	void set_selection(const std::string& str);
 
 	util::error load_narrative(tinyxml2::XMLElement* e, texture_manager& tm);
 
@@ -285,8 +289,6 @@ private:
 	direction facing_direction;
 };
 
-
-
 class scene :
 	public engine::render_proxy,
 	public engine::node
@@ -321,6 +323,30 @@ class angelscript
 	asIScriptContext *ctx;
 	asIScriptModule *scene_module;
 
+	struct pie
+	{
+		int b;
+		pie()
+		{
+			b = 45;
+		}
+	} pies;
+
+	void set_pie(pie* a, int b)
+	{
+		a->b = b;
+	}
+
+	pie* get_pie()
+	{
+		return &pies;
+	}
+
+	void printpie(pie* p)
+	{
+		std::cout << p->b;
+	}
+
 	void dprint(std::string &msg);
 	void yield();
 
@@ -330,6 +356,7 @@ public:
 	util::error load_scene_script(std::string path);
 	void add_function(const char* decl, const asSFuncPtr & ptr, void* instance);
 	void add_function(const char* decl, const asSFuncPtr & ptr);
+	void add_pointer_type(const char* name);
 	void call_event_function(std::string name);
 	int tick();
 };
@@ -344,10 +371,12 @@ class game :
 	narrative_dialog narrative;
 	panning_node     root_node;
 	engine::clock    frameclock;
-	angelscript      scripting;
+	angelscript      script;
 	controls         c_controls;
 
-	void player_scene_interact(controls& con);
+	engine::sound_stream bg_music;
+
+	void player_scene_interact();
 
 	void load_script_functions();
 

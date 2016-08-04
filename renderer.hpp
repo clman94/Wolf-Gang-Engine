@@ -349,6 +349,7 @@ public:
 	void set_anchor(engine::anchor a);
 	void set_color(const color c);
 	void set_scale(float a);
+	void copy_format(const text_node& node);
 	virtual int draw(renderer &_r);
 };
 

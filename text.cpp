@@ -68,6 +68,18 @@ text_node::set_scale(float a)
 	text.setScale({ a, a });
 }
 
+void
+text_node::copy_format(const text_node& node)
+{
+	auto nfont = node.text.getFont();
+	if(nfont) text.setFont(*nfont);
+
+	text.setColor(node.text.getColor());
+	text.setCharacterSize(node.text.getCharacterSize());
+	text.setScale(node.text.getScale());
+	text.setStyle(node.text.getStyle());
+}
+
 
 void 
 text_node::set_color(const color c)
