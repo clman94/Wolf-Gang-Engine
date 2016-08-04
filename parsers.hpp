@@ -5,12 +5,24 @@
 #include "utility.hpp"
 #include "vector.hpp"
 
+// A series of random string parsers for random things
+
 namespace parsers
 {
 
 static bool is_numeral(char c)
 {
 	if (c >= '0' && c <= '9')
+		return true;
+	return false;
+}
+
+static bool is_letter(char c)
+{
+	if (c >= 'a' &&
+		c <= 'z' ||
+		c >= 'A' &&
+		c <= 'Z')
 		return true;
 	return false;
 }
@@ -67,6 +79,33 @@ static range<T> parse_range(const std::string& str)
 	}
 
 	return std::move(retval);
+}
+
+template<typename T>
+engine::rect<T> parse_attribute_rect(const std::string& str)
+{
+	engine::rect<T> r;
+	char c = 0;
+	for (auto i = str.begin(); i != str.end(); i++)
+	{
+		if (*i == '=')
+		{
+			++i;
+			if (c == 'x')
+				r.x = util::to_numeral<T>(str, i);
+			if (c == 'y')
+				r.y = util::to_numeral<T>(str, i);
+			if (c == 'w')
+				r.w = util::to_numeral<T>(str, i);
+			if (c == 'h')
+				r.h = util::to_numeral<T>(str, i);
+		}
+		else
+			c = *i;
+		if (i == str.end())
+			break;
+	}
+	return r;
 }
 
 template<typename T>

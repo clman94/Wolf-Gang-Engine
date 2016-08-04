@@ -271,6 +271,8 @@ public:
 	void validate_all(flag_container& flags);
 
 	void add_wall(engine::frect r);
+	void add_trigger(trigger& t);
+	void add_button(trigger& t);
 	void clear();
 	util::error load_collision_boxes(tinyxml2::XMLElement* e, flag_container& flags);
 
@@ -319,6 +321,32 @@ private:
 	direction facing_direction;
 };
 
+class angelscript
+{
+private:
+	AS::asIScriptEngine* as_engine;
+	AS::CContextMgr ctxmgr;
+	AS::asIScriptModule *scene_module;
+	AS::CScriptBuilder builder;
+
+	engine::timer main_timer;
+
+	void dprint(std::string &msg);
+	void message_callback(const AS::asSMessageInfo * msg);
+
+	std::string get_metadata_type(const std::string &str);
+public:
+	angelscript();
+	~angelscript();
+	util::error load_scene_script(std::string path);
+	void add_function(const char* decl, const AS::asSFuncPtr & ptr, void* instance);
+	void add_function(const char* decl, const AS::asSFuncPtr & ptr);
+	void add_pointer_type(const char* name);
+	void call_event_function(std::string name);
+	void setup_triggers(collision_system& collision);
+	int tick();
+};
+
 class scene :
 	public engine::render_proxy,
 	public engine::node
@@ -338,62 +366,12 @@ public:
 	void clean_scene();
 	util::error load_entities(tinyxml2::XMLElement* e, texture_manager& tm);
 	util::error load_characters(tinyxml2::XMLElement* e, texture_manager& tm);
-	util::error load_scene(std::string path, flag_container& flags, texture_manager& tm);
+	util::error load_scene(std::string path, angelscript& script, flag_container& flags, texture_manager& tm);
 
 protected:
 	void refresh_renderer(engine::renderer& _r);
 };
 
-class angelscript
-{
-private:
-	AS::asIScriptEngine* as_engine;
-	void message_callback(const AS::asSMessageInfo * msg);
-
-	AS::CContextMgr ctxmgr;
-	AS::asIScriptModule *scene_module;
-
-	AS::CScriptBuilder builder;
-
-	struct pie
-	{
-		int b;
-		pie()
-		{
-			b = 45;
-		}
-	} pies;
-
-	void set_pie(pie* a, int b)
-	{
-		a->b = b;
-	}
-
-	pie* get_pie()
-	{
-		return &pies;
-	}
-
-	void printpie(pie* p)
-	{
-		std::cout << p->b;
-	}
-
-	engine::timer main_timer;
-
-	void dprint(std::string &msg);
-
-public:
-	angelscript();
-	~angelscript();
-	util::error load_scene_script(std::string path);
-	void add_function(const char* decl, const AS::asSFuncPtr & ptr, void* instance);
-	void add_function(const char* decl, const AS::asSFuncPtr & ptr);
-	void add_pointer_type(const char* name);
-	void call_event_function(std::string name);
-	void setup_triggers(collision_system& collision);
-	int tick();
-};
 
 class game :
 	public engine::render_proxy,

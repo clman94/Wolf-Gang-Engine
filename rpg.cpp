@@ -4,6 +4,7 @@
 #include <angelscript/add_on/scriptmath/scriptmath.h>
 #include <angelscript/add_on/scriptarray/scriptarray.h>
 
+#include "parsers.hpp"
 
 #include <functional>
 
@@ -422,6 +423,19 @@ collision_system::add_wall(engine::frect r)
 }
 
 void
+collision_system::add_trigger(trigger & t)
+{
+	triggers.push_back(t);
+}
+
+void
+collision_system::add_button(trigger & t)
+{
+	buttons.push_back(t);
+}
+
+
+void
 collision_system::clear()
 {
 	walls.clear();
@@ -610,8 +624,6 @@ scene::find_entity(std::string name)
 	return nullptr;
 }
 
-
-
 void
 scene::clean_scene()
 {
@@ -664,7 +676,7 @@ scene::load_characters(tinyxml2::XMLElement * e, texture_manager& tm)
 }
 
 util::error
-scene::load_scene(std::string path, flag_container& flags, texture_manager& tm)
+scene::load_scene(std::string path, angelscript& script, flag_container& flags, texture_manager& tm)
 {
 	using namespace tinyxml2;
 
@@ -693,6 +705,8 @@ scene::load_scene(std::string path, flag_container& flags, texture_manager& tm)
 
 	// Load all tilemap layers
 	tilemap.load_scene_tilemap(root, collision);
+
+	script.setup_triggers(collision);
 
 	return 0;
 }
@@ -745,6 +759,17 @@ void angelscript::message_callback(const asSMessageInfo * msg)
 		 << type << " : " << msg->message << "\n";
 }
 
+std::string
+angelscript::get_metadata_type(const std::string & str)
+{
+	for (auto i = str.begin(); i != str.end(); i++)
+	{
+		if (!parsers::is_letter(*i))
+			return std::string(str.begin(), i);
+	}
+	return str;
+}
+
 void
 angelscript::dprint(std::string &msg)
 {
@@ -762,11 +787,6 @@ angelscript::angelscript()
 	RegisterScriptArray(as_engine, true);
 	ctxmgr.RegisterCoRoutineSupport(as_engine);
 
-	as_engine->RegisterObjectType("pieptr", sizeof(pie*), asOBJ_VALUE | asOBJ_APP_PRIMITIVE | asOBJ_POD);
-	add_function("pieptr get_pie()",              asMETHOD(angelscript, get_pie), this);
-	add_function("void set_pie(pieptr, int)",     asMETHOD(angelscript, set_pie), this);
-	add_function("void printpie(pieptr)",         asMETHOD(angelscript, printpie), this);
-
 	add_function("void _timer_start(float)",      asMETHOD(engine::timer, start_timer), &main_timer);
 	add_function("bool _timer_reached()",         asMETHOD(engine::timer, is_reached), &main_timer);
 
@@ -775,6 +795,7 @@ angelscript::angelscript()
 
 angelscript::~angelscript()
 {
+	ctxmgr.~CContextMgr();
 	as_engine->ShutDownAndRelease();
 }
 
@@ -822,11 +843,32 @@ angelscript::call_event_function(std::string name)
 void
 angelscript::setup_triggers(collision_system& collision)
 {
-	size_t func_count = as_engine->GetGlobalFunctionCount();
+	size_t func_count = scene_module->GetFunctionCount();
 	for (size_t i = 0; i < func_count; i++)
 	{
-		auto func = as_engine->GetGlobalFunctionByIndex(i);
-		
+		auto func = scene_module->GetFunctionByIndex(i);
+		std::string metadata = builder.GetMetadataStringForFunc(func);
+		std::string type = get_metadata_type(metadata);
+
+		if (type == "trigger" ||
+			type == "button")
+		{
+			collision_system::trigger nt;
+
+			nt.func.set_context_manager(&ctxmgr);
+			nt.func.set_engine(as_engine);
+			nt.func.set_function(func);
+
+			std::string vectordata(metadata.begin() + type.length(), metadata.end());
+			auto rect = parsers::parse_attribute_rect<float>(vectordata);
+			nt.set_rect(engine::scale(rect, 32));
+			if (type == "trigger")
+				collision.add_trigger(nt);
+			if (type == "button")
+				collision.add_button(nt);
+		}
+		else if(!metadata.empty())
+			std::cout << "Invalid Metadata: " << metadata << "\n";
 	}
 }
 
@@ -852,7 +894,22 @@ game::game()
 void
 game::player_scene_interact()
 {
+	auto& collision = game_scene.get_collision_system();
 
+	auto trigger = collision.trigger_collision(player.get_position());
+	if (trigger)
+	{
+		trigger->func.call();
+	}
+
+	if (c_controls.is_triggered(controls::control::activate))
+	{
+		auto button = collision.button_collision(player.get_activation_point());
+		if (button)
+		{
+			button->func.call();
+		}
+	}
 }
 
 void
@@ -918,9 +975,9 @@ game::load_game(std::string path)
 	player.set_position({ 20, 120 });
 	player.set_cycle(character::e_cycle::default);
 
-	game_scene.load_scene(scene_path, flags, textures);
-
 	script.load_scene_script("test.as");
+
+	game_scene.load_scene(scene_path, script, flags, textures);
 
 	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
 	{
@@ -1167,4 +1224,33 @@ narrative_dialog::refresh_renderer(engine::renderer& r)
 	r.add_client(&selection);
 }
 
+// ##########
+// quick_function
+// ##########
 
+void
+quick_function::set_engine(AS::asIScriptEngine * e)
+{
+	as_engine = e;
+}
+
+void
+quick_function::set_function(AS::asIScriptFunction * f)
+{
+	func = f;
+}
+
+void
+quick_function::set_context_manager(AS::CContextMgr * cm)
+{
+	ctx = cm;
+}
+
+void
+quick_function::call()
+{
+	assert(as_engine != nullptr);
+	assert(func != nullptr);
+	assert(ctx != nullptr);
+	ctx->AddContext(as_engine, func);
+}
