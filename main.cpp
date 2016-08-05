@@ -92,6 +92,9 @@ int game()
 		if (r.is_key_pressed(engine::events::key_type::Right))
 			controls.trigger(rpg::controls::control::select_next);
 
+		if (r.is_key_pressed(engine::events::key_type::R))
+			controls.trigger(rpg::controls::control::reset);
+
 		if (r.is_key_down(engine::events::key_type::Escape))
 			working = false;
 

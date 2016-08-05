@@ -685,6 +685,8 @@ scene::load_scene(std::string path, angelscript& script, flag_container& flags, 
 
 	auto root = doc.RootElement();
 
+	c_path = path;
+
 	clean_scene();
 
 	// Load collision boxes
@@ -706,9 +708,19 @@ scene::load_scene(std::string path, angelscript& script, flag_container& flags, 
 	// Load all tilemap layers
 	tilemap.load_scene_tilemap(root, collision);
 
+	script.load_scene_script("test.as");
+
 	script.setup_triggers(collision);
 
 	return 0;
+}
+
+util::error
+scene::reload_scene(angelscript & script, flag_container & flags, texture_manager & tm)
+{
+	if (c_path.empty())
+		return "No scene currently loaded";
+	return load_scene(c_path, script, flags, tm);
 }
 
 void
@@ -776,6 +788,24 @@ angelscript::dprint(std::string &msg)
 	std::cout << "Debug : " << msg << "\n";
 }
 
+void
+angelscript::register_vector_type()
+{
+	as_engine->RegisterObjectType("vec", sizeof(engine::fvector), asOBJ_VALUE | asGetTypeTraits<engine::fvector>());
+
+	as_engine->RegisterObjectBehaviour("vec", asBEHAVE_CONSTRUCT, "void f()"
+		, asFUNCTION(as_default_constr<engine::fvector>), asCALL_CDECL_OBJLAST);
+	as_engine->RegisterObjectBehaviour("vec", asBEHAVE_DESTRUCT, "void f()"
+		, asFUNCTION(as_default_constr<engine::fvector>), asCALL_CDECL_OBJLAST);
+
+	as_engine->RegisterObjectMethod("vec", "vec& opAssign(const vec &in)"
+		, asMETHODPR(engine::fvector, operator=, (const engine::fvector&), engine::fvector&)
+		, asCALL_THISCALL);
+
+	as_engine->RegisterObjectProperty("vec", "float x", asOFFSET(engine::fvector, x));
+	as_engine->RegisterObjectProperty("vec", "float y", asOFFSET(engine::fvector, y));
+}
+
 angelscript::angelscript()
 {
 	as_engine = asCreateScriptEngine();
@@ -786,6 +816,8 @@ angelscript::angelscript()
 	RegisterScriptMath(as_engine);
 	RegisterScriptArray(as_engine, true);
 	ctxmgr.RegisterCoRoutineSupport(as_engine);
+
+	register_vector_type();
 
 	add_function("void _timer_start(float)",      asMETHOD(engine::timer, start_timer), &main_timer);
 	add_function("bool _timer_reached()",         asMETHOD(engine::timer, is_reached), &main_timer);
@@ -802,6 +834,8 @@ angelscript::~angelscript()
 util::error
 angelscript::load_scene_script(std::string path)
 {
+	ctxmgr.AbortAll();
+	as_engine->DiscardModule("scene");
 	builder.StartNewModule(as_engine, "scene");
 	builder.AddSectionFromMemory("scene_commands", "#include 'data/scene_commands.as'");
 	builder.AddSectionFromFile(path.c_str());
@@ -915,6 +949,7 @@ game::player_scene_interact()
 void
 game::load_script_functions()
 {
+
 	script.add_function("bool has_flag(const string &in)", asMETHOD(flag_container, has_flag), &flags);
 	script.add_function("bool set_flag(const string &in)", asMETHOD(flag_container, set_flag), &flags);
 	script.add_function("bool unset_flag(const string &in)", asMETHOD(flag_container, unset_flag), &flags);
@@ -975,8 +1010,6 @@ game::load_game(std::string path)
 	player.set_position({ 20, 120 });
 	player.set_cycle(character::e_cycle::default);
 
-	script.load_scene_script("test.as");
-
 	game_scene.load_scene(scene_path, script, flags, textures);
 
 	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
@@ -991,6 +1024,13 @@ game::tick(controls& con)
 {
 	float delta = frameclock.get_elapse().s();
 
+	if (con.is_triggered(controls::control::reset))
+	{
+		std::cout << "Reloading scene...\n";
+		game_scene.reload_scene(script, flags, textures);
+		std::cout << "Done\n";
+	}
+
 	c_controls = con;
 
 	player.movement(con, game_scene.get_collision_system(), delta);
@@ -1001,7 +1041,6 @@ game::tick(controls& con)
 		player_scene_interact();
 	}
 
-	
 	script.tick();
 
 	frameclock.restart();
@@ -1229,28 +1268,29 @@ narrative_dialog::refresh_renderer(engine::renderer& r)
 // ##########
 
 void
-quick_function::set_engine(AS::asIScriptEngine * e)
+script_function::set_engine(AS::asIScriptEngine * e)
 {
 	as_engine = e;
 }
 
 void
-quick_function::set_function(AS::asIScriptFunction * f)
+script_function::set_function(AS::asIScriptFunction * f)
 {
 	func = f;
 }
 
 void
-quick_function::set_context_manager(AS::CContextMgr * cm)
+script_function::set_context_manager(AS::CContextMgr * cm)
 {
 	ctx = cm;
 }
 
 void
-quick_function::call()
+script_function::call()
 {
 	assert(as_engine != nullptr);
 	assert(func != nullptr);
 	assert(ctx != nullptr);
-	ctx->AddContext(as_engine, func);
+	auto funcctx = ctx->AddContext(as_engine, func);
+	//funcctx->SetArgObject(0, &engine::fvector(2, 3));
 }

@@ -75,7 +75,7 @@ public:
 
 class controls
 {
-	std::array<bool, 7> c_controls;
+	std::array<bool, 8> c_controls;
 public:
 	enum class control
 	{
@@ -85,7 +85,8 @@ public:
 		up,
 		down,
 		select_next,
-		select_previous
+		select_previous,
+		reset
 	};
 	controls();
 	void trigger(control c);
@@ -209,32 +210,18 @@ protected:
 	void refresh_renderer(engine::renderer& r);
 };
 
-class quick_function
+class script_function
 {
 	AS::asIScriptEngine *as_engine;
 	AS::asIScriptFunction *func;
 	AS::CContextMgr *ctx;
 public:
-	void set_engine(AS::asIScriptEngine * e)
-	{
-		as_engine = e;
-	}
-
-	void set_function(AS::asIScriptFunction * f)
-	{
-		func = f;
-	}
-
-	void set_context_manager(AS::CContextMgr * cm)
-	{
-		ctx = cm;
-	}
-
-	void call()
-	{
-		ctx->AddContext(as_engine, func);
-	}
+	void set_engine(AS::asIScriptEngine * e);
+	void set_function(AS::asIScriptFunction * f);
+	void set_context_manager(AS::CContextMgr * cm);
+	void call();
 };
+
 
 class collision_system
 {
@@ -250,7 +237,7 @@ public:
 
 	struct trigger : public collision_box
 	{
-		quick_function func;
+		script_function func;
 	};
 
 	struct door : public collision_box
@@ -321,6 +308,19 @@ private:
 	direction facing_direction;
 };
 
+template<typename T>
+void as_default_constr(void *memory)
+{
+	new(memory) T();
+}
+
+template<typename T>
+void as_default_destr(void *memory)
+{
+	((T*)memory)->~T();
+}
+
+// Excuse this mess -_-
 class angelscript
 {
 private:
@@ -332,8 +332,8 @@ private:
 	engine::timer main_timer;
 
 	void dprint(std::string &msg);
+	void register_vector_type();
 	void message_callback(const AS::asSMessageInfo * msg);
-
 	std::string get_metadata_type(const std::string &str);
 public:
 	angelscript();
@@ -357,6 +357,8 @@ class scene :
 	node_list<character> characters;
 	node_list<entity> entities;
 
+	std::string c_path;
+
 public:
 	scene();
 	collision_system& get_collision_system();
@@ -367,7 +369,7 @@ public:
 	util::error load_entities(tinyxml2::XMLElement* e, texture_manager& tm);
 	util::error load_characters(tinyxml2::XMLElement* e, texture_manager& tm);
 	util::error load_scene(std::string path, angelscript& script, flag_container& flags, texture_manager& tm);
-
+	util::error reload_scene(angelscript& script, flag_container& flags, texture_manager& tm);
 protected:
 	void refresh_renderer(engine::renderer& _r);
 };
