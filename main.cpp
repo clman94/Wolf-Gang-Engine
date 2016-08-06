@@ -5,7 +5,6 @@
 #include "time.hpp"
 #include "ui.hpp"
 #include "rpg_config.hpp"
-#include "editor\editor.hpp"
 #include "parsers.hpp"
 
 #include "particle_engine.hpp"
@@ -14,10 +13,9 @@
 
 int game()
 {
-	
 	engine::renderer r;
-	r.initualize(rpg::defs::SCREEN_SIZE, 120); // Tiles fit nicely in this space
-	r.set_pixel_scale(2); // Set the pixels to be 2x2
+	r.initualize(rpg::defs::SCREEN_SIZE, 120);
+	r.set_pixel_scale(2);
 	
 	engine::clock load_clock;
 
@@ -33,9 +31,7 @@ int game()
 
 	std::cout << "Load time : " << load_clock.get_elapse().s() << " seconds\n";
 
-	// This clock will calculate the framerate
-	engine::clock fpsclock;
-	unsigned int frames_clocked = 0;
+	engine::fps_clock fps_clock;
 
 	// TEST particle system
 
@@ -53,12 +49,6 @@ int game()
 
 	r.start_text_record(true);
 
-	// TEST parser
-
-	{
-		auto v = parsers::parse_vector<int>("2, 5");
-		std::cout << v.x << " " << v.y << "\n";
-	}
 
 	rpg::controls controls;
 
@@ -98,16 +88,14 @@ int game()
 		if (r.is_key_down(engine::events::key_type::Escape))
 			working = false;
 
+		if (r.is_key_pressed(engine::events::key_type::T))
+			std::cout << "FPS: " << fps_clock.get_fps() << "\n";
+
 		game.tick(controls);
 		r.draw();
 
-		++frames_clocked;
-		if (fpsclock.get_elapse().s() >= 1)
-		{
-			std::cout << frames_clocked / fpsclock.get_elapse().s() << "\n";
-			frames_clocked = 0;
-			fpsclock.restart();
-		}
+		fps_clock.update();
+
 		controls.reset();
 	}
 	return 0;
@@ -115,11 +103,12 @@ int game()
 
 int main(int argc, char* argv[])
 {
-	if (argc == 2)
-	{
-			editors::editor_mode e;
-			return e.start(game);
-	}
+
+	rpg::tilemap_loader tl;
+	tl.load_tilemap("testmap.txt");
+	tl.condense_tiles();
+	tl.generate_tilemap();
+
 	return game();
 }
 

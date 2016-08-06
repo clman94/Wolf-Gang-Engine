@@ -172,7 +172,7 @@ tile_node::set_texture(texture& tex)
 }
 
 int
-tile_node::find_tile(ivector pos, size_t layer)
+tile_node::find_tile(fvector pos, size_t layer)
 {
 	for (size_t i = 0; i < entries.size(); i++)
 	{
@@ -186,13 +186,13 @@ tile_node::find_tile(ivector pos, size_t layer)
 
 
 void
-tile_node::set_tile_size(ivector s)
+tile_node::set_tile_size(fvector s)
 {
 	tile_size = s;
 }
 
 void
-tile_node::set_tile(ivector pos, std::string atlas, size_t layer, int rot, bool replace)
+tile_node::set_tile(fvector pos, std::string atlas, size_t layer, int rot, bool replace)
 {
 	auto crop = c_tex->get_entry(atlas);
 
@@ -213,7 +213,7 @@ tile_node::set_tile(ivector pos, std::string atlas, size_t layer, int rot, bool 
 	if (index == -1)
 	{
 		auto &vertices = *layers[layer];
-		entries.push_back({ pos, vertices.size(), layer });
+		entries.emplace_back(pos, vertices.size(), layer);
 		vertices.push_back(v[0]);
 		vertices.push_back(v[1]);
 		vertices.push_back(v[2]);
@@ -221,6 +221,7 @@ tile_node::set_tile(ivector pos, std::string atlas, size_t layer, int rot, bool 
 	}
 	else if (replace)
 	{
+
 		auto &vertices = *layers[layer];
 		vertices[index]     = v[0];
 		vertices[index + 1] = v[1];
@@ -229,7 +230,6 @@ tile_node::set_tile(ivector pos, std::string atlas, size_t layer, int rot, bool 
 	}
 }
 
-// TODO: Make all layers draw in one call
 int
 tile_node::draw(renderer &_r)
 {
@@ -237,7 +237,7 @@ tile_node::draw(renderer &_r)
 
 	sf::RenderStates rs;
 	auto pos = get_exact_position();
-	rs.transform.translate({ pos.x, pos.y });
+	rs.transform.translate({ std::floor(pos.x), std::floor(pos.y) }); // floor prevents those nasty lines
 	rs.texture = &c_tex->sfml_get_texture();
 
 	for (auto &i : layers){

@@ -407,21 +407,21 @@ class tile_node :
 	public node
 {
 	struct tile_entry{
-		ivector pos;
+		fvector pos;
 		size_t index, layer;
 		tile_entry(ivector _pos, size_t _index, size_t _layer)
 			: pos(_pos), index(_index), layer(_layer){}
 	};
 	std::vector<tile_entry> entries;
-	int find_tile(ivector pos, size_t layer = 0);
-	ivector tile_size;
+	int find_tile(fvector pos, size_t layer = 0);
+	fvector tile_size;
 	std::map<size_t, ptr_GC_owner<std::vector<sf::Vertex>>> layers;
 	texture* c_tex;
 public:
 	tile_node();
-	void set_tile_size(ivector s);
+	void set_tile_size(fvector s);
 	void set_texture(texture& tex);
-	void set_tile(ivector pos, std::string atlas, size_t layer = 0, int rot = 0, bool replace = true);
+	void set_tile(fvector pos, std::string atlas, size_t layer = 0, int rot = 0, bool replace = true);
 	void clear_all();
 	virtual int draw(renderer &_r);
 };

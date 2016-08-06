@@ -116,6 +116,7 @@ animation_node::animation_node()
 {
 	c_anchor = anchor::topleft;
 	playing = false;
+	c_animation = nullptr;
 }
 
 frame_t

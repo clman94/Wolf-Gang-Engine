@@ -200,6 +200,7 @@ public:
 	void set_interval(float ms);
 
 	void show_selection();
+	void hide_selection();
 	void set_selection(const std::string& str);
 
 	util::error load_narrative(tinyxml2::XMLElement* e, texture_manager& tm);
@@ -215,13 +216,17 @@ class script_function
 	AS::asIScriptEngine *as_engine;
 	AS::asIScriptFunction *func;
 	AS::CContextMgr *ctx;
+	AS::asIScriptContext *func_ctx;
+
 public:
+	script_function();
+	bool is_running();
 	void set_engine(AS::asIScriptEngine * e);
 	void set_function(AS::asIScriptFunction * f);
 	void set_context_manager(AS::CContextMgr * cm);
+	void add_arg_obj(unsigned int index, void* ptr);
 	void call();
 };
-
 
 class collision_system
 {
@@ -270,6 +275,67 @@ private:
 	std::list<trigger> buttons;
 };
 
+
+// Excuse this mess -_-
+class angelscript
+{
+private:
+	AS::asIScriptEngine* as_engine;
+	AS::CContextMgr ctxmgr;
+	AS::asIScriptModule *scene_module;
+	AS::CScriptBuilder builder;
+
+	engine::timer main_timer;
+
+	template<typename T>
+	static void as_default_constr(void *memory)
+	{
+		new(memory) T();
+	}
+
+	template<typename T>
+	static void as_default_destr(void *memory)
+	{
+		((T*)memory)->~T();
+	}
+
+	void dprint(std::string &msg);
+	void register_vector_type();
+	void message_callback(const AS::asSMessageInfo * msg);
+	std::string get_metadata_type(const std::string &str);
+public:
+	angelscript();
+	~angelscript();
+	util::error load_scene_script(const std::string& path);
+	void add_function(const char* decl, const AS::asSFuncPtr & ptr, void* instance);
+	void add_function(const char* decl, const AS::asSFuncPtr & ptr);
+	void add_pointer_type(const char* name);
+	void call_event_function(std::string name);
+	void setup_triggers(collision_system& collision);
+	int tick();
+};
+
+class tilemap_loader
+{
+	struct tile
+		: public engine::fvector
+	{
+		size_t layer;
+		int rotation;
+		std::string atlas;
+		engine::ivector fill;
+		bool collision;
+		void load_xml(tinyxml2::XMLElement *e, size_t layer);
+	};
+	std::vector<tile> tiles;
+public:
+	void condense_tiles();
+	util::error load_layer(tinyxml2::XMLElement *e, size_t layer);
+	util::error load_tilemap(std::string path);
+	void break_tile(engine::fvector pos);
+	void generate_tilemap();
+};
+
 class tilemap :
 	public engine::render_client,
 	public engine::node
@@ -279,8 +345,10 @@ class tilemap :
 public:
 	tilemap();
 	void set_texture(engine::texture& t);
+	void set_tile(const std::string& name, engine::fvector pos, engine::fvector fill, size_t layer, int rot);
 	util::error load_scene_tilemap(tinyxml2::XMLElement* e, collision_system& collision);
 	void clear();
+	void load_script_interface(angelscript& script);
 	int draw(engine::renderer &_r);
 };
 
@@ -306,45 +374,6 @@ public:
 private:
 	bool locked;
 	direction facing_direction;
-};
-
-template<typename T>
-void as_default_constr(void *memory)
-{
-	new(memory) T();
-}
-
-template<typename T>
-void as_default_destr(void *memory)
-{
-	((T*)memory)->~T();
-}
-
-// Excuse this mess -_-
-class angelscript
-{
-private:
-	AS::asIScriptEngine* as_engine;
-	AS::CContextMgr ctxmgr;
-	AS::asIScriptModule *scene_module;
-	AS::CScriptBuilder builder;
-
-	engine::timer main_timer;
-
-	void dprint(std::string &msg);
-	void register_vector_type();
-	void message_callback(const AS::asSMessageInfo * msg);
-	std::string get_metadata_type(const std::string &str);
-public:
-	angelscript();
-	~angelscript();
-	util::error load_scene_script(std::string path);
-	void add_function(const char* decl, const AS::asSFuncPtr & ptr, void* instance);
-	void add_function(const char* decl, const AS::asSFuncPtr & ptr);
-	void add_pointer_type(const char* name);
-	void call_event_function(std::string name);
-	void setup_triggers(collision_system& collision);
-	int tick();
 };
 
 class scene :
@@ -374,6 +403,18 @@ protected:
 	void refresh_renderer(engine::renderer& _r);
 };
 
+class tile_editor :
+	public engine::render_proxy,
+	public engine::node
+{
+	engine::text_node info;
+	engine::sprite_node tile_cursor;
+	void refresh_renderer(engine::renderer& _r);
+public:
+	tile_editor();
+	void setup();
+	void tick();
+};
 
 class game :
 	public engine::render_proxy,
@@ -392,12 +433,12 @@ class game :
 	engine::sound_stream bg_music;
 
 	void player_scene_interact();
+	void load_script_interface();
 
-	void load_script_functions();
+	tile_editor editor;
 
 public:
 	game();
-	scene& get_scene();
 	util::error load_game(std::string path);
 	void tick(controls& con);
 

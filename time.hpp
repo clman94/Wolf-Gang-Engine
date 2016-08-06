@@ -104,6 +104,43 @@ public:
 	}
 };
 
+class fps_clock
+{
+	engine::clock clock;
+	unsigned int frames;
+	float fps;
+	float interval;
+public:
+	fps_clock(float _interval = 1)
+	{
+		fps = 0;
+		frames = 0;
+		interval = _interval;
+	}
+
+	void set_interval(float seconds)
+	{
+		interval = seconds;
+	}
+
+	float get_fps()
+	{
+		return fps;
+	}
+
+	void update()
+	{
+		++frames;
+		auto time = clock.get_elapse().s();
+		if (time >= interval)
+		{
+			fps = frames / time;
+			frames = 0;
+			clock.restart();
+		}
+	}
+};
+
 }
 
 #endif

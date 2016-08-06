@@ -111,8 +111,6 @@ renderer::initualize(ivector size, int fps)
 {
 	window.create(sf::VideoMode(size.x, size.y), "The Amazing Window", sf::Style::Titlebar | sf::Style::Close);
 	window.setFramerateLimit(fps);
-
-
 	return 0;
 }
 
