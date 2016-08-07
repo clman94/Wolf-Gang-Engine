@@ -15,7 +15,7 @@ int game()
 {
 	engine::renderer r;
 	r.initualize(rpg::defs::SCREEN_SIZE, 120);
-	r.set_pixel_scale(2);
+	r.set_pixel_scale(3);
 	
 	engine::clock load_clock;
 
@@ -104,10 +104,10 @@ int game()
 int main(int argc, char* argv[])
 {
 
-	rpg::tilemap_loader tl;
+	/*rpg::tilemap_loader tl;
 	tl.load_tilemap("testmap.txt");
 	tl.condense_tiles();
-	tl.generate_tilemap();
+	tl.generate_tilemap("testmapnew.txt");*/
 
 	return game();
 }

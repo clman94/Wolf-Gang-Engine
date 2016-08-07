@@ -13,6 +13,7 @@
 #include <string>
 #include <array>
 #include <functional>
+#include <map>
 
 #include <angelscript.h> // AS_USE_NAMESPACE will need to be defined
 #include <angelscript/add_on/contextmgr/contextmgr.h>
@@ -310,30 +311,43 @@ public:
 	void add_function(const char* decl, const AS::asSFuncPtr & ptr, void* instance);
 	void add_function(const char* decl, const AS::asSFuncPtr & ptr);
 	void add_pointer_type(const char* name);
-	void call_event_function(std::string name);
+	void call_event_function(const std::string& name);
 	void setup_triggers(collision_system& collision);
 	int tick();
 };
 
-class tilemap_loader
+class tilemap_loader :
+	//public engine::render_client,
+	public engine::node
 {
 	struct tile
 		: public engine::fvector
 	{
-		size_t layer;
 		int rotation;
 		std::string atlas;
 		engine::ivector fill;
 		bool collision;
 		void load_xml(tinyxml2::XMLElement *e, size_t layer);
+		bool is_adjacent_above(tile& a);
+		bool is_adjacent_right(tile& a);
 	};
-	std::vector<tile> tiles;
+	std::map<size_t,std::vector<tile>> tiles;
+	tile* find_tile(engine::fvector pos, size_t layer);
+
+	void condense_layer(std::vector<tile> &map);
+	util::error load_layer(tinyxml2::XMLElement *e, size_t layer);
 public:
 	void condense_tiles();
-	util::error load_layer(tinyxml2::XMLElement *e, size_t layer);
+
+	util::error load_tilemap(tinyxml2::XMLElement *root);
 	util::error load_tilemap(std::string path);
+
 	void break_tile(engine::fvector pos);
-	void generate_tilemap();
+
+	void generate_tilemap(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode* root);
+	void generate_tilemap(const std::string& path);
+
+	int set_tile(engine::fvector pos, size_t layer, std::string atlas, int rot);
 };
 
 class tilemap :

@@ -6,8 +6,8 @@
 
 namespace rpg{ namespace defs{
 
-const engine::fvector SCREEN_SIZE            = { 640, 512 };
 const engine::fvector DISPLAY_SIZE           = { 320, 256 };
+const engine::fvector SCREEN_SIZE            = { DISPLAY_SIZE.x * 3, DISPLAY_SIZE.y * 3 };
 const int             TILE_WIDTH_PX          = 32;
 const int             TILE_HEIGHT_PX         = 32;
 const engine::ivector TILE_SIZE              = { TILE_WIDTH_PX, TILE_HEIGHT_PX };

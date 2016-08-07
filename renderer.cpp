@@ -134,8 +134,6 @@ renderer::draw()
 	return 0;
 }
 
-
-
 void
 renderer::start_text_record(bool multi_line)
 {

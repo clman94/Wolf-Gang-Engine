@@ -856,8 +856,11 @@ angelscript::angelscript()
 	register_vector_type();
 
 	add_function("int rand()", asFUNCTION(std::rand));
-	add_function("void _timer_start(float)",      asMETHOD(engine::timer, start_timer), &main_timer);
-	add_function("bool _timer_reached()",         asMETHOD(engine::timer, is_reached), &main_timer);
+
+	add_function("void _timer_start(float)",  asMETHOD(engine::timer, start_timer), &main_timer);
+	add_function("bool _timer_reached()",     asMETHOD(engine::timer, is_reached), &main_timer);
+
+	add_function("void cocall(const string &in)", asMETHOD(angelscript, call_event_function), this);
 
 	add_function("void dprint(const string &in)", asMETHOD(angelscript, dprint), this);
 }
@@ -905,9 +908,11 @@ angelscript::add_pointer_type(const char* name)
 }
 
 void
-angelscript::call_event_function(std::string name)
+angelscript::call_event_function(const std::string& name)
 {
 	auto func = scene_module->GetFunctionByName(name.c_str());
+	if (!func)
+		util::error("Function '" + name + "' does not exist");
 	ctxmgr.AddContext(as_engine, func);
 }
 
@@ -1422,28 +1427,63 @@ tilemap_loader::tile::load_xml(tinyxml2::XMLElement * e, size_t _layer)
 
 	rotation = e->IntAttribute("r") % 4;
 	collision = e->BoolAttribute("c");
-	layer = _layer;
 }
 
-void
-tilemap_loader::condense_tiles()
+bool
+tilemap_loader::tile::is_adjacent_above(tile & a)
 {
-	if (!tiles.size()) return;
+	return (
+		atlas == a.atlas
+		&& x == a.x
+		&& y == a.y + a.fill.y
+		&& fill.x == a.fill.x
+		&& collision == a.collision
+		);
+}
 
-	std::sort(tiles.begin(), tiles.end(), [](tile& a, tile& b)
+bool
+tilemap_loader::tile::is_adjacent_right(tile & a)
+{
+	return (
+		atlas == a.atlas
+		&& y == a.y
+		&& x + fill.x == a.x
+		&& fill.y == a.fill.y
+		&& collision == a.collision
+		);
+}
+
+tilemap_loader::tile*
+tilemap_loader::find_tile(engine::fvector pos, size_t layer)
+{
+	for (auto &i : tiles[layer])
+	{
+		if (i.x == pos.x
+			&& i.y == pos.y)
+			return &i;
+	}
+	return nullptr;
+}
+
+// Uses brute force to merge adjacent tiles
+void
+tilemap_loader::condense_layer(std::vector<tile> &map)
+{
+	if (map.size() < 2)
+		return;
+
+	std::sort(map.begin(), map.end(), [](tile& a, tile& b)
 	{ return (a.y < b.y) || ((a.y == b.y) && (a.x < b.x)); });
 
-	std::vector<tile> newset;
-	tile ntile = tiles.front();
+	std::vector<tile> nmap;
 
-	bool merge = false;
-	for (auto i = tiles.begin() + 1; i != tiles.end(); i++)
+	tile ntile = map.front();
+
+	bool merged = false;
+	for (auto &i = map.begin() + 1; i != map.end(); i++)
 	{
 		// Merge adjacent tile 
-		if (ntile.atlas == i->atlas
-			&& ntile.x + ntile.fill.x == i->x
-			&& ntile.y == i->y
-			&& ntile.layer == i->layer)
+		if (ntile.is_adjacent_right(*i))
 		{
 			ntile.fill.x += i->fill.x;
 		}
@@ -1451,30 +1491,37 @@ tilemap_loader::condense_tiles()
 		// Add tile
 		else
 		{
-			if(!merge)
-				newset.push_back(ntile);
-			merge = false;
+			// Merge any tile above this tile
+			for (auto &j : nmap)
+			{
+				if (ntile.is_adjacent_above(j))
+				{
+					j.fill.y += ntile.fill.y;
+					merged = true;
+					break;
+				}
+			}
+			if (!merged)
+			{
+				nmap.push_back(ntile);
+			}
+			merged = false;
 			ntile = *i;
 		}
-
-		// Merge any tile above this tile
-		for (auto &j : newset)
-		{
-			if (ntile.atlas == j.atlas
-				&& ntile.x == j.x
-				&& ntile.y == j.y + j.fill.y
-				&& ntile.fill.x == j.fill.x
-				&& ntile.layer == j.layer)
-			{
-				j.fill.y += ntile.fill.y;
-				merge = true;
-				break;
-			}
-		}
 	}
-	if (!merge)
-		newset.push_back(ntile); // add last tile
-	tiles = std::move(newset);
+	if (!merged)
+		nmap.push_back(ntile); // add last tile
+	map = std::move(nmap);
+}
+
+void
+tilemap_loader::condense_tiles()
+{
+	if (!tiles.size()) return;
+	for (auto &i : tiles)
+	{
+		condense_layer(i.second);
+	}
 }
 
 util::error
@@ -1483,10 +1530,28 @@ tilemap_loader::load_layer(tinyxml2::XMLElement * e, size_t layer)
 	auto i = e->FirstChildElement();
 	while (i)
 	{
-		tiles.emplace_back();
-		auto &t = tiles.back();
-		t.load_xml(i, layer);
+		tile ntile;
+		ntile.load_xml(i, layer);
+		tiles[layer].push_back(ntile);
 		i = i->NextSiblingElement();
+	}
+	return 0;
+}
+
+util::error
+tilemap_loader::load_tilemap(tinyxml2::XMLElement *root)
+{
+	auto ele_tilemap = root->FirstChildElement("layer");
+	while (ele_tilemap)
+	{
+		if (auto att_path = ele_tilemap->Attribute("path"))
+		{
+			load_tilemap(util::safe_string(att_path));
+		}
+
+		int att_layer = ele_tilemap->IntAttribute("id");
+		load_layer(ele_tilemap, att_layer);
+		ele_tilemap = ele_tilemap->NextSiblingElement("layer");
 	}
 	return 0;
 }
@@ -1496,15 +1561,10 @@ tilemap_loader::load_tilemap(std::string path)
 {
 	using namespace tinyxml2;
 	XMLDocument doc;
-	doc.LoadFile(path.c_str());
+	if (doc.LoadFile(path.c_str()))
+		return "Error loading tilemap file";
 	auto root = doc.RootElement();
-	auto ele_tilemap = root->FirstChildElement("tilemap");
-	while (ele_tilemap)
-	{
-		int att_layer = ele_tilemap->IntAttribute("layer");
-		load_layer(ele_tilemap, att_layer);
-		ele_tilemap = ele_tilemap->NextSiblingElement("tilemap");
-	}
+	load_tilemap(root);
 	return 0;
 }
 
@@ -1514,33 +1574,65 @@ tilemap_loader::break_tile(engine::fvector pos)
 }
 
 void
-tilemap_loader::generate_tilemap()
+tilemap_loader::generate_tilemap(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode * root)
+{
+	std::map<int, tinyxml2::XMLElement *> layers;
+	
+	for (auto &l : tiles)
+	{
+		if (!l.second.size())
+			continue;
+
+		auto ele_layer = doc.NewElement("layer");
+		ele_layer->SetAttribute("id", l.first);
+		root->InsertEndChild(ele_layer);
+		layers[l.first] = ele_layer;
+
+		for (auto &i : l.second)
+		{
+			auto ele = doc.NewElement(i.atlas.c_str());
+			ele->SetAttribute("x", i.x);
+			ele->SetAttribute("y", i.y);
+			if (i.fill.x > 1)    ele->SetAttribute("w", i.fill.x);
+			if (i.fill.y > 1)    ele->SetAttribute("h", i.fill.y);
+			if (i.rotation != 0) ele->SetAttribute("r", i.rotation);
+			if (i.collision)     ele->SetAttribute("c", i.collision);
+			layers[l.first]->InsertEndChild(ele);
+		}
+	}
+}
+
+void
+tilemap_loader::generate_tilemap(const std::string& path)
 {
 	using namespace tinyxml2;
 	XMLDocument doc;
-	auto root = doc.InsertEndChild(doc.NewElement("tilemap"));
+	auto root = doc.InsertEndChild(doc.NewElement("map"));
+	generate_tilemap(doc, root);
+	doc.SaveFile(path.c_str());
+}
 
-	std::map<int, tinyxml2::XMLElement *> layers;
-
-	for (auto &i : tiles)
+int
+tilemap_loader::set_tile(engine::fvector pos, size_t layer, std::string atlas, int rot)
+{
+	tile* t = find_tile(pos, layer);
+	if (!t)
 	{
-		auto ele = doc.NewElement(i.atlas.c_str());
-		ele->SetAttribute("x", i.x);
-		ele->SetAttribute("y", i.y);
-		if (i.fill.x > 1)    ele->SetAttribute("w", i.fill.x);
-		if (i.fill.y > 1)    ele->SetAttribute("h", i.fill.y);
-		if (i.rotation != 0) ele->SetAttribute("r", i.rotation);
-		if (i.collision)     ele->SetAttribute("c", i.collision);
-		if (layers.find(i.layer) == layers.end())
-		{
-			auto ele_layer = doc.NewElement("tilemap");
-			ele_layer->SetAttribute("layer", i.layer);
-			root->InsertEndChild(ele_layer);
-			layers[i.layer] = ele_layer;
-		}
-		layers[i.layer]->InsertEndChild(ele);
+		tiles[layer].emplace_back();
+		auto &nt = tiles[layer].back();
+		nt.x = pos.x;
+		nt.y = pos.y;
+		nt.fill = { 1, 1 };
+		nt.atlas = atlas;
+		nt.rotation = rot;
+		nt.collision = false;
 	}
-	doc.SaveFile("testmapnew.txt");
+	else
+	{
+		t->atlas = atlas;
+		t->rotation = rot;
+	}
+	return 0;
 }
 
 

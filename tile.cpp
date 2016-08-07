@@ -240,7 +240,8 @@ tile_node::draw(renderer &_r)
 	rs.transform.translate({ std::floor(pos.x), std::floor(pos.y) }); // floor prevents those nasty lines
 	rs.texture = &c_tex->sfml_get_texture();
 
-	for (auto &i : layers){
+	for (auto &i : layers)
+	{
 		auto &vertices = *i.second;
 		_r.window.draw(&vertices[0], vertices.size(), sf::Quads, rs);
 	}
