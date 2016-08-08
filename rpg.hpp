@@ -160,58 +160,6 @@ public:
 	float get_speed();
 };
 
-class narrative_dialog :
-	public engine::render_client
-{
-	engine::sprite_node box;
-	engine::sprite_node cursor;
-	engine::text_node   text;
-	engine::text_node   selection;
-	engine::font        font;
-	engine::clock       timer;
-
-	bool        revealing;
-	size_t      c_char;
-	std::string full_text;
-	float       interval;
-
-	util::error load_box(tinyxml2::XMLElement* e, texture_manager& tm);
-	util::error load_font(tinyxml2::XMLElement* e);
-
-public:
-	enum class position
-	{
-		top,
-		bottom
-	};
-
-	narrative_dialog();
-
-	void set_box_position(position pos);
-
-	bool is_revealing();
-
-	void reveal_text(const std::string& str, bool append = false);
-	void instant_text(std::string str, bool append = false);
-
-	void show_box();
-	void hide_box();
-	bool is_box_open();
-
-	void set_interval(float ms);
-
-	void show_selection();
-	void hide_selection();
-	void set_selection(const std::string& str);
-
-	util::error load_narrative(tinyxml2::XMLElement* e, texture_manager& tm);
-
-	int draw(engine::renderer &r);
-
-protected:
-	void refresh_renderer(engine::renderer& r);
-};
-
 class script_function
 {
 	AS::asIScriptEngine *as_engine;
@@ -221,6 +169,7 @@ class script_function
 
 public:
 	script_function();
+	~script_function();
 	bool is_running();
 	void set_engine(AS::asIScriptEngine * e);
 	void set_function(AS::asIScriptFunction * f);
@@ -276,7 +225,6 @@ private:
 	std::list<trigger> buttons;
 };
 
-
 // Excuse this mess -_-
 class angelscript
 {
@@ -316,10 +264,68 @@ public:
 	int tick();
 };
 
+class narrative_dialog :
+	public engine::render_client
+{
+	engine::sprite_node box;
+	engine::sprite_node cursor;
+	engine::text_node   text;
+	engine::text_node   selection;
+	engine::font        font;
+	engine::clock       timer;
+
+	bool        revealing;
+	size_t      c_char;
+	std::string full_text;
+	float       interval;
+
+	util::error load_box(tinyxml2::XMLElement* e, texture_manager& tm);
+	util::error load_font(tinyxml2::XMLElement* e);
+
+public:
+	enum class position
+	{
+		top,
+		bottom
+	};
+
+	narrative_dialog();
+
+	void set_box_position(position pos);
+
+	bool is_revealing();
+
+	void reveal_text(const std::string& str, bool append = false);
+	void instant_text(std::string str, bool append = false);
+
+	void show_box();
+	void hide_box();
+	bool is_box_open();
+
+	void set_style_profile(const std::string& path);
+
+	void set_interval(float ms);
+
+	void show_selection();
+	void hide_selection();
+	void set_selection(const std::string& str);
+
+	util::error load_narrative(tinyxml2::XMLElement* e, texture_manager& tm);
+
+	void load_script_interface(angelscript& script);
+
+	int draw(engine::renderer &r);
+
+protected:
+	void refresh_renderer(engine::renderer& r);
+};
+
 class tilemap_loader :
 	//public engine::render_client,
 	public engine::node
 {
+	engine::tile_node node;
+
 	struct tile
 		: public engine::fvector
 	{
@@ -337,6 +343,8 @@ class tilemap_loader :
 	void condense_layer(std::vector<tile> &map);
 	util::error load_layer(tinyxml2::XMLElement *e, size_t layer);
 public:
+	tilemap_loader();
+
 	void condense_tiles();
 
 	util::error load_tilemap(tinyxml2::XMLElement *root);
@@ -344,10 +352,12 @@ public:
 
 	void break_tile(engine::fvector pos);
 
-	void generate_tilemap(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode* root);
-	void generate_tilemap(const std::string& path);
+	void generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode* root);
+	void generate(const std::string& path);
 
 	int set_tile(engine::fvector pos, size_t layer, std::string atlas, int rot);
+
+	void update_display();
 };
 
 class tilemap :
@@ -396,38 +406,37 @@ class scene :
 {
 	tilemap tilemap;
 	collision_system collision;
+	texture_manager * tm;
 
 	node_list<character> characters;
 	node_list<entity> entities;
 
 	std::string c_path;
 
+	util::error load_entities(tinyxml2::XMLElement* e);
+	util::error load_characters(tinyxml2::XMLElement* e);
+
+	entity* script_add_entity(const std::string& path);
+	character* script_add_character(const std::string& path);
+	void script_set_position(entity* e, const engine::fvector& pos);
+	engine::fvector script_get_position(entity* e);
+
 public:
 	scene();
 	collision_system& get_collision_system();
-	character* find_character(std::string name);
-	entity* find_entity(std::string name);
+	character* find_character(const std::string& name);
+	entity* find_entity(const std::string& name);
 
 	void clean_scene();
-	util::error load_entities(tinyxml2::XMLElement* e, texture_manager& tm);
-	util::error load_characters(tinyxml2::XMLElement* e, texture_manager& tm);
-	util::error load_scene(std::string path, angelscript& script, flag_container& flags, texture_manager& tm);
-	util::error reload_scene(angelscript& script, flag_container& flags, texture_manager& tm);
+
+	util::error load_scene(std::string path, angelscript& script, flag_container& flags);
+	util::error reload_scene(angelscript& script, flag_container& flags);
+
+	void load_script_interface(angelscript& script);
+
+	void set_texture_manager(texture_manager& ntm);
 protected:
 	void refresh_renderer(engine::renderer& _r);
-};
-
-class tile_editor :
-	public engine::render_proxy,
-	public engine::node
-{
-	engine::text_node info;
-	engine::sprite_node tile_cursor;
-	void refresh_renderer(engine::renderer& _r);
-public:
-	tile_editor();
-	void setup();
-	void tick();
 };
 
 class game :
@@ -447,9 +456,10 @@ class game :
 	engine::sound_stream bg_music;
 
 	void player_scene_interact();
-	void load_script_interface();
 
-	tile_editor editor;
+	engine::fvector script_get_player_position();
+	void script_set_player_position(const engine::fvector& pos);
+	void load_script_interface();
 
 public:
 	game();

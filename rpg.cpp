@@ -5,6 +5,7 @@
 #include <angelscript/add_on/scriptarray/scriptarray.h>
 
 #include "parsers.hpp"
+#include "tinyxml2\xmlshortcuts.hpp"
 
 #include <functional>
 #include <algorithm>
@@ -622,7 +623,7 @@ scene::get_collision_system()
 }
 
 inline character*
-scene::find_character(std::string name)
+scene::find_character(const std::string& name)
 {
 	for (auto &i : characters)
 		if (i.get_name() == name)
@@ -631,7 +632,7 @@ scene::find_character(std::string name)
 }
 
 inline entity*
-scene::find_entity(std::string name)
+scene::find_entity(const std::string& name)
 {
 	for (auto &i : entities)
 		if (i.get_name() == name)
@@ -649,19 +650,19 @@ scene::clean_scene()
 }
 
 util::error
-scene::load_entities(tinyxml2::XMLElement * e, texture_manager& tm)
+scene::load_entities(tinyxml2::XMLElement * e)
 {
+	assert(tm != nullptr);
 	auto ele = e->FirstChildElement();
 	while (ele)
 	{
 		std::string name = ele->Name();
 		std::string att_path = ele->Attribute("path");
-		float x = ele->FloatAttribute("x");
-		float y = ele->FloatAttribute("y");
+		engine::fvector pos = util::shortcuts::vector_float_att(ele);
 
 		auto& ne = entities.add_item();
-		ne.load_entity(att_path, tm);
-		ne.set_position({ x, y });
+		ne.load_entity(att_path, *tm);
+		ne.set_position(pos);
 		get_renderer()->add_client(&ne);
 
 		ele = ele->NextSiblingElement();
@@ -670,20 +671,20 @@ scene::load_entities(tinyxml2::XMLElement * e, texture_manager& tm)
 }
 
 util::error
-scene::load_characters(tinyxml2::XMLElement * e, texture_manager& tm)
+scene::load_characters(tinyxml2::XMLElement * e)
 {
+	assert(tm != nullptr);
 	auto ele = e->FirstChildElement();
 	while (ele)
 	{
 		std::string name = ele->Name();
 		std::string att_path = ele->Attribute("path");
-		float x = ele->FloatAttribute("x");
-		float y = ele->FloatAttribute("y");
+		engine::fvector pos = util::shortcuts::vector_float_att(ele);
 
 		auto& ne = characters.add_item();
-		ne.load_entity(att_path, tm);
+		ne.load_entity(att_path, *tm);
 		ne.set_cycle("default");
-		ne.set_position(engine::fvector(x, y)*32);
+		ne.set_position(pos *32);
 		get_renderer()->add_client(&ne);
 
 		ele = ele->NextSiblingElement();
@@ -691,9 +692,41 @@ scene::load_characters(tinyxml2::XMLElement * e, texture_manager& tm)
 	return 0;
 }
 
-util::error
-scene::load_scene(std::string path, angelscript& script, flag_container& flags, texture_manager& tm)
+entity* scene::script_add_entity(const std::string & path)
 {
+	assert(tm != nullptr);
+	auto& ne = entities.add_item();
+	ne.load_entity(path, *tm);
+	get_renderer()->add_client(&ne);
+	return &ne;
+}
+
+entity* scene::script_add_character(const std::string & path)
+{
+	assert(tm != nullptr);
+	auto& nc = characters.add_item();
+	nc.load_entity(path, *tm);
+	nc.set_cycle(character::e_cycle::default);
+	get_renderer()->add_client(&nc);
+	return &nc;
+}
+
+void scene::script_set_position(entity* e, const engine::fvector & pos)
+{
+	assert(e != nullptr);
+	e->set_position(pos);
+}
+
+engine::fvector scene::script_get_position(entity * e)
+{
+	assert(e != nullptr);
+	return e->get_position();
+}
+
+
+util::error scene::load_scene(std::string path, angelscript& script, flag_container& flags)
+{
+	assert(tm != nullptr);
 	using namespace tinyxml2;
 
 	XMLDocument doc;
@@ -713,7 +746,7 @@ scene::load_scene(std::string path, angelscript& script, flag_container& flags, 
 	// Load tilemap texture
 	if (auto ele_tilemap_tex = root->FirstChildElement("tilemap_texture"))
 	{
-		auto tex = tm.get_texture(ele_tilemap_tex->GetText());
+		auto tex = tm->get_texture(ele_tilemap_tex->GetText());
 		if (!tex)
 			return "Invalid tilemap texture";
 		tilemap.set_texture(*tex);
@@ -724,12 +757,12 @@ scene::load_scene(std::string path, angelscript& script, flag_container& flags, 
 
 	if (auto ele_entities = root->FirstChildElement("entities"))
 	{
-		load_entities(ele_entities, tm);
+		load_entities(ele_entities);
 	}
 
 	if (auto ele_characters = root->FirstChildElement("characters"))
 	{
-		load_characters(ele_characters, tm);
+		load_characters(ele_characters);
 	}
 
 	if (auto ele_script = root->FirstChildElement("script"))
@@ -752,11 +785,27 @@ scene::load_scene(std::string path, angelscript& script, flag_container& flags, 
 }
 
 util::error
-scene::reload_scene(angelscript & script, flag_container & flags, texture_manager & tm)
+scene::reload_scene(angelscript & script, flag_container & flags)
 {
 	if (c_path.empty())
 		return "No scene currently loaded";
-	return load_scene(c_path, script, flags, tm);
+	return load_scene(c_path, script, flags);
+}
+
+void scene::load_script_interface(angelscript& script)
+{
+	script.add_pointer_type("entity");
+
+	script.add_function("entity add_entity(const string &in)", asMETHOD(scene, script_add_entity), this);
+	script.add_function("entity add_character(const string &in)", asMETHOD(scene, script_add_character), this);
+	script.add_function("void set_position(entity, const vec &in)", asMETHOD(scene, script_set_position), this);
+	script.add_function("vec get_position(entity)", asMETHOD(scene, script_get_position), this);
+}
+
+void
+scene::set_texture_manager(texture_manager & ntm)
+{
+	tm = &ntm;
 }
 
 void
@@ -837,6 +886,9 @@ angelscript::register_vector_type()
 	as_engine->RegisterObjectMethod("vec", "vec& opAssign(const vec &in)"
 		, asMETHODPR(engine::fvector, operator=, (const engine::fvector&), engine::fvector&)
 		, asCALL_THISCALL);
+	as_engine->RegisterObjectMethod("vec", "vec& opAddAssign(const vec &in)"
+		, asMETHODPR(engine::fvector, operator+=<float>, (const engine::fvector&), engine::fvector&)
+		, asCALL_THISCALL);
 
 	as_engine->RegisterObjectProperty("vec", "float x", asOFFSET(engine::fvector, x));
 	as_engine->RegisterObjectProperty("vec", "float y", asOFFSET(engine::fvector, y));
@@ -867,7 +919,8 @@ angelscript::angelscript()
 
 angelscript::~angelscript()
 {
-	ctxmgr.~CContextMgr();
+	ctxmgr.AbortAll();
+	ctxmgr.~CContextMgr(); // Destroy context manager before releasing engine
 	as_engine->ShutDownAndRelease();
 }
 
@@ -997,22 +1050,11 @@ game::player_scene_interact()
 void
 game::load_script_interface()
 {
-
 	script.add_function("bool has_flag(const string &in)", asMETHOD(flag_container, has_flag), &flags);
 	script.add_function("bool set_flag(const string &in)", asMETHOD(flag_container, set_flag), &flags);
 	script.add_function("bool unset_flag(const string &in)", asMETHOD(flag_container, unset_flag), &flags);
 
 	script.add_function("void _lockplayer(bool)", asMETHOD(player_character, set_locked), &player);
-
-	script.add_function("void _say(const string &in, bool)", asMETHOD(narrative_dialog, reveal_text), &narrative);
-	script.add_function("bool _is_revealing()", asMETHOD(narrative_dialog, is_revealing), &narrative);
-	script.add_function("void _showbox()", asMETHOD(narrative_dialog, show_box), &narrative);
-	script.add_function("void _hidebox()", asMETHOD(narrative_dialog, hide_box), &narrative);
-	script.add_function("void _show_selection()", asMETHOD(narrative_dialog, show_selection), &narrative);
-	script.add_function("void _hide_selection()", asMETHOD(narrative_dialog, hide_selection), &narrative);
-	script.add_function("void _set_interval(float)", asMETHOD(narrative_dialog, set_interval), &narrative);
-	script.add_function("void _set_box_position(int)", asMETHOD(narrative_dialog, set_box_position), &narrative);
-	script.add_function("void _set_selection(const string &in)", asMETHOD(narrative_dialog, set_selection), &narrative);
 
 	script.add_function("void _music_play()", asMETHOD(engine::sound_stream, play), &bg_music);
 	script.add_function("void _music_stop()", asMETHOD(engine::sound_stream, stop), &bg_music);
@@ -1023,6 +1065,9 @@ game::load_script_interface()
 	script.add_function("int _music_open(const string &in)", asMETHOD(engine::sound_stream, open), &bg_music);
 
 	script.add_function("bool _is_triggered(int)", asMETHOD(controls, is_triggered), &c_controls);
+	
+	narrative.load_script_interface(script);
+	game_scene.load_script_interface(script);
 }
 
 util::error
@@ -1049,12 +1094,13 @@ game::load_game(std::string path)
 	std::string player_path = ele_player->Attribute("path");
 
 	textures.load_settings(textures_path);
-
+	
 	player.load_entity(player_path, textures);
 	player.set_position({ 64, 120 });
 	player.set_cycle(character::e_cycle::default);
-
-	game_scene.load_scene(scene_path, script, flags, textures);
+	
+	game_scene.set_texture_manager(textures);
+	game_scene.load_scene(scene_path, script, flags);
 
 	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
 	{
@@ -1071,7 +1117,7 @@ game::tick(controls& con)
 	if (con.is_triggered(controls::control::reset))
 	{
 		std::cout << "Reloading scene...\n";
-		game_scene.reload_scene(script, flags, textures);
+		game_scene.reload_scene(script, flags);
 		std::cout << "Done\n";
 	}
 
@@ -1287,6 +1333,20 @@ narrative_dialog::load_narrative(tinyxml2::XMLElement* e, texture_manager& tm)
 	return 0;
 }
 
+void
+narrative_dialog::load_script_interface(angelscript & script)
+{
+	script.add_function("void _say(const string &in, bool)", asMETHOD(narrative_dialog, reveal_text), this);
+	script.add_function("bool _is_revealing()", asMETHOD(narrative_dialog, is_revealing), this);
+	script.add_function("void _showbox()", asMETHOD(narrative_dialog, show_box), this);
+	script.add_function("void _hidebox()", asMETHOD(narrative_dialog, hide_box), this);
+	script.add_function("void _show_selection()", asMETHOD(narrative_dialog, show_selection), this);
+	script.add_function("void _hide_selection()", asMETHOD(narrative_dialog, hide_selection), this);
+	script.add_function("void _set_interval(float)", asMETHOD(narrative_dialog, set_interval), this);
+	script.add_function("void _set_box_position(int)", asMETHOD(narrative_dialog, set_box_position), this);
+	script.add_function("void _set_selection(const string &in)", asMETHOD(narrative_dialog, set_selection), this);
+}
+
 int
 narrative_dialog::draw(engine::renderer& r)
 {
@@ -1329,11 +1389,16 @@ script_function::script_function():
 {
 }
 
+script_function::~script_function()
+{
+}
+
 bool
 script_function::is_running()
 {
 	if (!func_ctx) return false;
-	if (func_ctx->GetState() == AS::asEXECUTION_FINISHED)
+	if (func_ctx->GetFunction() != func
+		|| func_ctx->GetState() == AS::asEXECUTION_FINISHED)
 		return false;
 	return true;
 }
@@ -1374,36 +1439,9 @@ script_function::call()
 
 	if (!is_running())
 	{
-		if (func_ctx) func_ctx->Release();
+		if (func_ctx) ctx->DoneWithContext(func_ctx);
 		func_ctx = ctx->AddContext(as_engine, func, true);
 	}
-}
-
-// ##########
-// tile_editor
-// ##########
-
-tile_editor::tile_editor()
-{
-	add_child(tile_cursor);
-}
-
-void
-tile_editor::setup()
-{
-
-}
-
-void
-tile_editor::refresh_renderer(engine::renderer& r)
-{
-	r.add_client(&tile_cursor);
-}
-
-void
-tile_editor::tick()
-{
-
 }
 
 // ##########
@@ -1538,17 +1576,22 @@ tilemap_loader::load_layer(tinyxml2::XMLElement * e, size_t layer)
 	return 0;
 }
 
+tilemap_loader::tilemap_loader()
+{
+	node.set_tile_size(defs::TILE_SIZE);
+}
+
 util::error
 tilemap_loader::load_tilemap(tinyxml2::XMLElement *root)
 {
+	if (auto att_path = root->Attribute("path"))
+	{
+		load_tilemap(util::safe_string(att_path));
+	}
+
 	auto ele_tilemap = root->FirstChildElement("layer");
 	while (ele_tilemap)
 	{
-		if (auto att_path = ele_tilemap->Attribute("path"))
-		{
-			load_tilemap(util::safe_string(att_path));
-		}
-
 		int att_layer = ele_tilemap->IntAttribute("id");
 		load_layer(ele_tilemap, att_layer);
 		ele_tilemap = ele_tilemap->NextSiblingElement("layer");
@@ -1574,7 +1617,7 @@ tilemap_loader::break_tile(engine::fvector pos)
 }
 
 void
-tilemap_loader::generate_tilemap(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode * root)
+tilemap_loader::generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode * root)
 {
 	std::map<int, tinyxml2::XMLElement *> layers;
 	
@@ -1603,12 +1646,12 @@ tilemap_loader::generate_tilemap(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode *
 }
 
 void
-tilemap_loader::generate_tilemap(const std::string& path)
+tilemap_loader::generate(const std::string& path)
 {
 	using namespace tinyxml2;
 	XMLDocument doc;
 	auto root = doc.InsertEndChild(doc.NewElement("map"));
-	generate_tilemap(doc, root);
+	generate(doc, root);
 	doc.SaveFile(path.c_str());
 }
 
@@ -1633,6 +1676,19 @@ tilemap_loader::set_tile(engine::fvector pos, size_t layer, std::string atlas, i
 		t->rotation = rot;
 	}
 	return 0;
+}
+
+void
+tilemap_loader::update_display()
+{
+	node.clear_all();
+	for (auto &l : tiles)
+	{
+		for (auto &i : l.second)
+		{
+			node.set_tile(i, i.atlas, l.first, i.rotation);
+		}
+	}
 }
 
 

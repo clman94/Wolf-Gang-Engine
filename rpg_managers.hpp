@@ -41,7 +41,7 @@ class sound_manager
 
 public:
 	util::error load_sounds(std::string path);
-	int spawn_sound(std::string name);
+	int spawn_sound(const std::string& name);
 };
 
 }

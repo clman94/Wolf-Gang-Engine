@@ -89,13 +89,40 @@ sound_manager::find_buffer(std::string name)
 	return nullptr;
 }
 
-util::error rpg::sound_manager::load_sounds(std::string path)
+util::error
+sound_manager::load_sounds(std::string path)
 {
+	using namespace tinyxml2;
+
+	XMLDocument doc;
+	if (doc.LoadFile(path.c_str()))
+		return "Could not load souind manager";
+
+	XMLElement* ele_root = doc.RootElement();
+	if (!ele_root)
+		return "Please add root node";
+
+	auto ele_sound = ele_root->FirstChildElement();
+	while (ele_sound)
+	{
+		buffers.emplace_back();
+		auto & nbuf = buffers.back();
+
+		nbuf.buffer.load(path);
+		nbuf.name = util::safe_string(ele_sound->Name());
+
+		ele_sound->NextSiblingElement();
+	}
+
 	return 0;
 }
 
 int
-sound_manager::spawn_sound(std::string name)
+sound_manager::spawn_sound(const std::string& name)
 {
+	auto buf = find_buffer(name);
+	if (!buf)
+		return 1;
+	sounds.spawn(buf->buffer);
 	return 0;
 }
