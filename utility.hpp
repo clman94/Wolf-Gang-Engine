@@ -11,6 +11,11 @@
 namespace util
 {
 
+template<typename T>
+static T floor_align(T v, T scale)
+{
+	return std::floor(v / scale)*scale;
+}
 
 class nocopy {
 public:

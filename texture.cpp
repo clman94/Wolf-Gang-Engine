@@ -37,7 +37,7 @@ texture::get_entry(const std::string name)
 }
 
 int
-engine::load_xml_atlas(texture& tex, const std::string path)
+engine::load_atlas_xml(texture& tex, const std::string path)
 {
 	using namespace tinyxml2;
 

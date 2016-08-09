@@ -33,7 +33,7 @@ public:
 #endif
 };
 
-int load_xml_atlas(texture& tex, const std::string path);
+int load_atlas_xml(texture& tex, const std::string path);
 
 }
 

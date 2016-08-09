@@ -24,7 +24,7 @@ int game()
 	game.set_renderer(r);
 
 	// Load default location
-	game.load_game("data/game.xml");
+	game.load_game_xml("data/game.xml");
 
 	std::cout << "Size of the freakin game: " << sizeof(game) << "\n";
 	std::cout << "Size of the sprite_node: " << sizeof(engine::sprite_node) << "\n";

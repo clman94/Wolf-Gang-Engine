@@ -110,6 +110,12 @@ bool operator!=(const vector<T1>& L, const vector<T2>& R)
 	return (L.x != R.x) || (L.y != R.y);
 }
 
+template<typename T1, typename T2>
+bool operator==(const vector<T1>& L, const vector<T2>& R)
+{
+	return (L.x == R.x) && (L.y == R.y);
+}
+
 template<typename T>
 static vector<T> scale(vector<T> a, T b)
 {

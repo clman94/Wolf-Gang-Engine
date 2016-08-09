@@ -35,7 +35,7 @@ bool flag_container::has_flag(const std::string& name)
 // #########
 
 util::error
-entity::load_entity(std::string path, texture_manager & tm)
+entity::load_entity_xml(std::string path, texture_manager & tm)
 {
 	using namespace tinyxml2;
 	XMLDocument doc;
@@ -146,7 +146,7 @@ entity::load_animations(tinyxml2::XMLElement* e, texture_manager& tm)
 		if (ele->Attribute("type", "speech"))
 			anim.type = e_type::speech;
 
-		load_xml_animation(ele, anim.anim, tm);
+		load_single_animation(ele, anim.anim, tm);
 		ele = ele->NextSiblingElement();
 	}
 
@@ -154,7 +154,7 @@ entity::load_animations(tinyxml2::XMLElement* e, texture_manager& tm)
 }
 
 util::error
-entity::load_xml_animation(tinyxml2::XMLElement* ele, engine::animation &anim, texture_manager &tm)
+entity::load_single_animation(tinyxml2::XMLElement* ele, engine::animation &anim, texture_manager &tm)
 {
 	assert(ele != nullptr);
 
@@ -265,6 +265,7 @@ character::get_speed()
 
 tilemap::tilemap()
 {
+	add_child(node);
 	node.set_tile_size(defs::TILE_SIZE);
 }
 
@@ -329,7 +330,7 @@ tilemap::load_tilemap(tinyxml2::XMLElement* e, collision_system &collision, size
 }
 
 util::error
-tilemap::load_scene_tilemap(tinyxml2::XMLElement * e, collision_system & collision)
+tilemap::load_tilemap_xml(tinyxml2::XMLElement * e, collision_system & collision)
 {
 	auto ele_tilemap = e->FirstChildElement("tilemap");
 	while (ele_tilemap)
@@ -356,7 +357,21 @@ tilemap::load_script_interface(angelscript& script)
 int
 tilemap::draw(engine::renderer &_r)
 {
-	node.set_position(get_exact_position());
+	engine::fvector pos = get_exact_position();
+
+	engine::fvector mousepos = _r.get_mouse_position(pos) / 32;
+	mousepos.x = std::floor(mousepos.x);
+	mousepos.y = std::floor(mousepos.y);
+
+	if (_r.is_mouse_pressed(engine::events::mouse_button::mouse_left))
+	{
+		set_tile("wall", mousepos, {1, 1}, 0, 0);
+	}
+	if (_r.is_mouse_pressed(engine::events::mouse_button::mouse_right))
+	{
+		
+	}
+
 	node.draw(_r);
 	return 0;
 }
@@ -662,7 +677,7 @@ scene::load_entities(tinyxml2::XMLElement * e)
 		engine::fvector pos = util::shortcuts::vector_float_att(ele);
 
 		auto& ne = entities.add_item();
-		ne.load_entity(att_path, *tm);
+		ne.load_entity_xml(att_path, *tm);
 		ne.set_position(pos);
 		get_renderer()->add_client(&ne);
 
@@ -683,7 +698,7 @@ scene::load_characters(tinyxml2::XMLElement * e)
 		engine::fvector pos = util::shortcuts::vector_float_att(ele);
 
 		auto& ne = characters.add_item();
-		ne.load_entity(att_path, *tm);
+		ne.load_entity_xml(att_path, *tm);
 		ne.set_cycle("default");
 		ne.set_position(pos *32);
 		get_renderer()->add_client(&ne);
@@ -697,7 +712,7 @@ entity* scene::script_add_entity(const std::string & path)
 {
 	assert(tm != nullptr);
 	auto& ne = entities.add_item();
-	ne.load_entity(path, *tm);
+	ne.load_entity_xml(path, *tm);
 	get_renderer()->add_client(&ne);
 	return &ne;
 }
@@ -706,7 +721,7 @@ entity* scene::script_add_character(const std::string & path)
 {
 	assert(tm != nullptr);
 	auto& nc = characters.add_item();
-	nc.load_entity(path, *tm);
+	nc.load_entity_xml(path, *tm);
 	nc.set_cycle(character::e_cycle::default);
 	get_renderer()->add_client(&nc);
 	return &nc;
@@ -767,14 +782,15 @@ void scene::script_set_animation(entity * e, const std::string & name)
 }
 
 
-util::error scene::load_scene(std::string path, angelscript& script, flag_container& flags)
+util::error scene::load_scene_xml(std::string path, angelscript& script, flag_container& flags)
 {
 	assert(tm != nullptr);
+
 	using namespace tinyxml2;
 
 	XMLDocument doc;
-	doc.LoadFile(path.c_str());
-
+	if (doc.LoadFile(path.c_str()))
+		return util::error("Unable to load scene");
 	auto root = doc.RootElement();
 
 	c_path = path;
@@ -791,11 +807,11 @@ util::error scene::load_scene(std::string path, angelscript& script, flag_contai
 	{
 		auto tex = tm->get_texture(ele_tilemap_tex->GetText());
 		if (!tex)
-			return "Invalid tilemap texture";
+			return util::error("Invalid tilemap texture");
 		tilemap.set_texture(*tex);
 	}
 	else
-		return "Tilemap texture is not defined";
+		return util::error("Tilemap texture is not defined");
 	
 
 	if (auto ele_entities = root->FirstChildElement("entities"))
@@ -823,7 +839,8 @@ util::error scene::load_scene(std::string path, angelscript& script, flag_contai
 
 	}
 	
-	tilemap.load_scene_tilemap(root, collision);
+	if (auto ele_map = root->FirstChildElement("map"))
+		tilemap.load_tilemap_xml(ele_map);
 	return 0;
 }
 
@@ -831,8 +848,8 @@ util::error
 scene::reload_scene(angelscript & script, flag_container & flags)
 {
 	if (c_path.empty())
-		return "No scene currently loaded";
-	return load_scene(c_path, script, flags);
+		return util::error("No scene currently loaded");
+	return load_scene_xml(c_path, script, flags);
 }
 
 void scene::load_script_interface(angelscript& script)
@@ -1144,7 +1161,7 @@ float game::get_delta()
 }
 
 util::error
-game::load_game(std::string path)
+game::load_game_xml(std::string path)
 {
 	using namespace tinyxml2;
 
@@ -1168,16 +1185,16 @@ game::load_game(std::string path)
 
 	textures.load_settings(textures_path);
 	
-	player.load_entity(player_path, textures);
+	player.load_entity_xml(player_path, textures);
 	player.set_position({ 64, 120 });
 	player.set_cycle(character::e_cycle::default);
 	
 	game_scene.set_texture_manager(textures);
-	game_scene.load_scene(scene_path, script, flags);
+	game_scene.load_scene_xml(scene_path, script, flags);
 
 	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
 	{
-		narrative.load_narrative(ele_narrative, textures);
+		narrative.load_narrative_xml(ele_narrative, textures);
 	}
 	return 0;
 }
@@ -1185,6 +1202,8 @@ game::load_game(std::string path)
 void
 game::tick(controls& con)
 {
+	bool edit_mode = true;
+
 	float delta = frameclock.get_elapse().s();
 
 	if (con.is_triggered(controls::control::reset))
@@ -1196,12 +1215,25 @@ game::tick(controls& con)
 
 	c_controls = con;
 
-	player.movement(con, game_scene.get_collision_system(), delta);
-
-	if (!player.is_locked())
+	if (edit_mode)
 	{
-		root_node.set_focus(player.get_position());
-		player_scene_interact();
+		if (con.is_triggered(controls::control::left))
+			root_node.set_position(root_node.get_position() + engine::fvector( -delta, 0)*32);
+		if (con.is_triggered(controls::control::right))
+			root_node.set_position(root_node.get_position() + engine::fvector(delta, 0)*32);
+		if (con.is_triggered(controls::control::up))
+			root_node.set_position(root_node.get_position() + engine::fvector(0, -delta)*32);
+		if (con.is_triggered(controls::control::down))
+			root_node.set_position(root_node.get_position() + engine::fvector(0, delta)*32);
+	}
+	else{
+		player.movement(con, game_scene.get_collision_system(), delta);
+
+		if (!player.is_locked())
+		{
+			root_node.set_focus(player.get_position());
+			player_scene_interact();
+		}
 	}
 
 	script.tick();
@@ -1245,7 +1277,7 @@ panning_node::set_focus(engine::fvector pos)
 }
 
 // ##########
-// narrative
+// narrative_dialog
 // ##########
 
 util::error
@@ -1399,7 +1431,7 @@ narrative_dialog::set_selection(const std::string & str)
 }
 
 util::error
-narrative_dialog::load_narrative(tinyxml2::XMLElement* e, texture_manager& tm)
+narrative_dialog::load_narrative_xml(tinyxml2::XMLElement* e, texture_manager& tm)
 {
 	load_box(e, tm);
 	load_font(e);
@@ -1528,8 +1560,8 @@ tilemap_loader::tile::load_xml(tinyxml2::XMLElement * e, size_t _layer)
 
 	atlas = util::safe_string(e->Name());
 
-	x = e->FloatAttribute("x");
-	y = e->FloatAttribute("y");
+	pos.x = e->FloatAttribute("x");
+	pos.y = e->FloatAttribute("y");
 
 	fill.x = e->IntAttribute("w");
 	fill.y = e->IntAttribute("h");
@@ -1545,8 +1577,8 @@ tilemap_loader::tile::is_adjacent_above(tile & a)
 {
 	return (
 		atlas == a.atlas
-		&& x == a.x
-		&& y == a.y + a.fill.y
+		&& pos.x == a.pos.x
+		&& pos.y == a.pos.y + a.fill.y
 		&& fill.x == a.fill.x
 		&& collision == a.collision
 		);
@@ -1557,8 +1589,8 @@ tilemap_loader::tile::is_adjacent_right(tile & a)
 {
 	return (
 		atlas == a.atlas
-		&& y == a.y
-		&& x + fill.x == a.x
+		&& pos.y == a.pos.y
+		&& pos.x + fill.x == a.pos.x
 		&& fill.y == a.fill.y
 		&& collision == a.collision
 		);
@@ -1569,8 +1601,7 @@ tilemap_loader::find_tile(engine::fvector pos, size_t layer)
 {
 	for (auto &i : tiles[layer])
 	{
-		if (i.x == pos.x
-			&& i.y == pos.y)
+		if (i.pos == pos)
 			return &i;
 	}
 	return nullptr;
@@ -1584,7 +1615,7 @@ tilemap_loader::condense_layer(std::vector<tile> &map)
 		return;
 
 	std::sort(map.begin(), map.end(), [](tile& a, tile& b)
-	{ return (a.y < b.y) || ((a.y == b.y) && (a.x < b.x)); });
+	{ return (a.pos.y < b.pos.y) || ((a.pos.y == b.pos.y) && (a.pos.x < b.pos.x)); });
 
 	std::vector<tile> nmap;
 
@@ -1635,6 +1666,11 @@ tilemap_loader::condense_tiles()
 	}
 }
 
+void tilemap_loader::set_texture(engine::texture & t)
+{
+	node.set_texture(t);
+}
+
 util::error
 tilemap_loader::load_layer(tinyxml2::XMLElement * e, size_t layer)
 {
@@ -1651,15 +1687,16 @@ tilemap_loader::load_layer(tinyxml2::XMLElement * e, size_t layer)
 
 tilemap_loader::tilemap_loader()
 {
+	add_child(node);
 	node.set_tile_size(defs::TILE_SIZE);
 }
 
 util::error
-tilemap_loader::load_tilemap(tinyxml2::XMLElement *root)
+tilemap_loader::load_tilemap_xml(tinyxml2::XMLElement *root)
 {
 	if (auto att_path = root->Attribute("path"))
 	{
-		load_tilemap(util::safe_string(att_path));
+		load_tilemap_xml(util::safe_string(att_path));
 	}
 
 	auto ele_tilemap = root->FirstChildElement("layer");
@@ -1669,24 +1706,44 @@ tilemap_loader::load_tilemap(tinyxml2::XMLElement *root)
 		load_layer(ele_tilemap, att_layer);
 		ele_tilemap = ele_tilemap->NextSiblingElement("layer");
 	}
+	update_display();
 	return 0;
 }
 
 util::error
-tilemap_loader::load_tilemap(std::string path)
+tilemap_loader::load_tilemap_xml(std::string path)
 {
 	using namespace tinyxml2;
 	XMLDocument doc;
 	if (doc.LoadFile(path.c_str()))
 		return "Error loading tilemap file";
 	auto root = doc.RootElement();
-	load_tilemap(root);
+	load_tilemap_xml(root);
 	return 0;
 }
 
-void
-tilemap_loader::break_tile(engine::fvector pos)
+tilemap_loader::tile*
+tilemap_loader::find_tile_at(engine::fvector pos, size_t layer)
 {
+	for (auto &i : tiles[layer])
+	{
+		if (engine::frect(i.pos, i.fill).is_intersect(pos))
+		{
+			return &i;
+		}
+	}
+	return nullptr;
+}
+
+void
+tilemap_loader::break_tile(engine::fvector pos, size_t layer)
+{
+	auto t = find_tile_at(pos, layer);
+	if (!t)
+		return;
+	auto fill = t->fill;
+	t->fill = { 1, 1 };
+	set_tile(t->pos, fill, layer, t->atlas, t->rotation);
 }
 
 void
@@ -1707,8 +1764,8 @@ tilemap_loader::generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode * root)
 		for (auto &i : l.second)
 		{
 			auto ele = doc.NewElement(i.atlas.c_str());
-			ele->SetAttribute("x", i.x);
-			ele->SetAttribute("y", i.y);
+			ele->SetAttribute("x", i.pos.x);
+			ele->SetAttribute("y", i.pos.y);
 			if (i.fill.x > 1)    ele->SetAttribute("w", i.fill.x);
 			if (i.fill.y > 1)    ele->SetAttribute("h", i.fill.y);
 			if (i.rotation != 0) ele->SetAttribute("r", i.rotation);
@@ -1729,15 +1786,28 @@ tilemap_loader::generate(const std::string& path)
 }
 
 int
-tilemap_loader::set_tile(engine::fvector pos, size_t layer, std::string atlas, int rot)
+tilemap_loader::set_tile(engine::fvector pos, engine::fvector fill, size_t layer, const std::string& atlas, int rot)
+{
+	engine::fvector off(0, 0);
+	for (off.y = 0; off.y <= fill.y; off.y++)
+	{
+		for (off.x = 0; off.x <= fill.x; off.x++)
+		{
+			set_tile(pos + off, layer, atlas, rot);
+		}
+	}
+	return 0;
+}
+
+int
+tilemap_loader::set_tile(engine::fvector pos, size_t layer, const std::string& atlas, int rot)
 {
 	tile* t = find_tile(pos, layer);
 	if (!t)
 	{
 		tiles[layer].emplace_back();
 		auto &nt = tiles[layer].back();
-		nt.x = pos.x;
-		nt.y = pos.y;
+		nt.pos = pos;
 		nt.fill = { 1, 1 };
 		nt.atlas = atlas;
 		nt.rotation = rot;
@@ -1751,6 +1821,18 @@ tilemap_loader::set_tile(engine::fvector pos, size_t layer, std::string atlas, i
 	return 0;
 }
 
+void tilemap_loader::remove_tile(engine::fvector pos, size_t layer)
+{
+	for (auto &i = tiles[layer].begin(); i != tiles[layer].end(); i++)
+	{
+		if (i->pos == pos)
+		{
+			tiles[layer].erase(i);
+			break;
+		}
+	}
+}
+
 void
 tilemap_loader::update_display()
 {
@@ -1759,9 +1841,28 @@ tilemap_loader::update_display()
 	{
 		for (auto &i : l.second)
 		{
-			node.set_tile(i, i.atlas, l.first, i.rotation);
+			engine::fvector off(0, 0);
+			for (off.y = 0; off.y < i.fill.y; off.y++)
+			{
+				for (off.x = 0; off.x < i.fill.x; off.x++)
+				{
+					node.set_tile(i.pos + off, i.atlas, l.first, i.rotation);
+				}
+			}
 		}
 	}
+}
+
+void tilemap_loader::clear()
+{
+	node.clear_all();
+	tiles.clear();
+}
+
+int tilemap_loader::draw(engine::renderer & r)
+{
+	node.draw(r);
+	return 0;
 }
 
 

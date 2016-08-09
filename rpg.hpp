@@ -126,11 +126,11 @@ public:
 	void tick_withtype(e_type type);
 	bool set_animation(std::string name);
 	int draw(engine::renderer &_r);
-	util::error load_entity(std::string path, texture_manager& tm);
+	util::error load_entity_xml(std::string path, texture_manager& tm);
 	void set_dynamic_depth(bool a);
 protected:
 	util::error load_animations(tinyxml2::XMLElement* e, texture_manager& tm);
-	util::error load_xml_animation(tinyxml2::XMLElement* ele, engine::animation &anim, texture_manager& tm);
+	util::error load_single_animation(tinyxml2::XMLElement* ele, engine::animation &anim, texture_manager& tm);
 };
 
 class character :
@@ -303,7 +303,7 @@ public:
 	void hide_box();
 	bool is_box_open();
 
-	void set_style_profile(const std::string& path);
+	//void set_style_profile(const std::string& path);
 
 	void set_interval(float ms);
 
@@ -311,7 +311,7 @@ public:
 	void hide_selection();
 	void set_selection(const std::string& str);
 
-	util::error load_narrative(tinyxml2::XMLElement* e, texture_manager& tm);
+	util::error load_narrative_xml(tinyxml2::XMLElement* e, texture_manager& tm);
 
 	void load_script_interface(angelscript& script);
 
@@ -322,17 +322,16 @@ protected:
 };
 
 class tilemap_loader :
-	//public engine::render_client,
+	public engine::render_client,
 	public engine::node
 {
 	engine::tile_node node;
 
 	struct tile
-		: public engine::fvector
 	{
+		engine::fvector pos, fill;
 		int rotation;
 		std::string atlas;
-		engine::ivector fill;
 		bool collision;
 		void load_xml(tinyxml2::XMLElement *e, size_t layer);
 		bool is_adjacent_above(tile& a);
@@ -343,22 +342,32 @@ class tilemap_loader :
 
 	void condense_layer(std::vector<tile> &map);
 	util::error load_layer(tinyxml2::XMLElement *e, size_t layer);
+	
+	tile* find_tile_at(engine::fvector pos, size_t layer);
 public:
 	tilemap_loader();
 
 	void condense_tiles();
 
-	util::error load_tilemap(tinyxml2::XMLElement *root);
-	util::error load_tilemap(std::string path);
+	void set_texture(engine::texture& t);
 
-	void break_tile(engine::fvector pos);
+	util::error load_tilemap_xml(tinyxml2::XMLElement *root);
+	util::error load_tilemap_xml(std::string path);
+	
+	void break_tile(engine::fvector pos, size_t layer);
 
 	void generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode* root);
 	void generate(const std::string& path);
 
-	int set_tile(engine::fvector pos, size_t layer, std::string atlas, int rot);
+	int set_tile(engine::fvector pos, engine::fvector fill, size_t layer, const std::string& atlas, int rot);
+	int set_tile(engine::fvector pos, size_t layer, const std::string& atlas, int rot);
+	void remove_tile(engine::fvector pos, size_t layer);
 
 	void update_display();
+
+	void clear();
+
+	int draw(engine::renderer &_r);
 };
 
 class tilemap :
@@ -371,7 +380,7 @@ public:
 	tilemap();
 	void set_texture(engine::texture& t);
 	void set_tile(const std::string& name, engine::fvector pos, engine::fvector fill, size_t layer, int rot);
-	util::error load_scene_tilemap(tinyxml2::XMLElement* e, collision_system& collision);
+	util::error load_tilemap_xml(tinyxml2::XMLElement* e, collision_system& collision);
 	void clear();
 	void load_script_interface(angelscript& script);
 	int draw(engine::renderer &_r);
@@ -405,7 +414,7 @@ class scene :
 	public engine::render_proxy,
 	public engine::node
 {
-	tilemap tilemap;
+	tilemap_loader tilemap;
 	collision_system collision;
 	texture_manager * tm;
 
@@ -432,10 +441,10 @@ public:
 	collision_system& get_collision_system();
 
 	character* find_character(const std::string& name);
-	entity* find_entity(const std::string& name);
+	entity*    find_entity(const std::string& name);
 
 	void clean_scene();
-	util::error load_scene(std::string path, angelscript& script, flag_container& flags);
+	util::error load_scene_xml(std::string path, angelscript& script, flag_container& flags);
 	util::error reload_scene(angelscript& script, flag_container& flags);
 
 	void load_script_interface(angelscript& script);
@@ -470,7 +479,7 @@ class game :
 
 public:
 	game();
-	util::error load_game(std::string path);
+	util::error load_game_xml(std::string path);
 	void tick(controls& con);
 
 protected:
