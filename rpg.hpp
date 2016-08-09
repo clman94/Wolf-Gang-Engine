@@ -252,6 +252,7 @@ private:
 	void register_vector_type();
 	void message_callback(const AS::asSMessageInfo * msg);
 	std::string get_metadata_type(const std::string &str);
+	void script_abort();
 public:
 	angelscript();
 	~angelscript();
@@ -416,19 +417,24 @@ class scene :
 	util::error load_entities(tinyxml2::XMLElement* e);
 	util::error load_characters(tinyxml2::XMLElement* e);
 
-	entity* script_add_entity(const std::string& path);
-	character* script_add_character(const std::string& path);
-	void script_set_position(entity* e, const engine::fvector& pos);
+	entity*         script_add_entity(const std::string& path);
+	entity*         script_add_character(const std::string& path);
+	void            script_set_position(entity* e, const engine::fvector& pos);
 	engine::fvector script_get_position(entity* e);
+	void            script_set_direction(entity* e, int dir);
+	void            script_set_cycle(entity* e, const std::string& name);
+	void            script_start_animation(entity* e, int type);
+	void            script_stop_animation(entity* e, int type);
+	void            script_set_animation(entity* e, const std::string& name);
 
 public:
 	scene();
 	collision_system& get_collision_system();
+
 	character* find_character(const std::string& name);
 	entity* find_entity(const std::string& name);
 
 	void clean_scene();
-
 	util::error load_scene(std::string path, angelscript& script, flag_container& flags);
 	util::error reload_scene(angelscript& script, flag_container& flags);
 
@@ -457,9 +463,10 @@ class game :
 
 	void player_scene_interact();
 
-	engine::fvector script_get_player_position();
-	void script_set_player_position(const engine::fvector& pos);
+	entity* script_get_player();
 	void load_script_interface();
+
+	float get_delta();
 
 public:
 	game();

@@ -220,6 +220,7 @@ void
 character::set_cycle_group(std::string name)
 {
 	cyclegroup = name;
+	set_cycle(cycle);
 }
 
 void
@@ -714,13 +715,55 @@ entity* scene::script_add_character(const std::string & path)
 void scene::script_set_position(entity* e, const engine::fvector & pos)
 {
 	assert(e != nullptr);
-	e->set_position(pos);
+	e->set_position(engine::fvector(32, 32)*pos);
 }
 
 engine::fvector scene::script_get_position(entity * e)
 {
 	assert(e != nullptr);
-	return e->get_position();
+	return e->get_position()*32;
+}
+
+void scene::script_set_direction(entity* e, int dir)
+{
+	assert(e != nullptr);
+	character* c = dynamic_cast<character*>(e);
+	if (c == nullptr)
+	{
+		std::cout << "Error: Entity is not a character";
+		return;
+	}
+	c->set_cycle(static_cast<character::e_cycle>(dir));
+}
+
+void scene::script_set_cycle(entity* e, const std::string& name)
+{
+	assert(e != nullptr);
+	character* c = dynamic_cast<character*>(e);
+	if (c == nullptr)
+	{
+		std::cout << "Error: Entity is not a character";
+		return;
+	}
+	c->set_cycle_group(name);
+}
+
+void scene::script_start_animation(entity* e, int type)
+{
+	assert(e != nullptr);
+	e->play_withtype(static_cast<entity::e_type>(type));
+}
+
+void scene::script_stop_animation(entity* e, int type)
+{
+	assert(e != nullptr);
+	e->stop_withtype(static_cast<entity::e_type>(type));
+}
+
+void scene::script_set_animation(entity * e, const std::string & name)
+{
+	assert(e != nullptr);
+	e->set_animation(name);
 }
 
 
@@ -794,12 +837,15 @@ scene::reload_scene(angelscript & script, flag_container & flags)
 
 void scene::load_script_interface(angelscript& script)
 {
-	script.add_pointer_type("entity");
-
 	script.add_function("entity add_entity(const string &in)", asMETHOD(scene, script_add_entity), this);
 	script.add_function("entity add_character(const string &in)", asMETHOD(scene, script_add_character), this);
 	script.add_function("void set_position(entity, const vec &in)", asMETHOD(scene, script_set_position), this);
 	script.add_function("vec get_position(entity)", asMETHOD(scene, script_get_position), this);
+	script.add_function("void set_direction(entity, int)", asMETHOD(scene, script_set_direction), this);
+	script.add_function("void set_cycle(entity, const string &in)", asMETHOD(scene, script_set_cycle), this);
+	script.add_function("void _start_animation(entity, int)", asMETHOD(scene, script_start_animation), this);
+	script.add_function("void _stop_animation(entity, int)", asMETHOD(scene, script_stop_animation), this);
+	script.add_function("void set_animation(entity, const string &in)", asMETHOD(scene, script_set_animation), this);
 }
 
 void
@@ -867,6 +913,13 @@ angelscript::get_metadata_type(const std::string & str)
 	return str;
 }
 
+void angelscript::script_abort()
+{
+	auto c_ctx = ctxmgr.GetCurrentContext();
+	assert(c_ctx != nullptr);
+	c_ctx->Abort();
+}
+
 void
 angelscript::dprint(std::string &msg)
 {
@@ -888,6 +941,9 @@ angelscript::register_vector_type()
 		, asCALL_THISCALL);
 	as_engine->RegisterObjectMethod("vec", "vec& opAddAssign(const vec &in)"
 		, asMETHODPR(engine::fvector, operator+=<float>, (const engine::fvector&), engine::fvector&)
+		, asCALL_THISCALL);
+	as_engine->RegisterObjectMethod("vec", "vec opMul(const float&in)"
+		, asMETHODPR(engine::fvector, operator*<float>, (const float&), engine::fvector)
 		, asCALL_THISCALL);
 
 	as_engine->RegisterObjectProperty("vec", "float x", asOFFSET(engine::fvector, x));
@@ -915,6 +971,8 @@ angelscript::angelscript()
 	add_function("void cocall(const string &in)", asMETHOD(angelscript, call_event_function), this);
 
 	add_function("void dprint(const string &in)", asMETHOD(angelscript, dprint), this);
+
+	add_function("void abort()", asMETHOD(angelscript, script_abort), this);
 }
 
 angelscript::~angelscript()
@@ -1047,9 +1105,19 @@ game::player_scene_interact()
 	}
 }
 
+entity* game::script_get_player()
+{
+	return &player;
+}
+
 void
 game::load_script_interface()
 {
+	script.add_pointer_type("entity");
+
+	script.add_function("float get_delta()", asMETHOD(game, get_delta), this);
+	script.add_function("entity get_player()", asMETHOD(game, script_get_player), this);
+
 	script.add_function("bool has_flag(const string &in)", asMETHOD(flag_container, has_flag), &flags);
 	script.add_function("bool set_flag(const string &in)", asMETHOD(flag_container, set_flag), &flags);
 	script.add_function("bool unset_flag(const string &in)", asMETHOD(flag_container, unset_flag), &flags);
@@ -1065,9 +1133,14 @@ game::load_script_interface()
 	script.add_function("int _music_open(const string &in)", asMETHOD(engine::sound_stream, open), &bg_music);
 
 	script.add_function("bool _is_triggered(int)", asMETHOD(controls, is_triggered), &c_controls);
-	
+
 	narrative.load_script_interface(script);
 	game_scene.load_script_interface(script);
+}
+
+float game::get_delta()
+{
+	return frameclock.get_elapse().s();
 }
 
 util::error
