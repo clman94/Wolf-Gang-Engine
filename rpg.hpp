@@ -23,21 +23,24 @@ namespace AS = AngelScript;
 
 namespace rpg{
 
+class script_system;
+
 class panning_node :
 	public engine::node
 {
-	engine::fvector boundary, viewport;
 public:
 	void set_boundary(engine::fvector a);
 	void set_viewport(engine::fvector a);
 	void set_focus(engine::fvector pos);
+
+private:
+	engine::fvector boundary, viewport;
 };
 
 template<typename T>
 class node_list :
 	public engine::node
 {
-	std::list<T> items;
 public:
 
 	void clear()
@@ -63,20 +66,25 @@ public:
 	auto begin() { return items.begin(); }
 	auto end()   { return items.end();   }
 	auto back()  { return items.back();  }
+
+private:
+	std::list<T> items;
 };
 
 class flag_container
 {
-	std::set<std::string> flags;
 public:
 	bool set_flag(const std::string& name);
 	bool unset_flag(const std::string& name);
 	bool has_flag(const std::string& name);
+	void load_script_interface(script_system& script);
+
+private:
+	std::set<std::string> flags;
 };
 
 class controls
 {
-	std::array<bool, 8> c_controls;
 public:
 	enum class control
 	{
@@ -93,6 +101,9 @@ public:
 	void trigger(control c);
 	bool is_triggered(control c);
 	void reset();
+
+private:
+	std::array<bool, 8> c_controls;
 };
 
 class entity :
@@ -100,18 +111,6 @@ class entity :
 	public engine::node,
 	public   util::named
 {
-	struct entity_animation :
-		public util::named
-	{
-		engine::animation anim;
-		int type;
-	};
-
-	engine::animation_node node;
-	std::list<entity_animation> animations;
-	entity_animation *c_animation;
-
-	bool dynamic_depth;
 public:
 	enum e_type
 	{
@@ -128,17 +127,29 @@ public:
 	int draw(engine::renderer &_r);
 	util::error load_entity_xml(std::string path, texture_manager& tm);
 	void set_dynamic_depth(bool a);
+
 protected:
 	util::error load_animations(tinyxml2::XMLElement* e, texture_manager& tm);
 	util::error load_single_animation(tinyxml2::XMLElement* ele, engine::animation &anim, texture_manager& tm);
+
+private:
+	struct entity_animation :
+		public util::named
+	{
+		engine::animation anim;
+		int type;
+	};
+
+	engine::animation_node node;
+	std::list<entity_animation> animations;
+	entity_animation *c_animation;
+
+	bool dynamic_depth;
 };
 
 class character :
 	public entity
 {
-	std::string cyclegroup;
-	std::string cycle;
-	float move_speed;
 public:
 
 	enum struct e_cycle
@@ -158,15 +169,15 @@ public:
 
 	void  set_speed(float f);
 	float get_speed();
+
+private:
+	std::string cyclegroup;
+	std::string cycle;
+	float move_speed;
 };
 
 class script_function
 {
-	AS::asIScriptEngine *as_engine;
-	AS::asIScriptFunction *func;
-	AS::CContextMgr *ctx;
-	AS::asIScriptContext *func_ctx;
-
 public:
 	script_function();
 	~script_function();
@@ -176,32 +187,49 @@ public:
 	void set_context_manager(AS::CContextMgr * cm);
 	void add_arg_obj(unsigned int index, void* ptr);
 	void call();
+
+private:
+	AS::asIScriptEngine *as_engine;
+	AS::asIScriptFunction *func;
+	AS::CContextMgr *ctx;
+	AS::asIScriptContext *func_ctx;
+};
+
+struct collision_box
+	: engine::frect
+{
+public:
+	collision_box();
+	bool is_valid();
+	void validate(flag_container & flags);
+	void load_xml(tinyxml2::XMLElement* e);
+
+protected:
+	std::string invalid_on_flag;
+	std::string spawn_flag;
+	bool valid;
+};
+
+struct trigger : public collision_box
+{
+public:
+	script_function& get_function();
+	void parse_function_metadata(const std::string& metadata);
+
+private:
+	script_function func;
+};
+
+struct door : public collision_box
+{
+	std::string name;
+	std::string scene_path;
+	std::string destination;
 };
 
 class collision_system
 {
 public:
-	struct collision_box
-		: engine::frect
-	{
-		std::string invalid_on_flag;
-		std::string spawn_flag;
-		bool valid;
-		collision_box() : valid(true){}
-	};
-
-	struct trigger : public collision_box
-	{
-		script_function func;
-	};
-
-	struct door : public collision_box
-	{
-		std::string name;
-		std::string scene_path;
-		std::string destination;
-	};
-
 	collision_box* wall_collision(const engine::frect& r);
 	door*          door_collision(const engine::fvector& r);
 	trigger*       trigger_collision(const engine::fvector& pos);
@@ -209,7 +237,6 @@ public:
 
 	engine::fvector get_door_entry(std::string name);
 
-	void validate_collisionbox(collision_box& cb, flag_container& flags);
 	void validate_all(flag_container& flags);
 
 	void add_wall(engine::frect r);
@@ -226,7 +253,7 @@ private:
 };
 
 // Excuse this mess -_-
-class angelscript
+class script_system
 {
 private:
 	AS::asIScriptEngine* as_engine;
@@ -253,9 +280,10 @@ private:
 	void message_callback(const AS::asSMessageInfo * msg);
 	std::string get_metadata_type(const std::string &str);
 	void script_abort();
+
 public:
-	angelscript();
-	~angelscript();
+	script_system();
+	~script_system();
 	util::error load_scene_script(const std::string& path);
 	void add_function(const char* decl, const AS::asSFuncPtr & ptr, void* instance);
 	void add_function(const char* decl, const AS::asSFuncPtr & ptr);
@@ -313,7 +341,7 @@ public:
 
 	util::error load_narrative_xml(tinyxml2::XMLElement* e, texture_manager& tm);
 
-	void load_script_interface(angelscript& script);
+	void load_script_interface(script_system& script);
 
 	int draw(engine::renderer &r);
 
@@ -325,6 +353,7 @@ class tilemap_loader :
 	public engine::render_client,
 	public engine::node
 {
+private:
 	engine::tile_node node;
 
 	struct tile
@@ -374,16 +403,18 @@ class tilemap :
 	public engine::render_client,
 	public engine::node
 {
-	engine::tile_node node;
-	util::error load_tilemap(tinyxml2::XMLElement* e, collision_system& collision, size_t layer);
 public:
 	tilemap();
 	void set_texture(engine::texture& t);
 	void set_tile(const std::string& name, engine::fvector pos, engine::fvector fill, size_t layer, int rot);
 	util::error load_tilemap_xml(tinyxml2::XMLElement* e, collision_system& collision);
 	void clear();
-	void load_script_interface(angelscript& script);
+	void load_script_interface(script_system& script);
 	int draw(engine::renderer &_r);
+
+private:
+	engine::tile_node node;
+	util::error load_tilemap(tinyxml2::XMLElement* e, collision_system& collision, size_t layer);
 };
 
 class player_character :
@@ -414,6 +445,22 @@ class scene :
 	public engine::render_proxy,
 	public engine::node
 {
+public:
+	scene();
+	collision_system& get_collision_system();
+
+	character* find_character(const std::string& name);
+	entity*    find_entity(const std::string& name);
+
+	void clean_scene();
+	util::error load_scene_xml(std::string path, script_system& script, flag_container& flags);
+	util::error reload_scene(script_system& script, flag_container& flags);
+
+	void load_script_interface(script_system& script);
+
+	void set_texture_manager(texture_manager& ntm);
+
+private:
 	tilemap_loader tilemap;
 	collision_system collision;
 	texture_manager * tm;
@@ -436,47 +483,23 @@ class scene :
 	void            script_stop_animation(entity* e, int type);
 	void            script_set_animation(entity* e, const std::string& name);
 
-public:
-	scene();
-	collision_system& get_collision_system();
-
-	character* find_character(const std::string& name);
-	entity*    find_entity(const std::string& name);
-
-	void clean_scene();
-	util::error load_scene_xml(std::string path, angelscript& script, flag_container& flags);
-	util::error reload_scene(angelscript& script, flag_container& flags);
-
-	void load_script_interface(angelscript& script);
-
-	void set_texture_manager(texture_manager& ntm);
 protected:
 	void refresh_renderer(engine::renderer& _r);
+};
+
+class background_music
+{
+public:
+	void load_script_interface(script_system& script);
+
+private:
+	engine::sound_stream bg_music;
 };
 
 class game :
 	public engine::render_proxy,
 	public util::nocopy
-{
-	scene game_scene;
-	player_character player;
-	texture_manager  textures;
-	flag_container   flags;
-	narrative_dialog narrative;
-	panning_node     root_node;
-	engine::clock    frameclock;
-	angelscript      script;
-	controls         c_controls;
-
-	engine::sound_stream bg_music;
-
-	void player_scene_interact();
-
-	entity* script_get_player();
-	void load_script_interface();
-
-	float get_delta();
-
+{	
 public:
 	game();
 	util::error load_game_xml(std::string path);
@@ -484,6 +507,25 @@ public:
 
 protected:
 	void refresh_renderer(engine::renderer& r);
+
+private:
+	panning_node     root_node;
+	scene            game_scene;
+	player_character player;
+	texture_manager  textures;
+	flag_container   flags;
+	narrative_dialog narrative;
+	background_music bg_music;
+	engine::clock    frameclock;
+	script_system      script;
+	controls         c_controls;
+
+	void player_scene_interact();
+
+	entity* script_get_player();
+	void load_script_interface();
+
+	float get_delta();
 };
 
 }

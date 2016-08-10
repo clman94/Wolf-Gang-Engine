@@ -30,6 +30,13 @@ bool flag_container::has_flag(const std::string& name)
 	return flags.find(name) != flags.end();
 }
 
+void flag_container::load_script_interface(script_system & script)
+{
+	script.add_function("bool has_flag(const string &in)", asMETHOD(flag_container, has_flag), this);
+	script.add_function("bool set_flag(const string &in)", asMETHOD(flag_container, set_flag), this);
+	script.add_function("bool unset_flag(const string &in)", asMETHOD(flag_container, unset_flag), this);
+}
+
 // #########
 // entity
 // #########
@@ -48,7 +55,6 @@ entity::load_entity_xml(std::string path, texture_manager & tm)
 		auto ele_animations = ele_root->FirstChildElement("animations");
 		load_animations(ele_animations, tm);
 	}
-
 	return 0;
 }
 
@@ -349,7 +355,7 @@ tilemap::clear()
 }
 
 void
-tilemap::load_script_interface(angelscript& script)
+tilemap::load_script_interface(script_system& script)
 {
 	script.add_function("void set_tile(string, vec, vec, uint, int, bool)", asMETHOD(tilemap, set_tile), this);
 }
@@ -357,21 +363,6 @@ tilemap::load_script_interface(angelscript& script)
 int
 tilemap::draw(engine::renderer &_r)
 {
-	engine::fvector pos = get_exact_position();
-
-	engine::fvector mousepos = _r.get_mouse_position(pos) / 32;
-	mousepos.x = std::floor(mousepos.x);
-	mousepos.y = std::floor(mousepos.y);
-
-	if (_r.is_mouse_pressed(engine::events::mouse_button::mouse_left))
-	{
-		set_tile("wall", mousepos, {1, 1}, 0, 0);
-	}
-	if (_r.is_mouse_pressed(engine::events::mouse_button::mouse_right))
-	{
-		
-	}
-
 	node.draw(_r);
 	return 0;
 }
@@ -380,38 +371,38 @@ tilemap::draw(engine::renderer &_r)
 // collision_system
 // #########
 
-collision_system::collision_box*
+collision_box*
 collision_system::wall_collision(const engine::frect & r)
 {
 	for (auto &i : walls)
-		if (i.valid && i.is_intersect(r))
+		if (i.is_valid() && i.is_intersect(r))
 			return &i;
 	return nullptr;
 }
 
-collision_system::door*
+door*
 collision_system::door_collision(const engine::fvector & r)
 {
 	for (auto &i : doors)
-		if (i.valid && i.is_intersect(r))
+		if (i.is_valid() && i.is_intersect(r))
 			return &i;
 	return nullptr;
 }
 
-collision_system::trigger*
+trigger*
 collision_system::trigger_collision(const engine::fvector & pos)
 {
 	for (auto &i : triggers)
-		if (i.valid && i.is_intersect(pos))
+		if (i.is_valid() && i.is_intersect(pos))
 			return &i;
 	return nullptr;
 }
 
-collision_system::trigger*
+trigger*
 collision_system::button_collision(const engine::fvector & pos)
 {
 	for (auto &i : buttons)
-		if (i.valid && i.is_intersect(pos))
+		if (i.is_valid() && i.is_intersect(pos))
 			return &i;
 	return nullptr;
 }
@@ -429,21 +420,13 @@ collision_system::get_door_entry(std::string name)
 	return{ -1, -1};
 }
 
-void
-collision_system::validate_collisionbox(collision_box & cb, flag_container & flags)
-{
-	cb.valid = !flags.has_flag(cb.invalid_on_flag);
-	if (!cb.spawn_flag.empty())
-		flags.set_flag(cb.spawn_flag);
-}
-
 void 
 collision_system::validate_all(flag_container& flags)
 {
-	for (auto &i : walls)    validate_collisionbox(i, flags);
-	for (auto &i : doors)    validate_collisionbox(i, flags);
-	for (auto &i : triggers) validate_collisionbox(i, flags);
-	for (auto &i : buttons)  validate_collisionbox(i, flags);
+	for (auto &i : walls)    i.validate(flags);
+	for (auto &i : doors)    i.validate(flags);
+	for (auto &i : triggers) i.validate(flags);
+	for (auto &i : buttons)  i.validate(flags);
 }
 
 void
@@ -481,50 +464,28 @@ collision_system::load_collision_boxes(tinyxml2::XMLElement* e, flag_container& 
 {
 	assert(e != nullptr);
 
-	auto ele = e->FirstChildElement();
-	while (ele)
+	auto ele_item = e->FirstChildElement();
+	while (ele_item)
 	{
-		std::string box_type = util::safe_string(ele->Name());
-
-		std::string invalid_on_flag = util::safe_string(ele->Attribute("invalid"));
-		bool is_valid = !flags.has_flag(invalid_on_flag);
-
-		std::string spawn_flag = util::safe_string(ele->Attribute("spawn"));
-
-		engine::frect rect;
-		rect.x = ele->FloatAttribute("x");
-		rect.y = ele->FloatAttribute("y");
-		rect.w = ele->FloatAttribute("w");
-		rect.h = ele->FloatAttribute("h");
-		rect = engine::scale(rect, defs::TILE_SIZE);
-		
-
-		// ##### TODO: Refactor #####
+		std::string box_type = util::safe_string(ele_item->Name());
 
 		if (box_type == "wall")
 		{
 			collision_box nw;
-			nw.set_rect(rect);
-			nw.invalid_on_flag = invalid_on_flag;
-			nw.spawn_flag = spawn_flag;
-			nw.valid = is_valid;
+			nw.load_xml(ele_item);
 			walls.emplace_back(nw);
 		}
 
 		if (box_type == "door")
 		{
 			door nd;
-			nd.set_rect(rect);
-			nd.invalid_on_flag = invalid_on_flag;
-			nd.spawn_flag = spawn_flag;
-			nd.valid = is_valid;
-			nd.name = util::safe_string(ele->Attribute("name"));
-			nd.destination = util::safe_string(ele->Attribute("dest"));
-			nd.scene_path = util::safe_string(ele->Attribute("scene"));
+			nd.name = util::safe_string(ele_item->Attribute("name"));
+			nd.destination = util::safe_string(ele_item->Attribute("dest"));
+			nd.scene_path = util::safe_string(ele_item->Attribute("scene"));
 			doors.push_back(nd);
 		}
 
-		ele = ele->NextSiblingElement();
+		ele_item = ele_item->NextSiblingElement();
 	}
 	return 0;
 }
@@ -782,7 +743,7 @@ void scene::script_set_animation(entity * e, const std::string & name)
 }
 
 
-util::error scene::load_scene_xml(std::string path, angelscript& script, flag_container& flags)
+util::error scene::load_scene_xml(std::string path, script_system& script, flag_container& flags)
 {
 	assert(tm != nullptr);
 
@@ -845,14 +806,14 @@ util::error scene::load_scene_xml(std::string path, angelscript& script, flag_co
 }
 
 util::error
-scene::reload_scene(angelscript & script, flag_container & flags)
+scene::reload_scene(script_system & script, flag_container & flags)
 {
 	if (c_path.empty())
 		return util::error("No scene currently loaded");
 	return load_scene_xml(c_path, script, flags);
 }
 
-void scene::load_script_interface(angelscript& script)
+void scene::load_script_interface(script_system& script)
 {
 	script.add_function("entity add_entity(const string &in)", asMETHOD(scene, script_add_entity), this);
 	script.add_function("entity add_character(const string &in)", asMETHOD(scene, script_add_character), this);
@@ -908,7 +869,7 @@ controls::reset()
 // angelscript
 // #########
 
-void angelscript::message_callback(const asSMessageInfo * msg)
+void script_system::message_callback(const asSMessageInfo * msg)
 {
 	std::string type = "ERROR";
 	if (msg->type == asEMsgType::asMSGTYPE_INFORMATION)
@@ -920,7 +881,7 @@ void angelscript::message_callback(const asSMessageInfo * msg)
 }
 
 std::string
-angelscript::get_metadata_type(const std::string & str)
+script_system::get_metadata_type(const std::string & str)
 {
 	for (auto i = str.begin(); i != str.end(); i++)
 	{
@@ -930,7 +891,7 @@ angelscript::get_metadata_type(const std::string & str)
 	return str;
 }
 
-void angelscript::script_abort()
+void script_system::script_abort()
 {
 	auto c_ctx = ctxmgr.GetCurrentContext();
 	assert(c_ctx != nullptr);
@@ -938,13 +899,13 @@ void angelscript::script_abort()
 }
 
 void
-angelscript::dprint(std::string &msg)
+script_system::dprint(std::string &msg)
 {
 	std::cout << "Debug : " << msg << "\n";
 }
 
 void
-angelscript::register_vector_type()
+script_system::register_vector_type()
 {
 	as_engine->RegisterObjectType("vec", sizeof(engine::fvector), asOBJ_VALUE | asGetTypeTraits<engine::fvector>());
 
@@ -967,11 +928,11 @@ angelscript::register_vector_type()
 	as_engine->RegisterObjectProperty("vec", "float y", asOFFSET(engine::fvector, y));
 }
 
-angelscript::angelscript()
+script_system::script_system()
 {
 	as_engine = asCreateScriptEngine();
 
-	as_engine->SetMessageCallback(asMETHOD(angelscript, message_callback), this, asCALL_THISCALL);
+	as_engine->SetMessageCallback(asMETHOD(script_system, message_callback), this, asCALL_THISCALL);
 
 	RegisterStdString(as_engine);
 	RegisterScriptMath(as_engine);
@@ -985,14 +946,14 @@ angelscript::angelscript()
 	add_function("void _timer_start(float)",  asMETHOD(engine::timer, start_timer), &main_timer);
 	add_function("bool _timer_reached()",     asMETHOD(engine::timer, is_reached), &main_timer);
 
-	add_function("void cocall(const string &in)", asMETHOD(angelscript, call_event_function), this);
+	add_function("void cocall(const string &in)", asMETHOD(script_system, call_event_function), this);
 
-	add_function("void dprint(const string &in)", asMETHOD(angelscript, dprint), this);
+	add_function("void dprint(const string &in)", asMETHOD(script_system, dprint), this);
 
-	add_function("void abort()", asMETHOD(angelscript, script_abort), this);
+	add_function("void abort()", asMETHOD(script_system, script_abort), this);
 }
 
-angelscript::~angelscript()
+script_system::~script_system()
 {
 	ctxmgr.AbortAll();
 	ctxmgr.~CContextMgr(); // Destroy context manager before releasing engine
@@ -1000,7 +961,7 @@ angelscript::~angelscript()
 }
 
 util::error
-angelscript::load_scene_script(const std::string& path)
+script_system::load_scene_script(const std::string& path)
 {
 	ctxmgr.AbortAll();
 	as_engine->DiscardModule("scene");
@@ -1016,27 +977,27 @@ angelscript::load_scene_script(const std::string& path)
 }
 
 void
-angelscript::add_function(const char* decl, const asSFuncPtr& ptr, void* instance)
+script_system::add_function(const char* decl, const asSFuncPtr& ptr, void* instance)
 {
 	int r = as_engine->RegisterGlobalFunction(decl, ptr, asCALL_THISCALL_ASGLOBAL, instance);
 	assert(r >= 0);
 }
 
 void
-angelscript::add_function(const char * decl, const asSFuncPtr & ptr)
+script_system::add_function(const char * decl, const asSFuncPtr & ptr)
 {
 	int r = as_engine->RegisterGlobalFunction(decl, ptr, asCALL_CDECL);
 	assert(r >= 0);
 }
 
 void
-angelscript::add_pointer_type(const char* name)
+script_system::add_pointer_type(const char* name)
 {
 	as_engine->RegisterObjectType(name, sizeof(void*), asOBJ_VALUE | asOBJ_APP_PRIMITIVE | asOBJ_POD);
 }
 
 void
-angelscript::call_event_function(const std::string& name)
+script_system::call_event_function(const std::string& name)
 {
 	auto func = scene_module->GetFunctionByName(name.c_str());
 	if (!func)
@@ -1045,7 +1006,7 @@ angelscript::call_event_function(const std::string& name)
 }
 
 void
-angelscript::setup_triggers(collision_system& collision)
+script_system::setup_triggers(collision_system& collision)
 {
 	size_t func_count = scene_module->GetFunctionCount();
 	for (size_t i = 0; i < func_count; i++)
@@ -1057,15 +1018,15 @@ angelscript::setup_triggers(collision_system& collision)
 		if (type == "trigger" ||
 			type == "button")
 		{
-			collision_system::trigger nt;
-
-			nt.func.set_context_manager(&ctxmgr);
-			nt.func.set_engine(as_engine);
-			nt.func.set_function(func);
+			trigger nt;
+			script_function& sfunc = nt.get_function();
+			sfunc.set_context_manager(&ctxmgr);
+			sfunc.set_engine(as_engine);
+			sfunc.set_function(func);
 
 			std::string vectordata(metadata.begin() + type.length(), metadata.end());
-			auto rect = parsers::parse_attribute_rect<float>(vectordata);
-			nt.set_rect(engine::scale(rect, 32));
+			nt.parse_function_metadata(metadata);
+
 			if (type == "trigger")
 				collision.add_trigger(nt);
 			if (type == "button")
@@ -1077,7 +1038,7 @@ angelscript::setup_triggers(collision_system& collision)
 }
 
 int
-angelscript::tick()
+script_system::tick()
 {
 	ctxmgr.ExecuteScripts();
 	return 0;
@@ -1105,8 +1066,8 @@ game::player_scene_interact()
 		auto trigger = collision.trigger_collision(pos);
 		if (trigger)
 		{
-			trigger->func.call();
-			trigger->func.add_arg_obj(0, &pos);
+			trigger->get_function().call();
+			trigger->get_function().add_arg_obj(0, &pos);
 		}
 	}
 
@@ -1116,8 +1077,8 @@ game::player_scene_interact()
 		auto button = collision.button_collision(pos);
 		if (button)
 		{
-			button->func.call();
-			button->func.add_arg_obj(0, &pos);
+			button->get_function().call();
+			button->get_function().add_arg_obj(0, &pos);
 		}
 	}
 }
@@ -1135,24 +1096,14 @@ game::load_script_interface()
 	script.add_function("float get_delta()", asMETHOD(game, get_delta), this);
 	script.add_function("entity get_player()", asMETHOD(game, script_get_player), this);
 
-	script.add_function("bool has_flag(const string &in)", asMETHOD(flag_container, has_flag), &flags);
-	script.add_function("bool set_flag(const string &in)", asMETHOD(flag_container, set_flag), &flags);
-	script.add_function("bool unset_flag(const string &in)", asMETHOD(flag_container, unset_flag), &flags);
-
 	script.add_function("void _lockplayer(bool)", asMETHOD(player_character, set_locked), &player);
-
-	script.add_function("void _music_play()", asMETHOD(engine::sound_stream, play), &bg_music);
-	script.add_function("void _music_stop()", asMETHOD(engine::sound_stream, stop), &bg_music);
-	script.add_function("void _music_pause()", asMETHOD(engine::sound_stream, pause), &bg_music);
-	script.add_function("float _music_position()", asMETHOD(engine::sound_stream, get_position), &bg_music);
-	script.add_function("void _music_volume(float)", asMETHOD(engine::sound_stream, set_volume), &bg_music);
-	script.add_function("void _music_set_loop(bool)", asMETHOD(engine::sound_stream, set_loop), &bg_music);
-	script.add_function("int _music_open(const string &in)", asMETHOD(engine::sound_stream, open), &bg_music);
 
 	script.add_function("bool _is_triggered(int)", asMETHOD(controls, is_triggered), &c_controls);
 
+	flags.load_script_interface(script);
 	narrative.load_script_interface(script);
 	game_scene.load_script_interface(script);
+	bg_music.load_script_interface(script);
 }
 
 float game::get_delta()
@@ -1439,7 +1390,7 @@ narrative_dialog::load_narrative_xml(tinyxml2::XMLElement* e, texture_manager& t
 }
 
 void
-narrative_dialog::load_script_interface(angelscript & script)
+narrative_dialog::load_script_interface(script_system & script)
 {
 	script.add_function("void _say(const string &in, bool)", asMETHOD(narrative_dialog, reveal_text), this);
 	script.add_function("bool _is_revealing()", asMETHOD(narrative_dialog, is_revealing), this);
@@ -1739,11 +1690,12 @@ void
 tilemap_loader::break_tile(engine::fvector pos, size_t layer)
 {
 	auto t = find_tile_at(pos, layer);
-	if (!t)
+	if (!t || t->fill == engine::fvector(1, 1))
 		return;
+	auto atlas = t->atlas;
 	auto fill = t->fill;
 	t->fill = { 1, 1 };
-	set_tile(t->pos, fill, layer, t->atlas, t->rotation);
+	set_tile(t->pos, fill, layer, atlas, t->rotation);
 }
 
 void
@@ -1861,8 +1813,84 @@ void tilemap_loader::clear()
 
 int tilemap_loader::draw(engine::renderer & r)
 {
+	engine::fvector pos = get_exact_position();
+
+	engine::fvector mousepos = r.get_mouse_position(pos) / 32;
+	mousepos.x = std::floor(mousepos.x);
+	mousepos.y = std::floor(mousepos.y);
+
+	if (r.is_mouse_pressed(engine::events::mouse_button::mouse_left))
+	{
+		break_tile(mousepos, 0);
+		set_tile(mousepos, 0, "wall", 0);
+		update_display();
+	}
+	if (r.is_mouse_pressed(engine::events::mouse_button::mouse_right))
+	{
+		remove_tile(mousepos, 0);
+		update_display();
+	}
+
 	node.draw(r);
 	return 0;
 }
 
+// ##########
+// background_music
+// ##########
 
+void background_music::load_script_interface(script_system & script)
+{
+	script.add_function("void _music_play()", asMETHOD(engine::sound_stream, play), &bg_music);
+	script.add_function("void _music_stop()", asMETHOD(engine::sound_stream, stop), &bg_music);
+	script.add_function("void _music_pause()", asMETHOD(engine::sound_stream, pause), &bg_music);
+	script.add_function("float _music_position()", asMETHOD(engine::sound_stream, get_position), &bg_music);
+	script.add_function("void _music_volume(float)", asMETHOD(engine::sound_stream, set_volume), &bg_music);
+	script.add_function("void _music_set_loop(bool)", asMETHOD(engine::sound_stream, set_loop), &bg_music);
+	script.add_function("int _music_open(const string &in)", asMETHOD(engine::sound_stream, open), &bg_music);
+}
+
+// ##########
+// collision_box
+// ##########
+
+collision_box::collision_box() : valid(true)
+{
+}
+
+bool collision_box::is_valid()
+{
+	return valid;
+}
+
+void collision_box::validate(flag_container & flags)
+{
+	if (!invalid_on_flag.empty())
+		valid = !flags.has_flag(invalid_on_flag);
+	if (!spawn_flag.empty())
+		flags.set_flag(spawn_flag);
+}
+
+void collision_box::load_xml(tinyxml2::XMLElement * e)
+{
+	invalid_on_flag = util::safe_string(e->Attribute("invalid"));
+	spawn_flag = util::safe_string(e->Attribute("spawn"));
+
+	engine::frect rect;
+	rect.x = e->FloatAttribute("x");
+	rect.y = e->FloatAttribute("y");
+	rect.w = e->FloatAttribute("w");
+	rect.h = e->FloatAttribute("h");
+	set_rect(engine::scale(rect, defs::TILE_SIZE));
+}
+
+script_function& trigger::get_function()
+{
+	return func;
+}
+
+void trigger::parse_function_metadata(const std::string & metadata)
+{
+	auto rect = parsers::parse_attribute_rect<float>(metadata);
+	set_rect(engine::scale(rect, 32));
+}
