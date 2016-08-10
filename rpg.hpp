@@ -517,7 +517,7 @@ private:
 	narrative_dialog narrative;
 	background_music bg_music;
 	engine::clock    frameclock;
-	script_system      script;
+	script_system    script;
 	controls         c_controls;
 
 	void player_scene_interact();

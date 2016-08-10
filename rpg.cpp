@@ -68,6 +68,7 @@ entity::entity()
 {
 	dynamic_depth = true;
 	node.set_anchor(engine::anchor::bottom);
+	add_child(node);
 }
 
 void
@@ -121,7 +122,6 @@ entity::draw(engine::renderer &_r)
 		if (ndepth != get_depth())
 			set_depth(ndepth);
 	}
-	node.set_position(get_exact_position());
 	node.draw(_r);
 	return 0;
 }
@@ -1123,16 +1123,19 @@ game::load_game_xml(std::string path)
 	auto ele_root = doc.RootElement();
 
 	auto ele_scene = ele_root->FirstChildElement("scene");
-	if (!ele_scene) return "Please specify the scene to start with";
-	std::string scene_path = ele_scene->Attribute("path");
+	if (!ele_scene)
+		return "Please specify the scene to start with";
+	std::string scene_path = util::safe_string(ele_scene->Attribute("path"));
 
 	auto ele_textures = ele_root->FirstChildElement("textures");
-	if (!ele_textures) return "Please specify the texture file";
-	std::string textures_path = ele_textures->Attribute("path");
+	if (!ele_textures)
+		return "Please specify the texture file";
+	std::string textures_path = util::safe_string(ele_textures->Attribute("path"));
 
 	auto ele_player = ele_root->FirstChildElement("player");
-	if (!ele_player) return "Please specify the player";
-	std::string player_path = ele_player->Attribute("path");
+	if (!ele_player)
+		return "Please specify the player";
+	std::string player_path = util::safe_string(ele_player->Attribute("path"));
 
 	textures.load_settings(textures_path);
 	
@@ -1153,7 +1156,7 @@ game::load_game_xml(std::string path)
 void
 game::tick(controls& con)
 {
-	bool edit_mode = true;
+	bool edit_mode = false;
 
 	float delta = frameclock.get_elapse().s();
 
