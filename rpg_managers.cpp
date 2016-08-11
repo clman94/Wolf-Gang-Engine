@@ -4,7 +4,7 @@
 using namespace rpg;
 
 texture_manager::texture_entry*
-texture_manager::find_entry(std::string name)
+texture_manager::find_entry(const std::string&  name)
 {
 	for (auto& i : textures)
 	{
@@ -15,19 +15,13 @@ texture_manager::find_entry(std::string name)
 }
 
 int
-texture_manager::load_settings(std::string path)
+texture_manager::load_settings(tinyxml2::XMLElement* e)
 {
+	assert(e != nullptr);
+
 	using namespace tinyxml2;
 
-	XMLDocument doc;
-	if (doc.LoadFile(path.c_str()))
-		return 1;
-
-	XMLElement* ele_textures = doc.FirstChildElement("textures");
-	if (!ele_textures)
-		return 2;
-
-	XMLElement* ele_entry = ele_textures->FirstChildElement();
+	XMLElement* ele_entry = e->FirstChildElement();
 	while (ele_entry)
 	{
 		texture_entry nentry;
@@ -52,7 +46,7 @@ texture_manager::load_settings(std::string path)
 }
 
 engine::texture*
-texture_manager::get_texture(std::string name)
+texture_manager::get_texture(const std::string&  name)
 {
 	texture_entry* entry = find_entry(name);
 	if (!entry)
@@ -81,7 +75,7 @@ texture_manager::construct_list()
 }
 
 sound_manager::soundbuffer_entry*
-sound_manager::find_buffer(std::string name)
+sound_manager::find_buffer(const std::string&  name)
 {
 	for (auto& i : buffers)
 		if (i.name == name)
@@ -90,7 +84,7 @@ sound_manager::find_buffer(std::string name)
 }
 
 util::error
-sound_manager::load_sounds(std::string path)
+sound_manager::load_sounds(const std::string&  path)
 {
 	using namespace tinyxml2;
 

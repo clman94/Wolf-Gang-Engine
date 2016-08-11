@@ -6,6 +6,7 @@
 #include <list>
 #include "texture.hpp"
 #include "audio.hpp"
+#include "tinyxml2\xmlshortcuts.hpp"
 
 namespace rpg
 {
@@ -19,11 +20,11 @@ class texture_manager
 		engine::texture tex;
 	};
 	std::list<texture_entry> textures;
-	texture_entry* find_entry(std::string name);
+	texture_entry* find_entry(const std::string&  name);
 
 public:
-	int load_settings(std::string path);
-	engine::texture* get_texture(std::string name);
+	int load_settings(tinyxml2::XMLElement* e);
+	engine::texture* get_texture(const std::string& name);
 	std::vector<std::string> construct_list();
 };
 
@@ -35,12 +36,12 @@ class sound_manager
 		engine::sound_buffer buffer;
 	};
 	std::list<soundbuffer_entry> buffers;
-	soundbuffer_entry* find_buffer(std::string name);
+	soundbuffer_entry* find_buffer(const std::string&  name);
 
 	engine::sound_spawner sounds;
 
 public:
-	util::error load_sounds(std::string path);
+	util::error load_sounds(const std::string&  path);
 	int spawn_sound(const std::string& name);
 };
 

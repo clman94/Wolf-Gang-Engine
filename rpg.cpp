@@ -1130,15 +1130,13 @@ game::load_game_xml(std::string path)
 	auto ele_textures = ele_root->FirstChildElement("textures");
 	if (!ele_textures)
 		return "Please specify the texture file";
-	std::string textures_path = util::safe_string(ele_textures->Attribute("path"));
+	textures.load_settings(ele_textures);
 
 	auto ele_player = ele_root->FirstChildElement("player");
 	if (!ele_player)
 		return "Please specify the player";
 	std::string player_path = util::safe_string(ele_player->Attribute("path"));
 
-	textures.load_settings(textures_path);
-	
 	player.load_entity_xml(player_path, textures);
 	player.set_position({ 64, 120 });
 	player.set_cycle(character::e_cycle::default);
@@ -1897,3 +1895,5 @@ void trigger::parse_function_metadata(const std::string & metadata)
 	auto rect = parsers::parse_attribute_rect<float>(metadata);
 	set_rect(engine::scale(rect, 32));
 }
+
+
