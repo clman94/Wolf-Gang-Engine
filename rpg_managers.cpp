@@ -58,7 +58,7 @@ texture_manager::get_texture(const std::string&  name)
 	{
 		entry->tex.load_texture(entry->path);
 		if (entry->has_atlas)
-			engine::load_atlas_xml(entry->tex, entry->atlas);
+			entry->tex.load_atlas_xml(entry->atlas);
 		entry->is_loaded = true;
 	}
 	return &entry->tex;

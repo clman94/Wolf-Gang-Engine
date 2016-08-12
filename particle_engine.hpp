@@ -18,9 +18,8 @@ class particle_system :
 	struct particle
 	{
 		clock   timer;
-		fvector pos;
 		fvector velocity;
-		size_t  sprite;
+		engine::vertex_reference  sprite;
 	};
 	std::vector<particle> particles;
 
@@ -32,10 +31,11 @@ class particle_system :
 		fvector velocity;
 	} emitter;
 
-	sprite_batch  sprites;
+	vertex_batch  sprites;
 	frect         texture_rect;
 
 public:
+	particle_system();
 	void step();
 	void spawn_particle(size_t count = 1);
 	void set_region(fvector size);

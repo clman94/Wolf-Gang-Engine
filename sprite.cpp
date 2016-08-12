@@ -7,14 +7,14 @@ using namespace engine;
 int sprite_node::draw(renderer &_r)
 {
 	fvector loc = get_exact_position();
-	_sprite.setPosition(sf::Vector2f((float)loc.x, (float)loc.y) + offset);
+	_sprite.setPosition(loc + offset);
 	_r.window.draw(_sprite);
 	return 0;
 }
 
-void sprite_node::set_scale(fvector s)
+void sprite_node::set_scale(fvector scale)
 {
-	_sprite.setScale(sf::Vector2f(s.x, s.y));
+	_sprite.setScale(scale);
 }
 
 int sprite_node::set_texture(texture& tex)
@@ -35,8 +35,7 @@ int sprite_node::set_texture(texture& tex, std::string atlas)
 void
 sprite_node::set_anchor(anchor type)
 {
-	auto node_offset = engine::center_offset(get_size(), type);
-	_sprite.setOrigin({ node_offset.x, node_offset.y });
+	offset = engine::anchor_offset(get_size(), type);
 }
 
 fvector 

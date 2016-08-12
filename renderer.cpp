@@ -52,30 +52,6 @@ render_client::get_depth()
 	return depth;
 }
 
-render_client_wrapper::render_client_wrapper()
-{
-	ptr = nullptr;
-}
-
-int
-render_client_wrapper::draw(renderer &_r)
-{
-	if (!ptr) return 0;
-	return ptr->draw(_r);
-}
-
-void
-render_client_wrapper::bind_client(render_client* client)
-{
-	ptr = client;
-}
-
-render_client*
-render_client_wrapper::get_client()
-{
-	return ptr;
-}
-
 // ##########
 // renderer
 // ##########
@@ -246,7 +222,7 @@ renderer::get_mouse_position()
 {
 	auto pos = sf::Mouse::getPosition(window);
 	auto wpos = window.mapPixelToCoords(pos);
-	return{ wpos.x, wpos.y };
+	return wpos;
 }
 
 fvector
@@ -370,3 +346,4 @@ events::update_events()
 	}
 	return 0;
 }
+

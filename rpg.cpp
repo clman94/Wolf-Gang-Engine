@@ -179,26 +179,26 @@ entity::load_single_animation(tinyxml2::XMLElement* ele, engine::animation &anim
 	auto t = tm.get_texture(att_tex);
 	if (!t)
 		return "Texture '" + std::string(att_tex) + "' not found";
+	anim.set_texture(*t);
 
-	int loop_type = anim.LOOP_NONE;
-	if (att_loop)     loop_type = anim.LOOP_LINEAR;
-	if (att_pingpong) loop_type = anim.LOOP_PING_PONG;
+	engine::animation::e_loop loop_type = engine::animation::e_loop::none;
+	if (att_loop)             loop_type = engine::animation::e_loop::linear;
+	if (att_pingpong)         loop_type = engine::animation::e_loop::pingpong;
 	anim.set_loop(loop_type);
 
 	anim.add_interval(0, att_interval);
-	anim.set_texture(*t);
+
+	engine::frame_t frame_count = (att_frames <= 0 ? 1 : att_frames);// Default one frame
+	anim.set_frame_count(frame_count);
+
+	anim.set_default_frame(att_default);
 
 	{
 		auto atlas = t->get_entry(att_atlas);
 		if (atlas.w == 0)
 			return "Atlas '" + std::string(att_atlas) + "' does not exist";
-
-		anim.generate(
-			(att_frames <= 0 ? 1 : att_frames), // Default one frame
-			atlas);
+		anim.set_frame_rect(atlas);
 	}
-
-	anim.set_default_frame(att_default);
 
 	auto ele_seq = ele->FirstChildElement("seq");
 	while (ele_seq)

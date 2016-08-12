@@ -7,7 +7,7 @@
 using namespace engine;
 
 int
-texture::load_texture(const std::string path)
+texture::load_texture(const std::string& path)
 {
 	if (!_texture.loadFromFile(path))
 	{
@@ -17,27 +17,19 @@ texture::load_texture(const std::string path)
 }
 
 void
-texture::add_entry(const std::string name, const engine::irect rect)
+texture::add_entry(const std::string& name, const irect rect)
 {
-	texture_crop ncrop;
-	ncrop.set_rect(rect);
-	ncrop.name = name;
-	atlas.push_back(ncrop);
+	atlas[name] = rect;
 }
 
 irect
-texture::get_entry(const std::string name)
+texture::get_entry(const std::string& name)
 {
-	for (auto &i : atlas)
-	{
-		if (i.name == name)
-			return i;
-	}
-	return irect();
+	return atlas[name];
 }
 
 int
-engine::load_atlas_xml(texture& tex, const std::string path)
+texture::load_atlas_xml(const std::string& path)
 {
 	using namespace tinyxml2;
 
@@ -50,17 +42,17 @@ engine::load_atlas_xml(texture& tex, const std::string path)
 		return 2;
 
 	// Iterate though each item and load their values into the atlas
-	auto crop_param = atlas_e->FirstChildElement();
-	while (crop_param)
+	auto ele_crop = atlas_e->FirstChildElement();
+	while (ele_crop)
 	{
 		irect ncrop;
-		ncrop.x = crop_param->IntAttribute("x");
-		ncrop.y = crop_param->IntAttribute("y");
-		ncrop.w = crop_param->IntAttribute("w");
-		ncrop.h = crop_param->IntAttribute("h");
-		tex.add_entry(crop_param->Name(), ncrop);
+		ncrop.x = ele_crop->IntAttribute("x");
+		ncrop.y = ele_crop->IntAttribute("y");
+		ncrop.w = ele_crop->IntAttribute("w");
+		ncrop.h = ele_crop->IntAttribute("h");
+		add_entry(ele_crop->Name(), ncrop);
 
-		crop_param = crop_param->NextSiblingElement();
+		ele_crop = ele_crop->NextSiblingElement();
 	}
 	return 0;
 }

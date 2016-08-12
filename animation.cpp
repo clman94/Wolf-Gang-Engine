@@ -13,23 +13,15 @@ animation::animation()
 }
 
 void
-animation::set_loop(int a)
+animation::set_loop(e_loop a)
 {
 	loop = a;
 }
 
-int
+animation::e_loop
 animation::get_loop()
 {
 	return loop;
-}
-
-void
-animation::add_frame(engine::irect frame, int interval)
-{
-	if (get_interval() != interval)
-		sequence.push_back({ interval, frames.size() });
-	frames.push_back(frame);
 }
 
 void
@@ -55,24 +47,34 @@ animation::get_interval(frame_t at)
 	return retval;
 }
 
+void engine::animation::set_frame_count(frame_t count)
+{
+	frame_count = count;
+}
+
 frame_t
 animation::get_frame_count()
 {
-	return frames.size();
+	return frame_count;
 }
 
-const engine::irect&
-animation::get_frame(frame_t frame)
+void animation::set_frame_rect(engine::irect rect)
 {
-	return frames.at(frame);
+	frame = rect;
+}
+
+engine::irect
+animation::get_frame_at(frame_t at)
+{
+	engine::irect ret = frame;
+	ret.x += ret.w*(at%frame_count);
+	return ret;
 }
 
 ivector
 animation::get_size()
 {
-	if (!frames.size())
-		return 0;
-	return frames[0].get_size();
+	return frame.get_size();
 }
 
 void
@@ -99,24 +101,12 @@ animation::get_texture()
 	return opt_texture;
 }
 
-void
-animation::generate(frame_t frame_count, irect first_frame, ivector scan)
-{
-	auto offset = first_frame.get_offset();
-	auto size = first_frame.get_size();
-	for (frame_t i = 0; i < frame_count; i++)
-	{
-		auto nframe = first_frame;
-		nframe.set_offset((scan*size*i) + offset);
-		frames.push_back(nframe);
-	}
-}
-
 animation_node::animation_node()
 {
 	c_anchor = anchor::topleft;
 	playing = false;
 	c_animation = nullptr;
+	add_child(sprite);
 }
 
 frame_t
@@ -126,13 +116,14 @@ animation_node::calculate_frame()
 	if (c_animation->get_frame_count() == 0)
 		return 0;
 
-	if (c_animation->get_loop() == animation::LOOP_LINEAR)
+	if (c_animation->get_loop() == animation::e_loop::linear)
 		return c_count%c_animation->get_frame_count();
 
-	if (c_animation->get_loop() == animation::LOOP_PING_PONG)
+	else if (c_animation->get_loop() == animation::e_loop::pingpong)
 		return util::pingpong_index(c_count, c_animation->get_frame_count() - 1);
 
-	return c_count%c_animation->get_frame_count();
+	else
+		return c_count%c_animation->get_frame_count();
 }
 
 void
@@ -152,14 +143,14 @@ animation_node::set_animation(animation& a, bool swap)
 	if (swap) c_frame = calculate_frame();
 	else set_frame(a.get_default_frame());
 
-	if(a.get_texture())
+	if (a.get_texture())
 		set_texture(*a.get_texture());
 }
 
 void
 animation_node::set_texture(texture& tex)
 {
-	sfml_sprite.setTexture(tex.sfml_get_texture());
+	sprite.set_texture(tex);
 }
 
 int
@@ -218,18 +209,20 @@ void
 animation_node::set_anchor(engine::anchor a)
 {
 	c_anchor = a;
+	sprite.set_anchor(a);
 }
 
 int
-animation_node::draw(renderer &_r)
+animation_node::draw(renderer &r)
 {
 	if (!c_animation) return 1;
 	if (!c_animation->get_frame_count()) return 1;
 	if (playing) tick();
-	const engine::irect &crop = c_animation->get_frame(c_frame);
-	sfml_sprite.setTextureRect({ crop.x, crop.y, crop.w, crop.h });
-	fvector loc = get_exact_position() + anchor_offset(c_animation->get_size(), c_anchor);
-	sfml_sprite.setPosition(loc.x, loc.y);
-	_r.window.draw(sfml_sprite);
+
+	irect rect = c_animation->get_frame_at(c_frame);
+	sprite.set_texture_rect(rect);
+	sprite.set_anchor(c_anchor);
+
+	sprite.draw(r);
 	return 0;
 }

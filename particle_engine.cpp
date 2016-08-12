@@ -6,7 +6,6 @@
 
 using namespace engine;
 
-
 void
 particle_system::spawn_particle(size_t count)
 {
@@ -16,12 +15,17 @@ particle_system::spawn_particle(size_t count)
 		auto &p = particles.back();
 		p.timer.restart();
 		p.velocity = emitter.velocity;
-		p.pos = {
+		fvector position = {
 			std::fmodf((float)std::rand(), emitter.size.x),
 			std::fmodf((float)std::rand(), emitter.size.y)
 		};
-		p.sprite = sprites.add_sprite(p.pos, texture_rect);
+		p.sprite = sprites.add_sprite(position, texture_rect);
 	}
+}
+
+particle_system::particle_system()
+{
+	add_child(sprites);
 }
 
 void
@@ -37,8 +41,8 @@ particle_system::step()
 	for (auto &i : particles)
 	{
 		i.velocity += emitter.acceleration*time;
-		i.pos += i.velocity*time;
-		sprites.set_sprite_position(i.sprite, i.pos, texture_rect);
+		auto position = i.sprite.get_position();
+		i.sprite.set_position(position + i.velocity*time);
 	}
 
 	frameclock.restart();
@@ -90,7 +94,6 @@ int
 particle_system::draw(renderer &_r)
 {
 	step();
-	sprites.set_position(get_exact_position());
 	sprites.draw(_r);
 	return 0;
 }

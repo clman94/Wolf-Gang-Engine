@@ -4,7 +4,6 @@
 namespace engine
 {
 
-// Template expects  int, double, float, etc...
 template<typename T>
 struct vector
 {
@@ -92,11 +91,33 @@ struct vector
 		return *this;
 	}
 
+#ifdef SFML_VERTEX_HPP
+	vector(const sf::Vector2<T>& A)
+	{
+		x = A.x;
+		y = A.y;
+	}
+
+	vector& operator = (const sf::Vector2<T>& A)
+	{
+		x = A.x;
+		y = A.y;
+		return *this;
+	}
+
+	inline operator sf::Vector2<T>()
+	{
+		return{ x, y };
+	}
+
+#endif
+
 	// No division, high chance of dividing by zero.
 
 	template<typename>
 	friend struct vector;
 };
+
 
 template<typename T1, typename T2>
 bool operator<(const vector<T1>& L, const vector<T2>& R)
