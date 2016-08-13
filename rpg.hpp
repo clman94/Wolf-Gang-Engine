@@ -25,6 +25,48 @@ namespace rpg{
 
 class script_system;
 
+class tilemap_A :
+	public engine::render_client,
+	public engine::node
+{
+public:
+	void set_texture(engine::texture& tex);
+	void set_tile(engine::fvector position, engine::frect tex_rect, int layer, int rotation);
+	void set_tile(engine::fvector position, const std::string& atlas, int layer, int rotation);
+
+	int draw(engine::renderer &r);
+
+	void update_animations();
+
+	void clear();
+
+private:
+	engine::texture *c_texture;
+
+	class tile
+	{
+	public:
+		engine::vertex_reference ref;
+
+		tile() : animation(nullptr) {}
+
+		void set_animation(engine::animation& _animation);
+		void update_animation();
+	private:
+		engine::timer timer;
+		engine::frame_t frame;
+		engine::animation* animation;
+	};
+
+	struct layer
+	{
+		engine::vertex_batch vertices;
+		std::map<engine::fvector, tile> tiles;
+	};
+
+	std::map<int, layer> layers;
+};
+
 class panning_node :
 	public engine::node
 {
@@ -349,13 +391,9 @@ protected:
 	void refresh_renderer(engine::renderer& r);
 };
 
-class tilemap_loader :
-	public engine::render_client,
-	public engine::node
+class tilemap_loader
 {
 private:
-	engine::tile_node node;
-
 	struct tile
 	{
 		engine::fvector pos, fill;
@@ -369,6 +407,8 @@ private:
 	std::map<size_t,std::vector<tile>> tiles;
 	tile* find_tile(engine::fvector pos, size_t layer);
 
+	engine::fvector tile_size;
+
 	void condense_layer(std::vector<tile> &map);
 	util::error load_layer(tinyxml2::XMLElement *e, size_t layer);
 	
@@ -377,8 +417,6 @@ public:
 	tilemap_loader();
 
 	void condense_tiles();
-
-	void set_texture(engine::texture& t);
 
 	util::error load_tilemap_xml(tinyxml2::XMLElement *root);
 	util::error load_tilemap_xml(std::string path);
@@ -392,29 +430,9 @@ public:
 	int set_tile(engine::fvector pos, size_t layer, const std::string& atlas, int rot);
 	void remove_tile(engine::fvector pos, size_t layer);
 
-	void update_display();
+	void update_display(tilemap_A& tmA);
 
 	void clear();
-
-	int draw(engine::renderer &_r);
-};
-
-class tilemap :
-	public engine::render_client,
-	public engine::node
-{
-public:
-	tilemap();
-	void set_texture(engine::texture& t);
-	void set_tile(const std::string& name, engine::fvector pos, engine::fvector fill, size_t layer, int rot);
-	util::error load_tilemap_xml(tinyxml2::XMLElement* e, collision_system& collision);
-	void clear();
-	void load_script_interface(script_system& script);
-	int draw(engine::renderer &_r);
-
-private:
-	engine::tile_node node;
-	util::error load_tilemap(tinyxml2::XMLElement* e, collision_system& collision, size_t layer);
 };
 
 class player_character :
@@ -461,7 +479,8 @@ public:
 	void set_texture_manager(texture_manager& ntm);
 
 private:
-	tilemap_loader tilemap;
+	tilemap_A tilemap;
+	tilemap_loader tilemap_loader;
 	collision_system collision;
 	texture_manager * tm;
 

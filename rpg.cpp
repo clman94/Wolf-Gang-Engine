@@ -266,108 +266,6 @@ character::get_speed()
 }
 
 // #########
-// tilemap
-// #########
-
-tilemap::tilemap()
-{
-	add_child(node);
-	node.set_tile_size(defs::TILE_SIZE);
-}
-
-
-void
-tilemap::set_texture(engine::texture& t)
-{
-	node.set_texture(t);
-}
-
-void
-tilemap::set_tile(const std::string& name, engine::fvector pos, engine::fvector fill, size_t layer, int rot)
-{
-	engine::ivector off;
-	for (off.x = 0; off.x < fill.x; off.x++)
-	{
-		for (off.y = 0; off.y < fill.y; off.y++)
-		{
-			node.set_tile(pos + off, name, layer, rot);
-		}
-	}
-}
-
-util::error
-tilemap::load_tilemap(tinyxml2::XMLElement* e, collision_system &collision, size_t layer)
-{
-	assert(e != nullptr);
-
-	if (auto path = e->Attribute("path"))
-	{
-		using namespace tinyxml2;
-		XMLDocument doc;
-		doc.LoadFile(path);
-		auto root = doc.RootElement();
-		return load_tilemap(root, collision, layer);
-	}
-
-	auto i = e->FirstChildElement();
-	while (i)
-	{
-		engine::fvector pos;
-		pos.x = i->FloatAttribute("x");
-		pos.y = i->FloatAttribute("y");
-
-		engine::fvector fill;
-		fill.x = i->FloatAttribute("w");
-		fill.y = i->FloatAttribute("h");
-
-		fill.x = fill.x <= 0 ? 1 : fill.x; // Default 1
-		fill.y = fill.y <= 0 ? 1 : fill.y;
-
-		int r = i->IntAttribute("r") % 4;
-
-		if (i->BoolAttribute("c"))
-			collision.add_wall({ pos*defs::TILE_SIZE, fill*defs::TILE_SIZE });
-
-		set_tile(i->Name(), pos, fill, layer, r);
-
-		i = i->NextSiblingElement();
-	}
-	return 0;
-}
-
-util::error
-tilemap::load_tilemap_xml(tinyxml2::XMLElement * e, collision_system & collision)
-{
-	auto ele_tilemap = e->FirstChildElement("tilemap");
-	while (ele_tilemap)
-	{
-		int att_layer = ele_tilemap->IntAttribute("layer");
-		load_tilemap(ele_tilemap, collision, att_layer);
-		ele_tilemap = ele_tilemap->NextSiblingElement("tilemap");
-	}
-	return 0;
-}
-
-void
-tilemap::clear()
-{
-	node.clear_all();
-}
-
-void
-tilemap::load_script_interface(script_system& script)
-{
-	script.add_function("void set_tile(string, vec, vec, uint, int, bool)", asMETHOD(tilemap, set_tile), this);
-}
-
-int
-tilemap::draw(engine::renderer &_r)
-{
-	node.draw(_r);
-	return 0;
-}
-
-// #########
 // collision_system
 // #########
 
@@ -801,7 +699,10 @@ util::error scene::load_scene_xml(std::string path, script_system& script, flag_
 	}
 	
 	if (auto ele_map = root->FirstChildElement("map"))
-		tilemap.load_tilemap_xml(ele_map);
+	{
+		tilemap_loader.load_tilemap_xml(ele_map);
+		tilemap_loader.update_display(tilemap);
+	}
 	return 0;
 }
 
@@ -1493,7 +1394,6 @@ script_function::call()
 	assert(as_engine != nullptr);
 	assert(func != nullptr);
 	assert(ctx != nullptr);
-
 	if (!is_running())
 	{
 		if (func_ctx) ctx->DoneWithContext(func_ctx);
@@ -1618,11 +1518,6 @@ tilemap_loader::condense_tiles()
 	}
 }
 
-void tilemap_loader::set_texture(engine::texture & t)
-{
-	node.set_texture(t);
-}
-
 util::error
 tilemap_loader::load_layer(tinyxml2::XMLElement * e, size_t layer)
 {
@@ -1639,8 +1534,7 @@ tilemap_loader::load_layer(tinyxml2::XMLElement * e, size_t layer)
 
 tilemap_loader::tilemap_loader()
 {
-	add_child(node);
-	node.set_tile_size(defs::TILE_SIZE);
+	tile_size = defs::TILE_SIZE;
 }
 
 util::error
@@ -1658,7 +1552,6 @@ tilemap_loader::load_tilemap_xml(tinyxml2::XMLElement *root)
 		load_layer(ele_tilemap, att_layer);
 		ele_tilemap = ele_tilemap->NextSiblingElement("layer");
 	}
-	update_display();
 	return 0;
 }
 
@@ -1787,9 +1680,9 @@ void tilemap_loader::remove_tile(engine::fvector pos, size_t layer)
 }
 
 void
-tilemap_loader::update_display()
+tilemap_loader::update_display(tilemap_A& tmA)
 {
-	node.clear_all();
+	tmA.clear();
 	for (auto &l : tiles)
 	{
 		for (auto &i : l.second)
@@ -1799,7 +1692,7 @@ tilemap_loader::update_display()
 			{
 				for (off.x = 0; off.x < i.fill.x; off.x++)
 				{
-					node.set_tile(i.pos + off, i.atlas, l.first, i.rotation);
+					tmA.set_tile((i.pos + off)*tile_size, i.atlas, l.first, i.rotation);
 				}
 			}
 		}
@@ -1808,10 +1701,9 @@ tilemap_loader::update_display()
 
 void tilemap_loader::clear()
 {
-	node.clear_all();
 	tiles.clear();
 }
-
+/*
 int tilemap_loader::draw(engine::renderer & r)
 {
 	engine::fvector pos = get_exact_position();
@@ -1834,7 +1726,7 @@ int tilemap_loader::draw(engine::renderer & r)
 
 	node.draw(r);
 	return 0;
-}
+}*/
 
 // ##########
 // background_music
@@ -1896,4 +1788,67 @@ void trigger::parse_function_metadata(const std::string & metadata)
 	set_rect(engine::scale(rect, 32));
 }
 
+// ##########
+// tilemap_A
+// ##########
 
+void tilemap_A::set_texture(engine::texture & tex)
+{
+	c_texture = &tex;
+}
+
+void tilemap_A::set_tile(engine::fvector position, engine::frect tex_rect, int layer, int rotation)
+{
+	auto &ntile = layers[layer].tiles[position];
+	ntile.ref = layers[layer].vertices.add_sprite(position, tex_rect, rotation);
+}
+
+void tilemap_A::set_tile(engine::fvector position, const std::string & atlas, int layer, int rotation)
+{
+	set_tile(position, c_texture->get_entry(atlas), layer, rotation);
+}
+
+int tilemap_A::draw(engine::renderer & r)
+{
+	if (!c_texture) return 1;
+	for (auto &i : layers)
+	{
+		auto& vb = i.second.vertices;
+		vb.set_texture(*c_texture);
+		vb.set_position(get_exact_position());
+		vb.draw(r);
+	}
+	return 0;
+}
+
+void tilemap_A::update_animations()
+{
+	for (auto &i : layers)
+	{
+		for (auto &j : i.second.tiles)
+		{
+			j.second.update_animation();
+		}
+	}
+}
+
+void tilemap_A::clear()
+{
+	layers.clear();
+}
+
+void tilemap_A::tile::set_animation(engine::animation& _animation)
+{
+	animation = &_animation;
+	timer.start_timer(_animation.get_interval()*0.001f);
+}
+
+void tilemap_A::tile::update_animation()
+{
+	if (!animation) return;
+	if (timer.is_reached())
+	{
+		++frame;
+		timer.start_timer(animation->get_interval(frame)*0.001f);
+	}
+}

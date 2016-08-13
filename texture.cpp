@@ -17,12 +17,12 @@ texture::load_texture(const std::string& path)
 }
 
 void
-texture::add_entry(const std::string& name, const irect rect)
+texture::add_entry(const std::string& name, const frect rect)
 {
 	atlas[name] = rect;
 }
 
-irect
+frect
 texture::get_entry(const std::string& name)
 {
 	return atlas[name];
@@ -45,11 +45,11 @@ texture::load_atlas_xml(const std::string& path)
 	auto ele_crop = atlas_e->FirstChildElement();
 	while (ele_crop)
 	{
-		irect ncrop;
-		ncrop.x = ele_crop->IntAttribute("x");
-		ncrop.y = ele_crop->IntAttribute("y");
-		ncrop.w = ele_crop->IntAttribute("w");
-		ncrop.h = ele_crop->IntAttribute("h");
+		frect ncrop;
+		ncrop.x = ele_crop->FloatAttribute("x");
+		ncrop.y = ele_crop->FloatAttribute("y");
+		ncrop.w = ele_crop->FloatAttribute("w");
+		ncrop.h = ele_crop->FloatAttribute("h");
 		add_entry(ele_crop->Name(), ncrop);
 
 		ele_crop = ele_crop->NextSiblingElement();

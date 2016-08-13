@@ -89,18 +89,20 @@ public:
 
 class timer
 {
-	engine::clock clock;
+	std::chrono::time_point<std::chrono::system_clock>
+		start_point;
 	time_t seconds;
 public:
 	void start_timer(float sec)
 	{
 		seconds = sec;
-		clock.restart();
+		start_point = std::chrono::system_clock::now();
 	}
 
 	bool is_reached()
 	{
-		return clock.get_elapse().s() >= seconds;
+		std::chrono::duration<time_t> time = std::chrono::system_clock::now() - start_point;
+		return time.count() >= seconds;
 	}
 };
 

@@ -44,12 +44,12 @@ struct rect
 		h = a.h;
 	}
 
-	vector<T> get_offset()
+	vector<T> get_offset() const
 	{
 		return vector<T>(x, y);
 	}
 
-	vector<T> get_size()
+	vector<T> get_size() const
 	{
 		return vector<T>(w, h);
 	}

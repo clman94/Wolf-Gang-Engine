@@ -6,47 +6,50 @@ using namespace engine;
 
 int sprite_node::draw(renderer &_r)
 {
-	fvector loc = get_exact_position();
-	_sprite.setPosition(loc + offset);
-	_r.window.draw(_sprite);
+	sf::RenderStates rs;
+	rs.transform.translate(get_exact_position() + mOffset);
+	rs.texture = &c_texture->sfml_get_texture();
+	rs.transform.scale(mScale);
+	_r.window.draw(&mVertices[0], 4, sf::Quads , rs);
 	return 0;
 }
 
-void sprite_node::set_scale(fvector scale)
+void sprite_node::set_scale(fvector pScale)
 {
-	_sprite.setScale(scale);
+	mScale = pScale;
 }
 
-int sprite_node::set_texture(texture& tex)
+int sprite_node::set_texture(texture& pTexture)
 {
-	_sprite.setTexture(tex.sfml_get_texture());
+	c_texture = &pTexture;
 	return 0;
 }
 
-int sprite_node::set_texture(texture& tex, std::string atlas)
+int sprite_node::set_texture(texture& pTexture, std::string pAtlas)
 {
-	sf::Texture& sf_texture = tex.sfml_get_texture();
-	_sprite.setTexture(sf_texture);
-	auto crop = tex.get_entry(atlas);
+	c_texture = &pTexture;
+	auto crop = pTexture.get_entry(pAtlas);
 	set_texture_rect(crop);
 	return 0;
 }
 
 void
-sprite_node::set_anchor(anchor type)
+sprite_node::set_anchor(anchor pType)
 {
-	offset = engine::anchor_offset(get_size(), type);
+	mOffset = engine::anchor_offset(get_size(), pType);
 }
 
-fvector 
+fvector
 sprite_node::get_size()
 {
-	sf::IntRect rect = _sprite.getTextureRect();
-	return fvector((float)rect.width, (float)rect.height);
+	return fvector(mVertices[2].texCoords - mVertices[0].texCoords)*mScale;
 }
 
 void
-sprite_node::set_texture_rect(const engine::irect& crop)
+sprite_node::set_texture_rect(const engine::frect& rect)
 {
-	_sprite.setTextureRect(sf::IntRect(crop.x, crop.y, crop.w, crop.h));
+	mVertices[0].texCoords = rect.get_offset();
+	mVertices[1].texCoords = rect.get_offset() + fvector(rect.w, 0);
+	mVertices[2].texCoords = rect.get_offset() + rect.get_size();
+	mVertices[3].texCoords = rect.get_offset() + fvector(0, rect.h);
 }

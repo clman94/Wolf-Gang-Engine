@@ -292,17 +292,20 @@ class sprite_node :
 	public render_client, 
 	public node
 {
-	sf::Sprite _sprite;
-	fvector offset;
-
 public:
 	void set_anchor(anchor _anchor);
 	virtual int draw(renderer &_r);
 	void set_scale(fvector scale);
 	int set_texture(texture& tex);
 	int set_texture(texture& tex, std::string atlas);
-	void set_texture_rect(const engine::irect& crop);
+	void set_texture_rect(const engine::frect& crop);
 	fvector get_size();
+
+private:
+	texture *c_texture;
+	sf::Vertex mVertices[4];
+	fvector mOffset;
+	fvector mScale;
 };
 
 class font
@@ -332,51 +335,6 @@ public:
 	void set_scale(float a);
 	void copy_format(const text_node& node);
 	virtual int draw(renderer &_r);
-};
-
-class tile_sprite_node :
-	public node
-{
-	struct tile_sprite
-	{
-		ivector pos;
-		ptr_GC<sprite_node> sprite;
-		tile_sprite(){}
-		tile_sprite(ivector _pos, ptr_GC<sprite_node> _sprite)
-			: pos(_pos), sprite(_sprite){}
-	};
-	std::vector<tile_sprite> tiles;
-	float width, height;
-	tile_sprite* find_tile(int x, int y);
-	tile_sprite* find_tile(int x, int y, size_t& index);
-	tile_sprite* create_tile(int x, int y);
-public:
-	void set_tile_size(float w, float h);
-	int set_tile(int x, int y, texture& tex);
-	int set_tile(int x, int y, texture& tex, std::string atlas);
-	int remove_tile(int x, int y);
-	int update_tile_render(renderer &_r);
-	ptr_GC<sprite_node> get_sprite(int x, int y);
-};
-
-class tile_bind_node :
-	public node
-{
-	struct tile_entry
-	{
-		ivector pos;
-		ptr_GC<node> node;
-		tile_entry(ivector _pos, ptr_GC<engine::node>& _node)
-			: pos(_pos), node(_node){}
-	};
-	std::vector<tile_entry> tiles;
-	size_t find_tile(ivector pos);
-	ivector tile_size;
-public:
-	void set_tile_size(ivector s);
-	int bind_tile(ptr_GC<node> n, ivector pos, bool replace = true);
-	ptr_GC<node> unbind_tile(ivector pos);
-	void clear_all();
 };
 
 class tile_node :
@@ -427,10 +385,10 @@ public:
 	void set_frame_count(frame_t count);
 	frame_t get_frame_count();
 
-	void set_frame_rect(engine::irect rect);
-	engine::irect get_frame_at(frame_t at);
+	void set_frame_rect(engine::frect rect);
+	engine::frect get_frame_at(frame_t at);
 
-	ivector get_size();
+	fvector get_size();
 
 	void set_default_frame(frame_t frame);
 	int  get_default_frame();
@@ -445,7 +403,7 @@ private:
 		frame_t from;
 	};
 	std::vector<sequence_frame> sequence;
-	engine::irect               frame;
+	engine::frect               frame;
 	engine::texture*            opt_texture;
 	frame_t                     default_frame;
 	frame_t                     frame_count;

@@ -15,8 +15,8 @@ class texture
 {
 public:
 	int load_texture(const std::string& path);
-	void add_entry(const std::string& name, const irect rect);
-	irect get_entry(const std::string& name);
+	void add_entry(const std::string& name, const frect rect);
+	frect get_entry(const std::string& name);
 	int load_atlas_xml(const std::string& path);
 
 #ifdef ENGINE_INTERNAL
@@ -25,7 +25,7 @@ public:
 #endif
 
 private:
-	std::unordered_map<std::string, irect> atlas;
+	std::unordered_map<std::string, frect> atlas;
 	sf::Texture _texture;
 };
 

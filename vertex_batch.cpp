@@ -33,11 +33,10 @@ void vertex_reference::set_texture_rect(frect rect, int rotation)
 void vertex_reference::refresh_size()
 {
 	assert(ref != nullptr);
-	sf::Vector2f texture_offset = ref[0].texCoords;
 	sf::Vector2f offset = ref[0].position;
-	ref[1].position = offset + (ref[1].texCoords - texture_offset);
-	ref[2].position = offset + (ref[2].texCoords - texture_offset);
-	ref[3].position = offset + (ref[3].texCoords - texture_offset);
+	ref[1].position = offset + (ref[1].texCoords - ref[0].texCoords);
+	ref[2].position = offset + (ref[2].texCoords - ref[0].texCoords);
+	ref[3].position = offset + (ref[3].texCoords - ref[0].texCoords);
 }
 
 void

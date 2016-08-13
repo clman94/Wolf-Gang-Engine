@@ -58,20 +58,20 @@ animation::get_frame_count()
 	return frame_count;
 }
 
-void animation::set_frame_rect(engine::irect rect)
+void animation::set_frame_rect(engine::frect rect)
 {
 	frame = rect;
 }
 
-engine::irect
+engine::frect
 animation::get_frame_at(frame_t at)
 {
-	engine::irect ret = frame;
+	engine::frect ret = frame;
 	ret.x += ret.w*(at%frame_count);
 	return ret;
 }
 
-ivector
+fvector
 animation::get_size()
 {
 	return frame.get_size();
@@ -219,7 +219,7 @@ animation_node::draw(renderer &r)
 	if (!c_animation->get_frame_count()) return 1;
 	if (playing) tick();
 
-	irect rect = c_animation->get_frame_at(c_frame);
+	frect rect = c_animation->get_frame_at(c_frame);
 	sprite.set_texture_rect(rect);
 	sprite.set_anchor(c_anchor);
 
