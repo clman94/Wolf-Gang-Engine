@@ -197,7 +197,7 @@ input_box::draw(renderer &_r)
 	if (is_pressed())
 	{
 		request_focus();
-		_r.start_text_record(str);
+		//_r.start_text_record(str);
 	}
 	if (is_focused())
 	{
@@ -211,8 +211,8 @@ input_box::draw(renderer &_r)
 	}
 	else
 	{
-		if (_r.is_text_recording(str))
-			_r.end_text_record();
+		//if (_r.is_text_recording(str))
+		//	_r.end_text_record();
 		text.set_text(message + ":[" + str + "]");
 	}
 	text.set_position(get_exact_position());

@@ -10,46 +10,46 @@ using namespace engine;
 int 
 render_client::is_rendered()
 {
-	return client_index >= 0;
+	return mIndex >= 0;
 }
 
 void
-render_client::set_visible(bool a)
+render_client::set_visible(bool pVisible)
 {
-	visible = a;
+	mVisible = pVisible;
 }
 
 bool
 render_client::is_visible()
 {
-	return visible;
+	return mVisible;
 }
 
 render_client::render_client()
 {
-	client_index = -1;
+	mIndex = -1;
 	set_visible(true);
-	depth = 0;
-	renderer_ = nullptr;
+	mDepth = 0;
+	mRenderer = nullptr;
 }
 
 render_client::~render_client()
 {
-	renderer_->remove_client(this);
+	mRenderer->remove_client(this);
 }
 
 void
-render_client::set_depth(depth_t d)
+render_client::set_depth(depth_t pDepth)
 {
-	depth = d;
-	if (renderer_)
-		renderer_->sort_clients();
+	mDepth = pDepth;
+	if (mRenderer)
+		mRenderer->sort_clients();
 }
 
 float
 render_client::get_depth()
 {
-	return depth;
+	return mDepth;
 }
 
 // ##########
@@ -58,23 +58,21 @@ render_client::get_depth()
 
 renderer::renderer()
 {
-	events_update_sfml_window(window);
-	text_record.multi_line = false;
-	text_record.enable = false;
+	events_update_sfml_window(mWindow);
 }
 
 renderer::~renderer()
 {
-	for (auto i : clients)
-		i->client_index = -1;
+	for (auto i : mClients)
+		i->mIndex = -1;
 	close();
 }
 
 fvector
 renderer::get_size()
 {
-	auto px = window.getView().getSize();
-	auto scale = window.getView().getViewport();
+	auto px = mWindow.getView().getSize();
+	auto scale = mWindow.getView().getViewport();
 	return
 	{
 		px.x / scale.width,
@@ -83,10 +81,10 @@ renderer::get_size()
 }
 
 int
-renderer::initualize(ivector size, int fps)
+renderer::initualize(ivector pSize, int pFps)
 {
-	window.create(sf::VideoMode(size.x, size.y), "The Amazing Window", sf::Style::Titlebar | sf::Style::Close);
-	window.setFramerateLimit(fps);
+	mWindow.create(sf::VideoMode(pSize.x, pSize.y), "The Amazing Window", sf::Style::Titlebar | sf::Style::Close);
+	mWindow.setFramerateLimit(pFps);
 	return 0;
 }
 
@@ -94,7 +92,7 @@ renderer::initualize(ivector size, int fps)
 int
 renderer::draw_clients()
 {
-	for (auto i : clients)
+	for (auto i : mClients)
 		if (i->is_visible())
 			i->draw(*this);
 	return 0;
@@ -103,58 +101,18 @@ renderer::draw_clients()
 int
 renderer::draw()
 {
-	auto &c = background_color;
-	window.clear(sf::Color(c.r, c.g, c.b, c.a));
+	auto &c = mBackground_color;
+	mWindow.clear(sf::Color(c.r, c.g, c.b, c.a));
 	draw_clients();
-	window.display();
+	mWindow.display();
 	return 0;
-}
-
-void
-renderer::start_text_record(bool multi_line)
-{
-	text_record.multi_line = multi_line;
-	text_record.enable = true;
-	text_record.text.clear();
-}
-
-void
-renderer::start_text_record(std::string& ptr, bool multi_line)
-{
-	text_record.multi_line = multi_line;
-	text_record.enable = true;
-	text_record.ptr = &ptr;
-}
-
-bool
-renderer::is_text_recording()
-{
-	return text_record.enable;
-}
-
-bool
-renderer::is_text_recording(std::string& ptr)
-{
-	return text_record.ptr == &ptr;
-}
-
-void
-renderer::end_text_record()
-{
-	text_record.enable = false;
-	text_record.ptr = nullptr;
-}
-const std::string& 
-renderer::get_recorded_text()
-{
-	return text_record.text;
 }
 
 void
 renderer::refresh_clients()
 {
-	for (size_t i = 0; i < clients.size(); i++)
-		clients[i]->client_index = i;
+	for (size_t i = 0; i < mClients.size(); i++)
+		mClients[i]->mIndex = i;
 }
 
 // Sort items that have a higher depth to be farther behind
@@ -165,100 +123,100 @@ renderer::sort_clients()
 	{
 		bool operator()(render_client* c1, render_client* c2)
 		{
-			return c1->depth > c2->depth;
+			return c1->mDepth > c2->mDepth;
 		}
 	}client_sort;
-	std::sort(clients.begin(), clients.end(), client_sort);
+	std::sort(mClients.begin(), mClients.end(), client_sort);
 	refresh_clients();
 }
 
 int
-renderer::add_client(render_client* _client)
+renderer::add_client(render_client* pClient)
 {
-	if (_client->client_index >= 0)
+	if (pClient->mIndex >= 0)
 	{
-		return remove_client(_client);
+		return remove_client(pClient);
 	}
-	_client->renderer_ = this;
-	_client->client_index = clients.size();
-	clients.push_back(_client);
-	_client->refresh_renderer(*this);
+	pClient->mRenderer = this;
+	pClient->mIndex = mClients.size();
+	mClients.push_back(pClient);
+	pClient->refresh_renderer(*this);
 	sort_clients();
 	return 0;
 }
 
 int 
-renderer::remove_client(render_client* _client)
+renderer::remove_client(render_client* pClient)
 {
-	if (_client->client_index < 0
-		|| _client->renderer_ != this) return 1;
-	clients.erase(clients.begin() + _client->client_index);
+	if (pClient->mIndex < 0
+		|| pClient->mRenderer != this) return 1;
+	mClients.erase(mClients.begin() + pClient->mIndex);
 	refresh_clients();
-	_client->client_index = -1;
-	_client->renderer_ = nullptr;
+	pClient->mIndex = -1;
+	pClient->mRenderer = nullptr;
 	return 0;
 }
 
 int 
 renderer::close()
 {
-	window.close();
+	mWindow.close();
 	return 0;
 }
 
 void
-renderer::set_pixel_scale(float a)
+renderer::set_pixel_scale(float pScale)
 {
-	sf::View view = window.getDefaultView();
+	sf::View view = mWindow.getDefaultView();
 	sf::FloatRect fr = view.getViewport();
-	fr.width  *= a;
-	fr.height *= a;
+	fr.width  *= pScale;
+	fr.height *= pScale;
 	view.setViewport(fr);
-	window.setView(view);
+	mWindow.setView(view);
 }
 
 fvector
 renderer::get_mouse_position()
 {
-	auto pos = sf::Mouse::getPosition(window);
-	auto wpos = window.mapPixelToCoords(pos);
+	auto pos = sf::Mouse::getPosition(mWindow);
+	auto wpos = mWindow.mapPixelToCoords(pos);
 	return wpos;
 }
 
 fvector
-renderer::get_mouse_position(fvector relative)
+renderer::get_mouse_position(fvector pRelative)
 {
-	return get_mouse_position() - relative;
+	return get_mouse_position() - pRelative;
 }
 
 bool
 renderer::is_focused()
 {
-	return window.hasFocus();
+	return mWindow.hasFocus();
 }
 
 void
-renderer::set_visible(bool is_visible)
+renderer::set_visible(bool pVisible)
 {
-	window.setVisible(is_visible);
+	mWindow.setVisible(pVisible);
 }
 
 void
-renderer::set_bg_color(color c)
+renderer::set_background_color(color pColor)
 {
-	background_color = c;
+	mBackground_color = pColor;
 }
 
 void
 events::refresh_pressed()
 {
-	for (auto &i : pressed_keys)
+	for (auto &i : mPressed_keys)
 	{
 		if (i.second == 1)
 			i.second = -1;
 	}
 
-	for (auto &i : pressed_buttons)
+	for (auto &i : mPressed_buttons)
 	{
 		if (i.second == 1)
 			i.second = -1;
@@ -266,49 +224,49 @@ events::refresh_pressed()
 }
 
 bool
-events::is_key_pressed(key_type k)
+events::is_key_pressed(key_type pKey_type)
 {
-	if (!window->hasFocus())
+	if (!mWindow->hasFocus())
 		return false;
-	bool is_pressed = sf::Keyboard::isKeyPressed(k);
-	if (pressed_keys[k] == -1 && is_pressed)
+	bool is_pressed = sf::Keyboard::isKeyPressed(pKey_type);
+	if (mPressed_keys[pKey_type] == -1 && is_pressed)
 		return false;
-	pressed_keys[k] = is_pressed ? 1 : 0;
+	mPressed_keys[pKey_type] = is_pressed ? 1 : 0;
 	return is_pressed;
 }
 
 bool
-events::is_key_down(key_type k)
+events::is_key_down(key_type pKey_type)
 {
-	if (!window->hasFocus())
+	if (!mWindow->hasFocus())
 		return false;
-	return sf::Keyboard::isKeyPressed(k);
+	return sf::Keyboard::isKeyPressed(pKey_type);
 }
 
 bool
-events::is_mouse_pressed(mouse_button b)
+events::is_mouse_pressed(mouse_button pButton_type)
 {
-	if (!window->hasFocus())
+	if (!mWindow->hasFocus())
 		return false;
-	bool is_pressed = sf::Mouse::isButtonPressed((sf::Mouse::Button)b);
-	if (pressed_buttons[b] == -1 && is_pressed)
+	bool is_pressed = sf::Mouse::isButtonPressed((sf::Mouse::Button)pButton_type);
+	if (mPressed_buttons[pButton_type] == -1 && is_pressed)
 		return false;
-	pressed_buttons[b] = is_pressed ? 1 : 0;
+	mPressed_buttons[pButton_type] = is_pressed ? 1 : 0;
 	return is_pressed;
 }
 
 bool
-events::is_mouse_down(mouse_button b)
+events::is_mouse_down(mouse_button pButton_type)
 {
-	if (!window->hasFocus())
+	if (!mWindow->hasFocus())
 		return false;
-	return sf::Mouse::isButtonPressed((sf::Mouse::Button)b);
+	return sf::Mouse::isButtonPressed((sf::Mouse::Button)pButton_type);
 }
 
 void
-events::events_update_sfml_window(sf::RenderWindow& w)
+events::events_update_sfml_window(sf::RenderWindow& pWindow)
 {
-	window = &w;
+	mWindow = &pWindow;
 }
 
 int
@@ -316,12 +274,12 @@ events::update_events()
 {
 	refresh_pressed();
 
-	if (!window->isOpen())
+	if (!mWindow->isOpen())
 		return 1;
 
-	while (window->pollEvent(event))
+	while (mWindow->pollEvent(mEvent))
 	{
-		if (event.type == sf::Event::Closed)
+		if (mEvent.type == sf::Event::Closed)
 			return 1;
 
 		/*if (text_record.enable && event.type == sf::Event::TextEntered)

@@ -39,13 +39,7 @@ class render_client;
 
 class events
 {
-	sf::RenderWindow *window;
 
-	sf::Event event;
-
-	std::map<int, int> pressed_keys;
-	std::map<int, int> pressed_buttons;
-	void refresh_pressed();
 
 public:
 	typedef sf::Keyboard::Key key_type;
@@ -57,71 +51,57 @@ public:
 		mouse_middle
 	};
 
-	bool is_key_pressed(key_type k);
-	bool is_key_down(key_type k);
-	bool is_mouse_pressed(mouse_button b);
-	bool is_mouse_down(mouse_button b);
+	bool is_key_pressed(key_type pKey_type);
+	bool is_key_down(key_type pKey_type);
+	bool is_mouse_pressed(mouse_button pButton_type);
+	bool is_mouse_down(mouse_button pButton_type);
 
 	int update_events();
 
 protected:
-	void events_update_sfml_window(sf::RenderWindow& window);
+	void events_update_sfml_window(sf::RenderWindow& pWindow);
+
+private:
+	sf::RenderWindow *mWindow;
+
+	sf::Event mEvent;
+
+	std::map<int, int> mPressed_keys;
+	std::map<int, int> mPressed_buttons;
+
+	void refresh_pressed();
 };
 
 class renderer :
 	public events,
 	public util::nocopy
 {
-	sf::RenderWindow window;
-	std::vector<render_client*> clients;
-	int draw_clients();
-
-	void refresh_clients();
-
-	struct{
-		bool enable;
-		std::string text;
-		std::string* ptr;
-		bool multi_line;
-	} text_record;
-
-	color background_color;
-
 public:
-
 	renderer();
 	~renderer();
-	int initualize(ivector size, int fps = 30);
+	int initualize(ivector pSize, int pFps = 30);
 	int draw();
 	
 	int close();
-	int add_client(render_client* _client);
-	int remove_client(render_client* _client);
-	void set_pixel_scale(float a);
+	int add_client(render_client* pClient);
+	int remove_client(render_client* pClient);
+	void set_pixel_scale(float pScale);
 
 	fvector get_size();
 	void sort_clients();
 
-	void start_text_record(bool multi_line = false);
-	void start_text_record(std::string& ptr, bool multi_line = false);
-	bool is_text_recording();
-	bool is_text_recording(std::string& ptr);
-	void end_text_record();
-
-	const std::string& get_recorded_text();
-
 	fvector get_mouse_position();
-	fvector get_mouse_position(fvector relative);
+	fvector get_mouse_position(fvector pRelative);
 
 	bool is_focused();
 
-	void set_visible(bool is_visible);
-	void set_bg_color(color c);
+	void set_visible(bool pVisible);
+	void set_background_color(color pColor);
 
 #ifdef ENGINE_INTERNAL
 
 	sf::RenderWindow& get_sfml_window()
-	{ return window; }
+	{ return mWindow; }
 
 #endif
 
@@ -129,74 +109,86 @@ public:
 	friend class tile_node;
 	friend class text_node;
 	friend class rectangle_node;
+
+private:
+	sf::RenderWindow mWindow;
+	std::vector<render_client*> mClients;
+	int draw_clients();
+
+	void refresh_clients();
+
+	color mBackground_color;
 };
 
 class render_client :
 	public util::nocopy
 {
-	renderer* renderer_;
-	int client_index;
-	bool visible;
-	depth_t depth;
 public:
 	render_client();
 	~render_client();
-	void set_depth(depth_t d);
+	void set_depth(depth_t pDepth);
 	float get_depth();
 	bool is_visible();
-	void set_visible(bool a);
-	virtual int draw(renderer &_r) = 0;
+	void set_visible(bool pVisible);
+	virtual int draw(renderer &pR) = 0;
 	int is_rendered();
+
 	friend class renderer;
 
 protected:
-	virtual void refresh_renderer(renderer& _r) {}
+	virtual void refresh_renderer(renderer& pR) {}
+
+private:
+	renderer* mRenderer;
+	int mIndex;
+	bool mVisible;
+	depth_t mDepth;
 };
 
 class render_proxy
 {
-	renderer* r;
+	renderer* mR;
 public:
-	void set_renderer(renderer& _r)
+	void set_renderer(renderer& pR)
 	{
-		r = &_r;
-		refresh_renderer(_r);
+		mR = &pR;
+		refresh_renderer(pR);
 	}
 	renderer* get_renderer()
 	{
-		assert(r != nullptr);
-		return r;
+		assert(mR != nullptr);
+		return mR;
 	}
 protected:
-	virtual void refresh_renderer(renderer& _r){}
+	virtual void refresh_renderer(renderer& pR){}
 };
 
 class vertex_reference
 {
 public:
 	vertex_reference()
-		: ref(nullptr)
+		: mRef(nullptr)
 	{}
 
 #ifdef ENGINE_INTERNAL
 
 	vertex_reference(sf::Vertex& _ref)
-		: ref(&_ref)
+		: mRef(&_ref)
 	{}
 
 	vertex_reference& operator=(sf::Vertex& _ref)
 	{
-		ref = &_ref;
+		mRef = &_ref;
 		return *this;
 	}
 
 #endif
 
-	void set_position(fvector position);
+	void set_position(fvector pPosition);
 	fvector get_position();
-	void set_texture_rect(frect rect, int rotation);
+	void set_texture_rect(frect pRect, int rotation);
 private:
-	sf::Vertex* ref;
+	sf::Vertex* mRef;
 	void refresh_size();
 };
 
@@ -205,13 +197,13 @@ class vertex_batch :
 	public node
 {
 public:
-	void set_texture(texture &t);
-	vertex_reference add_sprite(fvector pos, frect tex_rect, int rot = 0);
-	int draw(renderer &_r);
+	void set_texture(texture &pTexture);
+	vertex_reference add_sprite(fvector pPosition, frect pTexture_rect, int pRotation = 0);
+	int draw(renderer &pR);
 
 private:
-	std::vector<sf::Vertex> vertices;
-	texture *c_texture;
+	std::vector<sf::Vertex> mVertices;
+	texture *mTexture;
 };
 
 enum struct anchor
@@ -228,36 +220,36 @@ enum struct anchor
 };
 
 template<typename T>
-static vector<T> center_offset(const vector<T>& size, anchor type)
+static vector<T> center_offset(const vector<T>& pSize, anchor pType)
 {
-	switch (type)
+	switch (pType)
 	{
 	case anchor::top:
-		return{ size.x/2, 0 };
+		return{ pSize.x/2, 0 };
 	case anchor::topleft:
 		return{ 0, 0 };
 	case anchor::topright:
-		return{ size.x, 0 };
+		return{ pSize.x, 0 };
 	case anchor::bottom:
-		return{ size.x/2, size.y };
+		return{ pSize.x/2, pSize.y };
 	case anchor::bottomleft:
-		return{ 0, size.y };
+		return{ 0, pSize.y };
 	case anchor::bottomright:
-		return{ size.x, size.y };
+		return{ pSize.x, pSize.y };
 	case anchor::left:
-		return{ 0, size.y/2 };
+		return{ 0, pSize.y/2 };
 	case anchor::right:
-		return{ size.x, size.y/2 };
+		return{ pSize.x, pSize.y/2 };
 	case anchor::center:
-		return{ size.x/2, size.y/2 };
+		return{ pSize.x/2, pSize.y/2 };
 	}
 	return 0;
 }
 
 template<typename T>
-static vector<T> anchor_offset(const vector<T> size, anchor type)
+static vector<T> anchor_offset(const vector<T> pSize, anchor pType)
 {
-	return center_offset(size, type) * -1;
+	return center_offset(pSize, pType) * -1;
 }
 
 class rectangle_node :
@@ -279,11 +271,11 @@ public:
 	{
 		shape.setSize({s.x, s.y});
 	}
-	virtual int draw(renderer &_r)
+	virtual int draw(renderer &pR)
 	{
 		auto pos = get_exact_position();
 		shape.setPosition({pos.x, pos.y});
-		_r.window.draw(shape);
+		pR.mWindow.draw(shape);
 		return 0;
 	}
 };
@@ -293,16 +285,16 @@ class sprite_node :
 	public node
 {
 public:
-	void set_anchor(anchor _anchor);
-	virtual int draw(renderer &_r);
-	void set_scale(fvector scale);
-	int set_texture(texture& tex);
-	int set_texture(texture& tex, std::string atlas);
-	void set_texture_rect(const engine::frect& crop);
+	void set_anchor(anchor pAnchor);
+	virtual int draw(renderer &pR);
+	void set_scale(fvector pScale);
+	int set_texture(texture& pTexture);
+	int set_texture(texture& pTexture, std::string pAtlas);
+	void set_texture_rect(const engine::frect& pRect);
 	fvector get_size();
 
 private:
-	texture *c_texture;
+	texture *mTexture;
 	sf::Vertex mVertices[4];
 	fvector mOffset;
 	fvector mScale;
@@ -312,7 +304,7 @@ class font
 {
 	sf::Font sf_font;
 public:
-	int load(std::string path);
+	int load(std::string pPath);
 	friend class text_node;
 };
 
@@ -321,45 +313,47 @@ class text_node :
 	public node
 {
 	sf::Text text;
-	std::string c_text; // Avoids reliance on sfml
-	engine::anchor c_anchor;
+	std::string mText; // Avoids reliance on sfml
+	engine::anchor mAnchor;
 public:
 	text_node();
-	void set_font(font& f);
-	void set_text(const std::string s);
-	void append_text(const std::string s);
+	void set_font(font& pFont);
+	void set_text(const std::string pText);
+	void append_text(const std::string pText);
 	std::string get_text();
-	void set_character_size(int s);
-	void set_anchor(engine::anchor a);
-	void set_color(const color c);
-	void set_scale(float a);
-	void copy_format(const text_node& node);
-	virtual int draw(renderer &_r);
+	void set_character_size(int pPixels);
+	void set_anchor(engine::anchor pAnchor);
+	void set_color(const color pColor);
+	void set_scale(float pScale);
+	void copy_format(const text_node& pText_node);
+	virtual int draw(renderer &pR);
 };
 
 class tile_node :
 	public render_client,
 	public node
 {
+public:
+	tile_node();
+	void set_tile_size(fvector pPixels);
+	void set_texture(texture& pTexture);
+	void set_tile(fvector pPosisition, std::string pAtlas, size_t pLayer = 0, int pRotation = 0, bool pReplace = true);
+	void remove_tile(fvector pPosisition, size_t pLayer);
+	void clear_all();
+	virtual int draw(renderer &pR);
+
+public:
 	struct tile_entry{
 		fvector pos;
 		size_t index, layer;
-		tile_entry(fvector _pos, size_t _index, size_t _layer)
-			: pos(_pos), index(_index), layer(_layer){}
+		tile_entry(fvector pPosition, size_t pIndex, size_t pLayer)
+			: pos(pPosition), index(pIndex), layer(pLayer){}
 	};
-	std::vector<tile_entry> entries;
-	int find_tile(fvector pos, size_t layer = 0);
-	fvector tile_size;
-	std::map<size_t, ptr_GC_owner<std::vector<sf::Vertex>>> layers;
-	texture* c_tex;
-public:
-	tile_node();
-	void set_tile_size(fvector s);
-	void set_texture(texture& tex);
-	void set_tile(fvector pos, std::string atlas, size_t layer = 0, int rot = 0, bool replace = true);
-	void remove_tile(fvector pos, size_t layer);
-	void clear_all();
-	virtual int draw(renderer &_r);
+	std::vector<tile_entry> mTiles;
+	int find_tile(fvector pPosition, size_t pLayer = 0);
+	fvector mTile_size;
+	texture* mTexture;
+	std::map<size_t, ptr_GC_owner<std::vector<sf::Vertex>>> mLayers;
 };
 
 
@@ -375,12 +369,12 @@ public:
 		pingpong
 	};
 
-	void set_loop(e_loop a);
+	void set_loop(e_loop pLoop);
 	e_loop  get_loop();
 
-	void add_interval(frame_t from, int interval);
+	void add_interval(frame_t pFrom, int pInterval);
 
-	int  get_interval(frame_t at = 0);
+	int  get_interval(frame_t pAt = 0);
 
 	void set_frame_count(frame_t count);
 	frame_t get_frame_count();
@@ -402,12 +396,12 @@ private:
 		int     interval;
 		frame_t from;
 	};
-	std::vector<sequence_frame> sequence;
-	engine::frect               frame;
-	engine::texture*            opt_texture;
-	frame_t                     default_frame;
-	frame_t                     frame_count;
-	e_loop                      loop;
+	std::vector<sequence_frame> mSequence;
+	engine::frect               mFrame;
+	engine::texture*            mTexture;
+	frame_t                     mDefault_frame;
+	frame_t                     mFrame_count;
+	e_loop                      mLoop;
 };
 
 class animation_node :
@@ -417,9 +411,9 @@ class animation_node :
 public:
 	animation_node();
 
-	void set_frame(frame_t frame);
-	void set_animation(animation& a, bool swap = false);
-	void set_texture(texture& tex);
+	void set_frame(frame_t pFrame);
+	void set_animation(animation& pAnimation, bool swap = false);
+	void set_texture(texture& pTexture);
 
 	int tick();
 
@@ -436,63 +430,20 @@ public:
 private:
 	sprite_node sprite;
 
-	engine::clock  clock;
+	engine::clock  mClock;
 
-	animation* c_animation;
+	animation* mAnimation;
 
-	frame_t c_count;
-	frame_t c_frame;
+	frame_t mCount;
+	frame_t mFrame;
 
-	anchor c_anchor;
+	anchor mAnchor;
 
-	int interval;
-	bool playing;
+	int mInterval;
+	bool mPlaying;
 
 	frame_t calculate_frame();
 };
-
-class tile_animation
-{
-public:
-	void set_frame_rect(frect rect)
-	{ frame_rect = rect; }
-
-	void set_frame_count(frame_t count)
-	{ frame_count = count; }
-
-private:
-	frect frame_rect;
-	frame_t frame_count;
-};
-
-
-class tilemap_node_remake
-{
-public:
-	void set_tile_size(fvector size)
-	{
-		tile_size = size;
-	}
-
-
-
-private:
-
-	struct tile_entry
-	{
-		fvector position;
-		size_t layer, index;
-		frame_t frame;
-		tile_animation* anim;
-		tile_entry(fvector _pos, size_t _index, size_t _layer)
-			: position(_pos), index(_index), layer(_layer) {}
-	};
-
-	std::vector<tile_entry> entries;
-	std::map<size_t, ptr_GC_owner<std::vector<sf::Vertex>>> layers;
-	fvector tile_size;
-};
-
 
 }
 

@@ -3,7 +3,6 @@
 #include "texture.hpp"
 #include "rpg.hpp"
 #include "time.hpp"
-#include "ui.hpp"
 #include "rpg_config.hpp"
 #include "parsers.hpp"
 
@@ -46,9 +45,6 @@ int game()
 	p1.set_texture_rect({ 0,0,32,32 });
 
 	r.add_client(&p1);*/
-
-	r.start_text_record(true);
-
 
 	rpg::controls controls;
 

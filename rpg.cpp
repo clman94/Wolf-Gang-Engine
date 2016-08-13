@@ -17,24 +17,24 @@ using namespace AS;
 // flag_container
 // #########
 
-bool flag_container::set_flag(const std::string& name)
+bool flag_container::set_flag(const std::string& pName)
 {
-	return flags.emplace(name).second;
+	return flags.emplace(pName).second;
 }
-bool flag_container::unset_flag(const std::string& name)
+bool flag_container::unset_flag(const std::string& pName)
 {
-	return flags.erase(name) == 1;
+	return flags.erase(pName) == 1;
 }
-bool flag_container::has_flag(const std::string& name)
+bool flag_container::has_flag(const std::string& pName)
 {
-	return flags.find(name) != flags.end();
+	return flags.find(pName) != flags.end();
 }
 
-void flag_container::load_script_interface(script_system & script)
+void flag_container::load_script_interface(script_system & pScript)
 {
-	script.add_function("bool has_flag(const string &in)", asMETHOD(flag_container, has_flag), this);
-	script.add_function("bool set_flag(const string &in)", asMETHOD(flag_container, set_flag), this);
-	script.add_function("bool unset_flag(const string &in)", asMETHOD(flag_container, unset_flag), this);
+	pScript.add_function("bool has_flag(const string &in)", asMETHOD(flag_container, has_flag), this);
+	pScript.add_function("bool set_flag(const string &in)", asMETHOD(flag_container, set_flag), this);
+	pScript.add_function("bool unset_flag(const string &in)", asMETHOD(flag_container, unset_flag), this);
 }
 
 // #########
@@ -67,43 +67,43 @@ entity::set_dynamic_depth(bool a)
 entity::entity()
 {
 	dynamic_depth = true;
-	node.set_anchor(engine::anchor::bottom);
-	add_child(node);
+	mNode.set_anchor(engine::anchor::bottom);
+	add_child(mNode);
 }
 
 void
-entity::play_withtype(e_type type)
+entity::play_withtype(e_type pType)
 {
-	if (c_animation
-		&& c_animation->type == type)
-		node.start();
+	if (mAnimation
+		&& mAnimation->type == pType)
+		mNode.start();
 }
 
 void
-entity::stop_withtype(e_type type)
+entity::stop_withtype(e_type pType)
 {
-	if (c_animation
-		&& c_animation->type == type)
-		node.stop();
+	if (mAnimation
+		&& mAnimation->type == pType)
+		mNode.stop();
 }
 
 void
-entity::tick_withtype(e_type type)
+entity::tick_withtype(e_type pType)
 {
-	if (c_animation
-		&& c_animation->type == type)
-		node.tick();
+	if (mAnimation
+		&& mAnimation->type == pType)
+		mNode.tick();
 }
 
 bool
-entity::set_animation(std::string name)
+entity::set_animation(std::string pName)
 {
 	for (auto &i : animations)
 	{
-		if (i.get_name() == name)
+		if (i.get_name() == pName)
 		{
-			c_animation = &i;
-			node.set_animation(i.anim, true);
+			mAnimation = &i;
+			mNode.set_animation(i.anim, true);
 			return true;
 		}
 	}
@@ -122,7 +122,7 @@ entity::draw(engine::renderer &_r)
 		if (ndepth != get_depth())
 			set_depth(ndepth);
 	}
-	node.draw(_r);
+	mNode.draw(_r);
 	return 0;
 }
 
@@ -272,7 +272,7 @@ character::get_speed()
 collision_box*
 collision_system::wall_collision(const engine::frect & r)
 {
-	for (auto &i : walls)
+	for (auto &i : mWalls)
 		if (i.is_valid() && i.is_intersect(r))
 			return &i;
 	return nullptr;
@@ -281,7 +281,7 @@ collision_system::wall_collision(const engine::frect & r)
 door*
 collision_system::door_collision(const engine::fvector & r)
 {
-	for (auto &i : doors)
+	for (auto &i : mDoors)
 		if (i.is_valid() && i.is_intersect(r))
 			return &i;
 	return nullptr;
@@ -290,7 +290,7 @@ collision_system::door_collision(const engine::fvector & r)
 trigger*
 collision_system::trigger_collision(const engine::fvector & pos)
 {
-	for (auto &i : triggers)
+	for (auto &i : mTriggers)
 		if (i.is_valid() && i.is_intersect(pos))
 			return &i;
 	return nullptr;
@@ -299,7 +299,7 @@ collision_system::trigger_collision(const engine::fvector & pos)
 trigger*
 collision_system::button_collision(const engine::fvector & pos)
 {
-	for (auto &i : buttons)
+	for (auto &i : mButtons)
 		if (i.is_valid() && i.is_intersect(pos))
 			return &i;
 	return nullptr;
@@ -308,7 +308,7 @@ collision_system::button_collision(const engine::fvector & pos)
 engine::fvector
 collision_system::get_door_entry(std::string name)
 {
-	for (auto& i : doors)
+	for (auto& i : mDoors)
 	{
 		if (i.name == name)
 		{
@@ -321,10 +321,10 @@ collision_system::get_door_entry(std::string name)
 void 
 collision_system::validate_all(flag_container& flags)
 {
-	for (auto &i : walls)    i.validate(flags);
-	for (auto &i : doors)    i.validate(flags);
-	for (auto &i : triggers) i.validate(flags);
-	for (auto &i : buttons)  i.validate(flags);
+	for (auto &i : mWalls)    i.validate(flags);
+	for (auto &i : mDoors)    i.validate(flags);
+	for (auto &i : mTriggers) i.validate(flags);
+	for (auto &i : mButtons)  i.validate(flags);
 }
 
 void
@@ -332,29 +332,29 @@ collision_system::add_wall(engine::frect r)
 {
 	collision_box nw;
 	nw.set_rect(r);
-	walls.push_back(nw);
+	mWalls.push_back(nw);
 }
 
 void
 collision_system::add_trigger(trigger & t)
 {
-	triggers.push_back(t);
+	mTriggers.push_back(t);
 }
 
 void
 collision_system::add_button(trigger & t)
 {
-	buttons.push_back(t);
+	mButtons.push_back(t);
 }
 
 
 void
 collision_system::clear()
 {
-	walls.clear();
-	doors.clear();
-	triggers.clear();
-	buttons.clear();
+	mWalls.clear();
+	mDoors.clear();
+	mTriggers.clear();
+	mButtons.clear();
 }
 
 util::error
@@ -371,7 +371,7 @@ collision_system::load_collision_boxes(tinyxml2::XMLElement* e, flag_container& 
 		{
 			collision_box nw;
 			nw.load_xml(ele_item);
-			walls.emplace_back(nw);
+			mWalls.emplace_back(nw);
 		}
 
 		if (box_type == "door")
@@ -380,7 +380,7 @@ collision_system::load_collision_boxes(tinyxml2::XMLElement* e, flag_container& 
 			nd.name = util::safe_string(ele_item->Attribute("name"));
 			nd.destination = util::safe_string(ele_item->Attribute("dest"));
 			nd.scene_path = util::safe_string(ele_item->Attribute("scene"));
-			doors.push_back(nd);
+			mDoors.push_back(nd);
 		}
 
 		ele_item = ele_item->NextSiblingElement();
@@ -749,21 +749,21 @@ controls::controls()
 }
 
 void
-controls::trigger(control c)
+controls::trigger(control pControl)
 {
-	c_controls[(int)c] = true;
+	mControls[(int)pControl] = true;
 }
 
 bool
-controls::is_triggered(control c)
+controls::is_triggered(control pControl)
 {
-	return c_controls[(int)c];
+	return mControls[(int)pControl];
 }
 
 void
 controls::reset()
 {
-	c_controls.assign(false);
+	mControls.assign(false);
 }
 
 // #########
@@ -782,19 +782,19 @@ void script_system::message_callback(const asSMessageInfo * msg)
 }
 
 std::string
-script_system::get_metadata_type(const std::string & str)
+script_system::get_metadata_type(const std::string & pMetadata)
 {
-	for (auto i = str.begin(); i != str.end(); i++)
+	for (auto i = pMetadata.begin(); i != pMetadata.end(); i++)
 	{
 		if (!parsers::is_letter(*i))
-			return std::string(str.begin(), i);
+			return std::string(pMetadata.begin(), i);
 	}
-	return str;
+	return pMetadata;
 }
 
 void script_system::script_abort()
 {
-	auto c_ctx = ctxmgr.GetCurrentContext();
+	auto c_ctx = mCtxmgr.GetCurrentContext();
 	assert(c_ctx != nullptr);
 	c_ctx->Abort();
 }
@@ -808,44 +808,44 @@ script_system::dprint(std::string &msg)
 void
 script_system::register_vector_type()
 {
-	as_engine->RegisterObjectType("vec", sizeof(engine::fvector), asOBJ_VALUE | asGetTypeTraits<engine::fvector>());
+	mEngine->RegisterObjectType("vec", sizeof(engine::fvector), asOBJ_VALUE | asGetTypeTraits<engine::fvector>());
 
-	as_engine->RegisterObjectBehaviour("vec", asBEHAVE_CONSTRUCT, "void f()"
+	mEngine->RegisterObjectBehaviour("vec", asBEHAVE_CONSTRUCT, "void f()"
 		, asFUNCTION(as_default_constr<engine::fvector>), asCALL_CDECL_OBJLAST);
-	as_engine->RegisterObjectBehaviour("vec", asBEHAVE_DESTRUCT, "void f()"
+	mEngine->RegisterObjectBehaviour("vec", asBEHAVE_DESTRUCT, "void f()"
 		, asFUNCTION(as_default_destr<engine::fvector>), asCALL_CDECL_OBJLAST);
 
-	as_engine->RegisterObjectMethod("vec", "vec& opAssign(const vec &in)"
+	mEngine->RegisterObjectMethod("vec", "vec& opAssign(const vec &in)"
 		, asMETHODPR(engine::fvector, operator=, (const engine::fvector&), engine::fvector&)
 		, asCALL_THISCALL);
-	as_engine->RegisterObjectMethod("vec", "vec& opAddAssign(const vec &in)"
+	mEngine->RegisterObjectMethod("vec", "vec& opAddAssign(const vec &in)"
 		, asMETHODPR(engine::fvector, operator+=<float>, (const engine::fvector&), engine::fvector&)
 		, asCALL_THISCALL);
-	as_engine->RegisterObjectMethod("vec", "vec opMul(const float&in)"
+	mEngine->RegisterObjectMethod("vec", "vec opMul(const float&in)"
 		, asMETHODPR(engine::fvector, operator*<float>, (const float&), engine::fvector)
 		, asCALL_THISCALL);
 
-	as_engine->RegisterObjectProperty("vec", "float x", asOFFSET(engine::fvector, x));
-	as_engine->RegisterObjectProperty("vec", "float y", asOFFSET(engine::fvector, y));
+	mEngine->RegisterObjectProperty("vec", "float x", asOFFSET(engine::fvector, x));
+	mEngine->RegisterObjectProperty("vec", "float y", asOFFSET(engine::fvector, y));
 }
 
 script_system::script_system()
 {
-	as_engine = asCreateScriptEngine();
+	mEngine = asCreateScriptEngine();
 
-	as_engine->SetMessageCallback(asMETHOD(script_system, message_callback), this, asCALL_THISCALL);
+	mEngine->SetMessageCallback(asMETHOD(script_system, message_callback), this, asCALL_THISCALL);
 
-	RegisterStdString(as_engine);
-	RegisterScriptMath(as_engine);
-	RegisterScriptArray(as_engine, true);
-	ctxmgr.RegisterCoRoutineSupport(as_engine);
+	RegisterStdString(mEngine);
+	RegisterScriptMath(mEngine);
+	RegisterScriptArray(mEngine, true);
+	mCtxmgr.RegisterCoRoutineSupport(mEngine);
 
 	register_vector_type();
 
 	add_function("int rand()", asFUNCTION(std::rand));
 
-	add_function("void _timer_start(float)",  asMETHOD(engine::timer, start_timer), &main_timer);
-	add_function("bool _timer_reached()",     asMETHOD(engine::timer, is_reached), &main_timer);
+	add_function("void _timer_start(float)",  asMETHOD(engine::timer, start_timer), &mTimer);
+	add_function("bool _timer_reached()",     asMETHOD(engine::timer, is_reached), &mTimer);
 
 	add_function("void cocall(const string &in)", asMETHOD(script_system, call_event_function), this);
 
@@ -856,64 +856,64 @@ script_system::script_system()
 
 script_system::~script_system()
 {
-	ctxmgr.AbortAll();
-	ctxmgr.~CContextMgr(); // Destroy context manager before releasing engine
-	as_engine->ShutDownAndRelease();
+	mCtxmgr.AbortAll();
+	mCtxmgr.~CContextMgr(); // Destroy context manager before releasing engine
+	mEngine->ShutDownAndRelease();
 }
 
 util::error
-script_system::load_scene_script(const std::string& path)
+script_system::load_scene_script(const std::string& pPath)
 {
-	ctxmgr.AbortAll();
-	as_engine->DiscardModule("scene");
-	builder.StartNewModule(as_engine, "scene");
-	builder.AddSectionFromMemory("scene_commands", "#include 'data/scene_commands.as'");
-	builder.AddSectionFromFile(path.c_str());
-	builder.BuildModule();
+	mCtxmgr.AbortAll();
+	mEngine->DiscardModule("scene");
+	mBuilder.StartNewModule(mEngine, "scene");
+	mBuilder.AddSectionFromMemory("scene_commands", "#include 'data/scene_commands.as'");
+	mBuilder.AddSectionFromFile(pPath.c_str());
+	mBuilder.BuildModule();
 
-	scene_module = builder.GetModule();
-	auto func = scene_module->GetFunctionByDecl("void start()");
-	ctxmgr.AddContext(as_engine, func);
+	mScene_module = mBuilder.GetModule();
+	auto func = mScene_module->GetFunctionByDecl("void start()");
+	mCtxmgr.AddContext(mEngine, func);
 	return 0;
 }
 
 void
-script_system::add_function(const char* decl, const asSFuncPtr& ptr, void* instance)
+script_system::add_function(const char* pDeclaration, const asSFuncPtr& pPtr, void* pInstance)
 {
-	int r = as_engine->RegisterGlobalFunction(decl, ptr, asCALL_THISCALL_ASGLOBAL, instance);
+	int r = mEngine->RegisterGlobalFunction(pDeclaration, pPtr, asCALL_THISCALL_ASGLOBAL, pInstance);
 	assert(r >= 0);
 }
 
 void
-script_system::add_function(const char * decl, const asSFuncPtr & ptr)
+script_system::add_function(const char * pDeclaration, const asSFuncPtr& pPtr)
 {
-	int r = as_engine->RegisterGlobalFunction(decl, ptr, asCALL_CDECL);
+	int r = mEngine->RegisterGlobalFunction(pDeclaration, pPtr, asCALL_CDECL);
 	assert(r >= 0);
 }
 
 void
-script_system::add_pointer_type(const char* name)
+script_system::add_pointer_type(const char* pName)
 {
-	as_engine->RegisterObjectType(name, sizeof(void*), asOBJ_VALUE | asOBJ_APP_PRIMITIVE | asOBJ_POD);
+	mEngine->RegisterObjectType(pName, sizeof(void*), asOBJ_VALUE | asOBJ_APP_PRIMITIVE | asOBJ_POD);
 }
 
 void
-script_system::call_event_function(const std::string& name)
+script_system::call_event_function(const std::string& pName)
 {
-	auto func = scene_module->GetFunctionByName(name.c_str());
+	auto func = mScene_module->GetFunctionByName(pName.c_str());
 	if (!func)
-		util::error("Function '" + name + "' does not exist");
-	ctxmgr.AddContext(as_engine, func);
+		util::error("Function '" + pName + "' does not exist");
+	mCtxmgr.AddContext(mEngine, func);
 }
 
 void
-script_system::setup_triggers(collision_system& collision)
+script_system::setup_triggers(collision_system& pCollision_system)
 {
-	size_t func_count = scene_module->GetFunctionCount();
+	size_t func_count = mScene_module->GetFunctionCount();
 	for (size_t i = 0; i < func_count; i++)
 	{
-		auto func = scene_module->GetFunctionByIndex(i);
-		std::string metadata = builder.GetMetadataStringForFunc(func);
+		auto func = mScene_module->GetFunctionByIndex(i);
+		std::string metadata = mBuilder.GetMetadataStringForFunc(func);
 		std::string type = get_metadata_type(metadata);
 
 		if (type == "trigger" ||
@@ -921,17 +921,17 @@ script_system::setup_triggers(collision_system& collision)
 		{
 			trigger nt;
 			script_function& sfunc = nt.get_function();
-			sfunc.set_context_manager(&ctxmgr);
-			sfunc.set_engine(as_engine);
+			sfunc.set_context_manager(&mCtxmgr);
+			sfunc.set_engine(mEngine);
 			sfunc.set_function(func);
 
 			std::string vectordata(metadata.begin() + type.length(), metadata.end());
 			nt.parse_function_metadata(metadata);
 
 			if (type == "trigger")
-				collision.add_trigger(nt);
+				pCollision_system.add_trigger(nt);
 			if (type == "button")
-				collision.add_button(nt);
+				pCollision_system.add_button(nt);
 		}
 		else if(!metadata.empty())
 			std::cout << "Invalid Metadata: " << metadata << "\n";
@@ -941,7 +941,7 @@ script_system::setup_triggers(collision_system& collision)
 int
 script_system::tick()
 {
-	ctxmgr.ExecuteScripts();
+	mCtxmgr.ExecuteScripts();
 	return 0;
 }
 
@@ -1109,23 +1109,23 @@ game::refresh_renderer(engine::renderer & r)
 // ##########
 
 void
-panning_node::set_boundary(engine::fvector a)
+panning_node::set_boundary(engine::fvector pBoundary)
 {
-	boundary = a;
+	mBoundary = pBoundary;
 }
 
 void
-panning_node::set_viewport(engine::fvector a)
+panning_node::set_viewport(engine::fvector pViewport)
 {
-	viewport = a;
+	mViewport = pViewport;
 }
 
 void
-panning_node::set_focus(engine::fvector pos)
+panning_node::set_focus(engine::fvector pFocus)
 {
-	engine::fvector npos = pos - (viewport * 0.5f);
-	npos.x = util::clamp(npos.x, 0.f, boundary.x - viewport.x);
-	npos.y = util::clamp(npos.y, 0.f, boundary.y - viewport.y);
+	engine::fvector npos = pFocus - (mViewport * 0.5f);
+	npos.x = util::clamp(pFocus.x, 0.f, mBoundary.x - mViewport.x);
+	npos.y = util::clamp(pFocus.y, 0.f, mBoundary.y - mViewport.y);
 	set_position(-npos);
 }
 
@@ -1143,7 +1143,7 @@ narrative_dialog::load_box(tinyxml2::XMLElement* e, texture_manager& tm)
 
 	auto tex = tm.get_texture(att_box_tex);
 	if (!tex) return "Texture does not exist";
-	box.set_texture(*tex, att_box_atlas);
+	mBox.set_texture(*tex, att_box_atlas);
 
 	set_box_position(position::bottom);
 
@@ -1157,43 +1157,43 @@ narrative_dialog::load_font(tinyxml2::XMLElement* e)
 
 	std::string att_font_path = ele_font->Attribute("path");
 
-	font.load(att_font_path);
-	text.set_font(font);
-	text.set_character_size(60);
-	text.set_scale(0.25f);
+	mFont.load(att_font_path);
+	mText.set_font(mFont);
+	mText.set_character_size(60);
+	mText.set_scale(0.25f);
 
-	selection.copy_format(text);
+	mSelection.copy_format(mText);
 
 	return 0;
 }
 
 narrative_dialog::narrative_dialog()
 {
-	revealing = false;
+	mRevealing = false;
 	hide_box();
-	interval = defs::DEFAULT_DIALOG_SPEED;
-	box.add_child(text);
-	box.add_child(selection);
+	mInterval = defs::DEFAULT_DIALOG_SPEED;
+	mBox.add_child(mText);
+	mBox.add_child(mSelection);
 
-	text.set_position({ 5,5 });
-	selection.set_position({ 50, 50 });
+	mText.set_position({ 5,5 });
+	mSelection.set_position({ 50, 50 });
 }
 
 void
-narrative_dialog::set_box_position(position pos)
+narrative_dialog::set_box_position(position pPosition)
 {
-	float offx = (defs::DISPLAY_SIZE.x - box.get_size().x) / 2;
+	float offx = (defs::DISPLAY_SIZE.x - mBox.get_size().x) / 2;
 
-	switch (pos)
+	switch (pPosition)
 	{
 	case position::top:
 	{
-		box.set_position({ offx, 10 });
+		mBox.set_position({ offx, 10 });
 		break;
 	}
 	case position::bottom:
 	{
-		box.set_position({ offx, defs::DISPLAY_SIZE.y - box.get_size().y - 10 });
+		mBox.set_position({ offx, defs::DISPLAY_SIZE.y - mBox.get_size().y - 10 });
 		break;
 	}
 	}
@@ -1202,85 +1202,85 @@ narrative_dialog::set_box_position(position pos)
 bool
 narrative_dialog::is_revealing()
 {
-	return revealing;
+	return mRevealing;
 }
 
 void
-narrative_dialog::reveal_text(const std::string& str, bool append)
+narrative_dialog::reveal_text(const std::string& pText, bool pAppend)
 {
-	timer.restart();
-	revealing = true;
+	mTimer.restart();
+	mRevealing = true;
 
-	if (append)
+	if (pAppend)
 	{
-		full_text += str;
+		mFull_text += pText;
 	}
 	else
 	{
-		full_text = str;
-		text.set_text("");
-		c_char = 0;
+		mFull_text = pText;
+		mText.set_text("");
+		mCount = 0;
 	}
 }
 
 void
-narrative_dialog::instant_text(std::string str, bool append)
+narrative_dialog::instant_text(std::string pText, bool pAppend)
 {
-	revealing = false;
-	if (append)
-		full_text += str;
+	mRevealing = false;
+	if (pAppend)
+		mFull_text += pText;
 	else
-		full_text = str;
-	text.set_text(full_text);
+		mFull_text = pText;
+	mText.set_text(mFull_text);
 }
 
 void
 narrative_dialog::show_box()
 {
-	text.set_visible(true);
-	box.set_visible(true);
+	mText.set_visible(true);
+	mBox.set_visible(true);
 }
 
 void
 narrative_dialog::hide_box()
 {
-	revealing = false;
-	text.set_visible(false);
-	text.set_text("");
-	box.set_visible(false);
-	selection.set_visible(false);
+	mRevealing = false;
+	mText.set_visible(false);
+	mText.set_text("");
+	mBox.set_visible(false);
+	mSelection.set_visible(false);
 }
 
 bool rpg::narrative_dialog::is_box_open()
 {
-	return box.is_visible();
+	return mBox.is_visible();
 }
 
 void
 narrative_dialog::set_interval(float ms)
 {
-	interval = ms;
+	mInterval = ms;
 }
 
 void
 narrative_dialog::show_selection()
 {
-	if (box.is_visible())
+	if (mBox.is_visible())
 	{
-		selection.set_visible(true);
+		mSelection.set_visible(true);
 	}
 }
 
 void
 narrative_dialog::hide_selection()
 {
-	selection.set_visible(false);
+	mSelection.set_visible(false);
 }
 
 void
-narrative_dialog::set_selection(const std::string & str)
+narrative_dialog::set_selection(const std::string & pText)
 {
-	selection.set_text(str);
+	mSelection.set_text(pText);
 }
 
 util::error
@@ -1292,37 +1292,37 @@ narrative_dialog::load_narrative_xml(tinyxml2::XMLElement* e, texture_manager& t
 }
 
 void
-narrative_dialog::load_script_interface(script_system & script)
+narrative_dialog::load_script_interface(script_system & pScript)
 {
-	script.add_function("void _say(const string &in, bool)", asMETHOD(narrative_dialog, reveal_text), this);
-	script.add_function("bool _is_revealing()", asMETHOD(narrative_dialog, is_revealing), this);
-	script.add_function("void _showbox()", asMETHOD(narrative_dialog, show_box), this);
-	script.add_function("void _hidebox()", asMETHOD(narrative_dialog, hide_box), this);
-	script.add_function("void _show_selection()", asMETHOD(narrative_dialog, show_selection), this);
-	script.add_function("void _hide_selection()", asMETHOD(narrative_dialog, hide_selection), this);
-	script.add_function("void _set_interval(float)", asMETHOD(narrative_dialog, set_interval), this);
-	script.add_function("void _set_box_position(int)", asMETHOD(narrative_dialog, set_box_position), this);
-	script.add_function("void _set_selection(const string &in)", asMETHOD(narrative_dialog, set_selection), this);
+	pScript.add_function("void _say(const string &in, bool)", asMETHOD(narrative_dialog, reveal_text), this);
+	pScript.add_function("bool _is_revealing()", asMETHOD(narrative_dialog, is_revealing), this);
+	pScript.add_function("void _showbox()", asMETHOD(narrative_dialog, show_box), this);
+	pScript.add_function("void _hidebox()", asMETHOD(narrative_dialog, hide_box), this);
+	pScript.add_function("void _show_selection()", asMETHOD(narrative_dialog, show_selection), this);
+	pScript.add_function("void _hide_selection()", asMETHOD(narrative_dialog, hide_selection), this);
+	pScript.add_function("void _set_interval(float)", asMETHOD(narrative_dialog, set_interval), this);
+	pScript.add_function("void _set_box_position(int)", asMETHOD(narrative_dialog, set_box_position), this);
+	pScript.add_function("void _set_selection(const string &in)", asMETHOD(narrative_dialog, set_selection), this);
 }
 
 int
-narrative_dialog::draw(engine::renderer& r)
+narrative_dialog::draw(engine::renderer& pR)
 {
-	if (!revealing) return 0;
+	if (!mRevealing) return 0;
 
-	float time = timer.get_elapse().ms();
-	if (time >= interval)
+	float time = mTimer.get_elapse().ms();
+	if (time >= mInterval)
 	{
-		c_char += (size_t)time / (size_t)interval;
-		c_char  = util::clamp<size_t>(c_char, 0, full_text.size());
+		mCount += (size_t)time / (size_t)mInterval;
+		mCount  = util::clamp<size_t>(mCount, 0, mFull_text.size());
 
-		std::string display(full_text.begin(), full_text.begin() + c_char);
-		text.set_text(display);
+		std::string display(mFull_text.begin(), mFull_text.begin() + mCount);
+		mText.set_text(display);
 
-		if (c_char >= full_text.size())
-			revealing = false;
+		if (mCount >= mFull_text.size())
+			mRevealing = false;
 
-		timer.restart();
+		mTimer.restart();
 	}
 	return 0;
 }
@@ -1330,9 +1330,9 @@ narrative_dialog::draw(engine::renderer& r)
 void
 narrative_dialog::refresh_renderer(engine::renderer& r)
 {
-	r.add_client(&box);
-	r.add_client(&text);
-	r.add_client(&selection);
+	r.add_client(&mBox);
+	r.add_client(&mText);
+	r.add_client(&mSelection);
 }
 
 // ##########
@@ -1756,18 +1756,18 @@ bool collision_box::is_valid()
 	return valid;
 }
 
-void collision_box::validate(flag_container & flags)
+void collision_box::validate(flag_container & pFlags)
 {
-	if (!invalid_on_flag.empty())
-		valid = !flags.has_flag(invalid_on_flag);
-	if (!spawn_flag.empty())
-		flags.set_flag(spawn_flag);
+	if (!mInvalid_on_flag.empty())
+		valid = !pFlags.has_flag(mInvalid_on_flag);
+	if (!mSpawn_flag.empty())
+		pFlags.set_flag(mSpawn_flag);
 }
 
 void collision_box::load_xml(tinyxml2::XMLElement * e)
 {
-	invalid_on_flag = util::safe_string(e->Attribute("invalid"));
-	spawn_flag = util::safe_string(e->Attribute("spawn"));
+	mInvalid_on_flag = util::safe_string(e->Attribute("invalid"));
+	mSpawn_flag = util::safe_string(e->Attribute("spawn"));
 
 	engine::frect rect;
 	rect.x = e->FloatAttribute("x");
@@ -1779,12 +1779,12 @@ void collision_box::load_xml(tinyxml2::XMLElement * e)
 
 script_function& trigger::get_function()
 {
-	return func;
+	return mFunc;
 }
 
-void trigger::parse_function_metadata(const std::string & metadata)
+void trigger::parse_function_metadata(const std::string & pMetadata)
 {
-	auto rect = parsers::parse_attribute_rect<float>(metadata);
+	auto rect = parsers::parse_attribute_rect<float>(pMetadata);
 	set_rect(engine::scale(rect, 32));
 }
 
@@ -1792,38 +1792,38 @@ void trigger::parse_function_metadata(const std::string & metadata)
 // tilemap_A
 // ##########
 
-void tilemap_A::set_texture(engine::texture & tex)
+void tilemap_A::set_texture(engine::texture & pTexture)
 {
-	c_texture = &tex;
+	mTexture = &pTexture;
 }
 
-void tilemap_A::set_tile(engine::fvector position, engine::frect tex_rect, int layer, int rotation)
+void tilemap_A::set_tile(engine::fvector pPosition, engine::frect pTexture_rect, int pLayer, int pRotation)
 {
-	auto &ntile = layers[layer].tiles[position];
-	ntile.ref = layers[layer].vertices.add_sprite(position, tex_rect, rotation);
+	auto &ntile = mLayers[pLayer].tiles[pPosition];
+	ntile.mRef = mLayers[pLayer].vertices.add_sprite(pPosition, pTexture_rect, pRotation);
 }
 
-void tilemap_A::set_tile(engine::fvector position, const std::string & atlas, int layer, int rotation)
+void tilemap_A::set_tile(engine::fvector pPosition, const std::string & pAtlas, int pLayer, int pRotation)
 {
-	set_tile(position, c_texture->get_entry(atlas), layer, rotation);
+	set_tile(pPosition, mTexture->get_entry(pAtlas), pLayer, pRotation);
 }
 
-int tilemap_A::draw(engine::renderer & r)
+int tilemap_A::draw(engine::renderer & pR)
 {
-	if (!c_texture) return 1;
-	for (auto &i : layers)
+	if (!mTexture) return 1;
+	for (auto &i : mLayers)
 	{
 		auto& vb = i.second.vertices;
-		vb.set_texture(*c_texture);
+		vb.set_texture(*mTexture);
 		vb.set_position(get_exact_position());
-		vb.draw(r);
+		vb.draw(pR);
 	}
 	return 0;
 }
 
 void tilemap_A::update_animations()
 {
-	for (auto &i : layers)
+	for (auto &i : mLayers)
 	{
 		for (auto &j : i.second.tiles)
 		{
@@ -1834,21 +1834,21 @@ void tilemap_A::update_animations()
 
 void tilemap_A::clear()
 {
-	layers.clear();
+	mLayers.clear();
 }
 
-void tilemap_A::tile::set_animation(engine::animation& _animation)
+void tilemap_A::tile::set_animation(engine::animation& pAnimation)
 {
-	animation = &_animation;
-	timer.start_timer(_animation.get_interval()*0.001f);
+	mAnimation = &pAnimation;
+	mTimer.start_timer(pAnimation.get_interval()*0.001f);
 }
 
 void tilemap_A::tile::update_animation()
 {
-	if (!animation) return;
-	if (timer.is_reached())
+	if (!mAnimation) return;
+	if (mTimer.is_reached())
 	{
-		++frame;
-		timer.start_timer(animation->get_interval(frame)*0.001f);
+		++mFrame;
+		mTimer.start_timer(mAnimation->get_interval(mFrame)*0.001f);
 	}
 }

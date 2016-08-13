@@ -4,24 +4,24 @@
 using namespace rpg;
 
 texture_manager::texture_entry*
-texture_manager::find_entry(const std::string&  name)
+texture_manager::find_entry(const std::string&  pName)
 {
-	for (auto& i : textures)
+	for (auto& i : mTextures)
 	{
-		if (i.name == name)
+		if (i.name == pName)
 			return &i;
 	}
 	return nullptr;
 }
 
 int
-texture_manager::load_settings(tinyxml2::XMLElement* e)
+texture_manager::load_settings(tinyxml2::XMLElement* pEle)
 {
-	assert(e != nullptr);
+	assert(pEle != nullptr);
 
 	using namespace tinyxml2;
 
-	XMLElement* ele_entry = e->FirstChildElement();
+	XMLElement* ele_entry = pEle->FirstChildElement();
 	while (ele_entry)
 	{
 		texture_entry nentry;
@@ -29,29 +29,29 @@ texture_manager::load_settings(tinyxml2::XMLElement* e)
 		nentry.path = ele_entry->Attribute("path");
 
 		// the optional atlas path
-		const char* opt_atlas = ele_entry->Attribute("atlas");
-		if (opt_atlas)
+		const char* att_atlas = ele_entry->Attribute("atlas");
+		if (att_atlas)
 		{
-			nentry.atlas = opt_atlas;
+			nentry.atlas = att_atlas;
 			nentry.has_atlas = true;
 		}
 		else
 			nentry.has_atlas = false;
 
 		nentry.is_loaded = false;
-		textures.push_back(nentry);
+		mTextures.push_back(nentry);
 		ele_entry = ele_entry->NextSiblingElement();
 	}
 	return 0;
 }
 
 engine::texture*
-texture_manager::get_texture(const std::string&  name)
+texture_manager::get_texture(const std::string&  pName)
 {
-	texture_entry* entry = find_entry(name);
+	texture_entry* entry = find_entry(pName);
 	if (!entry)
 	{
-		std::cout << "Error: Texture with name '" << name << "' Does not exist.\n";
+		std::cout << "Error: Texture with name '" << pName << "' Does not exist.\n";
 		return nullptr;
 	}
 	if (!entry->is_loaded)
@@ -68,28 +68,28 @@ std::vector<std::string>
 texture_manager::construct_list()
 {
 	std::vector<std::string> retval;
-	retval.reserve(textures.size());
-	for (auto& i : textures)
+	retval.reserve(mTextures.size());
+	for (auto& i : mTextures)
 		retval.push_back(i.name);
 	return std::move(retval);
 }
 
 sound_manager::soundbuffer_entry*
-sound_manager::find_buffer(const std::string&  name)
+sound_manager::find_buffer(const std::string&  pName)
 {
-	for (auto& i : buffers)
-		if (i.name == name)
+	for (auto& i : mBuffers)
+		if (i.name == pName)
 			return &i;
 	return nullptr;
 }
 
 util::error
-sound_manager::load_sounds(const std::string&  path)
+sound_manager::load_sounds(const std::string&  pPath)
 {
 	using namespace tinyxml2;
 
 	XMLDocument doc;
-	if (doc.LoadFile(path.c_str()))
+	if (doc.LoadFile(pPath.c_str()))
 		return "Could not load souind manager";
 
 	XMLElement* ele_root = doc.RootElement();
@@ -99,10 +99,10 @@ sound_manager::load_sounds(const std::string&  path)
 	auto ele_sound = ele_root->FirstChildElement();
 	while (ele_sound)
 	{
-		buffers.emplace_back();
-		auto & nbuf = buffers.back();
+		mBuffers.emplace_back();
+		auto & nbuf = mBuffers.back();
 
-		nbuf.buffer.load(path);
+		nbuf.buffer.load(pPath);
 		nbuf.name = util::safe_string(ele_sound->Name());
 
 		ele_sound->NextSiblingElement();
@@ -117,6 +117,6 @@ sound_manager::spawn_sound(const std::string& name)
 	auto buf = find_buffer(name);
 	if (!buf)
 		return 1;
-	sounds.spawn(buf->buffer);
+	mSounds.spawn(buf->buffer);
 	return 0;
 }

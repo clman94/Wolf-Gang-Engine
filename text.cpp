@@ -4,62 +4,61 @@ using namespace engine;
 
 text_node::text_node()
 {
-	c_anchor = anchor::topleft;
+	mAnchor = anchor::topleft;
 }
 
 int
-font::load(std::string path)
+font::load(std::string pPath)
 {
-	return sf_font.loadFromFile(path);
+	return sf_font.loadFromFile(pPath);
 }
 
 void
-text_node::set_font(font& f)
+text_node::set_font(font& pFont)
 {
-	text.setFont(f.sf_font);
+	text.setFont(pFont.sf_font);
 }
 
 void 
-text_node::set_text(const std::string s)
+text_node::set_text(const std::string pText)
 {
-	text.setString(s);
-	c_text = s;
+	text.setString(pText);
+	mText = pText;
 
-	auto center = center_offset<float>({ text.getLocalBounds().width, text.getLocalBounds().height }, c_anchor);
-	text.setOrigin(sf::Vector2f(center.x, center.y));
+	auto center = center_offset<float>({ text.getLocalBounds().width, text.getLocalBounds().height }, mAnchor);
+	text.setOrigin(center);
 }
 
 void
-text_node::append_text(const std::string s)
+text_node::append_text(const std::string pText)
 {
-	set_text(get_text() + s);
+	set_text(get_text() + pText);
 }
 
 std::string
 text_node::get_text()
 {
-	return c_text;
+	return mText;
 }
 
 int
-text_node::draw(renderer &_r)
+text_node::draw(renderer &pR)
 {
-	fvector loc = get_exact_position();
-	text.setPosition({ (float)loc.x, (float)loc.y });
-	_r.window.draw(text);
+	text.setPosition(get_exact_position());
+	pR.mWindow.draw(text);
 	return 0;
 }
 
 void
-text_node::set_character_size(int s)
+text_node::set_character_size(int pPixels)
 {
-	text.setCharacterSize(s);
+	text.setCharacterSize(pPixels);
 }
 
 void
 text_node::set_anchor(engine::anchor a)
 {
-	c_anchor = a;
+	mAnchor = a;
 }
 
 void

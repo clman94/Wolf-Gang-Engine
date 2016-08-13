@@ -4,68 +4,68 @@
 
 using namespace engine;
 
-void vertex_reference::set_position(fvector position)
+void vertex_reference::set_position(fvector pPosition)
 {
-	assert(ref != nullptr);
-	sf::Vector2f offset = position - fvector(ref[0].position);
-	ref[0].position += offset;
-	ref[1].position += offset;
-	ref[2].position += offset;
-	ref[3].position += offset;
+	assert(mRef != nullptr);
+	sf::Vector2f offset = pPosition - fvector(mRef[0].position);
+	mRef[0].position += offset;
+	mRef[1].position += offset;
+	mRef[2].position += offset;
+	mRef[3].position += offset;
 }
 
 fvector vertex_reference::get_position()
 {
-	assert(ref != nullptr);
-	return ref[0].position;
+	assert(mRef != nullptr);
+	return mRef[0].position;
 }
 
-void vertex_reference::set_texture_rect(frect rect, int rotation)
+void vertex_reference::set_texture_rect(frect pRect, int pRotation)
 {
-	assert(ref != nullptr);
-	ref[(rotation) % 4].texCoords = rect.get_offset();
-	ref[(rotation + 1) % 4].texCoords = rect.get_offset() + fvector(rect.w, 0);
-	ref[(rotation + 2) % 4].texCoords = rect.get_offset() + rect.get_size();
-	ref[(rotation + 3) % 4].texCoords = rect.get_offset() + fvector(0, rect.h);
+	assert(mRef != nullptr);
+	mRef[(pRotation    ) % 4].texCoords = pRect.get_offset();
+	mRef[(pRotation + 1) % 4].texCoords = pRect.get_offset() + fvector(pRect.w, 0);
+	mRef[(pRotation + 2) % 4].texCoords = pRect.get_offset() + pRect.get_size();
+	mRef[(pRotation + 3) % 4].texCoords = pRect.get_offset() + fvector(0, pRect.h);
 	refresh_size();
 }
 
 void vertex_reference::refresh_size()
 {
-	assert(ref != nullptr);
-	sf::Vector2f offset = ref[0].position;
-	ref[1].position = offset + (ref[1].texCoords - ref[0].texCoords);
-	ref[2].position = offset + (ref[2].texCoords - ref[0].texCoords);
-	ref[3].position = offset + (ref[3].texCoords - ref[0].texCoords);
+	assert(mRef != nullptr);
+	sf::Vector2f offset = mRef[0].position;
+	mRef[1].position = offset + (mRef[1].texCoords - mRef[0].texCoords);
+	mRef[2].position = offset + (mRef[2].texCoords - mRef[0].texCoords);
+	mRef[3].position = offset + (mRef[3].texCoords - mRef[0].texCoords);
 }
 
 void
 vertex_batch::set_texture(texture &t)
 {
-	c_texture = &t;
+	mTexture = &t;
 }
 
 vertex_reference
-vertex_batch::add_sprite(fvector pos, frect tex_rect, int rotation)
+vertex_batch::add_sprite(fvector pPosition, frect pTexture_rect, int pRotation)
 {
-	vertices.emplace_back();
-	vertices.emplace_back();
-	vertices.emplace_back();
-	vertices.emplace_back();
-	vertex_reference ref = vertices.at(vertices.size() - 4);
-	ref.set_texture_rect(tex_rect, rotation);
-	ref.set_position(pos);
+	mVertices.emplace_back();
+	mVertices.emplace_back();
+	mVertices.emplace_back();
+	mVertices.emplace_back();
+	vertex_reference ref = mVertices.at(mVertices.size() - 4);
+	ref.set_texture_rect(pTexture_rect, pRotation);
+	ref.set_position(pPosition);
 	return ref;
 }
 int
 vertex_batch::draw(renderer &_r)
 {
-	if (!c_texture || !vertices.size())
+	if (!mTexture || !mVertices.size())
 		return 1;
 
 	sf::RenderStates rs;
 	rs.transform.translate(get_exact_position());
-	rs.texture = &c_texture->sfml_get_texture();
-	_r.get_sfml_window().draw(&vertices[0], vertices.size(), sf::Quads, rs);
+	rs.texture = &mTexture->sfml_get_texture();
+	_r.get_sfml_window().draw(&mVertices[0], mVertices.size(), sf::Quads, rs);
 	return 0;
 }

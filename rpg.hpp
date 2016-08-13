@@ -30,32 +30,32 @@ class tilemap_A :
 	public engine::node
 {
 public:
-	void set_texture(engine::texture& tex);
-	void set_tile(engine::fvector position, engine::frect tex_rect, int layer, int rotation);
-	void set_tile(engine::fvector position, const std::string& atlas, int layer, int rotation);
+	void set_texture(engine::texture& pTexture);
+	void set_tile(engine::fvector pPosition, engine::frect pTexture_rect, int pLayer, int pRotation);
+	void set_tile(engine::fvector pPosition, const std::string& pAtlas, int pLayer, int pRotation);
 
-	int draw(engine::renderer &r);
+	int draw(engine::renderer &pR);
 
 	void update_animations();
 
 	void clear();
 
 private:
-	engine::texture *c_texture;
+	engine::texture *mTexture;
 
 	class tile
 	{
 	public:
-		engine::vertex_reference ref;
+		engine::vertex_reference mRef;
 
-		tile() : animation(nullptr) {}
+		tile() : mAnimation(nullptr) {}
 
-		void set_animation(engine::animation& _animation);
+		void set_animation(engine::animation& pAnimation);
 		void update_animation();
 	private:
-		engine::timer timer;
-		engine::frame_t frame;
-		engine::animation* animation;
+		engine::timer mTimer;
+		engine::frame_t mFrame;
+		engine::animation* mAnimation;
 	};
 
 	struct layer
@@ -64,19 +64,19 @@ private:
 		std::map<engine::fvector, tile> tiles;
 	};
 
-	std::map<int, layer> layers;
+	std::map<int, layer> mLayers;
 };
 
 class panning_node :
 	public engine::node
 {
 public:
-	void set_boundary(engine::fvector a);
-	void set_viewport(engine::fvector a);
-	void set_focus(engine::fvector pos);
+	void set_boundary(engine::fvector pBoundary);
+	void set_viewport(engine::fvector pViewport);
+	void set_focus(engine::fvector pFocus);
 
 private:
-	engine::fvector boundary, viewport;
+	engine::fvector mBoundary, mViewport;
 };
 
 template<typename T>
@@ -87,39 +87,39 @@ public:
 
 	void clear()
 	{
-		items.clear();
+		mItems.clear();
 	}
 
 	template<class... T_ARG>
-	auto& add_item(T_ARG&&... arg)
+	auto& add_item(T_ARG&&... pArg)
 	{
-		items.emplace_back(std::forward<T_ARG>(arg)...);
-		add_child(items.back());
-		return items.back();
+		mItems.emplace_back(std::forward<T_ARG>(pArg)...);
+		add_child(mItems.back());
+		return mItems.back();
 	}
 
 	auto& add_item()
 	{
-		items.emplace_back();
-		add_child(items.back());
-		return items.back();
+		mItems.emplace_back();
+		add_child(mItems.back());
+		return mItems.back();
 	}
 
-	auto begin() { return items.begin(); }
-	auto end()   { return items.end();   }
-	auto back()  { return items.back();  }
+	auto begin() { return mItems.begin(); }
+	auto end()   { return mItems.end();   }
+	auto back()  { return mItems.back();  }
 
 private:
-	std::list<T> items;
+	std::list<T> mItems;
 };
 
 class flag_container
 {
 public:
-	bool set_flag(const std::string& name);
-	bool unset_flag(const std::string& name);
-	bool has_flag(const std::string& name);
-	void load_script_interface(script_system& script);
+	bool set_flag(const std::string& pName);
+	bool unset_flag(const std::string& pName);
+	bool has_flag(const std::string& pName);
+	void load_script_interface(script_system& pScript);
 
 private:
 	std::set<std::string> flags;
@@ -140,12 +140,12 @@ public:
 		reset
 	};
 	controls();
-	void trigger(control c);
-	bool is_triggered(control c);
+	void trigger(control pControl);
+	bool is_triggered(control pControl);
 	void reset();
 
 private:
-	std::array<bool, 8> c_controls;
+	std::array<bool, 8> mControls;
 };
 
 class entity :
@@ -162,11 +162,11 @@ public:
 		user
 	};
 	entity();
-	void play_withtype(e_type type);
-	void stop_withtype(e_type type);
-	void tick_withtype(e_type type);
-	bool set_animation(std::string name);
-	int draw(engine::renderer &_r);
+	void play_withtype(e_type pType);
+	void stop_withtype(e_type pType);
+	void tick_withtype(e_type pType);
+	bool set_animation(std::string pName);
+	int draw(engine::renderer &pR);
 	util::error load_entity_xml(std::string path, texture_manager& tm);
 	void set_dynamic_depth(bool a);
 
@@ -182,9 +182,9 @@ private:
 		int type;
 	};
 
-	engine::animation_node node;
+	engine::animation_node mNode;
 	std::list<entity_animation> animations;
-	entity_animation *c_animation;
+	entity_animation *mAnimation;
 
 	bool dynamic_depth;
 };
@@ -243,12 +243,12 @@ struct collision_box
 public:
 	collision_box();
 	bool is_valid();
-	void validate(flag_container & flags);
+	void validate(flag_container & pFlags);
 	void load_xml(tinyxml2::XMLElement* e);
 
 protected:
-	std::string invalid_on_flag;
-	std::string spawn_flag;
+	std::string mInvalid_on_flag;
+	std::string mSpawn_flag;
 	bool valid;
 };
 
@@ -256,10 +256,10 @@ struct trigger : public collision_box
 {
 public:
 	script_function& get_function();
-	void parse_function_metadata(const std::string& metadata);
+	void parse_function_metadata(const std::string& pMetadata);
 
 private:
-	script_function func;
+	script_function mFunc;
 };
 
 struct door : public collision_box
@@ -288,67 +288,68 @@ public:
 	util::error load_collision_boxes(tinyxml2::XMLElement* e, flag_container& flags);
 
 private:
-	std::list<collision_box> walls;
-	std::list<door> doors;
-	std::list<trigger> triggers;
-	std::list<trigger> buttons;
+	std::list<collision_box> mWalls;
+	std::list<door> mDoors;
+	std::list<trigger> mTriggers;
+	std::list<trigger> mButtons;
 };
 
 // Excuse this mess -_-
 class script_system
 {
-private:
-	AS::asIScriptEngine* as_engine;
-	AS::CContextMgr ctxmgr;
-	AS::asIScriptModule *scene_module;
-	AS::CScriptBuilder builder;
+public:
+	script_system();
+	~script_system();
+	util::error load_scene_script(const std::string& pPath);
+	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr, void* pInstance);
+	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr);
+	void add_pointer_type(const char* pName);
+	void call_event_function(const std::string& pName);
+	void setup_triggers(collision_system& pCollision_system);
+	int tick();
 
-	engine::timer main_timer;
+private:
+	AS::asIScriptEngine* mEngine;
+	AS::CContextMgr mCtxmgr;
+	AS::asIScriptModule *mScene_module;
+	AS::CScriptBuilder mBuilder;
+
+	engine::timer mTimer;
 
 	template<typename T>
-	static void as_default_constr(void *memory)
+	static void as_default_constr(void *pMemory)
 	{
-		new(memory) T();
+		new(pMemory) T();
 	}
 
 	template<typename T>
-	static void as_default_destr(void *memory)
+	static void as_default_destr(void *pMemory)
 	{
-		((T*)memory)->~T();
+		((T*)pMemory)->~T();
 	}
 
 	void dprint(std::string &msg);
 	void register_vector_type();
 	void message_callback(const AS::asSMessageInfo * msg);
-	std::string get_metadata_type(const std::string &str);
+	std::string get_metadata_type(const std::string &pMetadata);
 	void script_abort();
 
-public:
-	script_system();
-	~script_system();
-	util::error load_scene_script(const std::string& path);
-	void add_function(const char* decl, const AS::asSFuncPtr & ptr, void* instance);
-	void add_function(const char* decl, const AS::asSFuncPtr & ptr);
-	void add_pointer_type(const char* name);
-	void call_event_function(const std::string& name);
-	void setup_triggers(collision_system& collision);
-	int tick();
 };
 
 class narrative_dialog :
 	public engine::render_client
 {
-	engine::sprite_node box;
-	engine::sprite_node cursor;
-	engine::text_node   text;
-	engine::text_node   selection;
-	engine::font        font;
-	engine::clock       timer;
+	engine::sprite_node mBox;
+	engine::sprite_node mCursor;
+	engine::text_node   mText;
+	engine::text_node   mSelection;
+	engine::font        mFont;
+	engine::clock       mTimer;
 
-	bool        revealing;
-	size_t      c_char;
-	std::string full_text;
-	float       interval;
+	bool        mRevealing;
+	size_t      mCount;
+	std::string mFull_text;
+	float       mInterval;
 
 	util::error load_box(tinyxml2::XMLElement* e, texture_manager& tm);
 	util::error load_font(tinyxml2::XMLElement* e);
@@ -362,12 +363,12 @@ public:
 
 	narrative_dialog();
 
-	void set_box_position(position pos);
+	void set_box_position(position pPosition);
 
 	bool is_revealing();
 
-	void reveal_text(const std::string& str, bool append = false);
-	void instant_text(std::string str, bool append = false);
+	void reveal_text(const std::string& pText, bool pAppend = false);
+	void instant_text(std::string pText, bool pAppend = false);
 
 	void show_box();
 	void hide_box();
@@ -379,13 +380,13 @@ public:
 
 	void show_selection();
 	void hide_selection();
-	void set_selection(const std::string& str);
+	void set_selection(const std::string& pText);
 
 	util::error load_narrative_xml(tinyxml2::XMLElement* e, texture_manager& tm);
 
-	void load_script_interface(script_system& script);
+	void load_script_interface(script_system& pScript);
 
-	int draw(engine::renderer &r);
+	int draw(engine::renderer &pR);
 
 protected:
 	void refresh_renderer(engine::renderer& r);
@@ -393,26 +394,6 @@ protected:
 
 class tilemap_loader
 {
-private:
-	struct tile
-	{
-		engine::fvector pos, fill;
-		int rotation;
-		std::string atlas;
-		bool collision;
-		void load_xml(tinyxml2::XMLElement *e, size_t layer);
-		bool is_adjacent_above(tile& a);
-		bool is_adjacent_right(tile& a);
-	};
-	std::map<size_t,std::vector<tile>> tiles;
-	tile* find_tile(engine::fvector pos, size_t layer);
-
-	engine::fvector tile_size;
-
-	void condense_layer(std::vector<tile> &map);
-	util::error load_layer(tinyxml2::XMLElement *e, size_t layer);
-	
-	tile* find_tile_at(engine::fvector pos, size_t layer);
 public:
 	tilemap_loader();
 
@@ -433,6 +414,27 @@ public:
 	void update_display(tilemap_A& tmA);
 
 	void clear();
+
+private:
+	struct tile
+	{
+		engine::fvector pos, fill;
+		int rotation;
+		std::string atlas;
+		bool collision;
+		void load_xml(tinyxml2::XMLElement *e, size_t layer);
+		bool is_adjacent_above(tile& a);
+		bool is_adjacent_right(tile& a);
+	};
+	std::map<size_t, std::vector<tile>> tiles;
+	tile* find_tile(engine::fvector pos, size_t layer);
+
+	engine::fvector tile_size;
+
+	void condense_layer(std::vector<tile> &map);
+	util::error load_layer(tinyxml2::XMLElement *e, size_t layer);
+
+	tile* find_tile_at(engine::fvector pos, size_t layer);
 };
 
 class player_character :
