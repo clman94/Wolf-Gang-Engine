@@ -485,22 +485,22 @@ player_character::get_activation_point(float distance)
 
 scene::scene()
 {
-	tilemap.set_depth(defs::TILES_DEPTH);
-	add_child(tilemap);
-	add_child(characters);
-	add_child(entities);
+	mTilemap.set_depth(defs::TILES_DEPTH);
+	add_child(mTilemap);
+	add_child(mCharacters);
+	add_child(mEntities);
 }
 
 collision_system&
 scene::get_collision_system()
 {
-	return collision;
+	return mCollision_system;
 }
 
 inline character*
 scene::find_character(const std::string& name)
 {
-	for (auto &i : characters)
+	for (auto &i : mCharacters)
 		if (i.get_name() == name)
 			return &i;
 	return nullptr;
@@ -509,7 +509,7 @@ scene::find_character(const std::string& name)
 inline entity*
 scene::find_entity(const std::string& name)
 {
-	for (auto &i : entities)
+	for (auto &i : mEntities)
 		if (i.get_name() == name)
 			return &i;
 	return nullptr;
@@ -518,16 +518,16 @@ scene::find_entity(const std::string& name)
 void
 scene::clean_scene()
 {
-	tilemap.clear();
-	collision.clear();
-	characters.clear();
-	entities.clear();
+	mTilemap.clear();
+	mCollision_system.clear();
+	mCharacters.clear();
+	mEntities.clear();
 }
 
 util::error
 scene::load_entities(tinyxml2::XMLElement * e)
 {
-	assert(tm != nullptr);
+	assert(mTexture_manager != nullptr);
 	auto ele = e->FirstChildElement();
 	while (ele)
 	{
@@ -535,8 +535,8 @@ scene::load_entities(tinyxml2::XMLElement * e)
 		std::string att_path = ele->Attribute("path");
 		engine::fvector pos = util::shortcuts::vector_float_att(ele);
 
-		auto& ne = entities.add_item();
-		ne.load_entity_xml(att_path, *tm);
+		auto& ne = mEntities.add_item();
+		ne.load_entity_xml(att_path, *mTexture_manager);
 		ne.set_position(pos);
 		get_renderer()->add_client(&ne);
 
@@ -548,7 +548,7 @@ scene::load_entities(tinyxml2::XMLElement * e)
 util::error
 scene::load_characters(tinyxml2::XMLElement * e)
 {
-	assert(tm != nullptr);
+	assert(mTexture_manager != nullptr);
 	auto ele = e->FirstChildElement();
 	while (ele)
 	{
@@ -556,8 +556,8 @@ scene::load_characters(tinyxml2::XMLElement * e)
 		std::string att_path = ele->Attribute("path");
 		engine::fvector pos = util::shortcuts::vector_float_att(ele);
 
-		auto& ne = characters.add_item();
-		ne.load_entity_xml(att_path, *tm);
+		auto& ne = mCharacters.add_item();
+		ne.load_entity_xml(att_path, *mTexture_manager);
 		ne.set_cycle("default");
 		ne.set_position(pos *32);
 		get_renderer()->add_client(&ne);
@@ -569,18 +569,18 @@ scene::load_characters(tinyxml2::XMLElement * e)
 
 entity* scene::script_add_entity(const std::string & path)
 {
-	assert(tm != nullptr);
-	auto& ne = entities.add_item();
-	ne.load_entity_xml(path, *tm);
+	assert(mTexture_manager != nullptr);
+	auto& ne = mEntities.add_item();
+	ne.load_entity_xml(path, *mTexture_manager);
 	get_renderer()->add_client(&ne);
 	return &ne;
 }
 
 entity* scene::script_add_character(const std::string & path)
 {
-	assert(tm != nullptr);
-	auto& nc = characters.add_item();
-	nc.load_entity_xml(path, *tm);
+	assert(mTexture_manager != nullptr);
+	auto& nc = mCharacters.add_item();
+	nc.load_entity_xml(path, *mTexture_manager);
 	nc.set_cycle(character::e_cycle::default);
 	get_renderer()->add_client(&nc);
 	return &nc;
@@ -641,33 +641,33 @@ void scene::script_set_animation(entity * e, const std::string & name)
 }
 
 
-util::error scene::load_scene_xml(std::string path, script_system& script, flag_container& flags)
+util::error scene::load_scene_xml(std::string pPath, script_system& pScript, flag_container& pFlags)
 {
-	assert(tm != nullptr);
+	assert(mTexture_manager != nullptr);
 
 	using namespace tinyxml2;
 
 	XMLDocument doc;
-	if (doc.LoadFile(path.c_str()))
+	if (doc.LoadFile(pPath.c_str()))
 		return util::error("Unable to load scene");
 	auto root = doc.RootElement();
 
-	c_path = path;
+	mScene_path = pPath;
 
 	clean_scene();
 
 	// Load collision boxes
 	auto ele_collisionboxes = root->FirstChildElement("collisionboxes");
 	if (ele_collisionboxes)
-		collision.load_collision_boxes(ele_collisionboxes, flags);
+		mCollision_system.load_collision_boxes(ele_collisionboxes, pFlags);
 
 	// Load tilemap texture
 	if (auto ele_tilemap_tex = root->FirstChildElement("tilemap_texture"))
 	{
-		auto tex = tm->get_texture(ele_tilemap_tex->GetText());
+		auto tex = mTexture_manager->get_texture(ele_tilemap_tex->GetText());
 		if (!tex)
 			return util::error("Invalid tilemap texture");
-		tilemap.set_texture(*tex);
+		mTilemap.set_texture(*tex);
 	}
 	else
 		return util::error("Tilemap texture is not defined");
@@ -688,8 +688,8 @@ util::error scene::load_scene_xml(std::string path, script_system& script, flag_
 		auto path = ele_script->Attribute("path");
 		if (path)
 		{
-			script.load_scene_script(path);
-			script.setup_triggers(collision);
+			pScript.load_scene_script(path);
+			pScript.setup_triggers(mCollision_system);
 		}
 	}
 
@@ -700,43 +700,43 @@ util::error scene::load_scene_xml(std::string path, script_system& script, flag_
 	
 	if (auto ele_map = root->FirstChildElement("map"))
 	{
-		tilemap_loader.load_tilemap_xml(ele_map);
-		tilemap_loader.update_display(tilemap);
+		mTilemap_loader.load_tilemap_xml(ele_map);
+		mTilemap_loader.update_display(mTilemap);
 	}
 	return 0;
 }
 
 util::error
-scene::reload_scene(script_system & script, flag_container & flags)
+scene::reload_scene(script_system & pScript, flag_container & pFlags)
 {
-	if (c_path.empty())
+	if (mScene_path.empty())
 		return util::error("No scene currently loaded");
-	return load_scene_xml(c_path, script, flags);
+	return load_scene_xml(mScene_path, pScript, pFlags);
 }
 
-void scene::load_script_interface(script_system& script)
+void scene::load_script_interface(script_system& pScript)
 {
-	script.add_function("entity add_entity(const string &in)", asMETHOD(scene, script_add_entity), this);
-	script.add_function("entity add_character(const string &in)", asMETHOD(scene, script_add_character), this);
-	script.add_function("void set_position(entity, const vec &in)", asMETHOD(scene, script_set_position), this);
-	script.add_function("vec get_position(entity)", asMETHOD(scene, script_get_position), this);
-	script.add_function("void set_direction(entity, int)", asMETHOD(scene, script_set_direction), this);
-	script.add_function("void set_cycle(entity, const string &in)", asMETHOD(scene, script_set_cycle), this);
-	script.add_function("void _start_animation(entity, int)", asMETHOD(scene, script_start_animation), this);
-	script.add_function("void _stop_animation(entity, int)", asMETHOD(scene, script_stop_animation), this);
-	script.add_function("void set_animation(entity, const string &in)", asMETHOD(scene, script_set_animation), this);
-}
-
-void
-scene::set_texture_manager(texture_manager & ntm)
-{
-	tm = &ntm;
+	pScript.add_function("entity add_entity(const string &in)", asMETHOD(scene, script_add_entity), this);
+	pScript.add_function("entity add_character(const string &in)", asMETHOD(scene, script_add_character), this);
+	pScript.add_function("void set_position(entity, const vec &in)", asMETHOD(scene, script_set_position), this);
+	pScript.add_function("vec get_position(entity)", asMETHOD(scene, script_get_position), this);
+	pScript.add_function("void set_direction(entity, int)", asMETHOD(scene, script_set_direction), this);
+	pScript.add_function("void set_cycle(entity, const string &in)", asMETHOD(scene, script_set_cycle), this);
+	pScript.add_function("void _start_animation(entity, int)", asMETHOD(scene, script_start_animation), this);
+	pScript.add_function("void _stop_animation(entity, int)", asMETHOD(scene, script_stop_animation), this);
+	pScript.add_function("void set_animation(entity, const string &in)", asMETHOD(scene, script_set_animation), this);
 }
 
 void
-scene::refresh_renderer(engine::renderer & _r)
+scene::set_texture_manager(texture_manager & pTexture_manager)
 {
-	_r.add_client(&tilemap);
+	mTexture_manager = &pTexture_manager;
+}
+
+void
+scene::refresh_renderer(engine::renderer & pR)
+{
+	pR.add_client(&mTilemap);
 }
 
 // #########
@@ -951,19 +951,19 @@ script_system::tick()
 
 game::game()
 {
-	root_node.add_child(player);
-	root_node.add_child(game_scene);
-	narrative.is_revealing();
+	mRoot_node.add_child(mPlayer);
+	mRoot_node.add_child(mScene);
+	mNarrative.is_revealing();
 	load_script_interface();
 }
 
 void
 game::player_scene_interact()
 {
-	auto& collision = game_scene.get_collision_system();
+	auto& collision = mScene.get_collision_system();
 
 	{
-		auto pos = player.get_position();
+		auto pos = mPlayer.get_position();
 		auto trigger = collision.trigger_collision(pos);
 		if (trigger)
 		{
@@ -972,9 +972,9 @@ game::player_scene_interact()
 		}
 	}
 
-	if (c_controls.is_triggered(controls::control::activate))
+	if (mControls.is_triggered(controls::control::activate))
 	{
-		auto pos = player.get_activation_point();
+		auto pos = mPlayer.get_activation_point();
 		auto button = collision.button_collision(pos);
 		if (button)
 		{
@@ -986,30 +986,30 @@ game::player_scene_interact()
 
 entity* game::script_get_player()
 {
-	return &player;
+	return &mPlayer;
 }
 
 void
 game::load_script_interface()
 {
-	script.add_pointer_type("entity");
+	mScript.add_pointer_type("entity");
 
-	script.add_function("float get_delta()", asMETHOD(game, get_delta), this);
-	script.add_function("entity get_player()", asMETHOD(game, script_get_player), this);
+	mScript.add_function("float get_delta()", asMETHOD(game, get_delta), this);
+	mScript.add_function("entity get_player()", asMETHOD(game, script_get_player), this);
 
-	script.add_function("void _lockplayer(bool)", asMETHOD(player_character, set_locked), &player);
+	mScript.add_function("void _lockplayer(bool)", asMETHOD(player_character, set_locked), &mPlayer);
 
-	script.add_function("bool _is_triggered(int)", asMETHOD(controls, is_triggered), &c_controls);
+	mScript.add_function("bool _is_triggered(int)", asMETHOD(controls, is_triggered), &mControls);
 
-	flags.load_script_interface(script);
-	narrative.load_script_interface(script);
-	game_scene.load_script_interface(script);
-	bg_music.load_script_interface(script);
+	mFlags.load_script_interface(mScript);
+	mNarrative.load_script_interface(mScript);
+	mScene.load_script_interface(mScript);
+	mBackground_music.load_script_interface(mScript);
 }
 
 float game::get_delta()
 {
-	return frameclock.get_elapse().s();
+	return mClock.get_elapse().s();
 }
 
 util::error
@@ -1031,77 +1031,77 @@ game::load_game_xml(std::string path)
 	auto ele_textures = ele_root->FirstChildElement("textures");
 	if (!ele_textures)
 		return "Please specify the texture file";
-	textures.load_settings(ele_textures);
+	mTexture_manager.load_settings(ele_textures);
 
 	auto ele_player = ele_root->FirstChildElement("player");
 	if (!ele_player)
 		return "Please specify the player";
 	std::string player_path = util::safe_string(ele_player->Attribute("path"));
 
-	player.load_entity_xml(player_path, textures);
-	player.set_position({ 64, 120 });
-	player.set_cycle(character::e_cycle::default);
+	mPlayer.load_entity_xml(player_path, mTexture_manager);
+	mPlayer.set_position({ 64, 120 });
+	mPlayer.set_cycle(character::e_cycle::default);
 	
-	game_scene.set_texture_manager(textures);
-	game_scene.load_scene_xml(scene_path, script, flags);
+	mScene.set_texture_manager(mTexture_manager);
+	mScene.load_scene_xml(scene_path, mScript, mFlags);
 
 	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
 	{
-		narrative.load_narrative_xml(ele_narrative, textures);
+		mNarrative.load_narrative_xml(ele_narrative, mTexture_manager);
 	}
 	return 0;
 }
 
 void
-game::tick(controls& con)
+game::tick(controls& pControls)
 {
 	bool edit_mode = false;
 
-	float delta = frameclock.get_elapse().s();
+	float delta = mClock.get_elapse().s();
 
-	if (con.is_triggered(controls::control::reset))
+	if (pControls.is_triggered(controls::control::reset))
 	{
 		std::cout << "Reloading scene...\n";
-		game_scene.reload_scene(script, flags);
+		mScene.reload_scene(mScript, mFlags);
 		std::cout << "Done\n";
 	}
 
-	c_controls = con;
+	mControls = pControls;
 
 	if (edit_mode)
 	{
-		if (con.is_triggered(controls::control::left))
-			root_node.set_position(root_node.get_position() + engine::fvector( -delta, 0)*32);
-		if (con.is_triggered(controls::control::right))
-			root_node.set_position(root_node.get_position() + engine::fvector(delta, 0)*32);
-		if (con.is_triggered(controls::control::up))
-			root_node.set_position(root_node.get_position() + engine::fvector(0, -delta)*32);
-		if (con.is_triggered(controls::control::down))
-			root_node.set_position(root_node.get_position() + engine::fvector(0, delta)*32);
+		if (pControls.is_triggered(controls::control::left))
+			mRoot_node.set_position(mRoot_node.get_position() + engine::fvector( -delta, 0)*32);
+		if (pControls.is_triggered(controls::control::right))
+			mRoot_node.set_position(mRoot_node.get_position() + engine::fvector(delta, 0)*32);
+		if (pControls.is_triggered(controls::control::up))
+			mRoot_node.set_position(mRoot_node.get_position() + engine::fvector(0, -delta)*32);
+		if (pControls.is_triggered(controls::control::down))
+			mRoot_node.set_position(mRoot_node.get_position() + engine::fvector(0, delta)*32);
 	}
 	else{
-		player.movement(con, game_scene.get_collision_system(), delta);
+		mPlayer.movement(pControls, mScene.get_collision_system(), delta);
 
-		if (!player.is_locked())
+		if (!mPlayer.is_locked())
 		{
-			root_node.set_focus(player.get_position());
+			mRoot_node.set_focus(mPlayer.get_position());
 			player_scene_interact();
 		}
 	}
 
-	script.tick();
+	mScript.tick();
 
-	frameclock.restart();
+	mClock.restart();
 }
 
 void
-game::refresh_renderer(engine::renderer & r)
+game::refresh_renderer(engine::renderer & pR)
 {
-	game_scene.set_renderer(r);
-	r.add_client(&player);
-	root_node.set_viewport(r.get_size());
-	root_node.set_boundary({ 11*32, 11*32 });
-	r.add_client(&narrative);
+	mScene.set_renderer(pR);
+	pR.add_client(&mPlayer);
+	mRoot_node.set_viewport(pR.get_size());
+	mRoot_node.set_boundary({ 11*32, 11*32 });
+	pR.add_client(&mNarrative);
 }
 
 // ##########
@@ -1732,15 +1732,15 @@ int tilemap_loader::draw(engine::renderer & r)
 // background_music
 // ##########
 
-void background_music::load_script_interface(script_system & script)
+void background_music::load_script_interface(script_system & pScript)
 {
-	script.add_function("void _music_play()", asMETHOD(engine::sound_stream, play), &bg_music);
-	script.add_function("void _music_stop()", asMETHOD(engine::sound_stream, stop), &bg_music);
-	script.add_function("void _music_pause()", asMETHOD(engine::sound_stream, pause), &bg_music);
-	script.add_function("float _music_position()", asMETHOD(engine::sound_stream, get_position), &bg_music);
-	script.add_function("void _music_volume(float)", asMETHOD(engine::sound_stream, set_volume), &bg_music);
-	script.add_function("void _music_set_loop(bool)", asMETHOD(engine::sound_stream, set_loop), &bg_music);
-	script.add_function("int _music_open(const string &in)", asMETHOD(engine::sound_stream, open), &bg_music);
+	pScript.add_function("void _music_play()", asMETHOD(engine::sound_stream, play), &mStream);
+	pScript.add_function("void _music_stop()", asMETHOD(engine::sound_stream, stop), &mStream);
+	pScript.add_function("void _music_pause()", asMETHOD(engine::sound_stream, pause), &mStream);
+	pScript.add_function("float _music_position()", asMETHOD(engine::sound_stream, get_position), &mStream);
+	pScript.add_function("void _music_volume(float)", asMETHOD(engine::sound_stream, set_volume), &mStream);
+	pScript.add_function("void _music_set_loop(bool)", asMETHOD(engine::sound_stream, set_loop), &mStream);
+	pScript.add_function("int _music_open(const string &in)", asMETHOD(engine::sound_stream, open), &mStream);
 }
 
 // ##########

@@ -473,23 +473,23 @@ public:
 	entity*    find_entity(const std::string& name);
 
 	void clean_scene();
-	util::error load_scene_xml(std::string path, script_system& script, flag_container& flags);
-	util::error reload_scene(script_system& script, flag_container& flags);
+	util::error load_scene_xml(std::string pPath, script_system& pScript, flag_container& pFlags);
+	util::error reload_scene(script_system& pScript, flag_container& pFlags);
 
-	void load_script_interface(script_system& script);
+	void load_script_interface(script_system& pScript);
 
 	void set_texture_manager(texture_manager& ntm);
 
 private:
-	tilemap_A tilemap;
-	tilemap_loader tilemap_loader;
-	collision_system collision;
-	texture_manager * tm;
+	tilemap_A mTilemap;
+	tilemap_loader mTilemap_loader;
+	collision_system mCollision_system;
+	texture_manager * mTexture_manager;
 
-	node_list<character> characters;
-	node_list<entity> entities;
+	node_list<character> mCharacters;
+	node_list<entity> mEntities;
 
-	std::string c_path;
+	std::string mScene_path;
 
 	util::error load_entities(tinyxml2::XMLElement* e);
 	util::error load_characters(tinyxml2::XMLElement* e);
@@ -511,10 +511,10 @@ protected:
 class background_music
 {
 public:
-	void load_script_interface(script_system& script);
+	void load_script_interface(script_system& pScript);
 
 private:
-	engine::sound_stream bg_music;
+	engine::sound_stream mStream;
 };
 
 class game :
@@ -524,22 +524,22 @@ class game :
 public:
 	game();
 	util::error load_game_xml(std::string path);
-	void tick(controls& con);
+	void tick(controls& pControls);
 
 protected:
 	void refresh_renderer(engine::renderer& r);
 
 private:
-	panning_node     root_node;
-	scene            game_scene;
-	player_character player;
-	texture_manager  textures;
-	flag_container   flags;
-	narrative_dialog narrative;
-	background_music bg_music;
-	engine::clock    frameclock;
-	script_system    script;
-	controls         c_controls;
+	panning_node     mRoot_node;
+	scene            mScene;
+	player_character mPlayer;
+	texture_manager  mTexture_manager;
+	flag_container   mFlags;
+	narrative_dialog mNarrative;
+	background_music mBackground_music;
+	engine::clock    mClock;
+	script_system    mScript;
+	controls         mControls;
 
 	void player_scene_interact();
 

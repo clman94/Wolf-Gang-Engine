@@ -285,6 +285,7 @@ class sprite_node :
 	public node
 {
 public:
+	sprite_node();
 	void set_anchor(anchor pAnchor);
 	virtual int draw(renderer &pR);
 	void set_scale(fvector pScale);

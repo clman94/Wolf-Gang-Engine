@@ -33,6 +33,12 @@ int sprite_node::set_texture(texture& pTexture, std::string pAtlas)
 	return 0;
 }
 
+sprite_node::sprite_node()
+{
+	mScale = { 1, 1 };
+	mTexture = nullptr;
+}
+
 void
 sprite_node::set_anchor(anchor pType)
 {
@@ -52,4 +58,9 @@ sprite_node::set_texture_rect(const engine::frect& pRect)
 	mVertices[1].texCoords = pRect.get_offset() + fvector(pRect.w, 0);
 	mVertices[2].texCoords = pRect.get_offset() + pRect.get_size();
 	mVertices[3].texCoords = pRect.get_offset() + fvector(0, pRect.h);
+
+	mVertices[0].position = { 0, 0 };
+	mVertices[1].position = { pRect.w, 0 };
+	mVertices[2].position = pRect.get_size();
+	mVertices[3].position = { 0, pRect.h };
 }
