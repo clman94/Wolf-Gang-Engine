@@ -400,16 +400,16 @@ public:
 	void condense_tiles();
 
 	util::error load_tilemap_xml(tinyxml2::XMLElement *root);
-	util::error load_tilemap_xml(std::string path);
+	util::error load_tilemap_xml(std::string pPath);
 	
-	void break_tile(engine::fvector pos, size_t layer);
+	void break_tile(engine::fvector pPosition, size_t pLayer);
 
 	void generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode* root);
-	void generate(const std::string& path);
+	void generate(const std::string& pPath);
 
-	int set_tile(engine::fvector pos, engine::fvector fill, size_t layer, const std::string& atlas, int rot);
-	int set_tile(engine::fvector pos, size_t layer, const std::string& atlas, int rot);
-	void remove_tile(engine::fvector pos, size_t layer);
+	int set_tile(engine::fvector pPosition, engine::fvector pFill, size_t pLayer, const std::string& pAtlas, int pRotation);
+	int set_tile(engine::fvector pPosition, size_t pLayer, const std::string& pAtlas, int pRotation);
+	void remove_tile(engine::fvector pPosition, size_t pLayer);
 
 	void update_display(tilemap_A& tmA);
 
@@ -426,15 +426,15 @@ private:
 		bool is_adjacent_above(tile& a);
 		bool is_adjacent_right(tile& a);
 	};
-	std::map<size_t, std::vector<tile>> tiles;
+	std::map<size_t, std::vector<tile>> mTiles;
 	tile* find_tile(engine::fvector pos, size_t layer);
 
-	engine::fvector tile_size;
+	engine::fvector mTile_size;
 
-	void condense_layer(std::vector<tile> &map);
-	util::error load_layer(tinyxml2::XMLElement *e, size_t layer);
+	void condense_layer(std::vector<tile> &pMap);
+	util::error load_layer(tinyxml2::XMLElement *pEle, size_t pLayer);
 
-	tile* find_tile_at(engine::fvector pos, size_t layer);
+	tile* find_tile_at(engine::fvector pPosition, size_t pLayer);
 };
 
 class player_character :
@@ -451,14 +451,14 @@ public:
 	};
 
 	player_character();
-	void set_locked(bool l);
+	void set_locked(bool pLocked);
 	bool is_locked();
-	void movement(controls &c, collision_system& collision, float delta);
-	engine::fvector get_activation_point(float distance = 16);
+	void movement(controls &pControls, collision_system& pCollision_system, float pDelta);
+	engine::fvector get_activation_point(float pDistance = 16);
 
 private:
-	bool locked;
-	direction facing_direction;
+	bool mLocked;
+	direction mFacing_direction;
 };
 
 class scene :
@@ -469,8 +469,8 @@ public:
 	scene();
 	collision_system& get_collision_system();
 
-	character* find_character(const std::string& name);
-	entity*    find_entity(const std::string& name);
+	character* find_character(const std::string& pName);
+	entity*    find_entity(const std::string& pName);
 
 	void clean_scene();
 	util::error load_scene_xml(std::string pPath, script_system& pScript, flag_container& pFlags);
@@ -478,7 +478,7 @@ public:
 
 	void load_script_interface(script_system& pScript);
 
-	void set_texture_manager(texture_manager& ntm);
+	void set_texture_manager(texture_manager& pTexture_manager);
 
 private:
 	tilemap_A mTilemap;
@@ -523,7 +523,7 @@ class game :
 {	
 public:
 	game();
-	util::error load_game_xml(std::string path);
+	util::error load_game_xml(std::string pPath);
 	void tick(controls& pControls);
 
 protected:

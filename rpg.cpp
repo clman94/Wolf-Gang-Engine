@@ -394,25 +394,25 @@ collision_system::load_collision_boxes(tinyxml2::XMLElement* e, flag_container& 
 
 player_character::player_character()
 {
-	facing_direction = direction::other;
+	mFacing_direction = direction::other;
 }
 
 void
-player_character::set_locked(bool l)
+player_character::set_locked(bool pLocked)
 {
-	locked = l;
+	mLocked = pLocked;
 }
 
 bool
 player_character::is_locked()
 {
-	return locked;
+	return mLocked;
 }
 
 void
-player_character::movement(controls& c, collision_system& collision, float delta)
+player_character::movement(controls& pControls, collision_system& pCollision_system, float pDelta)
 {
-	if (locked)
+	if (mLocked)
 	{
 		stop_withtype(entity::e_type::movement);
 		return;
@@ -421,41 +421,41 @@ player_character::movement(controls& c, collision_system& collision, float delta
 	engine::fvector pos = get_position();
 	engine::fvector move(0, 0);
 
-	if (c.is_triggered(controls::control::left))
+	if (pControls.is_triggered(controls::control::left))
 	{
-		if (!collision.wall_collision({ pos - engine::fvector(10, 8), { 10, 8 } }))
+		if (!pCollision_system.wall_collision({ pos - engine::fvector(10, 8), { 10, 8 } }))
 			move.x -= get_speed();
-		facing_direction = direction::left;
+		mFacing_direction = direction::left;
 		set_cycle(character::e_cycle::left);
 	}
 
-	if (c.is_triggered(controls::control::right))
+	if (pControls.is_triggered(controls::control::right))
 	{
-		if (!collision.wall_collision({ pos - engine::fvector(0, 8), { 10, 8 } }))
+		if (!pCollision_system.wall_collision({ pos - engine::fvector(0, 8), { 10, 8 } }))
 			move.x += get_speed();
-		facing_direction = direction::right;
+		mFacing_direction = direction::right;
 		set_cycle(character::e_cycle::right);
 	}
 
-	if (c.is_triggered(controls::control::up))
+	if (pControls.is_triggered(controls::control::up))
 	{
-		if (!collision.wall_collision({ pos - engine::fvector(8, 16), { 16, 16 } }))
+		if (!pCollision_system.wall_collision({ pos - engine::fvector(8, 16), { 16, 16 } }))
 			move.y -= get_speed();
-		facing_direction = direction::up;
+		mFacing_direction = direction::up;
 		set_cycle(character::e_cycle::up);
 	}
 
-	if (c.is_triggered(controls::control::down))
+	if (pControls.is_triggered(controls::control::down))
 	{
-		if (!collision.wall_collision({ pos - engine::fvector(8, 0), { 16, 4 } }))
+		if (!pCollision_system.wall_collision({ pos - engine::fvector(8, 0), { 16, 4 } }))
 			move.y += get_speed();
-		facing_direction = direction::down;
+		mFacing_direction = direction::down;
 		set_cycle(character::e_cycle::down);
 	}
 
 	if (move != engine::fvector(0, 0))
 	{
-		set_position(pos + (move*delta));
+		set_position(pos + (move*pDelta));
 		tick_withtype(entity::e_type::movement);
 	}
 	else
@@ -463,15 +463,15 @@ player_character::movement(controls& c, collision_system& collision, float delta
 }
 
 engine::fvector
-player_character::get_activation_point(float distance)
+player_character::get_activation_point(float pDistance)
 {
-	switch (facing_direction)
+	switch (mFacing_direction)
 	{
 	case direction::other: return get_position();
-	case direction::left:  return get_position() + engine::fvector(-distance, 0);
-	case direction::right: return get_position() + engine::fvector(distance, 0);
-	case direction::up:    return get_position() + engine::fvector(0, -distance);
-	case direction::down:  return get_position() + engine::fvector(0, distance);
+	case direction::left:  return get_position() + engine::fvector(-pDistance, 0);
+	case direction::right: return get_position() + engine::fvector(pDistance, 0);
+	case direction::up:    return get_position() + engine::fvector(0, -pDistance);
+	case direction::down:  return get_position() + engine::fvector(0, pDistance);
 	}
 	return{ 0, 0 };
 }
@@ -498,19 +498,19 @@ scene::get_collision_system()
 }
 
 inline character*
-scene::find_character(const std::string& name)
+scene::find_character(const std::string& pName)
 {
 	for (auto &i : mCharacters)
-		if (i.get_name() == name)
+		if (i.get_name() == pName)
 			return &i;
 	return nullptr;
 }
 
 inline entity*
-scene::find_entity(const std::string& name)
+scene::find_entity(const std::string& pName)
 {
 	for (auto &i : mEntities)
-		if (i.get_name() == name)
+		if (i.get_name() == pName)
 			return &i;
 	return nullptr;
 }
@@ -1013,13 +1013,13 @@ float game::get_delta()
 }
 
 util::error
-game::load_game_xml(std::string path)
+game::load_game_xml(std::string pPath)
 {
 	using namespace tinyxml2;
 
 	XMLDocument doc;
-	if (doc.LoadFile(path.c_str()))
-		return "Could not load game file at '" + path + "'";
+	if (doc.LoadFile(pPath.c_str()))
+		return "Could not load game file at '" + pPath + "'";
 
 	auto ele_root = doc.RootElement();
 
@@ -1451,7 +1451,7 @@ tilemap_loader::tile::is_adjacent_right(tile & a)
 tilemap_loader::tile*
 tilemap_loader::find_tile(engine::fvector pos, size_t layer)
 {
-	for (auto &i : tiles[layer])
+	for (auto &i : mTiles[layer])
 	{
 		if (i.pos == pos)
 			return &i;
@@ -1461,20 +1461,20 @@ tilemap_loader::find_tile(engine::fvector pos, size_t layer)
 
 // Uses brute force to merge adjacent tiles
 void
-tilemap_loader::condense_layer(std::vector<tile> &map)
+tilemap_loader::condense_layer(std::vector<tile> &pMap)
 {
-	if (map.size() < 2)
+	if (pMap.size() < 2)
 		return;
 
-	std::sort(map.begin(), map.end(), [](tile& a, tile& b)
+	std::sort(pMap.begin(), pMap.end(), [](tile& a, tile& b)
 	{ return (a.pos.y < b.pos.y) || ((a.pos.y == b.pos.y) && (a.pos.x < b.pos.x)); });
 
 	std::vector<tile> nmap;
 
-	tile ntile = map.front();
+	tile ntile = pMap.front();
 
 	bool merged = false;
-	for (auto &i = map.begin() + 1; i != map.end(); i++)
+	for (auto &i = pMap.begin() + 1; i != pMap.end(); i++)
 	{
 		// Merge adjacent tile 
 		if (ntile.is_adjacent_right(*i))
@@ -1505,28 +1505,28 @@ tilemap_loader::condense_layer(std::vector<tile> &map)
 	}
 	if (!merged)
 		nmap.push_back(ntile); // add last tile
-	map = std::move(nmap);
+	pMap = std::move(nmap);
 }
 
 void
 tilemap_loader::condense_tiles()
 {
-	if (!tiles.size()) return;
-	for (auto &i : tiles)
+	if (!mTiles.size()) return;
+	for (auto &i : mTiles)
 	{
 		condense_layer(i.second);
 	}
 }
 
 util::error
-tilemap_loader::load_layer(tinyxml2::XMLElement * e, size_t layer)
+tilemap_loader::load_layer(tinyxml2::XMLElement * pEle, size_t pLayer)
 {
-	auto i = e->FirstChildElement();
+	auto i = pEle->FirstChildElement();
 	while (i)
 	{
 		tile ntile;
-		ntile.load_xml(i, layer);
-		tiles[layer].push_back(ntile);
+		ntile.load_xml(i, pLayer);
+		mTiles[pLayer].push_back(ntile);
 		i = i->NextSiblingElement();
 	}
 	return 0;
@@ -1534,7 +1534,7 @@ tilemap_loader::load_layer(tinyxml2::XMLElement * e, size_t layer)
 
 tilemap_loader::tilemap_loader()
 {
-	tile_size = defs::TILE_SIZE;
+	mTile_size = defs::TILE_SIZE;
 }
 
 util::error
@@ -1556,11 +1556,11 @@ tilemap_loader::load_tilemap_xml(tinyxml2::XMLElement *root)
 }
 
 util::error
-tilemap_loader::load_tilemap_xml(std::string path)
+tilemap_loader::load_tilemap_xml(std::string pPath)
 {
 	using namespace tinyxml2;
 	XMLDocument doc;
-	if (doc.LoadFile(path.c_str()))
+	if (doc.LoadFile(pPath.c_str()))
 		return "Error loading tilemap file";
 	auto root = doc.RootElement();
 	load_tilemap_xml(root);
@@ -1568,11 +1568,11 @@ tilemap_loader::load_tilemap_xml(std::string path)
 }
 
 tilemap_loader::tile*
-tilemap_loader::find_tile_at(engine::fvector pos, size_t layer)
+tilemap_loader::find_tile_at(engine::fvector pPosition, size_t pLayer)
 {
-	for (auto &i : tiles[layer])
+	for (auto &i : mTiles[pLayer])
 	{
-		if (engine::frect(i.pos, i.fill).is_intersect(pos))
+		if (engine::frect(i.pos, i.fill).is_intersect(pPosition))
 		{
 			return &i;
 		}
@@ -1581,15 +1581,15 @@ tilemap_loader::find_tile_at(engine::fvector pos, size_t layer)
 }
 
 void
-tilemap_loader::break_tile(engine::fvector pos, size_t layer)
+tilemap_loader::break_tile(engine::fvector pPosition, size_t pLayer)
 {
-	auto t = find_tile_at(pos, layer);
+	auto t = find_tile_at(pPosition, pLayer);
 	if (!t || t->fill == engine::fvector(1, 1))
 		return;
 	auto atlas = t->atlas;
 	auto fill = t->fill;
 	t->fill = { 1, 1 };
-	set_tile(t->pos, fill, layer, atlas, t->rotation);
+	set_tile(pPosition, fill, pLayer, atlas, t->rotation);
 }
 
 void
@@ -1597,7 +1597,7 @@ tilemap_loader::generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode * root)
 {
 	std::map<int, tinyxml2::XMLElement *> layers;
 	
-	for (auto &l : tiles)
+	for (auto &l : mTiles)
 	{
 		if (!l.second.size())
 			continue;
@@ -1622,58 +1622,58 @@ tilemap_loader::generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode * root)
 }
 
 void
-tilemap_loader::generate(const std::string& path)
+tilemap_loader::generate(const std::string& pPath)
 {
 	using namespace tinyxml2;
 	XMLDocument doc;
 	auto root = doc.InsertEndChild(doc.NewElement("map"));
 	generate(doc, root);
-	doc.SaveFile(path.c_str());
+	doc.SaveFile(pPath.c_str());
 }
 
 int
-tilemap_loader::set_tile(engine::fvector pos, engine::fvector fill, size_t layer, const std::string& atlas, int rot)
+tilemap_loader::set_tile(engine::fvector pPosition, engine::fvector pFill, size_t pLayer, const std::string& pAtlas, int pRotation)
 {
 	engine::fvector off(0, 0);
-	for (off.y = 0; off.y <= fill.y; off.y++)
+	for (off.y = 0; off.y <= pFill.y; off.y++)
 	{
-		for (off.x = 0; off.x <= fill.x; off.x++)
+		for (off.x = 0; off.x <= pFill.x; off.x++)
 		{
-			set_tile(pos + off, layer, atlas, rot);
+			set_tile(pPosition + off, pLayer, pAtlas, pRotation);
 		}
 	}
 	return 0;
 }
 
 int
-tilemap_loader::set_tile(engine::fvector pos, size_t layer, const std::string& atlas, int rot)
+tilemap_loader::set_tile(engine::fvector pPosition, size_t pLayer, const std::string& pAtlas, int pRotation)
 {
-	tile* t = find_tile(pos, layer);
+	tile* t = find_tile(pPosition, pLayer);
 	if (!t)
 	{
-		tiles[layer].emplace_back();
-		auto &nt = tiles[layer].back();
-		nt.pos = pos;
+		mTiles[pLayer].emplace_back();
+		auto &nt = mTiles[pLayer].back();
+		nt.pos = pPosition;
 		nt.fill = { 1, 1 };
-		nt.atlas = atlas;
-		nt.rotation = rot;
+		nt.atlas = pAtlas;
+		nt.rotation = pRotation;
 		nt.collision = false;
 	}
 	else
 	{
-		t->atlas = atlas;
-		t->rotation = rot;
+		t->atlas = pAtlas;
+		t->rotation = pRotation;
 	}
 	return 0;
 }
 
-void tilemap_loader::remove_tile(engine::fvector pos, size_t layer)
+void tilemap_loader::remove_tile(engine::fvector pPosition, size_t pLayer)
 {
-	for (auto &i = tiles[layer].begin(); i != tiles[layer].end(); i++)
+	for (auto &i = mTiles[pLayer].begin(); i != mTiles[pLayer].end(); i++)
 	{
-		if (i->pos == pos)
+		if (i->pos == pPosition)
 		{
-			tiles[layer].erase(i);
+			mTiles[pLayer].erase(i);
 			break;
 		}
 	}
@@ -1683,7 +1683,7 @@ void
 tilemap_loader::update_display(tilemap_A& tmA)
 {
 	tmA.clear();
-	for (auto &l : tiles)
+	for (auto &l : mTiles)
 	{
 		for (auto &i : l.second)
 		{
@@ -1692,7 +1692,7 @@ tilemap_loader::update_display(tilemap_A& tmA)
 			{
 				for (off.x = 0; off.x < i.fill.x; off.x++)
 				{
-					tmA.set_tile((i.pos + off)*tile_size, i.atlas, l.first, i.rotation);
+					tmA.set_tile((i.pos + off)*mTile_size, i.atlas, l.first, i.rotation);
 				}
 			}
 		}
@@ -1701,7 +1701,7 @@ tilemap_loader::update_display(tilemap_A& tmA)
 
 void tilemap_loader::clear()
 {
-	tiles.clear();
+	mTiles.clear();
 }
 /*
 int tilemap_loader::draw(engine::renderer & r)
