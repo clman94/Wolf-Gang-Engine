@@ -219,7 +219,7 @@ entity::load_single_animation(tinyxml2::XMLElement* ele, engine::animation &anim
 character::character()
 {
 	cyclegroup = "default";
-	move_speed = 3* defs::TILE_SIZE.x;
+	move_speed = 3.f* defs::TILE_SIZE.x;
 }
 
 void
@@ -279,38 +279,38 @@ collision_system::wall_collision(const engine::frect & r)
 }
 
 door*
-collision_system::door_collision(const engine::fvector & r)
+collision_system::door_collision(const engine::fvector & pPosition)
 {
 	for (auto &i : mDoors)
-		if (i.is_valid() && i.is_intersect(r))
+		if (i.is_valid() && i.is_intersect(pPosition))
 			return &i;
 	return nullptr;
 }
 
 trigger*
-collision_system::trigger_collision(const engine::fvector & pos)
+collision_system::trigger_collision(const engine::fvector & pPosition)
 {
 	for (auto &i : mTriggers)
-		if (i.is_valid() && i.is_intersect(pos))
+		if (i.is_valid() && i.is_intersect(pPosition))
 			return &i;
 	return nullptr;
 }
 
 trigger*
-collision_system::button_collision(const engine::fvector & pos)
+collision_system::button_collision(const engine::fvector & pPosition)
 {
 	for (auto &i : mButtons)
-		if (i.is_valid() && i.is_intersect(pos))
+		if (i.is_valid() && i.is_intersect(pPosition))
 			return &i;
 	return nullptr;
 }
 
 engine::fvector
-collision_system::get_door_entry(std::string name)
+collision_system::get_door_entry(std::string pName)
 {
 	for (auto& i : mDoors)
 	{
-		if (i.name == name)
+		if (i.name == pName)
 		{
 			return i.get_offset() + (i.get_size()*0.5f);
 		}
@@ -319,12 +319,12 @@ collision_system::get_door_entry(std::string name)
 }
 
 void 
-collision_system::validate_all(flag_container& flags)
+collision_system::validate_all(flag_container& pFlags)
 {
-	for (auto &i : mWalls)    i.validate(flags);
-	for (auto &i : mDoors)    i.validate(flags);
-	for (auto &i : mTriggers) i.validate(flags);
-	for (auto &i : mButtons)  i.validate(flags);
+	for (auto &i : mWalls)    i.validate(pFlags);
+	for (auto &i : mDoors)    i.validate(pFlags);
+	for (auto &i : mTriggers) i.validate(pFlags);
+	for (auto &i : mButtons)  i.validate(pFlags);
 }
 
 void
@@ -358,11 +358,11 @@ collision_system::clear()
 }
 
 util::error
-collision_system::load_collision_boxes(tinyxml2::XMLElement* e, flag_container& flags)
+collision_system::load_collision_boxes(tinyxml2::XMLElement* pEle, flag_container& pFlags)
 {
-	assert(e != nullptr);
+	assert(pEle != nullptr);
 
-	auto ele_item = e->FirstChildElement();
+	auto ele_item = pEle->FirstChildElement();
 	while (ele_item)
 	{
 		std::string box_type = util::safe_string(ele_item->Name());
@@ -1124,8 +1124,8 @@ void
 panning_node::set_focus(engine::fvector pFocus)
 {
 	engine::fvector npos = pFocus - (mViewport * 0.5f);
-	npos.x = util::clamp(pFocus.x, 0.f, mBoundary.x - mViewport.x);
-	npos.y = util::clamp(pFocus.y, 0.f, mBoundary.y - mViewport.y);
+	npos.x = util::clamp(npos.x, 0.f, mBoundary.x - mViewport.x);
+	npos.y = util::clamp(npos.y, 0.f, mBoundary.y - mViewport.y);
 	set_position(-npos);
 }
 
@@ -1421,7 +1421,6 @@ tilemap_loader::tile::load_xml(tinyxml2::XMLElement * e, size_t _layer)
 	fill.y = fill.y <= 0 ? 1 : fill.y;
 
 	rotation = e->IntAttribute("r") % 4;
-	collision = e->BoolAttribute("c");
 }
 
 bool
@@ -1432,7 +1431,6 @@ tilemap_loader::tile::is_adjacent_above(tile & a)
 		&& pos.x == a.pos.x
 		&& pos.y == a.pos.y + a.fill.y
 		&& fill.x == a.fill.x
-		&& collision == a.collision
 		);
 }
 
@@ -1444,7 +1442,6 @@ tilemap_loader::tile::is_adjacent_right(tile & a)
 		&& pos.y == a.pos.y
 		&& pos.x + fill.x == a.pos.x
 		&& fill.y == a.fill.y
-		&& collision == a.collision
 		);
 }
 
@@ -1538,14 +1535,14 @@ tilemap_loader::tilemap_loader()
 }
 
 util::error
-tilemap_loader::load_tilemap_xml(tinyxml2::XMLElement *root)
+tilemap_loader::load_tilemap_xml(tinyxml2::XMLElement *pRoot)
 {
-	if (auto att_path = root->Attribute("path"))
+	if (auto att_path = pRoot->Attribute("path"))
 	{
 		load_tilemap_xml(util::safe_string(att_path));
 	}
 
-	auto ele_tilemap = root->FirstChildElement("layer");
+	auto ele_tilemap = pRoot->FirstChildElement("layer");
 	while (ele_tilemap)
 	{
 		int att_layer = ele_tilemap->IntAttribute("id");
@@ -1615,7 +1612,6 @@ tilemap_loader::generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode * root)
 			if (i.fill.x > 1)    ele->SetAttribute("w", i.fill.x);
 			if (i.fill.y > 1)    ele->SetAttribute("h", i.fill.y);
 			if (i.rotation != 0) ele->SetAttribute("r", i.rotation);
-			if (i.collision)     ele->SetAttribute("c", i.collision);
 			layers[l.first]->InsertEndChild(ele);
 		}
 	}
@@ -1657,7 +1653,6 @@ tilemap_loader::set_tile(engine::fvector pPosition, size_t pLayer, const std::st
 		nt.fill = { 1, 1 };
 		nt.atlas = pAtlas;
 		nt.rotation = pRotation;
-		nt.collision = false;
 	}
 	else
 	{
@@ -1680,7 +1675,7 @@ void tilemap_loader::remove_tile(engine::fvector pPosition, size_t pLayer)
 }
 
 void
-tilemap_loader::update_display(tilemap_A& tmA)
+tilemap_loader::update_display(tilemap_display& tmA)
 {
 	tmA.clear();
 	for (auto &l : mTiles)
@@ -1747,7 +1742,8 @@ void background_music::load_script_interface(script_system & pScript)
 // collision_box
 // ##########
 
-collision_box::collision_box() : valid(true)
+collision_box::collision_box()
+	: valid(true)
 {
 }
 
@@ -1789,26 +1785,33 @@ void trigger::parse_function_metadata(const std::string & pMetadata)
 }
 
 // ##########
-// tilemap_A
+// tilemap_display
 // ##########
 
-void tilemap_A::set_texture(engine::texture & pTexture)
+void tilemap_display::set_texture(engine::texture & pTexture)
 {
 	mTexture = &pTexture;
 }
 
-void tilemap_A::set_tile(engine::fvector pPosition, engine::frect pTexture_rect, int pLayer, int pRotation)
+void tilemap_display::set_tile(engine::fvector pPosition, engine::frect pTexture_rect, int pLayer, int pRotation)
 {
 	auto &ntile = mLayers[pLayer].tiles[pPosition];
-	ntile.mRef = mLayers[pLayer].vertices.add_sprite(pPosition, pTexture_rect, pRotation);
+	ntile.mRef = mLayers[pLayer].vertices.add_quad(pPosition, pTexture_rect, pRotation);
 }
 
-void tilemap_A::set_tile(engine::fvector pPosition, const std::string & pAtlas, int pLayer, int pRotation)
+void tilemap_display::set_tile(engine::fvector pPosition, const std::string & pAtlas, int pLayer, int pRotation)
 {
 	set_tile(pPosition, mTexture->get_entry(pAtlas), pLayer, pRotation);
 }
 
-int tilemap_A::draw(engine::renderer & pR)
+void tilemap_display::set_tile(engine::fvector pPosition, engine::animation & pAnimation, int pLayer, int pRotation)
+{
+	auto &ntile = mLayers[pLayer].tiles[pPosition];
+	ntile.mRef = mLayers[pLayer].vertices.add_quad(pPosition, pAnimation.get_frame_at(0), pRotation);
+	ntile.set_animation(pAnimation);
+}
+
+int tilemap_display::draw(engine::renderer & pR)
 {
 	if (!mTexture) return 1;
 	for (auto &i : mLayers)
@@ -1821,7 +1824,7 @@ int tilemap_A::draw(engine::renderer & pR)
 	return 0;
 }
 
-void tilemap_A::update_animations()
+void tilemap_display::update_animations()
 {
 	for (auto &i : mLayers)
 	{
@@ -1832,18 +1835,18 @@ void tilemap_A::update_animations()
 	}
 }
 
-void tilemap_A::clear()
+void tilemap_display::clear()
 {
 	mLayers.clear();
 }
 
-void tilemap_A::tile::set_animation(engine::animation& pAnimation)
+void tilemap_display::tile::set_animation(engine::animation& pAnimation)
 {
 	mAnimation = &pAnimation;
 	mTimer.start_timer(pAnimation.get_interval()*0.001f);
 }
 
-void tilemap_A::tile::update_animation()
+void tilemap_display::tile::update_animation()
 {
 	if (!mAnimation) return;
 	if (mTimer.is_reached())

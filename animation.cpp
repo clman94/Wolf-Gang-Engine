@@ -47,7 +47,8 @@ animation::get_interval(frame_t pAt)
 	return retval;
 }
 
-void engine::animation::set_frame_count(frame_t count)
+void
+animation::set_frame_count(frame_t count)
 {
 	mFrame_count = count;
 }
@@ -60,21 +61,21 @@ animation::get_frame_count()
 
 void animation::set_frame_rect(engine::frect rect)
 {
-	mFrame = rect;
+	mFrame_rect = rect;
 }
 
 engine::frect
 animation::get_frame_at(frame_t at)
 {
-	engine::frect ret = mFrame;
-	ret.x += ret.w*(at%mFrame_count);
+	engine::frect ret = mFrame_rect;
+	ret.x += ret.w*calculate_frame(at);
 	return ret;
 }
 
 fvector
 animation::get_size()
 {
-	return mFrame.get_size();
+	return mFrame_rect.get_size();
 }
 
 void
@@ -101,37 +102,36 @@ animation::get_texture()
 	return mTexture;
 }
 
+frame_t
+animation::calculate_frame(frame_t pCount)
+{
+	if (mFrame_count == 0)
+		return 0;
+
+	if (mLoop == animation::e_loop::linear)
+		return pCount%mFrame_count;
+
+	if (mLoop == animation::e_loop::pingpong)
+		return util::pingpong_index(pCount, mFrame_count - 1);
+
+	if (mLoop == animation::e_loop::none)
+		return pCount >= mFrame_count ? mFrame_count - 1 : pCount;
+
+	return 0;
+}
+
 animation_node::animation_node()
 {
 	mAnchor = anchor::topleft;
 	mPlaying = false;
 	mAnimation = nullptr;
-	add_child(sprite);
-}
-
-frame_t
-animation_node::calculate_frame()
-{
-	assert(mAnimation != nullptr);
-	if (mAnimation->get_frame_count() == 0)
-		return 0;
-
-	if (mAnimation->get_loop() == animation::e_loop::linear)
-		return mCount%mAnimation->get_frame_count();
-
-	else if (mAnimation->get_loop() == animation::e_loop::pingpong)
-		return util::pingpong_index(mCount, mAnimation->get_frame_count() - 1);
-
-	else
-		return mCount%mAnimation->get_frame_count();
+	add_child(mSprite);
 }
 
 void
 animation_node::set_frame(frame_t pFrame)
 {
-	mCount = pFrame;
-	if (mAnimation)
-		mFrame = calculate_frame();
+	mFrame = pFrame;
 }
 
 void
@@ -140,8 +140,8 @@ animation_node::set_animation(animation& pAnimation, bool pSwap)
 	mAnimation = &pAnimation;
 	mInterval = pAnimation.get_interval();
 
-	if (pSwap) mFrame = calculate_frame();
-	else set_frame(pAnimation.get_default_frame());
+	if (!pSwap)
+		set_frame(pAnimation.get_default_frame());
 
 	if (pAnimation.get_texture())
 		set_texture(*pAnimation.get_texture());
@@ -150,7 +150,7 @@ animation_node::set_animation(animation& pAnimation, bool pSwap)
 void
 animation_node::set_texture(texture& pTexture)
 {
-	sprite.set_texture(pTexture);
+	mSprite.set_texture(pTexture);
 }
 
 int
@@ -161,8 +161,7 @@ animation_node::tick()
 	int time = mClock.get_elapse().ms_i();
 	if (time >= mInterval && mInterval > 0)
 	{
-		mCount += time / mInterval;
-		mFrame = calculate_frame();
+		mFrame += time / mInterval;
 
 		mInterval = mAnimation->get_interval(mFrame);
 
@@ -206,10 +205,10 @@ animation_node::restart()
 }
 
 void
-animation_node::set_anchor(engine::anchor a)
+animation_node::set_anchor(engine::anchor pAnchor)
 {
-	mAnchor = a;
-	sprite.set_anchor(a);
+	mAnchor = pAnchor;
+	mSprite.set_anchor(pAnchor);
 }
 
 int
@@ -220,9 +219,9 @@ animation_node::draw(renderer &r)
 	if (mPlaying) tick();
 
 	frect rect = mAnimation->get_frame_at(mFrame);
-	sprite.set_texture_rect(rect);
-	sprite.set_anchor(mAnchor);
+	mSprite.set_texture_rect(rect);
+	mSprite.set_anchor(mAnchor);
 
-	sprite.draw(r);
+	mSprite.draw(r);
 	return 0;
 }

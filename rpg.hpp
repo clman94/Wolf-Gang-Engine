@@ -25,7 +25,7 @@ namespace rpg{
 
 class script_system;
 
-class tilemap_A :
+class tilemap_display :
 	public engine::render_client,
 	public engine::node
 {
@@ -33,6 +33,7 @@ public:
 	void set_texture(engine::texture& pTexture);
 	void set_tile(engine::fvector pPosition, engine::frect pTexture_rect, int pLayer, int pRotation);
 	void set_tile(engine::fvector pPosition, const std::string& pAtlas, int pLayer, int pRotation);
+	void set_tile(engine::fvector pPosition, engine::animation& pAnimation, int pLayer, int pRotation);
 
 	int draw(engine::renderer &pR);
 
@@ -273,19 +274,19 @@ class collision_system
 {
 public:
 	collision_box* wall_collision(const engine::frect& r);
-	door*          door_collision(const engine::fvector& r);
-	trigger*       trigger_collision(const engine::fvector& pos);
-	trigger*       button_collision(const engine::fvector& pos);
+	door*          door_collision(const engine::fvector& pPosition);
+	trigger*       trigger_collision(const engine::fvector& pPosition);
+	trigger*       button_collision(const engine::fvector& pPosition);
 
-	engine::fvector get_door_entry(std::string name);
+	engine::fvector get_door_entry(std::string pName);
 
-	void validate_all(flag_container& flags);
+	void validate_all(flag_container& pFlags);
 
 	void add_wall(engine::frect r);
 	void add_trigger(trigger& t);
 	void add_button(trigger& t);
 	void clear();
-	util::error load_collision_boxes(tinyxml2::XMLElement* e, flag_container& flags);
+	util::error load_collision_boxes(tinyxml2::XMLElement* pEle, flag_container& pFlags);
 
 private:
 	std::list<collision_box> mWalls;
@@ -411,7 +412,7 @@ public:
 	int set_tile(engine::fvector pPosition, size_t pLayer, const std::string& pAtlas, int pRotation);
 	void remove_tile(engine::fvector pPosition, size_t pLayer);
 
-	void update_display(tilemap_A& tmA);
+	void update_display(tilemap_display& tmA);
 
 	void clear();
 
@@ -421,7 +422,6 @@ private:
 		engine::fvector pos, fill;
 		int rotation;
 		std::string atlas;
-		bool collision;
 		void load_xml(tinyxml2::XMLElement *e, size_t layer);
 		bool is_adjacent_above(tile& a);
 		bool is_adjacent_right(tile& a);
@@ -481,7 +481,7 @@ public:
 	void set_texture_manager(texture_manager& pTexture_manager);
 
 private:
-	tilemap_A mTilemap;
+	tilemap_display mTilemap;
 	tilemap_loader mTilemap_loader;
 	collision_system mCollision_system;
 	texture_manager * mTexture_manager;

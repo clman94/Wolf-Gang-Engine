@@ -6,94 +6,118 @@
 
 using namespace engine;
 
-void
-particle_system::spawn_particle(size_t count)
+void particle_system::spawn_particle(size_t pCount)
 {
-	while (count-- != 0)
+	for (size_t i = 0; i < pCount; i++)
 	{
-		particles.emplace_back();
-		auto &p = particles.back();
-		p.timer.restart();
-		p.velocity = emitter.velocity;
+		auto nparticle = find_unused_particle();
+		if (!nparticle) {
+			mParticles.emplace_back();
+			nparticle = &mParticles.back();
+		}
+		nparticle->life.start_timer(mEmitter.life);
+		nparticle->velocity = mEmitter.velocity;
+		nparticle->valid = true;
+
 		fvector position = {
-			std::fmodf((float)std::rand(), emitter.size.x),
-			std::fmodf((float)std::rand(), emitter.size.y)
+			std::fmodf((float)std::rand(), mEmitter.size.x),
+			std::fmodf((float)std::rand(), mEmitter.size.y)
 		};
-		p.sprite = sprites.add_sprite(position, texture_rect);
+		nparticle->sprite = mSprites.add_quad(position, mTexture_rect);
 	}
+}
+
+particle_system::particle * particle_system::find_unused_particle()
+{
+	for (auto &i : mParticles)
+	{
+		if (!i.valid)
+			return &i;
+	}
+	return nullptr;
 }
 
 particle_system::particle_system()
 {
-	add_child(sprites);
+	add_child(mSprites);
 }
 
 void
-particle_system::step()
+particle_system::tick()
 {
-	if (emitter.rate > 0 && spawnclock.get_elapse().s() >= emitter.rate)
+	if (mEmitter.rate > 0 && mSpawn_clock.get_elapse().s() >= mEmitter.rate)
 	{
 		spawn_particle();
-		spawnclock.restart();
+		mSpawn_clock.restart();
 	}
 
-	time_t time = frameclock.get_elapse().s();
-	for (auto &i : particles)
+	time_t time = mFrame_clock.get_elapse().s();
+	for (auto &i : mParticles)
 	{
-		i.velocity += emitter.acceleration*time;
-		auto position = i.sprite.get_position();
-		i.sprite.set_position(position + i.velocity*time);
+		if (!i.valid)
+			continue;
+
+		if (i.life.is_reached())
+		{
+			i.sprite.hide();
+			i.valid = false;
+		}
+		else {
+			i.velocity += mEmitter.acceleration*time;
+			auto position = i.sprite.get_position();
+			i.sprite.set_position(position + i.velocity*time);
+		}
 	}
 
-	frameclock.restart();
+	mFrame_clock.restart();
 }
 
 void
 particle_system::set_region(fvector a)
 {
-	emitter.size = a;
+	mEmitter.size = a;
 }
 
 void
 particle_system::set_life(float a)
 {
-	emitter.life = a;
+	mEmitter.life = a;
 }
 
 void
 particle_system::set_acceleration(fvector a)
 {
-	emitter.acceleration = a;
+	mEmitter.acceleration = a;
 }
 
 void
 particle_system::set_velocity(fvector a)
 {
-	emitter.velocity = a;
+	mEmitter.velocity = a;
 }
 
 void
 particle_system::set_rate(float a)
 {
-	emitter.rate = a;
+	mEmitter.rate = a;
 }
 
 void
 particle_system::set_texture(texture &t)
 {
-	sprites.set_texture(t);
+	mSprites.set_texture(t);
 }
 
 void
 particle_system::set_texture_rect(frect r)
 {
-	texture_rect = r;
+	mTexture_rect = r;
 }
 
 int
 particle_system::draw(renderer &_r)
 {
-	step();
-	sprites.draw(_r);
+	tick();
+	mSprites.draw(_r);
 	return 0;
 }

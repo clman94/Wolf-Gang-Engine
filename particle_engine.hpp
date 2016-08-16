@@ -7,21 +7,27 @@
 #include "utility.hpp"
 #include "node.hpp"
 
+
+
 namespace engine
 {
+
 class particle_system :
 	public render_client,
 	public node
 {
-	clock frameclock, spawnclock;
+	clock mFrame_clock, mSpawn_clock;
 
 	struct particle
 	{
-		clock   timer;
+		timer life;
 		fvector velocity;
-		engine::vertex_reference  sprite;
+		bool valid;
+		engine::vertex_reference sprite;
 	};
-	std::vector<particle> particles;
+	std::vector<particle> mParticles;
+
+	particle* find_unused_particle();
 
 	struct
 	{
@@ -29,14 +35,14 @@ class particle_system :
 		float   rate, life;
 		fvector acceleration;
 		fvector velocity;
-	} emitter;
+	} mEmitter;
 
-	vertex_batch  sprites;
-	frect         texture_rect;
+	vertex_batch  mSprites;
+	frect         mTexture_rect;
 
 public:
 	particle_system();
-	void step();
+	void tick();
 	void spawn_particle(size_t count = 1);
 	void set_region(fvector size);
 	void set_life(float a);

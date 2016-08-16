@@ -27,16 +27,24 @@ void vertex_reference::set_texture_rect(frect pRect, int pRotation)
 	mRef[(pRotation + 1) % 4].texCoords = pRect.get_offset() + fvector(pRect.w, 0);
 	mRef[(pRotation + 2) % 4].texCoords = pRect.get_offset() + pRect.get_size();
 	mRef[(pRotation + 3) % 4].texCoords = pRect.get_offset() + fvector(0, pRect.h);
-	refresh_size();
+	reset_size(pRect.get_size());
 }
 
-void vertex_reference::refresh_size()
+void vertex_reference::reset_size(fvector pSize)
 {
 	assert(mRef != nullptr);
-	sf::Vector2f offset = mRef[0].position;
-	mRef[1].position = offset + (mRef[1].texCoords - mRef[0].texCoords);
-	mRef[2].position = offset + (mRef[2].texCoords - mRef[0].texCoords);
-	mRef[3].position = offset + (mRef[3].texCoords - mRef[0].texCoords);
+	fvector offset = mRef[0].position;
+	mRef[1].position = offset + fvector(pSize.x, 0);
+	mRef[2].position = offset + pSize;
+	mRef[3].position = offset + fvector(0, pSize.y);
+}
+
+void vertex_reference::hide()
+{
+	assert(mRef != nullptr);
+	mRef[1] = mRef[0];
+	mRef[2] = mRef[0];
+	mRef[3] = mRef[0];
 }
 
 void
@@ -46,7 +54,7 @@ vertex_batch::set_texture(texture &t)
 }
 
 vertex_reference
-vertex_batch::add_sprite(fvector pPosition, frect pTexture_rect, int pRotation)
+vertex_batch::add_quad(fvector pPosition, frect pTexture_rect, int pRotation)
 {
 	mVertices.emplace_back();
 	mVertices.emplace_back();

@@ -33,6 +33,13 @@ struct color
 		color_t _a = 255)
 		: r(_r), g(_g), b(_b), a(_a)
 	{}
+#ifdef SFML_COLOR_HPP
+	inline operator sf::Color() const
+	{
+		return{ r, g, b, a };
+	}
+#endif // SFML_COLOR_HPP
+
 };
 
 class render_client;
@@ -187,9 +194,11 @@ public:
 	void set_position(fvector pPosition);
 	fvector get_position();
 	void set_texture_rect(frect pRect, int rotation);
+	void reset_size(fvector pSize);
+	void hide();
+
 private:
 	sf::Vertex* mRef;
-	void refresh_size();
 };
 
 class vertex_batch :
@@ -198,7 +207,7 @@ class vertex_batch :
 {
 public:
 	void set_texture(texture &pTexture);
-	vertex_reference add_sprite(fvector pPosition, frect pTexture_rect, int pRotation = 0);
+	vertex_reference add_quad(fvector pPosition, frect pTexture_rect, int pRotation = 0);
 	int draw(renderer &pR);
 
 private:
@@ -313,8 +322,8 @@ class text_node :
 	public render_client,
 	public node
 {
-	sf::Text text;
-	std::string mText; // Avoids reliance on sfml
+	sf::Text mSfml_text;
+	std::string mString; // Avoids reliance on sfml
 	engine::anchor mAnchor;
 public:
 	text_node();
@@ -324,7 +333,7 @@ public:
 	std::string get_text();
 	void set_character_size(int pPixels);
 	void set_anchor(engine::anchor pAnchor);
-	void set_color(const color pColor);
+	void set_color(const color& pColor);
 	void set_scale(float pScale);
 	void copy_format(const text_node& pText_node);
 	virtual int draw(renderer &pR);
@@ -398,11 +407,12 @@ private:
 		frame_t from;
 	};
 	std::vector<sequence_frame> mSequence;
-	engine::frect               mFrame;
+	engine::frect               mFrame_rect;
 	engine::texture*            mTexture;
 	frame_t                     mDefault_frame;
 	frame_t                     mFrame_count;
 	e_loop                      mLoop;
+	frame_t calculate_frame(frame_t pCount);
 };
 
 class animation_node :
@@ -424,12 +434,12 @@ public:
 	void stop();
 	void restart();
 
-	void set_anchor(anchor a);
+	void set_anchor(anchor pAnchor);
 
 	int draw(renderer &r);
 
 private:
-	sprite_node sprite;
+	sprite_node mSprite;
 
 	engine::clock  mClock;
 
@@ -443,7 +453,7 @@ private:
 	int mInterval;
 	bool mPlaying;
 
-	frame_t calculate_frame();
+
 };
 
 }
