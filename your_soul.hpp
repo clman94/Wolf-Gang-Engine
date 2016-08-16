@@ -1,4 +1,8 @@
-static void soul()
+
+class soul
 {
-	void* emptyness = nullptr;
-}
+	void enter_void()
+	{
+		delete this;
+	}
+};

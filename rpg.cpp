@@ -957,6 +957,17 @@ game::game()
 	load_script_interface();
 }
 
+void rpg::game::save_game(size_t pSlot)
+{
+	const std::string path = "./data/saves/slot_"
+		+ std::to_string(pSlot)
+		+ ".xml";
+	save_system file;
+	file.new_save();
+	file.save_flags(mFlags);
+	file.save(path);
+}
+
 void
 game::player_scene_interact()
 {
@@ -1067,6 +1078,9 @@ game::tick(controls& pControls)
 	}
 
 	mControls = pControls;
+
+	if (pControls.is_triggered(controls::control::menu))
+		save_game(0);
 
 	if (edit_mode)
 	{

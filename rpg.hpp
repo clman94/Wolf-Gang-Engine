@@ -122,6 +122,12 @@ public:
 	bool has_flag(const std::string& pName);
 	void load_script_interface(script_system& pScript);
 
+	auto begin()
+	{ return flags.begin(); }
+
+	auto end()
+	{ return flags.end(); }
+
 private:
 	std::set<std::string> flags;
 };
@@ -138,7 +144,8 @@ public:
 		down,
 		select_next,
 		select_previous,
-		reset
+		reset,
+		menu
 	};
 	controls();
 	void trigger(control pControl);
@@ -146,7 +153,7 @@ public:
 	void reset();
 
 private:
-	std::array<bool, 8> mControls;
+	std::array<bool, 9> mControls;
 };
 
 class entity :
@@ -517,6 +524,47 @@ private:
 	engine::sound_stream mStream;
 };
 
+class save_system
+{
+	tinyxml2::XMLDocument mDocument;
+	tinyxml2::XMLElement *mEle_root;
+public:
+	save_system()
+	{
+		mEle_root = nullptr;
+	}
+
+	void open_save(const std::string& pPath)
+	{
+		mDocument.Clear();
+		mDocument.LoadFile(pPath.c_str());
+	}
+
+	void new_save()
+	{
+		mDocument.Clear();
+		mEle_root = mDocument.NewElement("save_file");
+		mDocument.InsertEndChild(mEle_root);
+	}
+
+	void save(const std::string& pPath)
+	{
+		assert(mEle_root != nullptr);
+		mDocument.SaveFile(pPath.c_str());
+	}
+
+	void save_flags(flag_container& pFlags)
+	{
+		assert(mEle_root != nullptr);
+		for (auto &i : pFlags)
+		{
+			auto ele_flag = mDocument.NewElement("flag");
+			ele_flag->SetAttribute("name", i.c_str());
+			mEle_root->InsertEndChild(ele_flag);
+		}
+	}
+};
+
 class game :
 	public engine::render_proxy,
 	public util::nocopy
@@ -540,6 +588,8 @@ private:
 	engine::clock    mClock;
 	script_system    mScript;
 	controls         mControls;
+
+	void save_game(size_t pSlot);
 
 	void player_scene_interact();
 
