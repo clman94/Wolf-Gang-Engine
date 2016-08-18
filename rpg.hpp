@@ -317,10 +317,10 @@ public:
 	int tick();
 
 private:
-	AS::asIScriptEngine* mEngine;
-	AS::CContextMgr mCtxmgr;
+	AS::asIScriptEngine *mEngine;
+	AS::CContextMgr      mCtxmgr;
 	AS::asIScriptModule *mScene_module;
-	AS::CScriptBuilder mBuilder;
+	AS::CScriptBuilder   mBuilder;
 
 	engine::timer mTimer;
 
@@ -347,21 +347,6 @@ private:
 class narrative_dialog :
 	public engine::render_client
 {
-	engine::sprite_node mBox;
-	engine::sprite_node mCursor;
-	engine::text_node   mText;
-	engine::text_node   mSelection;
-	engine::font        mFont;
-	engine::clock       mTimer;
-
-	bool        mRevealing;
-	size_t      mCount;
-	std::string mFull_text;
-	float       mInterval;
-
-	util::error load_box(tinyxml2::XMLElement* e, texture_manager& tm);
-	util::error load_font(tinyxml2::XMLElement* e);
-
 public:
 	enum class position
 	{
@@ -398,6 +383,22 @@ public:
 
 protected:
 	void refresh_renderer(engine::renderer& r);
+
+private:
+	engine::sprite_node mBox;
+	engine::sprite_node mCursor;
+	engine::text_node   mText;
+	engine::text_node   mSelection;
+	engine::font        mFont;
+	engine::clock       mTimer;
+
+	bool        mRevealing;
+	size_t      mCount;
+	std::string mFull_text;
+	float       mInterval;
+
+	util::error load_box(tinyxml2::XMLElement* e, texture_manager& tm);
+	util::error load_font(tinyxml2::XMLElement* e);
 };
 
 class tilemap_loader
@@ -415,8 +416,8 @@ public:
 	void generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode* root);
 	void generate(const std::string& pPath);
 
-	int set_tile(engine::fvector pPosition, engine::fvector pFill, size_t pLayer, const std::string& pAtlas, int pRotation);
-	int set_tile(engine::fvector pPosition, size_t pLayer, const std::string& pAtlas, int pRotation);
+	int  set_tile(engine::fvector pPosition, engine::fvector pFill, size_t pLayer, const std::string& pAtlas, int pRotation);
+	int  set_tile(engine::fvector pPosition, size_t pLayer, const std::string& pAtlas, int pRotation);
 	void remove_tile(engine::fvector pPosition, size_t pLayer);
 
 	void update_display(tilemap_display& tmA);
@@ -439,6 +440,7 @@ private:
 	engine::fvector mTile_size;
 
 	void condense_layer(std::vector<tile> &pMap);
+
 	util::error load_layer(tinyxml2::XMLElement *pEle, size_t pLayer);
 
 	tile* find_tile_at(engine::fvector pPosition, size_t pLayer);
@@ -483,20 +485,28 @@ public:
 	util::error load_scene_xml(std::string pPath, script_system& pScript, flag_container& pFlags);
 	util::error reload_scene(script_system& pScript, flag_container& pFlags);
 
+	const std::string& get_path()
+	{ return mScene_path; }
+
+	const std::string& get_name()
+	{ return mScene_name; }
+
+
 	void load_script_interface(script_system& pScript);
 
 	void set_texture_manager(texture_manager& pTexture_manager);
 
 private:
-	tilemap_display mTilemap;
-	tilemap_loader mTilemap_loader;
-	collision_system mCollision_system;
+	tilemap_display   mTilemap;
+	tilemap_loader    mTilemap_loader;
+	collision_system  mCollision_system;
 	texture_manager * mTexture_manager;
 
 	node_list<character> mCharacters;
-	node_list<entity> mEntities;
+	node_list<entity>    mEntities;
 
 	std::string mScene_path;
+	std::string mScene_name;
 
 	util::error load_entities(tinyxml2::XMLElement* e);
 	util::error load_characters(tinyxml2::XMLElement* e);
@@ -529,40 +539,17 @@ class save_system
 	tinyxml2::XMLDocument mDocument;
 	tinyxml2::XMLElement *mEle_root;
 public:
-	save_system()
-	{
-		mEle_root = nullptr;
-	}
+	save_system();
 
-	void open_save(const std::string& pPath)
-	{
-		mDocument.Clear();
-		mDocument.LoadFile(pPath.c_str());
-	}
+	bool open_save(const std::string& pPath);
+	void load_flags(flag_container& pFlags);
+	std::string get_scene_path();
+	std::string get_scene_name();
 
-	void new_save()
-	{
-		mDocument.Clear();
-		mEle_root = mDocument.NewElement("save_file");
-		mDocument.InsertEndChild(mEle_root);
-	}
-
-	void save(const std::string& pPath)
-	{
-		assert(mEle_root != nullptr);
-		mDocument.SaveFile(pPath.c_str());
-	}
-
-	void save_flags(flag_container& pFlags)
-	{
-		assert(mEle_root != nullptr);
-		for (auto &i : pFlags)
-		{
-			auto ele_flag = mDocument.NewElement("flag");
-			ele_flag->SetAttribute("name", i.c_str());
-			mEle_root->InsertEndChild(ele_flag);
-		}
-	}
+	void new_save();
+	void save(const std::string& pPath);
+	void save_flags(flag_container& pFlags);
+	void save_scene(const std::string & pName, const std::string & pPath);
 };
 
 class game :
@@ -589,7 +576,10 @@ private:
 	script_system    mScript;
 	controls         mControls;
 
+
+	std::string get_slot_path(size_t pSlot);
 	void save_game(size_t pSlot);
+	void open_game(size_t pSlot);
 
 	void player_scene_interact();
 

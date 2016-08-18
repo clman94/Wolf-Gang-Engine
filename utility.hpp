@@ -28,7 +28,7 @@ private:
 static std::string safe_string(const char* str)
 {
 	if (str == nullptr)
-		return "";
+		return std::string(); // Empty string
 	return str;
 }
 

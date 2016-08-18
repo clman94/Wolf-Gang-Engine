@@ -650,19 +650,20 @@ util::error scene::load_scene_xml(std::string pPath, script_system& pScript, fla
 	XMLDocument doc;
 	if (doc.LoadFile(pPath.c_str()))
 		return util::error("Unable to load scene");
-	auto root = doc.RootElement();
+	auto ele_root = doc.RootElement();
 
 	mScene_path = pPath;
+	mScene_name = util::safe_string(ele_root->Attribute("name"));
 
 	clean_scene();
 
 	// Load collision boxes
-	auto ele_collisionboxes = root->FirstChildElement("collisionboxes");
+	auto ele_collisionboxes = ele_root->FirstChildElement("collisionboxes");
 	if (ele_collisionboxes)
 		mCollision_system.load_collision_boxes(ele_collisionboxes, pFlags);
 
 	// Load tilemap texture
-	if (auto ele_tilemap_tex = root->FirstChildElement("tilemap_texture"))
+	if (auto ele_tilemap_tex = ele_root->FirstChildElement("tilemap_texture"))
 	{
 		auto tex = mTexture_manager->get_texture(ele_tilemap_tex->GetText());
 		if (!tex)
@@ -673,17 +674,17 @@ util::error scene::load_scene_xml(std::string pPath, script_system& pScript, fla
 		return util::error("Tilemap texture is not defined");
 	
 
-	if (auto ele_entities = root->FirstChildElement("entities"))
+	if (auto ele_entities = ele_root->FirstChildElement("entities"))
 	{
 		load_entities(ele_entities);
 	}
 
-	if (auto ele_characters = root->FirstChildElement("characters"))
+	if (auto ele_characters = ele_root->FirstChildElement("characters"))
 	{
 		load_characters(ele_characters);
 	}
 
-	if (auto ele_script = root->FirstChildElement("script"))
+	if (auto ele_script = ele_root->FirstChildElement("script"))
 	{
 		auto path = ele_script->Attribute("path");
 		if (path)
@@ -693,12 +694,12 @@ util::error scene::load_scene_xml(std::string pPath, script_system& pScript, fla
 		}
 	}
 
-	if (auto ele_boundary = root->FirstChildElement("boundary"))
+	if (auto ele_boundary = ele_root->FirstChildElement("boundary"))
 	{
 
 	}
 	
-	if (auto ele_map = root->FirstChildElement("map"))
+	if (auto ele_map = ele_root->FirstChildElement("map"))
 	{
 		mTilemap_loader.load_tilemap_xml(ele_map);
 		mTilemap_loader.update_display(mTilemap);
@@ -957,15 +958,34 @@ game::game()
 	load_script_interface();
 }
 
-void rpg::game::save_game(size_t pSlot)
+std::string game::get_slot_path(size_t pSlot)
 {
-	const std::string path = "./data/saves/slot_"
+	return "./data/saves/slot_"
 		+ std::to_string(pSlot)
 		+ ".xml";
+}
+
+void game::save_game(size_t pSlot)
+{
+	const std::string path = get_slot_path(pSlot);
 	save_system file;
 	file.new_save();
 	file.save_flags(mFlags);
+	file.save_scene(mScene.get_name(), mScene.get_path());
 	file.save(path);
+}
+
+void game::open_game(size_t pSlot)
+{
+	const std::string path = get_slot_path(pSlot);
+	save_system file;
+	if (!file.open_save(path))
+	{
+		util::error("Invalid slot");
+		return;
+	}
+	file.load_flags(mFlags);
+	mScene.load_scene_xml(file.get_scene_path(), mScript, mFlags);
 }
 
 void
@@ -1868,4 +1888,81 @@ void tilemap_display::tile::update_animation()
 		++mFrame;
 		mTimer.start_timer(mAnimation->get_interval(mFrame)*0.001f);
 	}
+}
+
+// ##########
+// save_system
+// ##########
+
+save_system::save_system()
+{
+	mEle_root = nullptr;
+}
+
+bool save_system::open_save(const std::string& pPath)
+{
+	mDocument.Clear();
+	if (mDocument.LoadFile(pPath.c_str()))
+	{
+		return false;
+	}
+	mEle_root = mDocument.RootElement();
+	return true;
+}
+
+void save_system::load_flags(flag_container& pFlags)
+{
+	auto ele_flag = mEle_root->FirstChildElement("flag");
+	while (ele_flag)
+	{
+		pFlags.set_flag(util::safe_string(ele_flag->Attribute("name")));
+		ele_flag = ele_flag->NextSiblingElement("flag");
+	}
+}
+
+std::string save_system::get_scene_path()
+{
+	assert(mEle_root != nullptr);
+	auto ele_scene = mEle_root->FirstChildElement("scene");
+	return util::safe_string(ele_scene->Attribute("path"));
+}
+
+std::string save_system::get_scene_name()
+{
+	assert(mEle_root != nullptr);
+	auto ele_scene = mEle_root->FirstChildElement("scene");
+	return util::safe_string(ele_scene->Attribute("name"));
+}
+
+void save_system::new_save()
+{
+	mDocument.Clear();
+	mEle_root = mDocument.NewElement("save_file");
+	mDocument.InsertEndChild(mEle_root);
+}
+
+void save_system::save(const std::string& pPath)
+{
+	assert(mEle_root != nullptr);
+	mDocument.SaveFile(pPath.c_str());
+}
+
+void save_system::save_flags(flag_container& pFlags)
+{
+	assert(mEle_root != nullptr);
+	for (auto &i : pFlags)
+	{
+		auto ele_flag = mDocument.NewElement("flag");
+		ele_flag->SetAttribute("name", i.c_str());
+		mEle_root->InsertEndChild(ele_flag);
+	}
+}
+
+void save_system::save_scene(const std::string& pName, const std::string& pPath)
+{
+	assert(mEle_root != nullptr);
+	auto ele_scene = mDocument.NewElement("scene");
+	mEle_root->InsertFirstChild(ele_scene);
+	ele_scene->SetAttribute("name", pName.c_str());
+	ele_scene->SetAttribute("path", pPath.c_str());
 }
