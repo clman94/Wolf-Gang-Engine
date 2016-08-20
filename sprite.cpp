@@ -10,7 +10,7 @@ int sprite_node::draw(renderer &pR)
 	rs.transform.translate(get_exact_position() + mOffset);
 	rs.texture = &mTexture->sfml_get_texture();
 	rs.transform.scale(mScale);
-	pR.mWindow.draw(&mVertices[0], 4, sf::Quads , rs);
+	pR.get_sfml_window().draw(&mVertices[0], 4, sf::Quads , rs);
 	return 0;
 }
 

@@ -43,7 +43,7 @@ render_client::set_depth(depth_t pDepth)
 {
 	mDepth = pDepth;
 	if (mRenderer)
-		mRenderer->sort_clients();
+		mRenderer->request_resort();
 }
 
 float
@@ -58,6 +58,7 @@ render_client::get_depth()
 
 renderer::renderer()
 {
+	mRequest_resort = false;
 	events_update_sfml_window(mWindow);
 }
 
@@ -78,6 +79,11 @@ renderer::get_size()
 		px.x / scale.width,
 		px.y / scale.height
 	};
+}
+
+void renderer::request_resort()
+{
+	mRequest_resort = true;
 }
 
 int
@@ -101,6 +107,13 @@ renderer::draw_clients()
 int
 renderer::draw()
 {
+	if (mRequest_resort)
+	{
+		sort_clients();
+		refresh_clients();
+		mRequest_resort = false;
+	}
+
 	auto &c = mBackground_color;
 	mWindow.clear(sf::Color(c.r, c.g, c.b, c.a));
 	draw_clients();

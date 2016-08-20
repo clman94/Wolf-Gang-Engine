@@ -1,3 +1,5 @@
+#define ENGINE_INTERNAL
+
 #include "renderer.hpp"
 
 using namespace engine;
@@ -45,7 +47,7 @@ int
 text_node::draw(renderer &pR)
 {
 	mSfml_text.setPosition(get_exact_position());
-	pR.mWindow.draw(mSfml_text);
+	pR.get_sfml_window().draw(mSfml_text);
 	return 0;
 }
 

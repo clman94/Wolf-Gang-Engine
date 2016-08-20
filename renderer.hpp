@@ -46,8 +46,6 @@ class render_client;
 
 class events
 {
-
-
 public:
 	typedef sf::Keyboard::Key key_type;
 
@@ -95,7 +93,7 @@ public:
 	void set_pixel_scale(float pScale);
 
 	fvector get_size();
-	void sort_clients();
+	void request_resort();
 
 	fvector get_mouse_position();
 	fvector get_mouse_position(fvector pRelative);
@@ -112,16 +110,15 @@ public:
 
 #endif
 
-	friend class sprite_node;
-	friend class tile_node;
-	friend class text_node;
 	friend class rectangle_node;
 
 private:
 	sf::RenderWindow mWindow;
 	std::vector<render_client*> mClients;
-	int draw_clients();
+	bool mRequest_resort;
 
+	int draw_clients();
+	void sort_clients();
 	void refresh_clients();
 
 	color mBackground_color;
@@ -318,6 +315,29 @@ public:
 	friend class text_node;
 };
 
+// TODO
+class text_format
+{
+public:
+	void set_color(const color& pColor)
+	{ mColor = pColor; }
+
+	void set_scale(float pScale)
+	{ mScale = pScale; }
+
+	void set_font(font &pFont)
+	{ mFont = &pFont; }
+
+	void set_character_size(unsigned int pPixels)
+	{ mCharacter_size = pPixels; }
+
+public:
+	float mScale;
+	color mColor;
+	font *mFont;
+	unsigned int mCharacter_size;
+};
+
 class text_node :
 	public render_client,
 	public node
@@ -332,11 +352,25 @@ public:
 	void append_text(const std::string pText);
 	std::string get_text();
 	void set_character_size(int pPixels);
-	void set_anchor(engine::anchor pAnchor);
+	void set_anchor(anchor pAnchor);
 	void set_color(const color& pColor);
 	void set_scale(float pScale);
 	void copy_format(const text_node& pText_node);
 	virtual int draw(renderer &pR);
+};
+
+class rich_text_node :
+	public render_client,
+	public node
+{
+	struct text_block
+	{
+		sf::Text sfml_text;
+		text_format format;
+	};
+	std::list<text_block> mText_blocks;
+public:
+	// TODO
 };
 
 class tile_node :
@@ -386,18 +420,18 @@ public:
 
 	int  get_interval(frame_t pAt = 0);
 
-	void set_frame_count(frame_t count);
+	void set_frame_count(frame_t pCount);
 	frame_t get_frame_count();
 
-	void set_frame_rect(engine::frect rect);
-	engine::frect get_frame_at(frame_t at);
+	void set_frame_rect(engine::frect pRect);
+	engine::frect get_frame_at(frame_t pAt);
 
 	fvector get_size();
 
-	void set_default_frame(frame_t frame);
+	void set_default_frame(frame_t pFrame);
 	int  get_default_frame();
 
-	void set_texture(engine::texture& texture);
+	void set_texture(engine::texture& pTexture);
 	engine::texture* get_texture();
 
 private:
@@ -423,7 +457,7 @@ public:
 	animation_node();
 
 	void set_frame(frame_t pFrame);
-	void set_animation(animation& pAnimation, bool swap = false);
+	void set_animation(animation& pAnimation, bool pSwap = false);
 	void set_texture(texture& pTexture);
 
 	int tick();

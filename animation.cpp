@@ -48,9 +48,9 @@ animation::get_interval(frame_t pAt)
 }
 
 void
-animation::set_frame_count(frame_t count)
+animation::set_frame_count(frame_t pCount)
 {
-	mFrame_count = count;
+	mFrame_count = pCount;
 }
 
 frame_t
@@ -59,16 +59,16 @@ animation::get_frame_count()
 	return mFrame_count;
 }
 
-void animation::set_frame_rect(engine::frect rect)
+void animation::set_frame_rect(engine::frect pRect)
 {
-	mFrame_rect = rect;
+	mFrame_rect = pRect;
 }
 
 engine::frect
-animation::get_frame_at(frame_t at)
+animation::get_frame_at(frame_t pAt)
 {
 	engine::frect ret = mFrame_rect;
-	ret.x += ret.w*calculate_frame(at);
+	ret.x += ret.w*calculate_frame(pAt);
 	return ret;
 }
 
@@ -79,9 +79,9 @@ animation::get_size()
 }
 
 void
-animation::set_default_frame(frame_t frame)
+animation::set_default_frame(frame_t pFrame)
 {
-	mDefault_frame = frame;
+	mDefault_frame = pFrame;
 }
 
 int
@@ -91,9 +91,9 @@ animation::get_default_frame()
 }
 
 void
-animation::set_texture(texture& _texture)
+animation::set_texture(texture& pTexture)
 {
-	mTexture = &_texture;
+	mTexture = &pTexture;
 }
 
 engine::texture*

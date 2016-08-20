@@ -726,6 +726,7 @@ void scene::load_script_interface(script_system& pScript)
 	pScript.add_function("void _start_animation(entity, int)", asMETHOD(scene, script_start_animation), this);
 	pScript.add_function("void _stop_animation(entity, int)", asMETHOD(scene, script_stop_animation), this);
 	pScript.add_function("void set_animation(entity, const string &in)", asMETHOD(scene, script_set_animation), this);
+	pScript.add_function("entity find_entity(const string &in)", asMETHOD(scene, find_entity), this);
 }
 
 void
@@ -1770,6 +1771,7 @@ void background_music::load_script_interface(script_system & pScript)
 	pScript.add_function("void _music_volume(float)", asMETHOD(engine::sound_stream, set_volume), &mStream);
 	pScript.add_function("void _music_set_loop(bool)", asMETHOD(engine::sound_stream, set_loop), &mStream);
 	pScript.add_function("int _music_open(const string &in)", asMETHOD(engine::sound_stream, open), &mStream);
+	pScript.add_function("bool _music_is_playing()", asMETHOD(engine::sound_stream, is_playing), &mStream);
 }
 
 // ##########
