@@ -569,6 +569,7 @@ scene::load_characters(tinyxml2::XMLElement * e)
 
 entity* scene::script_add_entity(const std::string & path)
 {
+	assert(get_renderer() != nullptr);
 	assert(mTexture_manager != nullptr);
 	auto& ne = mEntities.add_item();
 	ne.load_entity_xml(path, *mTexture_manager);
@@ -578,6 +579,7 @@ entity* scene::script_add_entity(const std::string & path)
 
 entity* scene::script_add_character(const std::string & path)
 {
+	assert(get_renderer() != nullptr);
 	assert(mTexture_manager != nullptr);
 	auto& nc = mCharacters.add_item();
 	nc.load_entity_xml(path, *mTexture_manager);

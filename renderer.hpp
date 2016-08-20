@@ -2,6 +2,7 @@
 #define RENDERER_HPP
 
 #include <SFML\Graphics.hpp>
+#include <TGUI\TGUI.hpp>
 
 #include <memory>
 #include <vector>
@@ -44,9 +45,13 @@ struct color
 
 class render_client;
 
-class events
+class renderer :
+	public util::nocopy
 {
 public:
+	renderer();
+	~renderer();
+
 	typedef sf::Keyboard::Key key_type;
 
 	enum mouse_button
@@ -63,27 +68,6 @@ public:
 
 	int update_events();
 
-protected:
-	void events_update_sfml_window(sf::RenderWindow& pWindow);
-
-private:
-	sf::RenderWindow *mWindow;
-
-	sf::Event mEvent;
-
-	std::map<int, int> mPressed_keys;
-	std::map<int, int> mPressed_buttons;
-
-	void refresh_pressed();
-};
-
-class renderer :
-	public events,
-	public util::nocopy
-{
-public:
-	renderer();
-	~renderer();
 	int initualize(ivector pSize, int pFps = 30);
 	int draw();
 	
@@ -103,6 +87,12 @@ public:
 	void set_visible(bool pVisible);
 	void set_background_color(color pColor);
 
+	void set_gui(tgui::Gui* pTgui)
+	{
+		mTgui = pTgui;
+		pTgui->setWindow(mWindow);
+	}
+
 #ifdef ENGINE_INTERNAL
 
 	/*sf::RenderWindow& get_sfml_window()
@@ -116,9 +106,17 @@ public:
 	friend class rectangle_node;
 
 private:
+
+	tgui::Gui* mTgui;
+
 	sf::RenderWindow mWindow;
 	std::vector<render_client*> mClients;
 	bool mRequest_resort;
+
+	sf::Event mEvent;
+	std::map<int, int> mPressed_keys;
+	std::map<int, int> mPressed_buttons;
+	void refresh_pressed();
 
 	int draw_clients();
 	void sort_clients();

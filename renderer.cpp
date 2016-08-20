@@ -1,4 +1,3 @@
-
 #include "renderer.hpp"
 
 using namespace engine;
@@ -70,7 +69,7 @@ render_client::get_depth()
 renderer::renderer()
 {
 	mRequest_resort = false;
-	events_update_sfml_window(mWindow);
+	mTgui = nullptr;
 }
 
 renderer::~renderer()
@@ -124,10 +123,9 @@ renderer::draw()
 		refresh_clients();
 		mRequest_resort = false;
 	}
-
-	auto &c = mBackground_color;
-	mWindow.clear(sf::Color(c.r, c.g, c.b, c.a));
+	mWindow.clear(mBackground_color);
 	draw_clients();
+	if (mTgui) mTgui->draw();
 	mWindow.display();
 	return 0;
 }
@@ -235,7 +233,7 @@ renderer::set_background_color(color pColor)
 }
 
 void
-events::refresh_pressed()
+renderer::refresh_pressed()
 {
 	for (auto &i : mPressed_keys)
 	{
@@ -251,9 +249,9 @@ events::refresh_pressed()
 }
 
 bool
-events::is_key_pressed(key_type pKey_type)
+renderer::is_key_pressed(key_type pKey_type)
 {
-	if (!mWindow->hasFocus())
+	if (!mWindow.hasFocus())
 		return false;
 	bool is_pressed = sf::Keyboard::isKeyPressed(pKey_type);
 	if (mPressed_keys[pKey_type] == -1 && is_pressed)
@@ -263,17 +261,17 @@ events::is_key_pressed(key_type pKey_type)
 }
 
 bool
-events::is_key_down(key_type pKey_type)
+renderer::is_key_down(key_type pKey_type)
 {
-	if (!mWindow->hasFocus())
+	if (!mWindow.hasFocus())
 		return false;
 	return sf::Keyboard::isKeyPressed(pKey_type);
 }
 
 bool
-events::is_mouse_pressed(mouse_button pButton_type)
+renderer::is_mouse_pressed(mouse_button pButton_type)
 {
-	if (!mWindow->hasFocus())
+	if (!mWindow.hasFocus())
 		return false;
 	bool is_pressed = sf::Mouse::isButtonPressed((sf::Mouse::Button)pButton_type);
 	if (mPressed_buttons[pButton_type] == -1 && is_pressed)
@@ -283,51 +281,28 @@ events::is_mouse_pressed(mouse_button pButton_type)
 }
 
 bool
-events::is_mouse_down(mouse_button pButton_type)
+renderer::is_mouse_down(mouse_button pButton_type)
 {
-	if (!mWindow->hasFocus())
+	if (!mWindow.hasFocus())
 		return false;
 	return sf::Mouse::isButtonPressed((sf::Mouse::Button)pButton_type);
 }
 
-void
-events::events_update_sfml_window(sf::RenderWindow& pWindow)
-{
-	mWindow = &pWindow;
-}
-
 int
-events::update_events()
+renderer::update_events()
 {
 	refresh_pressed();
 
-	if (!mWindow->isOpen())
+	if (!mWindow.isOpen())
 		return 1;
 
-	while (mWindow->pollEvent(mEvent))
+	while (mWindow.pollEvent(mEvent))
 	{
 		if (mEvent.type == sf::Event::Closed)
 			return 1;
 
-		/*if (text_record.enable && event.type == sf::Event::TextEntered)
-		{
-			std::string *text = &text_record.text;
-			if (text_record.ptr)
-				text = text_record.ptr;
-
-			if (event.text.unicode == '\b')
-			{
-				if (text->size() != 0)
-					text->pop_back();
-			}
-			else if (event.text.unicode == '\r')
-			{
-				if (text_record.multi_line)
-					text->push_back('\n');
-			}
-			else if (event.text.unicode < 128)
-				text->push_back(event.text.unicode);
-		}*/
+		if (mTgui)
+			mTgui->handleEvent(mEvent);
 	}
 	return 0;
 }
