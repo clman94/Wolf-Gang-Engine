@@ -33,24 +33,13 @@ public:
 
 	virtual ~node();
 
-	// Set relative position.
-	void set_exact_position(fvector pos);
+	void     set_exact_position(fvector pos);
+	fvector  get_exact_position();
 
-	// Set exact position
-	void set_position(fvector pos);
+	void     set_position(fvector pos);
+	fvector  get_position();
 
-	// The exact position.
-	fvector get_exact_position();
-	
-	// Returns position
-	fvector get_position();
-
-	// Returns pointer to the current instance.
-	// If not handled, it will be deleted with children.
 	node_ref detach_parent();
-
-	// Returns array of children.
-	// If not handled, they will be deleted.
 	node_arr detach_children();
 
 	node_ref get_parent();

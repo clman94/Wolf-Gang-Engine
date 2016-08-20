@@ -13,6 +13,17 @@ render_client::is_rendered()
 	return mIndex >= 0;
 }
 
+void render_client::set_renderer(renderer& pR)
+{
+	pR.add_client(*this);
+}
+
+void render_client::detach_renderer()
+{
+	if (mRenderer)
+		mRenderer->remove_client(*this);
+}
+
 void
 render_client::set_visible(bool pVisible)
 {
@@ -35,7 +46,7 @@ render_client::render_client()
 
 render_client::~render_client()
 {
-	mRenderer->remove_client(this);
+	detach_renderer();
 }
 
 void
@@ -144,29 +155,32 @@ renderer::sort_clients()
 }
 
 int
-renderer::add_client(render_client* pClient)
+renderer::add_client(render_client& pClient)
 {
-	if (pClient->mIndex >= 0)
+	if (pClient.mIndex >= 0)
 	{
 		return remove_client(pClient);
 	}
-	pClient->mRenderer = this;
-	pClient->mIndex = mClients.size();
-	mClients.push_back(pClient);
-	pClient->refresh_renderer(*this);
+	pClient.mRenderer = this;
+	pClient.mIndex = mClients.size();
+	mClients.push_back(&pClient);
+	pClient.refresh_renderer(*this);
 	sort_clients();
 	return 0;
 }
 
 int 
-renderer::remove_client(render_client* pClient)
+renderer::remove_client(render_client& pClient)
 {
-	if (pClient->mIndex < 0
-		|| pClient->mRenderer != this) return 1;
-	mClients.erase(mClients.begin() + pClient->mIndex);
+	if (pClient.mIndex < 0
+	||  pClient.mRenderer != this)
+	{
+		return 1;
+	}
+	mClients.erase(mClients.begin() + pClient.mIndex);
 	refresh_clients();
-	pClient->mIndex = -1;
-	pClient->mRenderer = nullptr;
+	pClient.mIndex = -1;
+	pClient.mRenderer = nullptr;
 	return 0;
 }
 

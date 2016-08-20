@@ -538,7 +538,7 @@ scene::load_entities(tinyxml2::XMLElement * e)
 		auto& ne = mEntities.add_item();
 		ne.load_entity_xml(att_path, *mTexture_manager);
 		ne.set_position(pos);
-		get_renderer()->add_client(&ne);
+		get_renderer()->add_client(ne);
 
 		ele = ele->NextSiblingElement();
 	}
@@ -560,7 +560,7 @@ scene::load_characters(tinyxml2::XMLElement * e)
 		ne.load_entity_xml(att_path, *mTexture_manager);
 		ne.set_cycle("default");
 		ne.set_position(pos *32);
-		get_renderer()->add_client(&ne);
+		get_renderer()->add_client(ne);
 
 		ele = ele->NextSiblingElement();
 	}
@@ -572,7 +572,7 @@ entity* scene::script_add_entity(const std::string & path)
 	assert(mTexture_manager != nullptr);
 	auto& ne = mEntities.add_item();
 	ne.load_entity_xml(path, *mTexture_manager);
-	get_renderer()->add_client(&ne);
+	get_renderer()->add_client(ne);
 	return &ne;
 }
 
@@ -582,7 +582,7 @@ entity* scene::script_add_character(const std::string & path)
 	auto& nc = mCharacters.add_item();
 	nc.load_entity_xml(path, *mTexture_manager);
 	nc.set_cycle(character::e_cycle::default);
-	get_renderer()->add_client(&nc);
+	get_renderer()->add_client(nc);
 	return &nc;
 }
 
@@ -741,7 +741,7 @@ bool scene::is_character(entity* pEntity)
 
 void scene::refresh_renderer(engine::renderer& pR)
 {
-	pR.add_client(&mTilemap);
+	pR.add_client(mTilemap);
 }
 
 // #########
@@ -976,6 +976,7 @@ void game::save_game(size_t pSlot)
 	file.new_save();
 	file.save_flags(mFlags);
 	file.save_scene(mScene.get_name(), mScene.get_path());
+	file.save_player(mPlayer);
 	file.save(path);
 }
 
@@ -989,6 +990,7 @@ void game::open_game(size_t pSlot)
 		return;
 	}
 	file.load_flags(mFlags);
+	file.load_player(mPlayer);
 	mScene.load_scene_xml(file.get_scene_path(), mScript, mFlags);
 }
 
@@ -1136,10 +1138,10 @@ void
 game::refresh_renderer(engine::renderer & pR)
 {
 	mScene.set_renderer(pR);
-	pR.add_client(&mPlayer);
+	pR.add_client(mPlayer);
 	mRoot_node.set_viewport(pR.get_size());
 	mRoot_node.set_boundary({ 11*32, 11*32 });
-	pR.add_client(&mNarrative);
+	pR.add_client(mNarrative);
 }
 
 // ##########
@@ -1368,9 +1370,9 @@ narrative_dialog::draw(engine::renderer& pR)
 void
 narrative_dialog::refresh_renderer(engine::renderer& r)
 {
-	r.add_client(&mBox);
-	r.add_client(&mText);
-	r.add_client(&mSelection);
+	r.add_client(mBox);
+	r.add_client(mText);
+	r.add_client(mSelection);
 }
 
 // ##########
@@ -1850,7 +1852,7 @@ void tilemap_display::set_tile(engine::fvector pPosition, engine::animation & pA
 	ntile.set_animation(pAnimation);
 }
 
-int tilemap_display::draw(engine::renderer & pR)
+int tilemap_display::draw(engine::renderer& pR)
 {
 	if (!mTexture) return 1;
 	for (auto &i : mLayers)
@@ -1917,12 +1919,23 @@ bool save_system::open_save(const std::string& pPath)
 
 void save_system::load_flags(flag_container& pFlags)
 {
+	assert(mEle_root != nullptr);
 	auto ele_flag = mEle_root->FirstChildElement("flag");
 	while (ele_flag)
 	{
 		pFlags.set_flag(util::safe_string(ele_flag->Attribute("name")));
 		ele_flag = ele_flag->NextSiblingElement("flag");
 	}
+}
+
+void save_system::load_player(player_character& pPlayer)
+{
+	assert(mEle_root != nullptr);
+	auto ele_player = mEle_root->FirstChildElement("player");
+	engine::fvector position;
+	position.x = ele_player->FloatAttribute("x");
+	position.y = ele_player->FloatAttribute("y");
+	pPlayer.set_position(position);
 }
 
 std::string save_system::get_scene_path()
@@ -1970,4 +1983,13 @@ void save_system::save_scene(const std::string& pName, const std::string& pPath)
 	mEle_root->InsertFirstChild(ele_scene);
 	ele_scene->SetAttribute("name", pName.c_str());
 	ele_scene->SetAttribute("path", pPath.c_str());
+}
+
+void save_system::save_player(player_character& pPlayer)
+{
+	assert(mEle_root != nullptr);
+	auto ele_scene = mDocument.NewElement("player");
+	mEle_root->InsertFirstChild(ele_scene);
+	ele_scene->SetAttribute("x", pPlayer.get_position().x);
+	ele_scene->SetAttribute("y", pPlayer.get_position().y);
 }

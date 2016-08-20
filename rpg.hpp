@@ -544,6 +544,7 @@ public:
 
 	bool open_save(const std::string& pPath);
 	void load_flags(flag_container& pFlags);
+	void load_player(player_character& pPlayer);
 	std::string get_scene_path();
 	std::string get_scene_name();
 
@@ -551,6 +552,7 @@ public:
 	void save(const std::string& pPath);
 	void save_flags(flag_container& pFlags);
 	void save_scene(const std::string & pName, const std::string & pPath);
+	void save_player(player_character& pPlayer);
 };
 
 class game :
@@ -576,7 +578,6 @@ private:
 	engine::clock    mClock;
 	script_system    mScript;
 	controls         mControls;
-
 
 	std::string get_slot_path(size_t pSlot);
 	void save_game(size_t pSlot);

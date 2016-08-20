@@ -88,8 +88,8 @@ public:
 	int draw();
 	
 	int close();
-	int add_client(render_client* pClient);
-	int remove_client(render_client* pClient);
+	int add_client(render_client& pClient);
+	int remove_client(render_client& pClient);
 	void set_pixel_scale(float pScale);
 
 	fvector get_size();
@@ -105,7 +105,10 @@ public:
 
 #ifdef ENGINE_INTERNAL
 
-	sf::RenderWindow& get_sfml_window()
+	/*sf::RenderWindow& get_sfml_window()
+	{ return mWindow; }*/
+
+	sf::RenderTarget& get_sfml_render()
 	{ return mWindow; }
 
 #endif
@@ -137,6 +140,9 @@ public:
 	virtual int draw(renderer &pR) = 0;
 	int is_rendered();
 
+	void set_renderer(renderer& pR);
+	void detach_renderer();
+
 	friend class renderer;
 
 protected:
@@ -153,6 +159,10 @@ class render_proxy
 {
 	renderer* mR;
 public:
+	render_proxy() : mR(nullptr)
+	{
+	}
+
 	void set_renderer(renderer& pR)
 	{
 		mR = &pR;
@@ -160,7 +170,6 @@ public:
 	}
 	renderer* get_renderer()
 	{
-		assert(mR != nullptr);
 		return mR;
 	}
 protected:

@@ -74,6 +74,6 @@ vertex_batch::draw(renderer &_r)
 	sf::RenderStates rs;
 	rs.transform.translate(get_exact_position());
 	rs.texture = &mTexture->sfml_get_texture();
-	_r.get_sfml_window().draw(&mVertices[0], mVertices.size(), sf::Quads, rs);
+	_r.get_sfml_render().draw(&mVertices[0], mVertices.size(), sf::Quads, rs);
 	return 0;
 }

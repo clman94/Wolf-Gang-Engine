@@ -90,7 +90,7 @@ tile_node::draw(renderer &_r)
 	for (auto &i : mLayers)
 	{
 		auto &vertices = *i.second;
-		_r.get_sfml_window().draw(&vertices[0], vertices.size(), sf::Quads, rs);
+		_r.get_sfml_render().draw(&vertices[0], vertices.size(), sf::Quads, rs);
 	}
 	return 0;
 }

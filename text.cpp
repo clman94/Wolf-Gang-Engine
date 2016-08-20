@@ -47,7 +47,7 @@ int
 text_node::draw(renderer &pR)
 {
 	mSfml_text.setPosition(get_exact_position());
-	pR.get_sfml_window().draw(mSfml_text);
+	pR.get_sfml_render().draw(mSfml_text);
 	return 0;
 }
 
