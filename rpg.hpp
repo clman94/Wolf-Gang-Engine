@@ -491,10 +491,11 @@ public:
 	const std::string& get_name()
 	{ return mScene_name; }
 
-
 	void load_script_interface(script_system& pScript);
 
 	void set_texture_manager(texture_manager& pTexture_manager);
+
+	bool is_character(entity* pEntity);
 
 private:
 	tilemap_display   mTilemap;

@@ -640,7 +640,6 @@ void scene::script_set_animation(entity * e, const std::string & name)
 	e->set_animation(name);
 }
 
-
 util::error scene::load_scene_xml(std::string pPath, script_system& pScript, flag_container& pFlags)
 {
 	assert(mTexture_manager != nullptr);
@@ -727,16 +726,20 @@ void scene::load_script_interface(script_system& pScript)
 	pScript.add_function("void _stop_animation(entity, int)", asMETHOD(scene, script_stop_animation), this);
 	pScript.add_function("void set_animation(entity, const string &in)", asMETHOD(scene, script_set_animation), this);
 	pScript.add_function("entity find_entity(const string &in)", asMETHOD(scene, find_entity), this);
+	pScript.add_function("bool is_character(entity)", asMETHOD(scene, is_character), this);
 }
 
-void
-scene::set_texture_manager(texture_manager & pTexture_manager)
+void scene::set_texture_manager(texture_manager& pTexture_manager)
 {
 	mTexture_manager = &pTexture_manager;
 }
 
-void
-scene::refresh_renderer(engine::renderer & pR)
+bool scene::is_character(entity* pEntity)
+{
+	return dynamic_cast<character*>(pEntity) != nullptr;
+}
+
+void scene::refresh_renderer(engine::renderer& pR)
 {
 	pR.add_client(&mTilemap);
 }
