@@ -476,29 +476,18 @@ player_character::get_activation_point(float pDistance)
 	return{ 0, 0 };
 }
 
-
-
 // #########
-// scene
+// entity_manager
 // #########
 
-
-scene::scene()
+entity_manager::entity_manager()
 {
-	mTilemap_display.set_depth(defs::TILES_DEPTH);
-	add_child(mTilemap_display);
-	add_child(mCharacters);
 	add_child(mEntities);
+	add_child(mCharacters);
 }
 
-collision_system&
-scene::get_collision_system()
-{
-	return mCollision_system;
-}
-
-inline character*
-scene::find_character(const std::string& pName)
+character*
+entity_manager::find_character(const std::string& pName)
 {
 	for (auto &i : mCharacters)
 		if (i.get_name() == pName)
@@ -506,8 +495,8 @@ scene::find_character(const std::string& pName)
 	return nullptr;
 }
 
-inline entity*
-scene::find_entity(const std::string& pName)
+entity*
+entity_manager::find_entity(const std::string& pName)
 {
 	for (auto &i : mEntities)
 		if (i.get_name() == pName)
@@ -515,17 +504,14 @@ scene::find_entity(const std::string& pName)
 	return nullptr;
 }
 
-void
-scene::clean_scene()
+void entity_manager::clean()
 {
-	mTilemap_display.clear();
-	mCollision_system.clear();
 	mCharacters.clear();
 	mEntities.clear();
 }
 
 util::error
-scene::load_entities(tinyxml2::XMLElement * e)
+entity_manager::load_entities(tinyxml2::XMLElement * e)
 {
 	assert(mTexture_manager != nullptr);
 	auto ele = e->FirstChildElement();
@@ -545,8 +531,13 @@ scene::load_entities(tinyxml2::XMLElement * e)
 	return 0;
 }
 
+void entity_manager::set_texture_manager(texture_manager& pTexture_manager)
+{
+	mTexture_manager = &pTexture_manager;
+}
+
 util::error
-scene::load_characters(tinyxml2::XMLElement * e)
+entity_manager::load_characters(tinyxml2::XMLElement * e)
 {
 	assert(mTexture_manager != nullptr);
 	auto ele = e->FirstChildElement();
@@ -567,7 +558,7 @@ scene::load_characters(tinyxml2::XMLElement * e)
 	return 0;
 }
 
-entity* scene::script_add_entity(const std::string & path)
+entity* entity_manager::script_add_entity(const std::string & path)
 {
 	assert(get_renderer() != nullptr);
 	assert(mTexture_manager != nullptr);
@@ -577,7 +568,7 @@ entity* scene::script_add_entity(const std::string & path)
 	return &ne;
 }
 
-entity* scene::script_add_character(const std::string & path)
+entity* entity_manager::script_add_character(const std::string & path)
 {
 	assert(get_renderer() != nullptr);
 	assert(mTexture_manager != nullptr);
@@ -588,19 +579,19 @@ entity* scene::script_add_character(const std::string & path)
 	return &nc;
 }
 
-void scene::script_set_position(entity* e, const engine::fvector & pos)
+void entity_manager::script_set_position(entity* e, const engine::fvector & pos)
 {
 	assert(e != nullptr);
 	e->set_position(engine::fvector(32, 32)*pos);
 }
 
-engine::fvector scene::script_get_position(entity * e)
+engine::fvector entity_manager::script_get_position(entity * e)
 {
 	assert(e != nullptr);
 	return e->get_position()*32;
 }
 
-void scene::script_set_direction(entity* e, int dir)
+void entity_manager::script_set_direction(entity* e, int dir)
 {
 	assert(e != nullptr);
 	character* c = dynamic_cast<character*>(e);
@@ -612,7 +603,7 @@ void scene::script_set_direction(entity* e, int dir)
 	c->set_cycle(static_cast<character::e_cycle>(dir));
 }
 
-void scene::script_set_cycle(entity* e, const std::string& name)
+void entity_manager::script_set_cycle(entity* e, const std::string& name)
 {
 	assert(e != nullptr);
 	character* c = dynamic_cast<character*>(e);
@@ -624,23 +615,70 @@ void scene::script_set_cycle(entity* e, const std::string& name)
 	c->set_cycle_group(name);
 }
 
-void scene::script_start_animation(entity* e, int type)
+void entity_manager::script_start_animation(entity* e, int type)
 {
 	assert(e != nullptr);
 	e->play_withtype(static_cast<entity::e_type>(type));
 }
 
-void scene::script_stop_animation(entity* e, int type)
+void entity_manager::script_stop_animation(entity* e, int type)
 {
 	assert(e != nullptr);
 	e->stop_withtype(static_cast<entity::e_type>(type));
 }
 
-void scene::script_set_animation(entity * e, const std::string & name)
+void entity_manager::script_set_animation(entity * e, const std::string & name)
 {
 	assert(e != nullptr);
 	e->set_animation(name);
 }
+
+void entity_manager::load_script_interface(script_system& pScript)
+{
+	pScript.add_function("entity add_entity(const string &in)", asMETHOD(entity_manager, script_add_entity), this);
+	pScript.add_function("entity add_character(const string &in)", asMETHOD(entity_manager, script_add_character), this);
+	pScript.add_function("void set_position(entity, const vec &in)", asMETHOD(entity_manager, script_set_position), this);
+	pScript.add_function("vec get_position(entity)", asMETHOD(entity_manager, script_get_position), this);
+	pScript.add_function("void set_direction(entity, int)", asMETHOD(entity_manager, script_set_direction), this);
+	pScript.add_function("void set_cycle(entity, const string &in)", asMETHOD(entity_manager, script_set_cycle), this);
+	pScript.add_function("void _start_animation(entity, int)", asMETHOD(entity_manager, script_start_animation), this);
+	pScript.add_function("void _stop_animation(entity, int)", asMETHOD(entity_manager, script_stop_animation), this);
+	pScript.add_function("void set_animation(entity, const string &in)", asMETHOD(entity_manager, script_set_animation), this);
+	pScript.add_function("entity find_entity(const string &in)", asMETHOD(entity_manager, find_entity), this);
+	pScript.add_function("bool is_character(entity)", asMETHOD(entity_manager, is_character), this);
+}
+
+bool entity_manager::is_character(entity* pEntity)
+{
+	return dynamic_cast<character*>(pEntity) != nullptr;
+}
+
+// #########
+// scene
+// #########
+
+scene::scene()
+{
+	mTilemap_display.set_depth(defs::TILES_DEPTH);
+	add_child(mTilemap_display);
+	add_child(mEntity_manager);
+}
+
+collision_system&
+scene::get_collision_system()
+{
+	return mCollision_system;
+}
+
+
+void
+scene::clean_scene()
+{
+	mTilemap_display.clear();
+	mCollision_system.clear();
+	mEntity_manager.clean();
+}
+
 
 util::error scene::load_scene_xml(std::string pPath, script_system& pScript, flag_container& pFlags)
 {
@@ -677,12 +715,12 @@ util::error scene::load_scene_xml(std::string pPath, script_system& pScript, fla
 
 	if (auto ele_entities = ele_root->FirstChildElement("entities"))
 	{
-		load_entities(ele_entities);
+		mEntity_manager.load_entities(ele_entities);
 	}
 
 	if (auto ele_characters = ele_root->FirstChildElement("characters"))
 	{
-		load_characters(ele_characters);
+		mEntity_manager.load_characters(ele_characters);
 	}
 
 	if (auto ele_script = ele_root->FirstChildElement("script"))
@@ -718,33 +756,21 @@ scene::reload_scene(script_system & pScript, flag_container & pFlags)
 
 void scene::load_script_interface(script_system& pScript)
 {
-	pScript.add_function("entity add_entity(const string &in)", asMETHOD(scene, script_add_entity), this);
-	pScript.add_function("entity add_character(const string &in)", asMETHOD(scene, script_add_character), this);
-	pScript.add_function("void set_position(entity, const vec &in)", asMETHOD(scene, script_set_position), this);
-	pScript.add_function("vec get_position(entity)", asMETHOD(scene, script_get_position), this);
-	pScript.add_function("void set_direction(entity, int)", asMETHOD(scene, script_set_direction), this);
-	pScript.add_function("void set_cycle(entity, const string &in)", asMETHOD(scene, script_set_cycle), this);
-	pScript.add_function("void _start_animation(entity, int)", asMETHOD(scene, script_start_animation), this);
-	pScript.add_function("void _stop_animation(entity, int)", asMETHOD(scene, script_stop_animation), this);
-	pScript.add_function("void set_animation(entity, const string &in)", asMETHOD(scene, script_set_animation), this);
-	pScript.add_function("entity find_entity(const string &in)", asMETHOD(scene, find_entity), this);
-	pScript.add_function("bool is_character(entity)", asMETHOD(scene, is_character), this);
+	mEntity_manager.load_script_interface(pScript);
 }
 
 void scene::set_texture_manager(texture_manager& pTexture_manager)
 {
 	mTexture_manager = &pTexture_manager;
-}
-
-bool scene::is_character(entity* pEntity)
-{
-	return dynamic_cast<character*>(pEntity) != nullptr;
+	mEntity_manager.set_texture_manager(pTexture_manager);
 }
 
 void scene::refresh_renderer(engine::renderer& pR)
 {
 	pR.add_client(mTilemap_display);
+	mEntity_manager.set_renderer(pR);
 }
+
 
 // #########
 // controls
@@ -1206,8 +1232,8 @@ narrative_dialog::load_font(tinyxml2::XMLElement* e)
 
 	mFont.load(att_font_path);
 	mText.set_font(mFont);
-	mText.set_character_size(60);
-	mText.set_scale(0.25f);
+	mText.set_character_size(ele_font->IntAttribute("size"));
+	mText.set_scale(ele_font->FloatAttribute("scale"));
 
 	mSelection.copy_format(mText);
 

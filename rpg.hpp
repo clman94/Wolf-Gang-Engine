@@ -65,6 +65,19 @@ public:
 		return mItems.back();
 	}
 
+	bool remove_item(T* pPtr)
+	{
+		for (auto i = mItems.begin(); i != mItems.end(); i++)
+		{
+			if (&(*i) == pPtr)
+			{
+				mItems.erase(i);
+				return true;
+			}
+		}
+		return false;
+	}
+
 	auto begin() { return mItems.begin(); }
 	auto end()   { return mItems.end();   }
 	auto back()  { return mItems.back();  }
@@ -360,7 +373,6 @@ private:
 	util::error load_font(tinyxml2::XMLElement* e);
 };
 
-
 class player_character :
 	public character
 {
@@ -385,6 +397,44 @@ private:
 	direction mFacing_direction;
 };
 
+class entity_manager :
+	public engine::render_proxy,
+	public engine::node
+{
+public:
+	entity_manager();
+
+	character* find_character(const std::string& pName);
+	entity*    find_entity(const std::string& pName);
+
+	void clean();
+
+	void load_script_interface(script_system& pScript);
+
+	void set_texture_manager(texture_manager& pTexture_manager);
+
+	util::error load_entities(tinyxml2::XMLElement* e);
+	util::error load_characters(tinyxml2::XMLElement* e);
+
+	bool is_character(entity* pEntity);
+
+private:
+	texture_manager*  mTexture_manager;
+
+	node_list<character> mCharacters;
+	node_list<entity>    mEntities;
+
+	entity*         script_add_entity(const std::string& path);
+	entity*         script_add_character(const std::string& path);
+	void            script_set_position(entity* e, const engine::fvector& pos);
+	engine::fvector script_get_position(entity* e);
+	void            script_set_direction(entity* e, int dir);
+	void            script_set_cycle(entity* e, const std::string& name);
+	void            script_start_animation(entity* e, int type);
+	void            script_stop_animation(entity* e, int type);
+	void            script_set_animation(entity* e, const std::string& name);
+};
+
 class scene :
 	public engine::render_proxy,
 	public engine::node
@@ -392,9 +442,6 @@ class scene :
 public:
 	scene();
 	collision_system& get_collision_system();
-
-	character* find_character(const std::string& pName);
-	entity*    find_entity(const std::string& pName);
 
 	void clean_scene();
 	util::error load_scene_xml(std::string pPath, script_system& pScript, flag_container& pFlags);
@@ -410,32 +457,15 @@ public:
 
 	void set_texture_manager(texture_manager& pTexture_manager);
 
-	bool is_character(entity* pEntity);
-
 private:
 	tilemap_display   mTilemap_display;
 	tilemap_loader    mTilemap_loader;
 	collision_system  mCollision_system;
-	texture_manager * mTexture_manager;
-
-	node_list<character> mCharacters;
-	node_list<entity>    mEntities;
+	texture_manager*  mTexture_manager;
+	entity_manager    mEntity_manager;
 
 	std::string mScene_path;
 	std::string mScene_name;
-
-	util::error load_entities(tinyxml2::XMLElement* e);
-	util::error load_characters(tinyxml2::XMLElement* e);
-
-	entity*         script_add_entity(const std::string& path);
-	entity*         script_add_character(const std::string& path);
-	void            script_set_position(entity* e, const engine::fvector& pos);
-	engine::fvector script_get_position(entity* e);
-	void            script_set_direction(entity* e, int dir);
-	void            script_set_cycle(entity* e, const std::string& name);
-	void            script_start_animation(entity* e, int type);
-	void            script_stop_animation(entity* e, int type);
-	void            script_set_animation(entity* e, const std::string& name);
 
 protected:
 	void refresh_renderer(engine::renderer& _r);
