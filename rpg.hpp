@@ -7,6 +7,8 @@
 #include "rpg_config.hpp"
 #include "your_soul.hpp"
 #include "tinyxml2\tinyxml2.h"
+#include "tilemap_loader.hpp"
+#include "editor.hpp"
 
 #include <set>
 #include <list>
@@ -24,49 +26,6 @@ namespace AS = AngelScript;
 namespace rpg{
 
 class script_system;
-
-class tilemap_display :
-	public engine::render_client,
-	public engine::node
-{
-public:
-	void set_texture(engine::texture& pTexture);
-	void set_tile(engine::fvector pPosition, engine::frect pTexture_rect, int pLayer, int pRotation);
-	void set_tile(engine::fvector pPosition, const std::string& pAtlas, int pLayer, int pRotation);
-	void set_tile(engine::fvector pPosition, engine::animation& pAnimation, int pLayer, int pRotation);
-
-	int draw(engine::renderer &pR);
-
-	void update_animations();
-
-	void clear();
-
-private:
-	engine::texture *mTexture;
-
-	class tile
-	{
-	public:
-		engine::vertex_reference mRef;
-
-		tile() : mAnimation(nullptr) {}
-
-		void set_animation(engine::animation& pAnimation);
-		void update_animation();
-	private:
-		engine::timer mTimer;
-		engine::frame_t mFrame;
-		engine::animation* mAnimation;
-	};
-
-	struct layer
-	{
-		engine::vertex_batch vertices;
-		std::map<engine::fvector, tile> tiles;
-	};
-
-	std::map<int, layer> mLayers;
-};
 
 class panning_node :
 	public engine::node
@@ -401,50 +360,6 @@ private:
 	util::error load_font(tinyxml2::XMLElement* e);
 };
 
-class tilemap_loader
-{
-public:
-	tilemap_loader();
-
-	void condense_tiles();
-
-	util::error load_tilemap_xml(tinyxml2::XMLElement *root);
-	util::error load_tilemap_xml(std::string pPath);
-	
-	void break_tile(engine::fvector pPosition, size_t pLayer);
-
-	void generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode* root);
-	void generate(const std::string& pPath);
-
-	int  set_tile(engine::fvector pPosition, engine::fvector pFill, size_t pLayer, const std::string& pAtlas, int pRotation);
-	int  set_tile(engine::fvector pPosition, size_t pLayer, const std::string& pAtlas, int pRotation);
-	void remove_tile(engine::fvector pPosition, size_t pLayer);
-
-	void update_display(tilemap_display& tmA);
-
-	void clear();
-
-private:
-	struct tile
-	{
-		engine::fvector pos, fill;
-		int rotation;
-		std::string atlas;
-		void load_xml(tinyxml2::XMLElement *e, size_t layer);
-		bool is_adjacent_above(tile& a);
-		bool is_adjacent_right(tile& a);
-	};
-	std::map<size_t, std::vector<tile>> mTiles;
-	tile* find_tile(engine::fvector pos, size_t layer);
-
-	engine::fvector mTile_size;
-
-	void condense_layer(std::vector<tile> &pMap);
-
-	util::error load_layer(tinyxml2::XMLElement *pEle, size_t pLayer);
-
-	tile* find_tile_at(engine::fvector pPosition, size_t pLayer);
-};
 
 class player_character :
 	public character
@@ -498,7 +413,7 @@ public:
 	bool is_character(entity* pEntity);
 
 private:
-	tilemap_display   mTilemap;
+	tilemap_display   mTilemap_display;
 	tilemap_loader    mTilemap_loader;
 	collision_system  mCollision_system;
 	texture_manager * mTexture_manager;
@@ -578,6 +493,8 @@ private:
 	engine::clock    mClock;
 	script_system    mScript;
 	controls         mControls;
+	
+	editor::editor_gui mTest_gui;
 
 	std::string get_slot_path(size_t pSlot);
 	void save_game(size_t pSlot);

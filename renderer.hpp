@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <cassert>
 
+#include "vector.hpp"
 #include "node.hpp"
 #include "texture.hpp"
 #include "ptr_GC.hpp"
@@ -84,8 +85,20 @@ public:
 
 	bool is_focused();
 
+	int set_icon(const std::string& pPath);
+
 	void set_visible(bool pVisible);
 	void set_background_color(color pColor);
+
+	float get_fps()
+	{
+		return mFrame_clock.get_fps();
+	}
+
+	float get_delta()
+	{
+		return mFrame_clock.get_delta();
+	}
 
 	void set_gui(tgui::Gui* pTgui)
 	{
@@ -112,6 +125,7 @@ private:
 	sf::RenderWindow mWindow;
 	std::vector<render_client*> mClients;
 	bool mRequest_resort;
+	frame_clock mFrame_clock;
 
 	sf::Event mEvent;
 	std::map<int, int> mPressed_keys;

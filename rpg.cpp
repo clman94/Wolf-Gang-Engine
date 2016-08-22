@@ -485,8 +485,8 @@ player_character::get_activation_point(float pDistance)
 
 scene::scene()
 {
-	mTilemap.set_depth(defs::TILES_DEPTH);
-	add_child(mTilemap);
+	mTilemap_display.set_depth(defs::TILES_DEPTH);
+	add_child(mTilemap_display);
 	add_child(mCharacters);
 	add_child(mEntities);
 }
@@ -518,7 +518,7 @@ scene::find_entity(const std::string& pName)
 void
 scene::clean_scene()
 {
-	mTilemap.clear();
+	mTilemap_display.clear();
 	mCollision_system.clear();
 	mCharacters.clear();
 	mEntities.clear();
@@ -669,7 +669,7 @@ util::error scene::load_scene_xml(std::string pPath, script_system& pScript, fla
 		auto tex = mTexture_manager->get_texture(ele_tilemap_tex->GetText());
 		if (!tex)
 			return util::error("Invalid tilemap texture");
-		mTilemap.set_texture(*tex);
+		mTilemap_display.set_texture(*tex);
 	}
 	else
 		return util::error("Tilemap texture is not defined");
@@ -703,7 +703,7 @@ util::error scene::load_scene_xml(std::string pPath, script_system& pScript, fla
 	if (auto ele_map = ele_root->FirstChildElement("map"))
 	{
 		mTilemap_loader.load_tilemap_xml(ele_map);
-		mTilemap_loader.update_display(mTilemap);
+		mTilemap_loader.update_display(mTilemap_display);
 	}
 	return 0;
 }
@@ -743,7 +743,7 @@ bool scene::is_character(entity* pEntity)
 
 void scene::refresh_renderer(engine::renderer& pR)
 {
-	pR.add_client(mTilemap);
+	pR.add_client(mTilemap_display);
 }
 
 // #########
@@ -1048,7 +1048,7 @@ game::load_script_interface()
 
 float game::get_delta()
 {
-	return mClock.get_elapse().s();
+	return get_renderer()->get_delta();
 }
 
 util::error
@@ -1088,6 +1088,8 @@ game::load_game_xml(std::string pPath)
 	{
 		mNarrative.load_narrative_xml(ele_narrative, mTexture_manager);
 	}
+	mTest_gui.set_renderer(*get_renderer());
+	mTest_gui.initualize();
 	return 0;
 }
 
@@ -1096,7 +1098,7 @@ game::tick(controls& pControls)
 {
 	bool edit_mode = false;
 
-	float delta = mClock.get_elapse().s();
+	float delta = get_renderer()->get_delta();
 
 	if (pControls.is_triggered(controls::control::reset))
 	{
@@ -1131,6 +1133,8 @@ game::tick(controls& pControls)
 		}
 	}
 
+	mTest_gui.update_camera_position(mRoot_node.get_exact_position());
+
 	mScript.tick();
 
 	mClock.restart();
@@ -1144,6 +1148,7 @@ game::refresh_renderer(engine::renderer & pR)
 	mRoot_node.set_viewport(pR.get_size());
 	mRoot_node.set_boundary({ 11*32, 11*32 });
 	pR.add_client(mNarrative);
+	pR.set_icon("data/icon.png");
 }
 
 // ##########

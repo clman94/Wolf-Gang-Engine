@@ -57,6 +57,11 @@ struct vector
 		return{ -x, -y};
 	}
 
+	template<typename T1>
+	vector operator /= (const T1& A)
+	{
+		return{ x / (T)A, y / (T)A };
+	}
 
 	template<typename T1>
 	vector& operator = (const vector<T1>& A)
@@ -90,7 +95,7 @@ struct vector
 		y *= (T)A.y;
 		return *this;
 	}
-
+	
 #ifdef SFML_VERTEX_HPP
 	vector(const sf::Vector2<T>& A)
 	{
@@ -105,7 +110,7 @@ struct vector
 		return *this;
 	}
 
-	inline operator sf::Vector2<T>()
+	inline operator sf::Vector2<T>() const
 	{
 		return{ x, y };
 	}

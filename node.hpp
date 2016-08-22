@@ -8,7 +8,7 @@
 
 namespace engine
 {
-
+ 
 class node;
 
 typedef ptr_GC<node> node_ref;
@@ -21,8 +21,6 @@ class node
 	node_ref parent;
 	node_arr children;
 
-	// Index of this object in 
-	// parent's children vector.
 	int child_index; 
 
 	fvector position;

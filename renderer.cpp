@@ -117,6 +117,7 @@ renderer::draw_clients()
 int
 renderer::draw()
 {
+	mFrame_clock.update();
 	if (mRequest_resort)
 	{
 		sort_clients();
@@ -218,6 +219,15 @@ bool
 renderer::is_focused()
 {
 	return mWindow.hasFocus();
+}
+
+int renderer::set_icon(const std::string & pPath)
+{
+	sf::Image image;
+	if (!image.loadFromFile(pPath))
+		return 1;
+	mWindow.setIcon(image.getSize().x, image.getSize().y, image.getPixelsPtr());
+	return 0;
 }
 
 void

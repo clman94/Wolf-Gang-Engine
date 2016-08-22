@@ -106,40 +106,50 @@ public:
 	}
 };
 
-class fps_clock
+class frame_clock
 {
-	engine::clock clock;
-	unsigned int frames;
-	float fps;
-	float interval;
+	clock mFps_clock;
+	clock mDelta_clock;
+	unsigned int mFrames;
+	float mFps;
+	float mInterval;
+	float mDelta;
 public:
-	fps_clock(float _interval = 1)
+	frame_clock(float _interval = 1)
 	{
-		fps = 0;
-		frames = 0;
-		interval = _interval;
+		mFps = 0;
+		mFrames = 0;
+		mInterval = _interval;
 	}
 
 	void set_interval(float seconds)
 	{
-		interval = seconds;
+		mInterval = seconds;
+	}
+	
+	float get_delta()
+	{
+		return mDelta;
 	}
 
 	float get_fps()
 	{
-		return fps;
+		return mFps;
 	}
 
 	void update()
 	{
-		++frames;
-		auto time = clock.get_elapse().s();
-		if (time >= interval)
+		++mFrames;
+		auto time = mFps_clock.get_elapse().s();
+		if (time >= mInterval)
 		{
-			fps = frames / time;
-			frames = 0;
-			clock.restart();
+			mFps = mFrames / time;
+			mFrames = 0;
+			mFps_clock.restart();
 		}
+
+		mDelta = mDelta_clock.get_elapse().s();
+		mDelta_clock.restart();
 	}
 };
 

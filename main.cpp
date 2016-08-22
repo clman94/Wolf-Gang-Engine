@@ -30,7 +30,6 @@ int game()
 
 	std::cout << "Load time : " << load_clock.get_elapse().s() << " seconds\n";
 
-	engine::fps_clock fps_clock;
 
 	// TEST particle system
 
@@ -78,22 +77,23 @@ int game()
 		if (r.is_key_pressed(engine::renderer::key_type::Right))
 			controls.trigger(rpg::controls::control::select_next);
 
-		if (r.is_key_pressed(engine::renderer::key_type::R))
-			controls.trigger(rpg::controls::control::reset);
+		if (r.is_key_down(engine::renderer::key_type::LControl))
+		{
+			if (r.is_key_pressed(engine::renderer::key_type::R))
+				controls.trigger(rpg::controls::control::reset);
+
+			if (r.is_key_pressed(engine::renderer::key_type::M))
+				controls.trigger(rpg::controls::control::menu);
+		}
 
 		if (r.is_key_down(engine::renderer::key_type::Escape))
 			working = false;
 
-		if (r.is_key_pressed(engine::renderer::key_type::M))
-			controls.trigger(rpg::controls::control::menu);
-
 		if (r.is_key_pressed(engine::renderer::key_type::T))
-			std::cout << "FPS: " << fps_clock.get_fps() << "\n";
+			std::cout << "FPS: " << r.get_fps() << "\n";
 
 		game.tick(controls);
 		r.draw();
-
-		fps_clock.update();
 
 		controls.reset();
 	}
