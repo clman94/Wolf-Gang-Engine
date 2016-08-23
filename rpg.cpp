@@ -646,6 +646,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void set_animation(entity, const string &in)", asMETHOD(entity_manager, script_set_animation), this);
 	pScript.add_function("entity find_entity(const string &in)", asMETHOD(entity_manager, find_entity), this);
 	pScript.add_function("bool is_character(entity)", asMETHOD(entity_manager, is_character), this);
+	//pScript.add_function("bool remove_entity(entity)", asMETHOD(node_list<entity>, remove_item), &mEntities);
 }
 
 bool entity_manager::is_character(entity* pEntity)
@@ -1066,6 +1067,11 @@ game::load_script_interface()
 
 	mScript.add_function("bool _is_triggered(int)", asMETHOD(controls, is_triggered), &mControls);
 
+	mScript.add_function("void set_focus(vec)", asMETHOD(panning_node, set_focus), &mRoot_node);
+
+	mScript.add_function("int _spawn_sound(const string&in)", asMETHOD(sound_manager, spawn_sound), &mSound_FX);
+	mScript.add_function("void _stop_all()", asMETHOD(sound_manager, stop_all), &mSound_FX);
+
 	mFlags.load_script_interface(mScript);
 	mNarrative.load_script_interface(mScript);
 	mScene.load_script_interface(mScript);
@@ -1109,6 +1115,11 @@ game::load_game_xml(std::string pPath)
 	
 	mScene.set_texture_manager(mTexture_manager);
 	mScene.load_scene_xml(scene_path, mScript, mFlags);
+
+	if (auto ele_sounds = ele_root->FirstChildElement("sounds"))
+	{
+		mSound_FX.load_sounds(ele_sounds);
+	}
 
 	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
 	{
@@ -1162,8 +1173,6 @@ game::tick(controls& pControls)
 	mTest_gui.update_camera_position(mRoot_node.get_exact_position());
 
 	mScript.tick();
-
-	mClock.restart();
 }
 
 void

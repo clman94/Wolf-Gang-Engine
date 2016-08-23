@@ -128,8 +128,8 @@ private:
 	frame_clock mFrame_clock;
 
 	sf::Event mEvent;
-	std::map<int, int> mPressed_keys;
-	std::map<int, int> mPressed_buttons;
+	std::unordered_map<int, int> mPressed_keys;
+	std::unordered_map<int, int> mPressed_buttons;
 	void refresh_pressed();
 
 	int draw_clients();

@@ -32,6 +32,7 @@ protected:
 	virtual void tick(engine::renderer& pR, engine::fvector pCamera_offset){}
 
 private:
+	float mUpdate_timer;
 	tgui::Label::Ptr mLb_mode;
 	tgui::Label::Ptr mLb_mouse;
 	tgui::Label::Ptr mLb_fps;

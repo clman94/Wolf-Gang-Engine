@@ -83,20 +83,27 @@ int editor_gui::draw(engine::renderer& pR)
 		else
 			mLayout->show();
 	}
-	auto mouse_position = pR.get_mouse_position(mCamera_offset);
-	std::string position;
-	position += "(";
-	//position += std::to_string(mouse_position.x);
-	//position += ", ";
-	//position += std::to_string(mouse_position.y);
-	//position += ") : (";
-	position += std::to_string(static_cast<int>(std::floor(mouse_position.x/32)));
-	position += ", ";
-	position += std::to_string(static_cast<int>(std::floor(mouse_position.y/32)));
-	position += ")";
-	mLb_mouse->setText(position);
 
-	mLb_fps->setText("FPS: " + std::to_string(pR.get_fps()));
+	mUpdate_timer += pR.get_delta();
+	if (mUpdate_timer >= 0.5f)
+	{
+		auto mouse_position = pR.get_mouse_position(mCamera_offset);
+		std::string position;
+		position += "(";
+		//position += std::to_string(mouse_position.x);
+		//position += ", ";
+		//position += std::to_string(mouse_position.y);
+		//position += ") : (";
+		position += std::to_string(static_cast<int>(std::floor(mouse_position.x / 32)));
+		position += ", ";
+		position += std::to_string(static_cast<int>(std::floor(mouse_position.y / 32)));
+		position += ")";
+		mLb_mouse->setText(position);
+
+		mLb_fps->setText("FPS: " + std::to_string(pR.get_fps()));
+
+		mUpdate_timer = 0;
+	}
 	return 0;
 }
 

@@ -520,7 +520,7 @@ private:
 	flag_container   mFlags;
 	narrative_dialog mNarrative;
 	background_music mBackground_music;
-	engine::clock    mClock;
+	sound_manager    mSound_FX;
 	script_system    mScript;
 	controls         mControls;
 	
