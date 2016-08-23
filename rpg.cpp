@@ -627,7 +627,7 @@ void entity_manager::script_stop_animation(entity* e, int type)
 	e->stop_withtype(static_cast<entity::e_type>(type));
 }
 
-void entity_manager::script_set_animation(entity * e, const std::string & name)
+void entity_manager::script_set_animation(entity* e, const std::string & name)
 {
 	assert(e != nullptr);
 	e->set_animation(name);
@@ -844,21 +844,55 @@ script_system::register_vector_type()
 {
 	mEngine->RegisterObjectType("vec", sizeof(engine::fvector), asOBJ_VALUE | asGetTypeTraits<engine::fvector>());
 
+	// Constructors and deconstructors
 	mEngine->RegisterObjectBehaviour("vec", asBEHAVE_CONSTRUCT, "void f()"
-		, asFUNCTION(as_default_constr<engine::fvector>), asCALL_CDECL_OBJLAST);
+		, asFUNCTION(script_default_constructor<engine::fvector>)
+		, asCALL_CDECL_OBJLAST);
+	mEngine->RegisterObjectBehaviour("vec", asBEHAVE_CONSTRUCT, "void f(float, float)"
+		, asFUNCTIONPR(script_constructor<engine::fvector>, (float, float, void*), void)
+		, asCALL_CDECL_OBJLAST);
 	mEngine->RegisterObjectBehaviour("vec", asBEHAVE_DESTRUCT, "void f()"
-		, asFUNCTION(as_default_destr<engine::fvector>), asCALL_CDECL_OBJLAST);
+		, asFUNCTION(script_default_deconstructor<engine::fvector>), asCALL_CDECL_OBJLAST);
 
+	// Assignments
 	mEngine->RegisterObjectMethod("vec", "vec& opAssign(const vec &in)"
 		, asMETHODPR(engine::fvector, operator=, (const engine::fvector&), engine::fvector&)
 		, asCALL_THISCALL);
 	mEngine->RegisterObjectMethod("vec", "vec& opAddAssign(const vec &in)"
 		, asMETHODPR(engine::fvector, operator+=<float>, (const engine::fvector&), engine::fvector&)
 		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "vec opMul(const float&in)"
-		, asMETHODPR(engine::fvector, operator*<float>, (const float&), engine::fvector)
+	mEngine->RegisterObjectMethod("vec", "vec& opSubAssign(const vec &in)"
+		, asMETHODPR(engine::fvector, operator-=<float>, (const engine::fvector&), engine::fvector&)
 		, asCALL_THISCALL);
 
+	// Arthimic
+	mEngine->RegisterObjectMethod("vec", "vec opSub(const vec&in)"
+		, asMETHODPR(engine::fvector, operator-<float>, (const engine::fvector&) const, engine::fvector)
+		, asCALL_THISCALL);
+	mEngine->RegisterObjectMethod("vec", "vec opMul(const vec&in)"
+		, asMETHODPR(engine::fvector, operator*<float>, (const engine::fvector&) const, engine::fvector)
+		, asCALL_THISCALL);
+	mEngine->RegisterObjectMethod("vec", "vec opMul(const float&in)"
+		, asMETHODPR(engine::fvector, operator*<float>, (const float&) const, engine::fvector)
+		, asCALL_THISCALL);
+
+	// Distance
+	mEngine->RegisterObjectMethod("vec", "float distance()"
+		, asMETHODPR(engine::fvector, distance, () const, float)
+		, asCALL_THISCALL);
+	mEngine->RegisterObjectMethod("vec", "float distance(const vec&in)"
+		, asMETHODPR(engine::fvector, distance, (const engine::fvector&) const, float)
+		, asCALL_THISCALL);
+
+	// Rotate
+	mEngine->RegisterObjectMethod("vec", "vec& rotate(float)"
+		, asMETHODPR(engine::fvector, rotate, (float), engine::fvector&)
+		, asCALL_THISCALL);
+	mEngine->RegisterObjectMethod("vec", "vec& rotate(const vec&in, float)"
+		, asMETHODPR(engine::fvector, rotate, (const engine::fvector&, float), engine::fvector&)
+		, asCALL_THISCALL);
+
+	// Members
 	mEngine->RegisterObjectProperty("vec", "float x", asOFFSET(engine::fvector, x));
 	mEngine->RegisterObjectProperty("vec", "float y", asOFFSET(engine::fvector, y));
 }
@@ -970,6 +1004,11 @@ script_system::setup_triggers(collision_system& pCollision_system)
 		else if(!metadata.empty())
 			std::cout << "Invalid Metadata: " << metadata << "\n";
 	}
+}
+
+void script_system::about_all()
+{
+	mCtxmgr.AbortAll();
 }
 
 int
@@ -1216,26 +1255,27 @@ panning_node::set_focus(engine::fvector pFocus)
 // ##########
 
 util::error
-narrative_dialog::load_box(tinyxml2::XMLElement* e, texture_manager& tm)
+narrative_dialog::load_box(tinyxml2::XMLElement* pEle, texture_manager& pTexture_manager)
 {
-	auto ele_box = e->FirstChildElement("box");
+	auto ele_box = pEle->FirstChildElement("box");
 
 	std::string att_box_tex = ele_box->Attribute("tex");
 	std::string att_box_atlas = ele_box->Attribute("atlas");
 
-	auto tex = tm.get_texture(att_box_tex);
+	auto tex = pTexture_manager.get_texture(att_box_tex);
 	if (!tex) return "Texture does not exist";
 	mBox.set_texture(*tex, att_box_atlas);
 
 	set_box_position(position::bottom);
 
+	mSelection.set_position(mBox.get_size() - engine::fvector(5, 5));
 	return 0;
 }
 
 util::error
-narrative_dialog::load_font(tinyxml2::XMLElement* e)
+narrative_dialog::load_font(tinyxml2::XMLElement* pEle)
 {
-	auto ele_font = e->FirstChildElement("font");
+	auto ele_font = pEle->FirstChildElement("font");
 
 	std::string att_font_path = ele_font->Attribute("path");
 
@@ -1257,8 +1297,8 @@ narrative_dialog::narrative_dialog()
 	mBox.add_child(mText);
 	mBox.add_child(mSelection);
 
-	mText.set_position({ 5,5 });
-	mSelection.set_position({ 50, 50 });
+	mText.set_position({ 5, 5 });
+	mSelection.set_anchor(engine::anchor::bottomright);
 }
 
 void

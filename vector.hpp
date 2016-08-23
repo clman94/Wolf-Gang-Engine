@@ -4,6 +4,13 @@
 namespace engine
 {
 
+// Estimate Radians from degree
+template<typename T>
+T degree_to_radian(T pDegree)
+{
+	return pDegree * static_cast<T>(0.0174533);
+}
+
 template<typename T>
 struct vector
 {
@@ -20,20 +27,47 @@ struct vector
 		y = (T)v.y;
 	}
 
+	T distance() const
+	{
+		return std::sqrt(std::pow(x, 2) + std::pow(y, 2));
+	}
+
 	template<typename T1>
-	vector operator + (const vector<T1>& A)
+	T distance(const vector<T1>& A) const
+	{
+		return std::sqrt(std::pow(A.x - x, 2) + std::pow(A.y - y, 2));
+	}
+
+	vector& rotate(T pDegrees)
+	{
+		const T rad = degree_to_radian(pDegrees);
+		x = x*std::cos(rad) - y*std::sin(rad);
+		y = y*std::cos(rad) + x*std::sin(rad);
+		return *this;
+	}
+
+	vector& rotate(const vector& pOrigin, T pDegrees)
+	{
+		*this -= pOrigin;
+		rotate(pDegrees);
+		*this += pOrigin;
+		return *this;
+	}
+
+	template<typename T1>
+	vector operator + (const vector<T1>& A) const
 	{
 		return{ x + (T)A.x, y + (T)A.y};
 	}
 
 	template<typename T1>
-	vector operator - (const vector<T1>& A)
+	vector operator - (const vector<T1>& A) const
 	{
 		return{ x - (T)A.x, y - (T)A.y};
 	}
 
 	template<typename T1>
-	vector operator * (const vector<T1>& A)
+	vector operator * (const vector<T1>& A) const
 	{
 		return{ x * (T)A.x, y * (T)A.y};
 	}
@@ -41,26 +75,28 @@ struct vector
 	// No division, high chance of dividing by zero.
 
 	template<typename T1>
-	vector operator * (const T1& A)
+	vector operator * (const T1& A) const
 	{
 		return{ x * (T)A, y * (T)A};
 	}
 
 	template<typename T1>
-	vector operator / (const T1& A)
+	vector operator / (const T1& A) const
 	{
 		return{ x / (T)A, y / (T)A };
 	}
 
-	vector operator - ()
+	vector operator - () const
 	{
 		return{ -x, -y};
 	}
 
 	template<typename T1>
-	vector operator /= (const T1& A)
+	vector& operator /= (const T1& A)
 	{
-		return{ x / (T)A, y / (T)A };
+		x /= (T)A.x;
+		y /= (T)A.y;
+		return *this;
 	}
 
 	template<typename T1>

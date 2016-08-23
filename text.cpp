@@ -19,20 +19,19 @@ void
 text_node::set_font(font& pFont)
 {
 	mSfml_text.setFont(pFont.sf_font);
+	update_offset();
 }
 
 void 
-text_node::set_text(const std::string pText)
+text_node::set_text(const std::string& pText)
 {
 	mSfml_text.setString(pText);
 	mString = pText;
-
-	auto center = center_offset<float>({ mSfml_text.getLocalBounds().width, mSfml_text.getLocalBounds().height }, mAnchor);
-	mSfml_text.setOrigin(center);
+	update_offset();
 }
 
 void
-text_node::append_text(const std::string pText)
+text_node::append_text(const std::string& pText)
 {
 	set_text(get_text() + pText);
 }
@@ -46,9 +45,15 @@ text_node::get_text()
 int
 text_node::draw(renderer &pR)
 {
-	mSfml_text.setPosition(get_exact_position());
+	mSfml_text.setPosition(get_exact_position() + mOffset);
 	pR.get_sfml_render().draw(mSfml_text);
 	return 0;
+}
+
+void text_node::update_offset()
+{
+	engine::fvector size = { mSfml_text.getLocalBounds().width, mSfml_text.getLocalBounds().height };
+	mOffset = anchor_offset<float>(size*engine::fvector(mSfml_text.getScale()), mAnchor);
 }
 
 void
@@ -61,6 +66,7 @@ void
 text_node::set_anchor(engine::anchor pAnchor)
 {
 	mAnchor = pAnchor;
+	update_offset();
 }
 
 void
@@ -79,6 +85,7 @@ text_node::copy_format(const text_node& pText_node)
 	mSfml_text.setCharacterSize(pText_node.mSfml_text.getCharacterSize());
 	mSfml_text.setScale(pText_node.mSfml_text.getScale());
 	mSfml_text.setStyle(pText_node.mSfml_text.getStyle());
+	update_offset();
 }
 
 

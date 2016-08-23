@@ -262,7 +262,7 @@ static vector<T> center_offset(const vector<T>& pSize, anchor pType)
 	case anchor::bottomleft:
 		return{ 0, pSize.y };
 	case anchor::bottomright:
-		return{ pSize.x, pSize.y };
+		return pSize;
 	case anchor::left:
 		return{ 0, pSize.y/2 };
 	case anchor::right:
@@ -363,14 +363,11 @@ class text_node :
 	public render_client,
 	public node
 {
-	sf::Text mSfml_text;
-	std::string mString; // Avoids reliance on sfml
-	engine::anchor mAnchor;
 public:
 	text_node();
 	void set_font(font& pFont);
-	void set_text(const std::string pText);
-	void append_text(const std::string pText);
+	void set_text(const std::string& pText);
+	void append_text(const std::string& pText);
 	std::string get_text();
 	void set_character_size(int pPixels);
 	void set_anchor(anchor pAnchor);
@@ -378,6 +375,14 @@ public:
 	void set_scale(float pScale);
 	void copy_format(const text_node& pText_node);
 	virtual int draw(renderer &pR);
+
+private:
+	sf::Text mSfml_text;
+	std::string mString; // Avoids reliance on sfml
+	engine::anchor mAnchor;
+	engine::fvector mOffset;
+
+	void update_offset();
 };
 
 class rich_text_node :

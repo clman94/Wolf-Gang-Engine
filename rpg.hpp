@@ -286,6 +286,7 @@ public:
 	void add_pointer_type(const char* pName);
 	void call_event_function(const std::string& pName);
 	void setup_triggers(collision_system& pCollision_system);
+	void about_all();
 	int tick();
 
 private:
@@ -297,13 +298,25 @@ private:
 	engine::timer mTimer;
 
 	template<typename T>
-	static void as_default_constr(void *pMemory)
+	static void script_default_constructor(void *pMemory)
 	{
 		new(pMemory) T();
 	}
 
+	template<typename T, typename Targ1>
+	static void script_constructor(Targ1 pArg1, void *pMemory)
+	{
+		new(pMemory) T(pArg1);
+	}
+
+	template<typename T, typename Targ1, typename Targ2>
+	static void script_constructor(Targ1 pArg1, Targ2 pArg2, void *pMemory)
+	{
+		new(pMemory) T(pArg1, pArg2);
+	}
+
 	template<typename T>
-	static void as_default_destr(void *pMemory)
+	static void script_default_deconstructor(void *pMemory)
 	{
 		((T*)pMemory)->~T();
 	}
@@ -369,8 +382,8 @@ private:
 	std::string mFull_text;
 	float       mInterval;
 
-	util::error load_box(tinyxml2::XMLElement* e, texture_manager& tm);
-	util::error load_font(tinyxml2::XMLElement* e);
+	util::error load_box(tinyxml2::XMLElement* pEle, texture_manager& pTexture_manager);
+	util::error load_font(tinyxml2::XMLElement* pEle);
 };
 
 class player_character :
