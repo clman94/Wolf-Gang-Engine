@@ -65,10 +65,12 @@ class sound_spawner
 	std::list<sound> mSounds;
 	void clean_list()
 	{
-		for (auto i = mSounds.begin(); i != mSounds.end(); i++)
+		for (auto &i = mSounds.begin(); i != mSounds.end(); i++)
 		{
 			if (!i->is_playing())
 				mSounds.erase(i);
+			if (!mSounds.size())
+				continue;
 		}
 	}
 public:

@@ -1,7 +1,7 @@
 #ifndef VECTOR_HPP
 #define VECTOR_HPP
 
-namespace engine
+namespace
 {
 
 // Estimate Radians from degree
@@ -10,6 +10,11 @@ T degree_to_radian(T pDegree)
 {
 	return pDegree * static_cast<T>(0.0174533);
 }
+
+}
+
+namespace engine
+{
 
 template<typename T>
 struct vector

@@ -34,9 +34,9 @@ public:
 	void set_boundary(engine::fvector pBoundary);
 	void set_viewport(engine::fvector pViewport);
 	void set_focus(engine::fvector pFocus);
-
+	engine::fvector get_focus();
 private:
-	engine::fvector mBoundary, mViewport;
+	engine::fvector mBoundary, mViewport, mFocus;
 };
 
 template<typename T>

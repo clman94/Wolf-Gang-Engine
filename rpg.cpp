@@ -582,13 +582,13 @@ entity* entity_manager::script_add_character(const std::string & path)
 void entity_manager::script_set_position(entity* e, const engine::fvector & pos)
 {
 	assert(e != nullptr);
-	e->set_position(engine::fvector(32, 32)*pos);
+	e->set_position(pos*32);
 }
 
 engine::fvector entity_manager::script_get_position(entity * e)
 {
 	assert(e != nullptr);
-	return e->get_position()*32;
+	return e->get_position()/32;
 }
 
 void entity_manager::script_set_direction(entity* e, int dir)
@@ -864,23 +864,33 @@ script_system::register_vector_type()
 	mEngine->RegisterObjectMethod("vec", "vec& opSubAssign(const vec &in)"
 		, asMETHODPR(engine::fvector, operator-=<float>, (const engine::fvector&), engine::fvector&)
 		, asCALL_THISCALL);
+	mEngine->RegisterObjectMethod("vec", "vec& opMulAssign(const vec &in)"
+		, asMETHODPR(engine::fvector, operator*=<float>, (const engine::fvector&), engine::fvector&)
+		, asCALL_THISCALL);
 
 	// Arthimic
-	mEngine->RegisterObjectMethod("vec", "vec opSub(const vec&in)"
+	mEngine->RegisterObjectMethod("vec", "vec opAdd(const vec &in)"
+		, asMETHODPR(engine::fvector, operator+<float>, (const engine::fvector&) const, engine::fvector)
+		, asCALL_THISCALL);
+	mEngine->RegisterObjectMethod("vec", "vec opSub(const vec &in)"
 		, asMETHODPR(engine::fvector, operator-<float>, (const engine::fvector&) const, engine::fvector)
 		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "vec opMul(const vec&in)"
+	mEngine->RegisterObjectMethod("vec", "vec opMul(const vec &in)"
 		, asMETHODPR(engine::fvector, operator*<float>, (const engine::fvector&) const, engine::fvector)
 		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "vec opMul(const float&in)"
+
+	mEngine->RegisterObjectMethod("vec", "vec opMul(const float &in)"
 		, asMETHODPR(engine::fvector, operator*<float>, (const float&) const, engine::fvector)
+		, asCALL_THISCALL);
+	mEngine->RegisterObjectMethod("vec", "vec opDiv(const float &in)"
+		, asMETHODPR(engine::fvector, operator/<float>, (const float&) const, engine::fvector)
 		, asCALL_THISCALL);
 
 	// Distance
 	mEngine->RegisterObjectMethod("vec", "float distance()"
 		, asMETHODPR(engine::fvector, distance, () const, float)
 		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "float distance(const vec&in)"
+	mEngine->RegisterObjectMethod("vec", "float distance(const vec &in)"
 		, asMETHODPR(engine::fvector, distance, (const engine::fvector&) const, float)
 		, asCALL_THISCALL);
 
@@ -888,7 +898,7 @@ script_system::register_vector_type()
 	mEngine->RegisterObjectMethod("vec", "vec& rotate(float)"
 		, asMETHODPR(engine::fvector, rotate, (float), engine::fvector&)
 		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "vec& rotate(const vec&in, float)"
+	mEngine->RegisterObjectMethod("vec", "vec& rotate(const vec &in, float)"
 		, asMETHODPR(engine::fvector, rotate, (const engine::fvector&, float), engine::fvector&)
 		, asCALL_THISCALL);
 
@@ -1107,6 +1117,7 @@ game::load_script_interface()
 	mScript.add_function("bool _is_triggered(int)", asMETHOD(controls, is_triggered), &mControls);
 
 	mScript.add_function("void set_focus(vec)", asMETHOD(panning_node, set_focus), &mRoot_node);
+	mScript.add_function("vec get_focus()", asMETHOD(panning_node, get_focus), &mRoot_node);
 
 	mScript.add_function("int _spawn_sound(const string&in)", asMETHOD(sound_manager, spawn_sound), &mSound_FX);
 	mScript.add_function("void _stop_all()", asMETHOD(sound_manager, stop_all), &mSound_FX);
@@ -1248,6 +1259,12 @@ panning_node::set_focus(engine::fvector pFocus)
 	npos.x = util::clamp(npos.x, 0.f, mBoundary.x - mViewport.x);
 	npos.y = util::clamp(npos.y, 0.f, mBoundary.y - mViewport.y);
 	set_position(-npos);
+	mFocus = pFocus;
+}
+
+engine::fvector panning_node::get_focus()
+{
+	return mFocus;
 }
 
 // ##########
