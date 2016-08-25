@@ -16,7 +16,7 @@ texture_manager::load_settings(tinyxml2::XMLElement* pEle)
 		texture_entry &nentry = mTextures[ele_entry->Name()];
 		nentry.path = ele_entry->Attribute("path");
 
-		// the optional atlas path
+		// the optional mAtlas path
 		const char* att_atlas = ele_entry->Attribute("atlas");
 		if (att_atlas)
 		{
@@ -38,19 +38,33 @@ texture_manager::get_texture(const std::string& pName)
 	auto& iter = mTextures.find(pName);
 	if (iter == mTextures.end())
 	{
-		util::error("Texture with name '" + pName + "' Does not exist.\n");
+		util::error("Texture with name '" + pName + "' does not exist.\n");
 		return nullptr;
 	}
 
 	auto &entry = iter->second;
-	if (!entry.is_loaded)
+	if (entry.ensure_loaded())
 	{
-		entry.texture.load_texture(entry.path);
-		if (entry.has_atlas)
-			entry.texture.load_atlas_xml(entry.atlas);
-		entry.is_loaded = true;
+		return &entry.texture;
 	}
-	return &entry.texture;
+
+	return nullptr;
+}
+
+bool texture_manager::texture_entry::ensure_loaded()
+{
+	if (!is_loaded)
+	{
+		if (texture.load_texture(path))
+		{
+			util::error("Failed to load texture.");
+			return false;
+		}
+		if (has_atlas)
+			texture.load_atlas_xml(atlas);
+		is_loaded = true;
+	}
+	return true;
 }
 
 std::vector<std::string>

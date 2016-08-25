@@ -10,6 +10,8 @@ animation::animation()
 {
 	mTexture = nullptr;
 	mDefault_frame = 0;
+	mFrame_count = 0;
+	mLoop = e_loop::linear;
 }
 
 void
@@ -19,7 +21,7 @@ animation::set_loop(e_loop pLoop)
 }
 
 animation::e_loop
-animation::get_loop()
+animation::get_loop() const
 {
 	return mLoop;
 }
@@ -32,7 +34,7 @@ animation::add_interval(frame_t pFrom, int pInterval)
 }
 
 int
-animation::get_interval(frame_t pAt)
+animation::get_interval(frame_t pAt) const
 {
 	int retval = 0;
 	frame_t last = 0;
@@ -54,7 +56,7 @@ animation::set_frame_count(frame_t pCount)
 }
 
 frame_t
-animation::get_frame_count()
+animation::get_frame_count() const
 {
 	return mFrame_count;
 }
@@ -65,15 +67,18 @@ void animation::set_frame_rect(engine::frect pRect)
 }
 
 engine::frect
-animation::get_frame_at(frame_t pAt)
+animation::get_frame_at(frame_t pAt) const
 {
+	if (mFrame_count == 0)
+		return mFrame_rect;
+
 	engine::frect ret = mFrame_rect;
 	ret.x += ret.w*calculate_frame(pAt);
 	return ret;
 }
 
 fvector
-animation::get_size()
+animation::get_size() const
 {
 	return mFrame_rect.get_size();
 }
@@ -85,7 +90,7 @@ animation::set_default_frame(frame_t pFrame)
 }
 
 int
-animation::get_default_frame()
+animation::get_default_frame() const
 {
 	return mDefault_frame;
 }
@@ -97,13 +102,13 @@ animation::set_texture(texture& pTexture)
 }
 
 engine::texture*
-animation::get_texture()
+animation::get_texture() const
 {
 	return mTexture;
 }
 
 frame_t
-animation::calculate_frame(frame_t pCount)
+animation::calculate_frame(frame_t pCount) const
 {
 	if (mFrame_count == 0)
 		return 0;
@@ -135,7 +140,7 @@ animation_node::set_frame(frame_t pFrame)
 }
 
 void
-animation_node::set_animation(animation& pAnimation, bool pSwap)
+animation_node::set_animation(const animation& pAnimation, bool pSwap)
 {
 	mAnimation = &pAnimation;
 	mInterval = pAnimation.get_interval();

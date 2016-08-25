@@ -152,13 +152,12 @@ public:
 
 protected:
 	util::error load_animations(tinyxml2::XMLElement* e, texture_manager& tm);
-	util::error load_single_animation(tinyxml2::XMLElement* ele, engine::animation &anim, texture_manager& tm);
 
 private:
 	struct entity_animation :
 		public util::named
 	{
-		engine::animation anim;
+		const engine::animation* animation;
 		int type;
 	};
 
@@ -326,7 +325,34 @@ private:
 	void message_callback(const AS::asSMessageInfo * msg);
 	std::string get_metadata_type(const std::string &pMetadata);
 	void script_abort();
+};
 
+class expression_manager
+{
+public:
+	engine::animation* find_anination(const std::string& mName)
+	{
+		auto &find = mAnimations.find(mName);
+		if (find != mAnimations.end())
+		{
+			return &find->second;
+		}
+		return nullptr;
+	}
+
+	int load_expressions_xml(tinyxml2::XMLElement * mRoot)
+	{
+		assert(mRoot != nullptr);
+		auto ele_expression = mRoot->FirstChildElement();
+		while (ele_expression)
+		{
+			auto & nanimation = mAnimations[ele_expression->Name()];
+			
+			ele_expression = ele_expression->NextSiblingElement();
+		}
+	}
+private:
+	std::map<std::string, engine::animation> mAnimations;
 };
 
 class narrative_dialog :
@@ -370,12 +396,13 @@ protected:
 	void refresh_renderer(engine::renderer& r);
 
 private:
-	engine::sprite_node mBox;
-	engine::sprite_node mCursor;
-	engine::text_node   mText;
-	engine::text_node   mSelection;
-	engine::font        mFont;
-	engine::clock       mTimer;
+	engine::sprite_node    mBox;
+	engine::sprite_node    mCursor;
+	engine::animation_node mExpression;
+	engine::text_node      mText;
+	engine::text_node      mSelection;
+	engine::font           mFont;
+	engine::clock          mTimer;
 
 	bool        mRevealing;
 	size_t      mCount;
@@ -536,6 +563,7 @@ private:
 	sound_manager    mSound_FX;
 	script_system    mScript;
 	controls         mControls;
+	size_t           mSlot;
 	
 	editor::editor_gui mTest_gui;
 

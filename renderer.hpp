@@ -21,6 +21,7 @@
 #include "rect.hpp"
 #include "types.hpp"
 #include "utility.hpp"
+#include "animation.hpp"
 
 namespace engine
 {
@@ -377,6 +378,7 @@ public:
 	virtual int draw(renderer &pR);
 
 private:
+	rectangle_node testrect;
 	sf::Text mSfml_text;
 	std::string mString; // Avoids reliance on sfml
 	engine::anchor mAnchor;
@@ -426,55 +428,6 @@ public:
 	std::map<size_t, ptr_GC_owner<std::vector<sf::Vertex>>> mLayers;
 };
 
-
-class animation
-{
-public:
-	animation();
-
-	enum class e_loop
-	{
-		none,
-		linear,
-		pingpong
-	};
-
-	void set_loop(e_loop pLoop);
-	e_loop  get_loop();
-
-	void add_interval(frame_t pFrom, int pInterval);
-
-	int  get_interval(frame_t pAt = 0);
-
-	void set_frame_count(frame_t pCount);
-	frame_t get_frame_count();
-
-	void set_frame_rect(engine::frect pRect);
-	engine::frect get_frame_at(frame_t pAt);
-
-	fvector get_size();
-
-	void set_default_frame(frame_t pFrame);
-	int  get_default_frame();
-
-	void set_texture(engine::texture& pTexture);
-	engine::texture* get_texture();
-
-private:
-	struct sequence_frame
-	{
-		int     interval;
-		frame_t from;
-	};
-	std::vector<sequence_frame> mSequence;
-	engine::frect               mFrame_rect;
-	engine::texture*            mTexture;
-	frame_t                     mDefault_frame;
-	frame_t                     mFrame_count;
-	e_loop                      mLoop;
-	frame_t calculate_frame(frame_t pCount);
-};
-
 class animation_node :
 	public render_client,
 	public node
@@ -483,7 +436,7 @@ public:
 	animation_node();
 
 	void set_frame(frame_t pFrame);
-	void set_animation(animation& pAnimation, bool pSwap = false);
+	void set_animation(const animation& pAnimation, bool pSwap = false);
 	void set_texture(texture& pTexture);
 
 	int tick();
@@ -503,7 +456,7 @@ private:
 
 	engine::clock  mClock;
 
-	animation* mAnimation;
+	const animation* mAnimation;
 
 	frame_t mCount;
 	frame_t mFrame;
@@ -512,9 +465,8 @@ private:
 
 	int mInterval;
 	bool mPlaying;
-
-
 };
+
 
 }
 

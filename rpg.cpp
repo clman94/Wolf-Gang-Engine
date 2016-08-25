@@ -103,7 +103,7 @@ entity::set_animation(std::string pName)
 		if (i.get_name() == pName)
 		{
 			mAnimation = &i;
-			mNode.set_animation(i.anim, true);
+			mNode.set_animation(*i.animation, true);
 			return true;
 		}
 	}
@@ -137,9 +137,13 @@ entity::load_animations(tinyxml2::XMLElement* e, texture_manager& tm)
 		animations.emplace_back();
 		auto &anim = animations.back();
 		anim.set_name(ele->Name());
-		
-		anim.type = e_type::movement;
 
+		std::string att_texture = ele->Attribute("tex");
+		std::string att_atlas = ele->Attribute("atlas");
+		auto texture = tm.get_texture(att_texture);
+		anim.animation = texture->get_animation(att_atlas);
+
+		anim.type = e_type::movement;
 		if (ele->Attribute("type", "user"))
 			anim.type = e_type::user;
 
@@ -151,64 +155,9 @@ entity::load_animations(tinyxml2::XMLElement* e, texture_manager& tm)
 
 		if (ele->Attribute("type", "speech"))
 			anim.type = e_type::speech;
-
-		load_single_animation(ele, anim.anim, tm);
+		
 		ele = ele->NextSiblingElement();
 	}
-
-	return 0;
-}
-
-util::error
-entity::load_single_animation(tinyxml2::XMLElement* ele, engine::animation &anim, texture_manager &tm)
-{
-	assert(ele != nullptr);
-
-	int  att_frames   = ele->IntAttribute("frames");
-	int  att_interval = ele->IntAttribute("interval");
-	int  att_default  = ele->IntAttribute("default");
-	bool att_loop     = ele->BoolAttribute("loop");
-	bool att_pingpong = ele->BoolAttribute("pingpong");
-	auto att_atlas    = ele->Attribute("atlas");
-	auto att_tex      = ele->Attribute("tex");
-	auto att_type     = ele->Attribute("type");
-
-	if (!att_tex)   return "Please provide texture attibute for character";
-	if (!att_atlas) return "Please provide atlas attribute for character";
-
-	auto t = tm.get_texture(att_tex);
-	if (!t)
-		return "Texture '" + std::string(att_tex) + "' not found";
-	anim.set_texture(*t);
-
-	engine::animation::e_loop loop_type = engine::animation::e_loop::none;
-	if (att_loop)             loop_type = engine::animation::e_loop::linear;
-	if (att_pingpong)         loop_type = engine::animation::e_loop::pingpong;
-	anim.set_loop(loop_type);
-
-	anim.add_interval(0, att_interval);
-
-	engine::frame_t frame_count = (att_frames <= 0 ? 1 : att_frames);// Default one frame
-	anim.set_frame_count(frame_count);
-
-	anim.set_default_frame(att_default);
-
-	{
-		auto atlas = t->get_entry(att_atlas);
-		if (atlas.w == 0)
-			return "Atlas '" + std::string(att_atlas) + "' does not exist";
-		anim.set_frame_rect(atlas);
-	}
-
-	auto ele_seq = ele->FirstChildElement("seq");
-	while (ele_seq)
-	{
-		anim.add_interval(
-			(engine::frame_t)ele_seq->IntAttribute("from"),
-			ele_seq->IntAttribute("interval"));
-		ele_seq = ele_seq->NextSiblingElement();
-	}
-
 	return 0;
 }
 
@@ -1038,6 +987,7 @@ game::game()
 	mRoot_node.add_child(mScene);
 	mNarrative.is_revealing();
 	load_script_interface();
+	mSlot = 0;
 }
 
 std::string game::get_slot_path(size_t pSlot)
@@ -1056,6 +1006,7 @@ void game::save_game(size_t pSlot)
 	file.save_scene(mScene.get_name(), mScene.get_path());
 	file.save_player(mPlayer);
 	file.save(path);
+	mSlot = pSlot;
 }
 
 void game::open_game(size_t pSlot)
@@ -1070,6 +1021,7 @@ void game::open_game(size_t pSlot)
 	file.load_flags(mFlags);
 	file.load_player(mPlayer);
 	mScene.load_scene_xml(file.get_scene_path(), mScript, mFlags);
+	mSlot = pSlot;
 }
 
 void
@@ -1197,7 +1149,7 @@ game::tick(controls& pControls)
 	mControls = pControls;
 
 	if (pControls.is_triggered(controls::control::menu))
-		save_game(0);
+		save_game(mSlot);
 
 	if (edit_mode)
 	{
@@ -1285,7 +1237,7 @@ narrative_dialog::load_box(tinyxml2::XMLElement* pEle, texture_manager& pTexture
 
 	set_box_position(position::bottom);
 
-	mSelection.set_position(mBox.get_size() - engine::fvector(5, 5));
+	mSelection.set_position(mBox.get_size() - engine::fvector(20, 10));
 	return 0;
 }
 
@@ -1314,7 +1266,7 @@ narrative_dialog::narrative_dialog()
 	mBox.add_child(mText);
 	mBox.add_child(mSelection);
 
-	mText.set_position({ 5, 5 });
+	mText.set_position({ 20, 20 });
 	mSelection.set_anchor(engine::anchor::bottomright);
 }
 

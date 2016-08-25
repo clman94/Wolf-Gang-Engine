@@ -45,21 +45,35 @@ text_node::get_text()
 int
 text_node::draw(renderer &pR)
 {
-	mSfml_text.setPosition(get_exact_position() + mOffset);
+	auto position = get_exact_position();
+
+	// Remove annoying offset of text
+	engine::frect lbounds = mSfml_text.getLocalBounds();
+	engine::fvector loffset(0, lbounds.get_offset().y*mSfml_text.getScale().y);
+	mSfml_text.setPosition(position + mOffset - loffset);
+
+	/*engine::frect bounds = mSfml_text.getGlobalBounds();
+	testrect.set_color({ 100, 100, 100, 255 });
+	testrect.set_position(bounds.get_offset());
+	testrect.set_size(bounds.get_size());
+	testrect.draw(pR);*/
+
 	pR.get_sfml_render().draw(mSfml_text);
 	return 0;
 }
 
 void text_node::update_offset()
 {
-	engine::fvector size = { mSfml_text.getLocalBounds().width, mSfml_text.getLocalBounds().height };
-	mOffset = anchor_offset<float>(size*engine::fvector(mSfml_text.getScale()), mAnchor);
+	engine::frect bounds = mSfml_text.getGlobalBounds();
+	mOffset = anchor_offset<float>(bounds.get_size(), mAnchor);
+	//mOffset -= bounds.get_offset() - get_exact_position();
 }
 
 void
 text_node::set_character_size(int pPixels)
 {
 	mSfml_text.setCharacterSize(pPixels);
+	update_offset();
 }
 
 void
@@ -79,7 +93,7 @@ void
 text_node::copy_format(const text_node& pText_node)
 {
 	auto nfont = pText_node.mSfml_text.getFont();
-	if(nfont) mSfml_text.setFont(*nfont);
+	if (nfont) mSfml_text.setFont(*nfont);
 
 	mSfml_text.setFillColor(pText_node.mSfml_text.getFillColor());
 	mSfml_text.setCharacterSize(pText_node.mSfml_text.getCharacterSize());

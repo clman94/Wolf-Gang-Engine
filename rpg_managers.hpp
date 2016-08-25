@@ -25,6 +25,8 @@ public:
 		std::string path, atlas;
 		bool is_loaded, has_atlas;
 		engine::texture texture;
+		bool ensure_loaded();
+		
 	};
 	std::map<std::string, texture_entry> mTextures;
 };

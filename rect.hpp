@@ -95,6 +95,33 @@ struct rect
 	{
 		return is_intersect(*this, a);
 	}
+
+#ifdef SFML_RECT_HPP
+
+	rect(const sf::Rect<T>& A)
+	{
+		x = A.left;
+		y = A.top;
+		w = A.width;
+		h = A.height;
+	}
+
+	rect& operator = (const sf::Rect<T>& A)
+	{
+		x = A.left;
+		y = A.top;
+		w = A.width;
+		h = A.height;
+		return *this;
+	}
+
+	inline operator sf::Rect<T>() const
+	{
+		return{ x, y, h, w };
+	}
+
+#endif
+
 };
 
 template<typename T1, typename T2>

@@ -63,22 +63,20 @@ public:
 class sound_spawner
 {
 	std::list<sound> mSounds;
-	void clean_list()
-	{
-		for (auto &i = mSounds.begin(); i != mSounds.end(); i++)
-		{
-			if (!i->is_playing())
-				mSounds.erase(i);
-			if (!mSounds.size())
-				continue;
-		}
-	}
 public:
 	void spawn(sound_buffer& pBuffer)
 	{
+		for (auto &i : mSounds)
+		{
+			if (!i.is_playing())
+			{
+				i.set_buffer(pBuffer);
+				i.play();
+				return;
+			}
+		}
 		mSounds.emplace_back(pBuffer);
 		mSounds.back().play();
-		clean_list();
 	}
 	void stop_all()
 	{
