@@ -184,7 +184,8 @@ animation_node::is_playing()
 void
 animation_node::start()
 {
-	mClock.restart();
+	if (!mPlaying)
+		mClock.restart();
 	mPlaying = true;
 }
 
@@ -207,6 +208,7 @@ animation_node::restart()
 {
 	if (mAnimation)
 		set_frame(mAnimation->get_default_frame());
+	mClock.restart();
 }
 
 void
@@ -220,7 +222,6 @@ int
 animation_node::draw(renderer &r)
 {
 	if (!mAnimation) return 1;
-	if (!mAnimation->get_frame_count()) return 1;
 	if (mPlaying) tick();
 
 	frect rect = mAnimation->get_frame_at(mFrame);

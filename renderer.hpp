@@ -70,7 +70,7 @@ public:
 
 	int update_events();
 
-	int initualize(ivector pSize, int pFps = 30);
+	int initualize(ivector pSize, int pFps = 0);
 	int draw();
 	
 	int close();

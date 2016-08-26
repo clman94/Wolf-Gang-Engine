@@ -65,6 +65,7 @@ vertex_batch::add_quad(fvector pPosition, frect pTexture_rect, int pRotation)
 	ref.set_position(pPosition);
 	return ref;
 }
+
 int
 vertex_batch::draw(renderer &_r)
 {

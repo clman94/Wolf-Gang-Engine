@@ -101,7 +101,8 @@ renderer::initualize(ivector pSize, int pFps)
 {
 	mWindow.create(sf::VideoMode(pSize.x, pSize.y), "The Amazing Window", sf::Style::Titlebar | sf::Style::Close);
 	//mWindow.create(sf::VideoMode(pSize.x, pSize.y), "The Amazing Window", sf::Style::Fullscreen);
-	mWindow.setFramerateLimit(pFps);
+	if (pFps > 0)
+		mWindow.setFramerateLimit(pFps);
 	return 0;
 }
 

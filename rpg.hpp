@@ -145,10 +145,12 @@ public:
 	void play_withtype(e_type pType);
 	void stop_withtype(e_type pType);
 	void tick_withtype(e_type pType);
-	bool set_animation(std::string pName);
+	bool set_animation(const std::string& pName, bool pSwap = false);
 	int draw(engine::renderer &pR);
 	util::error load_entity_xml(std::string path, texture_manager& tm);
 	void set_dynamic_depth(bool a);
+
+	bool is_playing();
 
 protected:
 	util::error load_animations(tinyxml2::XMLElement* e, texture_manager& tm);
@@ -161,9 +163,11 @@ private:
 		int type;
 	};
 
+	typedef std::unordered_map<std::string, entity_animation> animation_map_t;
+
 	engine::animation_node mNode;
-	std::list<entity_animation> animations;
-	entity_animation *mAnimation;
+	animation_map_t mAnimations;
+	animation_map_t::iterator mAnimation;
 
 	bool dynamic_depth;
 };
@@ -465,6 +469,7 @@ private:
 	node_list<entity>    mEntities;
 
 	entity*         script_add_entity(const std::string& path);
+	void            script_remove_entity(entity* e);
 	entity*         script_add_character(const std::string& path);
 	void            script_set_position(entity* e, const engine::fvector& pos);
 	engine::fvector script_get_position(entity* e);

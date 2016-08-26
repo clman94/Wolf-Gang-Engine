@@ -59,7 +59,7 @@ texture::load_atlas_xml(const std::string& pPath)
 		auto &nentry = mAtlas[ele_crop->Name()];
 		nentry.load_rect_xml(ele_crop);
 		nentry.is_animation = load_animation_xml(ele_crop, nentry);
-		nentry.animation.set_texture(*this); // Redundent but whatever...
+		nentry.animation.set_texture(*this);
 		ele_crop = ele_crop->NextSiblingElement();
 	}
 	return 0;
@@ -92,8 +92,6 @@ bool texture::load_animation_xml(tinyxml2::XMLElement * pEle, entry& pEntry)
 	engine::frame_t frame_count = (att_frames <= 0 ? 1 : att_frames);// Default one frame
 	anim.set_frame_count(frame_count);
 
-	anim.set_frame_rect(pEntry.rect);
-
 	auto ele_seq = pEle->FirstChildElement("seq");
 	while (ele_seq)
 	{
@@ -111,5 +109,6 @@ bool texture::entry::load_rect_xml(tinyxml2::XMLElement * pEle)
 	rect.y = pEle->FloatAttribute("y");
 	rect.w = pEle->FloatAttribute("w");
 	rect.h = pEle->FloatAttribute("h");
+	animation.set_frame_rect(rect);
 	return true;
 }

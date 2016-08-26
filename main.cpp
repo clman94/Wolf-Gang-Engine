@@ -13,7 +13,7 @@
 int game()
 {
 	engine::renderer r;
-	r.initualize(rpg::defs::SCREEN_SIZE, 120);
+	r.initualize(rpg::defs::SCREEN_SIZE);
 	r.set_pixel_scale(3);
 	
 	engine::clock load_clock;
@@ -29,7 +29,6 @@ int game()
 	std::cout << "Size of the sprite_node: " << sizeof(engine::sprite_node) << "\n";
 
 	std::cout << "Load time : " << load_clock.get_elapse().s() << " seconds\n";
-
 
 	// TEST particle system
 

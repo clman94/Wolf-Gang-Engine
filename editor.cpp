@@ -48,8 +48,6 @@ void editor_gui::initualize()
 	mEditor_layout->setSize(mLayout->getSize().x, 400);
 	mEditor_layout->setBackgroundColor({ 0, 0, 0, 0 });
 	mLayout->add(mEditor_layout);
-
-	add_label("Knob thingy:");
 }
 
 void editor_gui::clear()

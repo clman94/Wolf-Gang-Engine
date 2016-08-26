@@ -54,6 +54,7 @@ entity::load_entity_xml(std::string path, texture_manager & tm)
 	{
 		auto ele_animations = ele_root->FirstChildElement("animations");
 		load_animations(ele_animations, tm);
+		set_animation("default");
 	}
 	return 0;
 }
@@ -64,48 +65,55 @@ entity::set_dynamic_depth(bool a)
 	dynamic_depth = a;
 }
 
+bool entity::is_playing()
+{
+	return mNode.is_playing();
+}
+
 entity::entity()
 {
 	dynamic_depth = true;
 	mNode.set_anchor(engine::anchor::bottom);
 	add_child(mNode);
+	mAnimation = mAnimations.end();
 }
 
 void
 entity::play_withtype(e_type pType)
 {
-	if (mAnimation
-		&& mAnimation->type == pType)
+	if (mAnimation != mAnimations.end()
+		&& mAnimation->second.type == pType)
 		mNode.start();
 }
 
 void
 entity::stop_withtype(e_type pType)
 {
-	if (mAnimation
-		&& mAnimation->type == pType)
+	if (mAnimation != mAnimations.end()
+		&& mAnimation->second.type == pType)
 		mNode.stop();
 }
 
 void
 entity::tick_withtype(e_type pType)
 {
-	if (mAnimation
-		&& mAnimation->type == pType)
+	if (mAnimation != mAnimations.end()
+		&& mAnimation->second.type == pType)
 		mNode.tick();
 }
 
 bool
-entity::set_animation(std::string pName)
+entity::set_animation(const std::string& pName, bool pSwap)
 {
-	for (auto &i : animations)
+	if (mAnimation == mAnimations.end()
+	||  mAnimation->first != pName)
 	{
-		if (i.get_name() == pName)
-		{
-			mAnimation = &i;
-			mNode.set_animation(*i.animation, true);
-			return true;
-		}
+		auto find = mAnimations.find(pName);
+		if (find == mAnimations.end())
+			return false;
+		mAnimation = find;
+		mNode.set_animation(*mAnimation->second.animation, pSwap);
+		return true;
 	}
 	return false;
 }
@@ -134,9 +142,7 @@ entity::load_animations(tinyxml2::XMLElement* e, texture_manager& tm)
 	auto ele = e->FirstChildElement();
 	while (ele)
 	{
-		animations.emplace_back();
-		auto &anim = animations.back();
-		anim.set_name(ele->Name());
+		auto &anim = mAnimations[ele->Name()];
 
 		std::string att_texture = ele->Attribute("tex");
 		std::string att_atlas = ele->Attribute("atlas");
@@ -183,7 +189,7 @@ character::set_cycle(std::string name)
 {
 	if (cycle != name)
 	{
-		set_animation(cyclegroup + ":" + name);
+		set_animation(cyclegroup + ":" + name, is_playing());
 		cycle = name;
 	}
 }
@@ -405,7 +411,7 @@ player_character::movement(controls& pControls, collision_system& pCollision_sys
 	if (move != engine::fvector(0, 0))
 	{
 		set_position(pos + (move*pDelta));
-		tick_withtype(entity::e_type::movement);
+		play_withtype(entity::e_type::movement);
 	}
 	else
 		stop_withtype(entity::e_type::movement);
@@ -517,6 +523,20 @@ entity* entity_manager::script_add_entity(const std::string & path)
 	return &ne;
 }
 
+void rpg::entity_manager::script_remove_entity(entity * e)
+{
+	assert(e != nullptr);
+	if (is_character(e))
+	{
+		character* c = dynamic_cast<character*>(e);
+		mCharacters.remove_item(c);
+	}
+	else
+	{
+		mEntities.remove_item(e);
+	}
+}
+
 entity* entity_manager::script_add_character(const std::string & path)
 {
 	assert(get_renderer() != nullptr);
@@ -595,7 +615,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void set_animation(entity, const string &in)", asMETHOD(entity_manager, script_set_animation), this);
 	pScript.add_function("entity find_entity(const string &in)", asMETHOD(entity_manager, find_entity), this);
 	pScript.add_function("bool is_character(entity)", asMETHOD(entity_manager, is_character), this);
-	//pScript.add_function("bool remove_entity(entity)", asMETHOD(node_list<entity>, remove_item), &mEntities);
+	pScript.add_function("void remove_entity(entity)", asMETHOD(entity_manager, script_remove_entity), this);
 }
 
 bool entity_manager::is_character(entity* pEntity)
