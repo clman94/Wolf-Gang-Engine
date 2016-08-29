@@ -189,26 +189,20 @@ protected:
 	virtual void refresh_renderer(renderer& pR){}
 };
 
+class vertex_batch;
+
 class vertex_reference
 {
 public:
 	vertex_reference()
-		: mRef(nullptr)
+		: mBatch(nullptr)
 	{}
 
-#ifdef ENGINE_INTERNAL
-
-	vertex_reference(sf::Vertex& _ref)
-		: mRef(&_ref)
-	{}
-
-	vertex_reference& operator=(sf::Vertex& _ref)
+	vertex_reference(const vertex_reference& A)
 	{
-		mRef = &_ref;
-		return *this;
+		mBatch = A.mBatch;
+		mIndex = A.mIndex;
 	}
-
-#endif
 
 	void set_position(fvector pPosition);
 	fvector get_position();
@@ -216,8 +210,13 @@ public:
 	void reset_size(fvector pSize);
 	void hide();
 
+	friend class vertex_batch;
 private:
-	sf::Vertex* mRef;
+	//int mRotation;
+	vertex_batch* mBatch;
+	size_t mIndex;
+
+	sf::Vertex* get_reference();
 };
 
 class vertex_batch :
@@ -228,6 +227,8 @@ public:
 	void set_texture(texture &pTexture);
 	vertex_reference add_quad(fvector pPosition, frect pTexture_rect, int pRotation = 0);
 	int draw(renderer &pR);
+
+	friend class vertex_reference;
 
 private:
 	std::vector<sf::Vertex> mVertices;
@@ -438,6 +439,8 @@ public:
 	void set_frame(frame_t pFrame);
 	void set_animation(const animation& pAnimation, bool pSwap = false);
 	void set_texture(texture& pTexture);
+
+	engine::fvector get_size();
 
 	int tick();
 

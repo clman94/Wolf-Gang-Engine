@@ -645,6 +645,7 @@ void
 scene::clean_scene()
 {
 	mTilemap_display.clear();
+	mTilemap_loader.clear();
 	mCollision_system.clear();
 	mEntity_manager.clean();
 }
@@ -705,7 +706,8 @@ util::error scene::load_scene_xml(std::string pPath, script_system& pScript, fla
 
 	if (auto ele_boundary = ele_root->FirstChildElement("boundary"))
 	{
-
+		mBoundary.x = ele_boundary->FloatAttribute("x");
+		mBoundary.y = ele_boundary->FloatAttribute("y");
 	}
 	
 	if (auto ele_map = ele_root->FirstChildElement("map"))
@@ -1166,6 +1168,8 @@ game::tick(controls& pControls)
 		std::cout << "Done\n";
 	}
 
+	mRoot_node.set_boundary(mScene.get_boundary()*32);
+
 	mControls = pControls;
 
 	if (pControls.is_triggered(controls::control::menu))
@@ -1227,10 +1231,18 @@ panning_node::set_viewport(engine::fvector pViewport)
 void
 panning_node::set_focus(engine::fvector pFocus)
 {
-	engine::fvector npos = pFocus - (mViewport * 0.5f);
-	npos.x = util::clamp(npos.x, 0.f, mBoundary.x - mViewport.x);
-	npos.y = util::clamp(npos.y, 0.f, mBoundary.y - mViewport.y);
-	set_position(-npos);
+	engine::fvector offset = pFocus - mViewport * 0.5f;
+	if (mBoundary.x < mViewport.x)
+		offset.x = mBoundary.x * 0.5f;
+	else
+		offset.x = util::clamp(offset.x, 0.f, mBoundary.x - mViewport.x);
+
+	if (mBoundary.y < mViewport.y)
+		offset.y = mBoundary.y * 0.5f;
+	else
+		offset.y = util::clamp(offset.y, 0.f, mBoundary.y - mViewport.y);
+
+	set_position(-offset);
 	mFocus = pFocus;
 }
 
@@ -1274,8 +1286,22 @@ narrative_dialog::load_font(tinyxml2::XMLElement* pEle)
 	mText.set_scale(ele_font->FloatAttribute("scale"));
 
 	mSelection.copy_format(mText);
-
 	return 0;
+}
+
+void narrative_dialog::show_expression()
+{
+	mExpression.set_visible(true);
+	engine::fvector position =
+		mExpression.get_position()
+		+ engine::fvector(mExpression.get_size().x, 0)
+		+ engine::fvector(10, 10);
+	mText.set_position(position);
+}
+
+void narrative_dialog::reset_positions()
+{
+	mText.set_position({ 10, 10 });
 }
 
 narrative_dialog::narrative_dialog()
@@ -1285,9 +1311,13 @@ narrative_dialog::narrative_dialog()
 	mInterval = defs::DEFAULT_DIALOG_SPEED;
 	mBox.add_child(mText);
 	mBox.add_child(mSelection);
+	mBox.add_child(mExpression);
 
-	mText.set_position({ 20, 20 });
+	mExpression.set_position({ 10, 10 });
+
 	mSelection.set_anchor(engine::anchor::bottomright);
+
+	reset_positions();
 }
 
 void
@@ -1316,8 +1346,7 @@ narrative_dialog::is_revealing()
 	return mRevealing;
 }
 
-void
-narrative_dialog::reveal_text(const std::string& pText, bool pAppend)
+void narrative_dialog::reveal_text(const std::string& pText, bool pAppend)
 {
 	mTimer.restart();
 	mRevealing = true;
@@ -1334,8 +1363,7 @@ narrative_dialog::reveal_text(const std::string& pText, bool pAppend)
 	}
 }
 
-void
-narrative_dialog::instant_text(std::string pText, bool pAppend)
+void narrative_dialog::instant_text(std::string pText, bool pAppend)
 {
 	mRevealing = false;
 	if (pAppend)
@@ -1345,36 +1373,34 @@ narrative_dialog::instant_text(std::string pText, bool pAppend)
 	mText.set_text(mFull_text);
 }
 
-void
-narrative_dialog::show_box()
+void narrative_dialog::show_box()
 {
 	mText.set_visible(true);
 	mBox.set_visible(true);
 }
 
-void
-narrative_dialog::hide_box()
+void narrative_dialog::hide_box()
 {
 	mRevealing = false;
 	mText.set_visible(false);
 	mText.set_text("");
 	mBox.set_visible(false);
 	mSelection.set_visible(false);
+	mExpression.set_visible(false);
+	reset_positions();
 }
 
-bool rpg::narrative_dialog::is_box_open()
+bool narrative_dialog::is_box_open()
 {
 	return mBox.is_visible();
 }
 
-void
-narrative_dialog::set_interval(float ms)
+void narrative_dialog::set_interval(float ms)
 {
 	mInterval = ms;
 }
 
-void
-narrative_dialog::show_selection()
+void narrative_dialog::show_selection()
 {
 	if (mBox.is_visible())
 	{
@@ -1382,28 +1408,41 @@ narrative_dialog::show_selection()
 	}
 }
 
-void
-narrative_dialog::hide_selection()
+void narrative_dialog::hide_selection()
 {
 	mSelection.set_visible(false);
 }
 
-void
-narrative_dialog::set_selection(const std::string & pText)
+void narrative_dialog::set_selection(const std::string& pText)
 {
 	mSelection.set_text(pText);
 }
 
-util::error
-narrative_dialog::load_narrative_xml(tinyxml2::XMLElement* e, texture_manager& tm)
+void narrative_dialog::set_expression(const std::string& pName)
 {
-	load_box(e, tm);
-	load_font(e);
+	auto animation = mExpression_manager.find_anination(pName);
+	if (!animation)
+	{
+		util::error("Animation '" + pName + "' does not exist");
+		return;
+	}
+	mExpression.set_animation(*animation);
+	show_expression();
+}
+
+util::error narrative_dialog::load_narrative_xml(tinyxml2::XMLElement* pEle, texture_manager& pTexture_manager)
+{
+	load_box(pEle, pTexture_manager);
+	load_font(pEle);
+
+	if (auto ele_expressions = pEle->FirstChildElement("expressions"))
+	{
+		mExpression_manager.load_expressions_xml(ele_expressions, pTexture_manager);
+	}
 	return 0;
 }
 
-void
-narrative_dialog::load_script_interface(script_system & pScript)
+void narrative_dialog::load_script_interface(script_system & pScript)
 {
 	pScript.add_function("void _say(const string &in, bool)", asMETHOD(narrative_dialog, reveal_text), this);
 	pScript.add_function("bool _is_revealing()", asMETHOD(narrative_dialog, is_revealing), this);
@@ -1414,10 +1453,13 @@ narrative_dialog::load_script_interface(script_system & pScript)
 	pScript.add_function("void _set_interval(float)", asMETHOD(narrative_dialog, set_interval), this);
 	pScript.add_function("void _set_box_position(int)", asMETHOD(narrative_dialog, set_box_position), this);
 	pScript.add_function("void _set_selection(const string &in)", asMETHOD(narrative_dialog, set_selection), this);
+
+	pScript.add_function("void _set_expression(const string &in)", asMETHOD(narrative_dialog, set_expression), this);
+	pScript.add_function("void _start_expression_animation()", asMETHOD(engine::animation_node, start), &mExpression);
+	pScript.add_function("void _stop_expression_animation()", asMETHOD(engine::animation_node, stop), &mExpression);
 }
 
-int
-narrative_dialog::draw(engine::renderer& pR)
+int narrative_dialog::draw(engine::renderer& pR)
 {
 	if (!mRevealing) return 0;
 
@@ -1438,12 +1480,12 @@ narrative_dialog::draw(engine::renderer& pR)
 	return 0;
 }
 
-void
-narrative_dialog::refresh_renderer(engine::renderer& r)
+void narrative_dialog::refresh_renderer(engine::renderer& r)
 {
 	r.add_client(mBox);
 	r.add_client(mText);
 	r.add_client(mSelection);
+	r.add_client(mExpression);
 }
 
 // ##########
@@ -1905,27 +1947,24 @@ void tilemap_display::set_texture(engine::texture & pTexture)
 	mTexture = &pTexture;
 }
 
-void tilemap_display::set_tile(engine::fvector pPosition, engine::frect pTexture_rect, int pLayer, int pRotation)
-{
-	auto &ntile = mLayers[pLayer].tiles[pPosition];
-	ntile.mRef = mLayers[pLayer].vertices.add_quad(pPosition, pTexture_rect, pRotation);
-}
-
 void tilemap_display::set_tile(engine::fvector pPosition, const std::string & pAtlas, int pLayer, int pRotation)
 {
-	set_tile(pPosition, mTexture->get_entry(pAtlas), pLayer, pRotation);
-}
+	auto animation = mTexture->get_animation(pAtlas);
+	if (animation == nullptr)
+	{
+		util::error("Tile not found");
+		return;
+	}
 
-void tilemap_display::set_tile(engine::fvector pPosition, engine::animation & pAnimation, int pLayer, int pRotation)
-{
 	auto &ntile = mLayers[pLayer].tiles[pPosition];
-	ntile.mRef = mLayers[pLayer].vertices.add_quad(pPosition, pAnimation.get_frame_at(0), pRotation);
-	ntile.set_animation(pAnimation);
+	ntile.mRef = mLayers[pLayer].vertices.add_quad(pPosition, animation->get_frame_at(0), pRotation);
+	ntile.set_animation(animation);
 }
 
 int tilemap_display::draw(engine::renderer& pR)
 {
 	if (!mTexture) return 1;
+	update_animations();
 	for (auto &i : mLayers)
 	{
 		auto& vb = i.second.vertices;
@@ -1952,19 +1991,22 @@ void tilemap_display::clear()
 	mLayers.clear();
 }
 
-void tilemap_display::tile::set_animation(engine::animation& pAnimation)
+void tilemap_display::tile::set_animation(const engine::animation* pAnimation)
 {
-	mAnimation = &pAnimation;
-	mTimer.start_timer(pAnimation.get_interval()*0.001f);
+	mAnimation = pAnimation;
+	mFrame = 0;
+	mTimer.start_timer(pAnimation->get_interval()*0.001f);
 }
 
 void tilemap_display::tile::update_animation()
 {
 	if (!mAnimation) return;
+	if (!mAnimation->get_frame_count()) return;
 	if (mTimer.is_reached())
 	{
 		++mFrame;
 		mTimer.start_timer(mAnimation->get_interval(mFrame)*0.001f);
+		mRef.set_texture_rect(mAnimation->get_frame_at(mFrame), 0);
 	}
 }
 
@@ -2063,4 +2105,45 @@ void save_system::save_player(player_character& pPlayer)
 	mEle_root->InsertFirstChild(ele_scene);
 	ele_scene->SetAttribute("x", pPlayer.get_position().x);
 	ele_scene->SetAttribute("y", pPlayer.get_position().y);
+}
+
+// ##########
+// expression_manager
+// ##########
+
+const engine::animation* expression_manager::find_anination(const std::string & mName)
+{
+	auto &find = mAnimations.find(mName);
+	if (find != mAnimations.end())
+	{
+		return find->second;
+	}
+	return nullptr;
+}
+
+int expression_manager::load_expressions_xml(tinyxml2::XMLElement * pRoot, texture_manager & pTexture_manager)
+{
+	assert(pRoot != nullptr);
+	auto ele_expression = pRoot->FirstChildElement();
+	while (ele_expression)
+	{
+		const char* att_texture = ele_expression->Attribute("tex");
+		if (!att_texture)
+		{
+			util::error("Please specify texture for expression");
+			continue;
+		}
+		auto texture = pTexture_manager.get_texture(att_texture);
+
+		const char* att_atlas = ele_expression->Attribute("atlas");
+		if (!att_atlas)
+		{
+			util::error("Please specify atlas for expression");
+			continue;
+		}
+		mAnimations[ele_expression->Name()] = texture->get_animation(att_atlas);
+
+		ele_expression = ele_expression->NextSiblingElement();
+	}
+	return 0;
 }

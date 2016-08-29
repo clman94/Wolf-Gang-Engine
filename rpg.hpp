@@ -334,29 +334,10 @@ private:
 class expression_manager
 {
 public:
-	engine::animation* find_anination(const std::string& mName)
-	{
-		auto &find = mAnimations.find(mName);
-		if (find != mAnimations.end())
-		{
-			return &find->second;
-		}
-		return nullptr;
-	}
-
-	int load_expressions_xml(tinyxml2::XMLElement * mRoot)
-	{
-		assert(mRoot != nullptr);
-		auto ele_expression = mRoot->FirstChildElement();
-		while (ele_expression)
-		{
-			auto & nanimation = mAnimations[ele_expression->Name()];
-			
-			ele_expression = ele_expression->NextSiblingElement();
-		}
-	}
+	const engine::animation* find_anination(const std::string& mName);
+	int load_expressions_xml(tinyxml2::XMLElement * pRoot, texture_manager& pTexture_manager);
 private:
-	std::map<std::string, engine::animation> mAnimations;
+	std::map<std::string, const engine::animation*> mAnimations;
 };
 
 class narrative_dialog :
@@ -390,7 +371,9 @@ public:
 	void hide_selection();
 	void set_selection(const std::string& pText);
 
-	util::error load_narrative_xml(tinyxml2::XMLElement* e, texture_manager& tm);
+	void set_expression(const std::string& pName);
+
+	util::error load_narrative_xml(tinyxml2::XMLElement* pEle, texture_manager& pTexture_manager);
 
 	void load_script_interface(script_system& pScript);
 
@@ -402,11 +385,13 @@ protected:
 private:
 	engine::sprite_node    mBox;
 	engine::sprite_node    mCursor;
-	engine::animation_node mExpression;
 	engine::text_node      mText;
 	engine::text_node      mSelection;
 	engine::font           mFont;
 	engine::clock          mTimer;
+
+	expression_manager     mExpression_manager;
+	engine::animation_node mExpression;
 
 	bool        mRevealing;
 	size_t      mCount;
@@ -415,6 +400,9 @@ private:
 
 	util::error load_box(tinyxml2::XMLElement* pEle, texture_manager& pTexture_manager);
 	util::error load_font(tinyxml2::XMLElement* pEle);
+
+	void show_expression();
+	void reset_positions();
 };
 
 class player_character :
@@ -498,6 +486,9 @@ public:
 	const std::string& get_name()
 	{ return mScene_name; }
 
+	const engine::fvector& get_boundary()
+	{ return mBoundary; }
+
 	void load_script_interface(script_system& pScript);
 
 	void set_texture_manager(texture_manager& pTexture_manager);
@@ -508,6 +499,8 @@ private:
 	collision_system  mCollision_system;
 	texture_manager*  mTexture_manager;
 	entity_manager    mEntity_manager;
+
+	engine::fvector mBoundary;
 
 	std::string mScene_path;
 	std::string mScene_name;

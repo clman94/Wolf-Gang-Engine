@@ -168,7 +168,7 @@ struct vector
 template<typename T1, typename T2>
 bool operator<(const vector<T1>& L, const vector<T2>& R)
 {
-	return (L.x + L.y) < (R.x + R.y);
+	return (L.y < R.y) || ((L.y == R.y) && (L.x < R.x));
 }
 
 template<typename T1, typename T2>

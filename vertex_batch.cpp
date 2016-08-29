@@ -6,45 +6,51 @@ using namespace engine;
 
 void vertex_reference::set_position(fvector pPosition)
 {
-	assert(mRef != nullptr);
-	sf::Vector2f offset = pPosition - fvector(mRef[0].position);
-	mRef[0].position += offset;
-	mRef[1].position += offset;
-	mRef[2].position += offset;
-	mRef[3].position += offset;
+	auto ref = get_reference();
+	sf::Vector2f offset = pPosition - fvector(ref[0].position);
+	ref[0].position += offset;
+	ref[1].position += offset;
+	ref[2].position += offset;
+	ref[3].position += offset;
 }
 
 fvector vertex_reference::get_position()
 {
-	assert(mRef != nullptr);
-	return mRef[0].position;
+	auto ref = get_reference();
+	return ref[0].position;
 }
 
 void vertex_reference::set_texture_rect(frect pRect, int pRotation)
 {
-	assert(mRef != nullptr);
-	mRef[(pRotation    ) % 4].texCoords = pRect.get_offset();
-	mRef[(pRotation + 1) % 4].texCoords = pRect.get_offset() + fvector(pRect.w, 0);
-	mRef[(pRotation + 2) % 4].texCoords = pRect.get_offset() + pRect.get_size();
-	mRef[(pRotation + 3) % 4].texCoords = pRect.get_offset() + fvector(0, pRect.h);
+	auto ref = get_reference();
+	ref[(pRotation    ) % 4].texCoords = pRect.get_offset();
+	ref[(pRotation + 1) % 4].texCoords = pRect.get_offset() + fvector(pRect.w, 0);
+	ref[(pRotation + 2) % 4].texCoords = pRect.get_offset() + pRect.get_size();
+	ref[(pRotation + 3) % 4].texCoords = pRect.get_offset() + fvector(0, pRect.h);
 	reset_size(pRect.get_size());
 }
 
 void vertex_reference::reset_size(fvector pSize)
 {
-	assert(mRef != nullptr);
-	fvector offset = mRef[0].position;
-	mRef[1].position = offset + fvector(pSize.x, 0);
-	mRef[2].position = offset + pSize;
-	mRef[3].position = offset + fvector(0, pSize.y);
+	auto ref = get_reference();
+	fvector offset = ref[0].position;
+	ref[1].position = offset + fvector(pSize.x, 0);
+	ref[2].position = offset + pSize;
+	ref[3].position = offset + fvector(0, pSize.y);
 }
 
 void vertex_reference::hide()
 {
-	assert(mRef != nullptr);
-	mRef[1] = mRef[0];
-	mRef[2] = mRef[0];
-	mRef[3] = mRef[0];
+	auto ref = get_reference();
+	ref[1] = ref[0];
+	ref[2] = ref[0];
+	ref[3] = ref[0];
+}
+
+sf::Vertex * vertex_reference::get_reference()
+{
+	assert(mBatch != nullptr);
+	return &mBatch->mVertices[mIndex];
 }
 
 void
@@ -60,7 +66,10 @@ vertex_batch::add_quad(fvector pPosition, frect pTexture_rect, int pRotation)
 	mVertices.emplace_back();
 	mVertices.emplace_back();
 	mVertices.emplace_back();
-	vertex_reference ref = mVertices.at(mVertices.size() - 4);
+
+	vertex_reference ref;
+	ref.mBatch = this;
+	ref.mIndex = mVertices.size() - 4;
 	ref.set_texture_rect(pTexture_rect, pRotation);
 	ref.set_position(pPosition);
 	return ref;

@@ -158,6 +158,13 @@ animation_node::set_texture(texture& pTexture)
 	mSprite.set_texture(pTexture);
 }
 
+engine::fvector animation_node::get_size()
+{
+	if (!mAnimation)
+		return{ 0,0 };
+	return mAnimation->get_size();
+}
+
 int
 animation_node::tick()
 {

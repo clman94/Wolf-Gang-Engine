@@ -11,9 +11,7 @@ class tilemap_display :
 {
 public:
 	void set_texture(engine::texture& pTexture);
-	void set_tile(engine::fvector pPosition, engine::frect pTexture_rect, int pLayer, int pRotation);
 	void set_tile(engine::fvector pPosition, const std::string& pAtlas, int pLayer, int pRotation);
-	void set_tile(engine::fvector pPosition, engine::animation& pAnimation, int pLayer, int pRotation);
 
 	int draw(engine::renderer &pR);
 
@@ -31,12 +29,14 @@ private:
 
 		tile() : mAnimation(nullptr) {}
 
-		void set_animation(engine::animation& pAnimation);
+		void set_animation(const engine::animation* pAnimation);
 		void update_animation();
+
 	private:
+		int rotation;
 		engine::timer mTimer;
 		engine::frame_t mFrame;
-		engine::animation* mAnimation;
+		const engine::animation* mAnimation;
 	};
 
 	struct layer
