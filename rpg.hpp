@@ -8,6 +8,7 @@
 #include "your_soul.hpp"
 #include "tinyxml2\tinyxml2.h"
 #include "tilemap_loader.hpp"
+#include "particle_engine.hpp"
 #include "editor.hpp"
 
 #include <set>
@@ -134,6 +135,7 @@ class entity :
 	public   util::named
 {
 public:
+
 	enum e_type
 	{
 		movement,
@@ -149,7 +151,10 @@ public:
 	int draw(engine::renderer &pR);
 	util::error load_entity_xml(std::string path, texture_manager& tm);
 	void set_dynamic_depth(bool a);
+	void set_anchor(engine::anchor pAnchor);
 
+	engine::fvector get_size()
+	{ return mNode.get_size(); }
 	bool is_playing();
 
 protected:
@@ -179,7 +184,7 @@ public:
 
 	enum struct e_cycle
 	{
-		default,
+		def, // "default" is apparently not allowed in gcc....
 		left,
 		right,
 		up,
@@ -189,7 +194,7 @@ public:
 
 	character();
 	void set_cycle_group(std::string name);
-	void set_cycle(std::string name);
+	void set_cycle(const std::string& name);
 	void set_cycle(e_cycle type);
 
 	void  set_speed(float f);
@@ -210,8 +215,8 @@ public:
 	void set_engine(AS::asIScriptEngine * e);
 	void set_function(AS::asIScriptFunction * f);
 	void set_context_manager(AS::CContextMgr * cm);
-	void add_arg_obj(unsigned int index, void* ptr);
-	void call();
+	void set_arg(unsigned int index, void* ptr);
+	bool call();
 
 private:
 	AS::asIScriptEngine *as_engine;
@@ -250,6 +255,7 @@ struct door : public collision_box
 	std::string name;
 	std::string scene_path;
 	std::string destination;
+	engine::fvector offset;
 };
 
 class collision_system
@@ -267,7 +273,7 @@ public:
 	void add_wall(engine::frect r);
 	void add_trigger(trigger& t);
 	void add_button(trigger& t);
-	void clear();
+	void clean();
 	util::error load_collision_boxes(tinyxml2::XMLElement* pEle, flag_container& pFlags);
 
 private:
@@ -323,7 +329,7 @@ private:
 	{
 		((T*)pMemory)->~T();
 	}
-
+	
 	void dprint(std::string &msg);
 	void register_vector_type();
 	void message_callback(const AS::asSMessageInfo * msg);
@@ -334,8 +340,9 @@ private:
 class expression_manager
 {
 public:
-	const engine::animation* find_anination(const std::string& mName);
+	const engine::animation* find_animation(const std::string& mName);
 	int load_expressions_xml(tinyxml2::XMLElement * pRoot, texture_manager& pTexture_manager);
+	
 private:
 	std::map<std::string, const engine::animation*> mAnimations;
 };
@@ -421,12 +428,14 @@ public:
 	player_character();
 	void set_locked(bool pLocked);
 	bool is_locked();
+	engine::frect get_collision(direction pDirection);
 	void movement(controls &pControls, collision_system& pCollision_system, float pDelta);
-	engine::fvector get_activation_point(float pDistance = 16);
+	engine::fvector get_activation_point(float pDistance = 18);
 
 private:
 	bool mLocked;
 	direction mFacing_direction;
+	void set_move_direction(engine::fvector pVec);
 };
 
 class entity_manager :
@@ -459,13 +468,45 @@ private:
 	entity*         script_add_entity(const std::string& path);
 	void            script_remove_entity(entity* e);
 	entity*         script_add_character(const std::string& path);
+	void            script_set_name(entity* e, const std::string& pName);
 	void            script_set_position(entity* e, const engine::fvector& pos);
 	engine::fvector script_get_position(entity* e);
 	void            script_set_direction(entity* e, int dir);
 	void            script_set_cycle(entity* e, const std::string& name);
+	void            script_set_depth(entity* e, float pDepth);
+	void            script_set_depth_fixed(entity* e, bool pFixed);
 	void            script_start_animation(entity* e, int type);
 	void            script_stop_animation(entity* e, int type);
 	void            script_set_animation(entity* e, const std::string& name);
+	void            script_set_anchor(entity* e, engine::anchor pAnchor);
+};
+
+class battle_system
+{
+	// TODO
+};
+
+// TODO
+class particle_manager :
+	public engine::render_proxy,
+	public engine::node
+{
+public:
+	void load_scene_emitters_xml(tinyxml2::XMLElement * pEle) {}
+	void load_emitter_xml(tinyxml2::XMLElement * pEle);
+	void clean() {}
+
+private:
+	std::list<engine::particle_emitter> mEmitters;
+};
+
+class background_music
+{
+public:
+	void load_script_interface(script_system& pScript);
+	void clean();
+private:
+	engine::sound_stream mStream;
 };
 
 class scene :
@@ -499,6 +540,8 @@ private:
 	collision_system  mCollision_system;
 	texture_manager*  mTexture_manager;
 	entity_manager    mEntity_manager;
+	particle_manager  mParticle_system;
+	background_music  mBackground_music;
 
 	engine::fvector mBoundary;
 
@@ -507,15 +550,6 @@ private:
 
 protected:
 	void refresh_renderer(engine::renderer& _r);
-};
-
-class background_music
-{
-public:
-	void load_script_interface(script_system& pScript);
-
-private:
-	engine::sound_stream mStream;
 };
 
 class save_system
@@ -557,7 +591,6 @@ private:
 	texture_manager  mTexture_manager;
 	flag_container   mFlags;
 	narrative_dialog mNarrative;
-	background_music mBackground_music;
 	sound_manager    mSound_FX;
 	script_system    mScript;
 	controls         mControls;

@@ -16,7 +16,7 @@ const size_t          DIALOG_FX_INTERVAL     = 2;
 const size_t          CONTROL_COUNT          = 8;
 const engine::time_t  FADE_DURATION          = 0.2f;
 
-const float           TILES_DEPTH = 101;
+const float           TILES_DEPTH = 103;
 const float           TILE_DEPTH_RANGE_MIN   = 1;
 const float           TILE_DEPTH_RANGE_MAX = 100;
 const float           NARRATIVE_TEXT_DEPTH = -3;

@@ -7,15 +7,26 @@
 #include "utility.hpp"
 #include "node.hpp"
 
-
-
 namespace engine
 {
 
-class particle_system :
+class particle_emitter :
 	public render_client,
 	public node
 {
+public:
+	particle_emitter();
+	void spawn(size_t count = 1);
+	void set_region(fvector size);
+	void set_life(float a);
+	void set_acceleration(fvector a);
+	void set_velocity(fvector a);
+	void set_rate(float a);
+	void set_texture(texture &t);
+	void set_texture_rect(frect r);
+	int draw(renderer &_r);
+
+private:
 	clock mFrame_clock, mSpawn_clock;
 
 	struct particle
@@ -29,30 +40,17 @@ class particle_system :
 
 	particle* find_unused_particle();
 
-	struct
-	{
-		fvector size;
-		float   rate, life;
-		fvector acceleration;
-		fvector velocity;
-	} mEmitter;
+	fvector mRegion_size;
+	float   mRate, mLife;
+	fvector mAcceleration;
+	fvector mVelocity;
 
 	vertex_batch  mSprites;
 	frect         mTexture_rect;
 
-public:
-	particle_system();
 	void tick();
-	void spawn_particle(size_t count = 1);
-	void set_region(fvector size);
-	void set_life(float a);
-	void set_acceleration(fvector a);
-	void set_velocity(fvector a);
-	void set_rate(float a);
-	void set_texture(texture &t);
-	void set_texture_rect(frect r);
-	int draw(renderer &_r);
 };
+
 
 }
 

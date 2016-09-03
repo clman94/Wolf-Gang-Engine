@@ -17,7 +17,7 @@ public:
 
 	void update_animations();
 
-	void clear();
+	void clean();
 
 private:
 	engine::texture *mTexture;

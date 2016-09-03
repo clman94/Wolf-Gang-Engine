@@ -65,6 +65,11 @@ entity::set_dynamic_depth(bool a)
 	dynamic_depth = a;
 }
 
+void entity::set_anchor(engine::anchor pAnchor)
+{
+	mNode.set_anchor(pAnchor);
+}
+
 bool entity::is_playing()
 {
 	return mNode.is_playing();
@@ -108,7 +113,7 @@ entity::set_animation(const std::string& pName, bool pSwap)
 	if (mAnimation == mAnimations.end()
 	||  mAnimation->first != pName)
 	{
-		auto find = mAnimations.find(pName);
+		auto &find = mAnimations.find(pName);
 		if (find == mAnimations.end())
 			return false;
 		mAnimation = find;
@@ -185,7 +190,7 @@ character::set_cycle_group(std::string name)
 }
 
 void
-character::set_cycle(std::string name)
+character::set_cycle(const std::string& name)
 {
 	if (cycle != name)
 	{
@@ -199,12 +204,12 @@ character::set_cycle(e_cycle type)
 {
 	switch (type)
 	{
-	case e_cycle::default:  set_cycle("default"); break;
-	case e_cycle::left:     set_cycle("left");    break;
-	case e_cycle::right:    set_cycle("right");   break;
-	case e_cycle::up:       set_cycle("up");      break;
-	case e_cycle::down:     set_cycle("down");    break;
-	case e_cycle::idle:     set_cycle("idle");    break;
+	case e_cycle::def:     set_cycle("default"); break;
+	case e_cycle::left:    set_cycle("left");    break;
+	case e_cycle::right:   set_cycle("right");   break;
+	case e_cycle::up:      set_cycle("up");      break;
+	case e_cycle::down:    set_cycle("down");    break;
+	case e_cycle::idle:    set_cycle("idle");    break;
 	}
 }
 
@@ -225,7 +230,7 @@ character::get_speed()
 // #########
 
 collision_box*
-collision_system::wall_collision(const engine::frect & r)
+collision_system::wall_collision(const engine::frect& r)
 {
 	for (auto &i : mWalls)
 		if (i.is_valid() && i.is_intersect(r))
@@ -234,7 +239,7 @@ collision_system::wall_collision(const engine::frect & r)
 }
 
 door*
-collision_system::door_collision(const engine::fvector & pPosition)
+collision_system::door_collision(const engine::fvector& pPosition)
 {
 	for (auto &i : mDoors)
 		if (i.is_valid() && i.is_intersect(pPosition))
@@ -243,7 +248,7 @@ collision_system::door_collision(const engine::fvector & pPosition)
 }
 
 trigger*
-collision_system::trigger_collision(const engine::fvector & pPosition)
+collision_system::trigger_collision(const engine::fvector& pPosition)
 {
 	for (auto &i : mTriggers)
 		if (i.is_valid() && i.is_intersect(pPosition))
@@ -252,7 +257,7 @@ collision_system::trigger_collision(const engine::fvector & pPosition)
 }
 
 trigger*
-collision_system::button_collision(const engine::fvector & pPosition)
+collision_system::button_collision(const engine::fvector& pPosition)
 {
 	for (auto &i : mButtons)
 		if (i.is_valid() && i.is_intersect(pPosition))
@@ -267,7 +272,7 @@ collision_system::get_door_entry(std::string pName)
 	{
 		if (i.name == pName)
 		{
-			return i.get_offset() + (i.get_size()*0.5f);
+			return i.get_offset() + (i.get_size()*0.5f) + i.offset;
 		}
 	}
 	return{ -1, -1};
@@ -304,7 +309,7 @@ collision_system::add_button(trigger & t)
 
 
 void
-collision_system::clear()
+collision_system::clean()
 {
 	mWalls.clear();
 	mDoors.clear();
@@ -332,9 +337,12 @@ collision_system::load_collision_boxes(tinyxml2::XMLElement* pEle, flag_containe
 		if (box_type == "door")
 		{
 			door nd;
+			nd.load_xml(ele_item);
 			nd.name = util::safe_string(ele_item->Attribute("name"));
 			nd.destination = util::safe_string(ele_item->Attribute("dest"));
 			nd.scene_path = util::safe_string(ele_item->Attribute("scene"));
+			nd.offset.x = ele_item->FloatAttribute("offsetx")*32;
+			nd.offset.y = ele_item->FloatAttribute("offsety")*32;
 			mDoors.push_back(nd);
 		}
 
@@ -346,6 +354,33 @@ collision_system::load_collision_boxes(tinyxml2::XMLElement* pEle, flag_containe
 // #########
 // player_character
 // #########
+
+void player_character::set_move_direction(engine::fvector pVec)
+{
+	if (std::abs(pVec.x) > std::abs(pVec.y))
+	{
+		if (pVec.x > 0)
+		{
+			mFacing_direction = direction::right;
+			set_cycle(character::e_cycle::right);
+		}
+		else {
+			mFacing_direction = direction::left;
+			set_cycle(character::e_cycle::left);
+		}
+	}
+	else {
+		if (pVec.y > 0)
+		{
+			mFacing_direction = direction::down;
+			set_cycle(character::e_cycle::down);
+		}
+		else {
+			mFacing_direction = direction::up;
+			set_cycle(character::e_cycle::up);
+		}
+	}
+}
 
 player_character::player_character()
 {
@@ -364,6 +399,22 @@ player_character::is_locked()
 	return mLocked;
 }
 
+engine::frect player_character::get_collision(direction pDirection)
+{
+	engine::fvector pos = get_position();
+	engine::fvector size = get_size() - engine::fvector(2, 2);
+	engine::fvector hsize = get_size() / 2;
+	switch (pDirection)
+	{
+	case direction::other: return{ pos, {32, 32} };
+	case direction::left:  return{ pos - engine::fvector(hsize.x, hsize.y / 2), { hsize.x, hsize.y / 2 } };
+	case direction::right: return{ pos - engine::fvector(0, hsize.y / 2),{ hsize.x, hsize.y / 2 } };
+	case direction::up:    return{ pos - engine::fvector(size.x / 2, hsize.y - 2), { size.x, hsize.y - 2 } };
+	case direction::down:  return{ pos - engine::fvector(size.x / 2, 0),  { size.x, 4 } };
+	}
+	return{ 0, 0 };
+}
+
 void
 player_character::movement(controls& pControls, collision_system& pCollision_system, float pDelta)
 {
@@ -373,12 +424,11 @@ player_character::movement(controls& pControls, collision_system& pCollision_sys
 		return;
 	}
 
-	engine::fvector pos = get_position();
 	engine::fvector move(0, 0);
 
 	if (pControls.is_triggered(controls::control::left))
 	{
-		if (!pCollision_system.wall_collision({ pos - engine::fvector(10, 8), { 10, 8 } }))
+		if (!pCollision_system.wall_collision(get_collision(direction::left)))
 			move.x -= get_speed();
 		mFacing_direction = direction::left;
 		set_cycle(character::e_cycle::left);
@@ -386,7 +436,7 @@ player_character::movement(controls& pControls, collision_system& pCollision_sys
 
 	if (pControls.is_triggered(controls::control::right))
 	{
-		if (!pCollision_system.wall_collision({ pos - engine::fvector(0, 8), { 10, 8 } }))
+		if (!pCollision_system.wall_collision(get_collision(direction::right)))
 			move.x += get_speed();
 		mFacing_direction = direction::right;
 		set_cycle(character::e_cycle::right);
@@ -394,7 +444,7 @@ player_character::movement(controls& pControls, collision_system& pCollision_sys
 
 	if (pControls.is_triggered(controls::control::up))
 	{
-		if (!pCollision_system.wall_collision({ pos - engine::fvector(8, 16), { 16, 16 } }))
+		if (!pCollision_system.wall_collision(get_collision(direction::up)))
 			move.y -= get_speed();
 		mFacing_direction = direction::up;
 		set_cycle(character::e_cycle::up);
@@ -402,7 +452,7 @@ player_character::movement(controls& pControls, collision_system& pCollision_sys
 
 	if (pControls.is_triggered(controls::control::down))
 	{
-		if (!pCollision_system.wall_collision({ pos - engine::fvector(8, 0), { 16, 4 } }))
+		if (!pCollision_system.wall_collision(get_collision(direction::down)))
 			move.y += get_speed();
 		mFacing_direction = direction::down;
 		set_cycle(character::e_cycle::down);
@@ -410,7 +460,8 @@ player_character::movement(controls& pControls, collision_system& pCollision_sys
 
 	if (move != engine::fvector(0, 0))
 	{
-		set_position(pos + (move*pDelta));
+		set_move_direction(move); // Make sure the player is in the diretion he's moving
+		set_position(get_position() + (move*pDelta));
 		play_withtype(entity::e_type::movement);
 	}
 	else
@@ -474,7 +525,7 @@ entity_manager::load_entities(tinyxml2::XMLElement * e)
 	{
 		std::string name = ele->Name();
 		std::string att_path = ele->Attribute("path");
-		engine::fvector pos = util::shortcuts::vector_float_att(ele);
+		engine::fvector pos = util::shortcuts::vector_float_att(ele)*32;
 
 		auto& ne = mEntities.add_item();
 		ne.load_entity_xml(att_path, *mTexture_manager);
@@ -543,9 +594,15 @@ entity* entity_manager::script_add_character(const std::string & path)
 	assert(mTexture_manager != nullptr);
 	auto& nc = mCharacters.add_item();
 	nc.load_entity_xml(path, *mTexture_manager);
-	nc.set_cycle(character::e_cycle::default);
+	nc.set_cycle(character::e_cycle::def);
 	get_renderer()->add_client(nc);
 	return &nc;
+}
+
+void entity_manager::script_set_name(entity * e, const std::string & pName)
+{
+	assert(e != nullptr);
+	e->set_name(pName);
 }
 
 void entity_manager::script_set_position(entity* e, const engine::fvector & pos)
@@ -584,6 +641,18 @@ void entity_manager::script_set_cycle(entity* e, const std::string& name)
 	c->set_cycle_group(name);
 }
 
+void entity_manager::script_set_depth(entity * e, float pDepth)
+{
+	assert(e != nullptr);
+	e->set_depth(pDepth);
+}
+
+void entity_manager::script_set_depth_fixed(entity * e, bool pFixed)
+{
+	assert(e != nullptr);
+	e->set_dynamic_depth(!pFixed);
+}
+
 void entity_manager::script_start_animation(entity* e, int type)
 {
 	assert(e != nullptr);
@@ -602,6 +671,12 @@ void entity_manager::script_set_animation(entity* e, const std::string & name)
 	e->set_animation(name);
 }
 
+void entity_manager::script_set_anchor(entity * e, engine::anchor pAnchor)
+{
+	assert(e != nullptr);
+	e->set_anchor(pAnchor);
+}
+
 void entity_manager::load_script_interface(script_system& pScript)
 {
 	pScript.add_function("entity add_entity(const string &in)", asMETHOD(entity_manager, script_add_entity), this);
@@ -616,6 +691,10 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("entity find_entity(const string &in)", asMETHOD(entity_manager, find_entity), this);
 	pScript.add_function("bool is_character(entity)", asMETHOD(entity_manager, is_character), this);
 	pScript.add_function("void remove_entity(entity)", asMETHOD(entity_manager, script_remove_entity), this);
+	pScript.add_function("void set_depth(entity, float)", asMETHOD(entity_manager, script_set_depth), this);
+	pScript.add_function("void set_depth_fixed(entity, bool)", asMETHOD(entity_manager, script_set_depth_fixed), this);
+	pScript.add_function("void set_name(entity, const string &in)", asMETHOD(entity_manager, script_set_depth_fixed), this);
+	pScript.add_function("void _set_anchor(entity, int)", asMETHOD(entity_manager, script_set_name), this);
 }
 
 bool entity_manager::is_character(entity* pEntity)
@@ -644,10 +723,11 @@ scene::get_collision_system()
 void
 scene::clean_scene()
 {
-	mTilemap_display.clear();
-	mTilemap_loader.clear();
-	mCollision_system.clear();
+	mTilemap_display.clean();
+	mTilemap_loader.clean();
+	mCollision_system.clean();
 	mEntity_manager.clean();
+	mBackground_music.clean();
 }
 
 
@@ -699,15 +779,15 @@ util::error scene::load_scene_xml(std::string pPath, script_system& pScript, fla
 		auto path = ele_script->Attribute("path");
 		if (path)
 		{
-			pScript.load_scene_script(path);
-			pScript.setup_triggers(mCollision_system);
+			if (!pScript.load_scene_script(path).has_error())
+				pScript.setup_triggers(mCollision_system);
 		}
 	}
 
 	if (auto ele_boundary = ele_root->FirstChildElement("boundary"))
 	{
-		mBoundary.x = ele_boundary->FloatAttribute("x");
-		mBoundary.y = ele_boundary->FloatAttribute("y");
+		mBoundary.x = ele_boundary->FloatAttribute("w");
+		mBoundary.y = ele_boundary->FloatAttribute("h");
 	}
 	
 	if (auto ele_map = ele_root->FirstChildElement("map"))
@@ -729,6 +809,7 @@ scene::reload_scene(script_system & pScript, flag_container & pFlags)
 void scene::load_script_interface(script_system& pScript)
 {
 	mEntity_manager.load_script_interface(pScript);
+	mBackground_music.load_script_interface(pScript);
 }
 
 void scene::set_texture_manager(texture_manager& pTexture_manager)
@@ -804,6 +885,7 @@ void script_system::script_abort()
 	c_ctx->Abort();
 }
 
+
 void
 script_system::dprint(std::string &msg)
 {
@@ -821,6 +903,9 @@ script_system::register_vector_type()
 		, asCALL_CDECL_OBJLAST);
 	mEngine->RegisterObjectBehaviour("vec", asBEHAVE_CONSTRUCT, "void f(float, float)"
 		, asFUNCTIONPR(script_constructor<engine::fvector>, (float, float, void*), void)
+		, asCALL_CDECL_OBJLAST);
+	mEngine->RegisterObjectBehaviour("vec", asBEHAVE_CONSTRUCT, "void f(const vec&in)"
+		, asFUNCTIONPR(script_constructor<engine::fvector>, (const engine::fvector&, void*), void)
 		, asCALL_CDECL_OBJLAST);
 	mEngine->RegisterObjectBehaviour("vec", asBEHAVE_DESTRUCT, "void f()"
 		, asFUNCTION(script_default_deconstructor<engine::fvector>), asCALL_CDECL_OBJLAST);
@@ -840,29 +925,37 @@ script_system::register_vector_type()
 		, asCALL_THISCALL);
 
 	// Arthimic
-	mEngine->RegisterObjectMethod("vec", "vec opAdd(const vec &in)"
+	mEngine->RegisterObjectMethod("vec", "vec opAdd(const vec &in) const"
 		, asMETHODPR(engine::fvector, operator+<float>, (const engine::fvector&) const, engine::fvector)
 		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "vec opSub(const vec &in)"
+	mEngine->RegisterObjectMethod("vec", "vec opSub(const vec &in) const"
 		, asMETHODPR(engine::fvector, operator-<float>, (const engine::fvector&) const, engine::fvector)
 		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "vec opMul(const vec &in)"
+	mEngine->RegisterObjectMethod("vec", "vec opMul(const vec &in) const"
 		, asMETHODPR(engine::fvector, operator*<float>, (const engine::fvector&) const, engine::fvector)
 		, asCALL_THISCALL);
 
-	mEngine->RegisterObjectMethod("vec", "vec opMul(const float &in)"
+	mEngine->RegisterObjectMethod("vec", "vec opMul(const float &in) const"
 		, asMETHODPR(engine::fvector, operator*<float>, (const float&) const, engine::fvector)
 		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "vec opDiv(const float &in)"
+	mEngine->RegisterObjectMethod("vec", "vec opDiv(const float &in) const"
 		, asMETHODPR(engine::fvector, operator/<float>, (const float&) const, engine::fvector)
 		, asCALL_THISCALL);
 
 	// Distance
-	mEngine->RegisterObjectMethod("vec", "float distance()"
+	mEngine->RegisterObjectMethod("vec", "float distance() const"
 		, asMETHODPR(engine::fvector, distance, () const, float)
 		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "float distance(const vec &in)"
+	mEngine->RegisterObjectMethod("vec", "float distance(const vec &in) const"
 		, asMETHODPR(engine::fvector, distance, (const engine::fvector&) const, float)
+		, asCALL_THISCALL);
+
+	// Distance
+	mEngine->RegisterObjectMethod("vec", "float manhattan() const"
+		, asMETHODPR(engine::fvector, manhattan, () const, float)
+		, asCALL_THISCALL);
+	mEngine->RegisterObjectMethod("vec", "float manhattan(const vec &in) const"
+		, asMETHODPR(engine::fvector, manhattan, (const engine::fvector&) const, float)
 		, asCALL_THISCALL);
 
 	// Rotate
@@ -883,6 +976,7 @@ script_system::script_system()
 	mEngine = asCreateScriptEngine();
 
 	mEngine->SetMessageCallback(asMETHOD(script_system, message_callback), this, asCALL_THISCALL);
+	//mEngine->SetEngineProperty(asEP_BUILD_WITHOUT_LINE_CUES, true);
 
 	RegisterStdString(mEngine);
 	RegisterScriptMath(mEngine);
@@ -895,11 +989,8 @@ script_system::script_system()
 
 	add_function("void _timer_start(float)",  asMETHOD(engine::timer, start_timer), &mTimer);
 	add_function("bool _timer_reached()",     asMETHOD(engine::timer, is_reached), &mTimer);
-
 	add_function("void cocall(const string &in)", asMETHOD(script_system, call_event_function), this);
-
 	add_function("void dprint(const string &in)", asMETHOD(script_system, dprint), this);
-
 	add_function("void abort()", asMETHOD(script_system, script_abort), this);
 }
 
@@ -916,13 +1007,15 @@ script_system::load_scene_script(const std::string& pPath)
 	mCtxmgr.AbortAll();
 	mEngine->DiscardModule("scene");
 	mBuilder.StartNewModule(mEngine, "scene");
-	mBuilder.AddSectionFromMemory("scene_commands", "#include 'data/scene_commands.as'");
+	mBuilder.AddSectionFromMemory("scene_commands", "#include 'data/internal/scene_commands.as'");
 	mBuilder.AddSectionFromFile(pPath.c_str());
-	mBuilder.BuildModule();
+	if (mBuilder.BuildModule())
+		return "Failed to load scene script";
 
 	mScene_module = mBuilder.GetModule();
 	auto func = mScene_module->GetFunctionByDecl("void start()");
-	mCtxmgr.AddContext(mEngine, func);
+	if (func)
+		mCtxmgr.AddContext(mEngine, func);
 	return 0;
 }
 
@@ -1056,8 +1149,21 @@ game::player_scene_interact()
 		auto trigger = collision.trigger_collision(pos);
 		if (trigger)
 		{
-			trigger->get_function().call();
-			trigger->get_function().add_arg_obj(0, &pos);
+			if (trigger->get_function().call())
+				trigger->get_function().set_arg(0, &pos);
+		}
+	}
+
+	{		
+		auto pos = mPlayer.get_position();
+		auto door = collision.door_collision(pos);
+		if (door)
+		{
+			std::string destination = door->destination;
+			mScene.load_scene_xml(door->scene_path, mScript, mFlags);
+			auto nposition = collision.get_door_entry(destination);
+			mRoot_node.set_boundary(mScene.get_boundary() * 32);
+			mPlayer.set_position(nposition);
 		}
 	}
 
@@ -1067,8 +1173,8 @@ game::player_scene_interact()
 		auto button = collision.button_collision(pos);
 		if (button)
 		{
-			button->get_function().call();
-			button->get_function().add_arg_obj(0, &pos);
+			if (button->get_function().call())
+				button->get_function().set_arg(0, &pos);
 		}
 	}
 }
@@ -1099,7 +1205,6 @@ game::load_script_interface()
 	mFlags.load_script_interface(mScript);
 	mNarrative.load_script_interface(mScript);
 	mScene.load_script_interface(mScript);
-	mBackground_music.load_script_interface(mScript);
 }
 
 float game::get_delta()
@@ -1135,7 +1240,7 @@ game::load_game_xml(std::string pPath)
 
 	mPlayer.load_entity_xml(player_path, mTexture_manager);
 	mPlayer.set_position({ 64, 120 });
-	mPlayer.set_cycle(character::e_cycle::default);
+	mPlayer.set_cycle(character::e_cycle::def);
 	
 	mScene.set_texture_manager(mTexture_manager);
 	mScene.load_scene_xml(scene_path, mScript, mFlags);
@@ -1191,13 +1296,12 @@ game::tick(controls& pControls)
 
 		if (!mPlayer.is_locked())
 		{
-			mRoot_node.set_focus(mPlayer.get_position());
 			player_scene_interact();
+			mRoot_node.set_focus(mPlayer.get_position());
 		}
 	}
 
 	mTest_gui.update_camera_position(mRoot_node.get_exact_position());
-
 	mScript.tick();
 }
 
@@ -1233,12 +1337,12 @@ panning_node::set_focus(engine::fvector pFocus)
 {
 	engine::fvector offset = pFocus - mViewport * 0.5f;
 	if (mBoundary.x < mViewport.x)
-		offset.x = mBoundary.x * 0.5f;
+		offset.x = (mBoundary.x * 0.5f) - (mViewport.x * 0.5f);
 	else
 		offset.x = util::clamp(offset.x, 0.f, mBoundary.x - mViewport.x);
 
 	if (mBoundary.y < mViewport.y)
-		offset.y = mBoundary.y * 0.5f;
+		offset.y = (mBoundary.y * 0.5f) - (mViewport.y * 0.5f);
 	else
 		offset.y = util::clamp(offset.y, 0.f, mBoundary.y - mViewport.y);
 
@@ -1420,7 +1524,7 @@ void narrative_dialog::set_selection(const std::string& pText)
 
 void narrative_dialog::set_expression(const std::string& pName)
 {
-	auto animation = mExpression_manager.find_anination(pName);
+	auto animation = mExpression_manager.find_animation(pName);
 	if (!animation)
 	{
 		util::error("Animation '" + pName + "' does not exist");
@@ -1507,9 +1611,9 @@ script_function::~script_function()
 bool
 script_function::is_running()
 {
-	if (!func_ctx) return false;
-	if (func_ctx->GetFunction() != func
-		|| func_ctx->GetState() == AS::asEXECUTION_FINISHED)
+	if (!func_ctx)
+		return false;
+	if (func_ctx->GetState() == AS::asEXECUTION_FINISHED)
 		return false;
 	return true;
 }
@@ -1533,7 +1637,7 @@ script_function::set_context_manager(AS::CContextMgr * cm)
 }
 
 void
-script_function::add_arg_obj(unsigned int index, void* ptr)
+script_function::set_arg(unsigned int index, void* ptr)
 {
 	assert(func_ctx != nullptr);
 	assert(func != nullptr);
@@ -1541,7 +1645,7 @@ script_function::add_arg_obj(unsigned int index, void* ptr)
 		func_ctx->SetArgObject(index, ptr);
 }
 
-void
+bool
 script_function::call()
 {
 	assert(as_engine != nullptr);
@@ -1549,9 +1653,15 @@ script_function::call()
 	assert(ctx != nullptr);
 	if (!is_running())
 	{
-		if (func_ctx) ctx->DoneWithContext(func_ctx);
+		if (func_ctx)
+		{
+			ctx->DoneWithContext(func_ctx);
+			func_ctx = nullptr;
+		}
 		func_ctx = ctx->AddContext(as_engine, func, true);
+		return true;
 	}
+	return false;
 }
 
 // ##########
@@ -1830,7 +1940,7 @@ void tilemap_loader::remove_tile(engine::fvector pPosition, size_t pLayer)
 void
 tilemap_loader::update_display(tilemap_display& tmA)
 {
-	tmA.clear();
+	tmA.clean();
 	for (auto &l : mTiles)
 	{
 		for (auto &i : l.second)
@@ -1847,7 +1957,7 @@ tilemap_loader::update_display(tilemap_display& tmA)
 	}
 }
 
-void tilemap_loader::clear()
+void tilemap_loader::clean()
 {
 	mTiles.clear();
 }
@@ -1890,6 +2000,12 @@ void background_music::load_script_interface(script_system & pScript)
 	pScript.add_function("void _music_set_loop(bool)", asMETHOD(engine::sound_stream, set_loop), &mStream);
 	pScript.add_function("int _music_open(const string &in)", asMETHOD(engine::sound_stream, open), &mStream);
 	pScript.add_function("bool _music_is_playing()", asMETHOD(engine::sound_stream, is_playing), &mStream);
+	pScript.add_function("float _music_get_duration()", asMETHOD(engine::sound_stream, get_duration), &mStream);
+}
+
+void background_music::clean()
+{
+	mStream.stop();
 }
 
 // ##########
@@ -1986,7 +2102,7 @@ void tilemap_display::update_animations()
 	}
 }
 
-void tilemap_display::clear()
+void tilemap_display::clean()
 {
 	mLayers.clear();
 }
@@ -2111,7 +2227,7 @@ void save_system::save_player(player_character& pPlayer)
 // expression_manager
 // ##########
 
-const engine::animation* expression_manager::find_anination(const std::string & mName)
+const engine::animation* expression_manager::find_animation(const std::string & mName)
 {
 	auto &find = mAnimations.find(mName);
 	if (find != mAnimations.end())
@@ -2146,4 +2262,15 @@ int expression_manager::load_expressions_xml(tinyxml2::XMLElement * pRoot, textu
 		ele_expression = ele_expression->NextSiblingElement();
 	}
 	return 0;
+}
+
+// ##########
+// particle_manager
+// ##########
+
+void particle_manager::load_emitter_xml(tinyxml2::XMLElement* pEle)
+{
+	mEmitters.emplace_back();
+	auto& emitter = mEmitters.back();
+	emitter.set_acceleration(pEle->FloatAttribute("acceleration"));
 }

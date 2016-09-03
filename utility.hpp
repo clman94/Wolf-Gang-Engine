@@ -43,10 +43,10 @@ public:
 	}
 	~light_string()
 	{
-		clear();
+		clean();
 	}
 
-	void clear()
+	void clean()
 	{
 		if (str)
 			delete str;
@@ -56,7 +56,7 @@ public:
 	{
 		if (s == nullptr)
 		{
-			clear();
+			clean();
 			return *this;
 		}
 		size_t len = std::strlen(s);

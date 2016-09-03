@@ -27,7 +27,7 @@ public:
 
 	void update_display(tilemap_display& tmA);
 
-	void clear();
+	void clean();
 
 private:
 	struct tile

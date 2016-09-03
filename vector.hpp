@@ -43,6 +43,17 @@ struct vector
 		return std::sqrt(std::pow(A.x - x, 2) + std::pow(A.y - y, 2));
 	}
 
+	T manhattan() const
+	{
+		return std::abs(x) + std::abs(y);
+	}
+
+	template<typename T1>
+	T manhattan(const vector<T1>& A) const
+	{
+		return std::abs(A.x - x) + std::abs(A.y - y);
+	}
+
 	vector& rotate(T pDegrees)
 	{
 		const T rad = degree_to_radian(pDegrees);

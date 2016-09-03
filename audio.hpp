@@ -134,6 +134,11 @@ public:
 	{
 		return s.getPlayingOffset().asSeconds();
 	}
+	float get_duration()
+	{
+		return s.getDuration().asSeconds();
+	}
+
 	bool is_valid()
 	{
 		return valid;

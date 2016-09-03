@@ -32,7 +32,7 @@ int game()
 
 	// TEST particle system
 
-	/*engine::particle_system p1;
+	/*engine::particle_emitter p1;
 	p1.set_region({ 10,10 });
 	p1.set_life(4);
 	p1.set_acceleration({ 0, 5 });
