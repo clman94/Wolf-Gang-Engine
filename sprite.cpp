@@ -64,3 +64,11 @@ sprite_node::set_texture_rect(const engine::frect& pRect)
 	mVertices[2].position = pRect.get_size();
 	mVertices[3].position = { 0, pRect.h };
 }
+
+void sprite_node::set_color(color pColor)
+{
+	mVertices[0].color = pColor;
+	mVertices[1].color = pColor;
+	mVertices[2].color = pColor;
+	mVertices[3].color = pColor;
+}

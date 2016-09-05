@@ -1,6 +1,8 @@
 #ifndef VECTOR_HPP
 #define VECTOR_HPP
 
+#include <cmath>
+
 namespace
 {
 
@@ -146,6 +148,11 @@ struct vector
 		x *= (T)A.x;
 		y *= (T)A.y;
 		return *this;
+	}
+
+	vector floor() const
+	{
+		return{ std::floor(x), std::floor(y) };
 	}
 	
 #ifdef SFML_VERTEX_HPP

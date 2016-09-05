@@ -321,6 +321,7 @@ public:
 	int set_texture(texture& pTexture);
 	int set_texture(texture& pTexture, std::string pAtlas);
 	void set_texture_rect(const engine::frect& pRect);
+	void set_color(color pColor);
 	fvector get_size();
 
 private:
@@ -450,6 +451,7 @@ public:
 	void stop();
 	void restart();
 
+	void set_color(color pColor);
 	void set_anchor(anchor pAnchor);
 
 	int draw(renderer &r);

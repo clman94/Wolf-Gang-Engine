@@ -16,14 +16,14 @@ public:
 	util::error load_tilemap_xml(tinyxml2::XMLElement *root);
 	util::error load_tilemap_xml(std::string pPath);
 
-	void break_tile(engine::fvector pPosition, size_t pLayer);
+	void break_tile(engine::fvector pPosition, int pLayer);
 
 	void generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode* root);
 	void generate(const std::string& pPath);
 
-	int  set_tile(engine::fvector pPosition, engine::fvector pFill, size_t pLayer, const std::string& pAtlas, int pRotation);
-	int  set_tile(engine::fvector pPosition, size_t pLayer, const std::string& pAtlas, int pRotation);
-	void remove_tile(engine::fvector pPosition, size_t pLayer);
+	int  set_tile(engine::fvector pPosition, engine::fvector pFill, int pLayer, const std::string& pAtlas, int pRotation);
+	int  set_tile(engine::fvector pPosition, int pLayer, const std::string& pAtlas, int pRotation);
+	void remove_tile(engine::fvector pPosition, int pLayer);
 
 	void update_display(tilemap_display& tmA);
 
@@ -39,16 +39,16 @@ private:
 		bool is_adjacent_above(tile& a);
 		bool is_adjacent_right(tile& a);
 	};
-	std::map<size_t, std::vector<tile>> mTiles;
+	std::map<int, std::vector<tile>> mTiles;
 	tile* find_tile(engine::fvector pos, size_t layer);
 
 	engine::fvector mTile_size;
 
 	void condense_layer(std::vector<tile> &pMap);
 
-	util::error load_layer(tinyxml2::XMLElement *pEle, size_t pLayer);
+	util::error load_layer(tinyxml2::XMLElement *pEle, int pLayer);
 
-	tile* find_tile_at(engine::fvector pPosition, size_t pLayer);
+	tile* find_tile_at(engine::fvector pPosition, int pLayer);
 };
 
 }

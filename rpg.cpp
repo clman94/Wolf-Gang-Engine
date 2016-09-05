@@ -70,6 +70,11 @@ void entity::set_anchor(engine::anchor pAnchor)
 	mNode.set_anchor(pAnchor);
 }
 
+void entity::set_color(engine::color pColor)
+{
+	mNode.set_color(pColor);
+}
+
 bool entity::is_playing()
 {
 	return mNode.is_playing();
@@ -204,12 +209,12 @@ character::set_cycle(e_cycle type)
 {
 	switch (type)
 	{
-	case e_cycle::def:     set_cycle("default"); break;
-	case e_cycle::left:    set_cycle("left");    break;
-	case e_cycle::right:   set_cycle("right");   break;
-	case e_cycle::up:      set_cycle("up");      break;
-	case e_cycle::down:    set_cycle("down");    break;
-	case e_cycle::idle:    set_cycle("idle");    break;
+	case e_cycle::def:   set_cycle("default"); break;
+	case e_cycle::left:  set_cycle("left");    break;
+	case e_cycle::right: set_cycle("right");   break;
+	case e_cycle::up:    set_cycle("up");      break;
+	case e_cycle::down:  set_cycle("down");    break;
+	case e_cycle::idle:  set_cycle("idle");    break;
 	}
 }
 
@@ -677,6 +682,12 @@ void entity_manager::script_set_anchor(entity * e, engine::anchor pAnchor)
 	e->set_anchor(pAnchor);
 }
 
+void entity_manager::script_set_color(entity * e, int r, int g, int b, int a)
+{
+	assert(e != nullptr);
+	e->set_color(engine::color(r, g, b, a));
+}
+
 void entity_manager::load_script_interface(script_system& pScript)
 {
 	pScript.add_function("entity add_entity(const string &in)", asMETHOD(entity_manager, script_add_entity), this);
@@ -695,6 +706,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void set_depth_fixed(entity, bool)", asMETHOD(entity_manager, script_set_depth_fixed), this);
 	pScript.add_function("void set_name(entity, const string &in)", asMETHOD(entity_manager, script_set_depth_fixed), this);
 	pScript.add_function("void _set_anchor(entity, int)", asMETHOD(entity_manager, script_set_name), this);
+	pScript.add_function("void set_color(entity, int, int, int, int)", asMETHOD(entity_manager, script_set_color), this);
 }
 
 bool entity_manager::is_character(entity* pEntity)
@@ -810,12 +822,28 @@ void scene::load_script_interface(script_system& pScript)
 {
 	mEntity_manager.load_script_interface(pScript);
 	mBackground_music.load_script_interface(pScript);
+
+	pScript.add_function("void set_tile(const string &in, vec, int, int)", asMETHOD(scene, script_set_tile), this);
+	pScript.add_function("void remove_tile(vec, int)", asMETHOD(scene, script_remove_tile), this);
 }
 
 void scene::set_texture_manager(texture_manager& pTexture_manager)
 {
 	mTexture_manager = &pTexture_manager;
 	mEntity_manager.set_texture_manager(pTexture_manager);
+}
+
+void scene::script_set_tile(const std::string& pAtlas, engine::fvector pPosition
+	, int pLayer, int pRotation)
+{
+	mTilemap_loader.set_tile(pPosition, pLayer, pAtlas, pRotation);
+	mTilemap_loader.update_display(mTilemap_display);
+}
+
+void scene::script_remove_tile(engine::fvector pPosition, int pLayer)
+{
+	mTilemap_loader.remove_tile(pPosition, pLayer);
+	mTilemap_loader.update_display(mTilemap_display);
 }
 
 void scene::refresh_renderer(engine::renderer& pR)
@@ -858,13 +886,30 @@ controls::reset()
 
 void script_system::message_callback(const asSMessageInfo * msg)
 {
+	if (!mLog_file.is_open())
+	{
+		mLog_file.open("./data/log.txt");
+	}
+
 	std::string type = "ERROR";
 	if (msg->type == asEMsgType::asMSGTYPE_INFORMATION)
 		type = "INFO";
 	else if(msg->type == asEMsgType::asMSGTYPE_WARNING)
 		type = "WARNING";
-	std::cout << msg->section << "( " << msg->row << ", " << msg->col << " ) : "
-		 << type << " : " << msg->message << "\n";
+	std::string message = msg->section;
+	message += "( ";
+	message += msg->row; 
+	message += ", ";
+	message += msg->col;
+	message += " ) : ";
+	message += type;
+	message += " : ";
+	message += msg->message;
+	message += "\n";
+	std::cout << message;
+
+	if (mLog_file.is_open())
+		mLog_file << message;
 }
 
 std::string
@@ -1596,7 +1641,7 @@ void narrative_dialog::refresh_renderer(engine::renderer& r)
 // script_function
 // ##########
 
-script_function::script_function():
+script_function::script_function() :
 	as_engine(nullptr),
 	func(nullptr),
 	ctx(nullptr),
@@ -1779,7 +1824,7 @@ tilemap_loader::condense_tiles()
 }
 
 util::error
-tilemap_loader::load_layer(tinyxml2::XMLElement * pEle, size_t pLayer)
+tilemap_loader::load_layer(tinyxml2::XMLElement * pEle, int pLayer)
 {
 	auto i = pEle->FirstChildElement();
 	while (i)
@@ -1828,7 +1873,7 @@ tilemap_loader::load_tilemap_xml(std::string pPath)
 }
 
 tilemap_loader::tile*
-tilemap_loader::find_tile_at(engine::fvector pPosition, size_t pLayer)
+tilemap_loader::find_tile_at(engine::fvector pPosition, int pLayer)
 {
 	for (auto &i : mTiles[pLayer])
 	{
@@ -1841,7 +1886,7 @@ tilemap_loader::find_tile_at(engine::fvector pPosition, size_t pLayer)
 }
 
 void
-tilemap_loader::break_tile(engine::fvector pPosition, size_t pLayer)
+tilemap_loader::break_tile(engine::fvector pPosition, int pLayer)
 {
 	auto t = find_tile_at(pPosition, pLayer);
 	if (!t || t->fill == engine::fvector(1, 1))
@@ -1891,7 +1936,7 @@ tilemap_loader::generate(const std::string& pPath)
 }
 
 int
-tilemap_loader::set_tile(engine::fvector pPosition, engine::fvector pFill, size_t pLayer, const std::string& pAtlas, int pRotation)
+tilemap_loader::set_tile(engine::fvector pPosition, engine::fvector pFill, int pLayer, const std::string& pAtlas, int pRotation)
 {
 	engine::fvector off(0, 0);
 	for (off.y = 0; off.y <= pFill.y; off.y++)
@@ -1905,7 +1950,7 @@ tilemap_loader::set_tile(engine::fvector pPosition, engine::fvector pFill, size_
 }
 
 int
-tilemap_loader::set_tile(engine::fvector pPosition, size_t pLayer, const std::string& pAtlas, int pRotation)
+tilemap_loader::set_tile(engine::fvector pPosition, int pLayer, const std::string& pAtlas, int pRotation)
 {
 	tile* t = find_tile(pPosition, pLayer);
 	if (!t)
@@ -1925,7 +1970,7 @@ tilemap_loader::set_tile(engine::fvector pPosition, size_t pLayer, const std::st
 	return 0;
 }
 
-void tilemap_loader::remove_tile(engine::fvector pPosition, size_t pLayer)
+void tilemap_loader::remove_tile(engine::fvector pPosition, int pLayer)
 {
 	for (auto &i = mTiles[pLayer].begin(); i != mTiles[pLayer].end(); i++)
 	{
@@ -2001,6 +2046,7 @@ void background_music::load_script_interface(script_system & pScript)
 	pScript.add_function("int _music_open(const string &in)", asMETHOD(engine::sound_stream, open), &mStream);
 	pScript.add_function("bool _music_is_playing()", asMETHOD(engine::sound_stream, is_playing), &mStream);
 	pScript.add_function("float _music_get_duration()", asMETHOD(engine::sound_stream, get_duration), &mStream);
+
 }
 
 void background_music::clean()
@@ -2085,7 +2131,7 @@ int tilemap_display::draw(engine::renderer& pR)
 	{
 		auto& vb = i.second.vertices;
 		vb.set_texture(*mTexture);
-		vb.set_position(get_exact_position());
+		vb.set_position(get_exact_position().floor());
 		vb.draw(pR);
 	}
 	return 0;

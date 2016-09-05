@@ -10,7 +10,7 @@ node::node()
 
 node::~node()
 {
-	printf("delete\n");
+	//printf("delete\n");
 	detach_children();
 	detach_parent();
 }

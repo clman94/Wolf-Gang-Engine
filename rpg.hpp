@@ -17,6 +17,7 @@
 #include <array>
 #include <functional>
 #include <map>
+#include <fstream>
 
 #include <angelscript.h> // AS_USE_NAMESPACE will need to be defined
 #include <angelscript/add_on/contextmgr/contextmgr.h>
@@ -152,6 +153,7 @@ public:
 	util::error load_entity_xml(std::string path, texture_manager& tm);
 	void set_dynamic_depth(bool a);
 	void set_anchor(engine::anchor pAnchor);
+	void set_color(engine::color pColor);
 
 	engine::fvector get_size()
 	{ return mNode.get_size(); }
@@ -303,6 +305,7 @@ private:
 	AS::CContextMgr      mCtxmgr;
 	AS::asIScriptModule *mScene_module;
 	AS::CScriptBuilder   mBuilder;
+	std::ofstream mLog_file;
 
 	engine::timer mTimer;
 
@@ -479,6 +482,7 @@ private:
 	void            script_stop_animation(entity* e, int type);
 	void            script_set_animation(entity* e, const std::string& name);
 	void            script_set_anchor(entity* e, engine::anchor pAnchor);
+	void            script_set_color(entity* e, int r, int g, int b, int a);
 };
 
 class battle_system
@@ -542,6 +546,10 @@ private:
 	entity_manager    mEntity_manager;
 	particle_manager  mParticle_system;
 	background_music  mBackground_music;
+
+	void script_set_tile(const std::string& pAtlas
+		, engine::fvector pPosition, int pLayer, int pRotation);
+	void script_remove_tile(engine::fvector pPosition, int pLayer);
 
 	engine::fvector mBoundary;
 

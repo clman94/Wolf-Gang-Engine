@@ -218,6 +218,11 @@ animation_node::restart()
 	mClock.restart();
 }
 
+void animation_node::set_color(color pColor)
+{
+	mSprite.set_color(pColor);
+}
+
 void
 animation_node::set_anchor(engine::anchor pAnchor)
 {
