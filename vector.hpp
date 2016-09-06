@@ -10,7 +10,7 @@ namespace
 template<typename T>
 T degree_to_radian(T pDegree)
 {
-	return pDegree * static_cast<T>(0.0174533);
+	return pDegree * static_cast<T>(0.01745329252);
 }
 
 }
@@ -56,20 +56,22 @@ struct vector
 		return std::abs(A.x - x) + std::abs(A.y - y);
 	}
 
-	vector& rotate(T pDegrees)
+	vector rotate(T pDegrees) const
 	{
+		vector retval;
 		const T rad = degree_to_radian(pDegrees);
-		x = x*std::cos(rad) - y*std::sin(rad);
-		y = y*std::cos(rad) + x*std::sin(rad);
-		return *this;
+		retval.x = x*std::cos(rad) - y*std::sin(rad);
+		retval.y = y*std::cos(rad) + x*std::sin(rad);
+		return retval;
 	}
 
-	vector& rotate(const vector& pOrigin, T pDegrees)
+	vector rotate(const vector& pOrigin, T pDegrees) const
 	{
-		*this -= pOrigin;
-		rotate(pDegrees);
-		*this += pOrigin;
-		return *this;
+		vector retval = *this;
+		retval -= pOrigin;
+		retval = retval.rotate(pDegrees);
+		retval += pOrigin;
+		return retval;
 	}
 
 	template<typename T1>

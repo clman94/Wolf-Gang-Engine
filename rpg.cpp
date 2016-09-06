@@ -67,24 +67,29 @@ entity::set_dynamic_depth(bool a)
 
 void entity::set_anchor(engine::anchor pAnchor)
 {
-	mNode.set_anchor(pAnchor);
+	mSprite.set_anchor(pAnchor);
 }
 
 void entity::set_color(engine::color pColor)
 {
-	mNode.set_color(pColor);
+	mSprite.set_color(pColor);
+}
+
+void entity::set_rotation(float pRotation)
+{
+	mSprite.set_rotation(pRotation);
 }
 
 bool entity::is_playing()
 {
-	return mNode.is_playing();
+	return mSprite.is_playing();
 }
 
 entity::entity()
 {
 	dynamic_depth = true;
-	mNode.set_anchor(engine::anchor::bottom);
-	add_child(mNode);
+	mSprite.set_anchor(engine::anchor::bottom);
+	add_child(mSprite);
 	mAnimation = mAnimations.end();
 }
 
@@ -93,7 +98,7 @@ entity::play_withtype(e_type pType)
 {
 	if (mAnimation != mAnimations.end()
 		&& mAnimation->second.type == pType)
-		mNode.start();
+		mSprite.start();
 }
 
 void
@@ -101,7 +106,7 @@ entity::stop_withtype(e_type pType)
 {
 	if (mAnimation != mAnimations.end()
 		&& mAnimation->second.type == pType)
-		mNode.stop();
+		mSprite.stop();
 }
 
 void
@@ -109,7 +114,7 @@ entity::tick_withtype(e_type pType)
 {
 	if (mAnimation != mAnimations.end()
 		&& mAnimation->second.type == pType)
-		mNode.tick();
+		mSprite.tick();
 }
 
 bool
@@ -122,7 +127,7 @@ entity::set_animation(const std::string& pName, bool pSwap)
 		if (find == mAnimations.end())
 			return false;
 		mAnimation = find;
-		mNode.set_animation(*mAnimation->second.animation, pSwap);
+		mSprite.set_animation(*mAnimation->second.animation, pSwap);
 		return true;
 	}
 	return false;
@@ -140,7 +145,7 @@ entity::draw(engine::renderer &_r)
 		if (ndepth != get_depth())
 			set_depth(ndepth);
 	}
-	mNode.draw(_r);
+	mSprite.draw(_r);
 	return 0;
 }
 
@@ -682,6 +687,12 @@ void entity_manager::script_set_anchor(entity * e, engine::anchor pAnchor)
 	e->set_anchor(pAnchor);
 }
 
+void entity_manager::script_set_rotation(entity * e, float pRotation)
+{
+	assert(e != nullptr);
+	e->set_rotation(pRotation);
+}
+
 void entity_manager::script_set_color(entity * e, int r, int g, int b, int a)
 {
 	assert(e != nullptr);
@@ -706,6 +717,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void set_depth_fixed(entity, bool)", asMETHOD(entity_manager, script_set_depth_fixed), this);
 	pScript.add_function("void set_name(entity, const string &in)", asMETHOD(entity_manager, script_set_depth_fixed), this);
 	pScript.add_function("void _set_anchor(entity, int)", asMETHOD(entity_manager, script_set_name), this);
+	pScript.add_function("void set_rotation(entity, float)", asMETHOD(entity_manager, script_set_rotation), this);
 	pScript.add_function("void set_color(entity, int, int, int, int)", asMETHOD(entity_manager, script_set_color), this);
 }
 
@@ -735,6 +747,8 @@ scene::get_collision_system()
 void
 scene::clean_scene()
 {
+	mScript->about_all();
+
 	mTilemap_display.clean();
 	mTilemap_loader.clean();
 	mCollision_system.clean();
@@ -825,6 +839,8 @@ void scene::load_script_interface(script_system& pScript)
 
 	pScript.add_function("void set_tile(const string &in, vec, int, int)", asMETHOD(scene, script_set_tile), this);
 	pScript.add_function("void remove_tile(vec, int)", asMETHOD(scene, script_remove_tile), this);
+
+	mScript = &pScript;
 }
 
 void scene::set_texture_manager(texture_manager& pTexture_manager)
@@ -898,9 +914,9 @@ void script_system::message_callback(const asSMessageInfo * msg)
 		type = "WARNING";
 	std::string message = msg->section;
 	message += "( ";
-	message += msg->row; 
+	message += std::to_string(msg->row);
 	message += ", ";
-	message += msg->col;
+	message += std::to_string(msg->col);
 	message += " ) : ";
 	message += type;
 	message += " : ";
@@ -1004,11 +1020,11 @@ script_system::register_vector_type()
 		, asCALL_THISCALL);
 
 	// Rotate
-	mEngine->RegisterObjectMethod("vec", "vec& rotate(float)"
-		, asMETHODPR(engine::fvector, rotate, (float), engine::fvector&)
+	mEngine->RegisterObjectMethod("vec", "vec rotate(float) const"
+		, asMETHODPR(engine::fvector, rotate, (float) const, engine::fvector) 
 		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "vec& rotate(const vec &in, float)"
-		, asMETHODPR(engine::fvector, rotate, (const engine::fvector&, float), engine::fvector&)
+	mEngine->RegisterObjectMethod("vec", "vec rotate(const vec &in, float) const"
+		, asMETHODPR(engine::fvector, rotate, (const engine::fvector&, float) const, engine::fvector)
 		, asCALL_THISCALL);
 
 	// Members
@@ -1058,9 +1074,8 @@ script_system::load_scene_script(const std::string& pPath)
 		return "Failed to load scene script";
 
 	mScene_module = mBuilder.GetModule();
-	auto func = mScene_module->GetFunctionByDecl("void start()");
-	if (func)
-		mCtxmgr.AddContext(mEngine, func);
+
+	start_all_with_tag("start");
 	return 0;
 }
 
@@ -1120,14 +1135,29 @@ script_system::setup_triggers(collision_system& pCollision_system)
 			if (type == "button")
 				pCollision_system.add_button(nt);
 		}
-		else if(!metadata.empty())
-			std::cout << "Invalid Metadata: " << metadata << "\n";
 	}
 }
 
 void script_system::about_all()
 {
-	mCtxmgr.AbortAll();
+	if (mCtxmgr.GetCurrentContext())
+		mCtxmgr.PreAbout();
+	else
+		mCtxmgr.AbortAll();
+}
+
+void script_system::start_all_with_tag(const std::string & tag)
+{
+	size_t func_count = mScene_module->GetFunctionCount();
+	for (size_t i = 0; i < func_count; i++)
+	{
+		auto func = mScene_module->GetFunctionByIndex(i);
+		std::string metadata = mBuilder.GetMetadataStringForFunc(func);
+		if (metadata == tag)
+		{
+			mCtxmgr.AddContext(mEngine, func);
+		}
+	}
 }
 
 int
@@ -1163,7 +1193,7 @@ void game::save_game(size_t pSlot)
 	save_system file;
 	file.new_save();
 	file.save_flags(mFlags);
-	file.save_scene(mScene.get_name(), mScene.get_path());
+	file.save_scene(mScene);
 	file.save_player(mPlayer);
 	file.save(path);
 	mSlot = pSlot;
@@ -1180,8 +1210,9 @@ void game::open_game(size_t pSlot)
 	}
 	file.load_flags(mFlags);
 	file.load_player(mPlayer);
-	mScene.load_scene_xml(file.get_scene_path(), mScript, mFlags);
-	mSlot = pSlot;
+	mScript.about_all();
+	mRequest_load = true;
+	mNew_scene_path = file.get_scene_path();
 }
 
 void
@@ -1246,6 +1277,9 @@ game::load_script_interface()
 
 	mScript.add_function("int _spawn_sound(const string&in)", asMETHOD(sound_manager, spawn_sound), &mSound_FX);
 	mScript.add_function("void _stop_all()", asMETHOD(sound_manager, stop_all), &mSound_FX);
+
+	mScript.add_function("void save_game(uint)", asMETHOD(game, save_game), this);
+	mScript.add_function("void open_game(uint)", asMETHOD(game, open_game), this);
 
 	mFlags.load_script_interface(mScript);
 	mNarrative.load_script_interface(mScript);
@@ -1347,7 +1381,13 @@ game::tick(controls& pControls)
 	}
 
 	mTest_gui.update_camera_position(mRoot_node.get_exact_position());
+
 	mScript.tick();
+	if (mRequest_load)
+	{
+		mRequest_load = false;
+		mScene.load_scene_xml(mNew_scene_path, mScript, mFlags);
+	}
 }
 
 void
@@ -2212,7 +2252,6 @@ void save_system::load_player(player_character& pPlayer)
 	position.y = ele_player->FloatAttribute("y");
 	pPlayer.set_position(position);
 }
-
 std::string save_system::get_scene_path()
 {
 	assert(mEle_root != nullptr);
@@ -2251,13 +2290,13 @@ void save_system::save_flags(flag_container& pFlags)
 	}
 }
 
-void save_system::save_scene(const std::string& pName, const std::string& pPath)
+void save_system::save_scene(scene& pScene)
 {
 	assert(mEle_root != nullptr);
 	auto ele_scene = mDocument.NewElement("scene");
 	mEle_root->InsertFirstChild(ele_scene);
-	ele_scene->SetAttribute("name", pName.c_str());
-	ele_scene->SetAttribute("path", pPath.c_str());
+	ele_scene->SetAttribute("name", pScene.get_name().c_str());
+	ele_scene->SetAttribute("path", pScene.get_path().c_str());
 }
 
 void save_system::save_player(player_character& pPlayer)

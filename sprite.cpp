@@ -6,8 +6,11 @@ using namespace engine;
 
 int sprite_node::draw(renderer &pR)
 {
+	auto position = get_exact_position();
+
 	sf::RenderStates rs;
-	rs.transform.translate(get_exact_position() + mOffset);
+	rs.transform.translate(position - mCenter);
+	rs.transform.rotate(mRotation, mCenter);
 	rs.texture = &mTexture->sfml_get_texture();
 	rs.transform.scale(mScale);
 	pR.get_sfml_render().draw(&mVertices[0], 4, sf::Quads , rs);
@@ -37,12 +40,13 @@ sprite_node::sprite_node()
 {
 	mScale = { 1, 1 };
 	mTexture = nullptr;
+	mRotation = 0;
 }
 
 void
 sprite_node::set_anchor(anchor pType)
 {
-	mOffset = engine::anchor_offset(get_size(), pType);
+	mCenter = engine::center_offset(get_size(), pType);
 }
 
 fvector
@@ -71,4 +75,9 @@ void sprite_node::set_color(color pColor)
 	mVertices[1].color = pColor;
 	mVertices[2].color = pColor;
 	mVertices[3].color = pColor;
+}
+
+void sprite_node::set_rotation(float pRotation)
+{
+	mRotation = pRotation;
 }

@@ -230,6 +230,11 @@ animation_node::set_anchor(engine::anchor pAnchor)
 	mSprite.set_anchor(pAnchor);
 }
 
+void animation_node::set_rotation(float pRotation)
+{
+	mSprite.set_rotation(pRotation);
+}
+
 int
 animation_node::draw(renderer &r)
 {

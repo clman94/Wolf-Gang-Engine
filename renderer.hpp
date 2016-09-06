@@ -322,13 +322,15 @@ public:
 	int set_texture(texture& pTexture, std::string pAtlas);
 	void set_texture_rect(const engine::frect& pRect);
 	void set_color(color pColor);
+	void set_rotation(float pRotation);
 	fvector get_size();
 
 private:
 	texture *mTexture;
 	sf::Vertex mVertices[4];
-	fvector mOffset;
+	fvector mCenter;
 	fvector mScale;
+	float mRotation;
 };
 
 class font
@@ -453,6 +455,7 @@ public:
 
 	void set_color(color pColor);
 	void set_anchor(anchor pAnchor);
+	void set_rotation(float pRotation);
 
 	int draw(renderer &r);
 

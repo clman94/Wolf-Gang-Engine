@@ -154,9 +154,10 @@ public:
 	void set_dynamic_depth(bool a);
 	void set_anchor(engine::anchor pAnchor);
 	void set_color(engine::color pColor);
+	void set_rotation(float pRotation);
 
 	engine::fvector get_size()
-	{ return mNode.get_size(); }
+	{ return mSprite.get_size(); }
 	bool is_playing();
 
 protected:
@@ -172,7 +173,7 @@ private:
 
 	typedef std::unordered_map<std::string, entity_animation> animation_map_t;
 
-	engine::animation_node mNode;
+	engine::animation_node mSprite;
 	animation_map_t mAnimations;
 	animation_map_t::iterator mAnimation;
 
@@ -298,6 +299,7 @@ public:
 	void call_event_function(const std::string& pName);
 	void setup_triggers(collision_system& pCollision_system);
 	void about_all();
+	void start_all_with_tag(const std::string& tag);
 	int tick();
 
 private:
@@ -311,27 +313,19 @@ private:
 
 	template<typename T>
 	static void script_default_constructor(void *pMemory)
-	{
-		new(pMemory) T();
-	}
+	{ new(pMemory) T(); }
 
 	template<typename T, typename Targ1>
 	static void script_constructor(Targ1 pArg1, void *pMemory)
-	{
-		new(pMemory) T(pArg1);
-	}
+	{ new(pMemory) T(pArg1); }
 
 	template<typename T, typename Targ1, typename Targ2>
 	static void script_constructor(Targ1 pArg1, Targ2 pArg2, void *pMemory)
-	{
-		new(pMemory) T(pArg1, pArg2);
-	}
+	{ new(pMemory) T(pArg1, pArg2); }
 
 	template<typename T>
 	static void script_default_deconstructor(void *pMemory)
-	{
-		((T*)pMemory)->~T();
-	}
+	{ ((T*)pMemory)->~T(); }
 	
 	void dprint(std::string &msg);
 	void register_vector_type();
@@ -482,6 +476,7 @@ private:
 	void            script_stop_animation(entity* e, int type);
 	void            script_set_animation(entity* e, const std::string& name);
 	void            script_set_anchor(entity* e, engine::anchor pAnchor);
+	void            script_set_rotation(entity* e, float pRotation);
 	void            script_set_color(entity* e, int r, int g, int b, int a);
 };
 
@@ -543,6 +538,7 @@ private:
 	tilemap_loader    mTilemap_loader;
 	collision_system  mCollision_system;
 	texture_manager*  mTexture_manager;
+	script_system*    mScript;
 	entity_manager    mEntity_manager;
 	particle_manager  mParticle_system;
 	background_music  mBackground_music;
@@ -576,7 +572,7 @@ public:
 	void new_save();
 	void save(const std::string& pPath);
 	void save_flags(flag_container& pFlags);
-	void save_scene(const std::string & pName, const std::string & pPath);
+	void save_scene(scene& pScene);
 	void save_player(player_character& pPlayer);
 };
 
@@ -603,6 +599,9 @@ private:
 	script_system    mScript;
 	controls         mControls;
 	size_t           mSlot;
+
+	bool        mRequest_load;
+	std::string mNew_scene_path;
 	
 	editor::editor_gui mTest_gui;
 
