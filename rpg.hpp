@@ -307,7 +307,7 @@ private:
 	AS::CContextMgr      mCtxmgr;
 	AS::asIScriptModule *mScene_module;
 	AS::CScriptBuilder   mBuilder;
-	std::ofstream mLog_file;
+	std::ofstream        mLog_file;
 
 	engine::timer mTimer;
 
@@ -478,6 +478,7 @@ private:
 	void            script_set_anchor(entity* e, engine::anchor pAnchor);
 	void            script_set_rotation(entity* e, float pRotation);
 	void            script_set_color(entity* e, int r, int g, int b, int a);
+	bool            script_validate_entity(entity* e);
 };
 
 class battle_system

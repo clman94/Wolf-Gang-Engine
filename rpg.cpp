@@ -162,6 +162,12 @@ entity::load_animations(tinyxml2::XMLElement* e, texture_manager& tm)
 		std::string att_texture = ele->Attribute("tex");
 		std::string att_atlas = ele->Attribute("atlas");
 		auto texture = tm.get_texture(att_texture);
+		if (!texture)
+		{
+			util::error("Invalid texture '" + att_texture + "'");
+			ele = ele->NextSiblingElement();
+			continue;
+		}
 		anim.animation = texture->get_animation(att_atlas);
 
 		anim.type = e_type::movement;
@@ -699,6 +705,22 @@ void entity_manager::script_set_color(entity * e, int r, int g, int b, int a)
 	e->set_color(engine::color(r, g, b, a));
 }
 
+bool rpg::entity_manager::script_validate_entity(entity * e)
+{
+	for (auto& i : mCharacters)
+	{
+		if (&i == e)
+			return true;
+	}
+	for (auto &i : mEntities)
+	{
+		if (&i == e)
+			return true;
+	}
+
+	return false;
+}
+
 void entity_manager::load_script_interface(script_system& pScript)
 {
 	pScript.add_function("entity add_entity(const string &in)", asMETHOD(entity_manager, script_add_entity), this);
@@ -719,6 +741,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void _set_anchor(entity, int)", asMETHOD(entity_manager, script_set_name), this);
 	pScript.add_function("void set_rotation(entity, float)", asMETHOD(entity_manager, script_set_rotation), this);
 	pScript.add_function("void set_color(entity, int, int, int, int)", asMETHOD(entity_manager, script_set_color), this);
+	pScript.add_function("bool _validate_entity(entity)", asMETHOD(entity_manager, script_validate_entity), this);
 }
 
 bool entity_manager::is_character(entity* pEntity)
@@ -1036,8 +1059,10 @@ script_system::script_system()
 {
 	mEngine = asCreateScriptEngine();
 
-	mEngine->SetMessageCallback(asMETHOD(script_system, message_callback), this, asCALL_THISCALL);
+	mEngine->SetEngineProperty(asEP_REQUIRE_ENUM_SCOPE, true);
 	//mEngine->SetEngineProperty(asEP_BUILD_WITHOUT_LINE_CUES, true);
+
+	mEngine->SetMessageCallback(asMETHOD(script_system, message_callback), this, asCALL_THISCALL);
 
 	RegisterStdString(mEngine);
 	RegisterScriptMath(mEngine);
@@ -1047,7 +1072,6 @@ script_system::script_system()
 	register_vector_type();
 
 	add_function("int rand()", asFUNCTION(std::rand));
-
 	add_function("void _timer_start(float)",  asMETHOD(engine::timer, start_timer), &mTimer);
 	add_function("bool _timer_reached()",     asMETHOD(engine::timer, is_reached), &mTimer);
 	add_function("void cocall(const string &in)", asMETHOD(script_system, call_event_function), this);
