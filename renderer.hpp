@@ -405,33 +405,6 @@ public:
 	// TODO
 };
 
-class tile_node :
-	public render_client,
-	public node
-{
-public:
-	tile_node();
-	void set_tile_size(fvector pPixels);
-	void set_texture(texture& pTexture);
-	void set_tile(fvector pPosisition, std::string pAtlas, size_t pLayer = 0, int pRotation = 0, bool pReplace = true);
-	void remove_tile(fvector pPosisition, size_t pLayer);
-	void clear_all();
-	virtual int draw(renderer &pR);
-
-public:
-	struct tile_entry{
-		fvector pos;
-		size_t index, layer;
-		tile_entry(fvector pPosition, size_t pIndex, size_t pLayer)
-			: pos(pPosition), index(pIndex), layer(pLayer){}
-	};
-	std::vector<tile_entry> mTiles;
-	int find_tile(fvector pPosition, size_t pLayer = 0);
-	fvector mTile_size;
-	texture* mTexture;
-	std::map<size_t, ptr_GC_owner<std::vector<sf::Vertex>>> mLayers;
-};
-
 class animation_node :
 	public render_client,
 	public node
