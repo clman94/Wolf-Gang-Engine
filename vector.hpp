@@ -56,22 +56,20 @@ struct vector
 		return std::abs(A.x - x) + std::abs(A.y - y);
 	}
 
-	vector rotate(T pDegrees) const
+	vector& rotate(T pDegrees)
 	{
-		vector retval;
 		const T rad = degree_to_radian(pDegrees);
-		retval.x = x*std::cos(rad) - y*std::sin(rad);
-		retval.y = y*std::cos(rad) + x*std::sin(rad);
-		return retval;
+		x = x*std::cos(rad) - y*std::sin(rad);
+		y = y*std::cos(rad) + x*std::sin(rad);
+		return *this;
 	}
 
-	vector rotate(const vector& pOrigin, T pDegrees) const
+	vector& rotate(const vector& pOrigin, T pDegrees)
 	{
-		vector retval = *this;
-		retval -= pOrigin;
-		retval = retval.rotate(pDegrees);
-		retval += pOrigin;
-		return retval;
+		*this -= pOrigin;
+		rotate(pDegrees);
+		*this += pOrigin;
+		return *this;
 	}
 
 	template<typename T1>
@@ -152,9 +150,19 @@ struct vector
 		return *this;
 	}
 
-	vector floor() const
+	vector& floor()
 	{
-		return{ std::floor(x), std::floor(y) };
+		x = std::floor(x);
+		y = std::floor(y);
+		return *this;
+	}
+
+	vector& normalize()
+	{
+		float d = distance();
+		x /= d;
+		y /= d;
+		return *this;
 	}
 	
 #ifdef SFML_VERTEX_HPP

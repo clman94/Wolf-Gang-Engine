@@ -1033,8 +1033,6 @@ script_system::register_vector_type()
 	mEngine->RegisterObjectMethod("vec", "float distance(const vec &in) const"
 		, asMETHODPR(engine::fvector, distance, (const engine::fvector&) const, float)
 		, asCALL_THISCALL);
-
-	// Distance
 	mEngine->RegisterObjectMethod("vec", "float manhattan() const"
 		, asMETHODPR(engine::fvector, manhattan, () const, float)
 		, asCALL_THISCALL);
@@ -1043,11 +1041,15 @@ script_system::register_vector_type()
 		, asCALL_THISCALL);
 
 	// Rotate
-	mEngine->RegisterObjectMethod("vec", "vec rotate(float) const"
-		, asMETHODPR(engine::fvector, rotate, (float) const, engine::fvector) 
+	mEngine->RegisterObjectMethod("vec", "vec& rotate(float)"
+		, asMETHODPR(engine::fvector, rotate, (float), engine::fvector&) 
 		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "vec rotate(const vec &in, float) const"
-		, asMETHODPR(engine::fvector, rotate, (const engine::fvector&, float) const, engine::fvector)
+	mEngine->RegisterObjectMethod("vec", "vec& rotate(const vec &in, float)"
+		, asMETHODPR(engine::fvector, rotate, (const engine::fvector&, float), engine::fvector&)
+		, asCALL_THISCALL);
+
+	mEngine->RegisterObjectMethod("vec", "vec& normalize()"
+		, asMETHOD(engine::fvector, normalize)
 		, asCALL_THISCALL);
 
 	// Members
@@ -2195,7 +2197,7 @@ int tilemap_display::draw(engine::renderer& pR)
 	{
 		auto& vb = i.second.vertices;
 		vb.set_texture(*mTexture);
-		vb.set_position(get_exact_position().floor());
+		vb.set_position(engine::fvector(get_exact_position()).floor());
 		vb.draw(pR);
 	}
 	return 0;
