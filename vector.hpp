@@ -2,6 +2,7 @@
 #define VECTOR_HPP
 
 #include <cmath>
+#include <type_traits>
 
 namespace
 {
@@ -58,9 +59,11 @@ struct vector
 
 	vector& rotate(T pDegrees)
 	{
-		const T rad = degree_to_radian(pDegrees);
-		x = x*std::cos(rad) - y*std::sin(rad);
-		y = y*std::cos(rad) + x*std::sin(rad);
+		const T r = degree_to_radian(pDegrees);
+		float x1 = x*std::cos(r) - y*std::sin(r);
+		float y1 = y*std::cos(r) + x*std::sin(r);
+		x = x1;
+		y = y1;
 		return *this;
 	}
 
@@ -152,6 +155,8 @@ struct vector
 
 	vector& floor()
 	{
+		if (!std::is_floating_point<T>::value)
+			return *this;
 		x = std::floor(x);
 		y = std::floor(y);
 		return *this;
@@ -159,10 +164,19 @@ struct vector
 
 	vector& normalize()
 	{
-		float d = distance();
+		T d = distance();
 		x /= d;
 		y /= d;
 		return *this;
+	}
+
+	T angle() const
+	{
+		if (!std::is_floating_point<T>::value)
+			return 0;
+
+		T a = std::atan2(y, x) * static_cast<T>(180 / 3.14159265); // Compiler complains without the static casts
+		return std::fmod(a + 360, static_cast<T>(360));
 	}
 	
 #ifdef SFML_VERTEX_HPP
@@ -218,9 +232,10 @@ static vector<T> scale(vector<T> a, T b)
 }
 
 
+typedef vector<int>    ivector;
+typedef vector<float>  fvector;
+typedef vector<double> dvector;
 
-typedef vector<float> fvector;
-typedef vector<int>   ivector;
 }
 
 #endif

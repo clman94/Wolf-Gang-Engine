@@ -1052,6 +1052,14 @@ script_system::register_vector_type()
 		, asMETHOD(engine::fvector, normalize)
 		, asCALL_THISCALL);
 
+	mEngine->RegisterObjectMethod("vec", "vec& floor()"
+		, asMETHOD(engine::fvector, floor)
+		, asCALL_THISCALL);
+
+	mEngine->RegisterObjectMethod("vec", "float angle() const"
+		, asMETHOD(engine::fvector, angle)
+		, asCALL_THISCALL);
+
 	// Members
 	mEngine->RegisterObjectProperty("vec", "float x", asOFFSET(engine::fvector, x));
 	mEngine->RegisterObjectProperty("vec", "float y", asOFFSET(engine::fvector, y));
@@ -1079,6 +1087,8 @@ script_system::script_system()
 	add_function("void cocall(const string &in)", asMETHOD(script_system, call_event_function), this);
 	add_function("void dprint(const string &in)", asMETHOD(script_system, dprint), this);
 	add_function("void abort()", asMETHOD(script_system, script_abort), this);
+
+	mExecuting = false;
 }
 
 script_system::~script_system()
@@ -1189,8 +1199,15 @@ void script_system::start_all_with_tag(const std::string & tag)
 int
 script_system::tick()
 {
+	mExecuting = true;
 	mCtxmgr.ExecuteScripts();
+	mExecuting = false;
 	return 0;
+}
+
+bool script_system::is_executing()
+{
+	return mExecuting;
 }
 
 // #########
@@ -1237,8 +1254,14 @@ void game::open_game(size_t pSlot)
 	file.load_flags(mFlags);
 	file.load_player(mPlayer);
 	mScript.about_all();
-	mRequest_load = true;
-	mNew_scene_path = file.get_scene_path();
+	if (mScript.is_executing()) {
+		mRequest_load = true;
+		mNew_scene_path = file.get_scene_path();
+	}
+	else
+	{
+		mScene.load_scene_xml(file.get_scene_path(), mScript, mFlags);
+	}
 }
 
 void
@@ -1516,6 +1539,7 @@ void narrative_dialog::show_expression()
 
 void narrative_dialog::reset_positions()
 {
+	set_box_position(position::bottom);
 	mText.set_position({ 10, 10 });
 }
 
@@ -1717,6 +1741,7 @@ script_function::script_function() :
 
 script_function::~script_function()
 {
+	//return_context();
 }
 
 bool
@@ -1764,15 +1789,21 @@ script_function::call()
 	assert(ctx != nullptr);
 	if (!is_running())
 	{
-		if (func_ctx)
-		{
-			ctx->DoneWithContext(func_ctx);
-			func_ctx = nullptr;
-		}
+		return_context();
 		func_ctx = ctx->AddContext(as_engine, func, true);
 		return true;
 	}
 	return false;
+}
+
+void script_function::return_context()
+{
+	if (func_ctx)
+	{
+		func_ctx->Abort();
+		ctx->DoneWithContext(func_ctx);
+		func_ctx = nullptr;
+	}
 }
 
 // ##########

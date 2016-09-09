@@ -226,6 +226,7 @@ private:
 	AS::asIScriptFunction *func;
 	AS::CContextMgr *ctx;
 	AS::asIScriptContext *func_ctx;
+	void return_context();
 };
 
 struct collision_box
@@ -302,12 +303,15 @@ public:
 	void start_all_with_tag(const std::string& tag);
 	int tick();
 
+	bool is_executing();
+
 private:
 	AS::asIScriptEngine *mEngine;
 	AS::CContextMgr      mCtxmgr;
 	AS::asIScriptModule *mScene_module;
 	AS::CScriptBuilder   mBuilder;
 	std::ofstream        mLog_file;
+	bool                 mExecuting;
 
 	engine::timer mTimer;
 
