@@ -96,13 +96,13 @@ struct vector
 	// No division, high chance of dividing by zero.
 
 	template<typename T1>
-	vector operator * (const T1& A) const
+	vector operator * (T1 A) const
 	{
 		return{ x * (T)A, y * (T)A};
 	}
 
 	template<typename T1>
-	vector operator / (const T1& A) const
+	vector operator / (T1 A) const
 	{
 		return{ x / (T)A, y / (T)A };
 	}
@@ -112,11 +112,17 @@ struct vector
 		return{ -x, -y};
 	}
 
-	template<typename T1>
-	vector& operator /= (const T1& A)
+	vector& operator *= (T A)
 	{
-		x /= (T)A.x;
-		y /= (T)A.y;
+		x *= A;
+		y *= A;
+		return *this;
+	}
+
+	vector& operator /= (T A)
+	{
+		x /= A;
+		y /= A;
 		return *this;
 	}
 
@@ -150,6 +156,14 @@ struct vector
 	{
 		x *= (T)A.x;
 		y *= (T)A.y;
+		return *this;
+	}
+
+	template<typename T1>
+	vector& operator /= (const vector<T1>& A)
+	{
+		x /= (T)A.x;
+		y /= (T)A.y;
 		return *this;
 	}
 
@@ -223,12 +237,6 @@ template<typename T1, typename T2>
 bool operator==(const vector<T1>& L, const vector<T2>& R)
 {
 	return (L.x == R.x) && (L.y == R.y);
-}
-
-template<typename T>
-static vector<T> scale(vector<T> a, T b)
-{
-	return a*b;
 }
 
 

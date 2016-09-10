@@ -137,20 +137,13 @@ class entity :
 {
 public:
 
-	enum e_type
-	{
-		movement,
-		constant,
-		speech,
-		user
-	};
 	entity();
-	void play_withtype(e_type pType);
-	void stop_withtype(e_type pType);
-	void tick_withtype(e_type pType);
+	void play_animation();
+	void stop_animation();
+	void tick_animation();
 	bool set_animation(const std::string& pName, bool pSwap = false);
 	int draw(engine::renderer &pR);
-	util::error load_entity_xml(std::string path, texture_manager& tm);
+	util::error load_entity(std::string pName, texture_manager& pTexture_manager);
 	void set_dynamic_depth(bool a);
 	void set_anchor(engine::anchor pAnchor);
 	void set_color(engine::color pColor);
@@ -160,22 +153,9 @@ public:
 	{ return mSprite.get_size(); }
 	bool is_playing();
 
-protected:
-	util::error load_animations(tinyxml2::XMLElement* e, texture_manager& tm);
-
 private:
-	struct entity_animation :
-		public util::named
-	{
-		const engine::animation* animation;
-		int type;
-	};
-
-	typedef std::unordered_map<std::string, entity_animation> animation_map_t;
-
-	engine::animation_node mSprite;
-	animation_map_t mAnimations;
-	animation_map_t::iterator mAnimation;
+	engine::texture*         mTexture;
+	engine::animation_node   mSprite;
 
 	bool dynamic_depth;
 };
@@ -466,9 +446,10 @@ private:
 	node_list<character> mCharacters;
 	node_list<entity>    mEntities;
 
-	entity*         script_add_entity(const std::string& path);
+	entity*         script_add_entity(const std::string& tex);
+	entity*         script_add_entity_atlas(const std::string& tex, const std::string& atlas);
 	void            script_remove_entity(entity* e);
-	entity*         script_add_character(const std::string& path);
+	entity*         script_add_character(const std::string& tex);
 	void            script_set_name(entity* e, const std::string& pName);
 	void            script_set_position(entity* e, const engine::fvector& pos);
 	engine::fvector script_get_position(entity* e);
@@ -476,8 +457,8 @@ private:
 	void            script_set_cycle(entity* e, const std::string& name);
 	void            script_set_depth(entity* e, float pDepth);
 	void            script_set_depth_fixed(entity* e, bool pFixed);
-	void            script_start_animation(entity* e, int type);
-	void            script_stop_animation(entity* e, int type);
+	void            script_start_animation(entity* e);
+	void            script_stop_animation(entity* e);
 	void            script_set_animation(entity* e, const std::string& name);
 	void            script_set_anchor(entity* e, engine::anchor pAnchor);
 	void            script_set_rotation(entity* e, float pRotation);
@@ -584,7 +565,7 @@ public:
 class game :
 	public engine::render_proxy,
 	public util::nocopy
-{	
+{
 public:
 	game();
 	util::error load_game_xml(std::string pPath);

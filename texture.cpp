@@ -31,7 +31,7 @@ texture::get_entry(const std::string& pName)
 	return frect();
 }
 
-const engine::animation* engine::texture::get_animation(const std::string & pName)
+const animation* texture::get_animation(const std::string & pName)
 {
 	auto &find = mAtlas.find(pName);
 	if (find != mAtlas.end())

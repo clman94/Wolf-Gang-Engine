@@ -42,20 +42,11 @@ void flag_container::load_script_interface(script_system & pScript)
 // #########
 
 util::error
-entity::load_entity_xml(std::string path, texture_manager & tm)
+entity::load_entity(std::string path, texture_manager & tm)
 {
-	using namespace tinyxml2;
-	XMLDocument doc;
-	doc.LoadFile(path.c_str());
-
-	auto ele_root = doc.RootElement();
-
-	if (ele_root)
-	{
-		auto ele_animations = ele_root->FirstChildElement("animations");
-		load_animations(ele_animations, tm);
-		set_animation("default");
-	}
+	mTexture = tm.get_texture(path);
+	if (!mTexture)
+		util::error("Cannot find texture for entity");
 	return 0;
 }
 
@@ -90,47 +81,38 @@ entity::entity()
 	dynamic_depth = true;
 	mSprite.set_anchor(engine::anchor::bottom);
 	add_child(mSprite);
-	mAnimation = mAnimations.end();
 }
 
 void
-entity::play_withtype(e_type pType)
+entity::play_animation()
 {
-	if (mAnimation != mAnimations.end()
-		&& mAnimation->second.type == pType)
-		mSprite.start();
+	mSprite.start();
 }
 
 void
-entity::stop_withtype(e_type pType)
+entity::stop_animation()
 {
-	if (mAnimation != mAnimations.end()
-		&& mAnimation->second.type == pType)
-		mSprite.stop();
+	mSprite.stop();
 }
 
 void
-entity::tick_withtype(e_type pType)
+entity::tick_animation()
 {
-	if (mAnimation != mAnimations.end()
-		&& mAnimation->second.type == pType)
-		mSprite.tick();
+	mSprite.tick();
 }
 
 bool
 entity::set_animation(const std::string& pName, bool pSwap)
 {
-	if (mAnimation == mAnimations.end()
-	||  mAnimation->first != pName)
-	{
-		auto &find = mAnimations.find(pName);
-		if (find == mAnimations.end())
-			return false;
-		mAnimation = find;
-		mSprite.set_animation(*mAnimation->second.animation, pSwap);
-		return true;
-	}
-	return false;
+	if (!mTexture)
+		return false;
+
+	auto animation = mTexture->get_animation(pName);
+	if (!animation)
+		return false;
+
+	mSprite.set_animation(*animation, pSwap);
+	return true;
 }
 
 int
@@ -146,45 +128,6 @@ entity::draw(engine::renderer &_r)
 			set_depth(ndepth);
 	}
 	mSprite.draw(_r);
-	return 0;
-}
-
-util::error
-entity::load_animations(tinyxml2::XMLElement* e, texture_manager& tm)
-{
-	assert(e != nullptr);
-
-	auto ele = e->FirstChildElement();
-	while (ele)
-	{
-		auto &anim = mAnimations[ele->Name()];
-
-		std::string att_texture = ele->Attribute("tex");
-		std::string att_atlas = ele->Attribute("atlas");
-		auto texture = tm.get_texture(att_texture);
-		if (!texture)
-		{
-			util::error("Invalid texture '" + att_texture + "'");
-			ele = ele->NextSiblingElement();
-			continue;
-		}
-		anim.animation = texture->get_animation(att_atlas);
-
-		anim.type = e_type::movement;
-		if (ele->Attribute("type", "user"))
-			anim.type = e_type::user;
-
-		if (ele->Attribute("type", "constant"))
-			anim.type = e_type::constant;
-
-		if (ele->Attribute("type", "movement"))
-			anim.type = e_type::movement;
-
-		if (ele->Attribute("type", "speech"))
-			anim.type = e_type::speech;
-		
-		ele = ele->NextSiblingElement();
-	}
 	return 0;
 }
 
@@ -436,7 +379,7 @@ player_character::movement(controls& pControls, collision_system& pCollision_sys
 {
 	if (mLocked)
 	{
-		stop_withtype(entity::e_type::movement);
+		stop_animation();
 		return;
 	}
 
@@ -478,10 +421,10 @@ player_character::movement(controls& pControls, collision_system& pCollision_sys
 	{
 		set_move_direction(move); // Make sure the player is in the diretion he's moving
 		set_position(get_position() + (move*pDelta));
-		play_withtype(entity::e_type::movement);
+		play_animation();
 	}
 	else
-		stop_withtype(entity::e_type::movement);
+		stop_animation();
 }
 
 engine::fvector
@@ -540,11 +483,11 @@ entity_manager::load_entities(tinyxml2::XMLElement * e)
 	while (ele)
 	{
 		std::string name = ele->Name();
-		std::string att_path = ele->Attribute("path");
+		std::string att_texture = ele->Attribute("texture");
 		engine::fvector pos = util::shortcuts::vector_float_att(ele)*32;
 
 		auto& ne = mEntities.add_item();
-		ne.load_entity_xml(att_path, *mTexture_manager);
+		ne.load_entity(att_texture, *mTexture_manager);
 		ne.set_position(pos);
 		get_renderer()->add_client(ne);
 
@@ -566,12 +509,15 @@ entity_manager::load_characters(tinyxml2::XMLElement * e)
 	while (ele)
 	{
 		std::string name = ele->Name();
-		std::string att_path = ele->Attribute("path");
+		std::string att_texture = ele->Attribute("texture");
 		engine::fvector pos = util::shortcuts::vector_float_att(ele);
 
 		auto& ne = mCharacters.add_item();
-		ne.load_entity_xml(att_path, *mTexture_manager);
-		ne.set_cycle("default");
+		ne.load_entity(att_texture, *mTexture_manager);
+
+		std::string att_cycle = util::safe_string(ele->Attribute("cycle"));
+		ne.set_cycle(att_cycle.empty() ? "default" : att_cycle);
+
 		ne.set_position(pos *32);
 		get_renderer()->add_client(ne);
 
@@ -585,9 +531,16 @@ entity* entity_manager::script_add_entity(const std::string & path)
 	assert(get_renderer() != nullptr);
 	assert(mTexture_manager != nullptr);
 	auto& ne = mEntities.add_item();
-	ne.load_entity_xml(path, *mTexture_manager);
+	ne.load_entity(path, *mTexture_manager);
 	get_renderer()->add_client(ne);
 	return &ne;
+}
+
+entity* entity_manager::script_add_entity_atlas(const std::string & path, const std::string& atlas)
+{
+	entity* e = script_add_entity(path);
+	e->set_animation(atlas);
+	return e;
 }
 
 void rpg::entity_manager::script_remove_entity(entity * e)
@@ -609,7 +562,7 @@ entity* entity_manager::script_add_character(const std::string & path)
 	assert(get_renderer() != nullptr);
 	assert(mTexture_manager != nullptr);
 	auto& nc = mCharacters.add_item();
-	nc.load_entity_xml(path, *mTexture_manager);
+	nc.load_entity(path, *mTexture_manager);
 	nc.set_cycle(character::e_cycle::def);
 	get_renderer()->add_client(nc);
 	return &nc;
@@ -669,16 +622,16 @@ void entity_manager::script_set_depth_fixed(entity * e, bool pFixed)
 	e->set_dynamic_depth(!pFixed);
 }
 
-void entity_manager::script_start_animation(entity* e, int type)
+void entity_manager::script_start_animation(entity* e)
 {
 	assert(e != nullptr);
-	e->play_withtype(static_cast<entity::e_type>(type));
+	e->play_animation();
 }
 
-void entity_manager::script_stop_animation(entity* e, int type)
+void entity_manager::script_stop_animation(entity* e)
 {
 	assert(e != nullptr);
-	e->stop_withtype(static_cast<entity::e_type>(type));
+	e->stop_animation();
 }
 
 void entity_manager::script_set_animation(entity* e, const std::string & name)
@@ -724,13 +677,14 @@ bool rpg::entity_manager::script_validate_entity(entity * e)
 void entity_manager::load_script_interface(script_system& pScript)
 {
 	pScript.add_function("entity add_entity(const string &in)", asMETHOD(entity_manager, script_add_entity), this);
+	pScript.add_function("entity add_entity(const string &in, const string &in)", asMETHOD(entity_manager, script_add_entity_atlas), this);
 	pScript.add_function("entity add_character(const string &in)", asMETHOD(entity_manager, script_add_character), this);
 	pScript.add_function("void set_position(entity, const vec &in)", asMETHOD(entity_manager, script_set_position), this);
 	pScript.add_function("vec get_position(entity)", asMETHOD(entity_manager, script_get_position), this);
 	pScript.add_function("void set_direction(entity, int)", asMETHOD(entity_manager, script_set_direction), this);
 	pScript.add_function("void set_cycle(entity, const string &in)", asMETHOD(entity_manager, script_set_cycle), this);
-	pScript.add_function("void _start_animation(entity, int)", asMETHOD(entity_manager, script_start_animation), this);
-	pScript.add_function("void _stop_animation(entity, int)", asMETHOD(entity_manager, script_stop_animation), this);
+	pScript.add_function("void _start_animation(entity)", asMETHOD(entity_manager, script_start_animation), this);
+	pScript.add_function("void _stop_animation(entity)", asMETHOD(entity_manager, script_stop_animation), this);
 	pScript.add_function("void set_animation(entity, const string &in)", asMETHOD(entity_manager, script_set_animation), this);
 	pScript.add_function("entity find_entity(const string &in)", asMETHOD(entity_manager, find_entity), this);
 	pScript.add_function("bool is_character(entity)", asMETHOD(entity_manager, is_character), this);
@@ -801,16 +755,7 @@ util::error scene::load_scene_xml(std::string pPath, script_system& pScript, fla
 	if (ele_collisionboxes)
 		mCollision_system.load_collision_boxes(ele_collisionboxes, pFlags);
 
-	// Load tilemap texture
-	if (auto ele_tilemap_tex = ele_root->FirstChildElement("tilemap_texture"))
-	{
-		auto tex = mTexture_manager->get_texture(ele_tilemap_tex->GetText());
-		if (!tex)
-			return util::error("Invalid tilemap texture");
-		mTilemap_display.set_texture(*tex);
-	}
-	else
-		return util::error("Tilemap texture is not defined");
+
 	
 
 	if (auto ele_entities = ele_root->FirstChildElement("entities"))
@@ -841,8 +786,20 @@ util::error scene::load_scene_xml(std::string pPath, script_system& pScript, fla
 	
 	if (auto ele_map = ele_root->FirstChildElement("map"))
 	{
-		mTilemap_loader.load_tilemap_xml(ele_map);
-		mTilemap_loader.update_display(mTilemap_display);
+		// Load tilemap texture
+		if (auto ele_texture = ele_map->FirstChildElement("texture"))
+		{
+			auto tex = mTexture_manager->get_texture(ele_texture->GetText());
+			if (!tex)
+				return util::error("Invalid tilemap texture");
+			mTilemap_display.set_texture(*tex);
+
+			mTilemap_loader.load_tilemap_xml(ele_map);
+			mTilemap_loader.update_display(mTilemap_display);
+		}
+		else
+			return util::error("Tilemap texture is not defined");
+
 	}
 	return 0;
 }
@@ -1007,6 +964,12 @@ script_system::register_vector_type()
 	mEngine->RegisterObjectMethod("vec", "vec& opMulAssign(const vec &in)"
 		, asMETHODPR(engine::fvector, operator*=<float>, (const engine::fvector&), engine::fvector&)
 		, asCALL_THISCALL);
+	mEngine->RegisterObjectMethod("vec", "vec& opMulAssign(float)"
+		, asMETHODPR(engine::fvector, operator*=, (float), engine::fvector&)
+		, asCALL_THISCALL);
+	mEngine->RegisterObjectMethod("vec", "vec& opDivAssign(float)"
+		, asMETHODPR(engine::fvector, operator/=, (float), engine::fvector&)
+		, asCALL_THISCALL);
 
 	// Arthimic
 	mEngine->RegisterObjectMethod("vec", "vec opAdd(const vec &in) const"
@@ -1018,12 +981,11 @@ script_system::register_vector_type()
 	mEngine->RegisterObjectMethod("vec", "vec opMul(const vec &in) const"
 		, asMETHODPR(engine::fvector, operator*<float>, (const engine::fvector&) const, engine::fvector)
 		, asCALL_THISCALL);
-
-	mEngine->RegisterObjectMethod("vec", "vec opMul(const float &in) const"
-		, asMETHODPR(engine::fvector, operator*<float>, (const float&) const, engine::fvector)
+	mEngine->RegisterObjectMethod("vec", "vec opMul(float) const"
+		, asMETHODPR(engine::fvector, operator*<float>, (float) const, engine::fvector)
 		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "vec opDiv(const float &in) const"
-		, asMETHODPR(engine::fvector, operator/<float>, (const float&) const, engine::fvector)
+	mEngine->RegisterObjectMethod("vec", "vec opDiv(float) const"
+		, asMETHODPR(engine::fvector, operator/<float>, (float) const, engine::fvector)
 		, asCALL_THISCALL);
 
 	// Distance
@@ -1102,8 +1064,8 @@ util::error
 script_system::load_scene_script(const std::string& pPath)
 {
 	mCtxmgr.AbortAll();
-	mEngine->DiscardModule("scene");
-	mBuilder.StartNewModule(mEngine, "scene");
+	mEngine->DiscardModule(pPath.c_str());
+	mBuilder.StartNewModule(mEngine, pPath.c_str());
 	mBuilder.AddSectionFromMemory("scene_commands", "#include 'data/internal/scene_commands.as'");
 	mBuilder.AddSectionFromFile(pPath.c_str());
 	if (mBuilder.BuildModule())
@@ -1254,7 +1216,8 @@ void game::open_game(size_t pSlot)
 	file.load_flags(mFlags);
 	file.load_player(mPlayer);
 	mScript.about_all();
-	if (mScript.is_executing()) {
+	if (mScript.is_executing())
+	{
 		mRequest_load = true;
 		mNew_scene_path = file.get_scene_path();
 	}
@@ -1364,9 +1327,9 @@ game::load_game_xml(std::string pPath)
 	auto ele_player = ele_root->FirstChildElement("player");
 	if (!ele_player)
 		return "Please specify the player";
-	std::string player_path = util::safe_string(ele_player->Attribute("path"));
+	std::string player_path = util::safe_string(ele_player->Attribute("texture"));
 
-	mPlayer.load_entity_xml(player_path, mTexture_manager);
+	mPlayer.load_entity(player_path, mTexture_manager);
 	mPlayer.set_position({ 64, 120 });
 	mPlayer.set_cycle(character::e_cycle::def);
 	
