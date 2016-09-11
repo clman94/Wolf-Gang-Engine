@@ -237,7 +237,7 @@ private:
 
 enum struct anchor
 {
-	top,
+	top = 0,
 	topleft,
 	topright,
 	bottom,

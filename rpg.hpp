@@ -460,7 +460,7 @@ private:
 	void            script_start_animation(entity* e);
 	void            script_stop_animation(entity* e);
 	void            script_set_animation(entity* e, const std::string& name);
-	void            script_set_anchor(entity* e, engine::anchor pAnchor);
+	void            script_set_anchor(entity* e, int pAnchor);
 	void            script_set_rotation(entity* e, float pRotation);
 	void            script_set_color(entity* e, int r, int g, int b, int a);
 	bool            script_validate_entity(entity* e);
@@ -597,7 +597,10 @@ private:
 
 	void player_scene_interact();
 
+	void script_set_focus(engine::fvector pPosition);
+	engine::fvector script_get_focus();
 	entity* script_get_player();
+	void script_load_scene(const std::string& pPath);
 	void load_script_interface();
 
 	float get_delta();

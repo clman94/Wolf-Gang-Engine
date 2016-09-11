@@ -298,7 +298,7 @@ collision_system::load_collision_boxes(tinyxml2::XMLElement* pEle, flag_containe
 			door nd;
 			nd.load_xml(ele_item);
 			nd.name = util::safe_string(ele_item->Attribute("name"));
-			nd.destination = util::safe_string(ele_item->Attribute("dest"));
+			nd.destination = util::safe_string(ele_item->Attribute("destination"));
 			nd.scene_path = util::safe_string(ele_item->Attribute("scene"));
 			nd.offset.x = ele_item->FloatAttribute("offsetx")*32;
 			nd.offset.y = ele_item->FloatAttribute("offsety")*32;
@@ -640,10 +640,10 @@ void entity_manager::script_set_animation(entity* e, const std::string & name)
 	e->set_animation(name);
 }
 
-void entity_manager::script_set_anchor(entity * e, engine::anchor pAnchor)
+void entity_manager::script_set_anchor(entity * e, int pAnchor)
 {
 	assert(e != nullptr);
-	e->set_anchor(pAnchor);
+	e->set_anchor(static_cast<engine::anchor>(pAnchor));
 }
 
 void entity_manager::script_set_rotation(entity * e, float pRotation)
@@ -683,16 +683,16 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("vec get_position(entity)", asMETHOD(entity_manager, script_get_position), this);
 	pScript.add_function("void set_direction(entity, int)", asMETHOD(entity_manager, script_set_direction), this);
 	pScript.add_function("void set_cycle(entity, const string &in)", asMETHOD(entity_manager, script_set_cycle), this);
-	pScript.add_function("void _start_animation(entity)", asMETHOD(entity_manager, script_start_animation), this);
-	pScript.add_function("void _stop_animation(entity)", asMETHOD(entity_manager, script_stop_animation), this);
+	pScript.add_function("void start_animation(entity)", asMETHOD(entity_manager, script_start_animation), this);
+	pScript.add_function("void stop_animation(entity)", asMETHOD(entity_manager, script_stop_animation), this);
 	pScript.add_function("void set_animation(entity, const string &in)", asMETHOD(entity_manager, script_set_animation), this);
 	pScript.add_function("entity find_entity(const string &in)", asMETHOD(entity_manager, find_entity), this);
 	pScript.add_function("bool is_character(entity)", asMETHOD(entity_manager, is_character), this);
 	pScript.add_function("void remove_entity(entity)", asMETHOD(entity_manager, script_remove_entity), this);
 	pScript.add_function("void set_depth(entity, float)", asMETHOD(entity_manager, script_set_depth), this);
 	pScript.add_function("void set_depth_fixed(entity, bool)", asMETHOD(entity_manager, script_set_depth_fixed), this);
-	pScript.add_function("void set_name(entity, const string &in)", asMETHOD(entity_manager, script_set_depth_fixed), this);
-	pScript.add_function("void _set_anchor(entity, int)", asMETHOD(entity_manager, script_set_name), this);
+	pScript.add_function("void set_name(entity, const string &in)", asMETHOD(entity_manager, script_set_name), this);
+	pScript.add_function("void _set_anchor(entity, int)", asMETHOD(entity_manager, script_set_anchor), this);
 	pScript.add_function("void set_rotation(entity, float)", asMETHOD(entity_manager, script_set_rotation), this);
 	pScript.add_function("void set_color(entity, int, int, int, int)", asMETHOD(entity_manager, script_set_color), this);
 	pScript.add_function("bool _validate_entity(entity)", asMETHOD(entity_manager, script_validate_entity), this);
@@ -730,7 +730,6 @@ scene::clean_scene()
 	mTilemap_loader.clean();
 	mCollision_system.clean();
 	mEntity_manager.clean();
-	mBackground_music.clean();
 }
 
 
@@ -809,6 +808,7 @@ scene::reload_scene(script_system & pScript, flag_container & pFlags)
 {
 	if (mScene_path.empty())
 		return util::error("No scene currently loaded");
+	mBackground_music.clean();
 	return load_scene_xml(mScene_path, pScript, pFlags);
 }
 
@@ -971,7 +971,7 @@ script_system::register_vector_type()
 		, asMETHODPR(engine::fvector, operator/=, (float), engine::fvector&)
 		, asCALL_THISCALL);
 
-	// Arthimic
+	// Arithmic
 	mEngine->RegisterObjectMethod("vec", "vec opAdd(const vec &in) const"
 		, asMETHODPR(engine::fvector, operator+<float>, (const engine::fvector&) const, engine::fvector)
 		, asCALL_THISCALL);
@@ -986,6 +986,9 @@ script_system::register_vector_type()
 		, asCALL_THISCALL);
 	mEngine->RegisterObjectMethod("vec", "vec opDiv(float) const"
 		, asMETHODPR(engine::fvector, operator/<float>, (float) const, engine::fvector)
+		, asCALL_THISCALL);
+	mEngine->RegisterObjectMethod("vec", "vec opNeg() const"
+		, asMETHODPR(engine::fvector, operator-, () const, engine::fvector)
 		, asCALL_THISCALL);
 
 	// Distance
@@ -1267,9 +1270,25 @@ game::player_scene_interact()
 	}
 }
 
+void game::script_set_focus(engine::fvector pPosition)
+{
+	mRoot_node.set_focus(pPosition * 32);
+}
+
+engine::fvector game::script_get_focus()
+{
+	return mRoot_node.get_focus()/32;
+}
+
 entity* game::script_get_player()
 {
 	return &mPlayer;
+}
+
+void game::script_load_scene(const std::string & pPath)
+{
+	mRequest_load = true;
+	mNew_scene_path = pPath;
 }
 
 void
@@ -1284,14 +1303,15 @@ game::load_script_interface()
 
 	mScript.add_function("bool _is_triggered(int)", asMETHOD(controls, is_triggered), &mControls);
 
-	mScript.add_function("void set_focus(vec)", asMETHOD(panning_node, set_focus), &mRoot_node);
-	mScript.add_function("vec get_focus()", asMETHOD(panning_node, get_focus), &mRoot_node);
+	mScript.add_function("void set_focus(vec)", asMETHOD(game, script_set_focus), this);
+	mScript.add_function("vec get_focus()", asMETHOD(game, script_get_focus), this);
 
 	mScript.add_function("int _spawn_sound(const string&in)", asMETHOD(sound_manager, spawn_sound), &mSound_FX);
 	mScript.add_function("void _stop_all()", asMETHOD(sound_manager, stop_all), &mSound_FX);
 
 	mScript.add_function("void save_game(uint)", asMETHOD(game, save_game), this);
 	mScript.add_function("void open_game(uint)", asMETHOD(game, open_game), this);
+	mScript.add_function("void load_scene(const string &in)", asMETHOD(game, script_load_scene), this);
 
 	mFlags.load_script_interface(mScript);
 	mNarrative.load_script_interface(mScript);
@@ -1353,8 +1373,6 @@ game::load_game_xml(std::string pPath)
 void
 game::tick(controls& pControls)
 {
-	bool edit_mode = false;
-
 	float delta = get_renderer()->get_delta();
 
 	if (pControls.is_triggered(controls::control::reset))
@@ -1371,26 +1389,10 @@ game::tick(controls& pControls)
 	if (pControls.is_triggered(controls::control::menu))
 		save_game(mSlot);
 
-	if (edit_mode)
-	{
-		if (pControls.is_triggered(controls::control::left))
-			mRoot_node.set_position(mRoot_node.get_position() + engine::fvector( -delta, 0)*32);
-		if (pControls.is_triggered(controls::control::right))
-			mRoot_node.set_position(mRoot_node.get_position() + engine::fvector(delta, 0)*32);
-		if (pControls.is_triggered(controls::control::up))
-			mRoot_node.set_position(mRoot_node.get_position() + engine::fvector(0, -delta)*32);
-		if (pControls.is_triggered(controls::control::down))
-			mRoot_node.set_position(mRoot_node.get_position() + engine::fvector(0, delta)*32);
-	}
-	else{
-		mPlayer.movement(pControls, mScene.get_collision_system(), delta);
+	mPlayer.movement(pControls, mScene.get_collision_system(), delta);
 
-		if (!mPlayer.is_locked())
-		{
-			player_scene_interact();
-			mRoot_node.set_focus(mPlayer.get_position());
-		}
-	}
+	if (!mPlayer.is_locked())
+		player_scene_interact();
 
 	mTest_gui.update_camera_position(mRoot_node.get_exact_position());
 
@@ -1400,6 +1402,9 @@ game::tick(controls& pControls)
 		mRequest_load = false;
 		mScene.load_scene_xml(mNew_scene_path, mScript, mFlags);
 	}
+
+	if (!mPlayer.is_locked())
+		mRoot_node.set_focus(mPlayer.get_position());
 }
 
 void
