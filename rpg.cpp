@@ -42,9 +42,9 @@ void flag_container::load_script_interface(script_system & pScript)
 // #########
 
 util::error
-entity::load_entity(std::string path, texture_manager & tm)
+entity::load_entity(std::string pName, texture_manager & pTexture_manager)
 {
-	mTexture = tm.get_texture(path);
+	mTexture = pTexture_manager.get_texture(pName);
 	if (!mTexture)
 		util::error("Cannot find texture for entity");
 	return 0;
@@ -360,9 +360,9 @@ player_character::is_locked()
 
 engine::frect player_character::get_collision(direction pDirection)
 {
-	engine::fvector pos = get_position();
-	engine::fvector size = get_size() - engine::fvector(2, 2);
-	engine::fvector hsize = get_size() / 2;
+	const engine::fvector pos = get_position();
+	const engine::fvector size = get_size() - engine::fvector(2, 2);
+	const engine::fvector hsize = get_size() / 2;
 	switch (pDirection)
 	{
 	case direction::other: return{ pos, {32, 32} };
@@ -1350,7 +1350,6 @@ game::load_game_xml(std::string pPath)
 	std::string player_path = util::safe_string(ele_player->Attribute("texture"));
 
 	mPlayer.load_entity(player_path, mTexture_manager);
-	mPlayer.set_position({ 64, 120 });
 	mPlayer.set_cycle(character::e_cycle::def);
 	
 	mScene.set_texture_manager(mTexture_manager);
@@ -1394,8 +1393,6 @@ game::tick(controls& pControls)
 	if (!mPlayer.is_locked())
 		player_scene_interact();
 
-	mTest_gui.update_camera_position(mRoot_node.get_exact_position());
-
 	mScript.tick();
 	if (mRequest_load)
 	{
@@ -1405,6 +1402,8 @@ game::tick(controls& pControls)
 
 	if (!mPlayer.is_locked())
 		mRoot_node.set_focus(mPlayer.get_position());
+
+	mTest_gui.update_camera_position(mRoot_node.get_exact_position());
 }
 
 void
@@ -1466,7 +1465,7 @@ narrative_dialog::load_box(tinyxml2::XMLElement* pEle, texture_manager& pTexture
 {
 	auto ele_box = pEle->FirstChildElement("box");
 
-	std::string att_box_tex = ele_box->Attribute("tex");
+	std::string att_box_tex = ele_box->Attribute("texture");
 	std::string att_box_atlas = ele_box->Attribute("atlas");
 
 	auto tex = pTexture_manager.get_texture(att_box_tex);
@@ -2108,15 +2107,23 @@ void background_music::load_script_interface(script_system & pScript)
 	pScript.add_function("float _music_position()", asMETHOD(engine::sound_stream, get_position), &mStream);
 	pScript.add_function("void _music_volume(float)", asMETHOD(engine::sound_stream, set_volume), &mStream);
 	pScript.add_function("void _music_set_loop(bool)", asMETHOD(engine::sound_stream, set_loop), &mStream);
-	pScript.add_function("int _music_open(const string &in)", asMETHOD(engine::sound_stream, open), &mStream);
+	pScript.add_function("int _music_open(const string &in)", asMETHOD(background_music, script_music_open), this);
 	pScript.add_function("bool _music_is_playing()", asMETHOD(engine::sound_stream, is_playing), &mStream);
 	pScript.add_function("float _music_get_duration()", asMETHOD(engine::sound_stream, get_duration), &mStream);
-
 }
 
 void background_music::clean()
 {
 	mStream.stop();
+}
+
+void background_music::script_music_open(const std::string & pPath)
+{
+	if (mPath != pPath)
+	{
+		mPath = pPath;
+		mStream.open(pPath);
+	}
 }
 
 // ##########
