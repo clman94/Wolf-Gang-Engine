@@ -258,7 +258,7 @@ public:
 	void add_trigger(trigger& t);
 	void add_button(trigger& t);
 	void clean();
-	util::error load_collision_boxes(tinyxml2::XMLElement* pEle, flag_container& pFlags);
+	util::error load_collision_boxes(tinyxml2::XMLElement* pEle);
 
 private:
 	std::list<collision_box> mWalls;
@@ -499,15 +499,15 @@ private:
 
 class scene :
 	public engine::render_proxy,
-	public engine::node
+	public panning_node
 {
 public:
 	scene();
 	collision_system& get_collision_system();
 
 	void clean_scene();
-	util::error load_scene_xml(std::string pPath, script_system& pScript, flag_container& pFlags);
-	util::error reload_scene(script_system& pScript, flag_container& pFlags);
+	util::error load_scene(std::string pPath);
+	util::error reload_scene();
 
 	const std::string& get_path()
 	{ return mScene_path; }
@@ -515,28 +515,39 @@ public:
 	const std::string& get_name()
 	{ return mScene_name; }
 
-	const engine::fvector& get_boundary()
-	{ return mBoundary; }
-
 	void load_script_interface(script_system& pScript);
-
 	void set_texture_manager(texture_manager& pTexture_manager);
+	void load_game_xml(tinyxml2::XMLElement* ele_root);
+
+	player_character& get_player()
+	{ return mPlayer; }
+
+	void tick(controls &pControls);
+
+	void focus_player(bool pFocus);
 
 private:
+	texture_manager*  mTexture_manager;
+	script_system*    mScript;
+
 	tilemap_display   mTilemap_display;
 	tilemap_loader    mTilemap_loader;
 	collision_system  mCollision_system;
-	texture_manager*  mTexture_manager;
-	script_system*    mScript;
 	entity_manager    mEntity_manager;
 	particle_manager  mParticle_system;
 	background_music  mBackground_music;
+	narrative_dialog  mNarrative;
+	sound_manager     mSound_FX;
+	player_character  mPlayer;
 
-	void script_set_tile(const std::string& pAtlas
-		, engine::fvector pPosition, int pLayer, int pRotation);
-	void script_remove_tile(engine::fvector pPosition, int pLayer);
+	bool              mFocus_player;
 
-	engine::fvector mBoundary;
+	void            script_set_tile(const std::string& pAtlas
+		                  , engine::fvector pPosition, int pLayer, int pRotation);
+	void            script_remove_tile(engine::fvector pPosition, int pLayer);
+	void            script_set_focus(engine::fvector pPosition);
+	engine::fvector script_get_focus();
+	entity*         script_get_player();
 
 	std::string mScene_path;
 	std::string mScene_name;
@@ -547,8 +558,6 @@ protected:
 
 class save_system
 {
-	tinyxml2::XMLDocument mDocument;
-	tinyxml2::XMLElement *mEle_root;
 public:
 	save_system();
 
@@ -563,6 +572,10 @@ public:
 	void save_flags(flag_container& pFlags);
 	void save_scene(scene& pScene);
 	void save_player(player_character& pPlayer);
+
+private:
+	tinyxml2::XMLDocument mDocument;
+	tinyxml2::XMLElement *mEle_root;
 };
 
 class game :
@@ -578,13 +591,9 @@ protected:
 	void refresh_renderer(engine::renderer& r);
 
 private:
-	panning_node     mRoot_node;
 	scene            mScene;
-	player_character mPlayer;
 	texture_manager  mTexture_manager;
 	flag_container   mFlags;
-	narrative_dialog mNarrative;
-	sound_manager    mSound_FX;
 	script_system    mScript;
 	controls         mControls;
 	size_t           mSlot;
@@ -597,12 +606,8 @@ private:
 	std::string get_slot_path(size_t pSlot);
 	void save_game(size_t pSlot);
 	void open_game(size_t pSlot);
+	bool is_slot_used(size_t pSlot);
 
-	void player_scene_interact();
-
-	void script_set_focus(engine::fvector pPosition);
-	engine::fvector script_get_focus();
-	entity* script_get_player();
 	void script_load_scene(const std::string& pPath);
 	void load_script_interface();
 

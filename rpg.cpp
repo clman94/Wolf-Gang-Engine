@@ -277,7 +277,7 @@ collision_system::clean()
 }
 
 util::error
-collision_system::load_collision_boxes(tinyxml2::XMLElement* pEle, flag_container& pFlags)
+collision_system::load_collision_boxes(tinyxml2::XMLElement* pEle)
 {
 	assert(pEle != nullptr);
 
@@ -518,7 +518,7 @@ entity_manager::load_characters(tinyxml2::XMLElement * e)
 		std::string att_cycle = util::safe_string(ele->Attribute("cycle"));
 		ne.set_cycle(att_cycle.empty() ? "default" : att_cycle);
 
-		ne.set_position(pos *32);
+		ne.set_position(pos * 32);
 		get_renderer()->add_client(ne);
 
 		ele = ele->NextSiblingElement();
@@ -712,6 +712,8 @@ scene::scene()
 	mTilemap_display.set_depth(defs::TILES_DEPTH);
 	add_child(mTilemap_display);
 	add_child(mEntity_manager);
+	add_child(mPlayer);
+	mFocus_player = true;
 }
 
 collision_system&
@@ -730,12 +732,25 @@ scene::clean_scene()
 	mTilemap_loader.clean();
 	mCollision_system.clean();
 	mEntity_manager.clean();
+	mNarrative.hide_box();
+	mSound_FX.stop_all();
+
+	focus_player(true);
+
+	mPlayer.set_color({ 255, 255, 255, 255 });
+	mPlayer.set_position({ 0, 0 });
+	mPlayer.set_locked(false);
+	mPlayer.set_cycle_group("default");
+	mPlayer.set_cycle("default");
+	mPlayer.set_dynamic_depth(true);
+	mPlayer.set_rotation(0);
 }
 
 
-util::error scene::load_scene_xml(std::string pPath, script_system& pScript, flag_container& pFlags)
+util::error scene::load_scene(std::string pPath)
 {
 	assert(mTexture_manager != nullptr);
+	assert(mScript != nullptr);
 
 	using namespace tinyxml2;
 
@@ -752,10 +767,7 @@ util::error scene::load_scene_xml(std::string pPath, script_system& pScript, fla
 	// Load collision boxes
 	auto ele_collisionboxes = ele_root->FirstChildElement("collisionboxes");
 	if (ele_collisionboxes)
-		mCollision_system.load_collision_boxes(ele_collisionboxes, pFlags);
-
-
-	
+		mCollision_system.load_collision_boxes(ele_collisionboxes);
 
 	if (auto ele_entities = ele_root->FirstChildElement("entities"))
 	{
@@ -772,15 +784,17 @@ util::error scene::load_scene_xml(std::string pPath, script_system& pScript, fla
 		auto path = ele_script->Attribute("path");
 		if (path)
 		{
-			if (!pScript.load_scene_script(path).has_error())
-				pScript.setup_triggers(mCollision_system);
+			if (!mScript->load_scene_script(path).has_error())
+				mScript->setup_triggers(mCollision_system);
 		}
 	}
 
 	if (auto ele_boundary = ele_root->FirstChildElement("boundary"))
 	{
-		mBoundary.x = ele_boundary->FloatAttribute("w");
-		mBoundary.y = ele_boundary->FloatAttribute("h");
+		engine::fvector boundary;
+		boundary.x = ele_boundary->FloatAttribute("w");
+		boundary.y = ele_boundary->FloatAttribute("h");
+		set_boundary(boundary*32);
 	}
 	
 	if (auto ele_map = ele_root->FirstChildElement("map"))
@@ -798,27 +812,42 @@ util::error scene::load_scene_xml(std::string pPath, script_system& pScript, fla
 		}
 		else
 			return util::error("Tilemap texture is not defined");
-
 	}
+
+	// Pre-execute so the scene script can setup things before the render.
+	mScript->tick();
+	set_focus(mPlayer.get_position());
+
 	return 0;
 }
 
 util::error
-scene::reload_scene(script_system & pScript, flag_container & pFlags)
+scene::reload_scene()
 {
 	if (mScene_path.empty())
 		return util::error("No scene currently loaded");
 	mBackground_music.clean();
-	return load_scene_xml(mScene_path, pScript, pFlags);
+	return load_scene(mScene_path);
 }
 
 void scene::load_script_interface(script_system& pScript)
 {
+	mNarrative.load_script_interface(pScript);
 	mEntity_manager.load_script_interface(pScript);
 	mBackground_music.load_script_interface(pScript);
 
 	pScript.add_function("void set_tile(const string &in, vec, int, int)", asMETHOD(scene, script_set_tile), this);
 	pScript.add_function("void remove_tile(vec, int)", asMETHOD(scene, script_remove_tile), this);
+
+	pScript.add_function("int _spawn_sound(const string&in)", asMETHOD(sound_manager, spawn_sound), &mSound_FX);
+	pScript.add_function("void _stop_all()", asMETHOD(sound_manager, stop_all), &mSound_FX);
+	
+	pScript.add_function("entity get_player()", asMETHOD(scene, script_get_player), this);
+	pScript.add_function("void _lockplayer(bool)", asMETHOD(player_character, set_locked), &mPlayer);
+
+	pScript.add_function("void set_focus(vec)", asMETHOD(scene, script_set_focus), this);
+	pScript.add_function("vec get_focus()", asMETHOD(scene, script_get_focus), this);
+	pScript.add_function("void focus_player(bool)", asMETHOD(scene, focus_player), this);
 
 	mScript = &pScript;
 }
@@ -827,6 +856,97 @@ void scene::set_texture_manager(texture_manager& pTexture_manager)
 {
 	mTexture_manager = &pTexture_manager;
 	mEntity_manager.set_texture_manager(pTexture_manager);
+}
+
+void scene::load_game_xml(tinyxml2::XMLElement * ele_root)
+{
+	assert(ele_root != nullptr);
+
+	auto ele_player = ele_root->FirstChildElement("player");
+	if (!ele_player)
+	{
+		util::error("Please specify the player");
+		return;
+	}
+	std::string att_texture = util::safe_string(ele_player->Attribute("texture"));
+
+	mPlayer.load_entity(att_texture, *mTexture_manager);
+	mPlayer.set_cycle(character::e_cycle::def);
+
+	if (auto ele_sounds = ele_root->FirstChildElement("sounds"))
+	{
+		mSound_FX.load_sounds(ele_sounds);
+	}
+
+	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
+	{
+		assert(mTexture_manager != nullptr);
+		mNarrative.load_narrative_xml(ele_narrative, *mTexture_manager);
+	}
+}
+
+void
+scene::tick(controls &pControls)
+{
+	assert(get_renderer() != nullptr);
+
+	mPlayer.movement(pControls, mCollision_system, get_renderer()->get_delta());
+	if (mFocus_player)
+		set_focus(mPlayer.get_position());
+
+	{
+		auto pos = mPlayer.get_position();
+		auto trigger = mCollision_system.trigger_collision(pos);
+		if (trigger)
+		{
+			if (trigger->get_function().call())
+				trigger->get_function().set_arg(0, &pos);
+		}
+	}
+
+	{
+		auto pos = mPlayer.get_position();
+		auto door = mCollision_system.door_collision(pos);
+		if (door)
+		{
+			std::string destination = door->destination;
+			load_scene(door->scene_path);
+			auto nposition = mCollision_system.get_door_entry(destination);
+			mPlayer.set_position(nposition);
+		}
+	}
+
+	if (pControls.is_triggered(controls::control::activate))
+	{
+		auto pos = mPlayer.get_activation_point();
+		auto button = mCollision_system.button_collision(pos);
+		if (button)
+		{
+			if (button->get_function().call())
+				button->get_function().set_arg(0, &pos);
+		}
+	}
+}
+
+void scene::focus_player(bool pFocus)
+{
+	mFocus_player = pFocus;
+}
+
+void scene::script_set_focus(engine::fvector pPosition)
+{
+	mFocus_player = false;
+	set_focus(pPosition * 32);
+}
+
+engine::fvector scene::script_get_focus()
+{
+	return get_focus() / 32;
+}
+
+entity* scene::script_get_player()
+{
+	return &mPlayer;
 }
 
 void scene::script_set_tile(const std::string& pAtlas, engine::fvector pPosition
@@ -844,7 +964,10 @@ void scene::script_remove_tile(engine::fvector pPosition, int pLayer)
 
 void scene::refresh_renderer(engine::renderer& pR)
 {
+	set_viewport(pR.get_size());
 	pR.add_client(mTilemap_display);
+	pR.add_client(mNarrative);
+	pR.add_client(mPlayer);
 	mEntity_manager.set_renderer(pR);
 }
 
@@ -1069,7 +1192,7 @@ script_system::load_scene_script(const std::string& pPath)
 	mCtxmgr.AbortAll();
 	mEngine->DiscardModule(pPath.c_str());
 	mBuilder.StartNewModule(mEngine, pPath.c_str());
-	mBuilder.AddSectionFromMemory("scene_commands", "#include 'data/internal/scene_commands.as'");
+	mBuilder.AddSectionFromMemory("scene_commands", "#include 'data/internal/scene.as'");
 	mBuilder.AddSectionFromFile(pPath.c_str());
 	if (mBuilder.BuildModule())
 		return "Failed to load scene script";
@@ -1181,9 +1304,6 @@ bool script_system::is_executing()
 
 game::game()
 {
-	mRoot_node.add_child(mPlayer);
-	mRoot_node.add_child(mScene);
-	mNarrative.is_revealing();
 	load_script_interface();
 	mSlot = 0;
 }
@@ -1202,7 +1322,7 @@ void game::save_game(size_t pSlot)
 	file.new_save();
 	file.save_flags(mFlags);
 	file.save_scene(mScene);
-	file.save_player(mPlayer);
+	file.save_player(mScene.get_player());
 	file.save(path);
 	mSlot = pSlot;
 }
@@ -1217,7 +1337,7 @@ void game::open_game(size_t pSlot)
 		return;
 	}
 	file.load_flags(mFlags);
-	file.load_player(mPlayer);
+	file.load_player(mScene.get_player());
 	mScript.about_all();
 	if (mScript.is_executing())
 	{
@@ -1226,63 +1346,15 @@ void game::open_game(size_t pSlot)
 	}
 	else
 	{
-		mScene.load_scene_xml(file.get_scene_path(), mScript, mFlags);
+		mScene.load_scene(file.get_scene_path());
 	}
 }
 
-void
-game::player_scene_interact()
+bool game::is_slot_used(size_t pSlot)
 {
-	auto& collision = mScene.get_collision_system();
-
-	{
-		auto pos = mPlayer.get_position();
-		auto trigger = collision.trigger_collision(pos);
-		if (trigger)
-		{
-			if (trigger->get_function().call())
-				trigger->get_function().set_arg(0, &pos);
-		}
-	}
-
-	{		
-		auto pos = mPlayer.get_position();
-		auto door = collision.door_collision(pos);
-		if (door)
-		{
-			std::string destination = door->destination;
-			mScene.load_scene_xml(door->scene_path, mScript, mFlags);
-			auto nposition = collision.get_door_entry(destination);
-			mRoot_node.set_boundary(mScene.get_boundary() * 32);
-			mPlayer.set_position(nposition);
-		}
-	}
-
-	if (mControls.is_triggered(controls::control::activate))
-	{
-		auto pos = mPlayer.get_activation_point();
-		auto button = collision.button_collision(pos);
-		if (button)
-		{
-			if (button->get_function().call())
-				button->get_function().set_arg(0, &pos);
-		}
-	}
-}
-
-void game::script_set_focus(engine::fvector pPosition)
-{
-	mRoot_node.set_focus(pPosition * 32);
-}
-
-engine::fvector game::script_get_focus()
-{
-	return mRoot_node.get_focus()/32;
-}
-
-entity* game::script_get_player()
-{
-	return &mPlayer;
+	const std::string path = get_slot_path(pSlot);
+	std::ifstream stream(path.c_str());
+	return stream.good();
 }
 
 void game::script_load_scene(const std::string & pPath)
@@ -1297,24 +1369,15 @@ game::load_script_interface()
 	mScript.add_pointer_type("entity");
 
 	mScript.add_function("float get_delta()", asMETHOD(game, get_delta), this);
-	mScript.add_function("entity get_player()", asMETHOD(game, script_get_player), this);
-
-	mScript.add_function("void _lockplayer(bool)", asMETHOD(player_character, set_locked), &mPlayer);
 
 	mScript.add_function("bool _is_triggered(int)", asMETHOD(controls, is_triggered), &mControls);
 
-	mScript.add_function("void set_focus(vec)", asMETHOD(game, script_set_focus), this);
-	mScript.add_function("vec get_focus()", asMETHOD(game, script_get_focus), this);
-
-	mScript.add_function("int _spawn_sound(const string&in)", asMETHOD(sound_manager, spawn_sound), &mSound_FX);
-	mScript.add_function("void _stop_all()", asMETHOD(sound_manager, stop_all), &mSound_FX);
-
 	mScript.add_function("void save_game(uint)", asMETHOD(game, save_game), this);
 	mScript.add_function("void open_game(uint)", asMETHOD(game, open_game), this);
+	mScript.add_function("bool is_slot_used(uint)", asMETHOD(game, is_slot_used), this);
 	mScript.add_function("void load_scene(const string &in)", asMETHOD(game, script_load_scene), this);
 
 	mFlags.load_script_interface(mScript);
-	mNarrative.load_script_interface(mScript);
 	mScene.load_script_interface(mScript);
 }
 
@@ -1344,26 +1407,10 @@ game::load_game_xml(std::string pPath)
 		return "Please specify the texture file";
 	mTexture_manager.load_settings(ele_textures);
 
-	auto ele_player = ele_root->FirstChildElement("player");
-	if (!ele_player)
-		return "Please specify the player";
-	std::string player_path = util::safe_string(ele_player->Attribute("texture"));
-
-	mPlayer.load_entity(player_path, mTexture_manager);
-	mPlayer.set_cycle(character::e_cycle::def);
-	
 	mScene.set_texture_manager(mTexture_manager);
-	mScene.load_scene_xml(scene_path, mScript, mFlags);
+	mScene.load_game_xml(ele_root);
+	mScene.load_scene(scene_path);
 
-	if (auto ele_sounds = ele_root->FirstChildElement("sounds"))
-	{
-		mSound_FX.load_sounds(ele_sounds);
-	}
-
-	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
-	{
-		mNarrative.load_narrative_xml(ele_narrative, mTexture_manager);
-	}
 	mTest_gui.set_renderer(*get_renderer());
 	mTest_gui.initualize();
 	return 0;
@@ -1372,48 +1419,34 @@ game::load_game_xml(std::string pPath)
 void
 game::tick(controls& pControls)
 {
-	float delta = get_renderer()->get_delta();
-
 	if (pControls.is_triggered(controls::control::reset))
 	{
 		std::cout << "Reloading scene...\n";
-		mScene.reload_scene(mScript, mFlags);
+		mScene.reload_scene();
 		std::cout << "Done\n";
 	}
-
-	mRoot_node.set_boundary(mScene.get_boundary()*32);
 
 	mControls = pControls;
 
 	if (pControls.is_triggered(controls::control::menu))
 		save_game(mSlot);
 
-	mPlayer.movement(pControls, mScene.get_collision_system(), delta);
-
-	if (!mPlayer.is_locked())
-		player_scene_interact();
+	mScene.tick(pControls);
 
 	mScript.tick();
 	if (mRequest_load)
 	{
 		mRequest_load = false;
-		mScene.load_scene_xml(mNew_scene_path, mScript, mFlags);
+		mScene.load_scene(mNew_scene_path);
 	}
 
-	if (!mPlayer.is_locked())
-		mRoot_node.set_focus(mPlayer.get_position());
-
-	mTest_gui.update_camera_position(mRoot_node.get_exact_position());
+	mTest_gui.update_camera_position(mScene.get_exact_position());
 }
 
 void
 game::refresh_renderer(engine::renderer & pR)
 {
 	mScene.set_renderer(pR);
-	pR.add_client(mPlayer);
-	mRoot_node.set_viewport(pR.get_size());
-	mRoot_node.set_boundary({ 11*32, 11*32 });
-	pR.add_client(mNarrative);
 	pR.set_icon("data/icon.png");
 }
 
@@ -1594,6 +1627,7 @@ void narrative_dialog::hide_box()
 	mSelection.set_visible(false);
 	mExpression.set_visible(false);
 	reset_positions();
+	set_interval(defs::DEFAULT_DIALOG_SPEED);
 }
 
 bool narrative_dialog::is_box_open()

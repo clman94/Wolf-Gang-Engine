@@ -189,7 +189,7 @@ struct vector
 		if (!std::is_floating_point<T>::value)
 			return 0;
 
-		T a = std::atan2(y, x) * static_cast<T>(180 / 3.14159265); // Compiler complains without the static casts
+		T a = std::atan2(y, x) * static_cast<T>(180 / 3.14159265); // Compiler complains without these casts
 		return std::fmod(a + 360, static_cast<T>(360));
 	}
 	
