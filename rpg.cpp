@@ -2262,6 +2262,8 @@ void tilemap_display::set_tile(engine::fvector pPosition, const std::string & pA
 	auto &ntile = mLayers[pLayer].tiles[pPosition];
 	ntile.mRef = mLayers[pLayer].vertices.add_quad(pPosition, animation->get_frame_at(0), pRotation);
 	ntile.set_animation(animation);
+	if (animation->get_frame_count() > 1)
+		mAnimated_tiles.push_back(&ntile);
 }
 
 int tilemap_display::draw(engine::renderer& pR)
@@ -2280,18 +2282,24 @@ int tilemap_display::draw(engine::renderer& pR)
 
 void tilemap_display::update_animations()
 {
-	for (auto &i : mLayers)
-	{
-		for (auto &j : i.second.tiles)
+	try {
+		for (auto i : mAnimated_tiles)
 		{
-			j.second.update_animation();
+			i->update_animation();
 		}
+	}
+	catch (const std::exception& e)
+	{
+		util::error("Exception '" + std::string(e.what()) + "'");
+		util::error("Failed to animate tiles");
+		mAnimated_tiles.clear();
 	}
 }
 
 void tilemap_display::clean()
 {
 	mLayers.clear();
+	mAnimated_tiles.clear();
 }
 
 void tilemap_display::highlight_layer(int pLayer, engine::color pHighlight, engine::color pOthers)

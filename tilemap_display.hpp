@@ -34,7 +34,7 @@ private:
 		void update_animation();
 
 	private:
-		int rotation;
+		int mRotation;
 		engine::timer mTimer;
 		engine::frame_t mFrame;
 		const engine::animation* mAnimation;
@@ -45,6 +45,8 @@ private:
 		engine::vertex_batch vertices;
 		std::map<engine::fvector, tile> tiles;
 	};
+
+	std::vector<tile*> mAnimated_tiles;
 
 	std::map<int, layer> mLayers;
 };
