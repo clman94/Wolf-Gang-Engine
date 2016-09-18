@@ -10,6 +10,7 @@
 #include "types.hpp"
 #include "tinyxml2\tinyxml2.h"
 #include <unordered_map>
+#include <vector>
 
 namespace engine
 {
@@ -22,6 +23,7 @@ public:
 	frect get_entry(const std::string& pName);
 	const engine::animation* get_animation(const std::string& pName);
 	int load_atlas_xml(const std::string& pPath);
+	std::vector<std::string> compile_list();
 
 #ifdef ENGINE_INTERNAL
 	sf::Texture& sfml_get_texture()

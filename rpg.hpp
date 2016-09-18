@@ -601,7 +601,8 @@ private:
 	bool        mRequest_load;
 	std::string mNew_scene_path;
 	
-	editor::editor_gui mTest_gui;
+	editor::tilemap_editor mTilemap_editor;
+	editor::editor_gui     mTest_gui;
 
 	std::string get_slot_path(size_t pSlot);
 	void save_game(size_t pSlot);

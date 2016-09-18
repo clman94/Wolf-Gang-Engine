@@ -70,18 +70,18 @@ struct rect
 	{
 		if    (a.x <= b.x + b.w
 			&& a.y <= b.y + b.h
-			&& a.x + a.w >= b.x
-			&& a.y + a.h >= b.y)
+			&& a.x + a.w > b.x
+			&& a.y + a.h > b.y)
 			return true;
 		return false;
 	}
 
 	static bool is_intersect(const rect& a, const vector<T>& b)
 	{
-		if    (a.x <= b.x
+		if (a.x <= b.x
 			&& a.y <= b.y
-			&& a.x + a.w >= b.x
-			&& a.y + a.h >= b.y)
+			&& a.x + a.w > b.x
+			&& a.y + a.h > b.y)
 			return true;
 		return false;
 	}

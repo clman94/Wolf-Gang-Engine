@@ -1411,8 +1411,7 @@ game::load_game_xml(std::string pPath)
 	mScene.load_game_xml(ele_root);
 	mScene.load_scene(scene_path);
 
-	mTest_gui.set_renderer(*get_renderer());
-	mTest_gui.initualize();
+	mTilemap_editor.set_texture_manager(mTexture_manager);
 	return 0;
 }
 
@@ -1429,7 +1428,15 @@ game::tick(controls& pControls)
 	mControls = pControls;
 
 	if (pControls.is_triggered(controls::control::menu))
-		save_game(mSlot);
+	{
+		if (mTilemap_editor.is_visible())
+			mTilemap_editor.set_visible(false);
+		else
+		{
+			mTilemap_editor.set_visible(true);
+			mTilemap_editor.open_scene_tilemap(mScene.get_path());
+		}
+	}
 
 	mScene.tick(pControls);
 
@@ -1447,6 +1454,14 @@ void
 game::refresh_renderer(engine::renderer & pR)
 {
 	mScene.set_renderer(pR);
+
+	mTest_gui.set_renderer(*get_renderer());
+	mTest_gui.initualize();
+
+	mTilemap_editor.set_visible(false);
+	mTilemap_editor.set_editor_gui(mTest_gui);
+	pR.add_client(mTilemap_editor);
+
 	pR.set_icon("data/icon.png");
 }
 
@@ -1818,8 +1833,8 @@ tilemap_loader::tile::load_xml(tinyxml2::XMLElement * e, size_t _layer)
 
 	atlas = util::safe_string(e->Name());
 
-	pos.x = e->FloatAttribute("x");
-	pos.y = e->FloatAttribute("y");
+	position.x = e->FloatAttribute("x");
+	position.y = e->FloatAttribute("y");
 
 	fill.x = e->IntAttribute("w");
 	fill.y = e->IntAttribute("h");
@@ -1834,8 +1849,8 @@ tilemap_loader::tile::is_adjacent_above(tile & a)
 {
 	return (
 		atlas == a.atlas
-		&& pos.x == a.pos.x
-		&& pos.y == a.pos.y + a.fill.y
+		&& position.x == a.position.x
+		&& position.y == a.position.y + a.fill.y
 		&& fill.x == a.fill.x
 		);
 }
@@ -1845,8 +1860,8 @@ tilemap_loader::tile::is_adjacent_right(tile & a)
 {
 	return (
 		atlas == a.atlas
-		&& pos.y == a.pos.y
-		&& pos.x + fill.x == a.pos.x
+		&& position.y == a.position.y
+		&& position.x + fill.x == a.position.x
 		&& fill.y == a.fill.y
 		);
 }
@@ -1856,13 +1871,13 @@ tilemap_loader::find_tile(engine::fvector pos, size_t layer)
 {
 	for (auto &i : mTiles[layer])
 	{
-		if (i.pos == pos)
+		if (i.position == pos)
 			return &i;
 	}
 	return nullptr;
 }
 
-// Uses brute force to merge adjacent tiles
+// Uses brute force to merge adjacent tiles (till a little wonky)
 void
 tilemap_loader::condense_layer(std::vector<tile> &pMap)
 {
@@ -1870,7 +1885,7 @@ tilemap_loader::condense_layer(std::vector<tile> &pMap)
 		return;
 
 	std::sort(pMap.begin(), pMap.end(), [](tile& a, tile& b)
-	{ return (a.pos.y < b.pos.y) || ((a.pos.y == b.pos.y) && (a.pos.x < b.pos.x)); });
+	{ return (a.position.y < b.position.y) || ((a.position.y == b.position.y) && (a.position.x < b.position.x)); });
 
 	std::vector<tile> nmap;
 
@@ -1884,11 +1899,9 @@ tilemap_loader::condense_layer(std::vector<tile> &pMap)
 		{
 			ntile.fill.x += i->fill.x;
 		}
-
-		// Add tile
-		else
+		else // No more tiles to the right
 		{
-			// Merge any tile above this tile
+			// Merge ntime to any tile above
 			for (auto &j : nmap)
 			{
 				if (ntile.is_adjacent_above(j))
@@ -1898,7 +1911,7 @@ tilemap_loader::condense_layer(std::vector<tile> &pMap)
 					break;
 				}
 			}
-			if (!merged)
+			if (!merged) // Do not add when it was merged to another tile
 			{
 				nmap.push_back(ntile);
 			}
@@ -1906,8 +1919,7 @@ tilemap_loader::condense_layer(std::vector<tile> &pMap)
 			ntile = *i;
 		}
 	}
-	if (!merged)
-		nmap.push_back(ntile); // add last tile
+	nmap.push_back(ntile); // add last tile
 	pMap = std::move(nmap);
 }
 
@@ -1975,7 +1987,7 @@ tilemap_loader::find_tile_at(engine::fvector pPosition, int pLayer)
 {
 	for (auto &i : mTiles[pLayer])
 	{
-		if (engine::frect(i.pos, i.fill).is_intersect(pPosition))
+		if (engine::frect(i.position, i.fill).is_intersect(pPosition))
 		{
 			return &i;
 		}
@@ -1983,16 +1995,32 @@ tilemap_loader::find_tile_at(engine::fvector pPosition, int pLayer)
 	return nullptr;
 }
 
+void tilemap_loader::explode_tile(tile* pTile, int pLayer)
+{
+	auto atlas = pTile->atlas;
+	auto fill = pTile->fill;
+	int rotation = pTile->rotation;
+	auto position = pTile->position;
+	pTile->fill = { 1, 1 };
+	for (float x = 0; x < fill.x; x += 1)
+		for (float y = 0; y < fill.y; y += 1)
+			set_tile(position + engine::fvector(x, y), pLayer, atlas, rotation);
+}
+
 void
-tilemap_loader::break_tile(engine::fvector pPosition, int pLayer)
+tilemap_loader::explode_tile(engine::fvector pPosition, int pLayer)
 {
 	auto t = find_tile_at(pPosition, pLayer);
 	if (!t || t->fill == engine::fvector(1, 1))
 		return;
-	auto atlas = t->atlas;
-	auto fill = t->fill;
-	t->fill = { 1, 1 };
-	set_tile(pPosition, fill, pLayer, atlas, t->rotation);
+	explode_tile(t, pLayer);
+}
+
+void tilemap_loader::explode_all()
+{
+	for (auto &l : mTiles)
+		for (auto& i : l.second)
+			explode_tile(&i, l.first);
 }
 
 void
@@ -2013,8 +2041,8 @@ tilemap_loader::generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode * root)
 		for (auto &i : l.second)
 		{
 			auto ele = doc.NewElement(i.atlas.c_str());
-			ele->SetAttribute("x", i.pos.x);
-			ele->SetAttribute("y", i.pos.y);
+			ele->SetAttribute("x", i.position.x);
+			ele->SetAttribute("y", i.position.y);
 			if (i.fill.x > 1)    ele->SetAttribute("w", i.fill.x);
 			if (i.fill.y > 1)    ele->SetAttribute("h", i.fill.y);
 			if (i.rotation != 0) ele->SetAttribute("r", i.rotation);
@@ -2055,7 +2083,7 @@ tilemap_loader::set_tile(engine::fvector pPosition, int pLayer, const std::strin
 	{
 		mTiles[pLayer].emplace_back();
 		auto &nt = mTiles[pLayer].back();
-		nt.pos = pPosition;
+		nt.position = pPosition;
 		nt.fill = { 1, 1 };
 		nt.atlas = pAtlas;
 		nt.rotation = pRotation;
@@ -2072,7 +2100,7 @@ void tilemap_loader::remove_tile(engine::fvector pPosition, int pLayer)
 {
 	for (auto &i = mTiles[pLayer].begin(); i != mTiles[pLayer].end(); i++)
 	{
-		if (i->pos == pPosition)
+		if (i->position == pPosition)
 		{
 			mTiles[pLayer].erase(i);
 			break;
@@ -2093,7 +2121,7 @@ tilemap_loader::update_display(tilemap_display& tmA)
 			{
 				for (off.x = 0; off.x < i.fill.x; off.x++)
 				{
-					tmA.set_tile((i.pos + off)*mTile_size, i.atlas, l.first, i.rotation);
+					tmA.set_tile((i.position + off)*mTile_size, i.atlas, l.first, i.rotation);
 				}
 			}
 		}
@@ -2217,6 +2245,8 @@ void tilemap_display::set_texture(engine::texture & pTexture)
 
 void tilemap_display::set_tile(engine::fvector pPosition, const std::string & pAtlas, int pLayer, int pRotation)
 {
+	assert(mTexture != nullptr);
+
 	auto animation = mTexture->get_animation(pAtlas);
 	if (animation == nullptr)
 	{
@@ -2237,7 +2267,7 @@ int tilemap_display::draw(engine::renderer& pR)
 	{
 		auto& vb = i.second.vertices;
 		vb.set_texture(*mTexture);
-		vb.set_position(engine::fvector(get_exact_position()).floor());
+		vb.set_position(engine::fvector(get_exact_position()).round());
 		vb.draw(pR);
 	}
 	return 0;

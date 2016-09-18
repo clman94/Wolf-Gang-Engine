@@ -65,6 +65,14 @@ texture::load_atlas_xml(const std::string& pPath)
 	return 0;
 }
 
+std::vector<std::string> engine::texture::compile_list()
+{
+	std::vector<std::string> list;
+	for (auto& i : mAtlas)
+		list.push_back(i.first);
+	return std::move(list);
+}
+
 bool texture::load_animation_xml(tinyxml2::XMLElement * pEle, entry& pEntry)
 {
 	assert(pEle != nullptr);

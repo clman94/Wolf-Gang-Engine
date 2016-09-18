@@ -16,7 +16,8 @@ public:
 	util::error load_tilemap_xml(tinyxml2::XMLElement *root);
 	util::error load_tilemap_xml(std::string pPath);
 
-	void break_tile(engine::fvector pPosition, int pLayer);
+	void explode_tile(engine::fvector pPosition, int pLayer);
+	void explode_all();
 
 	void generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode* root);
 	void generate(const std::string& pPath);
@@ -32,7 +33,7 @@ public:
 private:
 	struct tile
 	{
-		engine::fvector pos, fill;
+		engine::fvector position, fill;
 		int rotation;
 		std::string atlas;
 		void load_xml(tinyxml2::XMLElement *e, size_t layer);
@@ -49,6 +50,8 @@ private:
 	util::error load_layer(tinyxml2::XMLElement *pEle, int pLayer);
 
 	tile* find_tile_at(engine::fvector pPosition, int pLayer);
+
+	void explode_tile(tile* pTile, int pLayer);
 };
 
 }

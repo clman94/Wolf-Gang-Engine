@@ -176,6 +176,15 @@ struct vector
 		return *this;
 	}
 
+	vector& round()
+	{
+		if (!std::is_floating_point<T>::value)
+			return *this;
+		x = std::round(x);
+		y = std::round(y);
+		return *this;
+	}
+
 	vector& normalize()
 	{
 		T d = distance();
