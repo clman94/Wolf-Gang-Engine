@@ -228,6 +228,8 @@ public:
 	vertex_reference add_quad(fvector pPosition, frect pTexture_rect, int pRotation = 0);
 	int draw(renderer &pR);
 
+	void set_color(color pColor);
+
 	friend class vertex_reference;
 
 private:
@@ -300,6 +302,11 @@ public:
 	{
 		shape.setSize({s.x, s.y});
 	}
+	fvector get_size()
+	{
+		return{ shape.getSize().x, shape.getSize().y };
+	}
+
 	virtual int draw(renderer &pR)
 	{
 		auto pos = get_exact_position();

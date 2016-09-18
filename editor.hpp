@@ -60,12 +60,12 @@ public:
 	void set_editor_gui(editor_gui& pEditor_gui)
 	{
 		mEditor_gui = &pEditor_gui;
-		setup_controls(pEditor_gui);
+		setup_editor(pEditor_gui);
 	}
 private:
 	editor_gui* mEditor_gui;
 protected:
-	virtual void setup_controls(editor_gui& pEditor_gui){}
+	virtual void setup_editor(editor_gui& pEditor_gui){}
 	editor_gui* get_editor_gui()
 	{ return mEditor_gui; }
 };
@@ -84,6 +84,7 @@ private:
 	size_t mCurrent_tile;
 	int    mRotation;
 	int    mLayer;
+	bool   mIs_highlight;
 
 	std::string mPath;
 
@@ -97,6 +98,8 @@ private:
 	engine::sprite_node mPreview;
 
 	engine::rectangle_node mBlackout;
+	engine::rectangle_node mLines[4];
+
 	rpg::tilemap_loader    mTilemap_loader;
 	rpg::tilemap_display   mTilemap_display;
 	rpg::texture_manager*  mTexture_manager;
@@ -105,11 +108,16 @@ private:
 	tgui::Label::Ptr mLb_layer;
 	tgui::Label::Ptr mLb_rotation;
 
-	void setup_controls(editor_gui& pEditor_gui);
+	void setup_editor(editor_gui& pEditor_gui);
+	void setup_lines();
 	void movement(engine::renderer& pR);
 
 	void update_labels();
 	void update_preview();
+	void update_highlight();
+	void update_lines(engine::fvector pBoundary);
+
+	void tick_highlight(engine::renderer & pR);
 
 	void save();
 };

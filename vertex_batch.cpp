@@ -87,3 +87,11 @@ vertex_batch::draw(renderer &_r)
 	_r.get_sfml_render().draw(&mVertices[0], mVertices.size(), sf::Quads, rs);
 	return 0;
 }
+
+void vertex_batch::set_color(color pColor)
+{
+	for (auto& i : mVertices)
+	{
+		i.color = pColor;
+	}
+}

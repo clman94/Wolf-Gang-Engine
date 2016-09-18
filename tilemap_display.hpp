@@ -14,10 +14,11 @@ public:
 	void set_tile(engine::fvector pPosition, const std::string& pAtlas, int pLayer, int pRotation);
 
 	int draw(engine::renderer &pR);
-
 	void update_animations();
-
 	void clean();
+
+	void highlight_layer(int pLayer, engine::color pHighlight, engine::color pOthers);
+	void remove_highlight();
 
 private:
 	engine::texture *mTexture;

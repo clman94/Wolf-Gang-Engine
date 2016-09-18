@@ -724,7 +724,7 @@ scene::get_collision_system()
 
 
 void
-scene::clean_scene()
+scene::clean_scene(bool pFull)
 {
 	mScript->about_all();
 
@@ -744,6 +744,11 @@ scene::clean_scene()
 	mPlayer.set_cycle("default");
 	mPlayer.set_dynamic_depth(true);
 	mPlayer.set_rotation(0);
+
+	if (pFull)
+	{
+		mBackground_music.clean();
+	}
 }
 
 
@@ -825,7 +830,7 @@ util::error
 scene::reload_scene()
 {
 	if (mScene_path.empty())
-		return util::error("No scene currently loaded");
+		return util::error("No scene to reload");
 	mBackground_music.clean();
 	return load_scene(mScene_path);
 }
@@ -1430,13 +1435,19 @@ game::tick(controls& pControls)
 	if (pControls.is_triggered(controls::control::menu))
 	{
 		if (mTilemap_editor.is_visible())
+		{
 			mTilemap_editor.set_visible(false);
+			mScene.reload_scene();
+		}
 		else
 		{
 			mTilemap_editor.set_visible(true);
 			mTilemap_editor.open_scene_tilemap(mScene.get_path());
+			mScene.clean_scene(true);
 		}
 	}
+	if (mTilemap_editor.is_visible())
+		return;
 
 	mScene.tick(pControls);
 
@@ -1954,6 +1965,8 @@ tilemap_loader::tilemap_loader()
 util::error
 tilemap_loader::load_tilemap_xml(tinyxml2::XMLElement *pRoot)
 {
+	clean();
+
 	if (auto att_path = pRoot->Attribute("path"))
 	{
 		load_tilemap_xml(util::safe_string(att_path));
@@ -2279,6 +2292,25 @@ void tilemap_display::update_animations()
 void tilemap_display::clean()
 {
 	mLayers.clear();
+}
+
+void tilemap_display::highlight_layer(int pLayer, engine::color pHighlight, engine::color pOthers)
+{
+	for (auto& l : mLayers)
+	{
+		if (l.first == pLayer)
+			l.second.vertices.set_color(pHighlight);
+		else
+			l.second.vertices.set_color(pOthers);
+	}
+}
+
+void tilemap_display::remove_highlight()
+{
+	for (auto& l : mLayers)
+	{
+		l.second.vertices.set_color({255, 255, 255, 255});
+	}
 }
 
 void tilemap_display::tile::set_animation(const engine::animation* pAnimation)
