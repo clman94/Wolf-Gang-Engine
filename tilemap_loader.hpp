@@ -4,6 +4,7 @@
 #include "renderer.hpp"
 #include "tilemap_display.hpp"
 #include "tinyxml2\tinyxml2.h"
+#include <map>
 namespace rpg {
 
 class tilemap_loader
@@ -31,6 +32,8 @@ public:
 	void clean();
 
 private:
+
+
 	struct tile
 	{
 		engine::fvector position, fill;
@@ -40,12 +43,16 @@ private:
 		bool is_adjacent_above(tile& a);
 		bool is_adjacent_right(tile& a);
 	};
-	std::map<int, std::vector<tile>> mTiles;
+
+	typedef std::map<engine::fvector, tile> layer;
+	typedef std::map<int, layer> map;
+
+	map mMap;
 	tile* find_tile(engine::fvector pos, size_t layer);
 
 	engine::fvector mTile_size;
 
-	void condense_layer(std::vector<tile> &pMap);
+	void condense_layer(layer &pMap);
 
 	util::error load_layer(tinyxml2::XMLElement *pEle, int pLayer);
 

@@ -1869,65 +1869,64 @@ tilemap_loader::tile::is_adjacent_right(tile & a)
 tilemap_loader::tile*
 tilemap_loader::find_tile(engine::fvector pos, size_t layer)
 {
-	for (auto &i : mTiles[layer])
+	for (auto &i : mMap[layer])
 	{
-		if (i.position == pos)
-			return &i;
+		if (i.second.position == pos)
+			return &i.second;
 	}
 	return nullptr;
 }
 
-// Uses brute force to merge adjacent tiles (till a little wonky)
+// Uses brute force to merge adjacent tiles (still a little wonky)
 void
-tilemap_loader::condense_layer(std::vector<tile> &pMap)
+tilemap_loader::condense_layer(layer &pMap)
 {
 	if (pMap.size() < 2)
 		return;
 
-	std::sort(pMap.begin(), pMap.end(), [](tile& a, tile& b)
-	{ return (a.position.y < b.position.y) || ((a.position.y == b.position.y) && (a.position.x < b.position.x)); });
+	layer nmap;
 
-	std::vector<tile> nmap;
-
-	tile ntile = pMap.front();
+	tile new_tile = pMap.begin()->second;
 
 	bool merged = false;
-	for (auto &i = pMap.begin() + 1; i != pMap.end(); i++)
+	for (auto &i = pMap.begin(); i != pMap.end(); i++)
 	{
+		auto& current_tile = i->second;
+
 		// Merge adjacent tile 
-		if (ntile.is_adjacent_right(*i))
+		if (new_tile.is_adjacent_right(current_tile))
 		{
-			ntile.fill.x += i->fill.x;
+			new_tile.fill.x += current_tile.fill.x;
 		}
 		else // No more tiles to the right
 		{
 			// Merge ntime to any tile above
 			for (auto &j : nmap)
 			{
-				if (ntile.is_adjacent_above(j))
+				if (new_tile.is_adjacent_above(j.second))
 				{
-					j.fill.y += ntile.fill.y;
+					j.second.fill.y += new_tile.fill.y;
 					merged = true;
 					break;
 				}
 			}
 			if (!merged) // Do not add when it was merged to another tile
 			{
-				nmap.push_back(ntile);
+				nmap[new_tile.position] = new_tile;
 			}
 			merged = false;
-			ntile = *i;
+			new_tile = current_tile;
 		}
 	}
-	nmap.push_back(ntile); // add last tile
+	nmap[new_tile.position] = new_tile; // add last tile
 	pMap = std::move(nmap);
 }
 
 void
 tilemap_loader::condense_tiles()
 {
-	if (!mTiles.size()) return;
-	for (auto &i : mTiles)
+	if (!mMap.size()) return;
+	for (auto &i : mMap)
 	{
 		condense_layer(i.second);
 	}
@@ -1941,7 +1940,7 @@ tilemap_loader::load_layer(tinyxml2::XMLElement * pEle, int pLayer)
 	{
 		tile ntile;
 		ntile.load_xml(i, pLayer);
-		mTiles[pLayer].push_back(ntile);
+		mMap[pLayer][ntile.position] = ntile;
 		i = i->NextSiblingElement();
 	}
 	return 0;
@@ -1985,11 +1984,12 @@ tilemap_loader::load_tilemap_xml(std::string pPath)
 tilemap_loader::tile*
 tilemap_loader::find_tile_at(engine::fvector pPosition, int pLayer)
 {
-	for (auto &i : mTiles[pLayer])
+	for (auto &i : mMap[pLayer])
 	{
-		if (engine::frect(i.position, i.fill).is_intersect(pPosition))
+		auto& tile = i.second;
+		if (engine::frect(tile.position, tile.fill).is_intersect(pPosition))
 		{
-			return &i;
+			return &tile;
 		}
 	}
 	return nullptr;
@@ -2018,9 +2018,9 @@ tilemap_loader::explode_tile(engine::fvector pPosition, int pLayer)
 
 void tilemap_loader::explode_all()
 {
-	for (auto &l : mTiles)
+	for (auto &l : mMap)
 		for (auto& i : l.second)
-			explode_tile(&i, l.first);
+			explode_tile(&i.second, l.first);
 }
 
 void
@@ -2028,7 +2028,7 @@ tilemap_loader::generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode * root)
 {
 	std::map<int, tinyxml2::XMLElement *> layers;
 	
-	for (auto &l : mTiles)
+	for (auto &l : mMap)
 	{
 		if (!l.second.size())
 			continue;
@@ -2040,12 +2040,13 @@ tilemap_loader::generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode * root)
 
 		for (auto &i : l.second)
 		{
-			auto ele = doc.NewElement(i.atlas.c_str());
-			ele->SetAttribute("x", i.position.x);
-			ele->SetAttribute("y", i.position.y);
-			if (i.fill.x > 1)    ele->SetAttribute("w", i.fill.x);
-			if (i.fill.y > 1)    ele->SetAttribute("h", i.fill.y);
-			if (i.rotation != 0) ele->SetAttribute("r", i.rotation);
+			auto& tile = i.second;
+			auto ele = doc.NewElement(tile.atlas.c_str());
+			ele->SetAttribute("x", tile.position.x);
+			ele->SetAttribute("y", tile.position.y);
+			if (tile.fill.x > 1)    ele->SetAttribute("w", tile.fill.x);
+			if (tile.fill.y > 1)    ele->SetAttribute("h", tile.fill.y);
+			if (tile.rotation != 0) ele->SetAttribute("r", tile.rotation);
 			layers[l.first]->InsertEndChild(ele);
 		}
 	}
@@ -2078,31 +2079,21 @@ tilemap_loader::set_tile(engine::fvector pPosition, engine::fvector pFill, int p
 int
 tilemap_loader::set_tile(engine::fvector pPosition, int pLayer, const std::string& pAtlas, int pRotation)
 {
-	tile* t = find_tile(pPosition, pLayer);
-	if (!t)
-	{
-		mTiles[pLayer].emplace_back();
-		auto &nt = mTiles[pLayer].back();
-		nt.position = pPosition;
-		nt.fill = { 1, 1 };
-		nt.atlas = pAtlas;
-		nt.rotation = pRotation;
-	}
-	else
-	{
-		t->atlas = pAtlas;
-		t->rotation = pRotation;
-	}
+	auto &nt = mMap[pLayer][pPosition];
+	nt.position = pPosition;
+	nt.fill = { 1, 1 };
+	nt.atlas = pAtlas;
+	nt.rotation = pRotation;
 	return 0;
 }
 
 void tilemap_loader::remove_tile(engine::fvector pPosition, int pLayer)
 {
-	for (auto &i = mTiles[pLayer].begin(); i != mTiles[pLayer].end(); i++)
+	for (auto &i = mMap[pLayer].begin(); i != mMap[pLayer].end(); i++)
 	{
-		if (i->position == pPosition)
+		if (i->second.position == pPosition)
 		{
-			mTiles[pLayer].erase(i);
+			mMap[pLayer].erase(i);
 			break;
 		}
 	}
@@ -2112,16 +2103,17 @@ void
 tilemap_loader::update_display(tilemap_display& tmA)
 {
 	tmA.clean();
-	for (auto &l : mTiles)
+	for (auto &l : mMap)
 	{
 		for (auto &i : l.second)
 		{
+			auto& tile = i.second;
 			engine::fvector off(0, 0);
-			for (off.y = 0; off.y < i.fill.y; off.y++)
+			for (off.y = 0; off.y < tile.fill.y; off.y++)
 			{
-				for (off.x = 0; off.x < i.fill.x; off.x++)
+				for (off.x = 0; off.x < tile.fill.x; off.x++)
 				{
-					tmA.set_tile((i.position + off)*mTile_size, i.atlas, l.first, i.rotation);
+					tmA.set_tile((tile.position + off)*mTile_size, tile.atlas, l.first, tile.rotation);
 				}
 			}
 		}
@@ -2130,7 +2122,7 @@ tilemap_loader::update_display(tilemap_display& tmA)
 
 void tilemap_loader::clean()
 {
-	mTiles.clear();
+	mMap.clear();
 }
 /*
 int tilemap_loader::draw(engine::renderer & r)
