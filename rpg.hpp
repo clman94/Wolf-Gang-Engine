@@ -10,6 +10,7 @@
 #include "tilemap_loader.hpp"
 #include "particle_engine.hpp"
 #include "editor.hpp"
+#include "scene_loader.hpp"
 
 #include <set>
 #include <list>
@@ -506,7 +507,7 @@ public:
 	collision_system& get_collision_system();
 
 	void clean_scene(bool pFull = false);
-	util::error load_scene(std::string pPath);
+	util::error load_scene(const std::string& pPath);
 	util::error reload_scene();
 
 	const std::string& get_path()
@@ -601,8 +602,9 @@ private:
 	bool        mRequest_load;
 	std::string mNew_scene_path;
 	
-	editor::tilemap_editor mTilemap_editor;
-	editor::editor_gui     mTest_gui;
+	editor::tilemap_editor      mTilemap_editor;
+	editor::collisionbox_editor mCollisionbox_editor;
+	editor::editor_gui          mEditor_gui;
 
 	std::string get_slot_path(size_t pSlot);
 	void save_game(size_t pSlot);

@@ -46,6 +46,8 @@ struct color
 };
 
 class render_client;
+class renderer;
+
 
 class renderer :
 	public util::nocopy
@@ -305,6 +307,16 @@ public:
 	fvector get_size()
 	{
 		return{ shape.getSize().x, shape.getSize().y };
+	}
+
+	void set_outline_color(color pColor)
+	{
+		shape.setOutlineColor(pColor);
+	}
+
+	void set_outline_thinkness(float pThickness)
+	{
+		shape.setOutlineThickness(pThickness);
 	}
 
 	virtual int draw(renderer &pR)

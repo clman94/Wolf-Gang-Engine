@@ -109,6 +109,7 @@ tilemap_editor::tilemap_editor()
 {
 	set_depth(-1000);
 
+	mTilemap_display.set_parent(mRoot_node);
 	mTilemap_display.set_depth(-1001);
 
 	mBlackout.set_color({ 0, 0, 0, 255 });
@@ -118,7 +119,7 @@ tilemap_editor::tilemap_editor()
 	setup_lines();
 
 	mPreview.set_color({ 255, 255, 255, 150 });
-	mPreview.set_parent(mTilemap_display);
+	mPreview.set_parent(mRoot_node);
 
 	mCurrent_tile = 0;
 	mRotation = 0;
@@ -127,56 +128,40 @@ tilemap_editor::tilemap_editor()
 	mIs_highlight = false;
 }
 
-int tilemap_editor::open_scene_tilemap(const std::string & pPath)
+int tilemap_editor::open_scene(const std::string & pPath)
 {
-	if (mScene_xml.LoadFile(pPath.c_str()))
+	if (mLoader.load(pPath))
 	{
 		util::error("Could not load scene tilemap to edit");
+		return 1;
 	}
 	mPath = pPath;
 
-	auto ele_root = mScene_xml.RootElement();
-
-	if (mMap_xml = ele_root->FirstChildElement("map"))
+	mTexture = mTexture_manager->get_texture(mLoader.get_tilemap_texture());
+	if (!mTexture)
 	{
-		// Load tilemap texture
-		if (auto ele_texture = mMap_xml->FirstChildElement("texture"))
-		{
-			mTexture = mTexture_manager->get_texture(ele_texture->GetText());
-			if (!mTexture) {
-				util::error("Invalid tilemap texture");
-				return 1;
-			}
-			mTilemap_display.set_texture(*mTexture);
-
-			mTilemap_loader.load_tilemap_xml(mMap_xml);
-			mTilemap_loader.update_display(mTilemap_display);
-
-			mTile_list = std::move(mTexture->compile_list());
-			assert(mTile_list.size() != 0);
-
-			update_preview();
-			update_labels();
-		}
-		else
-			util::error("Tilemap texture is not defined");
+		util::error("Invalid tilemap texture");
+		return 1;
 	}
-	else
-		util::error("This scene has no tilemap");
+	mTilemap_display.set_texture(*mTexture);
 
-	if (auto ele_boundary = ele_root->FirstChildElement("boundary"))
-	{
-		engine::fvector boundary;
-		boundary.x = ele_boundary->FloatAttribute("w");
-		boundary.y = ele_boundary->FloatAttribute("h");
-		update_lines(boundary*32);
-	}
+	mTilemap_loader.load_tilemap_xml(mLoader.get_tilemap());
+	mTilemap_loader.update_display(mTilemap_display);
+
+	mTile_list = std::move(mTexture->compile_list());
+	assert(mTile_list.size() != 0);
+
+	update_preview();
+	update_labels();
+
+	update_lines(mLoader.get_boundary());
+
 	return 0;
 }
 
 int tilemap_editor::draw(engine::renderer & pR)
 {
-	movement(pR);
+	mRoot_node.movement(pR);
 
 	if (pR.is_key_down(engine::renderer::key_type::Return))
 		save();
@@ -277,31 +262,16 @@ void tilemap_editor::setup_lines()
 	const engine::color line_color(255, 255, 255, 150);
 
 	mLines[0].set_color(line_color);
-	mLines[0].set_parent(mTilemap_display);
+	mLines[0].set_parent(mRoot_node);
 
 	mLines[1].set_color(line_color);
-	mLines[1].set_parent(mTilemap_display);
+	mLines[1].set_parent(mRoot_node);
 
 	mLines[2].set_color(line_color);
-	mLines[2].set_parent(mTilemap_display);
+	mLines[2].set_parent(mRoot_node);
 
 	mLines[3].set_color(line_color);
-	mLines[3].set_parent(mTilemap_display);
-}
-
-void tilemap_editor::movement(engine::renderer & pR)
-{
-	float speed = pR.get_delta() * 128;
-	engine::fvector position = mTilemap_display.get_position();
-	if (pR.is_key_down(engine::renderer::key_type::Left))
-		position += engine::fvector(1, 0)*speed;
-	if (pR.is_key_down(engine::renderer::key_type::Right))
-		position -= engine::fvector(1, 0)*speed;
-	if (pR.is_key_down(engine::renderer::key_type::Up))
-		position += engine::fvector(0, 1)*speed;
-	if (pR.is_key_down(engine::renderer::key_type::Down))
-		position -= engine::fvector(0, 1)*speed;
-	mTilemap_display.set_position(position);
+	mLines[3].set_parent(mRoot_node);
 }
 
 void tilemap_editor::update_labels()
@@ -352,15 +322,97 @@ void tilemap_editor::tick_highlight(engine::renderer& pR)
 
 void tilemap_editor::save()
 {
-	auto ele_layer = mMap_xml->FirstChildElement("layer");
+	auto& doc = mLoader.get_document();
+	auto ele_map = mLoader.get_tilemap();
+
+	auto ele_layer = ele_map->FirstChildElement("layer");
 	while (ele_layer)
 	{
 		ele_layer->DeleteChildren();
-		mScene_xml.DeleteNode(ele_layer);
-		ele_layer = mMap_xml->FirstChildElement("layer");
+		doc.DeleteNode(ele_layer);
+		ele_layer = ele_map->FirstChildElement("layer");
 	}
 	mTilemap_loader.condense_tiles();
-	mTilemap_loader.generate(mScene_xml, mMap_xml);
-	mScene_xml.SaveFile(mPath.c_str());
+	mTilemap_loader.generate(doc, ele_map);
+	doc.SaveFile(mPath.c_str());
 }
 
+// ##########
+// collisionbox_editor
+// ##########
+
+collisionbox_editor::collisionbox_editor()
+{
+	set_depth(-1000);
+
+	mTilemap_display.set_parent(mRoot_node);
+
+	mBlackout.set_color({ 0, 0, 0, 255 });
+	mBlackout.set_size({ 1000, 1000 });
+
+	mWall_display.set_color({ 100, 255, 100, 200 });
+	mWall_display.set_outline_color({ 255, 255, 255, 255 });
+	mWall_display.set_outline_thinkness(1);
+	mWall_display.set_parent(mRoot_node);
+}
+
+int collisionbox_editor::open_scene(const std::string& pPath)
+{
+	if (mLoader.load(pPath))
+	{
+		util::error("Unable to open scene");
+		return 1;
+	}
+	
+	auto ele_wall = mLoader.get_collisionboxes()->FirstChildElement("wall");
+	while (ele_wall)
+	{
+		mWalls.emplace_back();
+		auto& new_wall = mWalls.back();
+
+		new_wall = util::shortcuts::rect_float_att(ele_wall);
+
+		ele_wall = ele_wall->NextSiblingElement("wall");
+	}
+
+	return 0;
+}
+
+int collisionbox_editor::draw(engine::renderer & pR)
+{
+	mRoot_node.movement(pR);
+
+	auto mouse_position = pR.get_mouse_position(mRoot_node.get_exact_position());
+	engine::fvector tile_position = (mouse_position / 32).floor();
+
+
+
+	mBlackout.draw(pR);
+	for (auto& i : mWalls)
+	{
+		mWall_display.set_position(i.get_offset() * 32);
+		mWall_display.set_size(i.get_size() * 32);
+		mWall_display.draw(pR);
+	}
+	mTilemap_display.draw(pR);
+	return 0;
+}
+
+// ##########
+// scroll_control_node
+// ##########
+
+void scroll_control_node::movement(engine::renderer & pR)
+{
+	float speed = pR.get_delta() * 128;
+	engine::fvector position = get_position();
+	if (pR.is_key_down(engine::renderer::key_type::Left))
+		position += engine::fvector(1, 0)*speed;
+	if (pR.is_key_down(engine::renderer::key_type::Right))
+		position -= engine::fvector(1, 0)*speed;
+	if (pR.is_key_down(engine::renderer::key_type::Up))
+		position += engine::fvector(0, 1)*speed;
+	if (pR.is_key_down(engine::renderer::key_type::Down))
+		position -= engine::fvector(0, 1)*speed;
+	set_position(position);
+}

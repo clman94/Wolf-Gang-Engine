@@ -752,72 +752,32 @@ scene::clean_scene(bool pFull)
 }
 
 
-util::error scene::load_scene(std::string pPath)
+util::error scene::load_scene(const std::string& pPath)
 {
 	assert(mTexture_manager != nullptr);
 	assert(mScript != nullptr);
 
-	using namespace tinyxml2;
-
-	XMLDocument doc;
-	if (doc.LoadFile(pPath.c_str()))
-		return util::error("Unable to load scene");
-	auto ele_root = doc.RootElement();
+	scene_loader loader;
+	if (loader.load(pPath))
+		return util::error("Unable to open scene");
 
 	mScene_path = pPath;
-	mScene_name = util::safe_string(ele_root->Attribute("name"));
+	mScene_name = loader.get_name();
 
-	clean_scene();
+	mCollision_system.load_collision_boxes(loader.get_collisionboxes());
 
-	// Load collision boxes
-	auto ele_collisionboxes = ele_root->FirstChildElement("collisionboxes");
-	if (ele_collisionboxes)
-		mCollision_system.load_collision_boxes(ele_collisionboxes);
+	set_boundary(loader.get_boundary());
 
-	if (auto ele_entities = ele_root->FirstChildElement("entities"))
-	{
-		mEntity_manager.load_entities(ele_entities);
-	}
+	if (!mScript->load_scene_script(loader.get_script_path()))
+		mScript->setup_triggers(mCollision_system);
 
-	if (auto ele_characters = ele_root->FirstChildElement("characters"))
-	{
-		mEntity_manager.load_characters(ele_characters);
-	}
+	auto tilemap_texture = mTexture_manager->get_texture(loader.get_tilemap_texture());
+	if (!tilemap_texture)
+		return util::error("Invalid tilemap texture");
+	mTilemap_display.set_texture(*tilemap_texture);
 
-	if (auto ele_script = ele_root->FirstChildElement("script"))
-	{
-		auto path = ele_script->Attribute("path");
-		if (path)
-		{
-			if (!mScript->load_scene_script(path).has_error())
-				mScript->setup_triggers(mCollision_system);
-		}
-	}
-
-	if (auto ele_boundary = ele_root->FirstChildElement("boundary"))
-	{
-		engine::fvector boundary;
-		boundary.x = ele_boundary->FloatAttribute("w");
-		boundary.y = ele_boundary->FloatAttribute("h");
-		set_boundary(boundary*32);
-	}
-	
-	if (auto ele_map = ele_root->FirstChildElement("map"))
-	{
-		// Load tilemap texture
-		if (auto ele_texture = ele_map->FirstChildElement("texture"))
-		{
-			auto tex = mTexture_manager->get_texture(ele_texture->GetText());
-			if (!tex)
-				return util::error("Invalid tilemap texture");
-			mTilemap_display.set_texture(*tex);
-
-			mTilemap_loader.load_tilemap_xml(ele_map);
-			mTilemap_loader.update_display(mTilemap_display);
-		}
-		else
-			return util::error("Tilemap texture is not defined");
-	}
+	mTilemap_loader.load_tilemap_xml(loader.get_tilemap());
+	mTilemap_loader.update_display(mTilemap_display);
 
 	// Pre-execute so the scene script can setup things before the render.
 	mScript->tick();
@@ -1442,7 +1402,7 @@ game::tick(controls& pControls)
 		else
 		{
 			mTilemap_editor.set_visible(true);
-			mTilemap_editor.open_scene_tilemap(mScene.get_path());
+			mTilemap_editor.open_scene(mScene.get_path());
 			mScene.clean_scene(true);
 		}
 	}
@@ -1458,7 +1418,7 @@ game::tick(controls& pControls)
 		mScene.load_scene(mNew_scene_path);
 	}
 
-	mTest_gui.update_camera_position(mScene.get_exact_position());
+	mEditor_gui.update_camera_position(mScene.get_exact_position());
 }
 
 void
@@ -1466,12 +1426,14 @@ game::refresh_renderer(engine::renderer & pR)
 {
 	mScene.set_renderer(pR);
 
-	mTest_gui.set_renderer(*get_renderer());
-	mTest_gui.initualize();
+	mEditor_gui.set_renderer(*get_renderer());
+	mEditor_gui.initualize();
 
 	mTilemap_editor.set_visible(false);
-	mTilemap_editor.set_editor_gui(mTest_gui);
+	mTilemap_editor.set_editor_gui(mEditor_gui);
 	pR.add_client(mTilemap_editor);
+
+	//pR.add_client(mCollisionbox_editor);
 
 	pR.set_icon("data/icon.png");
 }

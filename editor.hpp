@@ -2,8 +2,12 @@
 #include "renderer.hpp"
 #include "tilemap_loader.hpp"
 #include "rpg_managers.hpp"
+#include "scene_loader.hpp"
 #include <vector>
 #include <string>
+#include <list>
+
+#include "tinyxml2\xmlshortcuts.hpp"
 
 namespace editor
 {
@@ -54,6 +58,13 @@ private:
 	int draw(engine::renderer& pR);
 };
 
+class scroll_control_node :
+	public engine::node
+{
+public:
+	void movement(engine::renderer& pR);
+};
+
 class editor
 {
 public:
@@ -70,13 +81,14 @@ protected:
 	{ return mEditor_gui; }
 };
 
+
 class tilemap_editor :
 	public engine::render_client,
 	public editor
 {
 public:
 	tilemap_editor();
-	int open_scene_tilemap(const std::string& pPath);
+	int open_scene(const std::string& pPath);
 	int draw(engine::renderer& pR);
 	void set_texture_manager(rpg::texture_manager& pTexture_manager);
 
@@ -90,8 +102,7 @@ private:
 
 	std::vector<std::string> mTile_list;
 
-	tinyxml2::XMLDocument mScene_xml;
-	tinyxml2::XMLElement* mMap_xml;
+	rpg::scene_loader mLoader;
 
 	engine::texture* mTexture;
 
@@ -99,6 +110,8 @@ private:
 
 	engine::rectangle_node mBlackout;
 	engine::rectangle_node mLines[4];
+
+	scroll_control_node mRoot_node;
 
 	rpg::tilemap_loader    mTilemap_loader;
 	rpg::tilemap_display   mTilemap_display;
@@ -110,7 +123,6 @@ private:
 
 	void setup_editor(editor_gui& pEditor_gui);
 	void setup_lines();
-	void movement(engine::renderer& pR);
 
 	void update_labels();
 	void update_preview();
@@ -122,6 +134,30 @@ private:
 	void save();
 };
 
+
+class collisionbox_editor :
+	public engine::render_client,
+	public editor
+{
+public:
+	collisionbox_editor();
+
+	int open_scene(const std::string& pPath);
+	int draw(engine::renderer& pR);
+
+private:
+	scroll_control_node mRoot_node;
+
+	engine::rectangle_node mWall_display;
+
+	std::vector<engine::frect> mWalls;
+
+	engine::rectangle_node mBlackout;
+	rpg::tilemap_loader    mTilemap_loader;
+	rpg::tilemap_display   mTilemap_display;
+	rpg::texture_manager*  mTexture_manager;
+	rpg::scene_loader      mLoader;
+};
 
 
 }
