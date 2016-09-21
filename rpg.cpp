@@ -1558,8 +1558,16 @@ narrative_dialog::narrative_dialog()
 	mRevealing = false;
 	hide_box();
 	mInterval = defs::DEFAULT_DIALOG_SPEED;
+
+	mBox.set_depth(defs::NARRATIVE_BOX_DEPTH);
+
+	mText.set_depth(defs::NARRATIVE_TEXT_DEPTH);
 	mBox.add_child(mText);
+
+	mSelection.set_depth(defs::NARRATIVE_TEXT_DEPTH);
 	mBox.add_child(mSelection);
+
+	mExpression.set_depth(defs::NARRATIVE_TEXT_DEPTH);
 	mBox.add_child(mExpression);
 
 	mExpression.set_position({ 10, 10 });
@@ -1716,7 +1724,7 @@ int narrative_dialog::draw(engine::renderer& pR)
 	float time = mTimer.get_elapse().ms();
 	if (time >= mInterval)
 	{
-		mCount += (size_t)time / (size_t)mInterval;
+		mCount += static_cast<size_t>(time / mInterval);
 		mCount  = util::clamp<size_t>(mCount, 0, mFull_text.size());
 
 		std::string display(mFull_text.begin(), mFull_text.begin() + mCount);
