@@ -81,6 +81,11 @@ public:
 		return false;
 	}
 
+	size_t size()
+	{
+		return mItems.size();
+	}
+
 	auto begin() { return mItems.begin(); }
 	auto end()   { return mItems.end();   }
 	auto back()  { return mItems.back();  }

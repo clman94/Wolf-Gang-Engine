@@ -533,6 +533,13 @@ entity* entity_manager::script_add_entity(const std::string & path)
 {
 	assert(get_renderer() != nullptr);
 	assert(mTexture_manager != nullptr);
+
+	if (mEntities.size() >= 256)
+	{
+		util::error("Reached upper limit of entities");
+		return nullptr;
+	}
+
 	auto& ne = mEntities.add_item();
 	ne.load_entity(path, *mTexture_manager);
 	get_renderer()->add_client(ne);
@@ -564,6 +571,13 @@ entity* entity_manager::script_add_character(const std::string & path)
 {
 	assert(get_renderer() != nullptr);
 	assert(mTexture_manager != nullptr);
+
+	if (mCharacters.size() >= 126)
+	{
+		util::error("Reached upper limit of characters.");
+		return nullptr;
+	}
+
 	auto& nc = mCharacters.add_item();
 	nc.load_entity(path, *mTexture_manager);
 	nc.set_cycle(character::e_cycle::def);
@@ -2426,10 +2440,11 @@ int expression_manager::load_expressions_xml(tinyxml2::XMLElement * pRoot, textu
 	auto ele_expression = pRoot->FirstChildElement();
 	while (ele_expression)
 	{
-		const char* att_texture = ele_expression->Attribute("tex");
+		const char* att_texture = ele_expression->Attribute("texture");
 		if (!att_texture)
 		{
 			util::error("Please specify texture for expression");
+			ele_expression = ele_expression->NextSiblingElement();
 			continue;
 		}
 		auto texture = pTexture_manager.get_texture(att_texture);
@@ -2438,6 +2453,7 @@ int expression_manager::load_expressions_xml(tinyxml2::XMLElement * pRoot, textu
 		if (!att_atlas)
 		{
 			util::error("Please specify atlas for expression");
+			ele_expression = ele_expression->NextSiblingElement();
 			continue;
 		}
 		mAnimations[ele_expression->Name()] = texture->get_animation(att_atlas);
