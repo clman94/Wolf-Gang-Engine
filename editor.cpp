@@ -135,7 +135,6 @@ int tilemap_editor::open_scene(const std::string & pPath)
 		util::error("Could not load scene tilemap to edit");
 		return 1;
 	}
-	mPath = pPath;
 
 	mTexture = mTexture_manager->get_texture(mLoader.get_tilemap_texture());
 	if (!mTexture)
@@ -169,6 +168,7 @@ int tilemap_editor::draw(engine::renderer & pR)
 	auto mouse_position = pR.get_mouse_position(mTilemap_display.get_exact_position());
 	engine::fvector tile_position = (mouse_position / 32).floor();
 
+	// Add tile
 	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left))
 	{
 		assert(mTile_list.size() != 0);
@@ -178,6 +178,7 @@ int tilemap_editor::draw(engine::renderer & pR)
 		update_highlight();
 	}
 
+	// Remove tile
 	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_right))
 	{
 		assert(mTile_list.size() != 0);
@@ -188,7 +189,8 @@ int tilemap_editor::draw(engine::renderer & pR)
 		update_highlight();
 	}
 
-	if (pR.is_key_pressed(engine::renderer::key_type::Period)) // Next tile
+	// Next tile
+	if (pR.is_key_pressed(engine::renderer::key_type::Period)) 
 	{
 		++mCurrent_tile %= mTile_list.size();
 		mPreview.set_texture(*mTexture, mTile_list[mCurrent_tile]);
@@ -196,13 +198,15 @@ int tilemap_editor::draw(engine::renderer & pR)
 		update_labels();
 	}
 
-	if (pR.is_key_pressed(engine::renderer::key_type::Comma)) // Previous tile
+	// Previous tile
+	if (pR.is_key_pressed(engine::renderer::key_type::Comma))
 	{
 		mCurrent_tile = mCurrent_tile == 0 ? (mTile_list.size() - 1) : (mCurrent_tile - 1);
 		update_preview();
 		update_labels();
 	}
 
+	// Layer +1
 	if (pR.is_key_pressed(engine::renderer::key_type::Quote))
 	{
 		++mLayer;
@@ -210,6 +214,7 @@ int tilemap_editor::draw(engine::renderer & pR)
 		update_highlight();
 	}
 
+	// Layer -1
 	if (pR.is_key_pressed(engine::renderer::key_type::Slash))
 	{
 		--mLayer;
@@ -217,6 +222,7 @@ int tilemap_editor::draw(engine::renderer & pR)
 		update_highlight();
 	}
 
+	// Rotate Clockwise
 	if (pR.is_key_pressed(engine::renderer::key_type::SemiColon))
 	{
 		++mRotation %= 4;
@@ -224,6 +230,8 @@ int tilemap_editor::draw(engine::renderer & pR)
 		update_labels();
 	}
 
+
+	// Rotate Counter-clockwise
 	if (pR.is_key_pressed(engine::renderer::key_type::L))
 	{
 		mRotation = mRotation == 0 ? 3 : (mRotation - 1);
@@ -334,7 +342,7 @@ void tilemap_editor::save()
 	}
 	mTilemap_loader.condense_tiles();
 	mTilemap_loader.generate(doc, ele_map);
-	doc.SaveFile(mPath.c_str());
+	doc.SaveFile(mLoader.get_scene_path().c_str());
 }
 
 // ##########
@@ -364,38 +372,85 @@ int collisionbox_editor::open_scene(const std::string& pPath)
 		return 1;
 	}
 	
-	auto ele_wall = mLoader.get_collisionboxes()->FirstChildElement("wall");
-	while (ele_wall)
-	{
-		mWalls.emplace_back();
-		auto& new_wall = mWalls.back();
-
-		new_wall = util::shortcuts::rect_float_att(ele_wall);
-
-		ele_wall = ele_wall->NextSiblingElement("wall");
-	}
+	mWalls = mLoader.construct_wall_list();
 
 	return 0;
 }
 
-int collisionbox_editor::draw(engine::renderer & pR)
+int collisionbox_editor::draw(engine::renderer& pR)
 {
 	mRoot_node.movement(pR);
 
+	if (pR.is_key_down(engine::renderer::key_type::Return))
+		save();
+
 	auto mouse_position = pR.get_mouse_position(mRoot_node.get_exact_position());
-	engine::fvector tile_position = (mouse_position / 32).floor();
+	engine::fvector tile_position = (mouse_position / 32);
 
+	// Selection
+	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left))
+	{
+		for (size_t i = 0; i < mWalls.size(); i++)
+		{
+			if (mWalls[i].is_intersect(tile_position))
+			{
+				mSelection = i;
+				break;
+			}
+		}
+	}
 
+	if (pR.is_key_pressed(engine::renderer::key_type::Delete) ||
+		pR.is_key_pressed(engine::renderer::key_type::BackSpace))
+	{
+		if (mSelection < mWalls.size())
+			mWalls.erase(mWalls.begin() + mSelection);
+	}
 
 	mBlackout.draw(pR);
-	for (auto& i : mWalls)
+	for (size_t i = 0; i < mWalls.size(); i++)
 	{
-		mWall_display.set_position(i.get_offset() * 32);
-		mWall_display.set_size(i.get_size() * 32);
+		if (i == mSelection)
+			mWall_display.set_outline_color({ 255, 90, 90, 255 });
+		else
+			mWall_display.set_outline_color({ 255, 255, 255, 255 });
+
+		mWall_display.set_position(mWalls[i].get_offset() * 32);
+		mWall_display.set_size(mWalls[i].get_size() * 32);
 		mWall_display.draw(pR);
 	}
 	mTilemap_display.draw(pR);
 	return 0;
+}
+
+void collisionbox_editor::set_texture_manager(rpg::texture_manager & pTexture_manager)
+{
+	mTexture_manager = &pTexture_manager;
+}
+
+void collisionbox_editor::save()
+{
+	auto& doc = mLoader.get_document();
+	auto ele_collisionboxes = mLoader.get_collisionboxes();
+
+	auto ele_wall = ele_collisionboxes->FirstChildElement("wall");
+	while (ele_wall)
+	{
+		doc.DeleteNode(ele_wall);
+		ele_wall = ele_collisionboxes->FirstChildElement("wall");
+	}
+
+	for (auto& i : mWalls)
+	{
+		auto new_wall = doc.NewElement("wall");
+		new_wall->SetAttribute("x", i.x);
+		new_wall->SetAttribute("y", i.y);
+		new_wall->SetAttribute("w", i.w);
+		new_wall->SetAttribute("h", i.h);
+		ele_collisionboxes->InsertEndChild(new_wall);
+	}
+
+	doc.SaveFile(mLoader.get_scene_path().c_str());
 }
 
 // ##########

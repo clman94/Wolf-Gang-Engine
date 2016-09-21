@@ -507,7 +507,7 @@ public:
 	collision_system& get_collision_system();
 
 	void clean_scene(bool pFull = false);
-	util::error load_scene(const std::string& pPath);
+	util::error load_scene(std::string pPath);
 	util::error reload_scene();
 
 	const std::string& get_path()

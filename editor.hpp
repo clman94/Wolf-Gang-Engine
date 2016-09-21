@@ -81,6 +81,11 @@ protected:
 	{ return mEditor_gui; }
 };
 
+class boundary_lines :
+	public engine::render_client
+{
+
+};
 
 class tilemap_editor :
 	public engine::render_client,
@@ -97,8 +102,6 @@ private:
 	int    mRotation;
 	int    mLayer;
 	bool   mIs_highlight;
-
-	std::string mPath;
 
 	std::vector<std::string> mTile_list;
 
@@ -144,19 +147,23 @@ public:
 
 	int open_scene(const std::string& pPath);
 	int draw(engine::renderer& pR);
+	void set_texture_manager(rpg::texture_manager& pTexture_manager);
 
 private:
-	scroll_control_node mRoot_node;
-
-	engine::rectangle_node mWall_display;
+	size_t mSelection;
 
 	std::vector<engine::frect> mWalls;
+
+	scroll_control_node    mRoot_node;
+	engine::rectangle_node mWall_display;
 
 	engine::rectangle_node mBlackout;
 	rpg::tilemap_loader    mTilemap_loader;
 	rpg::tilemap_display   mTilemap_display;
 	rpg::texture_manager*  mTexture_manager;
 	rpg::scene_loader      mLoader;
+
+	void save();
 };
 
 

@@ -3,10 +3,16 @@
 
 using namespace rpg;
 
-int scene_loader::load(const std::string & path)
+scene_loader::scene_loader()
+{
+	mEle_collisionboxes = nullptr;
+	mEle_map = nullptr;
+}
+
+int scene_loader::load(const std::string & pPath)
 {
 	mXml_Document.Clear();
-	if (mXml_Document.LoadFile(path.c_str()))
+	if (mXml_Document.LoadFile(pPath.c_str()))
 	{
 		util::error("Unable to open scene. Please check path.");
 		return 1;
@@ -62,6 +68,8 @@ int scene_loader::load(const std::string & path)
 			return 1;
 		}
 	}
+	mScene_path = pPath;
+
 	return 0;
 }
 
@@ -83,6 +91,27 @@ const std::string& scene_loader::get_script_path()
 const std::string& scene_loader::get_tilemap_texture()
 {
 	return mTilemap_texture;
+}
+
+const std::string & rpg::scene_loader::get_scene_path()
+{
+	return mScene_path;
+}
+
+std::vector<engine::frect> scene_loader::construct_wall_list()
+{
+	assert(mEle_collisionboxes != 0);
+
+	std::vector<engine::frect> walls;
+
+	auto ele_wall = mEle_collisionboxes->FirstChildElement("wall");
+	while (ele_wall)
+	{
+		walls.push_back(util::shortcuts::rect_float_att(ele_wall));
+		ele_wall = ele_wall->NextSiblingElement("wall");
+	}
+
+	return walls;
 }
 
 tinyxml2::XMLElement* scene_loader::get_collisionboxes()

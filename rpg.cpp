@@ -388,7 +388,7 @@ player_character::movement(controls& pControls, collision_system& pCollision_sys
 	if (pControls.is_triggered(controls::control::left))
 	{
 		if (!pCollision_system.wall_collision(get_collision(direction::left)))
-			move.x -= get_speed();
+			move.x -= 1;
 		mFacing_direction = direction::left;
 		set_cycle(character::e_cycle::left);
 	}
@@ -396,7 +396,7 @@ player_character::movement(controls& pControls, collision_system& pCollision_sys
 	if (pControls.is_triggered(controls::control::right))
 	{
 		if (!pCollision_system.wall_collision(get_collision(direction::right)))
-			move.x += get_speed();
+			move.x += 1;
 		mFacing_direction = direction::right;
 		set_cycle(character::e_cycle::right);
 	}
@@ -404,7 +404,7 @@ player_character::movement(controls& pControls, collision_system& pCollision_sys
 	if (pControls.is_triggered(controls::control::up))
 	{
 		if (!pCollision_system.wall_collision(get_collision(direction::up)))
-			move.y -= get_speed();
+			move.y -= 1;
 		mFacing_direction = direction::up;
 		set_cycle(character::e_cycle::up);
 	}
@@ -412,13 +412,16 @@ player_character::movement(controls& pControls, collision_system& pCollision_sys
 	if (pControls.is_triggered(controls::control::down))
 	{
 		if (!pCollision_system.wall_collision(get_collision(direction::down)))
-			move.y += get_speed();
+			move.y += 1;
 		mFacing_direction = direction::down;
 		set_cycle(character::e_cycle::down);
 	}
 
 	if (move != engine::fvector(0, 0))
 	{
+		move.normalize();
+		move *= get_speed();
+
 		set_move_direction(move); // Make sure the player is in the diretion he's moving
 		set_position(get_position() + (move*pDelta));
 		play_animation();
@@ -752,10 +755,12 @@ scene::clean_scene(bool pFull)
 }
 
 
-util::error scene::load_scene(const std::string& pPath)
+util::error scene::load_scene(std::string pPath)
 {
 	assert(mTexture_manager != nullptr);
 	assert(mScript != nullptr);
+
+	clean_scene();
 
 	scene_loader loader;
 	if (loader.load(pPath))
@@ -1388,6 +1393,7 @@ game::tick(controls& pControls)
 		std::cout << "Reloading scene...\n";
 		mScene.reload_scene();
 		std::cout << "Done\n";
+		//mCollisionbox_editor.open_scene(mScene.get_path());
 	}
 
 	mControls = pControls;
@@ -1407,7 +1413,9 @@ game::tick(controls& pControls)
 		}
 	}
 	if (mTilemap_editor.is_visible())
+	{
 		return;
+	}
 
 	mScene.tick(pControls);
 
