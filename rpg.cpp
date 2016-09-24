@@ -1290,6 +1290,7 @@ bool script_system::is_executing()
 game::game()
 {
 	load_script_interface();
+	mEditor_manager.set_texture_manager(mTexture_manager);
 	mSlot = 0;
 }
 
@@ -1395,8 +1396,6 @@ game::load_game_xml(std::string pPath)
 	mScene.set_texture_manager(mTexture_manager);
 	mScene.load_game_xml(ele_root);
 	mScene.load_scene(scene_path);
-
-	mTilemap_editor.set_texture_manager(mTexture_manager);
 	return 0;
 }
 
@@ -1405,31 +1404,35 @@ game::tick(controls& pControls)
 {
 	if (pControls.is_triggered(controls::control::reset))
 	{
+		mEditor_manager.close_editor();
 		std::cout << "Reloading scene...\n";
 		mScene.reload_scene();
 		std::cout << "Done\n";
-		//mCollisionbox_editor.open_scene(mScene.get_path());
 	}
 
 	mControls = pControls;
 
-	if (pControls.is_triggered(controls::control::menu))
+	if (pControls.is_triggered(controls::control::editor_1))
 	{
-		if (mTilemap_editor.is_visible())
-		{
-			mTilemap_editor.set_visible(false);
-			mScene.reload_scene();
-		}
-		else
-		{
-			mTilemap_editor.set_visible(true);
-			mTilemap_editor.open_scene(mScene.get_path());
-			mScene.clean_scene(true);
-		}
+		mEditor_manager.close_editor();
+		mEditor_manager.open_tilemap_editor(mScene.get_path());
+		mScene.clean_scene(true);
 	}
-	if (mTilemap_editor.is_visible())
+
+	if (pControls.is_triggered(controls::control::editor_2))
 	{
+		mEditor_manager.close_editor();
+		mEditor_manager.open_collisionbox_editor(mScene.get_path());
+		mScene.clean_scene(true);
+	}
+	if (mEditor_manager.is_editor_open())
 		return;
+
+	if (pControls.is_triggered(controls::control::reset))
+	{
+		std::cout << "Reloading scene...\n";
+		mScene.reload_scene();
+		std::cout << "Done\n";
 	}
 
 	mScene.tick(pControls);
@@ -1441,23 +1444,14 @@ game::tick(controls& pControls)
 		mScene.load_scene(mNew_scene_path);
 	}
 
-	mEditor_gui.update_camera_position(mScene.get_exact_position());
+	//mEditor_gui.update_camera_position(mScene.get_exact_position());
 }
 
 void
 game::refresh_renderer(engine::renderer & pR)
 {
 	mScene.set_renderer(pR);
-
-	mEditor_gui.set_renderer(*get_renderer());
-	mEditor_gui.initualize();
-
-	mTilemap_editor.set_visible(false);
-	mTilemap_editor.set_editor_gui(mEditor_gui);
-	pR.add_client(mTilemap_editor);
-
-	//pR.add_client(mCollisionbox_editor);
-
+	pR.add_client(mEditor_manager);
 	pR.set_icon("data/icon.png");
 }
 

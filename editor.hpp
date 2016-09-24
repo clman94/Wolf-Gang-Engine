@@ -30,18 +30,9 @@ public:
 
 	tgui::Label::Ptr add_label(const std::string& text);
 
-	void update_camera_position(engine::fvector pPosition)
-	{
-		mCamera_offset = pPosition;
-	}
+	void update_camera_position(engine::fvector pPosition);
 
-protected:
-	std::shared_ptr<tgui_list_layout> get_layout()
-	{
-		return mEditor_layout;
-	}
-
-	virtual void tick(engine::renderer& pR, engine::fvector pCamera_offset) {}
+	int draw(engine::renderer& pR);
 
 private:
 	float mUpdate_timer;
@@ -55,7 +46,6 @@ private:
 	engine::fvector mCamera_offset;
 
 	void refresh_renderer(engine::renderer& pR);
-	int draw(engine::renderer& pR);
 };
 
 class scroll_control_node :
@@ -65,16 +55,18 @@ public:
 	void movement(engine::renderer& pR);
 };
 
-class editor
+class editor :
+	public engine::render_client,
+	public engine::node
 {
 public:
-	void set_editor_gui(editor_gui& pEditor_gui)
-	{
-		mEditor_gui = &pEditor_gui;
-		setup_editor(pEditor_gui);
-	}
+	virtual int open_scene(std::string pPath) = 0;
+
+	void set_editor_gui(editor_gui& pEditor_gui);
 
 	void set_texture_manager(rpg::texture_manager& pTexture_manager);
+
+	virtual int save() = 0;
 
 protected:
 	editor_gui* mEditor_gui;
@@ -84,13 +76,13 @@ protected:
 };
 
 class tilemap_editor :
-	public engine::render_client,
 	public editor
 {
 public:
 	tilemap_editor();
-	int open_scene(const std::string& pPath);
+	int open_scene(std::string pPath);
 	int draw(engine::renderer& pR);
+	int save();
 	
 private:
 	size_t mCurrent_tile;
@@ -109,8 +101,6 @@ private:
 	engine::rectangle_node mBlackout;
 	engine::rectangle_node mLines[4];
 
-	scroll_control_node mRoot_node;
-
 	rpg::tilemap_loader    mTilemap_loader;
 	rpg::tilemap_display   mTilemap_display;
 
@@ -128,25 +118,23 @@ private:
 
 	void tick_highlight(engine::renderer& pR);
 
-	void save();
 };
 
 class collisionbox_editor :
-	public engine::render_client,
 	public editor
 {
 public:
 	collisionbox_editor();
 
-	int open_scene(const std::string& pPath);
+	int open_scene(std::string pPath);
 	int draw(engine::renderer& pR);
+	int save();
 
 private:
 	size_t mSelection;
 
 	std::vector<engine::frect> mWalls;
 
-	scroll_control_node    mRoot_node;
 	engine::rectangle_node mWall_display;
 
 	engine::rectangle_node mBlackout;
@@ -154,17 +142,33 @@ private:
 	rpg::tilemap_display   mTilemap_display;
 	rpg::scene_loader      mLoader;
 
-	void save();
 };
 
 class editor_manager :
 	public engine::render_client
 {
 public:
-	bool is_editor_open();
-	void open_editor();
-private:
+	editor_manager();
 
+	bool is_editor_open();
+	void open_tilemap_editor(std::string pScene_path);
+	void open_collisionbox_editor(std::string pScene_path);
+	void close_editor();
+
+	void set_texture_manager(rpg::texture_manager& pTexture_manager);
+
+	int draw(engine::renderer& pR);
+
+private:
+	void refresh_renderer(engine::renderer& pR);
+
+	editor* mCurrent_editor;
+
+	editor_gui mEditor_gui;
+	scroll_control_node mRoot_node;
+
+	tilemap_editor mTilemap_editor;
+	collisionbox_editor mCollisionbox_editor;
 };
 
 

@@ -64,6 +64,11 @@ tgui::Label::Ptr editor_gui::add_label(const std::string & pText)
 	return nlb;
 }
 
+void editor_gui::update_camera_position(engine::fvector pPosition)
+{
+	mCamera_offset = pPosition;
+}
+
 void editor_gui::refresh_renderer(engine::renderer & pR)
 {
 	pR.set_gui(&mTgui);
@@ -71,11 +76,10 @@ void editor_gui::refresh_renderer(engine::renderer & pR)
 
 int editor_gui::draw(engine::renderer& pR)
 {
-	tick(pR, mCamera_offset);
-	
 	if (pR.is_key_down(engine::renderer::key_type::LControl)
 	&&  pR.is_key_pressed(engine::renderer::key_type::E))
 	{
+		std::cout << "tesetsdf\n";
 		if (mLayout->isVisible())
 			mLayout->hide();
 		else
@@ -105,11 +109,27 @@ int editor_gui::draw(engine::renderer& pR)
 	return 0;
 }
 
+void editor::set_editor_gui(editor_gui & pEditor_gui)
+{
+	pEditor_gui.clear();
+	mEditor_gui = &pEditor_gui;
+	setup_editor(pEditor_gui);
+}
+
+void editor::set_texture_manager(rpg::texture_manager & pTexture_manager)
+{
+	mTexture_manager = &pTexture_manager;
+}
+
+// ##########
+// tilemap_editor
+// ##########
+
 tilemap_editor::tilemap_editor()
 {
 	set_depth(-1000);
 
-	mTilemap_display.set_parent(mRoot_node);
+	mTilemap_display.set_parent(*this);
 	mTilemap_display.set_depth(-1001);
 
 	mBlackout.set_color({ 0, 0, 0, 255 });
@@ -119,7 +139,7 @@ tilemap_editor::tilemap_editor()
 	setup_lines();
 
 	mPreview.set_color({ 255, 255, 255, 150 });
-	mPreview.set_parent(mRoot_node);
+	mPreview.set_parent(*this);
 
 	mCurrent_tile = 0;
 	mRotation = 0;
@@ -128,7 +148,7 @@ tilemap_editor::tilemap_editor()
 	mIs_highlight = false;
 }
 
-int tilemap_editor::open_scene(const std::string & pPath)
+int tilemap_editor::open_scene(std::string pPath)
 {
 	if (mLoader.load(pPath))
 	{
@@ -160,8 +180,6 @@ int tilemap_editor::open_scene(const std::string & pPath)
 
 int tilemap_editor::draw(engine::renderer & pR)
 {
-	mRoot_node.movement(pR);
-
 	if (pR.is_key_down(engine::renderer::key_type::Return))
 		save();
 
@@ -253,10 +271,6 @@ int tilemap_editor::draw(engine::renderer & pR)
 	return 0;
 }
 
-void editor::set_texture_manager(rpg::texture_manager & pTexture_manager)
-{
-	mTexture_manager = &pTexture_manager;
-}
 
 void tilemap_editor::setup_editor(editor_gui & pEditor_gui)
 {
@@ -270,16 +284,16 @@ void tilemap_editor::setup_lines()
 	const engine::color line_color(255, 255, 255, 150);
 
 	mLines[0].set_color(line_color);
-	mLines[0].set_parent(mRoot_node);
+	mLines[0].set_parent(*this);
 
 	mLines[1].set_color(line_color);
-	mLines[1].set_parent(mRoot_node);
+	mLines[1].set_parent(*this);
 
 	mLines[2].set_color(line_color);
-	mLines[2].set_parent(mRoot_node);
+	mLines[2].set_parent(*this);
 
 	mLines[3].set_color(line_color);
-	mLines[3].set_parent(mRoot_node);
+	mLines[3].set_parent(*this);
 }
 
 void tilemap_editor::update_labels()
@@ -328,7 +342,7 @@ void tilemap_editor::tick_highlight(engine::renderer& pR)
 	}
 }
 
-void tilemap_editor::save()
+int tilemap_editor::save()
 {
 	auto& doc = mLoader.get_document();
 	auto ele_map = mLoader.get_tilemap();
@@ -343,6 +357,7 @@ void tilemap_editor::save()
 	mTilemap_loader.condense_tiles();
 	mTilemap_loader.generate(doc, ele_map);
 	doc.SaveFile(mLoader.get_scene_path().c_str());
+	return 0;
 }
 
 // ##########
@@ -353,7 +368,7 @@ collisionbox_editor::collisionbox_editor()
 {
 	set_depth(-1000);
 
-	mTilemap_display.set_parent(mRoot_node);
+	add_child(mTilemap_display);
 
 	mBlackout.set_color({ 0, 0, 0, 255 });
 	mBlackout.set_size({ 1000, 1000 });
@@ -361,10 +376,10 @@ collisionbox_editor::collisionbox_editor()
 	mWall_display.set_color({ 100, 255, 100, 200 });
 	mWall_display.set_outline_color({ 255, 255, 255, 255 });
 	mWall_display.set_outline_thinkness(1);
-	mWall_display.set_parent(mRoot_node);
+	add_child(mWall_display);
 }
 
-int collisionbox_editor::open_scene(const std::string& pPath)
+int collisionbox_editor::open_scene(std::string pPath)
 {
 	if (mLoader.load(pPath))
 	{
@@ -379,12 +394,10 @@ int collisionbox_editor::open_scene(const std::string& pPath)
 
 int collisionbox_editor::draw(engine::renderer& pR)
 {
-	mRoot_node.movement(pR);
-
 	if (pR.is_key_down(engine::renderer::key_type::Return))
 		save();
 
-	auto mouse_position = pR.get_mouse_position(mRoot_node.get_exact_position());
+	auto mouse_position = pR.get_mouse_position(get_exact_position());
 	engine::fvector tile_position = (mouse_position / 32);
 
 	// Selection
@@ -423,7 +436,7 @@ int collisionbox_editor::draw(engine::renderer& pR)
 	return 0;
 }
 
-void collisionbox_editor::save()
+int collisionbox_editor::save()
 {
 	auto& doc = mLoader.get_document();
 	auto ele_collisionboxes = mLoader.get_collisionboxes();
@@ -446,6 +459,7 @@ void collisionbox_editor::save()
 	}
 
 	doc.SaveFile(mLoader.get_scene_path().c_str());
+	return 0;
 }
 
 // ##########
@@ -465,4 +479,68 @@ void scroll_control_node::movement(engine::renderer & pR)
 	if (pR.is_key_down(engine::renderer::key_type::Down))
 		position -= engine::fvector(0, 1)*speed;
 	set_position(position);
+}
+
+// ##########
+// editor_manager
+// ##########
+
+editor_manager::editor_manager()
+{
+	set_depth(-1000);
+	mTilemap_editor.set_parent(mRoot_node);
+	mCollisionbox_editor.set_parent(mRoot_node);
+	mCurrent_editor = nullptr;
+}
+
+bool editors::editor_manager::is_editor_open()
+{
+	return mCurrent_editor != nullptr;
+}
+
+void editor_manager::open_tilemap_editor(std::string pScene_path)
+{
+	mTilemap_editor.set_editor_gui(mEditor_gui);
+	mTilemap_editor.open_scene(pScene_path);
+	mCurrent_editor = &mTilemap_editor;
+}
+
+void editor_manager::open_collisionbox_editor(std::string pScene_path)
+{
+	mCollisionbox_editor.set_editor_gui(mEditor_gui);
+	mCollisionbox_editor.open_scene(pScene_path);
+	mCurrent_editor = &mCollisionbox_editor;
+}
+
+void editor_manager::close_editor()
+{
+	if (!mCurrent_editor)
+		return;
+	mCurrent_editor->save();
+	mCurrent_editor = nullptr;
+	mEditor_gui.clear();
+}
+
+void editor_manager::set_texture_manager(rpg::texture_manager & pTexture_manager)
+{
+	mTilemap_editor.set_texture_manager(pTexture_manager);
+	mCollisionbox_editor.set_texture_manager(pTexture_manager);
+}
+
+int editor_manager::draw(engine::renderer& pR)
+{
+	mRoot_node.movement(pR);
+
+	if (mCurrent_editor != nullptr)
+	{
+		mCurrent_editor->draw(pR);
+	}
+	return 0;
+}
+
+void editor_manager::refresh_renderer(engine::renderer & pR)
+{
+	mEditor_gui.set_renderer(pR);
+	mEditor_gui.set_depth(-1001);
+	mEditor_gui.initualize();
 }

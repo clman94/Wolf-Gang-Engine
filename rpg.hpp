@@ -125,7 +125,9 @@ public:
 		select_next,
 		select_previous,
 		reset,
-		menu
+		menu,
+		editor_1,
+		editor_2,
 	};
 	controls();
 	void trigger(control pControl);
@@ -133,7 +135,7 @@ public:
 	void reset();
 
 private:
-	std::array<bool, 9> mControls;
+	std::array<bool, 11> mControls;
 };
 
 class entity :
@@ -607,9 +609,7 @@ private:
 	bool        mRequest_load;
 	std::string mNew_scene_path;
 	
-	editors::tilemap_editor      mTilemap_editor;
-	editors::collisionbox_editor mCollisionbox_editor;
-	editors::editor_gui          mEditor_gui;
+	editors::editor_manager mEditor_manager;
 
 	std::string get_slot_path(size_t pSlot);
 	void save_game(size_t pSlot);

@@ -80,9 +80,10 @@ int game()
 		{
 			if (r.is_key_pressed(engine::renderer::key_type::R))
 				controls.trigger(rpg::controls::control::reset);
-
-			if (r.is_key_pressed(engine::renderer::key_type::M))
-				controls.trigger(rpg::controls::control::menu);
+			if (r.is_key_pressed(engine::renderer::key_type::Num1))
+				controls.trigger(rpg::controls::control::editor_1);
+			if (r.is_key_pressed(engine::renderer::key_type::Num2))
+				controls.trigger(rpg::controls::control::editor_2);
 		}
 
 		if (r.is_key_down(engine::renderer::key_type::Escape))
