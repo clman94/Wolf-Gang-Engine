@@ -3,6 +3,7 @@
 #include "tilemap_loader.hpp"
 #include "rpg_managers.hpp"
 #include "scene_loader.hpp"
+#include "rect.hpp"
 #include <vector>
 #include <string>
 #include <list>
@@ -136,12 +137,16 @@ private:
 	std::vector<engine::frect> mWalls;
 
 	engine::rectangle_node mWall_display;
+	engine::rectangle_node mResize_display;
+
+	engine::frect mResize_boxes[4];
 
 	engine::rectangle_node mBlackout;
 	rpg::tilemap_loader    mTilemap_loader;
 	rpg::tilemap_display   mTilemap_display;
 	rpg::scene_loader      mLoader;
 
+	void update_resize_boxes();
 };
 
 class editor_manager :
@@ -164,10 +169,10 @@ private:
 
 	editor* mCurrent_editor;
 
-	editor_gui mEditor_gui;
+	editor_gui          mEditor_gui;
 	scroll_control_node mRoot_node;
 
-	tilemap_editor mTilemap_editor;
+	tilemap_editor      mTilemap_editor;
 	collisionbox_editor mCollisionbox_editor;
 };
 

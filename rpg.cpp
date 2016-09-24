@@ -1428,13 +1428,6 @@ game::tick(controls& pControls)
 	if (mEditor_manager.is_editor_open())
 		return;
 
-	if (pControls.is_triggered(controls::control::reset))
-	{
-		std::cout << "Reloading scene...\n";
-		mScene.reload_scene();
-		std::cout << "Done\n";
-	}
-
 	mScene.tick(pControls);
 
 	mScript.tick();
@@ -2287,6 +2280,14 @@ void tilemap_display::clean()
 {
 	mLayers.clear();
 	mAnimated_tiles.clear();
+}
+
+void tilemap_display::set_color(engine::color pColor)
+{
+	for (auto& l : mLayers)
+	{
+		l.second.vertices.set_color(pColor);
+	}
 }
 
 void tilemap_display::highlight_layer(int pLayer, engine::color pHighlight, engine::color pOthers)

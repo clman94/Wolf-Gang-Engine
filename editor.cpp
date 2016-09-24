@@ -386,6 +386,18 @@ int collisionbox_editor::open_scene(std::string pPath)
 		util::error("Unable to open scene");
 		return 1;
 	}
+
+	auto tilemap_texture = mTexture_manager->get_texture(mLoader.get_tilemap_texture());
+	if (!tilemap_texture)
+	{
+		util::error("Invalid tilemap texture");
+		return 1;
+	}
+	mTilemap_display.set_texture(*tilemap_texture);
+
+	mTilemap_loader.load_tilemap_xml(mLoader.get_tilemap());
+	mTilemap_loader.update_display(mTilemap_display);
+	mTilemap_display.set_color({ 100, 100, 255, 150 });
 	
 	mWalls = mLoader.construct_wall_list();
 
@@ -403,6 +415,9 @@ int collisionbox_editor::draw(engine::renderer& pR)
 	// Selection
 	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left))
 	{
+		if (pR.is_key_down(engine::renderer::key_type::Insert))
+			mWalls.push_back(engine::frect(tile_position.floor(), { 1, 1 }));
+
 		for (size_t i = 0; i < mWalls.size(); i++)
 		{
 			if (mWalls[i].is_intersect(tile_position))
@@ -411,6 +426,7 @@ int collisionbox_editor::draw(engine::renderer& pR)
 				break;
 			}
 		}
+		//update_resize_boxes();
 	}
 
 	if (pR.is_key_pressed(engine::renderer::key_type::Delete) ||
@@ -418,9 +434,11 @@ int collisionbox_editor::draw(engine::renderer& pR)
 	{
 		if (mSelection < mWalls.size())
 			mWalls.erase(mWalls.begin() + mSelection);
+		//update_resize_boxes();
 	}
 
 	mBlackout.draw(pR);
+	mTilemap_display.draw(pR);
 	for (size_t i = 0; i < mWalls.size(); i++)
 	{
 		if (i == mSelection)
@@ -432,7 +450,6 @@ int collisionbox_editor::draw(engine::renderer& pR)
 		mWall_display.set_size(mWalls[i].get_size() * 32);
 		mWall_display.draw(pR);
 	}
-	mTilemap_display.draw(pR);
 	return 0;
 }
 
@@ -460,6 +477,28 @@ int collisionbox_editor::save()
 
 	doc.SaveFile(mLoader.get_scene_path().c_str());
 	return 0;
+}
+
+void collisionbox_editor::update_resize_boxes()
+{
+	if (!mWalls.size())
+		return;
+
+	const float size = 5;
+
+	auto& sel = mWalls[mSelection];
+
+	mResize_boxes[0].set_offset({ sel.get_offset().x, sel.get_offset().y - size });
+	mResize_boxes[0].set_size({ sel.w, size });
+
+	mResize_boxes[1].set_offset({ sel.get_offset().x - size, sel.get_offset().y });
+	mResize_boxes[1].set_size({ size, sel.h });
+
+	mResize_boxes[2].set_offset({ sel.get_offset().x, sel.get_offset().y + size });
+	mResize_boxes[2].set_size({ sel.w, size });
+
+	mResize_boxes[3].set_offset({ sel.get_offset().x + size, sel.get_offset().y });
+	mResize_boxes[3].set_size({ size, sel.h });
 }
 
 // ##########
@@ -529,10 +568,9 @@ void editor_manager::set_texture_manager(rpg::texture_manager & pTexture_manager
 
 int editor_manager::draw(engine::renderer& pR)
 {
-	mRoot_node.movement(pR);
-
 	if (mCurrent_editor != nullptr)
 	{
+		mRoot_node.movement(pR);
 		mCurrent_editor->draw(pR);
 	}
 	return 0;

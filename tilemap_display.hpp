@@ -17,6 +17,8 @@ public:
 	void update_animations();
 	void clean();
 
+	void set_color(engine::color pColor);
+
 	void highlight_layer(int pLayer, engine::color pHighlight, engine::color pOthers);
 	void remove_highlight();
 
