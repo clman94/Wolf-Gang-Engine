@@ -384,6 +384,12 @@ collisionbox_editor::collisionbox_editor()
 	mWall_display.set_outline_thinkness(1);
 	add_child(mWall_display);
 
+	mTile_preview.set_color({ 0, 0, 0, 0 });
+	mTile_preview.set_outline_color({ 255, 255, 255, 100 });
+	mTile_preview.set_outline_thinkness(1);
+	mTile_preview.set_size({ 32, 32 });
+	add_child(mTile_preview);
+
 	mSize_mode = false;
 }
 
@@ -431,10 +437,13 @@ int collisionbox_editor::draw(engine::renderer& pR)
 		}
 	}
 
+	// Resize mode
 	if (pR.is_mouse_down(engine::renderer::mouse_button::mouse_left)
 		&& mSize_mode)
 	{
 		auto new_size = (tile_position - mWalls[mSelection].get_offset()).floor();
+		if (new_size.x < 0) new_size.x = 0;
+		if (new_size.y < 0) new_size.y = 0;
 		mWalls[mSelection].set_size(new_size + engine::fvector(1, 1));
 	}
 	else
@@ -442,7 +451,7 @@ int collisionbox_editor::draw(engine::renderer& pR)
 		mSize_mode = false;
 	}
 
-
+	// Remove tile
 	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_right))
 	{
 		tile_selection(tile_position);
@@ -454,7 +463,7 @@ int collisionbox_editor::draw(engine::renderer& pR)
 
 	mBlackout.draw(pR);
 	mTilemap_display.draw(pR);
-	for (size_t i = 0; i < mWalls.size(); i++)
+	for (size_t i = 0; i < mWalls.size(); i++) // TODO: Optimize
 	{
 		if (i == mSelection)
 			mWall_display.set_outline_color({ 255, 90, 90, 255 });
@@ -465,6 +474,10 @@ int collisionbox_editor::draw(engine::renderer& pR)
 		mWall_display.set_size(mWalls[i].get_size() * 32);
 		mWall_display.draw(pR);
 	}
+
+	mTile_preview.set_position(tile_position.floor()*32);
+	mTile_preview.draw(pR);
+
 	return 0;
 }
 
@@ -516,29 +529,8 @@ bool collisionbox_editor::tile_selection(engine::fvector pCursor)
 		}
 	}
 	update_labels();
+
 	return new_selection;
-}
-
-void collisionbox_editor::update_resize_boxes()
-{
-	if (!mWalls.size())
-		return;
-
-	const float size = 5;
-
-	auto& sel = mWalls[mSelection];
-
-	mResize_boxes[0].set_offset({ sel.get_offset().x, sel.get_offset().y - size });
-	mResize_boxes[0].set_size({ sel.w, size });
-
-	mResize_boxes[1].set_offset({ sel.get_offset().x - size, sel.get_offset().y });
-	mResize_boxes[1].set_size({ size, sel.h });
-
-	mResize_boxes[2].set_offset({ sel.get_offset().x, sel.get_offset().y + size });
-	mResize_boxes[2].set_size({ sel.w, size });
-
-	mResize_boxes[3].set_offset({ sel.get_offset().x + size, sel.get_offset().y });
-	mResize_boxes[3].set_size({ size, sel.h });
 }
 
 void collisionbox_editor::update_labels()

@@ -143,10 +143,9 @@ private:
 
 	std::vector<engine::frect> mWalls;
 
+	engine::rectangle_node mTile_preview;
 	engine::rectangle_node mWall_display;
 	engine::rectangle_node mResize_display;
-
-	engine::frect mResize_boxes[4];
 
 	engine::rectangle_node mBlackout;
 	rpg::tilemap_loader    mTilemap_loader;
@@ -156,8 +155,6 @@ private:
 	void setup_editor(editor_gui& pEditor_gui);
 
 	bool tile_selection(engine::fvector pCursor);
-
-	void update_resize_boxes();
 	void update_labels();
 };
 
