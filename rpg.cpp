@@ -2164,13 +2164,14 @@ void background_music::clean()
 	mStream.stop();
 }
 
-void background_music::script_music_open(const std::string & pPath)
+int background_music::script_music_open(const std::string & pPath)
 {
 	if (mPath != pPath)
 	{
 		mPath = pPath;
-		mStream.open(pPath);
+		return mStream.open(pPath);
 	}
+	return 0;
 }
 
 // ##########

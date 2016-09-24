@@ -502,7 +502,7 @@ private:
 	engine::sound_stream mStream;
 	std::string mPath;
 
-	void script_music_open(const std::string& pPath);
+	int script_music_open(const std::string& pPath);
 };
 
 class scene :
