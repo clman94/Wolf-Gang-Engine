@@ -137,6 +137,8 @@ public:
 private:
 	size_t mSelection;
 
+	bool mSize_mode;
+
 	tgui::Label::Ptr mLb_tilesize;
 
 	std::vector<engine::frect> mWalls;
@@ -153,8 +155,9 @@ private:
 
 	void setup_editor(editor_gui& pEditor_gui);
 
-	void update_resize_boxes();
+	void tile_selection(engine::fvector pCursor);
 
+	void update_resize_boxes();
 	void update_labels();
 };
 

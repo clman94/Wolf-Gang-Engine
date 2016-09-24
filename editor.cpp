@@ -26,6 +26,7 @@ void editor_gui::initualize()
 	mLayout = std::make_shared<tgui_list_layout>();
 	mLayout->setBackgroundColor({ 0, 0, 0,  90});
 	mLayout->setSize(300, 500);
+	mLayout->hide();
 	mTgui.add(mLayout);
 
 	mLb_mode = std::make_shared<tgui::Label>();
@@ -382,6 +383,8 @@ collisionbox_editor::collisionbox_editor()
 	mWall_display.set_outline_color({ 255, 255, 255, 255 });
 	mWall_display.set_outline_thinkness(1);
 	add_child(mWall_display);
+
+	mSize_mode = false;
 }
 
 int collisionbox_editor::open_scene(std::string pPath)
@@ -421,27 +424,33 @@ int collisionbox_editor::draw(engine::renderer& pR)
 	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left))
 	{
 		if (pR.is_key_down(engine::renderer::key_type::Insert))
-			mWalls.push_back(engine::frect(tile_position.floor(), { 1, 1 }));
-
-		for (size_t i = 0; i < mWalls.size(); i++)
 		{
-			if (mWalls[i].is_intersect(tile_position))
-			{
-				mSelection = i;
-				break;
-			}
+			mSelection = mWalls.size();
+			mWalls.push_back(engine::frect(tile_position.floor(), { 1, 1 }));
+			mSize_mode = true;
 		}
-		update_labels();
-		//update_resize_boxes();
+		tile_selection(tile_position);
 	}
+
+	if (pR.is_mouse_down(engine::renderer::mouse_button::mouse_left)
+		&& mSize_mode)
+	{
+		auto new_size = (tile_position - mWalls[mSelection].get_offset()).floor();
+		mWalls[mSelection].set_size(new_size + engine::fvector(1, 1));
+	}
+	else
+	{
+		mSize_mode = false;
+	}
+
 
 	if (pR.is_key_pressed(engine::renderer::key_type::Delete) ||
 		pR.is_key_pressed(engine::renderer::key_type::BackSpace))
 	{
 		if (mSelection < mWalls.size())
 			mWalls.erase(mWalls.begin() + mSelection);
+		mSelection = 0;
 		update_labels();
-		//update_resize_boxes();
 	}
 
 	mBlackout.draw(pR);
@@ -489,6 +498,22 @@ int collisionbox_editor::save()
 void collisionbox_editor::setup_editor(editor_gui & pEditor_gui)
 {
 	mLb_tilesize = pEditor_gui.add_label("n/a, n/a");
+}
+
+void collisionbox_editor::tile_selection(engine::fvector pCursor)
+{
+	if (mSize_mode)
+		return;
+
+	for (size_t i = 0; i < mWalls.size(); i++)
+	{
+		if (mWalls[i].is_intersect(pCursor))
+		{
+			mSelection = i;
+			break;
+		}
+	}
+	update_labels();
 }
 
 void collisionbox_editor::update_resize_boxes()
