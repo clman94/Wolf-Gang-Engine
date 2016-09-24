@@ -607,9 +607,9 @@ private:
 	bool        mRequest_load;
 	std::string mNew_scene_path;
 	
-	editor::tilemap_editor      mTilemap_editor;
-	editor::collisionbox_editor mCollisionbox_editor;
-	editor::editor_gui          mEditor_gui;
+	editors::tilemap_editor      mTilemap_editor;
+	editors::collisionbox_editor mCollisionbox_editor;
+	editors::editor_gui          mEditor_gui;
 
 	std::string get_slot_path(size_t pSlot);
 	void save_game(size_t pSlot);

@@ -1,7 +1,7 @@
 
 #include "editor.hpp"
 
-using namespace editor;
+using namespace editors;
 
 void tgui_list_layout::updateWidgetPositions()
 {
@@ -135,7 +135,7 @@ int tilemap_editor::open_scene(const std::string & pPath)
 		util::error("Could not load scene tilemap to edit");
 		return 1;
 	}
-
+	
 	mTexture = mTexture_manager->get_texture(mLoader.get_tilemap_texture());
 	if (!mTexture)
 	{
@@ -253,7 +253,7 @@ int tilemap_editor::draw(engine::renderer & pR)
 	return 0;
 }
 
-void tilemap_editor::set_texture_manager(rpg::texture_manager & pTexture_manager)
+void editor::set_texture_manager(rpg::texture_manager & pTexture_manager)
 {
 	mTexture_manager = &pTexture_manager;
 }
@@ -421,11 +421,6 @@ int collisionbox_editor::draw(engine::renderer& pR)
 	}
 	mTilemap_display.draw(pR);
 	return 0;
-}
-
-void collisionbox_editor::set_texture_manager(rpg::texture_manager & pTexture_manager)
-{
-	mTexture_manager = &pTexture_manager;
 }
 
 void collisionbox_editor::save()

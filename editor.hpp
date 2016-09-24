@@ -9,7 +9,7 @@
 
 #include "tinyxml2\xmlshortcuts.hpp"
 
-namespace editor
+namespace editors
 {
 
 class tgui_list_layout :
@@ -73,18 +73,14 @@ public:
 		mEditor_gui = &pEditor_gui;
 		setup_editor(pEditor_gui);
 	}
-private:
-	editor_gui* mEditor_gui;
+
+	void set_texture_manager(rpg::texture_manager& pTexture_manager);
+
 protected:
+	editor_gui* mEditor_gui;
+	rpg::texture_manager*  mTexture_manager;
+
 	virtual void setup_editor(editor_gui& pEditor_gui){}
-	editor_gui* get_editor_gui()
-	{ return mEditor_gui; }
-};
-
-class boundary_lines :
-	public engine::render_client
-{
-
 };
 
 class tilemap_editor :
@@ -95,8 +91,7 @@ public:
 	tilemap_editor();
 	int open_scene(const std::string& pPath);
 	int draw(engine::renderer& pR);
-	void set_texture_manager(rpg::texture_manager& pTexture_manager);
-
+	
 private:
 	size_t mCurrent_tile;
 	int    mRotation;
@@ -118,7 +113,6 @@ private:
 
 	rpg::tilemap_loader    mTilemap_loader;
 	rpg::tilemap_display   mTilemap_display;
-	rpg::texture_manager*  mTexture_manager;
 
 	tgui::Label::Ptr mLb_tile;
 	tgui::Label::Ptr mLb_layer;
@@ -132,11 +126,10 @@ private:
 	void update_highlight();
 	void update_lines(engine::fvector pBoundary);
 
-	void tick_highlight(engine::renderer & pR);
+	void tick_highlight(engine::renderer& pR);
 
 	void save();
 };
-
 
 class collisionbox_editor :
 	public engine::render_client,
@@ -147,7 +140,6 @@ public:
 
 	int open_scene(const std::string& pPath);
 	int draw(engine::renderer& pR);
-	void set_texture_manager(rpg::texture_manager& pTexture_manager);
 
 private:
 	size_t mSelection;
@@ -160,10 +152,19 @@ private:
 	engine::rectangle_node mBlackout;
 	rpg::tilemap_loader    mTilemap_loader;
 	rpg::tilemap_display   mTilemap_display;
-	rpg::texture_manager*  mTexture_manager;
 	rpg::scene_loader      mLoader;
 
 	void save();
+};
+
+class editor_manager :
+	public engine::render_client
+{
+public:
+	bool is_editor_open();
+	void open_editor();
+private:
+
 };
 
 

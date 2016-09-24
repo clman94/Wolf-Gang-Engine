@@ -542,6 +542,7 @@ entity* entity_manager::script_add_entity(const std::string & path)
 
 	auto& ne = mEntities.add_item();
 	ne.load_entity(path, *mTexture_manager);
+	ne.set_animation("default:default");
 	get_renderer()->add_client(ne);
 	return &ne;
 }
@@ -1681,7 +1682,7 @@ void narrative_dialog::set_expression(const std::string& pName)
 	auto animation = mExpression_manager.find_animation(pName);
 	if (!animation)
 	{
-		util::error("Animation '" + pName + "' does not exist");
+		util::error("Expression '" + pName + "' does not exist");
 		return;
 	}
 	mExpression.set_animation(*animation);

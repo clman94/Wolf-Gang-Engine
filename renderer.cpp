@@ -99,7 +99,7 @@ void renderer::request_resort()
 int
 renderer::initualize(ivector pSize, int pFps)
 {
-	mWindow.create(sf::VideoMode(pSize.x, pSize.y), "The Amazing Window", sf::Style::Titlebar | sf::Style::Close);
+	mWindow.create(sf::VideoMode(pSize.x, pSize.y), "Wolf-Gang Engine", sf::Style::Titlebar | sf::Style::Close);
 	//mWindow.create(sf::VideoMode(pSize.x, pSize.y), "The Amazing Window", sf::Style::Fullscreen);
 	if (pFps > 0)
 		mWindow.setFramerateLimit(pFps);
