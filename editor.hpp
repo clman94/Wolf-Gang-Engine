@@ -155,7 +155,7 @@ private:
 
 	void setup_editor(editor_gui& pEditor_gui);
 
-	void tile_selection(engine::fvector pCursor);
+	bool tile_selection(engine::fvector pCursor);
 
 	void update_resize_boxes();
 	void update_labels();

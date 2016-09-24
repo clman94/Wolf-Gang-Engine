@@ -423,13 +423,12 @@ int collisionbox_editor::draw(engine::renderer& pR)
 	// Selection
 	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left))
 	{
-		if (pR.is_key_down(engine::renderer::key_type::Insert))
+		if (!tile_selection(tile_position))
 		{
 			mSelection = mWalls.size();
 			mWalls.push_back(engine::frect(tile_position.floor(), { 1, 1 }));
 			mSize_mode = true;
 		}
-		tile_selection(tile_position);
 	}
 
 	if (pR.is_mouse_down(engine::renderer::mouse_button::mouse_left)
@@ -444,9 +443,9 @@ int collisionbox_editor::draw(engine::renderer& pR)
 	}
 
 
-	if (pR.is_key_pressed(engine::renderer::key_type::Delete) ||
-		pR.is_key_pressed(engine::renderer::key_type::BackSpace))
+	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_right))
 	{
+		tile_selection(tile_position);
 		if (mSelection < mWalls.size())
 			mWalls.erase(mWalls.begin() + mSelection);
 		mSelection = 0;
@@ -500,20 +499,24 @@ void collisionbox_editor::setup_editor(editor_gui & pEditor_gui)
 	mLb_tilesize = pEditor_gui.add_label("n/a, n/a");
 }
 
-void collisionbox_editor::tile_selection(engine::fvector pCursor)
+bool collisionbox_editor::tile_selection(engine::fvector pCursor)
 {
 	if (mSize_mode)
-		return;
+		return false;
+
+	bool new_selection = false;
 
 	for (size_t i = 0; i < mWalls.size(); i++)
 	{
 		if (mWalls[i].is_intersect(pCursor))
 		{
 			mSelection = i;
+			new_selection = true;
 			break;
 		}
 	}
 	update_labels();
+	return new_selection;
 }
 
 void collisionbox_editor::update_resize_boxes()
