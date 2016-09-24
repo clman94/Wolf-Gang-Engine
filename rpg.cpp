@@ -1437,7 +1437,7 @@ game::tick(controls& pControls)
 		mScene.load_scene(mNew_scene_path);
 	}
 
-	//mEditor_gui.update_camera_position(mScene.get_exact_position());
+	mEditor_manager.update_camera_position(mScene.get_exact_position());
 }
 
 void

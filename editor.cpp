@@ -24,9 +24,8 @@ void tgui_list_layout::updateWidgetPositions()
 void editor_gui::initualize()
 {
 	mLayout = std::make_shared<tgui_list_layout>();
+	mLayout->setBackgroundColor({ 0, 0, 0,  90});
 	mLayout->setSize(300, 500);
-	mLayout->setBackgroundColor({ 0, 0, 0, 90 });
-	mLayout->hide();
 	mTgui.add(mLayout);
 
 	mLb_mode = std::make_shared<tgui::Label>();
@@ -64,6 +63,13 @@ tgui::Label::Ptr editor_gui::add_label(const std::string & pText)
 	return nlb;
 }
 
+tgui::TextBox::Ptr editors::editor_gui::add_textbox()
+{
+	auto ntb = std::make_shared<tgui::TextBox>();
+	mEditor_layout->add(ntb);
+	return ntb;
+}
+
 void editor_gui::update_camera_position(engine::fvector pPosition)
 {
 	mCamera_offset = pPosition;
@@ -79,7 +85,6 @@ int editor_gui::draw(engine::renderer& pR)
 	if (pR.is_key_down(engine::renderer::key_type::LControl)
 	&&  pR.is_key_pressed(engine::renderer::key_type::E))
 	{
-		std::cout << "tesetsdf\n";
 		if (mLayout->isVisible())
 			mLayout->hide();
 		else
@@ -426,6 +431,7 @@ int collisionbox_editor::draw(engine::renderer& pR)
 				break;
 			}
 		}
+		update_labels();
 		//update_resize_boxes();
 	}
 
@@ -434,6 +440,7 @@ int collisionbox_editor::draw(engine::renderer& pR)
 	{
 		if (mSelection < mWalls.size())
 			mWalls.erase(mWalls.begin() + mSelection);
+		update_labels();
 		//update_resize_boxes();
 	}
 
@@ -479,6 +486,11 @@ int collisionbox_editor::save()
 	return 0;
 }
 
+void collisionbox_editor::setup_editor(editor_gui & pEditor_gui)
+{
+	mLb_tilesize = pEditor_gui.add_label("n/a, n/a");
+}
+
 void collisionbox_editor::update_resize_boxes()
 {
 	if (!mWalls.size())
@@ -499,6 +511,19 @@ void collisionbox_editor::update_resize_boxes()
 
 	mResize_boxes[3].set_offset({ sel.get_offset().x + size, sel.get_offset().y });
 	mResize_boxes[3].set_size({ size, sel.h });
+}
+
+void collisionbox_editor::update_labels()
+{
+	assert(mLb_tilesize != nullptr);
+
+	if (!mWalls.size())
+		return;
+
+	std::string size_text = std::to_string(mWalls[mSelection].get_size().x);
+	size_text += ", ";
+	size_text += std::to_string(mWalls[mSelection].get_size().y);
+	mLb_tilesize->setText(size_text);
 }
 
 // ##########
@@ -560,6 +585,12 @@ void editor_manager::close_editor()
 	mEditor_gui.clear();
 }
 
+void editor_manager::update_camera_position(engine::fvector pPosition)
+{
+	if (!mCurrent_editor)
+		mEditor_gui.update_camera_position(pPosition);
+}
+
 void editor_manager::set_texture_manager(rpg::texture_manager & pTexture_manager)
 {
 	mTilemap_editor.set_texture_manager(pTexture_manager);
@@ -571,6 +602,7 @@ int editor_manager::draw(engine::renderer& pR)
 	if (mCurrent_editor != nullptr)
 	{
 		mRoot_node.movement(pR);
+		mEditor_gui.update_camera_position(mRoot_node.get_exact_position());
 		mCurrent_editor->draw(pR);
 	}
 	return 0;

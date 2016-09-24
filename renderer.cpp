@@ -312,7 +312,7 @@ renderer::update_events()
 	{
 		if (mEvent.type == sf::Event::Closed)
 			return 1;
-
+		
 		if (mTgui)
 			mTgui->handleEvent(mEvent);
 	}

@@ -31,11 +31,14 @@ public:
 
 	tgui::Label::Ptr add_label(const std::string& text);
 
+	tgui::TextBox::Ptr add_textbox();
+
 	void update_camera_position(engine::fvector pPosition);
 
 	int draw(engine::renderer& pR);
 
 private:
+
 	float mUpdate_timer;
 	tgui::Label::Ptr mLb_mode;
 	tgui::Label::Ptr mLb_mouse;
@@ -134,6 +137,8 @@ public:
 private:
 	size_t mSelection;
 
+	tgui::Label::Ptr mLb_tilesize;
+
 	std::vector<engine::frect> mWalls;
 
 	engine::rectangle_node mWall_display;
@@ -146,7 +151,11 @@ private:
 	rpg::tilemap_display   mTilemap_display;
 	rpg::scene_loader      mLoader;
 
+	void setup_editor(editor_gui& pEditor_gui);
+
 	void update_resize_boxes();
+
+	void update_labels();
 };
 
 class editor_manager :
@@ -159,6 +168,8 @@ public:
 	void open_tilemap_editor(std::string pScene_path);
 	void open_collisionbox_editor(std::string pScene_path);
 	void close_editor();
+
+	void update_camera_position(engine::fvector pPosition);
 
 	void set_texture_manager(rpg::texture_manager& pTexture_manager);
 
