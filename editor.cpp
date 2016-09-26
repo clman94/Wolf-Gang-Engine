@@ -423,9 +423,9 @@ int collisionbox_editor::draw(engine::renderer& pR)
 	if (pR.is_key_down(engine::renderer::key_type::Return))
 		save();
 
-	auto mouse_position = pR.get_mouse_position(get_exact_position());
-	engine::fvector exact_tile_position = (mouse_position / 32);
-	engine::fvector tile_position = exact_tile_position.floor();
+	const engine::fvector mouse_position = pR.get_mouse_position(get_exact_position());
+	const engine::fvector exact_tile_position = mouse_position / 32;
+	const engine::fvector tile_position = engine::fvector(exact_tile_position).floor();
 
 	// Selection
 	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left))
