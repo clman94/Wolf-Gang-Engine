@@ -138,6 +138,7 @@ private:
 	size_t mSelection;
 
 	bool mSize_mode;
+	engine::fvector mDrag_from;
 
 	tgui::Label::Ptr mLb_tilesize;
 

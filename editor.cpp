@@ -424,7 +424,8 @@ int collisionbox_editor::draw(engine::renderer& pR)
 		save();
 
 	auto mouse_position = pR.get_mouse_position(get_exact_position());
-	engine::fvector tile_position = (mouse_position / 32);
+	engine::fvector exact_tile_position = (mouse_position / 32);
+	engine::fvector tile_position = exact_tile_position.floor();
 
 	// Selection
 	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left))
@@ -432,8 +433,9 @@ int collisionbox_editor::draw(engine::renderer& pR)
 		if (!tile_selection(tile_position))
 		{
 			mSelection = mWalls.size();
-			mWalls.push_back(engine::frect(tile_position.floor(), { 1, 1 }));
+			mWalls.push_back(engine::frect(tile_position, { 1, 1 }));
 			mSize_mode = true;
+			mDrag_from = tile_position;
 		}
 	}
 
@@ -441,10 +443,19 @@ int collisionbox_editor::draw(engine::renderer& pR)
 	if (pR.is_mouse_down(engine::renderer::mouse_button::mouse_left)
 		&& mSize_mode)
 	{
-		auto new_size = (tile_position - mWalls[mSelection].get_offset()).floor();
-		if (new_size.x < 0) new_size.x = 0;
-		if (new_size.y < 0) new_size.y = 0;
-		mWalls[mSelection].set_size(new_size + engine::fvector(1, 1));
+		engine::fvector resize_to = tile_position;
+
+		if (tile_position.x <= mDrag_from.x)
+		{
+			mWalls[mSelection].x = tile_position.x;
+			resize_to.x = mDrag_from.x;
+		}
+		if (tile_position.y <= mDrag_from.y)
+		{
+			mWalls[mSelection].y = tile_position.y;
+			resize_to.y = mDrag_from.y;
+		}
+		mWalls[mSelection].set_size(resize_to - mWalls[mSelection].get_offset() + engine::fvector(1, 1));
 	}
 	else
 	{
@@ -454,7 +465,7 @@ int collisionbox_editor::draw(engine::renderer& pR)
 	// Remove tile
 	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_right))
 	{
-		tile_selection(tile_position);
+		tile_selection(exact_tile_position);
 		if (mSelection < mWalls.size())
 			mWalls.erase(mWalls.begin() + mSelection);
 		mSelection = 0;
@@ -475,7 +486,7 @@ int collisionbox_editor::draw(engine::renderer& pR)
 		mWall_display.draw(pR);
 	}
 
-	mTile_preview.set_position(tile_position.floor()*32);
+	mTile_preview.set_position(tile_position *32);
 	mTile_preview.draw(pR);
 
 	return 0;
