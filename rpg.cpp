@@ -422,12 +422,14 @@ player_character::movement(controls& pControls, collision_system& pCollision_sys
 		move.normalize();
 		move *= get_speed();
 
-		set_move_direction(move); // Make sure the player is in the diretion he's moving
+		set_move_direction(move); // Make sure the player is in the direction he's moving
 		set_position(get_position() + (move*pDelta));
 		play_animation();
 	}
 	else
+	{
 		stop_animation();
+	}
 }
 
 engine::fvector
@@ -1365,6 +1367,7 @@ game::load_script_interface()
 
 	mFlags.load_script_interface(mScript);
 	mScene.load_script_interface(mScript);
+	mValue_manager.load_script_interface(mScript);
 }
 
 float game::get_delta()
@@ -2477,4 +2480,77 @@ void particle_manager::load_emitter_xml(tinyxml2::XMLElement* pEle)
 	mEmitters.emplace_back();
 	auto& emitter = mEmitters.back();
 	emitter.set_acceleration(pEle->FloatAttribute("acceleration"));
+}
+
+// ##########
+// save_value_manager
+// ##########
+
+void save_value_manager::set_value(const std::string & pName, const std::string & pVal)
+{
+	auto& val = mValues[pName];
+	val.type = value_type::string;
+	val.val_string = pVal;
+}
+
+void save_value_manager::set_value(const std::string & pName, int pVal)
+{
+	auto& val = mValues[pName];
+	val.type = value_type::integer;
+	val.val_integer = pVal;
+}
+
+void save_value_manager::set_value(const std::string & pName, float pVal)
+{
+	auto& val = mValues[pName];
+	val.type = value_type::floating_point;
+	val.val_floating_point = pVal;
+}
+
+const std::string& save_value_manager::get_value_string(const std::string& pName)
+{
+	auto& val = mValues.find(pName);
+	if (val == mValues.end())
+		return std::string();
+	return val->second.val_string;
+}
+
+int save_value_manager::get_value_int(const std::string& pName)
+{
+	auto& val = mValues.find(pName);
+	if (val == mValues.end())
+		return 0;
+
+	
+	return val->second.val_integer;
+}
+
+float save_value_manager::get_value_float(const std::string & pName)
+{
+	auto& val = mValues.find(pName);
+	if (val == mValues.end())
+		return 0;
+	return val->second.val_floating_point;
+}
+
+bool save_value_manager::remove_value(const std::string & pName)
+{
+	auto& val = mValues.find(pName);
+	if (val == mValues.end())
+		return false;
+	mValues.erase(val);
+	return true;
+}
+
+void save_value_manager::load_script_interface(script_system& pScript)
+{
+	pScript.add_function("void _set_value(const string &in, const string&in)", asMETHODPR(save_value_manager, set_value, (const std::string&, const std::string&), void), this);
+	pScript.add_function("void _set_value(const string &in, int)", asMETHODPR(save_value_manager, set_value, (const std::string&, int), void), this);
+	pScript.add_function("void _set_value(const string &in, float)", asMETHODPR(save_value_manager, set_value, (const std::string&, float), void), this);
+
+	pScript.add_function("bool _remove_value(const string &in)", asMETHODPR(save_value_manager, remove_value, (const std::string&), bool), this);
+
+	pScript.add_function("const string& _get_value_string(const string &in)", asMETHOD(save_value_manager, get_value_string), this);
+	pScript.add_function("const string& _get_value_int(const string &in)", asMETHOD(save_value_manager, get_value_int), this);
+	pScript.add_function("const string& _get_value_float(const string &in)", asMETHOD(save_value_manager, get_value_float), this);
 }

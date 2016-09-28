@@ -564,6 +564,39 @@ protected:
 	void refresh_renderer(engine::renderer& _r);
 };
 
+class save_value_manager
+{
+public:
+	void set_value(const std::string& pName, const std::string& pVal);
+	void set_value(const std::string& pName, int pVal);
+	void set_value(const std::string& pName, float pVal);
+
+	const std::string& get_value_string(const std::string& pName);
+	int                get_value_int(const std::string& pName);
+	float              get_value_float(const std::string& pName);
+
+	bool remove_value(const std::string& pName);
+
+	void load_script_interface(script_system& pScript);
+
+private:
+	enum struct value_type
+	{
+		string,
+		floating_point,
+		integer
+	};
+
+	struct data_value
+	{
+		std::string val_string;
+		float val_floating_point;
+		int val_integer;
+		value_type type;
+	};
+	std::map<std::string, data_value> mValues;
+};
+
 class save_system
 {
 public:
@@ -605,6 +638,8 @@ private:
 	script_system    mScript;
 	controls         mControls;
 	size_t           mSlot;
+
+	save_value_manager mValue_manager;
 
 	bool        mRequest_load;
 	std::string mNew_scene_path;
