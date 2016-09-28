@@ -52,11 +52,11 @@ text_node::draw(renderer &pR)
 	engine::fvector loffset(0, lbounds.get_offset().y*mSfml_text.getScale().y);
 	mSfml_text.setPosition(position + mOffset - loffset);
 
-	/*engine::frect bounds = mSfml_text.getGlobalBounds();
+	engine::frect bounds = mSfml_text.getLocalBounds();
 	testrect.set_color({ 100, 100, 100, 255 });
-	testrect.set_position(bounds.get_offset());
-	testrect.set_size(bounds.get_size());
-	testrect.draw(pR);*/
+	testrect.set_position(position);
+	testrect.set_size(bounds.get_size()*engine::fvector(mSfml_text.getScale()));
+	testrect.draw(pR);
 
 	pR.get_sfml_render().draw(mSfml_text);
 	return 0;

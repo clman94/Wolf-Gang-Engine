@@ -189,8 +189,8 @@ int tilemap_editor::draw(engine::renderer & pR)
 	if (pR.is_key_down(engine::renderer::key_type::Return))
 		save();
 
-	auto mouse_position = pR.get_mouse_position(mTilemap_display.get_exact_position());
-	engine::fvector tile_position = (mouse_position / 32).floor();
+	const engine::fvector mouse_position = pR.get_mouse_position(mTilemap_display.get_exact_position());
+	const engine::fvector tile_position = (mouse_position / 32).floor();
 
 	// Add tile
 	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left))
