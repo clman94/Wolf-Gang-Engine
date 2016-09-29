@@ -1,7 +1,8 @@
 #define ENGINE_INTERNAL
 
-#include "renderer.hpp"
-#include "particle_engine.hpp"
+#include <engine/renderer.hpp>
+#include <engine/particle_engine.hpp>
+
 #include <cmath>
 
 using namespace engine;

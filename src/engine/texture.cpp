@@ -1,7 +1,9 @@
 #define ENGINE_INTERNAL
 
-#include "texture.hpp"
-#include "tinyxml2\tinyxml2.h"
+#include <engine/texture.hpp>
+
+#include "../../tinyxml2/tinyxml2.h"
+
 #include <iostream>
 
 using namespace engine;

@@ -1,12 +1,15 @@
 #ifndef RPG_SCENE_LOADER_HPP
 #define RPG_SCENE_LOADER_HPP
 
+#include "../../tinyxml2/tinyxml2.h"
+#include "../../tinyxml2/xmlshortcuts.hpp"
+
+#include <engine/vector.hpp>
+#include <engine/rect.hpp>
+
 #include <string>
 #include <vector>
-#include "tinyxml2\tinyxml2.h"
-#include "tinyxml2\xmlshortcuts.hpp"
-#include "vector.hpp"
-#include "rect.hpp"
+
 
 namespace rpg {
 

@@ -1,6 +1,6 @@
 #define ENGINE_INTERNAL
 
-#include "renderer.hpp"
+#include <engine/renderer.hpp>
 
 using namespace engine;
 

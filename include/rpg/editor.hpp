@@ -1,14 +1,18 @@
+#ifndef RPG_EDITOR_HPP
+#define RPG_EDITOR_HPP
 
-#include "renderer.hpp"
-#include "tilemap_loader.hpp"
-#include "rpg_managers.hpp"
-#include "scene_loader.hpp"
-#include "rect.hpp"
+#include <engine/renderer.hpp>
+#include <engine/rect.hpp>
+
+#include <rpg/tilemap_loader.hpp>
+#include <rpg/rpg_managers.hpp>
+#include <rpg/scene_loader.hpp>
+
 #include <vector>
 #include <string>
 #include <list>
 
-#include "tinyxml2\xmlshortcuts.hpp"
+#include "../tinyxml2/xmlshortcuts.hpp"
 
 namespace editors
 {
@@ -190,3 +194,5 @@ private:
 
 
 }
+
+#endif

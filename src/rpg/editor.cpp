@@ -1,5 +1,5 @@
 
-#include "editor.hpp"
+#include <rpg/editor.hpp>
 
 using namespace editors;
 

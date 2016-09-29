@@ -1,5 +1,6 @@
-#include "utility.hpp"
-#include "rpg_managers.hpp"
+#include <engine/utility.hpp>
+
+#include <rpg/rpg_managers.hpp>
 
 using namespace rpg;
 

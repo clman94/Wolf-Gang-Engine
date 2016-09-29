@@ -1,10 +1,14 @@
 #ifndef RPG_TILEMAP_LOADER_HPP
 #define RPG_TILEMAP_LOADER_HPP
 
-#include "renderer.hpp"
-#include "tilemap_display.hpp"
-#include "tinyxml2\tinyxml2.h"
+#include "../../tinyxml2/tinyxml2.h"
+
+#include <engine/renderer.hpp>
+
+#include <rpg/tilemap_display.hpp>
+
 #include <map>
+
 namespace rpg {
 
 class tilemap_loader

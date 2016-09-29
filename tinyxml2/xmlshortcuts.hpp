@@ -1,8 +1,8 @@
 #ifndef XMLSHORTCUTS_HPP
 #define XMLSHORTCUTS_HPP
 
-#include "../vector.hpp"
-#include "../rect.hpp"
+#include <engine/vector.hpp>
+#include <engine/rect.hpp>
 
 #include "tinyxml2.h"
 

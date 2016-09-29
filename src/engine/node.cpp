@@ -1,5 +1,5 @@
 
-#include "node.hpp"
+#include <engine/node.hpp>
 
 using namespace engine;
 

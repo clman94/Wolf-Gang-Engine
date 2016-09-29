@@ -1,5 +1,7 @@
 #define ENGINE_INTERNAL
-#include "renderer.hpp"
+
+#include <engine/renderer.hpp>
+
 #include <cassert>
 
 using namespace engine;

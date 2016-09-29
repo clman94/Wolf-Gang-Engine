@@ -1,11 +1,12 @@
-#include "rpg.hpp"
+#include <rpg/rpg.hpp>
 
 #include <angelscript/add_on/scriptstdstring/scriptstdstring.h>
 #include <angelscript/add_on/scriptmath/scriptmath.h>
 #include <angelscript/add_on/scriptarray/scriptarray.h>
 
-#include "parsers.hpp"
-#include "tinyxml2\xmlshortcuts.hpp"
+#include <engine/parsers.hpp>
+
+#include "../tinyxml2/xmlshortcuts.hpp"
 
 #include <functional>
 #include <algorithm>
@@ -2511,7 +2512,7 @@ const std::string& save_value_manager::get_value_string(const std::string& pName
 {
 	auto& val = mValues.find(pName);
 	if (val == mValues.end())
-		return std::string();
+		return std::string(); // NEED TO FIX
 	return val->second.val_string;
 }
 

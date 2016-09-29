@@ -1,16 +1,19 @@
 #ifndef ENGINE_TEXTURE_HPP
 #define ENGINE_TEXTURE_HPP
 
+
+#include <SFML/Graphics.hpp>
+
+#include <engine/animation.hpp>
+#include <engine/rect.hpp>
+#include <engine/types.hpp>
+
+#include "../../tinyxml2/tinyxml2.h"
+
+#include <unordered_map>
 #include <vector>
 #include <string>
 #include <assert.h>
-#include <SFML\Graphics.hpp>
-#include "animation.hpp"
-#include "rect.hpp"
-#include "types.hpp"
-#include "tinyxml2\tinyxml2.h"
-#include <unordered_map>
-#include <vector>
 
 namespace engine
 {

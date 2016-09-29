@@ -1,8 +1,8 @@
 #ifndef RPG_CONFIG_HPP
 #define RPG_CONFIG_HPP
 
-#include "vector.hpp"
-#include "time.hpp"
+#include <engine/vector.hpp>
+#include <engine/time.hpp>
 
 namespace rpg{ namespace defs{
 

@@ -1,16 +1,18 @@
 #ifndef RPG_HPP
 #define RPG_HPP
 
-#include "renderer.hpp"
-#include "utility.hpp"
-#include "rpg_managers.hpp"
-#include "rpg_config.hpp"
-#include "your_soul.hpp"
-#include "tinyxml2\tinyxml2.h"
-#include "tilemap_loader.hpp"
-#include "particle_engine.hpp"
-#include "editor.hpp"
-#include "scene_loader.hpp"
+#include "../../tinyxml2/tinyxml2.h"
+
+#include <engine/renderer.hpp>
+#include <engine/utility.hpp>
+#include <engine/particle_engine.hpp>
+#include <engine/your_soul.hpp>
+
+#include <rpg/rpg_managers.hpp>
+#include <rpg/rpg_config.hpp>
+#include <rpg/tilemap_loader.hpp>
+#include <rpg/editor.hpp>
+#include <rpg/scene_loader.hpp>
 
 #include <set>
 #include <list>

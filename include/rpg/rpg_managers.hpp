@@ -1,13 +1,14 @@
 #ifndef RPG_MANAGERS_HPP
 #define RPG_MANAGERS_HPP
 
+#include <engine/texture.hpp>
+#include <engine/audio.hpp>
+#include "../../tinyxml2/xmlshortcuts.hpp"
+
 #include <string>
 #include <vector>
 #include <list>
 #include <unordered_map>
-#include "texture.hpp"
-#include "audio.hpp"
-#include "tinyxml2\xmlshortcuts.hpp"
 
 namespace rpg
 {

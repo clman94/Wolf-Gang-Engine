@@ -1,9 +1,10 @@
 #include <iostream>
 #include <exception>
 
-#include "renderer.hpp"
-#include "rpg.hpp"
-#include "time.hpp"
+#include <engine/renderer.hpp>
+#include <engine/time.hpp>
+
+#include <rpg/rpg.hpp>
 
 class wolf_gang_engine
 {

@@ -1,5 +1,6 @@
-#include "scene_loader.hpp"
-#include "utility.hpp"
+#include <rpg/scene_loader.hpp>
+
+#include <engine/utility.hpp>
 
 using namespace rpg;
 

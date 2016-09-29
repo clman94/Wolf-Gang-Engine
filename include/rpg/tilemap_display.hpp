@@ -1,7 +1,7 @@
 #ifndef RPG_TILEMAP_DISPLAY_HPP
 #define RPG_TILEMAP_DISPLAY_HPP
 
-#include "renderer.hpp"
+#include <engine/renderer.hpp>
 
 namespace rpg {
 
