@@ -1,113 +1,126 @@
-#include "node.hpp"
+#include <iostream>
+#include <exception>
+
 #include "renderer.hpp"
-#include "texture.hpp"
 #include "rpg.hpp"
 #include "time.hpp"
-#include "rpg_config.hpp"
-#include "parsers.hpp"
 
-#include "particle_engine.hpp"
-
-// http://www.grinninglizard.com/tinyxmldocs/tutorial0.html
-
-int game()
+class wolf_gang_engine
 {
-	engine::renderer r;
-	r.initualize(rpg::defs::SCREEN_SIZE);
-	r.set_pixel_scale(3);
-	
+public:
+	wolf_gang_engine();
+
+	int initualize();
+	int run();
+
+private:
+	void update_events();
+
+	engine::renderer mRenderer;
+
+	rpg::game        mGame;
+	rpg::controls    mControls;
+
+	bool mRunning;
+};
+
+
+wolf_gang_engine::wolf_gang_engine()
+{
+	mRunning = true;
+}
+
+int wolf_gang_engine::initualize()
+{
 	engine::clock load_clock;
 
-	// The humungous class that is the rpg game engine :D
-	rpg::game game;
-	game.set_renderer(r);
+	mRenderer.initualize(rpg::defs::SCREEN_SIZE);
+	mRenderer.set_pixel_scale(3);
 
-	// Load default location
-	game.load_game_xml("data/game.xml");
+	mGame.set_renderer(mRenderer);
+	mGame.load_game_xml("data/game.xml");
 
-	std::cout << "Size of the freakin game: " << sizeof(game) << "\n";
-	std::cout << "Size of the sprite_node: " << sizeof(engine::sprite_node) << "\n";
+	float load_time = load_clock.get_elapse().s();
+	std::cout << "Load time : " << load_time << " seconds\n";
+	return 0;
+}
 
-	std::cout << "Load time : " << load_clock.get_elapse().s() << " seconds\n";
-
-	// TEST particle system
-
-	/*engine::particle_emitter p1;
-	p1.set_region({ 10,10 });
-	p1.set_life(4);
-	p1.set_acceleration({ 0, 5 });
-	p1.set_depth(-100);
-	p1.set_velocity({ 0.2f,0.2f });
-	p1.set_rate(1);
-	p1.set_texture(*game.get_texture_manager().get_texture("somedude1"));
-	p1.set_texture_rect({ 0,0,32,32 });
-
-	r.add_client(&p1);*/
-
-	rpg::controls controls;
-
-	bool working = true;
-	while (working)
+int wolf_gang_engine::run()
+{
+	while (mRunning)
 	{
-		if (r.update_events())
-		{
-			working = false;
-			break;
-		}
-		if (r.is_key_pressed(engine::renderer::key_type::Z) ||
-			r.is_key_pressed(engine::renderer::key_type::Return))
-			controls.trigger(rpg::controls::control::activate);
-
-		if (r.is_key_down(engine::renderer::key_type::Left))
-			controls.trigger(rpg::controls::control::left);
-
-		if (r.is_key_down(engine::renderer::key_type::Right))
-			controls.trigger(rpg::controls::control::right);
-
-		if (r.is_key_down(engine::renderer::key_type::Up))
-			controls.trigger(rpg::controls::control::up);
-
-		if (r.is_key_down(engine::renderer::key_type::Down))
-			controls.trigger(rpg::controls::control::down);
-
-		if (r.is_key_pressed(engine::renderer::key_type::Left))
-			controls.trigger(rpg::controls::control::select_previous);
-
-		if (r.is_key_pressed(engine::renderer::key_type::Right))
-			controls.trigger(rpg::controls::control::select_next);
-
-		if (r.is_key_down(engine::renderer::key_type::LControl))
-		{
-			if (r.is_key_pressed(engine::renderer::key_type::R))
-				controls.trigger(rpg::controls::control::reset);
-			if (r.is_key_pressed(engine::renderer::key_type::Num1))
-				controls.trigger(rpg::controls::control::editor_1);
-			if (r.is_key_pressed(engine::renderer::key_type::Num2))
-				controls.trigger(rpg::controls::control::editor_2);
-		}
-
-		if (r.is_key_down(engine::renderer::key_type::Escape))
-			working = false;
-
-		if (r.is_key_pressed(engine::renderer::key_type::T))
-			std::cout << "FPS: " << r.get_fps() << "\n";
-
-		game.tick(controls);
-		r.draw();
-
-		controls.reset();
+		update_events();
+		mGame.tick(mControls);
+		mRenderer.draw();
 	}
 	return 0;
 }
 
-int main(int argc, char* argv[])
+void wolf_gang_engine::update_events()
 {
+	if (mRenderer.update_events())
+	{
+		mRunning = false;
+		return;
+	}
 
-	/*rpg::tilemap_loader tl;
-	tl.load_tilemap("testmap.txt");
-	tl.condense_tiles();
-	tl.generate_tilemap("testmapnew.txt");*/
+	using key_type = engine::renderer::key_type;
+	using control = rpg::controls::control;
 
-	return game();
+	mControls.reset();
+
+	if (mRenderer.is_key_pressed(key_type::Z) ||
+		mRenderer.is_key_pressed(key_type::Return))
+		mControls.trigger(control::activate);
+
+	if (mRenderer.is_key_down(key_type::Left))
+		mControls.trigger(control::left);
+
+	if (mRenderer.is_key_down(key_type::Right))
+		mControls.trigger(control::right);
+
+	if (mRenderer.is_key_down(key_type::Up))
+		mControls.trigger(control::up);
+
+	if (mRenderer.is_key_down(key_type::Down))
+		mControls.trigger(control::down);
+
+	if (mRenderer.is_key_pressed(key_type::Left))
+		mControls.trigger(control::select_previous);
+
+	if (mRenderer.is_key_pressed(key_type::Right))
+		mControls.trigger(control::select_next);
+
+	if (mRenderer.is_key_down(key_type::LControl))
+	{
+		if (mRenderer.is_key_pressed(key_type::R))
+			mControls.trigger(control::reset);
+		if (mRenderer.is_key_pressed(key_type::Num1))
+			mControls.trigger(control::editor_1);
+		if (mRenderer.is_key_pressed(key_type::Num2))
+			mControls.trigger(control::editor_2);
+	}
+
+	if (mRenderer.is_key_down(key_type::Escape))
+		mRunning = false;
+
+	if (mRenderer.is_key_pressed(key_type::T))
+		std::cout << "FPS: " << mRenderer.get_fps() << "\n";
 }
 
+// Entry point of application
+int main(int argc, char* argv[])
+{
+	try
+	{
+		wolf_gang_engine wge;
+		wge.initualize();
+		wge.run();
+	}
+	catch (std::exception& e)
+	{
+		std::cout << "A main exception occurred: " << e.what() << "\n";
+		std::getchar();
+	}
+	return 0;
+}
