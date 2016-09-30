@@ -532,7 +532,103 @@ entity_manager::load_characters(tinyxml2::XMLElement * e)
 	return 0;
 }
 
-entity* entity_manager::script_add_entity(const std::string & path)
+
+entity_reference::entity_reference()
+{
+	mValid = false;
+}
+
+entity_reference::~entity_reference()
+{
+}
+
+entity_reference::entity_reference(const entity_reference & R)
+{
+	if (!R.mValid)
+	{
+		mValid = false;
+		return;
+	}
+	mValid = true;
+	mPtr = R.mPtr;
+}
+
+entity_reference::entity_reference(entity * pPtr)
+{
+	set(pPtr);
+}
+
+bool entity_reference::is_valid()
+{
+	return mValid;
+}
+
+void entity_reference::set(entity* pPtr)
+{
+	mValid = true;
+	mPtr = pPtr;
+}
+
+entity* entity_reference::get()
+{
+	assert(mPtr != nullptr);
+	assert(mValid);
+	return mPtr;
+}
+
+entity_reference& entity_reference::operator=(const entity_reference& R)
+{
+	if (R.mValid)
+	{
+		mValid = true;
+		mPtr = R.mPtr;
+	}
+	return *this;
+}
+
+entity * entity_reference::operator->()
+{
+	assert(mPtr != nullptr);
+	assert(mValid);
+	return mPtr;
+}
+
+
+void entity_manager::register_entity_type(script_system & pScript)
+{
+	auto& engine = pScript.get_engine();
+
+	engine.RegisterObjectType("entity", sizeof(entity_reference), asOBJ_VALUE | asGetTypeTraits<entity_reference>());
+
+	// Constructors and deconstructors
+	engine.RegisterObjectBehaviour("entity", asBEHAVE_CONSTRUCT, "void f()"
+		, asFUNCTION(script_system::script_default_constructor<entity_reference>)
+		, asCALL_CDECL_OBJLAST);
+	engine.RegisterObjectBehaviour("entity", asBEHAVE_CONSTRUCT, "void f(const entity&in)"
+		, asFUNCTIONPR(script_system::script_constructor<entity_reference>
+			, (const entity_reference&, void*), void)
+		, asCALL_CDECL_OBJLAST);
+	engine.RegisterObjectBehaviour("entity", asBEHAVE_DESTRUCT, "void f()"
+		, asFUNCTION(script_system::script_default_deconstructor<entity_reference>)
+		, asCALL_CDECL_OBJLAST);
+
+	// Assignments
+	engine.RegisterObjectMethod("entity", "entity& opAssign(const entity&in)"
+		, asMETHODPR(entity_reference, operator=, (const entity_reference&), entity_reference&)
+		, asCALL_THISCALL);
+}
+
+bool entity_manager::check_entity(entity_reference & e)
+{
+	if (!e.is_valid())
+	{
+		util::error("Entity object invalid");
+		return false;
+	}
+	return true;
+}
+
+entity_reference entity_manager::script_add_entity(const std::string & path)
 {
 	assert(get_renderer() != nullptr);
 	assert(mTexture_manager != nullptr);
@@ -540,38 +636,40 @@ entity* entity_manager::script_add_entity(const std::string & path)
 	if (mEntities.size() >= 256)
 	{
 		util::error("Reached upper limit of entities");
-		return nullptr;
+		return entity_reference();
 	}
 
 	auto& ne = mEntities.add_item();
 	ne.load_entity(path, *mTexture_manager);
 	ne.set_animation("default:default");
 	get_renderer()->add_client(ne);
+
 	return &ne;
 }
 
-entity* entity_manager::script_add_entity_atlas(const std::string & path, const std::string& atlas)
+entity_reference entity_manager::script_add_entity_atlas(const std::string & path, const std::string& atlas)
 {
-	entity* e = script_add_entity(path);
+	entity_reference e = script_add_entity(path);
 	e->set_animation(atlas);
 	return e;
 }
 
-void rpg::entity_manager::script_remove_entity(entity * e)
+void entity_manager::script_remove_entity(entity_reference& e)
 {
-	assert(e != nullptr);
-	if (is_character(e))
+	if (!check_entity(e)) return;
+
+	if (is_character(e.get()))
 	{
-		character* c = dynamic_cast<character*>(e);
+		character* c = dynamic_cast<character*>(e.get());
 		mCharacters.remove_item(c);
 	}
 	else
 	{
-		mEntities.remove_item(e);
+		mEntities.remove_item(e.get());
 	}
 }
 
-entity* entity_manager::script_add_character(const std::string & path)
+entity_reference entity_manager::script_add_character(const std::string & path)
 {
 	assert(get_renderer() != nullptr);
 	assert(mTexture_manager != nullptr);
@@ -579,38 +677,47 @@ entity* entity_manager::script_add_character(const std::string & path)
 	if (mCharacters.size() >= 126)
 	{
 		util::error("Reached upper limit of characters.");
-		return nullptr;
+		return entity_reference();
 	}
 
 	auto& nc = mCharacters.add_item();
 	nc.load_entity(path, *mTexture_manager);
 	nc.set_cycle(character::e_cycle::def);
 	get_renderer()->add_client(nc);
+
 	return &nc;
 }
 
-void entity_manager::script_set_name(entity * e, const std::string & pName)
+void entity_manager::script_set_name(entity_reference& e, const std::string & pName)
 {
-	assert(e != nullptr);
+	if (!check_entity(e)) return;
 	e->set_name(pName);
 }
 
-void entity_manager::script_set_position(entity* e, const engine::fvector & pos)
+void entity_manager::script_set_position(entity_reference& e, const engine::fvector & pos)
 {
-	assert(e != nullptr);
-	e->set_position(pos*32);
+	try
+	{
+		if (!check_entity(e)) return;
+		e->set_position(pos * 32);
+	}
+	catch (const std::exception& e)
+	{
+		std::cout << "An exception occurred: " << e.what() << "\n";
+		std::getchar();
+	}
 }
 
-engine::fvector entity_manager::script_get_position(entity * e)
+engine::fvector entity_manager::script_get_position(entity_reference& e)
 {
-	assert(e != nullptr);
+	if (!check_entity(e)) return engine::fvector(0, 0);
 	return e->get_position()/32;
 }
 
-void entity_manager::script_set_direction(entity* e, int dir)
+void entity_manager::script_set_direction(entity_reference& e, int dir)
 {
-	assert(e != nullptr);
-	character* c = dynamic_cast<character*>(e);
+	if (!check_entity(e)) return;
+	character* c = dynamic_cast<character*>(e.get());
 	if (c == nullptr)
 	{
 		std::cout << "Error: Entity is not a character";
@@ -619,10 +726,10 @@ void entity_manager::script_set_direction(entity* e, int dir)
 	c->set_cycle(static_cast<character::e_cycle>(dir));
 }
 
-void entity_manager::script_set_cycle(entity* e, const std::string& name)
+void entity_manager::script_set_cycle(entity_reference& e, const std::string& name)
 {
-	assert(e != nullptr);
-	character* c = dynamic_cast<character*>(e);
+	if (!check_entity(e)) return;
+	character* c = dynamic_cast<character*>(e.get());
 	if (c == nullptr)
 	{
 		std::cout << "Error: Entity is not a character";
@@ -631,92 +738,93 @@ void entity_manager::script_set_cycle(entity* e, const std::string& name)
 	c->set_cycle_group(name);
 }
 
-void entity_manager::script_set_depth(entity * e, float pDepth)
+void entity_manager::script_set_depth(entity_reference& e, float pDepth)
 {
-	assert(e != nullptr);
+	if (!check_entity(e)) return;
 	e->set_depth(pDepth);
 }
 
-void entity_manager::script_set_depth_fixed(entity * e, bool pFixed)
+void entity_manager::script_set_depth_fixed(entity_reference& e, bool pFixed)
 {
-	assert(e != nullptr);
+	if (!check_entity(e)) return;
 	e->set_dynamic_depth(!pFixed);
 }
 
-void entity_manager::script_start_animation(entity* e)
+void entity_manager::script_start_animation(entity_reference& e)
 {
-	assert(e != nullptr);
+	if (!check_entity(e)) return;
 	e->play_animation();
 }
 
-void entity_manager::script_stop_animation(entity* e)
+void entity_manager::script_stop_animation(entity_reference& e)
 {
-	assert(e != nullptr);
+	if (!check_entity(e)) return;
 	e->stop_animation();
 }
 
-void entity_manager::script_set_animation(entity* e, const std::string & name)
+void entity_manager::script_set_animation(entity_reference& e, const std::string & name)
 {
-	assert(e != nullptr);
+	if (!check_entity(e)) return;
 	e->set_animation(name);
 }
 
-void entity_manager::script_set_anchor(entity * e, int pAnchor)
+void entity_manager::script_set_anchor(entity_reference& e, int pAnchor)
 {
-	assert(e != nullptr);
+	if (!check_entity(e)) return;
 	e->set_anchor(static_cast<engine::anchor>(pAnchor));
 }
 
-void entity_manager::script_set_rotation(entity * e, float pRotation)
+void entity_manager::script_set_rotation(entity_reference& e, float pRotation)
 {
-	assert(e != nullptr);
-	e->set_rotation(pRotation);
+	if (!check_entity(e)) return;
+	e->set_rotation(std::fmod(std::abs(pRotation), 360.f));
 }
 
-void entity_manager::script_set_color(entity * e, int r, int g, int b, int a)
+void entity_manager::script_set_color(entity_reference& e, int r, int g, int b, int a)
 {
-	assert(e != nullptr);
+	if (!check_entity(e)) return;
 	e->set_color(engine::color(r, g, b, a));
 }
 
-bool rpg::entity_manager::script_validate_entity(entity * e)
+bool rpg::entity_manager::script_validate_entity(entity_reference& e)
 {
 	for (auto& i : mCharacters)
 	{
-		if (&i == e)
+		if (&i == e.get())
 			return true;
 	}
 	for (auto &i : mEntities)
 	{
-		if (&i == e)
+		if (&i == e.get())
 			return true;
 	}
-
 	return false;
 }
 
 void entity_manager::load_script_interface(script_system& pScript)
 {
-	pScript.add_function("entity add_entity(const string &in)", asMETHOD(entity_manager, script_add_entity), this);
-	pScript.add_function("entity add_entity(const string &in, const string &in)", asMETHOD(entity_manager, script_add_entity_atlas), this);
-	pScript.add_function("entity add_character(const string &in)", asMETHOD(entity_manager, script_add_character), this);
-	pScript.add_function("void set_position(entity, const vec &in)", asMETHOD(entity_manager, script_set_position), this);
-	pScript.add_function("vec get_position(entity)", asMETHOD(entity_manager, script_get_position), this);
-	pScript.add_function("void set_direction(entity, int)", asMETHOD(entity_manager, script_set_direction), this);
-	pScript.add_function("void set_cycle(entity, const string &in)", asMETHOD(entity_manager, script_set_cycle), this);
-	pScript.add_function("void start_animation(entity)", asMETHOD(entity_manager, script_start_animation), this);
-	pScript.add_function("void stop_animation(entity)", asMETHOD(entity_manager, script_stop_animation), this);
-	pScript.add_function("void set_animation(entity, const string &in)", asMETHOD(entity_manager, script_set_animation), this);
-	pScript.add_function("entity find_entity(const string &in)", asMETHOD(entity_manager, find_entity), this);
-	pScript.add_function("bool is_character(entity)", asMETHOD(entity_manager, is_character), this);
-	pScript.add_function("void remove_entity(entity)", asMETHOD(entity_manager, script_remove_entity), this);
-	pScript.add_function("void set_depth(entity, float)", asMETHOD(entity_manager, script_set_depth), this);
-	pScript.add_function("void set_depth_fixed(entity, bool)", asMETHOD(entity_manager, script_set_depth_fixed), this);
-	pScript.add_function("void set_name(entity, const string &in)", asMETHOD(entity_manager, script_set_name), this);
-	pScript.add_function("void _set_anchor(entity, int)", asMETHOD(entity_manager, script_set_anchor), this);
-	pScript.add_function("void set_rotation(entity, float)", asMETHOD(entity_manager, script_set_rotation), this);
-	pScript.add_function("void set_color(entity, int, int, int, int)", asMETHOD(entity_manager, script_set_color), this);
-	pScript.add_function("bool _validate_entity(entity)", asMETHOD(entity_manager, script_validate_entity), this);
+	register_entity_type(pScript);
+
+	pScript.add_function("entity add_entity(const string &in)",                      asMETHOD(entity_manager, script_add_entity), this);
+	pScript.add_function("entity add_entity(const string &in, const string &in)",    asMETHOD(entity_manager, script_add_entity_atlas), this);
+	pScript.add_function("entity add_character(const string &in)",                   asMETHOD(entity_manager, script_add_character), this);
+	pScript.add_function("void set_position(entity&in, const vec &in)",              asMETHOD(entity_manager, script_set_position), this);
+	pScript.add_function("vec get_position(entity&in)",                              asMETHOD(entity_manager, script_get_position), this);
+	pScript.add_function("void set_direction(entity&in, int)",                       asMETHOD(entity_manager, script_set_direction), this);
+	pScript.add_function("void set_cycle(entity&in, const string &in)",              asMETHOD(entity_manager, script_set_cycle), this);
+	pScript.add_function("void start_animation(entity&in)",                          asMETHOD(entity_manager, script_start_animation), this);
+	pScript.add_function("void stop_animation(entity&in)",                           asMETHOD(entity_manager, script_stop_animation), this);
+	pScript.add_function("void set_animation(entity&in, const string &in)",          asMETHOD(entity_manager, script_set_animation), this);
+	pScript.add_function("entity find_entity(const string &in)",                     asMETHOD(entity_manager, find_entity), this);
+	pScript.add_function("bool is_character(entity&in)",                             asMETHOD(entity_manager, is_character), this);
+	pScript.add_function("void remove_entity(entity&in)",                            asMETHOD(entity_manager, script_remove_entity), this);
+	pScript.add_function("void set_depth(entity&in, float)",                         asMETHOD(entity_manager, script_set_depth), this);
+	pScript.add_function("void set_depth_fixed(entity&in, bool)",                    asMETHOD(entity_manager, script_set_depth_fixed), this);
+	pScript.add_function("void set_name(entity&in, const string &in)",               asMETHOD(entity_manager, script_set_name), this);
+	pScript.add_function("void _set_anchor(entity&in, int)",                         asMETHOD(entity_manager, script_set_anchor), this);
+	pScript.add_function("void set_rotation(entity&in, float)",                      asMETHOD(entity_manager, script_set_rotation), this);
+	pScript.add_function("void set_color(entity&in, int, int, int, int)",            asMETHOD(entity_manager, script_set_color), this);
+	pScript.add_function("bool _validate_entity(entity&in)",                         asMETHOD(entity_manager, script_validate_entity), this);
 }
 
 bool entity_manager::is_character(entity* pEntity)
@@ -932,7 +1040,7 @@ engine::fvector scene::script_get_focus()
 	return get_focus() / 32;
 }
 
-entity* scene::script_get_player()
+entity_reference scene::script_get_player()
 {
 	return &mPlayer;
 }
@@ -1281,6 +1389,21 @@ script_system::tick()
 	return 0;
 }
 
+int script_system::get_current_line()
+{
+	if (mCtxmgr.GetCurrentContext())
+	{
+		return mCtxmgr.GetCurrentContext()->GetLineNumber();
+	}
+	return 0;
+}
+
+AS::asIScriptEngine& rpg::script_system::get_engine()
+{
+	assert(mEngine != nullptr);
+	return *mEngine;
+}
+
 bool script_system::is_executing()
 {
 	return mExecuting;
@@ -1355,8 +1478,6 @@ void game::script_load_scene(const std::string & pPath)
 void
 game::load_script_interface()
 {
-	mScript.add_pointer_type("entity");
-
 	mScript.add_function("float get_delta()", asMETHOD(game, get_delta), this);
 
 	mScript.add_function("bool _is_triggered(int)", asMETHOD(controls, is_triggered), &mControls);
@@ -2521,8 +2642,6 @@ int save_value_manager::get_value_int(const std::string& pName)
 	auto& val = mValues.find(pName);
 	if (val == mValues.end())
 		return 0;
-
-	
 	return val->second.val_integer;
 }
 

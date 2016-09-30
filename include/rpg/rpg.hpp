@@ -293,17 +293,11 @@ public:
 	void start_all_with_tag(const std::string& tag);
 	int tick();
 
+	int get_current_line();
+
+	AS::asIScriptEngine& get_engine();
+
 	bool is_executing();
-
-private:
-	AS::asIScriptEngine *mEngine;
-	AS::CContextMgr      mCtxmgr;
-	AS::asIScriptModule *mScene_module;
-	AS::CScriptBuilder   mBuilder;
-	std::ofstream        mLog_file;
-	bool                 mExecuting;
-
-	engine::timer mTimer;
 
 	template<typename T>
 	static void script_default_constructor(void *pMemory)
@@ -320,6 +314,16 @@ private:
 	template<typename T>
 	static void script_default_deconstructor(void *pMemory)
 	{ ((T*)pMemory)->~T(); }
+
+private:
+	AS::asIScriptEngine *mEngine;
+	AS::CContextMgr      mCtxmgr;
+	AS::asIScriptModule *mScene_module;
+	AS::CScriptBuilder   mBuilder;
+	std::ofstream        mLog_file;
+	bool                 mExecuting;
+
+	engine::timer mTimer;
 	
 	void dprint(std::string &msg);
 	void register_vector_type();
@@ -429,6 +433,25 @@ private:
 	void set_move_direction(engine::fvector pVec);
 };
 
+class entity_reference
+{
+public:
+	entity_reference();
+	~entity_reference();
+	entity_reference(const entity_reference& R);
+	entity_reference(entity* pPtr);
+	bool is_valid();
+
+	void set(entity* pPtr);
+	entity* get();
+
+	entity_reference& operator=(const entity_reference& R);
+	entity* operator->();
+private:
+	bool mValid;
+	entity* mPtr;
+};
+
 class entity_manager :
 	public engine::render_proxy,
 	public engine::node
@@ -451,29 +474,34 @@ public:
 	bool is_character(entity* pEntity);
 
 private:
+
+	void register_entity_type(script_system& pScript);
+
 	texture_manager*  mTexture_manager;
 
 	node_list<character> mCharacters;
 	node_list<entity>    mEntities;
 
-	entity*         script_add_entity(const std::string& tex);
-	entity*         script_add_entity_atlas(const std::string& tex, const std::string& atlas);
-	void            script_remove_entity(entity* e);
-	entity*         script_add_character(const std::string& tex);
-	void            script_set_name(entity* e, const std::string& pName);
-	void            script_set_position(entity* e, const engine::fvector& pos);
-	engine::fvector script_get_position(entity* e);
-	void            script_set_direction(entity* e, int dir);
-	void            script_set_cycle(entity* e, const std::string& name);
-	void            script_set_depth(entity* e, float pDepth);
-	void            script_set_depth_fixed(entity* e, bool pFixed);
-	void            script_start_animation(entity* e);
-	void            script_stop_animation(entity* e);
-	void            script_set_animation(entity* e, const std::string& name);
-	void            script_set_anchor(entity* e, int pAnchor);
-	void            script_set_rotation(entity* e, float pRotation);
-	void            script_set_color(entity* e, int r, int g, int b, int a);
-	bool            script_validate_entity(entity* e);
+	bool check_entity(entity_reference& e);
+
+	entity_reference script_add_entity(const std::string& tex);
+	entity_reference script_add_entity_atlas(const std::string& tex, const std::string& atlas);
+	void            script_remove_entity(entity_reference& e);
+	entity_reference script_add_character(const std::string& tex);
+	void            script_set_name(entity_reference& e, const std::string& pName);
+	void            script_set_position(entity_reference& e, const engine::fvector& pos);
+	engine::fvector script_get_position(entity_reference& e);
+	void            script_set_direction(entity_reference& e, int dir);
+	void            script_set_cycle(entity_reference& e, const std::string& name);
+	void            script_set_depth(entity_reference& e, float pDepth);
+	void            script_set_depth_fixed(entity_reference& e, bool pFixed);
+	void            script_start_animation(entity_reference& e);
+	void            script_stop_animation(entity_reference& e);
+	void            script_set_animation(entity_reference& e, const std::string& name);
+	void            script_set_anchor(entity_reference& e, int pAnchor);
+	void            script_set_rotation(entity_reference& e, float pRotation);
+	void            script_set_color(entity_reference& e, int r, int g, int b, int a);
+	bool            script_validate_entity(entity_reference& e);
 };
 
 class battle_system
@@ -552,12 +580,12 @@ private:
 
 	bool              mFocus_player;
 
-	void            script_set_tile(const std::string& pAtlas
+	void             script_set_tile(const std::string& pAtlas
 		                  , engine::fvector pPosition, int pLayer, int pRotation);
-	void            script_remove_tile(engine::fvector pPosition, int pLayer);
-	void            script_set_focus(engine::fvector pPosition);
-	engine::fvector script_get_focus();
-	entity*         script_get_player();
+	void             script_remove_tile(engine::fvector pPosition, int pLayer);
+	void             script_set_focus(engine::fvector pPosition);
+	engine::fvector  script_get_focus();
+	entity_reference script_get_player();
 
 	std::string mScene_path;
 	std::string mScene_name;
