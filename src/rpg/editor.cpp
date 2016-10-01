@@ -5,7 +5,7 @@ using namespace editors;
 
 void tgui_list_layout::updateWidgetPositions()
 {
-	auto widgets = getWidgets();
+	auto& widgets = getWidgets();
 
 	Widget::Ptr last;
 	for (auto i : widgets)

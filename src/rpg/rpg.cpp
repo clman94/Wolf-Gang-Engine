@@ -588,9 +588,7 @@ entity_reference& entity_reference::operator=(const entity_reference& R)
 
 entity * entity_reference::operator->()
 {
-	assert(mPtr != nullptr);
-	assert(mValid);
-	return mPtr;
+	return get();
 }
 
 
@@ -620,9 +618,12 @@ void entity_manager::register_entity_type(script_system & pScript)
 
 bool entity_manager::check_entity(entity_reference & e)
 {
+	assert(mScript_system != nullptr);
+
 	if (!e.is_valid())
 	{
-		util::error("Entity object invalid");
+		util::error("(" + std::to_string(mScript_system->get_current_line()) + ") "
+			+ "Entity object invalid.");
 		return false;
 	}
 	return true;
@@ -696,16 +697,8 @@ void entity_manager::script_set_name(entity_reference& e, const std::string & pN
 
 void entity_manager::script_set_position(entity_reference& e, const engine::fvector & pos)
 {
-	try
-	{
-		if (!check_entity(e)) return;
-		e->set_position(pos * 32);
-	}
-	catch (const std::exception& e)
-	{
-		std::cout << "An exception occurred: " << e.what() << "\n";
-		std::getchar();
-	}
+	if (!check_entity(e)) return;
+	e->set_position(pos * 32);
 }
 
 engine::fvector entity_manager::script_get_position(entity_reference& e)
@@ -803,6 +796,8 @@ bool rpg::entity_manager::script_validate_entity(entity_reference& e)
 
 void entity_manager::load_script_interface(script_system& pScript)
 {
+	mScript_system = &pScript;
+
 	register_entity_type(pScript);
 
 	pScript.add_function("entity add_entity(const string &in)",                      asMETHOD(entity_manager, script_add_entity), this);

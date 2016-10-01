@@ -474,10 +474,11 @@ public:
 	bool is_character(entity* pEntity);
 
 private:
-
 	void register_entity_type(script_system& pScript);
 
 	texture_manager*  mTexture_manager;
+
+	script_system* mScript_system;
 
 	node_list<character> mCharacters;
 	node_list<entity>    mEntities;
@@ -486,22 +487,22 @@ private:
 
 	entity_reference script_add_entity(const std::string& tex);
 	entity_reference script_add_entity_atlas(const std::string& tex, const std::string& atlas);
-	void            script_remove_entity(entity_reference& e);
+	void             script_remove_entity(entity_reference& e);
 	entity_reference script_add_character(const std::string& tex);
-	void            script_set_name(entity_reference& e, const std::string& pName);
-	void            script_set_position(entity_reference& e, const engine::fvector& pos);
-	engine::fvector script_get_position(entity_reference& e);
-	void            script_set_direction(entity_reference& e, int dir);
-	void            script_set_cycle(entity_reference& e, const std::string& name);
-	void            script_set_depth(entity_reference& e, float pDepth);
-	void            script_set_depth_fixed(entity_reference& e, bool pFixed);
-	void            script_start_animation(entity_reference& e);
-	void            script_stop_animation(entity_reference& e);
-	void            script_set_animation(entity_reference& e, const std::string& name);
-	void            script_set_anchor(entity_reference& e, int pAnchor);
-	void            script_set_rotation(entity_reference& e, float pRotation);
-	void            script_set_color(entity_reference& e, int r, int g, int b, int a);
-	bool            script_validate_entity(entity_reference& e);
+	void             script_set_name(entity_reference& e, const std::string& pName);
+	void             script_set_position(entity_reference& e, const engine::fvector& pos);
+	engine::fvector  script_get_position(entity_reference& e);
+	void             script_set_direction(entity_reference& e, int dir);
+	void             script_set_cycle(entity_reference& e, const std::string& name);
+	void             script_set_depth(entity_reference& e, float pDepth);
+	void             script_set_depth_fixed(entity_reference& e, bool pFixed);
+	void             script_start_animation(entity_reference& e);
+	void             script_stop_animation(entity_reference& e);
+	void             script_set_animation(entity_reference& e, const std::string& name);
+	void             script_set_anchor(entity_reference& e, int pAnchor);
+	void             script_set_rotation(entity_reference& e, float pRotation);
+	void             script_set_color(entity_reference& e, int r, int g, int b, int a);
+	bool             script_validate_entity(entity_reference& e);
 };
 
 class battle_system
