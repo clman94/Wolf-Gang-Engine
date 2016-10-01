@@ -81,7 +81,7 @@ entity::entity()
 {
 	dynamic_depth = true;
 	mSprite.set_anchor(engine::anchor::bottom);
-	add_child(mSprite);
+	//add_child(mSprite);
 }
 
 void
@@ -128,6 +128,7 @@ entity::draw(engine::renderer &_r)
 		if (ndepth != get_depth())
 			set_depth(ndepth);
 	}
+	mSprite.set_position(get_exact_position().floor());
 	mSprite.draw(_r);
 	return 0;
 }
@@ -532,41 +533,28 @@ entity_manager::load_characters(tinyxml2::XMLElement * e)
 	return 0;
 }
 
-
-entity_reference::entity_reference()
-{
-	mValid = false;
-}
-
-entity_reference::~entity_reference()
-{
-}
-
 entity_reference::entity_reference(const entity_reference & R)
 {
 	if (!R.mValid)
-	{
-		mValid = false;
 		return;
-	}
-	mValid = true;
+	mValid = R.mValid;
 	mPtr = R.mPtr;
 }
 
-entity_reference::entity_reference(entity * pPtr)
+entity_reference::entity_reference(entity& pPtr)
 {
 	set(pPtr);
 }
 
-bool entity_reference::is_valid()
+bool entity_reference::is_valid() const
 {
-	return mValid;
+	return mValid != nullptr && *mValid;
 }
 
-void entity_reference::set(entity* pPtr)
+void entity_reference::set(entity& pPtr)
 {
-	mValid = true;
-	mPtr = pPtr;
+	mValid = pPtr.get_validator();
+	mPtr = &pPtr;
 }
 
 entity* entity_reference::get()
@@ -580,13 +568,13 @@ entity_reference& entity_reference::operator=(const entity_reference& R)
 {
 	if (R.mValid)
 	{
-		mValid = true;
+		mValid = R.mValid;
 		mPtr = R.mPtr;
 	}
 	return *this;
 }
 
-entity * entity_reference::operator->()
+entity* entity_reference::operator->()
 {
 	return get();
 }
@@ -613,6 +601,11 @@ void entity_manager::register_entity_type(script_system & pScript)
 	// Assignments
 	engine.RegisterObjectMethod("entity", "entity& opAssign(const entity&in)"
 		, asMETHODPR(entity_reference, operator=, (const entity_reference&), entity_reference&)
+		, asCALL_THISCALL);
+
+	// is_valid
+	engine.RegisterObjectMethod("entity", "bool is_valid() const"
+		, asMETHOD(entity_reference, is_valid)
 		, asCALL_THISCALL);
 }
 
@@ -645,7 +638,7 @@ entity_reference entity_manager::script_add_entity(const std::string & path)
 	ne.set_animation("default:default");
 	get_renderer()->add_client(ne);
 
-	return &ne;
+	return ne;
 }
 
 entity_reference entity_manager::script_add_entity_atlas(const std::string & path, const std::string& atlas)
@@ -686,7 +679,7 @@ entity_reference entity_manager::script_add_character(const std::string & path)
 	nc.set_cycle(character::e_cycle::def);
 	get_renderer()->add_client(nc);
 
-	return &nc;
+	return nc;
 }
 
 void entity_manager::script_set_name(entity_reference& e, const std::string & pName)
@@ -1037,7 +1030,7 @@ engine::fvector scene::script_get_focus()
 
 entity_reference scene::script_get_player()
 {
-	return &mPlayer;
+	return mPlayer;
 }
 
 void scene::script_set_tile(const std::string& pAtlas, engine::fvector pPosition

@@ -11,6 +11,28 @@
 namespace util
 {
 
+class reference_owner
+{
+public:
+	reference_owner()
+	{
+		mIs_valid.reset(new bool);
+		*mIs_valid = true;
+	}
+	~reference_owner()
+	{
+		*mIs_valid = false;
+	}
+
+	const std::shared_ptr<bool>& get_validator()
+	{
+		return mIs_valid;
+	}
+private:
+	std::shared_ptr<bool> mIs_valid;
+};
+
+
 template<typename T>
 static T floor_align(T v, T scale)
 {

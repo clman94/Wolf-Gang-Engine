@@ -143,7 +143,8 @@ private:
 class entity :
 	public engine::render_client,
 	public engine::node,
-	public   util::named
+	public   util::named,
+	public   util::reference_owner
 {
 public:
 
@@ -436,19 +437,19 @@ private:
 class entity_reference
 {
 public:
-	entity_reference();
-	~entity_reference();
+	entity_reference(){}
+	~entity_reference(){}
 	entity_reference(const entity_reference& R);
-	entity_reference(entity* pPtr);
-	bool is_valid();
+	entity_reference(entity& pPtr);
+	bool is_valid() const;
 
-	void set(entity* pPtr);
+	void set(entity& pPtr);
 	entity* get();
 
 	entity_reference& operator=(const entity_reference& R);
 	entity* operator->();
 private:
-	bool mValid;
+	std::shared_ptr<bool> mValid;
 	entity* mPtr;
 };
 
