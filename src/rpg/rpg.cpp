@@ -81,7 +81,7 @@ entity::entity()
 {
 	dynamic_depth = true;
 	mSprite.set_anchor(engine::anchor::bottom);
-	//add_child(mSprite);
+	add_child(mSprite);
 }
 
 void
@@ -128,7 +128,7 @@ entity::draw(engine::renderer &_r)
 		if (ndepth != get_depth())
 			set_depth(ndepth);
 	}
-	mSprite.set_position(get_exact_position().floor());
+	//mSprite.set_position(get_exact_position().floor());
 	mSprite.draw(_r);
 	return 0;
 }
@@ -579,6 +579,10 @@ entity* entity_reference::operator->()
 	return get();
 }
 
+entity& entity_reference::operator*()
+{
+	return *get();
+}
 
 void entity_manager::register_entity_type(script_system & pScript)
 {
@@ -772,19 +776,42 @@ void entity_manager::script_set_color(entity_reference& e, int r, int g, int b, 
 	e->set_color(engine::color(r, g, b, a));
 }
 
-bool rpg::entity_manager::script_validate_entity(entity_reference& e)
+void entity_manager::script_add_child(entity_reference& e1, entity_reference& e2)
 {
-	for (auto& i : mCharacters)
+	if (!check_entity(e1)) return;
+	if (!check_entity(e2)) return;
+
+	e2->set_position(e2->get_position(*e1));
+	e1->add_child(*e2);
+}
+
+void entity_manager::script_set_parent(entity_reference& e1, entity_reference& e2)
+{
+	if (!check_entity(e1)) return;
+	if (!check_entity(e2)) return;
+
+	e1->set_position(e1->get_position(*e2));
+	e1->set_parent(*e2);
+}
+
+void entity_manager::script_detach_children(entity_reference& e)
+{
+	if (!check_entity(e)) return;
+
+	auto children = e->get_children();
+	for (auto& i : children)
 	{
-		if (&i == e.get())
-			return true;
+		i->set_position(i->get_position(*this));
+		i->set_parent(*this);
 	}
-	for (auto &i : mEntities)
-	{
-		if (&i == e.get())
-			return true;
-	}
-	return false;
+}
+
+void entity_manager::script_detach_parent(entity_reference& e)
+{
+	if (!check_entity(e)) return;
+
+	e->set_position(e->get_position(*this));
+	e->set_parent(*this);
 }
 
 void entity_manager::load_script_interface(script_system& pScript)
@@ -812,7 +839,11 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void _set_anchor(entity&in, int)",                         asMETHOD(entity_manager, script_set_anchor), this);
 	pScript.add_function("void set_rotation(entity&in, float)",                      asMETHOD(entity_manager, script_set_rotation), this);
 	pScript.add_function("void set_color(entity&in, int, int, int, int)",            asMETHOD(entity_manager, script_set_color), this);
-	pScript.add_function("bool _validate_entity(entity&in)",                         asMETHOD(entity_manager, script_validate_entity), this);
+
+	pScript.add_function("void add_child(entity&in, entity&in)",                     asMETHOD(entity_manager, script_add_child), this);
+	pScript.add_function("void set_parent(entity&in, entity&in)",                    asMETHOD(entity_manager, script_set_parent), this);
+	pScript.add_function("void detach_children(entity&in)",                          asMETHOD(entity_manager, script_detach_children), this);
+	pScript.add_function("void detach_parent(entity&in)",                            asMETHOD(entity_manager, script_detach_parent), this);
 }
 
 bool entity_manager::is_character(entity* pEntity)
@@ -2368,7 +2399,7 @@ int tilemap_display::draw(engine::renderer& pR)
 	{
 		auto& vb = i.second.vertices;
 		vb.set_texture(*mTexture);
-		vb.set_position(engine::fvector(get_exact_position()).round());
+		vb.set_position(get_exact_position().floor());
 		vb.draw(pR);
 	}
 	return 0;

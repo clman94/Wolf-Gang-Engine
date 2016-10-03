@@ -5,7 +5,7 @@ using namespace engine;
 
 node::node()
 {
-	parent.reset();
+	mParent.reset();
 }
 
 node::~node()
@@ -16,67 +16,72 @@ node::~node()
 }
 
 fvector
-node::get_exact_position()
+node::get_exact_position() const
 {
-	if (!parent) return position;
-	return position + parent->get_exact_position();
+	if (!mParent) return mPosition;
+	return mPosition + mParent->get_exact_position();
 }
 
 fvector
-node::get_position()
+node::get_position() const
 {
-	return position;
+	return mPosition;
+}
+
+fvector node::get_position(const node& pRelative) const
+{
+	return get_exact_position() - pRelative.get_exact_position();
 }
 
 void
 node::set_exact_position(fvector pos)
 {
-	if (parent)
-		position = pos - parent->get_exact_position();
+	if (mParent)
+		mPosition = pos - mParent->get_exact_position();
 	else
-		position = pos;
+		mPosition = pos;
 }
 
 void
 node::set_position(fvector pos)
 {
-	position = pos;
+	mPosition = pos;
 }
 
 node_ref
 node::detach_parent()
 {
-	if (!parent) return nullptr;
-	node_ref temp = parent->children[child_index];
-	parent->children.erase(parent->children.begin() + child_index);
-	for (size_t i = 0; i < parent->children.size(); i++)
-		parent->children[i]->child_index = i;
-	child_index = -1;
-	parent.reset();
+	if (!mParent) return nullptr;
+	node_ref temp = mParent->mChildren[mChild_index];
+	mParent->mChildren.erase(mParent->mChildren.begin() + mChild_index);
+	for (size_t i = 0; i < mParent->mChildren.size(); i++)
+		mParent->mChildren[i]->mChild_index = i;
+	mChild_index = -1;
+	mParent.reset();
 	return temp;
 }
 
 node_arr
 node::detach_children()
 {
-	if (!children.size()) return node_arr();
-	node_arr temp = children;
-	for (auto i : children)
-		i->parent.reset();
-	children.clear();
+	if (!mChildren.size()) return node_arr();
+	node_arr temp = mChildren;
+	for (auto i : mChildren)
+		i->mParent.reset();
+	mChildren.clear();
 	return temp;
 }
 
 node_ref
 node::get_parent()
 {
-	return parent;
+	return mParent;
 }
 
 node_arr
 node::get_children()
 {
-	return children;
+	return mChildren;
 }
 
 int
@@ -88,9 +93,9 @@ node::set_parent(node_ref obj)
 int
 node::add_child(node_ref obj)
 {
-	if (obj->parent) obj->detach_parent();
-	obj->child_index = children.size();
-	obj->parent = *this;
-	children.push_back(obj);
+	if (obj->mParent) obj->detach_parent();
+	obj->mChild_index = mChildren.size();
+	obj->mParent = *this;
+	mChildren.push_back(obj);
 	return 0;
 }

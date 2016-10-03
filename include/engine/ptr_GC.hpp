@@ -85,7 +85,7 @@ public:
 		_owner = true;
 	}
 
-	bool is_null()
+	bool is_null() const
 	{
 		return _ptr == nullptr;
 	}
@@ -139,37 +139,37 @@ public:
 	}
 
 	// Get direct pointer
-	T* get()
+	T* get() const
 	{
 		return _ptr.get();
 	}
 
-	ptr_GC<T> protect()
+	ptr_GC<T> protect() const
 	{
 		return ptr_GC<T>(_ptr.get());
 	}
 
-	bool is_owner()
+	bool is_owner() const
 	{
 		return _owner;
 	}
 
-	int count()
+	int count() const
 	{
 		return _ptr.use_count();
 	}
 
-	T* operator->()
+	T* operator->() const
 	{
 		return _ptr.get();
 	}
 
-	T& operator*()
+	T& operator*() const
 	{
 		return *_ptr.get();
 	}
 
-	explicit operator bool()
+	explicit operator bool() const
 	{
 		return _ptr != nullptr;
 	}

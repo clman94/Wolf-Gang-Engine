@@ -18,12 +18,12 @@ typedef std::vector<node_ref> node_arr;
 // their representation in game space
 class node
 {
-	node_ref parent;
-	node_arr children;
+	node_ref mParent;
+	node_arr mChildren;
 
-	int child_index; 
+	size_t mChild_index; 
 
-	fvector position;
+	fvector mPosition;
 
 public:
 
@@ -32,10 +32,11 @@ public:
 	virtual ~node();
 
 	void     set_exact_position(fvector pos);
-	fvector  get_exact_position();
+	fvector  get_exact_position() const;
 
 	void     set_position(fvector pos);
-	fvector  get_position();
+	fvector  get_position() const;
+	fvector  get_position(const node& pRelative) const;
 
 	node_ref detach_parent();
 	node_arr detach_children();

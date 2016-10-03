@@ -448,6 +448,9 @@ public:
 
 	entity_reference& operator=(const entity_reference& R);
 	entity* operator->();
+
+	entity& operator *();
+
 private:
 	std::shared_ptr<bool> mValid;
 	entity* mPtr;
@@ -503,7 +506,11 @@ private:
 	void             script_set_anchor(entity_reference& e, int pAnchor);
 	void             script_set_rotation(entity_reference& e, float pRotation);
 	void             script_set_color(entity_reference& e, int r, int g, int b, int a);
-	bool             script_validate_entity(entity_reference& e);
+
+	void             script_add_child(entity_reference& e1, entity_reference& e2);
+	void             script_set_parent(entity_reference& e1, entity_reference& e2);
+	void             script_detach_children(entity_reference& e);
+	void             script_detach_parent(entity_reference& e);
 };
 
 class battle_system
