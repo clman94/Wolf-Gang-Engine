@@ -162,7 +162,7 @@ public:
 	void tick_animation();
 	bool set_animation(const std::string& pName, bool pSwap = false);
 	int draw(engine::renderer &pR);
-	util::error load_entity(std::string pName, texture_manager& pTexture_manager);
+	int load_entity(std::string pName, texture_manager& pTexture_manager);
 	void set_dynamic_depth(bool a);
 	void set_anchor(engine::anchor pAnchor);
 	void set_color(engine::color pColor);
@@ -278,7 +278,7 @@ public:
 	void add_trigger(trigger& t);
 	void add_button(trigger& t);
 	void clean();
-	util::error load_collision_boxes(tinyxml2::XMLElement* pEle);
+	int load_collision_boxes(tinyxml2::XMLElement* pEle);
 
 private:
 	std::list<collision_box> mWalls;
@@ -293,7 +293,7 @@ class script_system
 public:
 	script_system();
 	~script_system();
-	util::error load_scene_script(const std::string& pPath);
+	int load_scene_script(const std::string& pPath);
 	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr, void* pInstance);
 	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr);
 	void add_pointer_type(const char* pName);
@@ -385,7 +385,7 @@ public:
 
 	void set_expression(const std::string& pName);
 
-	util::error load_narrative_xml(tinyxml2::XMLElement* pEle, texture_manager& pTexture_manager);
+	int load_narrative_xml(tinyxml2::XMLElement* pEle, texture_manager& pTexture_manager);
 
 	void load_script_interface(script_system& pScript);
 
@@ -410,8 +410,8 @@ private:
 	std::string mFull_text;
 	float       mInterval;
 
-	util::error load_box(tinyxml2::XMLElement* pEle, texture_manager& pTexture_manager);
-	util::error load_font(tinyxml2::XMLElement* pEle);
+	int load_box(tinyxml2::XMLElement* pEle, texture_manager& pTexture_manager);
+	int load_font(tinyxml2::XMLElement* pEle);
 
 	void show_expression();
 	void reset_positions();
@@ -459,8 +459,8 @@ public:
 
 	void set_texture_manager(texture_manager& pTexture_manager);
 
-	util::error load_entities(tinyxml2::XMLElement* e);
-	util::error load_characters(tinyxml2::XMLElement* e);
+	int load_entities(tinyxml2::XMLElement* e);
+	int load_characters(tinyxml2::XMLElement* e);
 
 	bool is_character(entity* pEntity);
 
@@ -540,8 +540,8 @@ public:
 	collision_system& get_collision_system();
 
 	void clean_scene(bool pFull = false);
-	util::error load_scene(std::string pPath);
-	util::error reload_scene();
+	int load_scene(std::string pPath);
+	int reload_scene();
 
 	const std::string& get_path()
 	{ return mScene_path; }
@@ -655,7 +655,7 @@ class game :
 {
 public:
 	game();
-	util::error load_game_xml(std::string pPath);
+	int load_game_xml(std::string pPath);
 	void tick(controls& pControls);
 
 protected:

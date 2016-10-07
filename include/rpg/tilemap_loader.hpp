@@ -18,8 +18,8 @@ public:
 
 	void condense_tiles();
 
-	util::error load_tilemap_xml(tinyxml2::XMLElement *root);
-	util::error load_tilemap_xml(std::string pPath);
+	int load_tilemap_xml(tinyxml2::XMLElement *root);
+	int load_tilemap_xml(std::string pPath);
 
 	void explode_tile(engine::fvector pPosition, int pLayer);
 	void explode_all();
@@ -58,7 +58,7 @@ private:
 
 	void condense_layer(layer &pMap);
 
-	util::error load_layer(tinyxml2::XMLElement *pEle, int pLayer);
+	int load_layer(tinyxml2::XMLElement *pEle, int pLayer);
 
 	tile* find_tile_at(engine::fvector pPosition, int pLayer);
 

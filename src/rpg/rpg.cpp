@@ -42,7 +42,7 @@ void flag_container::load_script_interface(script_system & pScript)
 // entity
 // #########
 
-util::error entity::load_entity(std::string pName, texture_manager & pTexture_manager)
+int entity::load_entity(std::string pName, texture_manager & pTexture_manager)
 {
 	mTexture = pTexture_manager.get_texture(pName);
 	if (!mTexture)
@@ -261,7 +261,7 @@ void collision_system::clean()
 	mButtons.clear();
 }
 
-util::error collision_system::load_collision_boxes(tinyxml2::XMLElement* pEle)
+int collision_system::load_collision_boxes(tinyxml2::XMLElement* pEle)
 {
 	assert(pEle != nullptr);
 
@@ -458,7 +458,7 @@ void entity_manager::clean()
 	mEntities.clear();
 }
 
-util::error entity_manager::load_entities(tinyxml2::XMLElement * e)
+int entity_manager::load_entities(tinyxml2::XMLElement * e)
 {
 	assert(mTexture_manager != nullptr);
 	auto ele = e->FirstChildElement();
@@ -483,7 +483,7 @@ void entity_manager::set_texture_manager(texture_manager& pTexture_manager)
 	mTexture_manager = &pTexture_manager;
 }
 
-util::error entity_manager::load_characters(tinyxml2::XMLElement * e)
+int entity_manager::load_characters(tinyxml2::XMLElement * e)
 {
 	assert(mTexture_manager != nullptr);
 	auto ele = e->FirstChildElement();
@@ -823,7 +823,7 @@ scene::clean_scene(bool pFull)
 }
 
 
-util::error scene::load_scene(std::string pPath)
+int scene::load_scene(std::string pPath)
 {
 	assert(mTexture_manager != nullptr);
 	assert(mScript != nullptr);
@@ -832,7 +832,10 @@ util::error scene::load_scene(std::string pPath)
 
 	scene_loader loader;
 	if (loader.load(pPath))
-		return util::error("Unable to open scene");
+	{
+		util::error("Unable to open scene");
+		return 1;
+	}
 
 	mScene_path = pPath;
 	mScene_name = loader.get_name();
@@ -846,7 +849,10 @@ util::error scene::load_scene(std::string pPath)
 
 	auto tilemap_texture = mTexture_manager->get_texture(loader.get_tilemap_texture());
 	if (!tilemap_texture)
-		return util::error("Invalid tilemap texture");
+	{
+		util::error("Invalid tilemap texture");
+		return 1;
+	}
 	mTilemap_display.set_texture(*tilemap_texture);
 
 	mTilemap_loader.load_tilemap_xml(loader.get_tilemap());
@@ -859,11 +865,14 @@ util::error scene::load_scene(std::string pPath)
 	return 0;
 }
 
-util::error
+int
 scene::reload_scene()
 {
 	if (mScene_path.empty())
-		return util::error("No scene to reload");
+	{
+		util::error("No scene to reload");
+		return 1;
+	}
 	mBackground_music.clean();
 	return load_scene(mScene_path);
 }
@@ -1250,7 +1259,7 @@ script_system::~script_system()
 	mEngine->ShutDownAndRelease();
 }
 
-util::error
+int
 script_system::load_scene_script(const std::string& pPath)
 {
 	mCtxmgr.AbortAll();
@@ -1259,7 +1268,10 @@ script_system::load_scene_script(const std::string& pPath)
 	mBuilder.AddSectionFromMemory("scene_commands", "#include 'data/internal/scene.as'");
 	mBuilder.AddSectionFromFile(pPath.c_str());
 	if (mBuilder.BuildModule())
-		return "Failed to load scene script";
+	{
+		util::error("Failed to load scene script");
+		return 1;
+	}
 
 	mScene_module = mBuilder.GetModule();
 
@@ -1465,25 +1477,33 @@ float game::get_delta()
 	return get_renderer()->get_delta();
 }
 
-util::error
+int
 game::load_game_xml(std::string pPath)
 {
 	using namespace tinyxml2;
 
 	XMLDocument doc;
 	if (doc.LoadFile(pPath.c_str()))
-		return "Could not load game file at '" + pPath + "'";
-
+	{
+		util::error("Could not load game file at '" + pPath + "'");
+		return 1;
+	}
 	auto ele_root = doc.RootElement();
 
 	auto ele_scene = ele_root->FirstChildElement("scene");
 	if (!ele_scene)
-		return "Please specify the scene to start with";
+	{
+		util::error("Please specify the scene to start with");
+		return 1;
+	}
 	std::string scene_path = util::safe_string(ele_scene->Attribute("path"));
 
 	auto ele_textures = ele_root->FirstChildElement("textures");
 	if (!ele_textures)
-		return "Please specify the texture file";
+	{
+		util::error("Please specify the texture file");
+		return 1;
+	}
 	mTexture_manager.load_settings(ele_textures);
 
 	mScene.set_texture_manager(mTexture_manager);
@@ -1605,7 +1625,7 @@ void panning_node::set_boundary_enable(bool pEnable)
 // narrative_dialog
 // ##########
 
-util::error
+int
 narrative_dialog::load_box(tinyxml2::XMLElement* pEle, texture_manager& pTexture_manager)
 {
 	auto ele_box = pEle->FirstChildElement("box");
@@ -1614,7 +1634,11 @@ narrative_dialog::load_box(tinyxml2::XMLElement* pEle, texture_manager& pTexture
 	std::string att_box_atlas = ele_box->Attribute("atlas");
 
 	auto tex = pTexture_manager.get_texture(att_box_tex);
-	if (!tex) return "Texture does not exist";
+	if (!tex)
+	{
+		util::error("Texture does not exist");
+		return 1;
+	}
 	mBox.set_texture(*tex, att_box_atlas);
 
 	set_box_position(position::bottom);
@@ -1623,7 +1647,7 @@ narrative_dialog::load_box(tinyxml2::XMLElement* pEle, texture_manager& pTexture
 	return 0;
 }
 
-util::error
+int
 narrative_dialog::load_font(tinyxml2::XMLElement* pEle)
 {
 	auto ele_font = pEle->FirstChildElement("font");
@@ -1790,7 +1814,7 @@ void narrative_dialog::set_expression(const std::string& pName)
 	show_expression();
 }
 
-util::error narrative_dialog::load_narrative_xml(tinyxml2::XMLElement* pEle, texture_manager& pTexture_manager)
+int narrative_dialog::load_narrative_xml(tinyxml2::XMLElement* pEle, texture_manager& pTexture_manager)
 {
 	load_box(pEle, pTexture_manager);
 	load_font(pEle);
@@ -2037,7 +2061,7 @@ tilemap_loader::condense_tiles()
 	}
 }
 
-util::error
+int
 tilemap_loader::load_layer(tinyxml2::XMLElement * pEle, int pLayer)
 {
 	auto i = pEle->FirstChildElement();
@@ -2056,7 +2080,7 @@ tilemap_loader::tilemap_loader()
 	mTile_size = defs::TILE_SIZE;
 }
 
-util::error
+int
 tilemap_loader::load_tilemap_xml(tinyxml2::XMLElement *pRoot)
 {
 	clean();
@@ -2076,13 +2100,16 @@ tilemap_loader::load_tilemap_xml(tinyxml2::XMLElement *pRoot)
 	return 0;
 }
 
-util::error
+int
 tilemap_loader::load_tilemap_xml(std::string pPath)
 {
 	using namespace tinyxml2;
 	XMLDocument doc;
 	if (doc.LoadFile(pPath.c_str()))
-		return "Error loading tilemap file";
+	{
+		util::error("Error loading tilemap file");
+		return 1;
+	}
 	auto root = doc.RootElement();
 	load_tilemap_xml(root);
 	return 0;

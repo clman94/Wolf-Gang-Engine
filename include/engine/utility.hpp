@@ -217,98 +217,10 @@ T pingpong_index(T v, T end)
 	return ((v / end) % 2) ? end - (v%end) : (v%end);
 }
 
-// Gives error handling in the form a return.
-// Simply provide an error message and it will print the message
-// if the error is not handled by handle_error().
-// Ex: return "Failed to do thing!";
-// Error codes can be provided as well.
-// To specify no error, simply return error::NOERROR or return 0.
-// The main purpose was to rid of all the std::cout and make
-// error handling simply one liners.
-class error
+static void error(const std::string& pMessage)
 {
-	struct handler{
-		bool unhandled; 
-		std::string message;
-		int code;
-	};
-	std::shared_ptr<handler> err;
-public:
-
-	static const int NOERROR = 0, ERROR = 1;
-
-	error()
-	{
-		err.reset(new handler);
-		err->code = NOERROR;
-		err->unhandled = false;
-	}
-	error(const error& A)
-	{
-		err = A.err;
-	}
-	error(const std::string& message)
-	{
-		err.reset(new handler);
-		err->unhandled = true;
-		err->message = message;
-		err->code = ERROR;
-	}
-	error(int code)
-	{
-		err.reset(new handler);
-		err->unhandled = (code != NOERROR);
-		err->code = code;
-	}
-
-	~error()
-	{
-		if (err->unhandled && err.unique())
-		{
-			if (err->message.empty())
-				std::cout << "Error Code :" << err->code << "\n";
-			else
-				std::cout << "Error : " << err->message << "\n";
-		}
-	}
-
-	error& handle_error()
-	{
-		err->unhandled = false;
-		return *this;
-	}
-
-	const std::string& get_message()
-	{
-	    return err->message;
-	}
-	
-	int get_error_code()
-	{
-		return err->code;
-	}
-
-	error& operator=(const error& A)
-	{
-		err = A.err;
-		return *this;
-	}
-	
-	bool has_error()
-	{
-		return err->code != NOERROR;
-	}
-
-	bool is_handled()
-	{
-		return !err->unhandled;
-	}
-
-	explicit operator bool()
-	{
-		return err->code != NOERROR;
-	}
-};
+	std::cout << "Error : " << pMessage << "\n";
+}
 
 
 }

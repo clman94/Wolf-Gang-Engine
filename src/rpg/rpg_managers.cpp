@@ -78,7 +78,7 @@ texture_manager::construct_list()
 	return std::move(retval);
 }
 
-util::error
+int
 sound_manager::load_sounds(tinyxml2::XMLElement* pEle_root)
 {
 	auto ele_sound = pEle_root->FirstChildElement();

@@ -35,7 +35,7 @@ public:
 class sound_manager
 {
 public:
-	util::error load_sounds(tinyxml2::XMLElement* pEle_root);
+	int load_sounds(tinyxml2::XMLElement* pEle_root);
 	int spawn_sound(const std::string& pName);
 	void stop_all();
 
