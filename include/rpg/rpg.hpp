@@ -151,8 +151,8 @@ private:
 class entity :
 	public engine::render_client,
 	public engine::node,
-	public   util::named,
-	public   util::tracked_owner
+	public util::named,
+	public util::tracked_owner
 {
 public:
 

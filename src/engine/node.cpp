@@ -5,7 +5,7 @@ using namespace engine;
 
 node::node()
 {
-	mParent.reset();
+	mParent = nullptr;
 }
 
 node::~node()
@@ -48,16 +48,16 @@ node::set_position(fvector pos)
 	mPosition = pos;
 }
 
-node_ref
+node*
 node::detach_parent()
 {
 	if (!mParent) return nullptr;
-	node_ref temp = mParent->mChildren[mChild_index];
+	node* temp = mParent->mChildren[mChild_index];
 	mParent->mChildren.erase(mParent->mChildren.begin() + mChild_index);
 	for (size_t i = 0; i < mParent->mChildren.size(); i++)
 		mParent->mChildren[i]->mChild_index = i;
 	mChild_index = -1;
-	mParent.reset();
+	mParent = nullptr;
 	return temp;
 }
 
@@ -67,12 +67,12 @@ node::detach_children()
 	if (!mChildren.size()) return node_arr();
 	node_arr temp = mChildren;
 	for (auto i : mChildren)
-		i->mParent.reset();
+		i->mParent = nullptr;
 	mChildren.clear();
 	return temp;
 }
 
-node_ref
+node*
 node::get_parent()
 {
 	return mParent;
@@ -85,17 +85,17 @@ node::get_children()
 }
 
 int
-node::set_parent(node_ref obj)
+node::set_parent(node& obj)
 {
-	return obj->add_child(*this);
+	return obj.add_child(*this);
 }
 
 int
-node::add_child(node_ref obj)
+node::add_child(node& obj)
 {
-	if (obj->mParent) obj->detach_parent();
-	obj->mChild_index = mChildren.size();
-	obj->mParent = *this;
-	mChildren.push_back(obj);
+	if (obj.mParent) obj.detach_parent();
+	obj.mChild_index = mChildren.size();
+	obj.mParent = this;
+	mChildren.push_back(&obj);
 	return 0;
 }

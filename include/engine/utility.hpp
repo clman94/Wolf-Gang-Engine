@@ -76,6 +76,11 @@ public:
 		mPointer = r.mPointer;
 	}
 
+	void reset()
+	{
+		mIs_valid.reset();
+	}
+
 	bool is_valid() const
 	{
 		return mIs_valid != nullptr && *mIs_valid != false;
@@ -98,7 +103,7 @@ public:
 		return get();
 	}
 
-	operator bool()
+	operator bool() const
 	{
 		return is_valid();
 	}

@@ -16,7 +16,6 @@
 #include "vector.hpp"
 #include "node.hpp"
 #include "texture.hpp"
-#include "ptr_GC.hpp"
 #include "time.hpp"
 #include "rect.hpp"
 #include "types.hpp"
