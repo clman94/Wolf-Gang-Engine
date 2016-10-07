@@ -44,7 +44,7 @@ public:
 	engine::frect get_boundary();
 	engine::fvector get_focus();
 
-	void enable_boundary(bool pEnable);
+	void set_boundary_enable(bool pEnable);
 
 private:
 	engine::frect mBoundary;
@@ -152,7 +152,7 @@ class entity :
 	public engine::render_client,
 	public engine::node,
 	public   util::named,
-	public   util::reference_owner
+	public   util::tracked_owner
 {
 public:
 
@@ -178,6 +178,7 @@ private:
 
 	bool dynamic_depth;
 };
+typedef util::tracking_ptr<entity> entity_reference;
 
 class character :
 	public entity
@@ -440,28 +441,6 @@ private:
 	bool mLocked;
 	direction mFacing_direction;
 	void set_move_direction(engine::fvector pVec);
-};
-
-class entity_reference
-{
-public:
-	entity_reference(){}
-	~entity_reference(){}
-	entity_reference(const entity_reference& R);
-	entity_reference(entity& pPtr);
-	bool is_valid() const;
-
-	void set(entity& pPtr);
-	entity* get();
-
-	entity_reference& operator=(const entity_reference& R);
-	entity* operator->();
-
-	entity& operator *();
-
-private:
-	std::shared_ptr<bool> mValid;
-	entity* mPtr;
 };
 
 class entity_manager :

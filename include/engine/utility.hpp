@@ -11,25 +11,101 @@
 namespace util
 {
 
-class reference_owner
+class tracked_owner
 {
 public:
-	reference_owner()
+	tracked_owner()
 	{
 		mIs_valid.reset(new bool);
 		*mIs_valid = true;
 	}
-	~reference_owner()
+
+	~tracked_owner()
 	{
 		*mIs_valid = false;
 	}
 
-	const std::shared_ptr<bool>& get_validator()
-	{
-		return mIs_valid;
-	}
+	template<typename T>
+	friend class tracking_ptr;
+
 private:
 	std::shared_ptr<bool> mIs_valid;
+};
+
+template<typename T>
+class tracking_ptr
+{
+public:
+	tracking_ptr() {}
+	~tracking_ptr() {}
+	
+	tracking_ptr(T& a)
+	{
+		set(a);
+	}
+
+	tracking_ptr(const tracking_ptr& a)
+	{
+		set(a);
+	}
+
+	tracking_ptr& operator=(const tracking_ptr& r)
+	{
+		set(r);
+		return *this;
+	}
+
+	tracking_ptr& operator=(T& r)
+	{
+		set(r);
+		return *this;
+	}
+
+	void set(T& r)
+	{
+		assert(r.mIs_valid != nullptr);
+		mIs_valid = r.mIs_valid;
+		mPointer = &r;
+	}
+
+	void set(const tracking_ptr& r)
+	{
+		if (!r.is_valid())
+			return;
+		mIs_valid = r.mIs_valid;
+		mPointer = r.mPointer;
+	}
+
+	bool is_valid() const
+	{
+		return mIs_valid != nullptr && *mIs_valid != false;
+	}
+
+	T* get() const
+	{
+		assert(mIs_valid != nullptr);
+		assert(*mIs_valid != false);
+		return mPointer;
+	}
+
+	T& operator*() const
+	{
+		return *get();
+	}
+
+	T* operator->() const
+	{
+		return get();
+	}
+
+	operator bool()
+	{
+		return is_valid();
+	}
+
+private:
+	std::shared_ptr<bool> mIs_valid;
+	T* mPointer;
 };
 
 

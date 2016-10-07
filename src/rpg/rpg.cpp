@@ -507,57 +507,6 @@ util::error entity_manager::load_characters(tinyxml2::XMLElement * e)
 	return 0;
 }
 
-entity_reference::entity_reference(const entity_reference & R)
-{
-	if (!R.mValid)
-		return;
-	mValid = R.mValid;
-	mPtr = R.mPtr;
-}
-
-entity_reference::entity_reference(entity& pPtr)
-{
-	set(pPtr);
-}
-
-bool entity_reference::is_valid() const
-{
-	return mValid != nullptr && *mValid;
-}
-
-void entity_reference::set(entity& pPtr)
-{
-	mValid = pPtr.get_validator();
-	mPtr = &pPtr;
-}
-
-entity* entity_reference::get()
-{
-	assert(mPtr != nullptr);
-	assert(mValid);
-	return mPtr;
-}
-
-entity_reference& entity_reference::operator=(const entity_reference& R)
-{
-	if (R.mValid)
-	{
-		mValid = R.mValid;
-		mPtr = R.mPtr;
-	}
-	return *this;
-}
-
-entity* entity_reference::operator->()
-{
-	return get();
-}
-
-entity& entity_reference::operator*()
-{
-	return *get();
-}
-
 void entity_manager::register_entity_type(script_system & pScript)
 {
 	auto& engine = pScript.get_engine();
@@ -942,6 +891,8 @@ void scene::load_script_interface(script_system& pScript)
 	pScript.add_function("vec get_boundary_size()", asMETHOD(scene, script_get_boundary_size), this);
 	pScript.add_function("void get_boundary_position(vec)", asMETHOD(scene, script_set_boundary_position), this);
 	pScript.add_function("void get_boundary_size(vec)", asMETHOD(scene, script_set_boundary_size), this);
+	pScript.add_function("void set_boundary_enable(bool)", asMETHOD(panning_node, set_boundary_enable), this);
+
 
 	mScript = &pScript;
 }
@@ -1645,7 +1596,7 @@ engine::fvector panning_node::get_focus()
 	return mFocus;
 }
 
-void panning_node::enable_boundary(bool pEnable)
+void panning_node::set_boundary_enable(bool pEnable)
 {
 	mBoundary_enabled = pEnable;
 }
