@@ -9,39 +9,34 @@ template<typename T>
 struct rect
 {
 	T x, y, w, h;
-	rect(T _x = 0, T _y = 0, T _w = 0, T _h = 0)
-		: x(_x), y(_y), w(_w), h(_h) {}
+	
+	rect(T pX = 0, T pY = 0, T pW = 0, T pH = 0)
+		: x(pX), y(pY), w(pW), h(pH) {}
+
 	rect(const rect& a)
 	{
-		x = a.x;
-		y = a.y;
-		w = a.w;
-		h = a.h;
+		set_rect(a);
 	}
 
 	rect(const vector<T>& a, const vector<T>& b)
 	{
-		x = a.x;
-		y = a.y;
-		w = b.x;
-		h = b.y;
+		set_offset(a);
+		set_size(b);
 	}
 
 	rect& operator=(const rect& r)
 	{
-		x = r.x;
-		y = r.y;
-		w = r.w;
-		h = r.h;
+		set_rect(r);
 		return *this;
 	}
 
-	void set_rect(const rect& a)
+	rect& set_rect(const rect& a)
 	{
 		x = a.x;
 		y = a.y;
 		w = a.w;
 		h = a.h;
+		return *this;
 	}
 
 	vector<T> get_offset() const
@@ -54,16 +49,28 @@ struct rect
 		return vector<T>(w, h);
 	}
 
-	void set_offset(vector<T> v)
+	rect& set_offset(vector<T> v)
 	{
 		x = v.x;
 		y = v.y;
+		return *this;
 	}
 
-	void set_size(vector<T> v)
+	rect& set_size(vector<T> v)
 	{
 		w = v.x;
 		h = v.y;
+		return *this;
+	}
+
+	rect operator*(T a) const
+	{
+		return{ x*a, y*a, w*a, h*a };
+	}
+
+	vector<T> get_corner() const
+	{
+		return get_offset() + get_size();
 	}
 
 	static bool is_intersect(const rect& a, const rect& b)
@@ -86,12 +93,12 @@ struct rect
 		return false;
 	}
 
-	bool is_intersect(const rect& a)
+	bool is_intersect(const rect& a) const
 	{
 		return is_intersect(*this, a);
 	}
 
-	bool is_intersect(const vector<T>& a)
+	bool is_intersect(const vector<T>& a) const
 	{
 		return is_intersect(*this, a);
 	}

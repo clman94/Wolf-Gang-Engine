@@ -122,7 +122,7 @@ private:
 	void update_labels();
 	void update_preview();
 	void update_highlight();
-	void update_lines(engine::fvector pBoundary);
+	void update_lines(engine::frect pBoundary);
 
 	void tick_highlight(engine::renderer& pR);
 

@@ -36,12 +36,20 @@ class panning_node :
 	public engine::node
 {
 public:
-	void set_boundary(engine::fvector pBoundary);
+	panning_node();
+
+	void set_boundary(engine::frect pBoundary);
 	void set_viewport(engine::fvector pViewport);
 	void set_focus(engine::fvector pFocus);
+	engine::frect get_boundary();
 	engine::fvector get_focus();
+
+	void enable_boundary(bool pEnable);
+
 private:
-	engine::fvector mBoundary, mViewport, mFocus;
+	engine::frect mBoundary;
+	engine::fvector mViewport, mFocus;
+	bool mBoundary_enabled;
 };
 
 template<typename T>
@@ -595,6 +603,10 @@ private:
 	void             script_set_focus(engine::fvector pPosition);
 	engine::fvector  script_get_focus();
 	entity_reference script_get_player();
+	engine::fvector  script_get_boundary_position();
+	engine::fvector  script_get_boundary_size();
+	void             script_set_boundary_position(engine::fvector pPosition);
+	void             script_set_boundary_size(engine::fvector pSize);
 
 	std::string mScene_path;
 	std::string mScene_name;

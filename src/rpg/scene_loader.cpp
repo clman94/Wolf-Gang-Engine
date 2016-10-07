@@ -44,10 +44,12 @@ int scene_loader::load(const std::string & pPath)
 	// Get boundary
 	if (auto ele_boundary = ele_root->FirstChildElement("boundary"))
 	{
-		engine::fvector boundary;
-		boundary.x = ele_boundary->FloatAttribute("w");
-		boundary.y = ele_boundary->FloatAttribute("h");
-		mBoundary = boundary * 32;
+		engine::frect boundary;
+		boundary.x = ele_boundary->FloatAttribute("x");
+		boundary.y = ele_boundary->FloatAttribute("y");
+		boundary.w = ele_boundary->FloatAttribute("w");
+		boundary.h = ele_boundary->FloatAttribute("h");
+		mBoundary = boundary * 32.f;
 	}
 	else
 	{
@@ -74,7 +76,7 @@ int scene_loader::load(const std::string & pPath)
 	return 0;
 }
 
-const engine::fvector& scene_loader::get_boundary()
+const engine::frect& scene_loader::get_boundary()
 {
 	return mBoundary;
 }

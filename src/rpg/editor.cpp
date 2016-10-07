@@ -328,15 +328,17 @@ void tilemap_editor::update_highlight()
 		mTilemap_display.remove_highlight();
 }
 
-void tilemap_editor::update_lines(engine::fvector pBoundary)
+void tilemap_editor::update_lines(engine::frect pBoundary)
 {
-	mLines[0].set_size({ pBoundary.x, 1 });
-	mLines[1].set_size({ 1, pBoundary.y });
-	mLines[2].set_size({ pBoundary.x, 1 });
-	mLines[3].set_size({ 1, pBoundary.y });
+	mLines[0].set_size({ pBoundary.w, 1 });
+	mLines[1].set_size({ 1, pBoundary.h });
+	mLines[2].set_size({ pBoundary.w, 1 });
+	mLines[3].set_size({ 1, pBoundary.h });
 
-	mLines[2].set_position(pBoundary - mLines[2].get_size());
-	mLines[3].set_position(pBoundary - mLines[3].get_size());
+	mLines[0].set_position(pBoundary.get_offset());
+	mLines[1].set_position(pBoundary.get_offset());
+	mLines[2].set_position(pBoundary.get_corner() - mLines[2].get_size());
+	mLines[3].set_position(pBoundary.get_corner() - mLines[3].get_size());
 }
 
 void tilemap_editor::tick_highlight(engine::renderer& pR)

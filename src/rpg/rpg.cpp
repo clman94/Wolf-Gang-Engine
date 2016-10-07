@@ -42,8 +42,7 @@ void flag_container::load_script_interface(script_system & pScript)
 // entity
 // #########
 
-util::error
-entity::load_entity(std::string pName, texture_manager & pTexture_manager)
+util::error entity::load_entity(std::string pName, texture_manager & pTexture_manager)
 {
 	mTexture = pTexture_manager.get_texture(pName);
 	if (!mTexture)
@@ -51,8 +50,7 @@ entity::load_entity(std::string pName, texture_manager & pTexture_manager)
 	return 0;
 }
 
-void
-entity::set_dynamic_depth(bool a)
+void entity::set_dynamic_depth(bool a)
 {
 	dynamic_depth = a;
 }
@@ -84,26 +82,22 @@ entity::entity()
 	add_child(mSprite);
 }
 
-void
-entity::play_animation()
+void entity::play_animation()
 {
 	mSprite.start();
 }
 
-void
-entity::stop_animation()
+void entity::stop_animation()
 {
 	mSprite.stop();
 }
 
-void
-entity::tick_animation()
+void entity::tick_animation()
 {
 	mSprite.tick();
 }
 
-bool
-entity::set_animation(const std::string& pName, bool pSwap)
+bool entity::set_animation(const std::string& pName, bool pSwap)
 {
 	if (!mTexture)
 		return false;
@@ -116,8 +110,7 @@ entity::set_animation(const std::string& pName, bool pSwap)
 	return true;
 }
 
-int
-entity::draw(engine::renderer &_r)
+int entity::draw(engine::renderer &_r)
 {
 	if (dynamic_depth)
 	{
@@ -190,8 +183,7 @@ character::get_speed()
 // collision_system
 // #########
 
-collision_box*
-collision_system::wall_collision(const engine::frect& r)
+collision_box* collision_system::wall_collision(const engine::frect& r)
 {
 	for (auto &i : mWalls)
 		if (i.is_valid() && i.is_intersect(r))
@@ -199,8 +191,7 @@ collision_system::wall_collision(const engine::frect& r)
 	return nullptr;
 }
 
-door*
-collision_system::door_collision(const engine::fvector& pPosition)
+door* collision_system::door_collision(const engine::fvector& pPosition)
 {
 	for (auto &i : mDoors)
 		if (i.is_valid() && i.is_intersect(pPosition))
@@ -208,8 +199,7 @@ collision_system::door_collision(const engine::fvector& pPosition)
 	return nullptr;
 }
 
-trigger*
-collision_system::trigger_collision(const engine::fvector& pPosition)
+trigger* collision_system::trigger_collision(const engine::fvector& pPosition)
 {
 	for (auto &i : mTriggers)
 		if (i.is_valid() && i.is_intersect(pPosition))
@@ -217,8 +207,7 @@ collision_system::trigger_collision(const engine::fvector& pPosition)
 	return nullptr;
 }
 
-trigger*
-collision_system::button_collision(const engine::fvector& pPosition)
+trigger* collision_system::button_collision(const engine::fvector& pPosition)
 {
 	for (auto &i : mButtons)
 		if (i.is_valid() && i.is_intersect(pPosition))
@@ -226,8 +215,7 @@ collision_system::button_collision(const engine::fvector& pPosition)
 	return nullptr;
 }
 
-engine::fvector
-collision_system::get_door_entry(std::string pName)
+engine::fvector collision_system::get_door_entry(std::string pName)
 {
 	for (auto& i : mDoors)
 	{
@@ -239,8 +227,7 @@ collision_system::get_door_entry(std::string pName)
 	return{ -1, -1};
 }
 
-void 
-collision_system::validate_all(flag_container& pFlags)
+void  collision_system::validate_all(flag_container& pFlags)
 {
 	for (auto &i : mWalls)    i.validate(pFlags);
 	for (auto &i : mDoors)    i.validate(pFlags);
@@ -248,29 +235,25 @@ collision_system::validate_all(flag_container& pFlags)
 	for (auto &i : mButtons)  i.validate(pFlags);
 }
 
-void
-collision_system::add_wall(engine::frect r)
+void collision_system::add_wall(engine::frect r)
 {
 	collision_box nw;
 	nw.set_rect(r);
 	mWalls.push_back(nw);
 }
 
-void
-collision_system::add_trigger(trigger & t)
+void collision_system::add_trigger(trigger & t)
 {
 	mTriggers.push_back(t);
 }
 
-void
-collision_system::add_button(trigger & t)
+void collision_system::add_button(trigger & t)
 {
 	mButtons.push_back(t);
 }
 
 
-void
-collision_system::clean()
+void collision_system::clean()
 {
 	mWalls.clear();
 	mDoors.clear();
@@ -278,8 +261,7 @@ collision_system::clean()
 	mButtons.clear();
 }
 
-util::error
-collision_system::load_collision_boxes(tinyxml2::XMLElement* pEle)
+util::error collision_system::load_collision_boxes(tinyxml2::XMLElement* pEle)
 {
 	assert(pEle != nullptr);
 
@@ -348,14 +330,12 @@ player_character::player_character()
 	mFacing_direction = direction::other;
 }
 
-void
-player_character::set_locked(bool pLocked)
+void player_character::set_locked(bool pLocked)
 {
 	mLocked = pLocked;
 }
 
-bool
-player_character::is_locked()
+bool player_character::is_locked()
 {
 	return mLocked;
 }
@@ -376,8 +356,7 @@ engine::frect player_character::get_collision(direction pDirection)
 	return{ 0, 0 };
 }
 
-void
-player_character::movement(controls& pControls, collision_system& pCollision_system, float pDelta)
+void player_character::movement(controls& pControls, collision_system& pCollision_system, float pDelta)
 {
 	if (mLocked)
 	{
@@ -434,8 +413,7 @@ player_character::movement(controls& pControls, collision_system& pCollision_sys
 	}
 }
 
-engine::fvector
-player_character::get_activation_point(float pDistance)
+engine::fvector player_character::get_activation_point(float pDistance)
 {
 	switch (mFacing_direction)
 	{
@@ -458,8 +436,7 @@ entity_manager::entity_manager()
 	add_child(mCharacters);
 }
 
-character*
-entity_manager::find_character(const std::string& pName)
+character* entity_manager::find_character(const std::string& pName)
 {
 	for (auto &i : mCharacters)
 		if (i.get_name() == pName)
@@ -467,8 +444,7 @@ entity_manager::find_character(const std::string& pName)
 	return nullptr;
 }
 
-entity*
-entity_manager::find_entity(const std::string& pName)
+entity* entity_manager::find_entity(const std::string& pName)
 {
 	for (auto &i : mEntities)
 		if (i.get_name() == pName)
@@ -482,8 +458,7 @@ void entity_manager::clean()
 	mEntities.clear();
 }
 
-util::error
-entity_manager::load_entities(tinyxml2::XMLElement * e)
+util::error entity_manager::load_entities(tinyxml2::XMLElement * e)
 {
 	assert(mTexture_manager != nullptr);
 	auto ele = e->FirstChildElement();
@@ -508,8 +483,7 @@ void entity_manager::set_texture_manager(texture_manager& pTexture_manager)
 	mTexture_manager = &pTexture_manager;
 }
 
-util::error
-entity_manager::load_characters(tinyxml2::XMLElement * e)
+util::error entity_manager::load_characters(tinyxml2::XMLElement * e)
 {
 	assert(mTexture_manager != nullptr);
 	auto ele = e->FirstChildElement();
@@ -964,6 +938,11 @@ void scene::load_script_interface(script_system& pScript)
 	pScript.add_function("vec get_focus()", asMETHOD(scene, script_get_focus), this);
 	pScript.add_function("void focus_player(bool)", asMETHOD(scene, focus_player), this);
 
+	pScript.add_function("vec get_boundary_position()", asMETHOD(scene, script_get_boundary_position), this);
+	pScript.add_function("vec get_boundary_size()", asMETHOD(scene, script_get_boundary_size), this);
+	pScript.add_function("void get_boundary_position(vec)", asMETHOD(scene, script_set_boundary_position), this);
+	pScript.add_function("void get_boundary_size(vec)", asMETHOD(scene, script_set_boundary_size), this);
+
 	mScript = &pScript;
 }
 
@@ -1000,14 +979,13 @@ void scene::load_game_xml(tinyxml2::XMLElement * ele_root)
 	}
 }
 
-void
-scene::tick(controls &pControls)
+void scene::tick(controls &pControls)
 {
 	assert(get_renderer() != nullptr);
 
 	mPlayer.movement(pControls, mCollision_system, get_renderer()->get_delta());
 	if (mFocus_player)
-		set_focus(mPlayer.get_position());
+		set_focus(mPlayer.get_position(*this)); // Relative to the scene so you can parent the player currently
 
 	{
 		auto pos = mPlayer.get_position();
@@ -1062,6 +1040,26 @@ engine::fvector scene::script_get_focus()
 entity_reference scene::script_get_player()
 {
 	return mPlayer;
+}
+
+engine::fvector scene::script_get_boundary_position()
+{
+	return get_boundary().get_offset();
+}
+
+engine::fvector scene::script_get_boundary_size()
+{
+	return get_boundary().get_size();
+}
+
+void scene::script_set_boundary_size(engine::fvector pSize)
+{
+	set_boundary(get_boundary().set_size(pSize));
+}
+
+void scene::script_set_boundary_position(engine::fvector pPosition)
+{
+	set_boundary(get_boundary().set_offset(pPosition));
 }
 
 void scene::script_set_tile(const std::string& pAtlas, engine::fvector pPosition
@@ -1596,8 +1594,13 @@ game::refresh_renderer(engine::renderer & pR)
 // panning_node
 // ##########
 
+panning_node::panning_node()
+{
+	mBoundary_enabled = true;
+}
+
 void
-panning_node::set_boundary(engine::fvector pBoundary)
+panning_node::set_boundary(engine::frect pBoundary)
 {
 	mBoundary = pBoundary;
 }
@@ -1611,24 +1614,40 @@ panning_node::set_viewport(engine::fvector pViewport)
 void
 panning_node::set_focus(engine::fvector pFocus)
 {
-	engine::fvector offset = pFocus - mViewport * 0.5f;
-	if (mBoundary.x < mViewport.x)
-		offset.x = (mBoundary.x * 0.5f) - (mViewport.x * 0.5f);
-	else
-		offset.x = util::clamp(offset.x, 0.f, mBoundary.x - mViewport.x);
+	if (!mBoundary_enabled)
+	{
+		set_position(-(pFocus - (mViewport * 0.5f)));
+		mFocus = pFocus;
+	}
 
-	if (mBoundary.y < mViewport.y)
+	engine::fvector offset = pFocus - (mViewport * 0.5f) - mBoundary.get_offset();
+	if (mBoundary.w < mViewport.x)
+		offset.x = (mBoundary.w * 0.5f) - (mViewport.x * 0.5f);
+	else
+		offset.x = util::clamp(offset.x, 0.f, mBoundary.w - mViewport.x);
+
+	if (mBoundary.h < mViewport.y)
 		offset.y = (mBoundary.y * 0.5f) - (mViewport.y * 0.5f);
 	else
-		offset.y = util::clamp(offset.y, 0.f, mBoundary.y - mViewport.y);
+		offset.y = util::clamp(offset.y, 0.f, mBoundary.w - mViewport.y);
 
-	set_position(-offset);
+	set_position(-(offset + mBoundary.get_offset()));
 	mFocus = pFocus;
+}
+
+engine::frect panning_node::get_boundary()
+{
+	return mBoundary;
 }
 
 engine::fvector panning_node::get_focus()
 {
 	return mFocus;
+}
+
+void panning_node::enable_boundary(bool pEnable)
+{
+	mBoundary_enabled = pEnable;
 }
 
 // ##########

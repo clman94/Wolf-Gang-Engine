@@ -20,7 +20,7 @@ public:
 
 	int load(const std::string& pPath);
 
-	const engine::fvector& get_boundary();
+	const engine::frect& get_boundary();
 	const std::string& get_name();
 	const std::string& get_script_path();
 	const std::string& get_tilemap_texture();
@@ -39,7 +39,7 @@ private:
 	std::string mScene_name;
 	std::string mTilemap_texture;
 	std::string mScene_path;
-	engine::fvector mBoundary;
+	engine::frect mBoundary;
 	tinyxml2::XMLElement* mEle_collisionboxes;
 	tinyxml2::XMLElement* mEle_map;
 };
