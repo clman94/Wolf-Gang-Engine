@@ -36,7 +36,10 @@ template<typename T>
 class tracking_ptr
 {
 public:
-	tracking_ptr() {}
+	tracking_ptr()
+	{
+		static_assert(std::is_convertible<T, tracked_owner>::value, "T is not tracked_owner");
+	}
 	~tracking_ptr() {}
 	
 	tracking_ptr(T& a)
