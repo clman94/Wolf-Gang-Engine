@@ -531,6 +531,23 @@ private:
 	int script_music_open(const std::string& pPath);
 };
 
+class colored_overlay :
+	public engine::render_proxy
+{
+public:
+	colored_overlay();
+	void load_script_interface(script_system& pScript);
+	void clean();
+
+private:
+	void refresh_renderer(engine::renderer& pR);
+
+	engine::rectangle_node mOverlay;
+
+	void script_set_overlay_color(int r, int g, int b);
+	void script_set_overlay_opacity(int a);
+};
+
 class scene :
 	public engine::render_proxy,
 	public panning_node
@@ -573,6 +590,7 @@ private:
 	narrative_dialog  mNarrative;
 	sound_manager     mSound_FX;
 	player_character  mPlayer;
+	colored_overlay   mColored_overlay;
 
 	bool              mFocus_player;
 
@@ -590,7 +608,6 @@ private:
 	std::string mScene_path;
 	std::string mScene_name;
 
-protected:
 	void refresh_renderer(engine::renderer& _r);
 };
 

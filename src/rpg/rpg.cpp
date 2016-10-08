@@ -803,6 +803,7 @@ scene::clean_scene(bool pFull)
 	mTilemap_loader.clean();
 	mCollision_system.clean();
 	mEntity_manager.clean();
+	mColored_overlay.clean();
 	mNarrative.hide_box();
 	mSound_FX.stop_all();
 
@@ -883,6 +884,7 @@ void scene::load_script_interface(script_system& pScript)
 	mNarrative.load_script_interface(pScript);
 	mEntity_manager.load_script_interface(pScript);
 	mBackground_music.load_script_interface(pScript);
+	mColored_overlay.load_script_interface(pScript);
 
 	pScript.add_function("void set_tile(const string &in, vec, int, int)", asMETHOD(scene, script_set_tile), this);
 	pScript.add_function("void remove_tile(vec, int)", asMETHOD(scene, script_remove_tile), this);
@@ -902,7 +904,6 @@ void scene::load_script_interface(script_system& pScript)
 	pScript.add_function("void get_boundary_position(vec)", asMETHOD(scene, script_set_boundary_position), this);
 	pScript.add_function("void get_boundary_size(vec)", asMETHOD(scene, script_set_boundary_size), this);
 	pScript.add_function("void set_boundary_enable(bool)", asMETHOD(panning_node, set_boundary_enable), this);
-
 
 	mScript = &pScript;
 }
@@ -1042,6 +1043,7 @@ void scene::refresh_renderer(engine::renderer& pR)
 	pR.add_client(mTilemap_display);
 	pR.add_client(mNarrative);
 	pR.add_client(mPlayer);
+	mColored_overlay.set_renderer(pR);
 	mEntity_manager.set_renderer(pR);
 }
 
@@ -2691,4 +2693,44 @@ void save_value_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("const string& _get_value_string(const string &in)", asMETHOD(save_value_manager, get_value_string), this);
 	pScript.add_function("const string& _get_value_int(const string &in)", asMETHOD(save_value_manager, get_value_int), this);
 	pScript.add_function("const string& _get_value_float(const string &in)", asMETHOD(save_value_manager, get_value_float), this);
+}
+
+// ##########
+// colored_overlay
+// ##########
+
+colored_overlay::colored_overlay()
+{
+	clean();
+	mOverlay.set_depth(-10000);
+}
+
+void colored_overlay::load_script_interface(script_system & pScript)
+{
+	pScript.add_function("void set_overlay_color(int, int, int)", asMETHOD(colored_overlay, script_set_overlay_color), this);
+	pScript.add_function("void set_overlay_opacity(int)", asMETHOD(colored_overlay, script_set_overlay_opacity), this);
+}
+
+void colored_overlay::clean()
+{
+	mOverlay.set_color({ 0, 0, 0, 0 });
+}
+
+void colored_overlay::refresh_renderer(engine::renderer& pR)
+{
+	pR.add_client(mOverlay);
+	mOverlay.set_size(pR.get_size());
+}
+
+void colored_overlay::script_set_overlay_color(int r, int g, int b)
+{
+	auto color = mOverlay.get_color();
+	mOverlay.set_color(engine::color(r, g, b, color.a ));
+}
+
+void colored_overlay::script_set_overlay_opacity(int a)
+{
+	auto color = mOverlay.get_color();
+	color.a = a;
+	mOverlay.set_color(color);
 }
