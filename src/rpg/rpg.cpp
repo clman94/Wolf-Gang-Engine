@@ -842,6 +842,7 @@ int scene::load_scene(std::string pPath)
 
 	mCollision_system.load_collision_boxes(loader.get_collisionboxes());
 
+	set_boundary_enable(loader.has_boundary());
 	set_boundary(loader.get_boundary());
 
 	if (!mScript->load_scene_script(loader.get_script_path()))
@@ -1585,10 +1586,12 @@ panning_node::set_viewport(engine::fvector pViewport)
 void
 panning_node::set_focus(engine::fvector pFocus)
 {
+	mFocus = pFocus;
+
 	if (!mBoundary_enabled)
 	{
 		set_position(-(pFocus - (mViewport * 0.5f)));
-		mFocus = pFocus;
+		return;
 	}
 
 	engine::fvector offset = pFocus - (mViewport * 0.5f) - mBoundary.get_offset();
@@ -1598,12 +1601,11 @@ panning_node::set_focus(engine::fvector pFocus)
 		offset.x = util::clamp(offset.x, 0.f, mBoundary.w - mViewport.x);
 
 	if (mBoundary.h < mViewport.y)
-		offset.y = (mBoundary.y * 0.5f) - (mViewport.y * 0.5f);
+		offset.y = (mBoundary.h * 0.5f) - (mViewport.y * 0.5f);
 	else
-		offset.y = util::clamp(offset.y, 0.f, mBoundary.w - mViewport.y);
+		offset.y = util::clamp(offset.y, 0.f, mBoundary.h - mViewport.y);
 
 	set_position(-(offset + mBoundary.get_offset()));
-	mFocus = pFocus;
 }
 
 engine::frect panning_node::get_boundary()

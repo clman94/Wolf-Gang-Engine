@@ -50,11 +50,11 @@ int scene_loader::load(const std::string & pPath)
 		boundary.w = ele_boundary->FloatAttribute("w");
 		boundary.h = ele_boundary->FloatAttribute("h");
 		mBoundary = boundary * 32.f;
+		mHas_boundary = true;
 	}
 	else
 	{
-		util::error("Please specify boundary of tilemap");
-		return 1;
+		mHas_boundary = false;
 	}
 
 	// Get tilemap
@@ -74,6 +74,11 @@ int scene_loader::load(const std::string & pPath)
 	mScene_path = pPath;
 
 	return 0;
+}
+
+bool scene_loader::has_boundary()
+{
+	return mHas_boundary;
 }
 
 const engine::frect& scene_loader::get_boundary()
