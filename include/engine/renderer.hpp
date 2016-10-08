@@ -12,6 +12,7 @@
 #include <map>
 #include <unordered_map>
 #include <cassert>
+#include <array>
 
 #include "vector.hpp"
 #include "node.hpp"
@@ -130,8 +131,8 @@ private:
 	frame_clock mFrame_clock;
 
 	sf::Event mEvent;
-	std::unordered_map<int, int> mPressed_keys;
-	std::unordered_map<int, int> mPressed_buttons;
+	std::array<char, 256> mPressed_keys;
+	std::array<char, 16> mPressed_buttons;
 	void refresh_pressed();
 
 	int draw_clients();

@@ -249,14 +249,14 @@ renderer::refresh_pressed()
 {
 	for (auto &i : mPressed_keys)
 	{
-		if (i.second == 1)
-			i.second = -1;
+		if (i == 1)
+			i = -1;
 	}
 
 	for (auto &i : mPressed_buttons)
 	{
-		if (i.second == 1)
-			i.second = -1;
+		if (i == 1)
+			i = -1;
 	}
 }
 
