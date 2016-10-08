@@ -190,7 +190,16 @@ int tilemap_editor::draw(engine::renderer & pR)
 		save();
 
 	const engine::fvector mouse_position = pR.get_mouse_position(mTilemap_display.get_exact_position());
-	const engine::fvector tile_position = (mouse_position / 32).floor();
+
+	engine::fvector tile_position;
+	if (mPreview.get_size() == engine::fvector(16, 16)) // Half-size tile
+	{
+		tile_position = (mouse_position / 16).floor() / 2;
+	}
+	else
+	{
+		tile_position = (mouse_position / 32).floor();
+	}
 
 	// Add tile
 	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left))
