@@ -405,6 +405,7 @@ private:
 	expression_manager     mExpression_manager;
 	engine::animation_node mExpression;
 
+	bool        mNew_character;
 	bool        mRevealing;
 	size_t      mCount;
 	std::string mFull_text;
@@ -415,6 +416,8 @@ private:
 
 	void show_expression();
 	void reset_positions();
+
+	bool script_has_displayed_new_character();
 };
 
 class player_character :

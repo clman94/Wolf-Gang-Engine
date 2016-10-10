@@ -64,7 +64,7 @@ class sound_spawner
 {
 	std::list<sound> mSounds;
 public:
-	void spawn(sound_buffer& pBuffer)
+	void spawn(sound_buffer& pBuffer, float pVolume = 100, float pPitch = 1)
 	{
 		for (auto &i : mSounds)
 		{
@@ -76,7 +76,10 @@ public:
 			}
 		}
 		mSounds.emplace_back(pBuffer);
-		mSounds.back().play();
+		auto& newsound = mSounds.back();
+		newsound.set_volume(pVolume);
+		newsound.set_pitch(pPitch);
+		newsound.play();
 	}
 	void stop_all()
 	{

@@ -889,7 +889,7 @@ void scene::load_script_interface(script_system& pScript)
 	pScript.add_function("void set_tile(const string &in, vec, int, int)", asMETHOD(scene, script_set_tile), this);
 	pScript.add_function("void remove_tile(vec, int)", asMETHOD(scene, script_remove_tile), this);
 
-	pScript.add_function("int _spawn_sound(const string&in)", asMETHOD(sound_manager, spawn_sound), &mSound_FX);
+	pScript.add_function("int _spawn_sound(const string&in, float, float)", asMETHOD(sound_manager, spawn_sound), &mSound_FX);
 	pScript.add_function("void _stop_all()", asMETHOD(sound_manager, stop_all), &mSound_FX);
 	
 	pScript.add_function("entity get_player()", asMETHOD(scene, script_get_player), this);
@@ -1683,6 +1683,11 @@ void narrative_dialog::reset_positions()
 	mText.set_position({ 10, 10 });
 }
 
+bool narrative_dialog::script_has_displayed_new_character()
+{
+	return mNew_character;
+}
+
 narrative_dialog::narrative_dialog()
 {
 	mRevealing = false;
@@ -1845,23 +1850,29 @@ void narrative_dialog::load_script_interface(script_system & pScript)
 	pScript.add_function("void _set_expression(const string &in)", asMETHOD(narrative_dialog, set_expression), this);
 	pScript.add_function("void _start_expression_animation()", asMETHOD(engine::animation_node, start), &mExpression);
 	pScript.add_function("void _stop_expression_animation()", asMETHOD(engine::animation_node, stop), &mExpression);
+
+	pScript.add_function("bool _has_displayed_new_character()", asMETHOD(narrative_dialog, script_has_displayed_new_character), this);
 }
 
 int narrative_dialog::draw(engine::renderer& pR)
 {
+	mNew_character = false;
+
 	if (!mRevealing) return 0;
 
 	float time = mTimer.get_elapse().ms();
 	if (time >= mInterval)
 	{
 		mCount += static_cast<size_t>(time / mInterval);
-		mCount  = util::clamp<size_t>(mCount, 0, mFull_text.size());
+		mCount = util::clamp<size_t>(mCount, 0, mFull_text.size());
 
 		std::string display(mFull_text.begin(), mFull_text.begin() + mCount);
 		mText.set_text(display);
 
 		if (mCount >= mFull_text.size())
 			mRevealing = false;
+
+		mNew_character = true;
 
 		mTimer.restart();
 	}

@@ -98,12 +98,12 @@ sound_manager::load_sounds(tinyxml2::XMLElement* pEle_root)
 }
 
 int
-sound_manager::spawn_sound(const std::string& name)
+sound_manager::spawn_sound(const std::string& name, float pVolume, float pPitch)
 {
 	auto &buffer = mBuffers.find(name);
 	if (buffer == mBuffers.end())
 		return 1;
-	mSounds.spawn(buffer->second);
+	mSounds.spawn(buffer->second, pVolume, pPitch);
 	return 0;
 }
 
