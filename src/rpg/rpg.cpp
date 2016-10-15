@@ -1777,6 +1777,11 @@ void narrative_dialog::hide_box()
 	mText.set_visible(false);
 	mText.set_text("");
 	mBox.set_visible(false);
+}
+
+void narrative_dialog::end_narrative()
+{
+	hide_box();
 	mSelection.set_visible(false);
 	mExpression.set_visible(false);
 	reset_positions();
@@ -1841,6 +1846,7 @@ void narrative_dialog::load_script_interface(script_system & pScript)
 	pScript.add_function("bool _is_revealing()", asMETHOD(narrative_dialog, is_revealing), this);
 	pScript.add_function("void _showbox()", asMETHOD(narrative_dialog, show_box), this);
 	pScript.add_function("void _hidebox()", asMETHOD(narrative_dialog, hide_box), this);
+	pScript.add_function("void _end_narrative()", asMETHOD(narrative_dialog, end_narrative), this);
 	pScript.add_function("void _show_selection()", asMETHOD(narrative_dialog, show_selection), this);
 	pScript.add_function("void _hide_selection()", asMETHOD(narrative_dialog, hide_selection), this);
 	pScript.add_function("void _set_interval(float)", asMETHOD(narrative_dialog, set_interval), this);

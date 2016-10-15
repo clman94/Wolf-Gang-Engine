@@ -373,6 +373,7 @@ public:
 
 	void show_box();
 	void hide_box();
+	void end_narrative();
 	bool is_box_open();
 
 	//void set_style_profile(const std::string& path);
