@@ -46,7 +46,7 @@ class grid_set
 public:
 	std::vector<engine::fvector> get_empty_neighbors_positions(path_node& pNode);
 	void add_node(path_node& pNode);
-
+	void clean();
 private:
 	std::set<engine::ivector> mMap;
 };
@@ -65,6 +65,7 @@ public:
 
 	std::vector<path_node*> create_neighbors(path_node& pNode, collision_callback pCollision_callback);
 
+	bool is_openset_empty();
 private:
 	path_node& add_node(engine::fvector pPosition);
 
@@ -75,7 +76,6 @@ private:
 	engine::fvector mDestination;
 
 	grid_set mGrid; // Keeps track of occupied spaces
-
 };
 
 class pathfinder

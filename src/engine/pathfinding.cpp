@@ -83,6 +83,7 @@ void path_set::clean()
 {
 	mOpen_set.clear();
 	mClosed_set.clear();
+	mGrid.clean();
 }
 
 void path_set::start_path(engine::fvector pStart, engine::fvector pDestination)
@@ -134,6 +135,11 @@ std::vector<path_node*> path_set::create_neighbors(path_node& pNode, collision_c
 	return neighbors;
 }
 
+bool path_set::is_openset_empty()
+{
+	return mOpen_set.empty();
+}
+
 path_node& path_set::add_node(engine::fvector pPosition)
 {
 	path_node new_node;
@@ -148,11 +154,11 @@ path_node& path_set::add_node(engine::fvector pPosition)
 		return mOpen_set.back();
 	}
 
-	// Insert node according to its h value
+	// Insert node according to its f value
 	auto i = mOpen_set.begin();
 	for (; i != mOpen_set.end(); i++)
 	{
-		if (new_node.get_h() <= i->get_h())
+		if (new_node.get_f() <= i->get_f())
 		{
 			mOpen_set.insert(i, new_node);
 			--i;
@@ -214,6 +220,11 @@ void grid_set::add_node(path_node& pNode)
 	mMap.insert(pNode.get_grid_position());
 }
 
+void grid_set::clean()
+{
+	mMap.clear();
+}
+
 bool pathfinder::start(engine::fvector pStart, engine::fvector pDestination)
 {
 	mPath_set.start_path(pStart, pDestination);
@@ -227,6 +238,8 @@ bool pathfinder::start(engine::fvector pStart, engine::fvector pDestination)
 			std::cout << "iterations: " << i << "\n";
 			return true;
 		}
+		if (mPath_set.is_openset_empty())
+			return false;
 	}
 	return false;
 }
@@ -243,5 +256,5 @@ void engine::pathfinder::set_path_limit(size_t pLimit)
 
 path_t pathfinder::construct_path()
 {
-	return mPath_set.construct_path();;
+	return mPath_set.construct_path();
 }

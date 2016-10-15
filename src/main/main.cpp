@@ -6,7 +6,7 @@
 
 #include <rpg/rpg.hpp>
 
-#include <engine/pathfinding.hpp>
+
 
 class wolf_gang_engine
 {
@@ -114,7 +114,7 @@ void wolf_gang_engine::update_events()
 // Entry point of application
 int main(int argc, char* argv[])
 {
-	/*try
+	try
 	{
 		wolf_gang_engine wge;
 		wge.initualize();
@@ -124,25 +124,7 @@ int main(int argc, char* argv[])
 	{
 		std::cout << "A main exception occurred: " << e.what() << "\n";
 		std::getchar();
-	}*/
-
-	engine::pathfinder pathfinder;
-	pathfinder.set_path_limit(1000);
-	pathfinder.set_collision_callback(
-		[](engine::fvector pos) -> bool
-	{
-		return engine::frect({ 1, -10 }, {1, 100}).is_intersect(pos + engine::fvector(0.5f, 0.5f));
-	});
-
-	pathfinder.start({ 0, 0 }, { 3, 0 });
-
-	auto path = pathfinder.construct_path();
-
-	for (auto i : path)
-	{
-		std::cout << i.x << " " << i.y << "\n";
 	}
-	std::getchar();
 
 	return 0;
 }

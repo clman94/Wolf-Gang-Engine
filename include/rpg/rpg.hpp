@@ -7,6 +7,7 @@
 #include <engine/utility.hpp>
 #include <engine/particle_engine.hpp>
 #include <engine/your_soul.hpp>
+#include <engine/pathfinding.hpp>
 
 #include <rpg/rpg_managers.hpp>
 #include <rpg/rpg_config.hpp>
@@ -25,6 +26,7 @@
 #include <angelscript.h> // AS_USE_NAMESPACE will need to be defined
 #include <angelscript/add_on/contextmgr/contextmgr.h>
 #include <angelscript/add_on/scriptbuilder/scriptbuilder.h>
+#include <angelscript/add_on/scriptarray/scriptarray.h>
 
 namespace AS = AngelScript;
 
@@ -552,6 +554,20 @@ private:
 	void script_set_overlay_opacity(int a);
 };
 
+class pathfinding_system
+{
+public:
+	void set_collision_system(collision_system& pCollision_system);
+
+	void load_script_interface(script_system& pScript);
+
+private:
+	collision_system* mCollision_system;
+	engine::pathfinder mPathfinder;
+
+	bool script_find_path(AS::CScriptArray* pScript_path, engine::fvector pStart, engine::fvector pDestination);
+};
+
 class scene :
 	public engine::render_proxy,
 	public panning_node
@@ -585,16 +601,17 @@ private:
 	texture_manager*  mTexture_manager;
 	script_system*    mScript;
 
-	tilemap_display   mTilemap_display;
-	tilemap_loader    mTilemap_loader;
-	collision_system  mCollision_system;
-	entity_manager    mEntity_manager;
-	particle_manager  mParticle_system;
-	background_music  mBackground_music;
-	narrative_dialog  mNarrative;
-	sound_manager     mSound_FX;
-	player_character  mPlayer;
-	colored_overlay   mColored_overlay;
+	tilemap_display    mTilemap_display;
+	tilemap_loader     mTilemap_loader;
+	collision_system   mCollision_system;
+	entity_manager     mEntity_manager;
+	particle_manager   mParticle_system;
+	background_music   mBackground_music;
+	narrative_dialog   mNarrative;
+	sound_manager      mSound_FX;
+	player_character   mPlayer;
+	colored_overlay    mColored_overlay;
+	pathfinding_system mPathfinding_system;
 
 	bool              mFocus_player;
 

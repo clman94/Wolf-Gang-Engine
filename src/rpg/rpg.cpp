@@ -2,7 +2,6 @@
 
 #include <angelscript/add_on/scriptstdstring/scriptstdstring.h>
 #include <angelscript/add_on/scriptmath/scriptmath.h>
-#include <angelscript/add_on/scriptarray/scriptarray.h>
 
 #include <engine/parsers.hpp>
 
@@ -785,6 +784,8 @@ scene::scene()
 	add_child(mEntity_manager);
 	add_child(mPlayer);
 	mFocus_player = true;
+
+	mPathfinding_system.set_collision_system(mCollision_system);
 }
 
 collision_system&
@@ -885,6 +886,7 @@ void scene::load_script_interface(script_system& pScript)
 	mEntity_manager.load_script_interface(pScript);
 	mBackground_music.load_script_interface(pScript);
 	mColored_overlay.load_script_interface(pScript);
+	mPathfinding_system.load_script_interface(pScript);
 
 	pScript.add_function("void set_tile(const string &in, vec, int, int)", asMETHOD(scene, script_set_tile), this);
 	pScript.add_function("void remove_tile(vec, int)", asMETHOD(scene, script_remove_tile), this);
@@ -2750,4 +2752,33 @@ void colored_overlay::script_set_overlay_opacity(int a)
 	auto color = mOverlay.get_color();
 	color.a = a;
 	mOverlay.set_color(color);
+}
+
+void pathfinding_system::set_collision_system(collision_system & pCollision_system)
+{
+	mCollision_system = &pCollision_system;
+}
+
+void pathfinding_system::load_script_interface(script_system & pScript)
+{
+	pScript.add_function("bool find_path(array<vec>@, vec, vec)", asMETHOD(pathfinding_system, script_find_path), this);
+}
+
+bool pathfinding_system::script_find_path(AS::CScriptArray * pScript_path, engine::fvector pStart, engine::fvector pDestination)
+{
+	mPathfinder.set_path_limit(1000);
+	mPathfinder.set_collision_callback(
+		[&](engine::fvector pos) ->bool
+	{
+		return mCollision_system->wall_collision({ pos*32, { 31, 31 } }) != nullptr;
+	});
+
+	if (mPathfinder.start(pStart, pDestination))
+	{
+		auto path = mPathfinder.construct_path();
+		for (auto& i : path)
+			pScript_path->InsertLast(&i);
+		return true;
+	}
+	return false;
 }
