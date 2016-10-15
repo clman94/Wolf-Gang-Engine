@@ -6,6 +6,8 @@
 
 #include <rpg/rpg.hpp>
 
+#include <engine/pathfinding.hpp>
+
 class wolf_gang_engine
 {
 public:
@@ -36,7 +38,7 @@ int wolf_gang_engine::initualize()
 	engine::clock load_clock;
 
 	mRenderer.initualize(rpg::defs::SCREEN_SIZE);
-	mRenderer.set_pixel_scale(3);
+	mRenderer.set_pixel_scale(2);
 
 	mGame.set_renderer(mRenderer);
 	mGame.load_game_xml("data/game.xml");
@@ -112,7 +114,7 @@ void wolf_gang_engine::update_events()
 // Entry point of application
 int main(int argc, char* argv[])
 {
-	try
+	/*try
 	{
 		wolf_gang_engine wge;
 		wge.initualize();
@@ -122,6 +124,25 @@ int main(int argc, char* argv[])
 	{
 		std::cout << "A main exception occurred: " << e.what() << "\n";
 		std::getchar();
+	}*/
+
+	engine::pathfinder pathfinder;
+	pathfinder.set_path_limit(1000);
+	pathfinder.set_collision_callback(
+		[](engine::fvector pos) -> bool
+	{
+		return engine::frect({ 1, -10 }, {1, 100}).is_intersect(pos + engine::fvector(0.5f, 0.5f));
+	});
+
+	pathfinder.start({ 0, 0 }, { 3, 0 });
+
+	auto path = pathfinder.construct_path();
+
+	for (auto i : path)
+	{
+		std::cout << i.x << " " << i.y << "\n";
 	}
+	std::getchar();
+
 	return 0;
 }
