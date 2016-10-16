@@ -2,6 +2,7 @@
 
 #include <angelscript/add_on/scriptstdstring/scriptstdstring.h>
 #include <angelscript/add_on/scriptmath/scriptmath.h>
+#include <angelscript/add_on/scriptdictionary/scriptdictionary.h>
 
 #include <engine/parsers.hpp>
 
@@ -788,6 +789,10 @@ scene::scene()
 	mPathfinding_system.set_collision_system(mCollision_system);
 }
 
+scene::~scene()
+{
+}
+
 collision_system&
 scene::get_collision_system()
 {
@@ -1127,6 +1132,33 @@ void script_system::script_abort()
 	c_ctx->Abort();
 }
 
+void script_system::script_create_thread(AS::asIScriptFunction * func, AS::CScriptDictionary * arg)
+{
+	if (func == 0)
+	{
+		util::error("Invalid function");
+		return;
+	}
+
+	// Create a new context for the co-routine
+	asIScriptContext *ctx = mCtxmgr.AddContext(mEngine, func);
+
+	// Pass the argument to the context
+	ctx->SetArgObject(0, arg);
+}
+
+void script_system::script_create_thread_noargs(AS::asIScriptFunction * func)
+{
+	if (func == 0)
+	{
+		util::error("Invalid function");
+		return;
+	}
+
+	// Create a new context for the co-routine
+	asIScriptContext *ctx = mCtxmgr.AddContext(mEngine, func);
+}
+
 
 void
 script_system::dprint(std::string &msg)
@@ -1243,6 +1275,7 @@ script_system::script_system()
 	RegisterStdString(mEngine);
 	RegisterScriptMath(mEngine);
 	RegisterScriptArray(mEngine, true);
+	RegisterScriptDictionary(mEngine);
 	mCtxmgr.RegisterCoRoutineSupport(mEngine);
 
 	register_vector_type();
@@ -1251,6 +1284,10 @@ script_system::script_system()
 	add_function("void _timer_start(float)",  asMETHOD(engine::timer, start_timer), &mTimer);
 	add_function("bool _timer_reached()",     asMETHOD(engine::timer, is_reached), &mTimer);
 	add_function("void cocall(const string &in)", asMETHOD(script_system, call_event_function), this);
+
+	add_function("void create_thread(coroutine @+)", asMETHOD(script_system, script_create_thread_noargs), this);
+	add_function("void create_thread(coroutine @+, dictionary @+)", asMETHOD(script_system, script_create_thread), this);
+
 	add_function("void dprint(const string &in)", asMETHOD(script_system, dprint), this);
 	add_function("void abort()", asMETHOD(script_system, script_abort), this);
 
@@ -2762,6 +2799,7 @@ void pathfinding_system::set_collision_system(collision_system & pCollision_syst
 void pathfinding_system::load_script_interface(script_system & pScript)
 {
 	pScript.add_function("bool find_path(array<vec>@, vec, vec)", asMETHOD(pathfinding_system, script_find_path), this);
+	pScript.add_function("bool find_path_partial(array<vec>@, vec, vec, int)", asMETHOD(pathfinding_system, script_find_path_partial), this);
 }
 
 bool pathfinding_system::script_find_path(AS::CScriptArray * pScript_path, engine::fvector pStart, engine::fvector pDestination)
@@ -2770,7 +2808,7 @@ bool pathfinding_system::script_find_path(AS::CScriptArray * pScript_path, engin
 	mPathfinder.set_collision_callback(
 		[&](engine::fvector pos) ->bool
 	{
-		return mCollision_system->wall_collision({ pos*32, { 31, 31 } }) != nullptr;
+		return mCollision_system->wall_collision({ pos * 32,{ 31, 31 } }) != nullptr;
 	});
 
 	if (mPathfinder.start(pStart, pDestination))
@@ -2781,4 +2819,22 @@ bool pathfinding_system::script_find_path(AS::CScriptArray * pScript_path, engin
 		return true;
 	}
 	return false;
+}
+
+bool pathfinding_system::script_find_path_partial(AS::CScriptArray * pScript_path, engine::fvector pStart, engine::fvector pDestination, int pCount)
+{
+	mPathfinder.set_path_limit(pCount);
+	mPathfinder.set_collision_callback(
+		[&](engine::fvector pos) ->bool
+	{
+		return mCollision_system->wall_collision({ pos * 32, { 31, 31 } }) != nullptr;
+	});
+
+	bool retval = mPathfinder.start(pStart, pDestination);
+
+	auto path = mPathfinder.construct_path();
+	for (auto& i : path)
+		pScript_path->InsertLast(&i);
+
+	return retval;
 }

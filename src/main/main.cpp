@@ -42,7 +42,7 @@ int wolf_gang_engine::initualize()
 
 	mGame.set_renderer(mRenderer);
 	mGame.load_game_xml("data/game.xml");
-
+	
 	float load_time = load_clock.get_elapse().s();
 	std::cout << "Load time : " << load_time << " seconds\n";
 	return 0;

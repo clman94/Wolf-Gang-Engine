@@ -49,9 +49,10 @@ public:
 	void set_boundary_enable(bool pEnable);
 
 private:
-	engine::frect mBoundary;
-	engine::fvector mViewport, mFocus;
-	bool mBoundary_enabled;
+	engine::frect mBoundary;     ///< Region that the viewport will stay within
+	engine::fvector mViewport;   ///< Size of the viewport
+	engine::fvector mFocus;      ///< Point of focus (typically in the center of the screen)
+	bool mBoundary_enabled;      ///< 
 };
 
 template<typename T>
@@ -342,6 +343,8 @@ private:
 	void message_callback(const AS::asSMessageInfo * msg);
 	std::string get_metadata_type(const std::string &pMetadata);
 	void script_abort();
+	void script_create_thread(AS::asIScriptFunction *func, AS::CScriptDictionary *arg);
+	void script_create_thread_noargs(AS::asIScriptFunction *func);
 };
 
 class expression_manager
@@ -566,6 +569,7 @@ private:
 	engine::pathfinder mPathfinder;
 
 	bool script_find_path(AS::CScriptArray* pScript_path, engine::fvector pStart, engine::fvector pDestination);
+	bool script_find_path_partial(AS::CScriptArray* pScript_path, engine::fvector pStart, engine::fvector pDestination, int pCount);
 };
 
 class scene :
@@ -574,6 +578,7 @@ class scene :
 {
 public:
 	scene();
+	~scene();
 	collision_system& get_collision_system();
 
 	void clean_scene(bool pFull = false);

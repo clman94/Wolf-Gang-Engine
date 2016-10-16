@@ -146,7 +146,7 @@ path_node& path_set::add_node(engine::fvector pPosition)
 	new_node.set_position(pPosition);
 	new_node.calculate_cost(mStart, mDestination);
 
-	// Insert first node
+	// Insert as first node
 	if (!mOpen_set.size())
 	{
 		mOpen_set.push_back(new_node);
@@ -167,7 +167,7 @@ path_node& path_set::add_node(engine::fvector pPosition)
 		}
 	}
 
-	// Insert last
+	// Insert as last
 	mOpen_set.push_back(new_node);
 	mGrid.add_node(mOpen_set.back());
 	return mOpen_set.back();
