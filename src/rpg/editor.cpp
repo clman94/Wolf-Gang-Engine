@@ -201,10 +201,18 @@ int tilemap_editor::draw(engine::renderer & pR)
 		tile_position = (mouse_position / 32).floor();
 	}
 
+	const bool control_add_tile    = pR.is_mouse_down(engine::renderer::mouse_button::mouse_left);
+	const bool control_remove_tile = pR.is_mouse_down(engine::renderer::mouse_button::mouse_right);
+	if (!control_add_tile && !control_remove_tile)
+		last_tile = { -10000000, -1000000 };
+
 	// Add tile
-	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left))
+	if (control_add_tile
+		&& last_tile != tile_position)
 	{
 		assert(mTile_list.size() != 0);
+		last_tile = tile_position;
+
 		mTilemap_loader.explode_tile(tile_position, mLayer);
 		mTilemap_loader.set_tile(tile_position, mLayer, mTile_list[mCurrent_tile], mRotation);
 		mTilemap_loader.update_display(mTilemap_display);
@@ -212,9 +220,11 @@ int tilemap_editor::draw(engine::renderer & pR)
 	}
 
 	// Remove tile
-	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_right))
+	if (control_remove_tile
+		&& last_tile != tile_position)
 	{
 		assert(mTile_list.size() != 0);
+		last_tile = tile_position;
 
 		mTilemap_loader.explode_tile(tile_position, mLayer);
 		mTilemap_loader.remove_tile(tile_position, mLayer);

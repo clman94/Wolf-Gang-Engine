@@ -98,6 +98,8 @@ private:
 	int    mLayer;
 	bool   mIs_highlight;
 
+	engine::fvector last_tile;
+
 	std::vector<std::string> mTile_list;
 
 	rpg::scene_loader mLoader;
