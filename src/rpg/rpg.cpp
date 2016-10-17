@@ -186,7 +186,7 @@ character::get_speed()
 collision_box* collision_system::wall_collision(const engine::frect& r)
 {
 	for (auto &i : mWalls)
-		if (i.is_valid() && i.is_intersect(r))
+		if (i.is_valid() && i.get_region().is_intersect(r))
 			return &i;
 	return nullptr;
 }
@@ -194,7 +194,7 @@ collision_box* collision_system::wall_collision(const engine::frect& r)
 door* collision_system::door_collision(const engine::fvector& pPosition)
 {
 	for (auto &i : mDoors)
-		if (i.is_valid() && i.is_intersect(pPosition))
+		if (i.is_valid() && i.get_region().is_intersect(pPosition))
 			return &i;
 	return nullptr;
 }
@@ -202,7 +202,7 @@ door* collision_system::door_collision(const engine::fvector& pPosition)
 trigger* collision_system::trigger_collision(const engine::fvector& pPosition)
 {
 	for (auto &i : mTriggers)
-		if (i.is_valid() && i.is_intersect(pPosition))
+		if (i.is_valid() && i.get_region().is_intersect(pPosition))
 			return &i;
 	return nullptr;
 }
@@ -210,7 +210,7 @@ trigger* collision_system::trigger_collision(const engine::fvector& pPosition)
 trigger* collision_system::button_collision(const engine::fvector& pPosition)
 {
 	for (auto &i : mButtons)
-		if (i.is_valid() && i.is_intersect(pPosition))
+		if (i.is_valid() && i.get_region().is_intersect(pPosition))
 			return &i;
 	return nullptr;
 }
@@ -221,7 +221,8 @@ engine::fvector collision_system::get_door_entry(std::string pName)
 	{
 		if (i.name == pName)
 		{
-			return i.get_offset() + (i.get_size()*0.5f) + i.offset;
+			engine::frect region = i.get_region();
+			return region.get_offset() + (region.get_size()*0.5f) + i.offset;
 		}
 	}
 	return{ -1, -1};
@@ -238,7 +239,7 @@ void  collision_system::validate_all(flag_container& pFlags)
 void collision_system::add_wall(engine::frect r)
 {
 	collision_box nw;
-	nw.set_rect(r);
+	nw.set_region(r);
 	mWalls.push_back(nw);
 }
 
@@ -2407,7 +2408,17 @@ void collision_box::load_xml(tinyxml2::XMLElement * e)
 	rect.y = e->FloatAttribute("y");
 	rect.w = e->FloatAttribute("w");
 	rect.h = e->FloatAttribute("h");
-	set_rect(engine::scale(rect, defs::TILE_SIZE));
+	mRegion = engine::scale(rect, defs::TILE_SIZE);
+}
+
+engine::frect collision_box::get_region()
+{
+	return mRegion;
+}
+
+void collision_box::set_region(engine::frect pRegion)
+{
+	mRegion = pRegion;
 }
 
 script_function& trigger::get_function()
@@ -2418,7 +2429,7 @@ script_function& trigger::get_function()
 void trigger::parse_function_metadata(const std::string & pMetadata)
 {
 	auto rect = parsers::parse_attribute_rect<float>(pMetadata);
-	set_rect(engine::scale(rect, 32));
+	mRegion = engine::scale(rect, 32);
 }
 
 // ##########
@@ -2791,6 +2802,19 @@ void colored_overlay::script_set_overlay_opacity(int a)
 	mOverlay.set_color(color);
 }
 
+// ##########
+// pathfinding_system
+// ##########
+
+pathfinding_system::pathfinding_system()
+{
+	mPathfinder.set_collision_callback(
+		[&](engine::fvector& pos) ->bool
+	{
+		return mCollision_system->wall_collision({ (pos * 32), { 31, 31 } }) != nullptr;
+	});
+}
+
 void pathfinding_system::set_collision_system(collision_system & pCollision_system)
 {
 	mCollision_system = &pCollision_system;
@@ -2805,11 +2829,6 @@ void pathfinding_system::load_script_interface(script_system & pScript)
 bool pathfinding_system::script_find_path(AS::CScriptArray * pScript_path, engine::fvector pStart, engine::fvector pDestination)
 {
 	mPathfinder.set_path_limit(1000);
-	mPathfinder.set_collision_callback(
-		[&](engine::fvector pos) ->bool
-	{
-		return mCollision_system->wall_collision({ pos * 32,{ 31, 31 } }) != nullptr;
-	});
 
 	if (mPathfinder.start(pStart, pDestination))
 	{
@@ -2824,11 +2843,6 @@ bool pathfinding_system::script_find_path(AS::CScriptArray * pScript_path, engin
 bool pathfinding_system::script_find_path_partial(AS::CScriptArray * pScript_path, engine::fvector pStart, engine::fvector pDestination, int pCount)
 {
 	mPathfinder.set_path_limit(pCount);
-	mPathfinder.set_collision_callback(
-		[&](engine::fvector pos) ->bool
-	{
-		return mCollision_system->wall_collision({ pos * 32, { 31, 31 } }) != nullptr;
-	});
 
 	bool retval = mPathfinder.start(pStart, pDestination);
 

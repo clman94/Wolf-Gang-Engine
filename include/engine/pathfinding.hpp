@@ -11,14 +11,12 @@
 
 namespace engine {
 
-typedef std::function<bool(engine::fvector)> collision_callback;
+typedef std::function<bool(engine::fvector&)> collision_callback;
 typedef std::deque<engine::fvector> path_t;
 
 class path_node
 {
 public:
-
-
 	path_node();
 
 	float calculate_cost(fvector pStart, fvector pDestination);
@@ -44,26 +42,26 @@ private:
 class grid_set
 {
 public:
-	std::vector<engine::fvector> get_empty_neighbors_positions(path_node& pNode);
+	std::vector<fvector> get_empty_neighbors_positions(path_node& pNode);
 	void add_node(path_node& pNode);
 	void clean();
 private:
 	std::set<engine::ivector> mMap;
 };
 
-
 class path_set
 {
 public:
 	void clean();
 
-	void start_path(engine::fvector pStart, engine::fvector pDestination);
+	void start_path(fvector pStart, fvector pDestination);
 
 	bool step(collision_callback pCollision_callback);
 
 	std::deque<engine::fvector> construct_path();
 
-	std::vector<path_node*> create_neighbors(path_node& pNode, collision_callback pCollision_callback);
+	void create_neighbors(path_node& pNode,
+		collision_callback pCollision_callback);
 
 	bool is_openset_empty();
 private:
@@ -81,12 +79,9 @@ private:
 class pathfinder
 {
 public:
-	bool start(engine::fvector pStart, engine::fvector pDestination);
-
+	bool start(engine::fvector pStart, fvector pDestination);
 	void set_collision_callback(collision_callback pCollision_callback);
-
 	void set_path_limit(size_t pLimit);
-
 	path_t construct_path();
 
 private:

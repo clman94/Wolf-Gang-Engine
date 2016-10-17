@@ -25,7 +25,7 @@ path_node::path_node() :
 {
 }
 
-float path_node::calculate_cost(engine::fvector pStart, engine::fvector pDestination)
+float path_node::calculate_cost(fvector pStart, fvector pDestination)
 {
 	mG = mPosition.distance(pStart);
 	mH = mPosition.distance(pDestination);
@@ -48,19 +48,19 @@ float path_node::get_g() const
 	return mG;
 }
 
-void path_node::set_position(engine::fvector pPosition)
+void path_node::set_position(fvector pPosition)
 {
 	mPosition = pPosition;
 }
 
-engine::fvector path_node::get_position() const
+fvector path_node::get_position() const
 {
 	return mPosition;
 }
 
-engine::ivector path_node::get_grid_position() const
+ivector path_node::get_grid_position() const
 {
-	return engine::ivector(static_cast<int>(mPosition.x), static_cast<int>(mPosition.y));
+	return ivector(fvector(mPosition).floor());
 }
 
 bool path_node::has_predecessor() const
@@ -86,7 +86,7 @@ void path_set::clean()
 	mGrid.clean();
 }
 
-void path_set::start_path(engine::fvector pStart, engine::fvector pDestination)
+void path_set::start_path(fvector pStart, fvector pDestination)
 {
 	clean();
 
@@ -113,11 +113,9 @@ bool path_set::step(collision_callback pCollision_callback)
 	return false;
 }
 
-std::vector<path_node*> path_set::create_neighbors(path_node& pNode, collision_callback pCollision_callback)
+void path_set::create_neighbors(path_node& pNode, collision_callback pCollision_callback)
 {
 	auto neighbor_positions = mGrid.get_empty_neighbors_positions(pNode);
-
-	std::vector<path_node*> neighbors;
 
 	for (auto i : neighbor_positions)
 	{
@@ -130,9 +128,7 @@ std::vector<path_node*> path_set::create_neighbors(path_node& pNode, collision_c
 		path_node& new_node = add_node(i);
 		new_node.set_predecessor(pNode);
 
-		neighbors.push_back(&new_node);
 	}
-	return neighbors;
 }
 
 bool path_set::is_openset_empty()
@@ -140,7 +136,7 @@ bool path_set::is_openset_empty()
 	return mOpen_set.empty();
 }
 
-path_node& path_set::add_node(engine::fvector pPosition)
+path_node& path_set::add_node(fvector pPosition)
 {
 	path_node new_node;
 	new_node.set_position(pPosition);
@@ -176,11 +172,10 @@ path_node& path_set::add_node(engine::fvector pPosition)
 path_t path_set::construct_path()
 {
 	path_t path;
-
-	path.push_front(mOpen_set.front().get_position()); // First node
-
 	path_node* current = &mOpen_set.front();
-	while (current->has_predecessor())
+	path.push_front(current->get_position()); // First node
+
+	while (current->has_predecessor()) // Push all predecessors
 	{
 		current = &current->get_predecessor();
 		path.push_front(current->get_position());
@@ -189,27 +184,27 @@ path_t path_set::construct_path()
 	return path;
 }
 
-std::vector<engine::fvector> grid_set::get_empty_neighbors_positions(path_node& pNode)
+std::vector<fvector> grid_set::get_empty_neighbors_positions(path_node& pNode)
 {
-	const engine::ivector position = pNode.get_grid_position();
-
-	std::array<engine::ivector, 4> neighbors;
+	std::array<fvector, 4> neighbors;
 
 	//neighbors[neighbor_position::topleft]     = position + ivector(-1, -1);
-	neighbors[neighbor_position::top]         = position + ivector(0, -1);
 	//neighbors[neighbor_position::topright]    = position + ivector(1, -1);
-	neighbors[neighbor_position::right]       = position + ivector(1, 0);
 	//neighbors[neighbor_position::bottomright] = position + ivector(1, 1);
-	neighbors[neighbor_position::bottom]      = position + ivector(0, 1);
 	//neighbors[neighbor_position::bottomleft]  = position + ivector(-1, 1);
-	neighbors[neighbor_position::left]        = position + ivector(-1, 0);
+	neighbors[neighbor_position::top]         =  fvector(0, -1);
+	neighbors[neighbor_position::right]       =  fvector(1, 0);
+	neighbors[neighbor_position::bottom]      =  fvector(0, 1);
+	neighbors[neighbor_position::left]        =  fvector(-1, 0);
 
-	std::vector<engine::fvector> retval;
+	std::vector<fvector> retval;
+
+	const fvector position = pNode.get_position();
 
 	for (auto i : neighbors)
 	{
-		if (mMap.find(i) == mMap.end())
-			retval.push_back(i);
+		if (mMap.find((i + position).floor()) == mMap.end())
+			retval.push_back(i + position);
 	}
 
 	return retval;
@@ -249,7 +244,7 @@ void pathfinder::set_collision_callback(collision_callback pCollision_callback)
 	mCollision_callback = pCollision_callback;
 }
 
-void engine::pathfinder::set_path_limit(size_t pLimit)
+void pathfinder::set_path_limit(size_t pLimit)
 {
 	mPath_limit = pLimit;
 }

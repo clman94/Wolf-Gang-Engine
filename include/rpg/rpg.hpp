@@ -233,18 +233,20 @@ private:
 };
 
 struct collision_box
-	: engine::frect
 {
 public:
 	collision_box();
 	bool is_valid();
 	void validate(flag_container & pFlags);
 	void load_xml(tinyxml2::XMLElement* e);
+	engine::frect get_region();
+	void set_region(engine::frect pRegion);
 
 protected:
 	std::string mInvalid_on_flag;
 	std::string mSpawn_flag;
 	bool valid;
+	engine::frect mRegion;
 };
 
 struct trigger : public collision_box
@@ -560,6 +562,8 @@ private:
 class pathfinding_system
 {
 public:
+	pathfinding_system();
+
 	void set_collision_system(collision_system& pCollision_system);
 
 	void load_script_interface(script_system& pScript);
