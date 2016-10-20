@@ -2326,30 +2326,6 @@ void tilemap_loader::clean()
 {
 	mMap.clear();
 }
-/*
-int tilemap_loader::draw(engine::renderer & r)
-{
-	engine::fvector pos = get_exact_position();
-
-	engine::fvector mousepos = r.get_mouse_position(pos) / 32;
-	mousepos.x = std::floor(mousepos.x);
-	mousepos.y = std::floor(mousepos.y);
-
-	if (r.is_mouse_pressed(engine::events::mouse_button::mouse_left))
-	{
-		break_tile(mousepos, 0);
-		set_tile(mousepos, 0, "wall", 0);
-		update_display();
-	}
-	if (r.is_mouse_pressed(engine::events::mouse_button::mouse_right))
-	{
-		remove_tile(mousepos, 0);
-		update_display();
-	}
-
-	node.draw(r);
-	return 0;
-}*/
 
 // ##########
 // background_music
@@ -2685,17 +2661,6 @@ int expression_manager::load_expressions_xml(tinyxml2::XMLElement * pRoot, textu
 		ele_expression = ele_expression->NextSiblingElement();
 	}
 	return 0;
-}
-
-// ##########
-// particle_manager
-// ##########
-
-void particle_manager::load_emitter_xml(tinyxml2::XMLElement* pEle)
-{
-	mEmitters.emplace_back();
-	auto& emitter = mEmitters.back();
-	emitter.set_acceleration(pEle->FloatAttribute("acceleration"));
 }
 
 // ##########

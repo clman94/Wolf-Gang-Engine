@@ -512,25 +512,6 @@ private:
 	void             script_detach_parent(entity_reference& e);
 };
 
-class battle_system
-{
-	// TODO
-};
-
-// TODO
-class particle_manager :
-	public engine::render_proxy,
-	public engine::node
-{
-public:
-	void load_scene_emitters_xml(tinyxml2::XMLElement * pEle) {}
-	void load_emitter_xml(tinyxml2::XMLElement * pEle);
-	void clean() {}
-
-private:
-	std::list<engine::particle_emitter> mEmitters;
-};
-
 class background_music
 {
 public:
@@ -615,7 +596,6 @@ private:
 	tilemap_loader     mTilemap_loader;
 	collision_system   mCollision_system;
 	entity_manager     mEntity_manager;
-	particle_manager   mParticle_system;
 	background_music   mBackground_music;
 	narrative_dialog   mNarrative;
 	sound_manager      mSound_FX;
