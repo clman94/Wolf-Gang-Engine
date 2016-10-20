@@ -18,8 +18,6 @@ enum neighbor_position
 
 
 path_node::path_node() :
-	mH(0),
-	mG(0),
 	mF(0),
 	mPredecessor(nullptr)
 {
@@ -27,25 +25,15 @@ path_node::path_node() :
 
 float path_node::calculate_cost(fvector pStart, fvector pDestination)
 {
-	mG = mPosition.distance(pStart);
-	mH = mPosition.distance(pDestination);
-	mF = mG + mH;
+	float G = mPosition.distance(pStart);
+	float H = mPosition.distance(pDestination);
+	mF = G + H;
 	return mF;
 }
 
 float path_node::get_f() const
 {
 	return mF;
-}
-
-float path_node::get_h() const
-{
-	return mH;
-}
-
-float path_node::get_g() const
-{
-	return mG;
 }
 
 void path_node::set_position(fvector pPosition)
@@ -127,7 +115,6 @@ void path_set::create_neighbors(path_node& pNode, collision_callback pCollision_
 		// Create new node
 		path_node& new_node = add_node(i);
 		new_node.set_predecessor(pNode);
-
 	}
 }
 
@@ -224,15 +211,10 @@ bool pathfinder::start(engine::fvector pStart, engine::fvector pDestination)
 {
 	mPath_set.start_path(pStart, pDestination);
 
-	std::deque<engine::fvector> path;
-
 	for (size_t i = 0; i < mPath_limit; i++)
 	{
 		if (mPath_set.step(mCollision_callback))
-		{
-			std::cout << "iterations: " << i << "\n";
 			return true;
-		}
 		if (mPath_set.is_openset_empty())
 			return false;
 	}

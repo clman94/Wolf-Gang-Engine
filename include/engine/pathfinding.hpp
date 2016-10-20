@@ -22,8 +22,6 @@ public:
 	float calculate_cost(fvector pStart, fvector pDestination);
 
 	float get_f() const;
-	float get_h() const;
-	float get_g() const;
 
 	void set_position(fvector pPosition);
 	fvector get_position() const;
@@ -34,7 +32,7 @@ public:
 	path_node& get_predecessor();
 
 private:
-	float mH, mG, mF;
+	float mF;
 	engine::fvector mPosition;
 	path_node* mPredecessor;
 };
@@ -64,6 +62,7 @@ public:
 		collision_callback pCollision_callback);
 
 	bool is_openset_empty();
+
 private:
 	path_node& add_node(engine::fvector pPosition);
 
