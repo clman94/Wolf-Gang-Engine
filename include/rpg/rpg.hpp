@@ -504,6 +504,7 @@ private:
 	void             script_set_anchor(entity_reference& e, int pAnchor);
 	void             script_set_rotation(entity_reference& e, float pRotation);
 	void             script_set_color(entity_reference& e, int r, int g, int b, int a);
+	void             script_set_visibility(entity_reference& e, bool pIs_visible);
 
 	void             script_add_child(entity_reference& e1, entity_reference& e2);
 	void             script_set_parent(entity_reference& e1, entity_reference& e2);

@@ -700,6 +700,12 @@ void entity_manager::script_set_color(entity_reference& e, int r, int g, int b, 
 	e->set_color(engine::color(r, g, b, a));
 }
 
+void entity_manager::script_set_visibility(entity_reference & e, bool pIs_visible)
+{
+	if (!check_entity(e)) return;
+	e->set_visible(pIs_visible);
+}
+
 void entity_manager::script_add_child(entity_reference& e1, entity_reference& e2)
 {
 	if (!check_entity(e1)) return;
@@ -763,6 +769,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void _set_anchor(entity&in, int)",                         asMETHOD(entity_manager, script_set_anchor), this);
 	pScript.add_function("void set_rotation(entity&in, float)",                      asMETHOD(entity_manager, script_set_rotation), this);
 	pScript.add_function("void set_color(entity&in, int, int, int, int)",            asMETHOD(entity_manager, script_set_color), this);
+	pScript.add_function("void set_visibility(entity&in, bool)",                     asMETHOD(entity_manager, script_set_visibility), this);
 
 	pScript.add_function("void add_child(entity&in, entity&in)",                     asMETHOD(entity_manager, script_add_child), this);
 	pScript.add_function("void set_parent(entity&in, entity&in)",                    asMETHOD(entity_manager, script_set_parent), this);
