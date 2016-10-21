@@ -818,7 +818,7 @@ scene::clean_scene(bool pFull)
 	mCollision_system.clean();
 	mEntity_manager.clean();
 	mColored_overlay.clean();
-	mNarrative.hide_box();
+	mNarrative.end_narrative();
 	mSound_FX.stop_all();
 
 	focus_player(true);
