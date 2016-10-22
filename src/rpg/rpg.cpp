@@ -132,24 +132,24 @@ int entity::draw(engine::renderer &_r)
 
 character::character()
 {
-	cyclegroup = "default";
-	move_speed = 3.f* defs::TILE_SIZE.x;
+	mCyclegroup = "default";
+	mMove_speed = 3.f* defs::TILE_SIZE.x;
 }
 
 void
 character::set_cycle_group(std::string name)
 {
-	cyclegroup = name;
-	set_cycle(cycle);
+	mCyclegroup = name;
+	set_animation(mCyclegroup + ":" + mCycle, is_playing());
 }
 
 void
 character::set_cycle(const std::string& name)
 {
-	if (cycle != name)
+	if (mCycle != name)
 	{
-		set_animation(cyclegroup + ":" + name, is_playing());
-		cycle = name;
+		set_animation(mCyclegroup + ":" + name, is_playing());
+		mCycle = name;
 	}
 }
 
@@ -170,13 +170,13 @@ character::set_cycle(e_cycle type)
 void
 character::set_speed(float f)
 {
-	move_speed = f;
+	mMove_speed = f;
 }
 
 float
 character::get_speed()
 {
-	return move_speed;
+	return mMove_speed;
 }
 
 // #########

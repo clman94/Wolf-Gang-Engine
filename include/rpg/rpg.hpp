@@ -207,9 +207,9 @@ public:
 	float get_speed();
 
 private:
-	std::string cyclegroup;
-	std::string cycle;
-	float move_speed;
+	std::string mCyclegroup;
+	std::string mCycle;
+	float mMove_speed;
 };
 
 class script_function
