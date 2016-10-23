@@ -377,6 +377,7 @@ public:
 
 	void reveal_text(const std::string& pText, bool pAppend = false);
 	void instant_text(std::string pText, bool pAppend = false);
+	void skip_reveal();
 
 	void show_box();
 	void hide_box();
@@ -620,6 +621,8 @@ private:
 	std::string mScene_name;
 
 	void refresh_renderer(engine::renderer& _r);
+	void update_focus();
+	void update_collision_interaction(controls &pControls);
 };
 
 class save_value_manager
@@ -705,9 +708,11 @@ private:
 	editors::editor_manager mEditor_manager;
 
 	std::string get_slot_path(size_t pSlot);
-	void save_game(size_t pSlot);
-	void open_game(size_t pSlot);
+	void save_game();
+	void open_game();
 	bool is_slot_used(size_t pSlot);
+	void set_slot(size_t pSlot);
+	size_t get_slot();
 
 	void script_load_scene(const std::string& pPath);
 	void load_script_interface();

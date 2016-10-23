@@ -876,7 +876,8 @@ int scene::load_scene(std::string pPath)
 
 	// Pre-execute so the scene script can setup things before the render.
 	mScript->tick();
-	set_focus(mPlayer.get_position());
+
+	update_focus();
 
 	return 0;
 }
@@ -959,43 +960,9 @@ void scene::load_game_xml(tinyxml2::XMLElement * ele_root)
 void scene::tick(controls &pControls)
 {
 	assert(get_renderer() != nullptr);
-
 	mPlayer.movement(pControls, mCollision_system, get_renderer()->get_delta());
-	if (mFocus_player)
-		set_focus(mPlayer.get_position(*this)); // Relative to the scene so you can parent the player currently
-
-	{
-		auto pos = mPlayer.get_position();
-		auto trigger = mCollision_system.trigger_collision(pos);
-		if (trigger)
-		{
-			if (trigger->get_function().call())
-				trigger->get_function().set_arg(0, &pos);
-		}
-	}
-
-	{
-		auto pos = mPlayer.get_position();
-		auto door = mCollision_system.door_collision(pos);
-		if (door)
-		{
-			std::string destination = door->destination;
-			load_scene(door->scene_path);
-			auto nposition = mCollision_system.get_door_entry(destination);
-			mPlayer.set_position(nposition);
-		}
-	}
-
-	if (pControls.is_triggered(controls::control::activate))
-	{
-		auto pos = mPlayer.get_activation_point();
-		auto button = mCollision_system.button_collision(pos);
-		if (button)
-		{
-			if (button->get_function().call())
-				button->get_function().set_arg(0, &pos);
-		}
-	}
+	update_focus();
+	update_collision_interaction(pControls);
 }
 
 void scene::focus_player(bool pFocus)
@@ -1060,6 +1027,48 @@ void scene::refresh_renderer(engine::renderer& pR)
 	pR.add_client(mPlayer);
 	mColored_overlay.set_renderer(pR);
 	mEntity_manager.set_renderer(pR);
+}
+
+void rpg::scene::update_focus()
+{
+	if (mFocus_player)
+		set_focus(mPlayer.get_position(*this));
+}
+
+void scene::update_collision_interaction(controls & pControls)
+{
+	{
+		auto pos = mPlayer.get_position();
+		auto trigger = mCollision_system.trigger_collision(pos);
+		if (trigger)
+		{
+			if (trigger->get_function().call())
+				trigger->get_function().set_arg(0, &pos);
+		}
+	}
+
+	{
+		auto pos = mPlayer.get_position();
+		auto door = mCollision_system.door_collision(pos);
+		if (door)
+		{
+			std::string destination = door->destination;
+			load_scene(door->scene_path);
+			auto nposition = mCollision_system.get_door_entry(destination);
+			mPlayer.set_position(nposition);
+		}
+	}
+
+	if (pControls.is_triggered(controls::control::activate))
+	{
+		auto pos = mPlayer.get_activation_point();
+		auto button = mCollision_system.button_collision(pos);
+		if (button)
+		{
+			if (button->get_function().call())
+				button->get_function().set_arg(0, &pos);
+		}
+	}
 }
 
 
@@ -1457,21 +1466,20 @@ std::string game::get_slot_path(size_t pSlot)
 		+ ".xml";
 }
 
-void game::save_game(size_t pSlot)
+void game::save_game()
 {
-	const std::string path = get_slot_path(pSlot);
+	const std::string path = get_slot_path(mSlot);
 	save_system file;
 	file.new_save();
 	file.save_flags(mFlags);
 	file.save_scene(mScene);
 	file.save_player(mScene.get_player());
 	file.save(path);
-	mSlot = pSlot;
 }
 
-void game::open_game(size_t pSlot)
+void game::open_game()
 {
-	const std::string path = get_slot_path(pSlot);
+	const std::string path = get_slot_path(mSlot);
 	save_system file;
 	if (!file.open_save(path))
 	{
@@ -1499,6 +1507,16 @@ bool game::is_slot_used(size_t pSlot)
 	return stream.good();
 }
 
+void game::set_slot(size_t pSlot)
+{
+	mSlot = pSlot;
+}
+
+size_t game::get_slot()
+{
+	return mSlot;
+}
+
 void game::script_load_scene(const std::string & pPath)
 {
 	mRequest_load = true;
@@ -1512,8 +1530,10 @@ game::load_script_interface()
 
 	mScript.add_function("bool _is_triggered(int)", asMETHOD(controls, is_triggered), &mControls);
 
-	mScript.add_function("void save_game(uint)", asMETHOD(game, save_game), this);
-	mScript.add_function("void open_game(uint)", asMETHOD(game, open_game), this);
+	mScript.add_function("void save_game()", asMETHOD(game, save_game), this);
+	mScript.add_function("void open_game()", asMETHOD(game, open_game), this);
+	mScript.add_function("uint get_slot()", asMETHOD(game, get_slot), this);
+	mScript.add_function("void set_slot(uint)", asMETHOD(game, set_slot), this);
 	mScript.add_function("bool is_slot_used(uint)", asMETHOD(game, is_slot_used), this);
 	mScript.add_function("void load_scene(const string &in)", asMETHOD(game, script_load_scene), this);
 
@@ -1812,6 +1832,12 @@ void narrative_dialog::instant_text(std::string pText, bool pAppend)
 	mText.set_text(mFull_text);
 }
 
+void narrative_dialog::skip_reveal()
+{
+	if (mRevealing)
+		mCount = mFull_text.length();
+}
+
 void narrative_dialog::show_box()
 {
 	mText.set_visible(true);
@@ -1891,6 +1917,7 @@ void narrative_dialog::load_script_interface(script_system & pScript)
 {
 	pScript.add_function("void _say(const string &in, bool)", asMETHOD(narrative_dialog, reveal_text), this);
 	pScript.add_function("bool _is_revealing()", asMETHOD(narrative_dialog, is_revealing), this);
+	pScript.add_function("void _skip_reveal()", asMETHOD(narrative_dialog, skip_reveal), this);
 	pScript.add_function("void _showbox()", asMETHOD(narrative_dialog, show_box), this);
 	pScript.add_function("void _hidebox()", asMETHOD(narrative_dialog, hide_box), this);
 	pScript.add_function("void _end_narrative()", asMETHOD(narrative_dialog, end_narrative), this);
@@ -2064,7 +2091,7 @@ tilemap_loader::tile::is_adjacent_right(tile & a)
 }
 
 tilemap_loader::tile*
-tilemap_loader::find_tile(engine::fvector pos, size_t layer)
+tilemap_loader::find_tile(engine::fvector pos, int layer)
 {
 	for (auto &i : mMap[layer])
 	{
@@ -2299,6 +2326,14 @@ void tilemap_loader::remove_tile(engine::fvector pPosition, int pLayer)
 			break;
 		}
 	}
+}
+
+std::string tilemap_loader::find_tile_name(engine::fvector pPosition, int pLayer)
+{
+	auto f = find_tile_at(pPosition, pLayer);
+	if (!f)
+		return std::string();
+	return f->atlas;
 }
 
 void
