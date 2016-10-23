@@ -31,6 +31,8 @@ public:
 	int  set_tile(engine::fvector pPosition, int pLayer, const std::string& pAtlas, int pRotation);
 	void remove_tile(engine::fvector pPosition, int pLayer);
 
+	std::string find_tile_name(engine::fvector pPosition, int pLayer);
+
 	void update_display(tilemap_display& tmA);
 
 	void clean();
@@ -52,7 +54,7 @@ private:
 	typedef std::map<int, layer> map;
 
 	map mMap;
-	tile* find_tile(engine::fvector pos, size_t layer);
+	tile* find_tile(engine::fvector pos, int layer);
 
 	engine::fvector mTile_size;
 

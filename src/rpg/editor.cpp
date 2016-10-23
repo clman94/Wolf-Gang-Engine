@@ -191,15 +191,13 @@ int tilemap_editor::draw(engine::renderer & pR)
 
 	const engine::fvector mouse_position = pR.get_mouse_position(mTilemap_display.get_exact_position());
 
-	engine::fvector tile_position;
+	engine::fvector tile_position_exact;
 	if (mPreview.get_size() == engine::fvector(16, 16)) // Half-size tile
-	{
-		tile_position = (mouse_position / 16).floor() / 2;
-	}
+		tile_position_exact = (mouse_position / 16) / 2;
 	else
-	{
-		tile_position = (mouse_position / 32).floor();
-	}
+		tile_position_exact = (mouse_position / 32);
+
+	const engine::fvector tile_position = tile_position_exact.floor();
 
 	const bool control_add_tile    = pR.is_mouse_down(engine::renderer::mouse_button::mouse_left);
 	const bool control_remove_tile = pR.is_mouse_down(engine::renderer::mouse_button::mouse_right);
@@ -230,6 +228,21 @@ int tilemap_editor::draw(engine::renderer & pR)
 		mTilemap_loader.remove_tile(tile_position, mLayer);
 		mTilemap_loader.update_display(mTilemap_display);
 		update_highlight();
+	}
+
+	// Copy tile
+	if (pR.is_mouse_down(engine::renderer::mouse_button::mouse_middle))
+	{
+		std::string atlas = mTilemap_loader.find_tile_name(tile_position_exact, mLayer);
+		if (!atlas.empty())
+			for (size_t i = 0; i < mTile_list.size(); i++) // Find tile in tile_list and set it as current tile
+				if (mTile_list[i] == atlas)
+				{
+					mCurrent_tile = i;
+					update_preview();
+					update_labels();
+					break;
+				}
 	}
 
 	// Next tile
