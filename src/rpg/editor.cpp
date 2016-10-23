@@ -202,7 +202,7 @@ int tilemap_editor::draw(engine::renderer & pR)
 	const bool control_add_tile    = pR.is_mouse_down(engine::renderer::mouse_button::mouse_left);
 	const bool control_remove_tile = pR.is_mouse_down(engine::renderer::mouse_button::mouse_right);
 	if (!control_add_tile && !control_remove_tile)
-		last_tile = { -10000000, -1000000 };
+		last_tile = { -10000000, -1000000 }; // Temporary
 
 	// Add tile
 	if (control_add_tile

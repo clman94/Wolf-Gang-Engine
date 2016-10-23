@@ -20,15 +20,15 @@ using namespace AS;
 
 bool flag_container::set_flag(const std::string& pName)
 {
-	return flags.emplace(pName).second;
+	return mFlags.emplace(pName).second;
 }
 bool flag_container::unset_flag(const std::string& pName)
 {
-	return flags.erase(pName) == 1;
+	return mFlags.erase(pName) == 1;
 }
 bool flag_container::has_flag(const std::string& pName)
 {
-	return flags.find(pName) != flags.end();
+	return mFlags.find(pName) != mFlags.end();
 }
 
 void flag_container::load_script_interface(script_system & pScript)
@@ -36,6 +36,11 @@ void flag_container::load_script_interface(script_system & pScript)
 	pScript.add_function("bool has_flag(const string &in)", asMETHOD(flag_container, has_flag), this);
 	pScript.add_function("bool set_flag(const string &in)", asMETHOD(flag_container, set_flag), this);
 	pScript.add_function("bool unset_flag(const string &in)", asMETHOD(flag_container, unset_flag), this);
+}
+
+void flag_container::clean()
+{
+	mFlags.clear();
 }
 
 // #########
@@ -1486,6 +1491,7 @@ void game::open_game()
 		util::error("Invalid slot");
 		return;
 	}
+	mFlags.clean();
 	file.load_flags(mFlags);
 	file.load_player(mScene.get_player());
 	mScript.about_all();

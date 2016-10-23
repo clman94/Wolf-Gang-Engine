@@ -114,15 +114,16 @@ public:
 	bool unset_flag(const std::string& pName);
 	bool has_flag(const std::string& pName);
 	void load_script_interface(script_system& pScript);
+	void clean();
 
 	auto begin()
-	{ return flags.begin(); }
+	{ return mFlags.begin(); }
 
 	auto end()
-	{ return flags.end(); }
+	{ return mFlags.end(); }
 
 private:
-	std::set<std::string> flags;
+	std::set<std::string> mFlags;
 };
 
 class controls
