@@ -74,7 +74,7 @@ void path_set::clean()
 	mGrid.clean();
 }
 
-void path_set::start_path(fvector pStart, fvector pDestination)
+void path_set::new_path(fvector pStart, fvector pDestination)
 {
 	clean();
 
@@ -93,7 +93,7 @@ bool path_set::step(collision_callback pCollision_callback)
 	if (current.get_position() == mDestination)
 		return true;
 
-	// Move node to closed list
+	// Move top node to closed list
 	mClosed_set.splice(mClosed_set.begin(), mOpen_set, mOpen_set.begin());
 	
 	create_neighbors(current, pCollision_callback);
@@ -159,10 +159,11 @@ path_node& path_set::add_node(fvector pPosition)
 path_t path_set::construct_path()
 {
 	path_t path;
-	path_node* current = &mOpen_set.front();
+	path_node* current = &mOpen_set.front(); // The top node should be the least costly
 	path.push_front(current->get_position()); // First node
 
-	while (current->has_predecessor()) // Push all predecessors
+	// Follow all predecessors to create path
+	while (current->has_predecessor())
 	{
 		current = &current->get_predecessor();
 		path.push_front(current->get_position());
@@ -175,10 +176,13 @@ std::vector<fvector> grid_set::get_empty_neighbors_positions(path_node& pNode)
 {
 	std::array<fvector, 4> neighbors;
 
+	// These are the corners but they are not useful in a tile like enviroment
+	// TODO: Provide ability to switch these on and off for whatever reason
 	//neighbors[neighbor_position::topleft]     = position + ivector(-1, -1);
 	//neighbors[neighbor_position::topright]    = position + ivector(1, -1);
 	//neighbors[neighbor_position::bottomright] = position + ivector(1, 1);
 	//neighbors[neighbor_position::bottomleft]  = position + ivector(-1, 1);
+
 	neighbors[neighbor_position::top]         =  fvector(0, -1);
 	neighbors[neighbor_position::right]       =  fvector(1, 0);
 	neighbors[neighbor_position::bottom]      =  fvector(0, 1);
@@ -207,9 +211,14 @@ void grid_set::clean()
 	mMap.clear();
 }
 
+pathfinder::pathfinder()
+{
+	mPath_limit = 1000;
+}
+
 bool pathfinder::start(engine::fvector pStart, engine::fvector pDestination)
 {
-	mPath_set.start_path(pStart, pDestination);
+	mPath_set.new_path(pStart, pDestination);
 
 	for (size_t i = 0; i < mPath_limit; i++)
 	{

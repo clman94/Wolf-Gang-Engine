@@ -474,7 +474,7 @@ int entity_manager::load_entities(tinyxml2::XMLElement * e)
 		std::string att_texture = ele->Attribute("texture");
 		engine::fvector pos = util::shortcuts::vector_float_att(ele)*32;
 
-		auto& ne = mEntities.add_item();
+		auto& ne = mEntities.create_item();
 		ne.load_entity(att_texture, *mTexture_manager);
 		ne.set_position(pos);
 		get_renderer()->add_client(ne);
@@ -499,7 +499,7 @@ int entity_manager::load_characters(tinyxml2::XMLElement * e)
 		std::string att_texture = ele->Attribute("texture");
 		engine::fvector pos = util::shortcuts::vector_float_att(ele);
 
-		auto& ne = mCharacters.add_item();
+		auto& ne = mCharacters.create_item();
 		ne.load_entity(att_texture, *mTexture_manager);
 
 		std::string att_cycle = util::safe_string(ele->Attribute("cycle"));
@@ -566,7 +566,7 @@ entity_reference entity_manager::script_add_entity(const std::string & path)
 		return entity_reference();
 	}
 
-	auto& ne = mEntities.add_item();
+	auto& ne = mEntities.create_item();
 	ne.load_entity(path, *mTexture_manager);
 	ne.set_animation("default:default");
 	get_renderer()->add_client(ne);
@@ -607,7 +607,7 @@ entity_reference entity_manager::script_add_character(const std::string & path)
 		return entity_reference();
 	}
 
-	auto& nc = mCharacters.add_item();
+	auto& nc = mCharacters.create_item();
 	nc.load_entity(path, *mTexture_manager);
 	nc.set_cycle(character::e_cycle::def);
 	get_renderer()->add_client(nc);
@@ -1357,20 +1357,6 @@ script_system::add_function(const char * pDeclaration, const asSFuncPtr& pPtr)
 	assert(r >= 0);
 }
 
-void
-script_system::add_pointer_type(const char* pName)
-{
-	mEngine->RegisterObjectType(pName, sizeof(void*), asOBJ_VALUE | asOBJ_APP_PRIMITIVE | asOBJ_POD);
-}
-
-void
-script_system::call_event_function(const std::string& pName)
-{
-	auto func = mScene_module->GetFunctionByName(pName.c_str());
-	if (!func)
-		util::error("Function '" + pName + "' does not exist");
-	mCtxmgr.AddContext(mEngine, func);
-}
 
 void
 script_system::setup_triggers(collision_system& pCollision_system)

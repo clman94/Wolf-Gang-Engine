@@ -34,16 +34,22 @@ namespace rpg{
 
 class script_system;
 
+// A node that acts as a sophisticated camera that can focus on a point.
 class panning_node :
 	public engine::node
 {
 public:
 	panning_node();
 
+	// Set the region in which the camera will allways stay within
 	void set_boundary(engine::frect pBoundary);
-	void set_viewport(engine::fvector pViewport);
-	void set_focus(engine::fvector pFocus);
 	engine::frect get_boundary();
+
+	// Set the camera's resolution
+	void set_viewport(engine::fvector pViewport);
+
+	// Set the focal point in which the camera will center on
+	void set_focus(engine::fvector pFocus);
 	engine::fvector get_focus();
 
 	void set_boundary_enable(bool pEnable);
@@ -55,6 +61,7 @@ private:
 	bool mBoundary_enabled;      ///< 
 };
 
+// A list template that connects all nodes contained to a central node
 template<typename T>
 class node_list :
 	public engine::node
@@ -67,14 +74,14 @@ public:
 	}
 
 	template<class... T_ARG>
-	auto& add_item(T_ARG&&... pArg)
+	auto& create_item(T_ARG&&... pArg)
 	{
 		mItems.emplace_back(std::forward<T_ARG>(pArg)...);
 		add_child(mItems.back());
 		return mItems.back();
 	}
 
-	auto& add_item()
+	auto& create_item()
 	{
 		mItems.emplace_back();
 		add_child(mItems.back());
@@ -107,6 +114,7 @@ private:
 	std::list<T> mItems;
 };
 
+// Contains all flags and an interface to them
 class flag_container
 {
 public:
@@ -152,6 +160,7 @@ private:
 	std::array<bool, 11> mControls;
 };
 
+// The basic dynamic object in game.
 class entity :
 	public engine::render_client,
 	public engine::node,
@@ -184,6 +193,8 @@ private:
 };
 typedef util::tracking_ptr<entity> entity_reference;
 
+// An entity that has a specific role as a character.
+// Provides walk cycles.
 class character :
 	public entity
 {
@@ -213,6 +224,7 @@ private:
 	float mMove_speed;
 };
 
+// A reference to a script function.
 class script_function
 {
 public:
@@ -233,6 +245,7 @@ private:
 	void return_context();
 };
 
+// A basic collision box
 struct collision_box
 {
 public:
@@ -250,6 +263,7 @@ protected:
 	engine::frect mRegion;
 };
 
+// A collisionbox that is activated once the player has walked over it.
 struct trigger : public collision_box
 {
 public:
@@ -268,6 +282,7 @@ struct door : public collision_box
 	engine::fvector offset;
 };
 
+// A simple static collision system for world interactivity
 class collision_system
 {
 public:
@@ -293,7 +308,9 @@ private:
 	std::list<trigger> mButtons;
 };
 
-// Excuse this mess -_-
+// Angelscript wrapper
+// Excuse this mess, please -_-
+// TODO: Cleanup
 class script_system
 {
 public:
@@ -350,6 +367,7 @@ private:
 	void script_create_thread_noargs(AS::asIScriptFunction *func);
 };
 
+// Resource management of expression animations
 class expression_manager
 {
 public:
@@ -360,6 +378,10 @@ private:
 	std::map<std::string, const engine::animation*> mAnimations;
 };
 
+// The dialog object with text reveal
+// TODO: Make more flexible with the ability to only have the text,
+//       move the text to any location, (possibly) automatically wrap text
+//       without cutting off words, and lots more that might be useful.
 class narrative_dialog :
 	public engine::render_client
 {
@@ -376,19 +398,34 @@ public:
 
 	bool is_revealing();
 
+	// Set the text to begin revealing
 	void reveal_text(const std::string& pText, bool pAppend = false);
+
+	// Set text without reveal
 	void instant_text(std::string pText, bool pAppend = false);
+
+	// Finish reveal before it is finished
 	void skip_reveal();
 
+	// Show the dialog box
 	void show_box();
+
+	// Hide the dialog box
 	void hide_box();
+	
+	// Cleanup the current session
 	void end_narrative();
+
 	bool is_box_open();
 
 	//void set_style_profile(const std::string& path);
 
+	// Set duration between each character during reveal
 	void set_interval(float ms);
 
+
+	// The selection is just a simple text object, nothing really special.
+	// TODO: Make special
 	void show_selection();
 	void hide_selection();
 	void set_selection(const std::string& pText);
@@ -430,6 +467,7 @@ private:
 	bool script_has_displayed_new_character();
 };
 
+// The main player character
 class player_character :
 	public character
 {
@@ -446,8 +484,14 @@ public:
 	player_character();
 	void set_locked(bool pLocked);
 	bool is_locked();
+
+	// Get Collision box in a specific durection based on the size of the frame
 	engine::frect get_collision(direction pDirection);
+
+	// Do movement with collision detection
 	void movement(controls &pControls, collision_system& pCollision_system, float pDelta);
+	
+	// Get point in front of player
 	engine::fvector get_activation_point(float pDistance = 18);
 
 private:
@@ -456,6 +500,7 @@ private:
 	void set_move_direction(engine::fvector pVec);
 };
 
+// Manager of entities in world
 class entity_manager :
 	public engine::render_proxy,
 	public engine::node
@@ -526,6 +571,8 @@ private:
 	int script_music_open(const std::string& pPath);
 };
 
+// A colored rectangle overlay of the entire screen for
+// fade effects
 class colored_overlay :
 	public engine::render_proxy
 {
@@ -543,11 +590,13 @@ private:
 	void script_set_overlay_opacity(int a);
 };
 
+// The main pathfinding system for tilemap based pathfinding
 class pathfinding_system
 {
 public:
 	pathfinding_system();
 
+	// Pathfinding uses the walls in the collsiion system for obsticle checking
 	void set_collision_system(collision_system& pCollision_system);
 
 	void load_script_interface(script_system& pScript);
@@ -569,8 +618,15 @@ public:
 	~scene();
 	collision_system& get_collision_system();
 
+	// Cleanups the scene for a new scene.
+	// Does not stop background music by default 
+	// so it can be continued in the next scene.
 	void clean_scene(bool pFull = false);
+
+	// Load scene xml file which loads the scene script
 	int load_scene(std::string pPath);
+
+	// Reload the currently loaded scene.
 	int reload_scene();
 
 	const std::string& get_path()
@@ -626,6 +682,7 @@ private:
 	void update_collision_interaction(controls &pControls);
 };
 
+// TODO: Think of something better
 class save_value_manager
 {
 public:
@@ -659,6 +716,8 @@ private:
 	std::map<std::string, data_value> mValues;
 };
 
+// A basic save system.
+// Saves player position, flags, and current scene path.
 class save_system
 {
 public:
@@ -681,13 +740,17 @@ private:
 	tinyxml2::XMLElement *mEle_root;
 };
 
+// The main game
 class game :
 	public engine::render_proxy,
 	public util::nocopy
 {
 public:
 	game();
+
+	// Load the xml game settings
 	int load_game_xml(std::string pPath);
+
 	void tick(controls& pControls);
 
 protected:
