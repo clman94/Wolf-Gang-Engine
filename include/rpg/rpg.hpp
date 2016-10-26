@@ -41,7 +41,7 @@ class panning_node :
 public:
 	panning_node();
 
-	// Set the region in which the camera will allways stay within
+	// Set the region in which the camera will always stay within
 	void set_boundary(engine::frect pBoundary);
 	engine::frect get_boundary();
 
@@ -316,14 +316,26 @@ class script_system
 public:
 	script_system();
 	~script_system();
+
+	// Load the scene angelscript file
 	int load_scene_script(const std::string& pPath);
+
+	// Register a member function
 	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr, void* pInstance);
+	
+	// Register a non-member/static function
 	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr);
-	void add_pointer_type(const char* pName);
-	void call_event_function(const std::string& pName);
+
+	// Create custom triggers/buttons for trigger/button functions (data contained in metadata)
 	void setup_triggers(collision_system& pCollision_system);
+
 	void about_all();
+
+	// Call all functions that contain the specific metadata
+	// TODO: Cut off leading and trailing whitespace in all metadata before comparing
 	void start_all_with_tag(const std::string& tag);
+
+	// Execute all scripts
 	int tick();
 
 	int get_current_line();
@@ -379,7 +391,7 @@ private:
 };
 
 // The dialog object with text reveal
-// TODO: Make more flexible with the ability to only have the text,
+// TODO: Make more flexible with the ability to only have the text displayed,
 //       move the text to any location, (possibly) automatically wrap text
 //       without cutting off words, and lots more that might be useful.
 class narrative_dialog :
