@@ -31,34 +31,41 @@ namespace priv
 	string current_dialog_sound = "dialog_sound";
 	bool randomized_dialog_sound = false;
 }
-
+	
+	// Set the sound to activate each character
 	void set_dialog_sound(string &in pName)
 	{
 		narrative::priv::current_dialog_sound = pName;
 	}
-
+	
+	// Add an entity whose animation will play when dialog is appearing
 	void add_speaker(entity pEntity)
 	{
 		narrative::priv::speakers.insertLast(pEntity);
 	}
 	
+	// Remove all entities that are to speak
 	void clear_speakers()
 	{
 		uint size = narrative::priv::speakers.length();
 		narrative::priv::speakers.removeRange(0, size);
 	}
 	
+	// Reappear the dialog box
 	void show()
 	{
 		player::lock(true);
 		_showbox();
 	}
-
+	
+	// Hide the dialog box. Use show() to make it appear again
+	// Use end() when you want to "end" the dialog session
 	void hide()
 	{
 		_hidebox();
 	}
 	
+	// End the dialog session
 	void end(bool pUnlock_player = true)
 	{
 		clear_speakers();
@@ -74,21 +81,25 @@ namespace priv
 		bottom
 	};
 	
+	// Changes the position of the dialog box
 	void move_box(int pos)
 	{
 		_set_box_position(pos);
 	}
 	
+	// Set the interval between each character
 	void set_interval(float ms)
 	{
 		_set_interval(ms);
 	}
 	
+	// Set interval between each character based on characters per second
 	void set_speed(float pSpeed)
 	{
 		set_interval(1000.f/pSpeed);
 	}
 	
+	// Set the expression of be shown in the left of the dialog box
 	void set_expression(const string&in pName)
 	{
 		_set_expression(pName);
@@ -108,6 +119,9 @@ void _wait_dialog_reveal(bool pSkip = false)
 			else
 				fx::sound(narrative::priv::current_dialog_sound);
 		}
+		
+		if (is_triggered(control::activate))
+			_skip_reveal();
 	} while (_is_revealing());
 	_stop_expression_animation();
 	narrative::priv::stop_speakers();

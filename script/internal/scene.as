@@ -9,6 +9,7 @@
 #include "scoped_entity.as"
 #include "narrative.as"
 #include "follow_character.as"
+#include "music.as"
 
 enum anchor
 {
@@ -53,84 +54,19 @@ enum direction
 
 namespace player
 {
-	void lock(bool is_locked)
+	shared void lock(bool pIs_locked)
 	{
-		_lockplayer(is_locked);
-	}
-}
-
-namespace music
-{
-	void loop(bool pLoop)
-	{
-		_music_set_loop(pLoop);
+		_lockplayer(pIs_locked);
 	}
 	
-	void stop()
+	shared void focus(bool pIs_focus = true)
 	{
-		_music_stop();
+		focus_player(pIs_focus);
 	}
 	
-	void pause()
+	shared void unfocus()
 	{
-		_music_pause();
-	}
-	
-	bool playing()
-	{
-		return _music_is_playing();
-	}
-	
-	void play()
-	{
-		if (!playing())
-			_music_play();
-	}
-	
-	void volume(float pVolume)
-	{
-		_music_volume(pVolume);
-	}
-	
-	float duration()
-	{
-		return _music_get_duration();
-	}
-	
-	float position()
-	{
-		return _music_position();
-	}
-	
-	void open(const string&in pPath, bool pQuick = true)
-	{
-		if (_music_open(pPath) != 0)
-			dprint("Could not load music file '" + pPath + "'");
-		
-		if (pQuick)
-		{
-			loop(true);
-			play();
-		}
-	}
-	
-	void wait_until(float pSeconds)
-	{
-		if (!music::playing())
-		{
-			dprint("No music is playing to wait for...");
-			return;
-		}
-		
-		if (music::duration() < pSeconds)
-		{
-			dprint("The duration of the music is less then the time you requested to wait");
-			return;
-		}
-		
-		while (music::playing()
-		&&     music::position() < pSeconds)
-		{ yield(); }
+		focus_player(false);
 	}
 }
 
@@ -208,11 +144,6 @@ void once_flag(const string&in pFlag)
 void allow_loop()
 {
 	yield();
-}
-
-void focus_player()
-{
-	focus_player(true);
 }
 
 // Calculate direction based on a vector
@@ -398,17 +329,34 @@ void set_color(entity pEntity, int r, int g, int b)
 	set_color(pEntity, r, g, b, 255);
 }
 
-void pathfind_move(entity pEntity, vec pDestination, float pSpeed)
+void pathfind_move(entity pEntity, vec pDestination, float pSpeed, float pWait_for_player = 0)
 {
-	array<vec> path;
-	if (!find_path(path, get_position(pEntity), pDestination))
+	if (pWait_for_player < 0)
 	{
-		dprint("could not find path");
+		eprint("pWait_for_player should not be less than 0");
+		return;
+	}
+
+	array<vec> path;
+	if (!find_path(path, get_position(pEntity).floor(), pDestination.floor()))
+	{
+		eprint("Could not find path");
 		return;
 	}
 	for (uint i = 1; i < path.length(); i++)
 	{
-		//dprint(formatFloat(path[i].x) + " " +  formatFloat(path[i].y));
+		if (pWait_for_player != 0)
+		{
+			vec player_position = get_position(get_player());
+			vec position = get_position(pEntity);
+			
+			while (get_position(get_player()).distance(position) >= pWait_for_player)
+			{
+				set_direction(pEntity, player_position);
+				yield();
+			}
+		}
+		dprint(formatFloat(path[i].x) + ", " +  formatFloat(path[i].y));
 		move(pEntity, path[i] + vec(0.5f, 0.5f), speed(pSpeed));
 	}
 }

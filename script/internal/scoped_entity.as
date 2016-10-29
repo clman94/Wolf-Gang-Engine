@@ -1,3 +1,5 @@
+
+// Removes entity when this object goes out of scope
 class scoped_entity
 {
 	scoped_entity()
@@ -37,13 +39,13 @@ class scoped_entity
 	
 	~scoped_entity()
 	{
-		remove();
-	}
-	
-	void remove()
-	{
 		if (mEntity.is_valid())
 			remove_entity(mEntity);
+	}
+	
+	void release()
+	{
+		// TODO
 	}
 	
 	entity opImplConv() const

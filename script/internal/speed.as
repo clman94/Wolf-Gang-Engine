@@ -8,7 +8,7 @@ class speed
 		mSpeed = pSpeed;
 	}
 	
-	float get_speed()
+	float get_speed() const
 	{
 		return mSpeed;
 	}
@@ -20,7 +20,7 @@ class speed
 	
 	// Calculate amount of time to move
 	//  a distance at the current speed
-	float get_time(float pDistance)
+	float get_time(float pDistance) const
 	{
 		return pDistance/mSpeed;
 	}
