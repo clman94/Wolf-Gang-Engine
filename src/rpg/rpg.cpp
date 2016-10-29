@@ -2790,13 +2790,17 @@ void colored_overlay::refresh_renderer(engine::renderer& pR)
 void colored_overlay::script_set_overlay_color(int r, int g, int b)
 {
 	auto color = mOverlay.get_color();
-	mOverlay.set_color(engine::color(r, g, b, color.a ));
+	mOverlay.set_color(engine::color(
+		util::clamp(r, 0, 255)
+		, util::clamp(g, 0, 255)
+		, util::clamp(b, 0, 255)
+		, color.a ));
 }
 
 void colored_overlay::script_set_overlay_opacity(int a)
 {
 	auto color = mOverlay.get_color();
-	color.a = a;
+	color.a = util::clamp(a, 0, 255);
 	mOverlay.set_color(color);
 }
 
