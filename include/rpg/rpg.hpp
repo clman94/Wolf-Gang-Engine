@@ -370,14 +370,28 @@ private:
 	bool                 mExecuting;
 
 	engine::timer mTimer;
+
+	enum class log_entry_type
+	{
+		error,
+		info,
+		warning,
+		debug
+	};
 	
-	void dprint(std::string &msg);
+	void log_print(const std::string& pFile, int pLine, int pCol
+		, log_entry_type pType, const std::string& pMessage);
+
+	void debug_print(std::string &pMessage);
+	void error_print(std::string &pMessage);
 	void register_vector_type();
 	void message_callback(const AS::asSMessageInfo * msg);
 	std::string get_metadata_type(const std::string &pMetadata);
 	void script_abort();
 	void script_create_thread(AS::asIScriptFunction *func, AS::CScriptDictionary *arg);
 	void script_create_thread_noargs(AS::asIScriptFunction *func);
+
+	void load_script_interface();
 };
 
 // Resource management of expression animations

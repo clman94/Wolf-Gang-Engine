@@ -1110,30 +1110,13 @@ controls::reset()
 
 void script_system::message_callback(const asSMessageInfo * msg)
 {
-	if (!mLog_file.is_open())
-	{
-		mLog_file.open("./data/log.txt");
-	}
-
-	std::string type = "ERROR";
+	log_entry_type type = log_entry_type::error;
 	if (msg->type == asEMsgType::asMSGTYPE_INFORMATION)
-		type = "INFO";
+		type = log_entry_type::info;
 	else if(msg->type == asEMsgType::asMSGTYPE_WARNING)
-		type = "WARNING";
-	std::string message = msg->section;
-	message += "( ";
-	message += std::to_string(msg->row);
-	message += ", ";
-	message += std::to_string(msg->col);
-	message += " ) : ";
-	message += type;
-	message += " : ";
-	message += msg->message;
-	message += "\n";
-	std::cout << message;
+		type = log_entry_type::warning;
 
-	if (mLog_file.is_open())
-		mLog_file << message;
+	log_print(msg->section,msg->row, msg->col, type, msg->message);
 }
 
 std::string
@@ -1181,11 +1164,69 @@ void script_system::script_create_thread_noargs(AS::asIScriptFunction * func)
 	asIScriptContext *ctx = mCtxmgr.AddContext(mEngine, func);
 }
 
+void script_system::load_script_interface()
+{
+	add_function("int rand()", asFUNCTION(std::rand));
+	add_function("void _timer_start(float)", asMETHOD(engine::timer, start_timer), &mTimer);
+	add_function("bool _timer_reached()", asMETHOD(engine::timer, is_reached), &mTimer);
+
+	add_function("void create_thread(coroutine @+)", asMETHOD(script_system, script_create_thread_noargs), this);
+	add_function("void create_thread(coroutine @+, dictionary @+)", asMETHOD(script_system, script_create_thread), this);
+
+	add_function("void dprint(const string &in)", asMETHOD(script_system, debug_print), this);
+	add_function("void eprint(const string &in)", asMETHOD(script_system, error_print), this);
+	add_function("void abort()", asMETHOD(script_system, script_abort), this);
+}
+
+
+void script_system::log_print(const std::string& pFile, int pLine, int pCol, log_entry_type pType, const std::string& pMessage)
+{
+	if (!mLog_file.is_open()) // Open the log file when needed
+		mLog_file.open("./data/log.txt");
+
+	std::string type;
+	switch (pType)
+	{
+	case log_entry_type::error:   type = "ERROR";   break;
+	case log_entry_type::info:    type = "INFO";    break;
+	case log_entry_type::warning: type = "WARNING"; break;
+	case log_entry_type::debug:   type = "DEBUG";   break;
+	}
+
+	std::string message = pFile;
+	message += " ( ";
+	message += std::to_string(pLine);
+	message += ", ";
+	message += std::to_string(pCol);
+	message += " ) : ";
+	message += type;
+	message += " : ";
+	message += pMessage;
+	message += "\n";
+
+	if (mLog_file.is_open())
+		mLog_file << message;
+
+	std::cout << message;
+}
 
 void
-script_system::dprint(std::string &msg)
+script_system::debug_print(std::string &pMessage)
 {
-	std::cout << "Debug : " << msg << "\n";
+	assert(mCtxmgr.GetCurrentContext() != nullptr);
+	assert(mCtxmgr.GetCurrentContext()->GetFunction() != nullptr);
+
+	std::string name = mCtxmgr.GetCurrentContext()->GetFunction()->GetName();
+	log_print(name, get_current_line(), 0, log_entry_type::debug, pMessage);
+}
+
+void script_system::error_print(std::string & pMessage)
+{
+	assert(mCtxmgr.GetCurrentContext() != nullptr);
+	assert(mCtxmgr.GetCurrentContext()->GetFunction() != nullptr);
+
+	std::string name = mCtxmgr.GetCurrentContext()->GetFunction()->GetName();
+	log_print(name, get_current_line(), 0, log_entry_type::error, pMessage);
 }
 
 void
@@ -1302,15 +1343,7 @@ script_system::script_system()
 
 	register_vector_type();
 
-	add_function("int rand()", asFUNCTION(std::rand));
-	add_function("void _timer_start(float)",  asMETHOD(engine::timer, start_timer), &mTimer);
-	add_function("bool _timer_reached()",     asMETHOD(engine::timer, is_reached), &mTimer);
-
-	add_function("void create_thread(coroutine @+)", asMETHOD(script_system, script_create_thread_noargs), this);
-	add_function("void create_thread(coroutine @+, dictionary @+)", asMETHOD(script_system, script_create_thread), this);
-
-	add_function("void dprint(const string &in)", asMETHOD(script_system, dprint), this);
-	add_function("void abort()", asMETHOD(script_system, script_abort), this);
+	load_script_interface();
 
 	mExecuting = false;
 }
