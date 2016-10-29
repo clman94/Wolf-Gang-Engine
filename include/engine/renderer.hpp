@@ -76,8 +76,8 @@ public:
 	int draw();
 	
 	int close();
-	int add_client(render_object& pClient);
-	int remove_client(render_object& pClient);
+	int add_object(render_object& pObject);
+	int remove_object(render_object& pObject);
 	void set_pixel_scale(float pScale);
 
 	fvector get_size();
@@ -118,7 +118,7 @@ private:
 	tgui::Gui* mTgui;
 
 	sf::RenderWindow mWindow;
-	std::vector<render_object*> mClients;
+	std::vector<render_object*> mObjects;
 	bool mRequest_resort;
 	frame_clock mFrame_clock;
 
@@ -127,9 +127,9 @@ private:
 	std::array<char, 16> mPressed_buttons;
 	void refresh_pressed();
 
-	int draw_clients();
-	void sort_clients();
-	void refresh_clients();
+	int draw_objects();
+	void sort_objects();    // Sorts the mObjects array by depth
+	void refresh_objects(); // Updates the indexs of all objects
 
 	color mBackground_color;
 };
@@ -162,7 +162,7 @@ protected:
 
 private:
 	renderer* mRenderer;
-	int mIndex;
+	size_t mIndex;
 	bool mVisible;
 	depth_t mDepth;
 };

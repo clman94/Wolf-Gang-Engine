@@ -14,14 +14,14 @@ render_object::is_rendered()
 
 void render_object::set_renderer(renderer& pR)
 {
-	pR.add_client(*this);
+	pR.add_object(*this);
 }
 
 void render_object::detach_renderer()
 {
 	if (mRenderer)
 	{
-		mRenderer->remove_client(*this);
+		mRenderer->remove_object(*this);
 		mRenderer = nullptr;
 	}
 }
@@ -77,7 +77,7 @@ renderer::renderer()
 
 renderer::~renderer()
 {
-	for (auto i : mClients)
+	for (auto i : mObjects)
 		i->mIndex = -1;
 	close();
 }
@@ -111,9 +111,9 @@ renderer::initualize(ivector pSize, int pFps)
 
 
 int
-renderer::draw_clients()
+renderer::draw_objects()
 {
-	for (auto i : mClients)
+	for (auto i : mObjects)
 		if (i->is_visible())
 			i->draw(*this);
 	return 0;
@@ -125,27 +125,27 @@ renderer::draw()
 	mFrame_clock.update();
 	if (mRequest_resort)
 	{
-		sort_clients();
-		refresh_clients();
+		sort_objects();
+		refresh_objects();
 		mRequest_resort = false;
 	}
 	mWindow.clear(mBackground_color);
-	draw_clients();
+	draw_objects();
 	if (mTgui) mTgui->draw();
 	mWindow.display();
 	return 0;
 }
 
 void
-renderer::refresh_clients()
+renderer::refresh_objects()
 {
-	for (size_t i = 0; i < mClients.size(); i++)
-		mClients[i]->mIndex = i;
+	for (size_t i = 0; i < mObjects.size(); i++)
+		mObjects[i]->mIndex = i;
 }
 
 // Sort items that have a higher depth to be farther behind
 void
-renderer::sort_clients()
+renderer::sort_objects()
 {
 	struct
 	{
@@ -154,37 +154,38 @@ renderer::sort_clients()
 			return c1->mDepth > c2->mDepth;
 		}
 	}client_sort;
-	std::sort(mClients.begin(), mClients.end(), client_sort);
-	refresh_clients();
+	std::sort(mObjects.begin(), mObjects.end(), client_sort);
+	refresh_objects();
 }
 
 int
-renderer::add_client(render_object& pClient)
+renderer::add_object(render_object& pObject)
 {
-	if (pClient.mIndex >= 0)
-	{
-		return remove_client(pClient);
-	}
-	pClient.mRenderer = this;
-	pClient.mIndex = mClients.size();
-	mClients.push_back(&pClient);
-	pClient.refresh_renderer(*this);
-	sort_clients();
+	// Already registered
+	if (pObject.mRenderer == this)
+		return 0;
+
+	// Remove object from its previous renderer (if there is one)
+	pObject.detach_renderer();
+
+	pObject.mRenderer = this;
+	pObject.mIndex = mObjects.size();
+	mObjects.push_back(&pObject);
+	pObject.refresh_renderer(*this);
+	sort_objects();
 	return 0;
 }
 
 int 
-renderer::remove_client(render_object& pClient)
+renderer::remove_object(render_object& pObject)
 {
-	if (pClient.mIndex < 0
-	||  pClient.mRenderer != this)
-	{
+	// This is not the correct renderer to remove object from
+	if (pObject.mRenderer != this)
 		return 1;
-	}
-	mClients.erase(mClients.begin() + pClient.mIndex);
-	refresh_clients();
-	pClient.mIndex = -1;
-	pClient.mRenderer = nullptr;
+
+	mObjects.erase(mObjects.begin() + pObject.mIndex);
+	refresh_objects();
+	pObject.mRenderer = nullptr;
 	return 0;
 }
 

@@ -477,7 +477,7 @@ int entity_manager::load_entities(tinyxml2::XMLElement * e)
 		auto& ne = mEntities.create_item();
 		ne.load_entity(att_texture, *mTexture_manager);
 		ne.set_position(pos);
-		get_renderer()->add_client(ne);
+		get_renderer()->add_object(ne);
 
 		ele = ele->NextSiblingElement();
 	}
@@ -506,7 +506,7 @@ int entity_manager::load_characters(tinyxml2::XMLElement * e)
 		ne.set_cycle(att_cycle.empty() ? "default" : att_cycle);
 
 		ne.set_position(pos * 32);
-		get_renderer()->add_client(ne);
+		get_renderer()->add_object(ne);
 
 		ele = ele->NextSiblingElement();
 	}
@@ -569,7 +569,7 @@ entity_reference entity_manager::script_add_entity(const std::string & path)
 	auto& ne = mEntities.create_item();
 	ne.load_entity(path, *mTexture_manager);
 	ne.set_animation("default:default");
-	get_renderer()->add_client(ne);
+	get_renderer()->add_object(ne);
 
 	return ne;
 }
@@ -610,7 +610,7 @@ entity_reference entity_manager::script_add_character(const std::string & path)
 	auto& nc = mCharacters.create_item();
 	nc.load_entity(path, *mTexture_manager);
 	nc.set_cycle(character::e_cycle::def);
-	get_renderer()->add_client(nc);
+	get_renderer()->add_object(nc);
 
 	return nc;
 }
@@ -1027,9 +1027,9 @@ void scene::script_remove_tile(engine::fvector pPosition, int pLayer)
 void scene::refresh_renderer(engine::renderer& pR)
 {
 	set_viewport(pR.get_size());
-	pR.add_client(mTilemap_display);
-	pR.add_client(mNarrative);
-	pR.add_client(mPlayer);
+	pR.add_object(mTilemap_display);
+	pR.add_object(mNarrative);
+	pR.add_object(mPlayer);
 	mColored_overlay.set_renderer(pR);
 	mEntity_manager.set_renderer(pR);
 }
@@ -1651,7 +1651,7 @@ void
 game::refresh_renderer(engine::renderer & pR)
 {
 	mScene.set_renderer(pR);
-	pR.add_client(mEditor_manager);
+	pR.add_object(mEditor_manager);
 	pR.set_icon("data/icon.png");
 }
 
@@ -1985,10 +1985,10 @@ int narrative_dialog::draw(engine::renderer& pR)
 
 void narrative_dialog::refresh_renderer(engine::renderer& r)
 {
-	r.add_client(mBox);
-	r.add_client(mText);
-	r.add_client(mSelection);
-	r.add_client(mExpression);
+	r.add_object(mBox);
+	r.add_object(mText);
+	r.add_object(mSelection);
+	r.add_object(mExpression);
 }
 
 // ##########
@@ -2816,7 +2816,7 @@ void colored_overlay::clean()
 
 void colored_overlay::refresh_renderer(engine::renderer& pR)
 {
-	pR.add_client(mOverlay);
+	pR.add_object(mOverlay);
 	mOverlay.set_size(pR.get_size());
 }
 
