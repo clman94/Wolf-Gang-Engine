@@ -26,7 +26,7 @@ private:
 
 
 class editor_gui :
-	public engine::render_client
+	public engine::render_object
 {
 public:
 	void initualize();
@@ -64,7 +64,7 @@ public:
 };
 
 class editor :
-	public engine::render_client,
+	public engine::render_object,
 	public engine::node
 {
 public:
@@ -166,7 +166,7 @@ private:
 };
 
 class editor_manager :
-	public engine::render_client
+	public engine::render_object
 {
 public:
 	editor_manager();

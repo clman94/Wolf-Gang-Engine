@@ -45,7 +45,7 @@ struct color
 
 };
 
-class render_client;
+class render_object;
 class renderer;
 
 
@@ -76,11 +76,13 @@ public:
 	int draw();
 	
 	int close();
-	int add_client(render_client& pClient);
-	int remove_client(render_client& pClient);
+	int add_client(render_object& pClient);
+	int remove_client(render_object& pClient);
 	void set_pixel_scale(float pScale);
 
 	fvector get_size();
+
+	// Tells the renderer to resort all objects
 	void request_resort();
 
 	fvector get_mouse_position();
@@ -93,21 +95,11 @@ public:
 	void set_visible(bool pVisible);
 	void set_background_color(color pColor);
 
-	float get_fps()
-	{
-		return mFrame_clock.get_fps();
-	}
+	float get_fps();
 
-	float get_delta()
-	{
-		return mFrame_clock.get_delta();
-	}
+	float get_delta();
 
-	void set_gui(tgui::Gui* pTgui)
-	{
-		mTgui = pTgui;
-		pTgui->setWindow(mWindow);
-	}
+	void set_gui(tgui::Gui* pTgui);
 
 #ifdef ENGINE_INTERNAL
 
@@ -126,7 +118,7 @@ private:
 	tgui::Gui* mTgui;
 
 	sf::RenderWindow mWindow;
-	std::vector<render_client*> mClients;
+	std::vector<render_object*> mClients;
 	bool mRequest_resort;
 	frame_clock mFrame_clock;
 
@@ -142,17 +134,22 @@ private:
 	color mBackground_color;
 };
 
-class render_client :
+class render_object :
 	public util::nocopy
 {
 public:
-	render_client();
-	~render_client();
+	render_object();
+	~render_object();
+
+	// Depth defines the order in which this object will be called
 	void set_depth(depth_t pDepth);
 	float get_depth();
+
 	bool is_visible();
 	void set_visible(bool pVisible);
+	
 	virtual int draw(renderer &pR) = 0;
+	
 	int is_rendered();
 
 	void set_renderer(renderer& pR);
@@ -222,7 +219,7 @@ private:
 };
 
 class vertex_batch :
-	public render_client,
+	public render_object,
 	public node
 {
 public:
@@ -286,7 +283,7 @@ static vector<T> anchor_offset(const vector<T> pSize, anchor pType)
 }
 
 class rectangle_node :
-	public render_client,
+	public render_object,
 	public node
 {
 	sf::RectangleShape shape;
@@ -329,7 +326,7 @@ public:
 };
 
 class sprite_node : 
-	public render_client, 
+	public render_object, 
 	public node
 {
 public:
@@ -384,7 +381,7 @@ public:
 };
 
 class text_node :
-	public render_client,
+	public render_object,
 	public node
 {
 public:
@@ -411,7 +408,7 @@ private:
 };
 
 class rich_text_node :
-	public render_client,
+	public render_object,
 	public node
 {
 	struct text_block
@@ -425,7 +422,7 @@ public:
 };
 
 class animation_node :
-	public render_client,
+	public render_object,
 	public node
 {
 public:

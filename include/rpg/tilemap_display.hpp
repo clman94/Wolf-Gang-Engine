@@ -6,7 +6,7 @@
 namespace rpg {
 
 class tilemap_display :
-	public engine::render_client,
+	public engine::render_object,
 	public engine::node
 {
 public:

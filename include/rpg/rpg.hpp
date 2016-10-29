@@ -162,7 +162,7 @@ private:
 
 // The basic dynamic object in game.
 class entity :
-	public engine::render_client,
+	public engine::render_object,
 	public engine::node,
 	public util::named,
 	public util::tracked_owner
@@ -320,20 +320,21 @@ public:
 	// Load the scene angelscript file
 	int load_scene_script(const std::string& pPath);
 
-	// Register a member function
+	// Register a member function, will require the pointer to the instance
 	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr, void* pInstance);
 	
 	// Register a non-member/static function
 	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr);
 
-	// Create custom triggers/buttons for trigger/button functions (data contained in metadata)
+	// Constructs all triggers/buttons defined by functions
+	// with metadata "trigger" and "button"
+	// TODO: Stablize parsing of metadata
 	void setup_triggers(collision_system& pCollision_system);
 
 	void about_all();
 
 	// Call all functions that contain the specific metadata
-	// TODO: Cut off leading and trailing whitespace in all metadata before comparing
-	void start_all_with_tag(const std::string& tag);
+	void start_all_with_tag(const std::string& pTag);
 
 	// Execute all scripts
 	int tick();
@@ -395,7 +396,7 @@ private:
 //       move the text to any location, (possibly) automatically wrap text
 //       without cutting off words, and lots more that might be useful.
 class narrative_dialog :
-	public engine::render_client
+	public engine::render_object
 {
 public:
 	enum class position

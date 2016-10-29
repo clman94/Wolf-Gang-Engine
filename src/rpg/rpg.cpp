@@ -1305,7 +1305,6 @@ script_system::script_system()
 	add_function("int rand()", asFUNCTION(std::rand));
 	add_function("void _timer_start(float)",  asMETHOD(engine::timer, start_timer), &mTimer);
 	add_function("bool _timer_reached()",     asMETHOD(engine::timer, is_reached), &mTimer);
-	add_function("void cocall(const string &in)", asMETHOD(script_system, call_event_function), this);
 
 	add_function("void create_thread(coroutine @+)", asMETHOD(script_system, script_create_thread_noargs), this);
 	add_function("void create_thread(coroutine @+, dictionary @+)", asMETHOD(script_system, script_create_thread), this);
@@ -1365,7 +1364,7 @@ script_system::setup_triggers(collision_system& pCollision_system)
 	for (size_t i = 0; i < func_count; i++)
 	{
 		auto func = mScene_module->GetFunctionByIndex(i);
-		std::string metadata = mBuilder.GetMetadataStringForFunc(func);
+		std::string metadata = parsers::remove_trailing_whitespace(mBuilder.GetMetadataStringForFunc(func));
 		std::string type = get_metadata_type(metadata);
 
 		if (type == "trigger" ||
@@ -1396,14 +1395,14 @@ void script_system::about_all()
 		mCtxmgr.AbortAll();
 }
 
-void script_system::start_all_with_tag(const std::string & tag)
+void script_system::start_all_with_tag(const std::string & pTag)
 {
 	size_t func_count = mScene_module->GetFunctionCount();
 	for (size_t i = 0; i < func_count; i++)
 	{
 		auto func = mScene_module->GetFunctionByIndex(i);
-		std::string metadata = mBuilder.GetMetadataStringForFunc(func);
-		if (metadata == tag)
+		std::string metadata = parsers::remove_trailing_whitespace(mBuilder.GetMetadataStringForFunc(func));
+		if (metadata == pTag)
 		{
 			mCtxmgr.AddContext(mEngine, func);
 		}

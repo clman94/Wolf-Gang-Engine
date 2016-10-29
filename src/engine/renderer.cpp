@@ -3,39 +3,42 @@
 using namespace engine;
 
 // ##########
-// render_client
+// render_object
 // ##########
 
 int 
-render_client::is_rendered()
+render_object::is_rendered()
 {
 	return mIndex >= 0;
 }
 
-void render_client::set_renderer(renderer& pR)
+void render_object::set_renderer(renderer& pR)
 {
 	pR.add_client(*this);
 }
 
-void render_client::detach_renderer()
+void render_object::detach_renderer()
 {
 	if (mRenderer)
+	{
 		mRenderer->remove_client(*this);
+		mRenderer = nullptr;
+	}
 }
 
 void
-render_client::set_visible(bool pVisible)
+render_object::set_visible(bool pVisible)
 {
 	mVisible = pVisible;
 }
 
 bool
-render_client::is_visible()
+render_object::is_visible()
 {
 	return mVisible;
 }
 
-render_client::render_client()
+render_object::render_object()
 {
 	mIndex = -1;
 	set_visible(true);
@@ -43,13 +46,13 @@ render_client::render_client()
 	mRenderer = nullptr;
 }
 
-render_client::~render_client()
+render_object::~render_object()
 {
 	detach_renderer();
 }
 
 void
-render_client::set_depth(depth_t pDepth)
+render_object::set_depth(depth_t pDepth)
 {
 	mDepth = pDepth;
 	if (mRenderer)
@@ -57,7 +60,7 @@ render_client::set_depth(depth_t pDepth)
 }
 
 float
-render_client::get_depth()
+render_object::get_depth()
 {
 	return mDepth;
 }
@@ -146,7 +149,7 @@ renderer::sort_clients()
 {
 	struct
 	{
-		bool operator()(render_client* c1, render_client* c2)
+		bool operator()(render_object* c1, render_object* c2)
 		{
 			return c1->mDepth > c2->mDepth;
 		}
@@ -156,7 +159,7 @@ renderer::sort_clients()
 }
 
 int
-renderer::add_client(render_client& pClient)
+renderer::add_client(render_object& pClient)
 {
 	if (pClient.mIndex >= 0)
 	{
@@ -171,7 +174,7 @@ renderer::add_client(render_client& pClient)
 }
 
 int 
-renderer::remove_client(render_client& pClient)
+renderer::remove_client(render_object& pClient)
 {
 	if (pClient.mIndex < 0
 	||  pClient.mRenderer != this)
@@ -242,6 +245,22 @@ void
 renderer::set_background_color(color pColor)
 {
 	mBackground_color = pColor;
+}
+
+float renderer::get_fps()
+{
+	return mFrame_clock.get_fps();
+}
+
+float renderer::get_delta()
+{
+	return mFrame_clock.get_delta();
+}
+
+void renderer::set_gui(tgui::Gui * pTgui)
+{
+	mTgui = pTgui;
+	pTgui->setWindow(mWindow);
 }
 
 void

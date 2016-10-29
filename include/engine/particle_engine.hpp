@@ -11,7 +11,7 @@ namespace engine
 {
 
 class particle_emitter :
-	public render_client,
+	public render_object,
 	public node
 {
 public:
