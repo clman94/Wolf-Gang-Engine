@@ -59,10 +59,10 @@ static bool is_numeral(char c)
 
 static bool is_letter(char c)
 {
-	if (c >= 'a' &&
-		c <= 'z' ||
-		c >= 'A' &&
-		c <= 'Z')
+	if ((c >= 'a' &&
+		c <= 'z') ||
+		(c >= 'A' &&
+		c <= 'Z'))
 		return true;
 	return false;
 }
@@ -85,6 +85,7 @@ public:
 		}
 		return false;
 	}
+
 	friend range<T> parse_range(const std::string& str);
 };
 

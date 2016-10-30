@@ -3,13 +3,13 @@ using namespace engine;
 
 freq_sequence::freq_sequence() {}
 
-freq_sequence::freq_sequence(freq_sequence& a)
+freq_sequence::freq_sequence(const freq_sequence& a)
 {
 	seq = a.seq;
 }
 
 void
-freq_sequence::add(freq_sequence& fs, float start, int voice)
+freq_sequence::add(const freq_sequence& fs, float start, int voice)
 {
 	for (auto i : fs.seq)
 	{
@@ -53,7 +53,7 @@ freq_sequence::append(int note, float duration, float volume, int voice)
 }
 
 void
-freq_sequence::append(freq_sequence& fs, int voice)
+freq_sequence::append(const freq_sequence& fs, int voice)
 {
 	size_t start = 0;
 	for (auto& i : seq)
@@ -70,7 +70,7 @@ freq_sequence::append(freq_sequence& fs, int voice)
 	}
 }
 
-freq_sequence
+const freq_sequence
 freq_sequence::snip(size_t s_start, size_t s_duration)
 {
 	freq_sequence retval;
@@ -158,27 +158,27 @@ sample_buffer::generate(sample_buffer& buf, int wave, float f, float v, size_t s
 
 		if (wave == wave_saw)
 		{
-			sample = v - std::fmodf((b*f*i), v * 2);
+			sample = v - std::fmod((b*f*i), v * 2);
 		}
 		else if (wave == wave_sine)
 		{
-			const float pi_2 = std::atanf(1) * 8.f;
-			sample = std::sinf(pi_2*(f / r)*i)*v;
+			const float pi_2 = std::atan(1) * 8.f;
+			sample = std::sin(pi_2*(f / r)*i)*v;
 		}
 		else if (wave == wave_triangle)
 		{
-			sample = std::abs(v - std::fmodf((b*f*i), v * 2));
+			sample = std::abs(v - std::fmod((b*f*i), v * 2));
 		}
 		else if (wave == wave_noise)
 		{
-			sample = v - std::fmodf((float)std::rand(), v * 2);
+			sample = v - std::fmod((float)std::rand(), v * 2);
 		}
 		buf.samples[i] += (int)sample;
 	}
 }
 
 void
-sample_buffer::generate(sample_buffer& buf, int wave, freq_sequence& seq, int voice)
+sample_buffer::generate(sample_buffer& buf, int wave, const freq_sequence& seq, int voice)
 {
 	for (auto& i : seq.seq)
 	{
@@ -212,7 +212,7 @@ sample_mix::generate_section(size_t start, size_t duration)
 
 	for (auto& i : channels)
 	{
-		engine::freq_sequence s = i.seq->snip(start, duration);
+		const engine::freq_sequence s = i.seq->snip(start, duration);
 		sample_buffer::generate(mix, i.wave, s, i.voice);
 	}
 }

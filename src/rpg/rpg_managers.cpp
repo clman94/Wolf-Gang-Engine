@@ -2,7 +2,11 @@
 
 #include <rpg/rpg_managers.hpp>
 
+#ifdef __MINGW32__
+#include <experimental/filesystem>
+#else
 #include <filesystem>
+#endif
 
 using namespace rpg;
 
@@ -39,7 +43,7 @@ int texture_manager::load_from_directory(const std::string& pPath)
 engine::texture*
 texture_manager::get_texture(const std::string& pName)
 {
-	auto& iter = mTextures.find(pName);
+	auto iter = mTextures.find(pName);
 	if (iter == mTextures.end())
 	{
 		util::error("Texture with name '" + pName + "' does not exist.\n");
@@ -101,7 +105,7 @@ sound_manager::load_sounds(tinyxml2::XMLElement* pEle_root)
 int
 sound_manager::spawn_sound(const std::string& name, float pVolume, float pPitch)
 {
-	auto &buffer = mBuffers.find(name);
+	auto buffer = mBuffers.find(name);
 	if (buffer == mBuffers.end())
 		return 1;
 	mSounds.spawn(buffer->second, pVolume, pPitch);

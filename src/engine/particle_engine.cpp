@@ -21,8 +21,8 @@ void particle_emitter::spawn(size_t pCount)
 		nparticle->valid = true;
 
 		fvector position = {
-			std::fmodf((float)std::rand(), mRegion_size.x),
-			std::fmodf((float)std::rand(), mRegion_size.y)
+			std::fmod((float)std::rand(), mRegion_size.x),
+			std::fmod((float)std::rand(), mRegion_size.y)
 		};
 		nparticle->sprite = mSprites.add_quad(position, mTexture_rect);
 	}

@@ -912,7 +912,7 @@ void scene::load_script_interface(script_system& pScript)
 
 	pScript.add_function("int _spawn_sound(const string&in, float, float)", asMETHOD(sound_manager, spawn_sound), &mSound_FX);
 	pScript.add_function("void _stop_all()", asMETHOD(sound_manager, stop_all), &mSound_FX);
-	
+
 	pScript.add_function("entity get_player()", asMETHOD(scene, script_get_player), this);
 	pScript.add_function("void _lockplayer(bool)", asMETHOD(player_character, set_locked), &mPlayer);
 
@@ -1101,7 +1101,7 @@ controls::is_triggered(control pControl)
 void
 controls::reset()
 {
-	mControls.assign(false);
+	mControls.fill(false);
 }
 
 // #########
@@ -1161,7 +1161,7 @@ void script_system::script_create_thread_noargs(AS::asIScriptFunction * func)
 	}
 
 	// Create a new context for the co-routine
-	asIScriptContext *ctx = mCtxmgr.AddContext(mEngine, func);
+	mCtxmgr.AddContext(mEngine, func);
 }
 
 void script_system::load_script_interface()
@@ -1303,7 +1303,7 @@ script_system::register_vector_type()
 
 	// Rotate
 	mEngine->RegisterObjectMethod("vec", "vec& rotate(float)"
-		, asMETHODPR(engine::fvector, rotate, (float), engine::fvector&) 
+		, asMETHODPR(engine::fvector, rotate, (float), engine::fvector&)
 		, asCALL_THISCALL);
 	mEngine->RegisterObjectMethod("vec", "vec& rotate(const vec &in, float)"
 		, asMETHODPR(engine::fvector, rotate, (const engine::fvector&, float), engine::fvector&)
@@ -2138,11 +2138,11 @@ tilemap_loader::condense_layer(layer &pMap)
 	tile new_tile = pMap.begin()->second;
 
 	bool merged = false;
-	for (auto &i = pMap.begin(); i != pMap.end(); i++)
+	for (auto i = pMap.begin(); i != pMap.end(); i++)
 	{
 		auto& current_tile = i->second;
 
-		// Merge adjacent tile 
+		// Merge adjacent tile
 		if (new_tile.is_adjacent_right(current_tile))
 		{
 			new_tile.fill.x += current_tile.fill.x;
@@ -2281,7 +2281,7 @@ void
 tilemap_loader::generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode * root)
 {
 	std::map<int, tinyxml2::XMLElement *> layers;
-	
+
 	for (auto &l : mMap)
 	{
 		if (!l.second.size())
@@ -2343,7 +2343,7 @@ tilemap_loader::set_tile(engine::fvector pPosition, int pLayer, const std::strin
 
 void tilemap_loader::remove_tile(engine::fvector pPosition, int pLayer)
 {
-	for (auto &i = mMap[pLayer].begin(); i != mMap[pLayer].end(); i++)
+	for (auto i = mMap[pLayer].begin(); i != mMap[pLayer].end(); i++)
 	{
 		if (i->second.position == pPosition)
 		{
@@ -2686,7 +2686,7 @@ void save_system::save_player(player_character& pPlayer)
 
 const engine::animation* expression_manager::find_animation(const std::string & mName)
 {
-	auto &find = mAnimations.find(mName);
+	auto find = mAnimations.find(mName);
 	if (find != mAnimations.end())
 	{
 		return find->second;
@@ -2755,7 +2755,7 @@ void save_value_manager::set_value(const std::string & pName, float pVal)
 
 const std::string& save_value_manager::get_value_string(const std::string& pName)
 {
-	auto& val = mValues.find(pName);
+	auto val = mValues.find(pName);
 	if (val == mValues.end())
 		return std::string(); // NEED TO FIX
 	return val->second.val_string;
@@ -2763,7 +2763,7 @@ const std::string& save_value_manager::get_value_string(const std::string& pName
 
 int save_value_manager::get_value_int(const std::string& pName)
 {
-	auto& val = mValues.find(pName);
+	auto val = mValues.find(pName);
 	if (val == mValues.end())
 		return 0;
 	return val->second.val_integer;
@@ -2771,7 +2771,7 @@ int save_value_manager::get_value_int(const std::string& pName)
 
 float save_value_manager::get_value_float(const std::string & pName)
 {
-	auto& val = mValues.find(pName);
+	auto val = mValues.find(pName);
 	if (val == mValues.end())
 		return 0;
 	return val->second.val_floating_point;
@@ -2779,7 +2779,7 @@ float save_value_manager::get_value_float(const std::string & pName)
 
 bool save_value_manager::remove_value(const std::string & pName)
 {
-	auto& val = mValues.find(pName);
+	auto val = mValues.find(pName);
 	if (val == mValues.end())
 		return false;
 	mValues.erase(val);

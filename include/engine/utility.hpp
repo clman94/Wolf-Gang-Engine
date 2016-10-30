@@ -7,6 +7,7 @@
 #include <list>
 #include <cassert>
 #include <type_traits>
+#include <cmath>
 
 namespace util
 {
@@ -41,7 +42,7 @@ public:
 		static_assert(std::is_convertible<T, tracked_owner>::value, "T is not tracked_owner");
 	}
 	~tracking_ptr() {}
-	
+
 	tracking_ptr(T& a)
 	{
 		set(a);
@@ -138,41 +139,40 @@ static std::string safe_string(const char* str)
 	return str;
 }
 
-
 template<typename T>
-static T to_numeral(const std::string& str, size_t *i = nullptr)
+inline T to_numeral(const std::string& str, size_t *i = nullptr)
 {
 	static_assert(std::is_arithmetic<T>::value, "Requires arithmetic type");
 	return 0;
 }
 
 template<>
-static char to_numeral<char>(const std::string& str, size_t *i)
+inline char to_numeral<char>(const std::string& str, size_t *i)
 {
 	return (char)std::stoi(str, i);
 }
 
 template<>
-static int to_numeral<int>(const std::string& str, size_t *i)
+inline int to_numeral<int>(const std::string& str, size_t *i)
 {
 	return std::stoi(str, i);
 }
 
 template<>
-static float to_numeral<float>(const std::string& str, size_t *i)
+inline float to_numeral<float>(const std::string& str, size_t *i)
 {
 	return std::stof(str, i);
 }
 
 template<>
-static double to_numeral<double>(const std::string& str, size_t *i)
+inline double to_numeral<double>(const std::string& str, size_t *i)
 {
 	return std::stod(str, i);
 }
 
 
 template<typename T>
-static T to_numeral(const std::string& str, std::string::iterator& iter)
+T to_numeral(const std::string& str, std::string::iterator& iter)
 {
 	size_t i = 0;
 	T val = to_numeral<T>(std::string(iter, str.end()), &i);
@@ -181,7 +181,7 @@ static T to_numeral(const std::string& str, std::string::iterator& iter)
 }
 
 template<typename T>
-static T to_numeral(const std::string& str, std::string::const_iterator& iter)
+T to_numeral(const std::string& str, std::string::const_iterator& iter)
 {
 	size_t i = 0;
 	T val = to_numeral<T>(std::string(iter, str.end()), &i);

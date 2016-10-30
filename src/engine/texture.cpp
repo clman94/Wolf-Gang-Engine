@@ -27,7 +27,7 @@ texture::add_entry(const std::string& pName, const frect pRect)
 frect
 texture::get_entry(const std::string& pName)
 {
-	auto &find = mAtlas.find(pName);
+	auto find = mAtlas.find(pName);
 	if (find != mAtlas.end())
 		return find->second.rect;
 	return frect();
@@ -35,7 +35,7 @@ texture::get_entry(const std::string& pName)
 
 const animation* texture::get_animation(const std::string & pName)
 {
-	auto &find = mAtlas.find(pName);
+	auto find = mAtlas.find(pName);
 	if (find != mAtlas.end())
 		return &find->second.animation;
 	return nullptr;
