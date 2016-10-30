@@ -220,6 +220,7 @@ T pingpong_index(T v, T end)
 	return ((v / end) % 2) ? end - (v%end) : (v%end);
 }
 
+
 static void error(const std::string& pMessage)
 {
 	std::cout << "Error : " << pMessage << "\n";

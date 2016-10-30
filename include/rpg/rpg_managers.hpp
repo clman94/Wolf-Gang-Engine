@@ -16,7 +16,10 @@ namespace rpg
 class texture_manager
 {
 public:
-	int load_settings(tinyxml2::XMLElement* pEle);
+
+	// Locates all png files in the directory and associates its
+	// atlas of the same name (if it exists)
+	int load_from_directory(const std::string& pPath);
 	engine::texture* get_texture(const std::string& pName);
 	std::vector<std::string> construct_list();
 
@@ -24,10 +27,9 @@ public:
 	struct texture_entry
 	{
 		std::string path, atlas;
-		bool is_loaded, has_atlas;
+		bool is_loaded;
 		engine::texture texture;
 		bool ensure_loaded();
-		
 	};
 	std::map<std::string, texture_entry> mTextures;
 };

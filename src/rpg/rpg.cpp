@@ -1593,12 +1593,13 @@ game::load_game_xml(std::string pPath)
 	std::string scene_path = util::safe_string(ele_scene->Attribute("path"));
 
 	auto ele_textures = ele_root->FirstChildElement("textures");
-	if (!ele_textures)
+	if (!ele_textures ||
+		!ele_textures->Attribute("path"))
 	{
-		util::error("Please specify the texture file");
+		util::error("Please specify the texture directory's path");
 		return 1;
 	}
-	mTexture_manager.load_settings(ele_textures);
+	mTexture_manager.load_from_directory(ele_textures->Attribute("path"));
 
 	mScene.set_texture_manager(mTexture_manager);
 	mScene.load_game_xml(ele_root);
@@ -2707,6 +2708,11 @@ int expression_manager::load_expressions_xml(tinyxml2::XMLElement * pRoot, textu
 			continue;
 		}
 		auto texture = pTexture_manager.get_texture(att_texture);
+		if (!texture)
+		{
+			util::error("Failed to load expression '" + std::string(att_texture) + "'");
+			continue;
+		}
 
 		const char* att_atlas = ele_expression->Attribute("atlas");
 		if (!att_atlas)

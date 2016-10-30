@@ -2,33 +2,36 @@
 
 #include <rpg/rpg_managers.hpp>
 
+#include <filesystem>
+
 using namespace rpg;
 
-int
-texture_manager::load_settings(tinyxml2::XMLElement* pEle)
+int texture_manager::load_from_directory(const std::string& pPath)
 {
-	assert(pEle != nullptr);
+	namespace fs = std::experimental::filesystem;
 
-	using namespace tinyxml2;
-
-	XMLElement* ele_entry = pEle->FirstChildElement();
-	while (ele_entry)
+	if (!fs::exists(pPath))
 	{
-		texture_entry &nentry = mTextures[ele_entry->Name()];
-		nentry.path = ele_entry->Attribute("path");
+		util::error("Invalid textures directory does not exist");
+		return 1;
+	}
 
-		// the optional mAtlas path
-		const char* att_atlas = ele_entry->Attribute("atlas");
-		if (att_atlas)
+	for (auto& i : fs::recursive_directory_iterator(pPath))
+	{
+		auto& texture_path = i.path();
+
+		if (texture_path.extension() == ".png")
 		{
-			nentry.atlas = att_atlas;
-			nentry.has_atlas = true;
-		}
-		else
-			nentry.has_atlas = false;
+			texture_entry& entry = mTextures[texture_path.stem().string()];
+			entry.path = texture_path.string();
+			entry.is_loaded = false;
 
-		nentry.is_loaded = false;
-		ele_entry = ele_entry->NextSiblingElement();
+			// Get atlas path (if it exists)
+			auto atlas_path = texture_path.parent_path();
+			atlas_path /= texture_path.stem().string() + ".xml";
+			if (fs::exists(atlas_path))
+				entry.atlas = atlas_path.string();
+		}
 	}
 	return 0;
 }
@@ -45,9 +48,7 @@ texture_manager::get_texture(const std::string& pName)
 
 	auto &entry = iter->second;
 	if (entry.ensure_loaded())
-	{
 		return &entry.texture;
-	}
 
 	return nullptr;
 }
@@ -61,7 +62,7 @@ bool texture_manager::texture_entry::ensure_loaded()
 			util::error("Failed to load texture.");
 			return false;
 		}
-		if (has_atlas)
+		if (!atlas.empty())
 			texture.load_atlas_xml(atlas);
 		is_loaded = true;
 	}
