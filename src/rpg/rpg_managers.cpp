@@ -3,17 +3,17 @@
 #include <rpg/rpg_managers.hpp>
 
 #ifdef __MINGW32__
-#include <experimental/filesystem>
+#include <boost/filesystem.hpp>
+namespace fs = boost::filesystem;
 #else
 #include <filesystem>
+namespace fs = std::experimental::filesystem
 #endif
 
 using namespace rpg;
 
 int texture_manager::load_from_directory(const std::string& pPath)
 {
-	namespace fs = std::experimental::filesystem;
-
 	if (!fs::exists(pPath))
 	{
 		util::error("Invalid textures directory does not exist");
