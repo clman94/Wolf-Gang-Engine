@@ -346,6 +346,7 @@ bool player_character::is_locked()
 	return mLocked;
 }
 
+
 engine::frect player_character::get_collision(direction pDirection)
 {
 	const engine::fvector pos = get_position();
@@ -1104,6 +1105,46 @@ controls::reset()
 	mControls.fill(false);
 }
 
+void controls::update(engine::renderer & pR)
+{
+	using key_type = engine::renderer::key_type;
+	using control = rpg::controls::control;
+
+	reset();
+
+	if (pR.is_key_pressed(key_type::Z) ||
+		pR.is_key_pressed(key_type::Return))
+		trigger(control::activate);
+
+	if (pR.is_key_down(key_type::Left))
+		trigger(control::left);
+
+	if (pR.is_key_down(key_type::Right))
+		trigger(control::right);
+
+	if (pR.is_key_down(key_type::Up))
+		trigger(control::up);
+
+	if (pR.is_key_down(key_type::Down))
+		trigger(control::down);
+
+	if (pR.is_key_pressed(key_type::Left))
+		trigger(control::select_previous);
+
+	if (pR.is_key_pressed(key_type::Right))
+		trigger(control::select_next);
+
+	if (pR.is_key_down(key_type::LControl))
+	{
+		if (pR.is_key_pressed(key_type::R))
+			trigger(control::reset);
+		if (pR.is_key_pressed(key_type::Num1))
+			trigger(control::editor_1);
+		if (pR.is_key_pressed(key_type::Num2))
+			trigger(control::editor_2);
+	}
+}
+
 // #########
 // angelscript
 // #########
@@ -1608,9 +1649,10 @@ game::load_game_xml(std::string pPath)
 }
 
 void
-game::tick(controls& pControls)
+game::tick()
 {
-	if (pControls.is_triggered(controls::control::reset))
+	mControls.update(*get_renderer());
+	if (mControls.is_triggered(controls::control::reset))
 	{
 		mEditor_manager.close_editor();
 		std::cout << "Reloading scene...\n";
@@ -1618,16 +1660,14 @@ game::tick(controls& pControls)
 		std::cout << "Done\n";
 	}
 
-	mControls = pControls;
-
-	if (pControls.is_triggered(controls::control::editor_1))
+	if (mControls.is_triggered(controls::control::editor_1))
 	{
 		mEditor_manager.close_editor();
 		mEditor_manager.open_tilemap_editor(mScene.get_path());
 		mScene.clean_scene(true);
 	}
 
-	if (pControls.is_triggered(controls::control::editor_2))
+	if (mControls.is_triggered(controls::control::editor_2))
 	{
 		mEditor_manager.close_editor();
 		mEditor_manager.open_collisionbox_editor(mScene.get_path());
@@ -1636,7 +1676,7 @@ game::tick(controls& pControls)
 	if (mEditor_manager.is_editor_open())
 		return;
 
-	mScene.tick(pControls);
+	mScene.tick(mControls);
 
 	mScript.tick();
 	if (mRequest_load)

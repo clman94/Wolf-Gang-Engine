@@ -7,7 +7,7 @@
 namespace fs = boost::filesystem;
 #else
 #include <filesystem>
-namespace fs = std::experimental::filesystem
+namespace fs = std::experimental::filesystem;
 #endif
 
 using namespace rpg;
@@ -68,6 +68,7 @@ bool texture_manager::texture_entry::ensure_loaded()
 		}
 		if (!atlas.empty())
 			texture.load_atlas_xml(atlas);
+
 		is_loaded = true;
 	}
 	return true;

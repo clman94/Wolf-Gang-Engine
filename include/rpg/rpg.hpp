@@ -156,6 +156,8 @@ public:
 	bool is_triggered(control pControl);
 	void reset();
 
+	void update(engine::renderer& pR);
+
 private:
 	std::array<bool, 11> mControls;
 };
@@ -778,7 +780,7 @@ public:
 	// Load the xml game settings
 	int load_game_xml(std::string pPath);
 
-	void tick(controls& pControls);
+	void tick();
 
 protected:
 	void refresh_renderer(engine::renderer& r);

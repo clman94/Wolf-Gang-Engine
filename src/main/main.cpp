@@ -53,7 +53,7 @@ int wolf_gang_engine::run()
 	while (mRunning)
 	{
 		update_events();
-		mGame.tick(mControls);
+		mGame.tick();
 		mRenderer.draw();
 	}
 	return 0;
@@ -67,47 +67,10 @@ void wolf_gang_engine::update_events()
 		return;
 	}
 
-	using key_type = engine::renderer::key_type;
-	using control = rpg::controls::control;
-
-	mControls.reset();
-
-	if (mRenderer.is_key_pressed(key_type::Z) ||
-		mRenderer.is_key_pressed(key_type::Return))
-		mControls.trigger(control::activate);
-
-	if (mRenderer.is_key_down(key_type::Left))
-		mControls.trigger(control::left);
-
-	if (mRenderer.is_key_down(key_type::Right))
-		mControls.trigger(control::right);
-
-	if (mRenderer.is_key_down(key_type::Up))
-		mControls.trigger(control::up);
-
-	if (mRenderer.is_key_down(key_type::Down))
-		mControls.trigger(control::down);
-
-	if (mRenderer.is_key_pressed(key_type::Left))
-		mControls.trigger(control::select_previous);
-
-	if (mRenderer.is_key_pressed(key_type::Right))
-		mControls.trigger(control::select_next);
-
-	if (mRenderer.is_key_down(key_type::LControl))
-	{
-		if (mRenderer.is_key_pressed(key_type::R))
-			mControls.trigger(control::reset);
-		if (mRenderer.is_key_pressed(key_type::Num1))
-			mControls.trigger(control::editor_1);
-		if (mRenderer.is_key_pressed(key_type::Num2))
-			mControls.trigger(control::editor_2);
-	}
-
-	if (mRenderer.is_key_down(key_type::Escape))
+	if (mRenderer.is_key_down(engine::renderer::key_type::Escape))
 		mRunning = false;
 
-	if (mRenderer.is_key_pressed(key_type::T))
+	if (mRenderer.is_key_pressed(engine::renderer::key_type::T))
 		std::cout << "FPS: " << mRenderer.get_fps() << "\n";
 }
 
