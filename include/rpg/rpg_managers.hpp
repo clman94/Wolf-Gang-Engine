@@ -3,6 +3,7 @@
 
 #include <engine/texture.hpp>
 #include <engine/audio.hpp>
+#include <engine/utility.hpp>
 #include "../../tinyxml2/xmlshortcuts.hpp"
 
 #include <string>
@@ -20,7 +21,7 @@ public:
 	// Locates all png files in the directory and associates its
 	// atlas of the same name (if it exists)
 	int load_from_directory(const std::string& pPath);
-	engine::texture* get_texture(const std::string& pName);
+	util::optional_pointer<engine::texture> get_texture(const std::string& pName);
 	std::vector<std::string> construct_list();
 
 public:
@@ -38,7 +39,7 @@ class sound_manager
 {
 public:
 	int load_sounds(tinyxml2::XMLElement* pEle_root);
-	int spawn_sound(const std::string& pName, float pVolume = 100, float pPitch = 1);
+	bool spawn_sound(const std::string& pName, float pVolume = 100, float pPitch = 1);
 	void stop_all();
 
 private:

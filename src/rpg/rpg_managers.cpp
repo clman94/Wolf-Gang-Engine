@@ -40,21 +40,20 @@ int texture_manager::load_from_directory(const std::string& pPath)
 	return 0;
 }
 
-engine::texture*
+util::optional_pointer<engine::texture>
 texture_manager::get_texture(const std::string& pName)
 {
 	auto iter = mTextures.find(pName);
 	if (iter == mTextures.end())
 	{
 		util::error("Texture with name '" + pName + "' does not exist.\n");
-		return nullptr;
+		return{};
 	}
 
 	auto &entry = iter->second;
 	if (entry.ensure_loaded())
 		return &entry.texture;
-
-	return nullptr;
+	return{};
 }
 
 bool texture_manager::texture_entry::ensure_loaded()
@@ -103,7 +102,7 @@ sound_manager::load_sounds(tinyxml2::XMLElement* pEle_root)
 	return 0;
 }
 
-int
+bool
 sound_manager::spawn_sound(const std::string& name, float pVolume, float pPitch)
 {
 	auto buffer = mBuffers.find(name);

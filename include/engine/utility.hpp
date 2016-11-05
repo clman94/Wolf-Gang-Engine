@@ -8,9 +8,143 @@
 #include <cassert>
 #include <type_traits>
 #include <cmath>
-
 namespace util
 {
+
+template<typename T>
+class optional_pointer
+{
+public:
+	optional_pointer()
+	{
+		mPointer = nullptr;
+	}
+
+	optional_pointer(T* pPointer)
+	{
+		mPointer = pPointer;
+	}
+
+	bool has_value() const
+	{
+		return mPointer != nullptr;
+	}
+
+	operator bool() const
+	{
+		return has_value();
+	}
+
+	operator T*() const
+	{
+		assert(has_value());
+		return mPointer;
+	}
+
+	T& operator*() const
+	{
+		assert(has_value());
+		return *mPointer;
+	}
+
+	T* operator->() const
+	{
+		assert(has_value());
+		return mPointer;
+	}
+
+private:
+	T* mPointer;
+};
+
+class in_place_t {};
+static const in_place_t in_place;
+
+template<typename T>
+class optional
+{
+public:
+	optional()
+	{
+		mHas_value = false;
+	}
+
+	~optional()
+	{
+		if (mHas_value &&
+			std::is_destructible<T>::value)
+		{
+			get_data()->~T();
+		}
+	}
+
+	optional(const optional& pOptional)
+	{
+		mHas_value = pOptional.mHas_value;
+		if (mHas_value)
+			get_data()->T(*pOptional->get_data());
+	}
+
+	optional(const T& pValue)
+	{
+		static_assert(std::is_copy_constructible<T>::value, "Type needs to be copy constructable");
+		new(get_data()) T(pValue);
+		mHas_value = true;
+	}
+
+	template<typename...T_ARGS>
+	optional(in_place_t pIn_place, T_ARGS&&... pArgs)
+	{
+		static_assert(std::is_copy_constructible<T>::value, "Type needs to be copy constructable");
+		get_data()->T(std::forward<T_ARGS>(pArgs)...);
+		mHas_value = true;
+	}
+
+	T& operator*()&
+	{
+		assert(mHas_value);
+		return *get_data();
+	}
+
+	const T& operator*() const&
+	{
+		assert(mHas_value);
+		return *get_data();
+	}
+
+	T& operator->()
+	{
+		assert(mHas_value);
+		return *get_data();
+	}
+
+	const T& operator->() const
+	{
+		assert(mHas_value);
+		return *get_data();
+	}
+
+	bool has_value() const
+	{
+		return mHas_value;
+	}
+
+	operator bool() const
+	{
+		return mHas_value;
+	}
+private:
+
+	T* get_data()
+	{
+		return reinterpret_cast<T*>(&mData);
+	}
+
+	// Allocates space for the object WITHOUT any construction
+	char mData[sizeof(T)];
+
+	bool mHas_value;
+};
 
 class tracked_owner
 {

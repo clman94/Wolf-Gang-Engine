@@ -288,12 +288,12 @@ struct door : public collision_box
 class collision_system
 {
 public:
-	collision_box* wall_collision(const engine::frect& r);
-	door*          door_collision(const engine::fvector& pPosition);
-	trigger*       trigger_collision(const engine::fvector& pPosition);
-	trigger*       button_collision(const engine::fvector& pPosition);
+	util::optional<collision_box*> wall_collision(const engine::frect& r);
+	util::optional<door*>          door_collision(const engine::fvector& pPosition);
+	util::optional<trigger*>       trigger_collision(const engine::fvector& pPosition);
+	util::optional<trigger*>       button_collision(const engine::fvector& pPosition);
 
-	engine::fvector get_door_entry(std::string pName);
+	util::optional<engine::fvector> get_door_entry(std::string pName);
 
 	void validate_all(flag_container& pFlags);
 
@@ -400,7 +400,7 @@ private:
 class expression_manager
 {
 public:
-	const engine::animation* find_animation(const std::string& mName);
+	util::optional_pointer<const engine::animation> find_animation(const std::string& mName);
 	int load_expressions_xml(tinyxml2::XMLElement * pRoot, texture_manager& pTexture_manager);
 	
 private:
@@ -645,6 +645,7 @@ class scene :
 public:
 	scene();
 	~scene();
+
 	collision_system& get_collision_system();
 
 	// Cleanups the scene for a new scene.
@@ -652,24 +653,24 @@ public:
 	// so it can be continued in the next scene.
 	void clean_scene(bool pFull = false);
 
-	// Load scene xml file which loads the scene script
+	// Load scene xml file which loads the scene script.
+	// pPath is not a reference so cleanup doesn't cause issues.
 	int load_scene(std::string pPath);
 
 	// Reload the currently loaded scene.
 	int reload_scene();
 
-	const std::string& get_path()
-	{ return mScene_path; }
-
-	const std::string& get_name()
-	{ return mScene_name; }
+	const std::string& get_path();
+	const std::string& get_name();
 
 	void load_script_interface(script_system& pScript);
+
 	void set_texture_manager(texture_manager& pTexture_manager);
+
+	// Loads global scene settings from game.xml file.
 	void load_game_xml(tinyxml2::XMLElement* ele_root);
 
-	player_character& get_player()
-	{ return mPlayer; }
+	player_character& get_player();
 
 	void tick(controls &pControls);
 

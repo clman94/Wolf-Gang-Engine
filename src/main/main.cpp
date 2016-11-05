@@ -37,7 +37,7 @@ int wolf_gang_engine::initualize()
 {
 	engine::clock load_clock;
 
-	mRenderer.initualize(rpg::defs::SCREEN_SIZE, 60);
+	mRenderer.initualize(rpg::defs::SCREEN_SIZE);
 	mRenderer.set_pixel_scale(2);
 
 	mGame.set_renderer(mRenderer);

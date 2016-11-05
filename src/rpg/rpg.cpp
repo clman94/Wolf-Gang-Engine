@@ -49,9 +49,10 @@ void flag_container::clean()
 
 int entity::load_entity(std::string pName, texture_manager & pTexture_manager)
 {
-	mTexture = pTexture_manager.get_texture(pName);
-	if (!mTexture)
+	auto texture = pTexture_manager.get_texture(pName);
+	if (!texture)
 		util::error("Cannot find texture for entity");
+	mTexture = texture;
 	return 0;
 }
 
@@ -188,39 +189,39 @@ character::get_speed()
 // collision_system
 // #########
 
-collision_box* collision_system::wall_collision(const engine::frect& r)
+util::optional<collision_box*> collision_system::wall_collision(const engine::frect& r)
 {
 	for (auto &i : mWalls)
 		if (i.is_valid() && i.get_region().is_intersect(r))
 			return &i;
-	return nullptr;
+	return{};
 }
 
-door* collision_system::door_collision(const engine::fvector& pPosition)
+util::optional<door*> collision_system::door_collision(const engine::fvector& pPosition)
 {
 	for (auto &i : mDoors)
 		if (i.is_valid() && i.get_region().is_intersect(pPosition))
 			return &i;
-	return nullptr;
+	return{};
 }
 
-trigger* collision_system::trigger_collision(const engine::fvector& pPosition)
+util::optional<trigger*> collision_system::trigger_collision(const engine::fvector& pPosition)
 {
 	for (auto &i : mTriggers)
 		if (i.is_valid() && i.get_region().is_intersect(pPosition))
 			return &i;
-	return nullptr;
+	return{};
 }
 
-trigger* collision_system::button_collision(const engine::fvector& pPosition)
+util::optional<trigger*> collision_system::button_collision(const engine::fvector& pPosition)
 {
 	for (auto &i : mButtons)
 		if (i.is_valid() && i.get_region().is_intersect(pPosition))
 			return &i;
-	return nullptr;
+	return{};
 }
 
-engine::fvector collision_system::get_door_entry(std::string pName)
+util::optional<engine::fvector> collision_system::get_door_entry(std::string pName)
 {
 	for (auto& i : mDoors)
 	{
@@ -230,10 +231,10 @@ engine::fvector collision_system::get_door_entry(std::string pName)
 			return region.get_offset() + (region.get_size()*0.5f) + i.offset;
 		}
 	}
-	return{ -1, -1};
+	return{};
 }
 
-void  collision_system::validate_all(flag_container& pFlags)
+void collision_system::validate_all(flag_container& pFlags)
 {
 	for (auto &i : mWalls)    i.validate(pFlags);
 	for (auto &i : mDoors)    i.validate(pFlags);
@@ -360,7 +361,7 @@ engine::frect player_character::get_collision(direction pDirection)
 	case direction::up:    return{ pos - engine::fvector(size.x / 2, hsize.y - 2), { size.x, hsize.y - 2 } };
 	case direction::down:  return{ pos - engine::fvector(size.x / 2, 0),  { size.x, 4 } };
 	}
-	return{ 0, 0 };
+	return{ 0, 0 }; // Probably never reaches this point
 }
 
 void player_character::movement(controls& pControls, collision_system& pCollision_system, float pDelta)
@@ -900,6 +901,16 @@ scene::reload_scene()
 	return load_scene(mScene_path);
 }
 
+const std::string& scene::get_path()
+{
+	return mScene_path;
+}
+
+const std::string& scene::get_name()
+{
+	return mScene_name;
+}
+
 void scene::load_script_interface(script_system& pScript)
 {
 	mNarrative.load_script_interface(pScript);
@@ -961,6 +972,11 @@ void scene::load_game_xml(tinyxml2::XMLElement * ele_root)
 		assert(mTexture_manager != nullptr);
 		mNarrative.load_narrative_xml(ele_narrative, *mTexture_manager);
 	}
+}
+
+player_character& scene::get_player()
+{
+	return mPlayer;
 }
 
 void scene::tick(controls &pControls)
@@ -1043,36 +1059,38 @@ void rpg::scene::update_focus()
 
 void scene::update_collision_interaction(controls & pControls)
 {
+	auto player_position = mPlayer.get_position();
+
 	{
-		auto pos = mPlayer.get_position();
-		auto trigger = mCollision_system.trigger_collision(pos);
+		auto trigger = mCollision_system.trigger_collision(player_position);
 		if (trigger)
 		{
 			if (trigger->get_function().call())
-				trigger->get_function().set_arg(0, &pos);
+				trigger->get_function().set_arg(0, &player_position);
 		}
 	}
 
 	{
-		auto pos = mPlayer.get_position();
-		auto door = mCollision_system.door_collision(pos);
+		auto door = mCollision_system.door_collision(player_position);
 		if (door)
 		{
 			std::string destination = door->destination;
 			load_scene(door->scene_path);
-			auto nposition = mCollision_system.get_door_entry(destination);
-			mPlayer.set_position(nposition);
+			auto new_position = mCollision_system.get_door_entry(destination);
+			if (!new_position)
+				util::error("Destination door '" + destination + "' does not exist");
+			else
+				mPlayer.set_position(*new_position);
 		}
 	}
 
 	if (pControls.is_triggered(controls::control::activate))
 	{
-		auto pos = mPlayer.get_activation_point();
-		auto button = mCollision_system.button_collision(pos);
+		auto button = mCollision_system.button_collision(player_position);
 		if (button)
 		{
 			if (button->get_function().call())
-				button->get_function().set_arg(0, &pos);
+				button->get_function().set_arg(0, &player_position);
 		}
 	}
 }
@@ -2724,14 +2742,14 @@ void save_system::save_player(player_character& pPlayer)
 // expression_manager
 // ##########
 
-const engine::animation* expression_manager::find_animation(const std::string & mName)
+util::optional_pointer<const engine::animation> expression_manager::find_animation(const std::string & mName)
 {
 	auto find = mAnimations.find(mName);
 	if (find != mAnimations.end())
 	{
 		return find->second;
 	}
-	return nullptr;
+	return{};
 }
 
 int expression_manager::load_expressions_xml(tinyxml2::XMLElement * pRoot, texture_manager & pTexture_manager)
@@ -2892,7 +2910,7 @@ pathfinding_system::pathfinding_system()
 	mPathfinder.set_collision_callback(
 		[&](engine::fvector& pos) ->bool
 	{
-		return mCollision_system->wall_collision({ (pos * 32), { 31, 31 } }) != nullptr;
+		return mCollision_system->wall_collision({ (pos * 32), { 31, 31 } }).has_value();
 	});
 }
 
