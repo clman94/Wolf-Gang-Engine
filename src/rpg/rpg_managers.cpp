@@ -16,7 +16,7 @@ int texture_manager::load_from_directory(const std::string& pPath)
 {
 	if (!fs::exists(pPath))
 	{
-		util::error("Invalid textures directory does not exist");
+		util::error("Textures directory does not exist");
 		return 1;
 	}
 
@@ -35,6 +35,8 @@ int texture_manager::load_from_directory(const std::string& pPath)
 			atlas_path /= texture_path.stem().string() + ".xml";
 			if (fs::exists(atlas_path))
 				entry.atlas = atlas_path.string();
+
+			// TODO: Preload SMALL textures
 		}
 	}
 	return 0;
@@ -83,22 +85,38 @@ texture_manager::construct_list()
 	return std::move(retval);
 }
 
-int
-sound_manager::load_sounds(tinyxml2::XMLElement* pEle_root)
+int sound_manager::load_from_directory(const std::string& pPath)
 {
-	auto ele_sound = pEle_root->FirstChildElement();
-	while (ele_sound)
+	if (!fs::exists(pPath))
 	{
-		std::string name = ele_sound->Name();
-
-		if (auto att_path = ele_sound->Attribute("path"))
-			mBuffers[name].load(att_path);
-		else
-			util::error("Please provide a path to sound");
-
-		ele_sound = ele_sound->NextSiblingElement();
+		util::error("Sound directory does not exist");
+		return 1;
 	}
 
+	// File with these extensions will be used
+	const std::set<std::string> extensions =
+	{
+		".ogg",
+		".flac",
+	};
+
+	for (auto& i : fs::recursive_directory_iterator(pPath))
+	{
+		auto& sound_path = i.path();
+		if (extensions.find(sound_path.extension().string()) != extensions.end())
+		{
+			if (fs::file_size(sound_path) >= 1049000)
+			{
+				util::warning("It is highly recommended to have sound effects less than 1 MB");
+			}
+
+			auto& entry = mBuffers[sound_path.stem().string()];
+			if (!entry.load(sound_path.string()))
+			{
+				util::error("Failed to load sound file '" + sound_path.stem().string() + "'");
+			}
+		}
+	}
 	return 0;
 }
 

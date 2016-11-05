@@ -89,21 +89,51 @@ public:
 
 class timer
 {
-	std::chrono::time_point<std::chrono::system_clock>
-		start_point;
-	time_t seconds;
 public:
-	void start_timer(float sec)
+	void start(float pSeconds)
 	{
-		seconds = sec;
-		start_point = std::chrono::system_clock::now();
+		if (pSeconds <= 0)
+			throw "Bad time";
+		mSeconds = pSeconds;
+		mStart_point = std::chrono::system_clock::now();
 	}
 
 	bool is_reached()
 	{
-		std::chrono::duration<time_t> time = std::chrono::system_clock::now() - start_point;
-		return time.count() >= seconds;
+		std::chrono::duration<time_t> time = std::chrono::system_clock::now() - mStart_point;
+		return time.count() >= mSeconds;
 	}
+
+private:
+	std::chrono::time_point<std::chrono::system_clock>
+		mStart_point;
+	time_t mSeconds;
+};
+
+class counter_clock
+{
+public:
+	void start()
+	{
+		mStart_point = std::chrono::system_clock::now();
+	}
+
+	void set_interval(float pInterval)
+	{
+		if (pInterval <= 0)
+			throw "Bad time";
+		mInterval = pInterval;
+	}
+
+	size_t get_count()
+	{
+		std::chrono::duration<time_t> time = std::chrono::system_clock::now() - mStart_point;
+		return static_cast<size_t>(std::floor(time.count() / mInterval));
+	}
+private:
+	std::chrono::time_point<std::chrono::system_clock>
+		mStart_point;
+	time_t mInterval;
 };
 
 class frame_clock

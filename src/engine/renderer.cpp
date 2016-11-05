@@ -119,8 +119,7 @@ renderer::draw_objects()
 	return 0;
 }
 
-int
-renderer::draw()
+int renderer::draw()
 {
 	mFrame_clock.update();
 	if (mRequest_resort)
@@ -134,6 +133,11 @@ renderer::draw()
 	if (mTgui) mTgui->draw();
 	mWindow.display();
 	return 0;
+}
+
+int renderer::draw(render_object& pObject)
+{
+	return pObject.draw(*this);
 }
 
 void

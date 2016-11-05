@@ -444,20 +444,20 @@ entity_manager::entity_manager()
 	add_child(mCharacters);
 }
 
-character* entity_manager::find_character(const std::string& pName)
+util::optional_pointer<character> entity_manager::find_character(const std::string& pName)
 {
 	for (auto &i : mCharacters)
 		if (i.get_name() == pName)
 			return &i;
-	return nullptr;
+	return{};
 }
 
-entity* entity_manager::find_entity(const std::string& pName)
+util::optional_pointer<entity> entity_manager::find_entity(const std::string& pName)
 {
 	for (auto &i : mEntities)
 		if (i.get_name() == pName)
 			return &i;
-	return nullptr;
+	return{};
 }
 
 void entity_manager::clean()
@@ -466,53 +466,9 @@ void entity_manager::clean()
 	mEntities.clear();
 }
 
-int entity_manager::load_entities(tinyxml2::XMLElement * e)
-{
-	assert(mTexture_manager != nullptr);
-	auto ele = e->FirstChildElement();
-	while (ele)
-	{
-		std::string name = ele->Name();
-		std::string att_texture = ele->Attribute("texture");
-		engine::fvector pos = util::shortcuts::vector_float_att(ele)*32;
-
-		auto& ne = mEntities.create_item();
-		ne.load_entity(att_texture, *mTexture_manager);
-		ne.set_position(pos);
-		get_renderer()->add_object(ne);
-
-		ele = ele->NextSiblingElement();
-	}
-	return 0;
-}
-
 void entity_manager::set_texture_manager(texture_manager& pTexture_manager)
 {
 	mTexture_manager = &pTexture_manager;
-}
-
-int entity_manager::load_characters(tinyxml2::XMLElement * e)
-{
-	assert(mTexture_manager != nullptr);
-	auto ele = e->FirstChildElement();
-	while (ele)
-	{
-		std::string name = ele->Name();
-		std::string att_texture = ele->Attribute("texture");
-		engine::fvector pos = util::shortcuts::vector_float_att(ele);
-
-		auto& ne = mCharacters.create_item();
-		ne.load_entity(att_texture, *mTexture_manager);
-
-		std::string att_cycle = util::safe_string(ele->Attribute("cycle"));
-		ne.set_cycle(att_cycle.empty() ? "default" : att_cycle);
-
-		ne.set_position(pos * 32);
-		get_renderer()->add_object(ne);
-
-		ele = ele->NextSiblingElement();
-	}
-	return 0;
 }
 
 void entity_manager::register_entity_type(script_system & pScript)
@@ -962,9 +918,15 @@ void scene::load_game_xml(tinyxml2::XMLElement * ele_root)
 	mPlayer.load_entity(att_texture, *mTexture_manager);
 	mPlayer.set_cycle(character::e_cycle::def);
 
-	if (auto ele_sounds = ele_root->FirstChildElement("sounds"))
+	auto ele_sounds = ele_root->FirstChildElement("sounds");
+	if (ele_sounds)
 	{
-		mSound_FX.load_sounds(ele_sounds);
+		if (!ele_sounds->Attribute("path"))
+		{
+			util::error("Please specify path of sounds");
+			return;
+		}
+		mSound_FX.load_from_directory(ele_sounds->Attribute("path"));
 	}
 
 	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
@@ -1226,7 +1188,7 @@ void script_system::script_create_thread_noargs(AS::asIScriptFunction * func)
 void script_system::load_script_interface()
 {
 	add_function("int rand()", asFUNCTION(std::rand));
-	add_function("void _timer_start(float)", asMETHOD(engine::timer, start_timer), &mTimer);
+	add_function("void _timer_start(float)", asMETHOD(engine::timer, start), &mTimer);
 	add_function("bool _timer_reached()", asMETHOD(engine::timer, is_reached), &mTimer);
 
 	add_function("void create_thread(coroutine @+)", asMETHOD(script_system, script_create_thread_noargs), this);
@@ -1622,7 +1584,6 @@ game::load_script_interface()
 
 	mFlags.load_script_interface(mScript);
 	mScene.load_script_interface(mScript);
-	mValue_manager.load_script_interface(mScript);
 }
 
 float game::get_delta()
@@ -1804,16 +1765,11 @@ narrative_dialog::load_box(tinyxml2::XMLElement* pEle, texture_manager& pTexture
 int
 narrative_dialog::load_font(tinyxml2::XMLElement* pEle)
 {
-	auto ele_font = pEle->FirstChildElement("font");
+	mFormat.load_settings(pEle);
 
-	std::string att_font_path = ele_font->Attribute("path");
+	mText.apply_format(mFormat);
+	mFormat.apply_to(mSelection);
 
-	mFont.load(att_font_path);
-	mText.set_font(mFont);
-	mText.set_character_size(ele_font->IntAttribute("size"));
-	mText.set_scale(ele_font->FloatAttribute("scale"));
-
-	mSelection.copy_format(mText);
 	return 0;
 }
 
@@ -1833,16 +1789,9 @@ void narrative_dialog::reset_positions()
 	mText.set_position({ 10, 10 });
 }
 
-bool narrative_dialog::script_has_displayed_new_character()
-{
-	return mNew_character;
-}
-
 narrative_dialog::narrative_dialog()
 {
-	mRevealing = false;
 	hide_box();
-	mInterval = defs::DEFAULT_DIALOG_SPEED;
 
 	mBox.set_depth(defs::NARRATIVE_BOX_DEPTH);
 
@@ -1881,46 +1830,6 @@ narrative_dialog::set_box_position(position pPosition)
 	}
 	}
 }
-
-bool
-narrative_dialog::is_revealing()
-{
-	return mRevealing;
-}
-
-void narrative_dialog::reveal_text(const std::string& pText, bool pAppend)
-{
-	mTimer.restart();
-	mRevealing = true;
-
-	if (pAppend)
-	{
-		mFull_text += pText;
-	}
-	else
-	{
-		mFull_text = pText;
-		mText.set_text("");
-		mCount = 0;
-	}
-}
-
-void narrative_dialog::instant_text(std::string pText, bool pAppend)
-{
-	mRevealing = false;
-	if (pAppend)
-		mFull_text += pText;
-	else
-		mFull_text = pText;
-	mText.set_text(mFull_text);
-}
-
-void narrative_dialog::skip_reveal()
-{
-	if (mRevealing)
-		mCount = mFull_text.length();
-}
-
 void narrative_dialog::show_box()
 {
 	mText.set_visible(true);
@@ -1929,9 +1838,7 @@ void narrative_dialog::show_box()
 
 void narrative_dialog::hide_box()
 {
-	mRevealing = false;
 	mText.set_visible(false);
-	mText.set_text("");
 	mBox.set_visible(false);
 }
 
@@ -1941,17 +1848,12 @@ void narrative_dialog::end_narrative()
 	mSelection.set_visible(false);
 	mExpression.set_visible(false);
 	reset_positions();
-	set_interval(defs::DEFAULT_DIALOG_SPEED);
+	mText.set_interval(defs::DEFAULT_DIALOG_SPEED);
 }
 
 bool narrative_dialog::is_box_open()
 {
 	return mBox.is_visible();
-}
-
-void narrative_dialog::set_interval(float ms)
-{
-	mInterval = ms;
 }
 
 void narrative_dialog::show_selection()
@@ -1998,15 +1900,17 @@ int narrative_dialog::load_narrative_xml(tinyxml2::XMLElement* pEle, texture_man
 
 void narrative_dialog::load_script_interface(script_system & pScript)
 {
-	pScript.add_function("void _say(const string &in, bool)", asMETHOD(narrative_dialog, reveal_text), this);
-	pScript.add_function("bool _is_revealing()", asMETHOD(narrative_dialog, is_revealing), this);
-	pScript.add_function("void _skip_reveal()", asMETHOD(narrative_dialog, skip_reveal), this);
+	pScript.add_function("void _say(const string &in, bool)", asMETHOD(dialog_text_node, reveal), &mText);
+	pScript.add_function("bool _is_revealing()", asMETHOD(dialog_text_node, is_revealing), &mText);
+	pScript.add_function("void _skip_reveal()", asMETHOD(dialog_text_node, skip_reveal), &mText);
+	pScript.add_function("void _set_interval(float)", asMETHOD(dialog_text_node, set_interval), &mText);
+	pScript.add_function("bool _has_displayed_new_character()", asMETHOD(dialog_text_node, has_revealed_character), &mText);
+
 	pScript.add_function("void _showbox()", asMETHOD(narrative_dialog, show_box), this);
 	pScript.add_function("void _hidebox()", asMETHOD(narrative_dialog, hide_box), this);
 	pScript.add_function("void _end_narrative()", asMETHOD(narrative_dialog, end_narrative), this);
 	pScript.add_function("void _show_selection()", asMETHOD(narrative_dialog, show_selection), this);
 	pScript.add_function("void _hide_selection()", asMETHOD(narrative_dialog, hide_selection), this);
-	pScript.add_function("void _set_interval(float)", asMETHOD(narrative_dialog, set_interval), this);
 	pScript.add_function("void _set_box_position(int)", asMETHOD(narrative_dialog, set_box_position), this);
 	pScript.add_function("void _set_selection(const string &in)", asMETHOD(narrative_dialog, set_selection), this);
 
@@ -2014,31 +1918,10 @@ void narrative_dialog::load_script_interface(script_system & pScript)
 	pScript.add_function("void _start_expression_animation()", asMETHOD(engine::animation_node, start), &mExpression);
 	pScript.add_function("void _stop_expression_animation()", asMETHOD(engine::animation_node, stop), &mExpression);
 
-	pScript.add_function("bool _has_displayed_new_character()", asMETHOD(narrative_dialog, script_has_displayed_new_character), this);
 }
 
 int narrative_dialog::draw(engine::renderer& pR)
 {
-	mNew_character = false;
-
-	if (!mRevealing) return 0;
-
-	float time = mTimer.get_elapse().ms();
-	if (time >= mInterval)
-	{
-		mCount += static_cast<size_t>(time / mInterval);
-		mCount = util::clamp<size_t>(mCount, 0, mFull_text.size());
-
-		std::string display(mFull_text.begin(), mFull_text.begin() + mCount);
-		mText.set_text(display);
-
-		if (mCount >= mFull_text.size())
-			mRevealing = false;
-
-		mNew_character = true;
-
-		mTimer.restart();
-	}
 	return 0;
 }
 
@@ -2627,7 +2510,9 @@ void tilemap_display::tile::set_animation(const engine::animation* pAnimation)
 {
 	mAnimation = pAnimation;
 	mFrame = 0;
-	mTimer.start_timer(pAnimation->get_interval()*0.001f);
+
+	if (pAnimation->get_frame_count() > 0) // Start timer if this is an animation
+		mTimer.start(pAnimation->get_interval()*0.001f);
 }
 
 void tilemap_display::tile::update_animation()
@@ -2637,7 +2522,7 @@ void tilemap_display::tile::update_animation()
 	if (mTimer.is_reached())
 	{
 		++mFrame;
-		mTimer.start_timer(mAnimation->get_interval(mFrame)*0.001f);
+		mTimer.start(mAnimation->get_interval(mFrame)*0.001f);
 		mRef.set_texture_rect(mAnimation->get_frame_at(mFrame), 0);
 	}
 }
@@ -2787,77 +2672,6 @@ int expression_manager::load_expressions_xml(tinyxml2::XMLElement * pRoot, textu
 }
 
 // ##########
-// save_value_manager
-// ##########
-
-void save_value_manager::set_value(const std::string & pName, const std::string & pVal)
-{
-	auto& val = mValues[pName];
-	val.type = value_type::string;
-	val.val_string = pVal;
-}
-
-void save_value_manager::set_value(const std::string & pName, int pVal)
-{
-	auto& val = mValues[pName];
-	val.type = value_type::integer;
-	val.val_integer = pVal;
-}
-
-void save_value_manager::set_value(const std::string & pName, float pVal)
-{
-	auto& val = mValues[pName];
-	val.type = value_type::floating_point;
-	val.val_floating_point = pVal;
-}
-
-const std::string& save_value_manager::get_value_string(const std::string& pName)
-{
-	auto val = mValues.find(pName);
-	if (val == mValues.end())
-		return std::string(); // NEED TO FIX
-	return val->second.val_string;
-}
-
-int save_value_manager::get_value_int(const std::string& pName)
-{
-	auto val = mValues.find(pName);
-	if (val == mValues.end())
-		return 0;
-	return val->second.val_integer;
-}
-
-float save_value_manager::get_value_float(const std::string & pName)
-{
-	auto val = mValues.find(pName);
-	if (val == mValues.end())
-		return 0;
-	return val->second.val_floating_point;
-}
-
-bool save_value_manager::remove_value(const std::string & pName)
-{
-	auto val = mValues.find(pName);
-	if (val == mValues.end())
-		return false;
-	mValues.erase(val);
-	return true;
-}
-
-void save_value_manager::load_script_interface(script_system& pScript)
-{
-	pScript.add_function("void _set_value(const string &in, const string&in)", asMETHODPR(save_value_manager, set_value, (const std::string&, const std::string&), void), this);
-	pScript.add_function("void _set_value(const string &in, int)", asMETHODPR(save_value_manager, set_value, (const std::string&, int), void), this);
-	pScript.add_function("void _set_value(const string &in, float)", asMETHODPR(save_value_manager, set_value, (const std::string&, float), void), this);
-
-	pScript.add_function("bool _remove_value(const string &in)", asMETHODPR(save_value_manager, remove_value, (const std::string&), bool), this);
-
-	pScript.add_function("const string& _get_value_string(const string &in)", asMETHOD(save_value_manager, get_value_string), this);
-	pScript.add_function("const string& _get_value_int(const string &in)", asMETHOD(save_value_manager, get_value_int), this);
-	pScript.add_function("const string& _get_value_float(const string &in)", asMETHOD(save_value_manager, get_value_float), this);
-}
-
-// ##########
 // colored_overlay
 // ##########
 
@@ -2950,4 +2764,142 @@ bool pathfinding_system::script_find_path_partial(AS::CScriptArray * pScript_pat
 		pScript_path->InsertLast(&i);
 
 	return retval;
+}
+
+int text_format_profile::load_settings(tinyxml2::XMLElement * pEle)
+{
+	auto ele_font = pEle->FirstChildElement("font");
+
+	std::string att_path = util::safe_string(ele_font->Attribute("path"));
+	if (att_path.empty())
+	{
+		util::error("Please specify font path");
+		return 1;
+	}
+	mFont.load(att_path);
+
+	auto att_size = ele_font->IntAttribute("size");
+	if (att_size > 0)
+		mCharacter_size = att_size;
+	else
+		mCharacter_size = 9;
+
+	auto att_scale = ele_font->FloatAttribute("scale");
+	if (att_scale > 0)
+		mScale = att_scale;
+	else
+		mScale = 1;
+
+	return 0;
+}
+
+int text_format_profile::get_character_size() const
+{
+	return mCharacter_size;
+}
+
+float text_format_profile::get_scale() const
+{
+	return mScale;
+}
+
+const engine::font& text_format_profile::get_font() const
+{
+	return mFont;
+}
+
+void text_format_profile::apply_to(engine::text_node& pText) const
+{
+	pText.set_font(mFont);
+	pText.set_character_size(mCharacter_size);
+	pText.set_scale(mScale);
+	//pText.set_color(mColor);
+}
+
+dialog_text_node::dialog_text_node()
+{
+	set_interval(25);
+	add_child(mText);
+}
+
+void dialog_text_node::clear()
+{
+	mRevealing = false;
+	mText.set_text("");
+}
+
+void dialog_text_node::apply_format(const text_format_profile & pFormat)
+{
+	pFormat.apply_to(mText);
+}
+
+int dialog_text_node::draw(engine::renderer & pR)
+{
+	mNew_character = false;
+	if (mRevealing)
+		do_reveal();
+
+	mText.draw(pR);
+	return 0;
+}
+
+bool dialog_text_node::is_revealing()
+{
+	return mRevealing;
+}
+
+void dialog_text_node::reveal(const std::string & pText, bool pAppend)
+{
+	if (pText.empty())
+		return;
+
+	mTimer.start();
+	mRevealing = true;
+
+	if (pAppend)
+	{
+		mFull_text += pText;
+	}
+	else
+	{
+		mFull_text = pText;
+		mText.set_text("");
+		mCount = 0;
+	}
+}
+
+void dialog_text_node::skip_reveal()
+{
+	if (mRevealing)
+		mCount = mFull_text.length();
+}
+
+void dialog_text_node::set_interval(float pMilliseconds)
+{
+	mTimer.set_interval(pMilliseconds*0.001f);
+}
+
+bool dialog_text_node::has_revealed_character()
+{
+	return mNew_character;
+}
+
+void dialog_text_node::do_reveal()
+{
+	size_t iterations = mTimer.get_count();
+	if (iterations > 0)
+	{
+		mCount += iterations;
+		mCount = util::clamp<size_t>(mCount, 0, mFull_text.size());
+
+		std::string display(mFull_text.begin(), mFull_text.begin() + mCount);
+		mText.set_text(display);
+
+		if (mCount == mFull_text.size())
+			mRevealing = false;
+
+		mNew_character = true;
+
+		mTimer.start();
+	}
 }

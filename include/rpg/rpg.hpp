@@ -162,7 +162,7 @@ private:
 	std::array<bool, 11> mControls;
 };
 
-// The basic dynamic object in game.
+// The basic dynamic sprite object in game.
 class entity :
 	public engine::render_object,
 	public engine::node,
@@ -407,6 +407,58 @@ private:
 	std::map<std::string, const engine::animation*> mAnimations;
 };
 
+// 
+class text_format_profile
+{
+public:
+	// Load xml settings:
+	// <font path="" size="" scale=""/>
+	int load_settings(tinyxml2::XMLElement* pEle);
+	int get_character_size() const;
+	float get_scale() const;
+	const engine::font& get_font() const;
+	void apply_to(engine::text_node& pText) const;
+
+private:
+	engine::font mFont;
+	int mCharacter_size;
+	float mScale;
+	//engine::color mColor; // TODO: Implement color
+};
+
+class dialog_text_node :
+	public engine::node,
+	public engine::render_object
+{
+public:
+	dialog_text_node();
+
+	void clear();
+
+	void apply_format(const text_format_profile& pFormat);
+	int draw(engine::renderer& pR);
+
+	bool is_revealing();
+	void reveal(const std::string& pText, bool pAppend);
+	void skip_reveal();
+
+	void set_interval(float pMilliseconds);
+
+	// Returns whether or not the text has revealed a
+	// new character in this frame
+	bool has_revealed_character();
+
+private:
+	engine::text_node mText;
+	bool        mNew_character;
+	bool        mRevealing;
+	size_t      mCount;
+	std::string mFull_text;
+	engine::counter_clock mTimer;
+
+	void do_reveal();
+};
+
 // The dialog object with text reveal
 // TODO: Make more flexible with the ability to only have the text displayed,
 //       move the text to any location, (possibly) automatically wrap text
@@ -425,17 +477,6 @@ public:
 
 	void set_box_position(position pPosition);
 
-	bool is_revealing();
-
-	// Set the text to begin revealing
-	void reveal_text(const std::string& pText, bool pAppend = false);
-
-	// Set text without reveal
-	void instant_text(std::string pText, bool pAppend = false);
-
-	// Finish reveal before it is finished
-	void skip_reveal();
-
 	// Show the dialog box
 	void show_box();
 
@@ -446,12 +487,6 @@ public:
 	void end_narrative();
 
 	bool is_box_open();
-
-	//void set_style_profile(const std::string& path);
-
-	// Set duration between each character during reveal
-	void set_interval(float ms);
-
 
 	// The selection is just a simple text object, nothing really special.
 	// TODO: Make special
@@ -473,27 +508,18 @@ protected:
 private:
 	engine::sprite_node    mBox;
 	engine::sprite_node    mCursor;
-	engine::text_node      mText;
+	dialog_text_node       mText;
 	engine::text_node      mSelection;
-	engine::font           mFont;
-	engine::clock          mTimer;
+	text_format_profile    mFormat;
 
 	expression_manager     mExpression_manager;
 	engine::animation_node mExpression;
-
-	bool        mNew_character;
-	bool        mRevealing;
-	size_t      mCount;
-	std::string mFull_text;
-	float       mInterval;
 
 	int load_box(tinyxml2::XMLElement* pEle, texture_manager& pTexture_manager);
 	int load_font(tinyxml2::XMLElement* pEle);
 
 	void show_expression();
 	void reset_positions();
-
-	bool script_has_displayed_new_character();
 };
 
 // The main player character
@@ -529,7 +555,6 @@ private:
 	void set_move_direction(engine::fvector pVec);
 };
 
-// Manager of entities in world
 class entity_manager :
 	public engine::render_proxy,
 	public engine::node
@@ -537,18 +562,13 @@ class entity_manager :
 public:
 	entity_manager();
 
-	character* find_character(const std::string& pName);
-	entity*    find_entity(const std::string& pName);
+	util::optional_pointer<character> find_character(const std::string& pName);
+	util::optional_pointer<entity>    find_entity(const std::string& pName);
 
 	void clean();
 
 	void load_script_interface(script_system& pScript);
-
 	void set_texture_manager(texture_manager& pTexture_manager);
-
-	int load_entities(tinyxml2::XMLElement* e);
-	int load_characters(tinyxml2::XMLElement* e);
-
 	bool is_character(entity* pEntity);
 
 private:
@@ -712,40 +732,6 @@ private:
 	void update_collision_interaction(controls &pControls);
 };
 
-// TODO: Think of something better
-class save_value_manager
-{
-public:
-	void set_value(const std::string& pName, const std::string& pVal);
-	void set_value(const std::string& pName, int pVal);
-	void set_value(const std::string& pName, float pVal);
-
-	const std::string& get_value_string(const std::string& pName);
-	int                get_value_int(const std::string& pName);
-	float              get_value_float(const std::string& pName);
-
-	bool remove_value(const std::string& pName);
-
-	void load_script_interface(script_system& pScript);
-
-private:
-	enum struct value_type
-	{
-		string,
-		floating_point,
-		integer
-	};
-
-	struct data_value
-	{
-		std::string val_string;
-		float val_floating_point;
-		int val_integer;
-		value_type type;
-	};
-	std::map<std::string, data_value> mValues;
-};
-
 // A basic save system.
 // Saves player position, flags, and current scene path.
 class save_system
@@ -793,8 +779,6 @@ private:
 	script_system    mScript;
 	controls         mControls;
 	size_t           mSlot;
-
-	save_value_manager mValue_manager;
 
 	bool        mRequest_load;
 	std::string mNew_scene_path;

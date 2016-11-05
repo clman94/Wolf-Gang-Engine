@@ -283,7 +283,7 @@ inline T to_numeral(const std::string& str, size_t *i = nullptr)
 template<>
 inline char to_numeral<char>(const std::string& str, size_t *i)
 {
-	return (char)std::stoi(str, i);
+	return static_cast<char>(std::stoi(str, i));
 }
 
 template<>
@@ -360,6 +360,10 @@ static void error(const std::string& pMessage)
 	std::cout << "Error : " << pMessage << "\n";
 }
 
+static void warning(const std::string& pMessage)
+{
+	std::cout << "Warning : " << pMessage << "\n";
+}
 
 }
 

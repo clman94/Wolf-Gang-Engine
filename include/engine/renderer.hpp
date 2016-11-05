@@ -37,7 +37,7 @@ struct color
 		: r(_r), g(_g), b(_b), a(_a)
 	{}
 #ifdef SFML_COLOR_HPP
-	inline operator sf::Color() const
+	operator sf::Color() const
 	{
 		return{ r, g, b, a };
 	}
@@ -74,7 +74,8 @@ public:
 
 	int initualize(ivector pSize, int pFps = 0);
 	int draw();
-	
+	int draw(render_object& pObject);
+
 	int close();
 	int add_object(render_object& pObject);
 	int remove_object(render_object& pObject);
@@ -353,31 +354,8 @@ class font
 {
 	sf::Font sf_font;
 public:
-	int load(std::string pPath);
+	int load(const std::string& pPath);
 	friend class text_node;
-};
-
-// TODO
-class text_format
-{
-public:
-	void set_color(const color& pColor)
-	{ mColor = pColor; }
-
-	void set_scale(float pScale)
-	{ mScale = pScale; }
-
-	void set_font(font &pFont)
-	{ mFont = &pFont; }
-
-	void set_character_size(unsigned int pPixels)
-	{ mCharacter_size = pPixels; }
-
-public:
-	float mScale;
-	color mColor;
-	font *mFont;
-	unsigned int mCharacter_size;
 };
 
 class text_node :
@@ -386,7 +364,7 @@ class text_node :
 {
 public:
 	text_node();
-	void set_font(font& pFont);
+	void set_font(const font& pFont);
 	void set_text(const std::string& pText);
 	void append_text(const std::string& pText);
 	std::string get_text();
@@ -405,20 +383,6 @@ private:
 	engine::fvector mOffset;
 
 	void update_offset();
-};
-
-class rich_text_node :
-	public render_object,
-	public node
-{
-	struct text_block
-	{
-		sf::Text sfml_text;
-		text_format format;
-	};
-	std::list<text_block> mText_blocks;
-public:
-	// TODO
 };
 
 class animation_node :

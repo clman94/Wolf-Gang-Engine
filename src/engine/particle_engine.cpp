@@ -16,7 +16,7 @@ void particle_emitter::spawn(size_t pCount)
 			mParticles.emplace_back();
 			nparticle = &mParticles.back();
 		}
-		nparticle->life.start_timer(mLife);
+		nparticle->life.start(mLife);
 		nparticle->velocity = mVelocity;
 		nparticle->valid = true;
 

@@ -11,9 +11,9 @@ class sound_buffer
 {
 	sf::SoundBuffer buf;
 public:
-	int load(const std::string path)
+	bool load(const std::string path)
 	{
-		return !buf.loadFromFile(path);
+		return buf.loadFromFile(path);
 	}
 	friend class sound;
 };

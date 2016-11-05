@@ -10,13 +10,13 @@ text_node::text_node()
 }
 
 int
-font::load(std::string pPath)
+font::load(const std::string& pPath)
 {
 	return sf_font.loadFromFile(pPath);
 }
 
 void
-text_node::set_font(font& pFont)
+text_node::set_font(const font& pFont)
 {
 	mSfml_text.setFont(pFont.sf_font);
 	update_offset();
