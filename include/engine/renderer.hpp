@@ -396,11 +396,11 @@ public:
 	void set_animation(const animation& pAnimation, bool pSwap = false);
 	void set_texture(texture& pTexture);
 
-	engine::fvector get_size();
+	engine::fvector get_size() const;
 
 	int tick();
 
-	bool is_playing();
+	bool is_playing() const;
 	void start();
 	void pause();
 	void stop();

@@ -158,7 +158,7 @@ animation_node::set_texture(texture& pTexture)
 	mSprite.set_texture(pTexture);
 }
 
-engine::fvector animation_node::get_size()
+engine::fvector animation_node::get_size() const
 {
 	if (!mAnimation)
 		return{ 0,0 };
@@ -183,7 +183,7 @@ animation_node::tick()
 }
 
 bool
-animation_node::is_playing()
+animation_node::is_playing() const
 {
 	return mPlaying;
 }

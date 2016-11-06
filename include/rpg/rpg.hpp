@@ -183,9 +183,10 @@ public:
 	void set_color(engine::color pColor);
 	void set_rotation(float pRotation);
 
-	engine::fvector get_size()
-	{ return mSprite.get_size(); }
-	bool is_playing();
+	engine::fvector get_size() const;
+	bool is_playing() const;
+
+
 
 private:
 	engine::texture*         mTexture;
@@ -288,10 +289,10 @@ struct door : public collision_box
 class collision_system
 {
 public:
-	util::optional<collision_box*> wall_collision(const engine::frect& r);
-	util::optional<door*>          door_collision(const engine::fvector& pPosition);
-	util::optional<trigger*>       trigger_collision(const engine::fvector& pPosition);
-	util::optional<trigger*>       button_collision(const engine::fvector& pPosition);
+	util::optional_pointer<collision_box> wall_collision(const engine::frect& r);
+	util::optional_pointer<door>          door_collision(const engine::fvector& pPosition);
+	util::optional_pointer<trigger>       trigger_collision(const engine::fvector& pPosition);
+	util::optional_pointer<trigger>       button_collision(const engine::fvector& pPosition);
 
 	util::optional<engine::fvector> get_door_entry(std::string pName);
 

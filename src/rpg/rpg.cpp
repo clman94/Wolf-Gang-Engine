@@ -76,7 +76,12 @@ void entity::set_rotation(float pRotation)
 	mSprite.set_rotation(pRotation);
 }
 
-bool entity::is_playing()
+engine::fvector entity::get_size() const
+{
+	return mSprite.get_size();
+}
+
+bool entity::is_playing() const
 {
 	return mSprite.is_playing();
 }
@@ -189,7 +194,7 @@ character::get_speed()
 // collision_system
 // #########
 
-util::optional<collision_box*> collision_system::wall_collision(const engine::frect& r)
+util::optional_pointer<collision_box> collision_system::wall_collision(const engine::frect& r)
 {
 	for (auto &i : mWalls)
 		if (i.is_valid() && i.get_region().is_intersect(r))
@@ -197,7 +202,7 @@ util::optional<collision_box*> collision_system::wall_collision(const engine::fr
 	return{};
 }
 
-util::optional<door*> collision_system::door_collision(const engine::fvector& pPosition)
+util::optional_pointer<door> collision_system::door_collision(const engine::fvector& pPosition)
 {
 	for (auto &i : mDoors)
 		if (i.is_valid() && i.get_region().is_intersect(pPosition))
@@ -205,7 +210,7 @@ util::optional<door*> collision_system::door_collision(const engine::fvector& pP
 	return{};
 }
 
-util::optional<trigger*> collision_system::trigger_collision(const engine::fvector& pPosition)
+util::optional_pointer<trigger> collision_system::trigger_collision(const engine::fvector& pPosition)
 {
 	for (auto &i : mTriggers)
 		if (i.is_valid() && i.get_region().is_intersect(pPosition))
@@ -213,7 +218,7 @@ util::optional<trigger*> collision_system::trigger_collision(const engine::fvect
 	return{};
 }
 
-util::optional<trigger*> collision_system::button_collision(const engine::fvector& pPosition)
+util::optional_pointer<trigger> collision_system::button_collision(const engine::fvector& pPosition)
 {
 	for (auto &i : mButtons)
 		if (i.is_valid() && i.get_region().is_intersect(pPosition))
@@ -258,7 +263,6 @@ void collision_system::add_button(trigger & t)
 {
 	mButtons.push_back(t);
 }
-
 
 void collision_system::clean()
 {
