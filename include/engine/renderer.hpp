@@ -149,7 +149,7 @@ public:
 	bool is_visible();
 	void set_visible(bool pVisible);
 	
-	virtual int draw(renderer &pR) = 0;
+	virtual int draw(renderer &pR) { return 0; }
 	
 	int is_rendered();
 

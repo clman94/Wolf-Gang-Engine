@@ -44,10 +44,10 @@ void flag_container::clean()
 }
 
 // #########
-// entity
+// sprite_entity
 // #########
 
-int entity::load_entity(std::string pName, texture_manager & pTexture_manager)
+int sprite_entity::set_texture(std::string pName, texture_manager & pTexture_manager)
 {
 	auto texture = pTexture_manager.get_texture(pName);
 	if (!texture)
@@ -56,59 +56,59 @@ int entity::load_entity(std::string pName, texture_manager & pTexture_manager)
 	return 0;
 }
 
-void entity::set_dynamic_depth(bool a)
+void sprite_entity::set_dynamic_depth(bool a)
 {
 	dynamic_depth = a;
 }
 
-void entity::set_anchor(engine::anchor pAnchor)
+void sprite_entity::set_anchor(engine::anchor pAnchor)
 {
 	mSprite.set_anchor(pAnchor);
 }
 
-void entity::set_color(engine::color pColor)
+void sprite_entity::set_color(engine::color pColor)
 {
 	mSprite.set_color(pColor);
 }
 
-void entity::set_rotation(float pRotation)
+void sprite_entity::set_rotation(float pRotation)
 {
 	mSprite.set_rotation(pRotation);
 }
 
-engine::fvector entity::get_size() const
+engine::fvector sprite_entity::get_size() const
 {
 	return mSprite.get_size();
 }
 
-bool entity::is_playing() const
+bool sprite_entity::is_playing() const
 {
 	return mSprite.is_playing();
 }
 
-entity::entity()
+sprite_entity::sprite_entity()
 {
 	dynamic_depth = true;
 	mSprite.set_anchor(engine::anchor::bottom);
 	add_child(mSprite);
 }
 
-void entity::play_animation()
+void sprite_entity::play_animation()
 {
 	mSprite.start();
 }
 
-void entity::stop_animation()
+void sprite_entity::stop_animation()
 {
 	mSprite.stop();
 }
 
-void entity::tick_animation()
+void sprite_entity::tick_animation()
 {
 	mSprite.tick();
 }
 
-bool entity::set_animation(const std::string& pName, bool pSwap)
+bool sprite_entity::set_animation(const std::string& pName, bool pSwap)
 {
 	if (!mTexture)
 		return false;
@@ -121,7 +121,7 @@ bool entity::set_animation(const std::string& pName, bool pSwap)
 	return true;
 }
 
-int entity::draw(engine::renderer &_r)
+int sprite_entity::draw(engine::renderer &_r)
 {
 	if (dynamic_depth)
 	{
@@ -138,24 +138,24 @@ int entity::draw(engine::renderer &_r)
 }
 
 // #########
-// character
+// character_entity
 // #########
 
-character::character()
+character_entity::character_entity()
 {
 	mCyclegroup = "default";
 	mMove_speed = 3.f* defs::TILE_SIZE.x;
 }
 
 void
-character::set_cycle_group(std::string name)
+character_entity::set_cycle_group(std::string name)
 {
 	mCyclegroup = name;
 	set_animation(mCyclegroup + ":" + mCycle, is_playing());
 }
 
 void
-character::set_cycle(const std::string& name)
+character_entity::set_cycle(const std::string& name)
 {
 	if (mCycle != name)
 	{
@@ -165,7 +165,7 @@ character::set_cycle(const std::string& name)
 }
 
 void
-character::set_cycle(e_cycle type)
+character_entity::set_cycle(e_cycle type)
 {
 	switch (type)
 	{
@@ -179,13 +179,13 @@ character::set_cycle(e_cycle type)
 }
 
 void
-character::set_speed(float f)
+character_entity::set_speed(float f)
 {
 	mMove_speed = f;
 }
 
 float
-character::get_speed()
+character_entity::get_speed()
 {
 	return mMove_speed;
 }
@@ -316,22 +316,22 @@ void player_character::set_move_direction(engine::fvector pVec)
 		if (pVec.x > 0)
 		{
 			mFacing_direction = direction::right;
-			set_cycle(character::e_cycle::right);
+			set_cycle(character_entity::e_cycle::right);
 		}
 		else {
 			mFacing_direction = direction::left;
-			set_cycle(character::e_cycle::left);
+			set_cycle(character_entity::e_cycle::left);
 		}
 	}
 	else {
 		if (pVec.y > 0)
 		{
 			mFacing_direction = direction::down;
-			set_cycle(character::e_cycle::down);
+			set_cycle(character_entity::e_cycle::down);
 		}
 		else {
 			mFacing_direction = direction::up;
-			set_cycle(character::e_cycle::up);
+			set_cycle(character_entity::e_cycle::up);
 		}
 	}
 }
@@ -383,7 +383,7 @@ void player_character::movement(controls& pControls, collision_system& pCollisio
 		if (!pCollision_system.wall_collision(get_collision(direction::left)))
 			move.x -= 1;
 		mFacing_direction = direction::left;
-		set_cycle(character::e_cycle::left);
+		set_cycle(character_entity::e_cycle::left);
 	}
 
 	if (pControls.is_triggered(controls::control::right))
@@ -391,7 +391,7 @@ void player_character::movement(controls& pControls, collision_system& pCollisio
 		if (!pCollision_system.wall_collision(get_collision(direction::right)))
 			move.x += 1;
 		mFacing_direction = direction::right;
-		set_cycle(character::e_cycle::right);
+		set_cycle(character_entity::e_cycle::right);
 	}
 
 	if (pControls.is_triggered(controls::control::up))
@@ -399,7 +399,7 @@ void player_character::movement(controls& pControls, collision_system& pCollisio
 		if (!pCollision_system.wall_collision(get_collision(direction::up)))
 			move.y -= 1;
 		mFacing_direction = direction::up;
-		set_cycle(character::e_cycle::up);
+		set_cycle(character_entity::e_cycle::up);
 	}
 
 	if (pControls.is_triggered(controls::control::down))
@@ -407,15 +407,18 @@ void player_character::movement(controls& pControls, collision_system& pCollisio
 		if (!pCollision_system.wall_collision(get_collision(direction::down)))
 			move.y += 1;
 		mFacing_direction = direction::down;
-		set_cycle(character::e_cycle::down);
+		set_cycle(character_entity::e_cycle::down);
 	}
 
 	if (move != engine::fvector(0, 0))
 	{
+
 		move.normalize();
 		move *= get_speed();
 
+
 		set_move_direction(move); // Make sure the player is in the direction he's moving
+
 		set_position(get_position() + (move*pDelta));
 		play_animation();
 	}
@@ -444,29 +447,18 @@ engine::fvector player_character::get_activation_point(float pDistance)
 
 entity_manager::entity_manager()
 {
-	add_child(mEntities);
-	add_child(mCharacters);
-}
-
-util::optional_pointer<character> entity_manager::find_character(const std::string& pName)
-{
-	for (auto &i : mCharacters)
-		if (i.get_name() == pName)
-			return &i;
-	return{};
 }
 
 util::optional_pointer<entity> entity_manager::find_entity(const std::string& pName)
 {
 	for (auto &i : mEntities)
-		if (i.get_name() == pName)
-			return &i;
+		if (i->get_name() == pName)
+			return i.get();
 	return{};
 }
 
 void entity_manager::clean()
 {
-	mCharacters.clear();
 	mEntities.clear();
 }
 
@@ -528,18 +520,18 @@ entity_reference entity_manager::script_add_entity(const std::string & path)
 		return entity_reference();
 	}
 
-	auto& ne = mEntities.create_item();
-	ne.load_entity(path, *mTexture_manager);
-	ne.set_animation("default:default");
-	get_renderer()->add_object(ne);
+	auto ne = construct_entity<sprite_entity>();
+	ne->set_texture(path, *mTexture_manager);
+	ne->set_animation("default:default");
+	get_renderer()->add_object(*ne);
 
-	return ne;
+	return *ne;
 }
 
 entity_reference entity_manager::script_add_entity_atlas(const std::string & path, const std::string& atlas)
 {
 	entity_reference e = script_add_entity(path);
-	e->set_animation(atlas);
+	dynamic_cast<sprite_entity*>(e.get())->set_animation(atlas);
 	return e;
 }
 
@@ -547,15 +539,16 @@ void entity_manager::script_remove_entity(entity_reference& e)
 {
 	if (!check_entity(e)) return;
 
-	if (is_character(e.get()))
+	for (auto i = mEntities.begin(); i != mEntities.end(); i++)
 	{
-		character* c = dynamic_cast<character*>(e.get());
-		mCharacters.remove_item(c);
+		if (i->get() == e.get())
+		{
+			mEntities.erase(i);
+			return;
+		}
 	}
-	else
-	{
-		mEntities.remove_item(e.get());
-	}
+
+	util::error("Could not remove entity");
 }
 
 entity_reference entity_manager::script_add_character(const std::string & path)
@@ -563,18 +556,18 @@ entity_reference entity_manager::script_add_character(const std::string & path)
 	assert(get_renderer() != nullptr);
 	assert(mTexture_manager != nullptr);
 
-	if (mCharacters.size() >= 126)
+	if (mEntities.size() >= 256)
 	{
 		util::error("Reached upper limit of characters.");
 		return entity_reference();
 	}
 
-	auto& nc = mCharacters.create_item();
-	nc.load_entity(path, *mTexture_manager);
-	nc.set_cycle(character::e_cycle::def);
-	get_renderer()->add_object(nc);
+	auto nc = construct_entity<character_entity>();
+	nc->set_texture(path, *mTexture_manager);
+	nc->set_cycle(character_entity::e_cycle::def);
+	get_renderer()->add_object(*nc);
 
-	return nc;
+	return *nc;
 }
 
 void entity_manager::script_set_name(entity_reference& e, const std::string & pName)
@@ -598,22 +591,22 @@ engine::fvector entity_manager::script_get_position(entity_reference& e)
 void entity_manager::script_set_direction(entity_reference& e, int dir)
 {
 	if (!check_entity(e)) return;
-	character* c = dynamic_cast<character*>(e.get());
-	if (c == nullptr)
+	character_entity* c = dynamic_cast<character_entity*>(e.get());
+	if (!c)
 	{
-		std::cout << "Error: Entity is not a character";
+		util::error("Entity is not a character");
 		return;
 	}
-	c->set_cycle(static_cast<character::e_cycle>(dir));
+	c->set_cycle(static_cast<character_entity::e_cycle>(dir));
 }
 
 void entity_manager::script_set_cycle(entity_reference& e, const std::string& name)
 {
 	if (!check_entity(e)) return;
-	character* c = dynamic_cast<character*>(e.get());
+	character_entity* c = dynamic_cast<character_entity*>(e.get());
 	if (c == nullptr)
 	{
-		std::cout << "Error: Entity is not a character";
+		util::error("Entity is not a character");
 		return;
 	}
 	c->set_cycle_group(name);
@@ -628,49 +621,104 @@ void entity_manager::script_set_depth(entity_reference& e, float pDepth)
 void entity_manager::script_set_depth_fixed(entity_reference& e, bool pFixed)
 {
 	if (!check_entity(e)) return;
-	e->set_dynamic_depth(!pFixed);
+	auto se = dynamic_cast<sprite_entity*>(e.get());
+	if (!se)
+	{
+		util::error("Entity is not sprite-based");
+		return;
+	}
+	se->set_dynamic_depth(!pFixed);
 }
 
 void entity_manager::script_start_animation(entity_reference& e)
 {
 	if (!check_entity(e)) return;
-	e->play_animation();
+	auto se = dynamic_cast<sprite_entity*>(e.get());
+	if (!se)
+	{
+		util::error("Entity is not sprite-based");
+		return;
+	}
+	se->play_animation();
 }
 
 void entity_manager::script_stop_animation(entity_reference& e)
 {
 	if (!check_entity(e)) return;
-	e->stop_animation();
+	auto se = dynamic_cast<sprite_entity*>(e.get());
+	if (!se)
+	{
+		util::error("Entity is not sprite-based");
+		return;
+	}
+	se->stop_animation();
 }
 
 void entity_manager::script_set_animation(entity_reference& e, const std::string & name)
 {
 	if (!check_entity(e)) return;
-	e->set_animation(name);
+	auto se = dynamic_cast<sprite_entity*>(e.get());
+	if (!se)
+	{
+		util::error("Entity is not sprite-based");
+		return;
+	}
+	se->set_animation(name);
 }
 
 void entity_manager::script_set_anchor(entity_reference& e, int pAnchor)
 {
 	if (!check_entity(e)) return;
-	e->set_anchor(static_cast<engine::anchor>(pAnchor));
+	auto se = dynamic_cast<sprite_entity*>(e.get());
+	if (!se)
+	{
+		util::error("Entity is not sprite-based");
+		return;
+	}
+	se->set_anchor(static_cast<engine::anchor>(pAnchor));
 }
 
 void entity_manager::script_set_rotation(entity_reference& e, float pRotation)
 {
 	if (!check_entity(e)) return;
-	e->set_rotation(std::fmod(std::abs(pRotation), 360.f));
+	auto se = dynamic_cast<sprite_entity*>(e.get());
+	if (!se)
+	{
+		util::error("Entity is not sprite-based");
+		return;
+	}
+	se->set_rotation(std::fmod(std::abs(pRotation), 360.f));
 }
 
 void entity_manager::script_set_color(entity_reference& e, int r, int g, int b, int a)
 {
 	if (!check_entity(e)) return;
-	e->set_color(engine::color(r, g, b, a));
+	auto se = dynamic_cast<sprite_entity*>(e.get());
+	if (!se)
+	{
+		util::error("Entity is not sprite-based");
+		return;
+	}
+	se->set_color(engine::color(r, g, b, a));
 }
 
-void entity_manager::script_set_visibility(entity_reference & e, bool pIs_visible)
+void entity_manager::script_set_visible(entity_reference & e, bool pIs_visible)
 {
 	if (!check_entity(e)) return;
 	e->set_visible(pIs_visible);
+}
+
+void entity_manager::script_set_texture(entity_reference & e, const std::string & name)
+{
+	if (!check_entity(e)) return;
+	auto se = dynamic_cast<sprite_entity*>(e.get());
+	if (!se)
+	{
+		util::error("Entity is not sprite-based");
+		return;
+	}
+	se->set_texture(name, *mTexture_manager);
+	se->set_animation("default:default");
 }
 
 void entity_manager::script_add_child(entity_reference& e1, entity_reference& e2)
@@ -711,6 +759,18 @@ void entity_manager::script_detach_parent(entity_reference& e)
 	e->set_parent(*this);
 }
 
+void entity_manager::script_make_gui(entity_reference & e)
+{
+	if (!check_entity(e)) return;
+
+	// Gui elements essentually don't stick to anything
+	// So we just detach everything.
+	e->detach_children();
+	e->detach_parent();
+
+	e->set_depth(defs::NARRATIVE_TEXT_DEPTH);
+}
+
 void entity_manager::load_script_interface(script_system& pScript)
 {
 	mScript_system = &pScript;
@@ -736,17 +796,19 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void _set_anchor(entity&in, int)",                         asMETHOD(entity_manager, script_set_anchor), this);
 	pScript.add_function("void set_rotation(entity&in, float)",                      asMETHOD(entity_manager, script_set_rotation), this);
 	pScript.add_function("void set_color(entity&in, int, int, int, int)",            asMETHOD(entity_manager, script_set_color), this);
-	pScript.add_function("void set_visibility(entity&in, bool)",                     asMETHOD(entity_manager, script_set_visibility), this);
+	pScript.add_function("void set_visible(entity&in, bool)",                     asMETHOD(entity_manager, script_set_visible), this);
+	pScript.add_function("void set_texture(entity&in, const string&in)",             asMETHOD(entity_manager, script_set_texture), this);
 
 	pScript.add_function("void add_child(entity&in, entity&in)",                     asMETHOD(entity_manager, script_add_child), this);
 	pScript.add_function("void set_parent(entity&in, entity&in)",                    asMETHOD(entity_manager, script_set_parent), this);
 	pScript.add_function("void detach_children(entity&in)",                          asMETHOD(entity_manager, script_detach_children), this);
 	pScript.add_function("void detach_parent(entity&in)",                            asMETHOD(entity_manager, script_detach_parent), this);
+	pScript.add_function("void make_gui(entity&in)",                            asMETHOD(entity_manager, script_make_gui), this);
 }
 
-bool entity_manager::is_character(entity* pEntity)
+bool entity_manager::is_character(sprite_entity* pEntity)
 {
-	return dynamic_cast<character*>(pEntity) != nullptr;
+	return dynamic_cast<character_entity*>(pEntity) != nullptr;
 }
 
 // #########
@@ -873,8 +935,8 @@ const std::string& scene::get_name()
 
 void scene::load_script_interface(script_system& pScript)
 {
-	mNarrative.load_script_interface(pScript);
 	mEntity_manager.load_script_interface(pScript);
+	mNarrative.load_script_interface(pScript);
 	mBackground_music.load_script_interface(pScript);
 	mColored_overlay.load_script_interface(pScript);
 	mPathfinding_system.load_script_interface(pScript);
@@ -919,8 +981,8 @@ void scene::load_game_xml(tinyxml2::XMLElement * ele_root)
 	}
 	std::string att_texture = util::safe_string(ele_player->Attribute("texture"));
 
-	mPlayer.load_entity(att_texture, *mTexture_manager);
-	mPlayer.set_cycle(character::e_cycle::def);
+	mPlayer.set_texture(att_texture, *mTexture_manager);
+	mPlayer.set_cycle(character_entity::e_cycle::def);
 
 	auto ele_sounds = ele_root->FirstChildElement("sounds");
 	if (ele_sounds)
@@ -1414,7 +1476,6 @@ script_system::add_function(const char * pDeclaration, const asSFuncPtr& pPtr)
 	assert(r >= 0);
 }
 
-
 void
 script_system::setup_triggers(collision_system& pCollision_system)
 {
@@ -1752,14 +1813,10 @@ narrative_dialog::load_box(tinyxml2::XMLElement* pEle, texture_manager& pTexture
 	std::string att_box_tex = ele_box->Attribute("texture");
 	std::string att_box_atlas = ele_box->Attribute("atlas");
 
-	auto tex = pTexture_manager.get_texture(att_box_tex);
-	if (!tex)
-	{
-		util::error("Texture does not exist");
-		return 1;
-	}
-	mBox.set_texture(*tex, att_box_atlas);
+	mBox.set_texture(att_box_tex, pTexture_manager);
+	mBox.set_animation(att_box_atlas);
 
+	mBox.set_anchor(engine::anchor::topleft);
 	set_box_position(position::bottom);
 
 	mSelection.set_position(mBox.get_size() - engine::fvector(20, 10));
@@ -1773,7 +1830,6 @@ narrative_dialog::load_font(tinyxml2::XMLElement* pEle)
 
 	mText.apply_format(mFormat);
 	mFormat.apply_to(mSelection);
-
 	return 0;
 }
 
@@ -1857,7 +1913,7 @@ void narrative_dialog::end_narrative()
 
 bool narrative_dialog::is_box_open()
 {
-	return mBox.is_visible();
+	return mBox.is_visible() || mText.is_visible();
 }
 
 void narrative_dialog::show_selection()
@@ -1904,11 +1960,11 @@ int narrative_dialog::load_narrative_xml(tinyxml2::XMLElement* pEle, texture_man
 
 void narrative_dialog::load_script_interface(script_system & pScript)
 {
-	pScript.add_function("void _say(const string &in, bool)", asMETHOD(dialog_text_node, reveal), &mText);
-	pScript.add_function("bool _is_revealing()", asMETHOD(dialog_text_node, is_revealing), &mText);
-	pScript.add_function("void _skip_reveal()", asMETHOD(dialog_text_node, skip_reveal), &mText);
-	pScript.add_function("void _set_interval(float)", asMETHOD(dialog_text_node, set_interval), &mText);
-	pScript.add_function("bool _has_displayed_new_character()", asMETHOD(dialog_text_node, has_revealed_character), &mText);
+	pScript.add_function("void _say(const string &in, bool)", asMETHOD(dialog_text_entity, reveal), &mText);
+	pScript.add_function("bool _is_revealing()", asMETHOD(dialog_text_entity, is_revealing), &mText);
+	pScript.add_function("void _skip_reveal()", asMETHOD(dialog_text_entity, skip_reveal), &mText);
+	pScript.add_function("void _set_interval(float)", asMETHOD(dialog_text_entity, set_interval), &mText);
+	pScript.add_function("bool _has_displayed_new_character()", asMETHOD(dialog_text_entity, has_revealed_character), &mText);
 
 	pScript.add_function("void _showbox()", asMETHOD(narrative_dialog, show_box), this);
 	pScript.add_function("void _hidebox()", asMETHOD(narrative_dialog, hide_box), this);
@@ -1917,10 +1973,14 @@ void narrative_dialog::load_script_interface(script_system & pScript)
 	pScript.add_function("void _hide_selection()", asMETHOD(narrative_dialog, hide_selection), this);
 	pScript.add_function("void _set_box_position(int)", asMETHOD(narrative_dialog, set_box_position), this);
 	pScript.add_function("void _set_selection(const string &in)", asMETHOD(narrative_dialog, set_selection), this);
+	pScript.add_function("bool _is_box_open()", asMETHOD(narrative_dialog, is_box_open), this);
 
 	pScript.add_function("void _set_expression(const string &in)", asMETHOD(narrative_dialog, set_expression), this);
 	pScript.add_function("void _start_expression_animation()", asMETHOD(engine::animation_node, start), &mExpression);
 	pScript.add_function("void _stop_expression_animation()", asMETHOD(engine::animation_node, stop), &mExpression);
+
+	pScript.add_function("entity _get_narrative_box()", asMETHOD(narrative_dialog, script_get_narrative_box), this);
+	pScript.add_function("entity _get_narrative_text()", asMETHOD(narrative_dialog, script_get_narrative_text), this);
 
 }
 
@@ -2820,24 +2880,24 @@ void text_format_profile::apply_to(engine::text_node& pText) const
 	//pText.set_color(mColor);
 }
 
-dialog_text_node::dialog_text_node()
+dialog_text_entity::dialog_text_entity()
 {
 	set_interval(25);
 	add_child(mText);
 }
 
-void dialog_text_node::clear()
+void dialog_text_entity::clear()
 {
 	mRevealing = false;
 	mText.set_text("");
 }
 
-void dialog_text_node::apply_format(const text_format_profile & pFormat)
+void dialog_text_entity::apply_format(const text_format_profile & pFormat)
 {
 	pFormat.apply_to(mText);
 }
 
-int dialog_text_node::draw(engine::renderer & pR)
+int dialog_text_entity::draw(engine::renderer & pR)
 {
 	mNew_character = false;
 	if (mRevealing)
@@ -2847,12 +2907,12 @@ int dialog_text_node::draw(engine::renderer & pR)
 	return 0;
 }
 
-bool dialog_text_node::is_revealing()
+bool dialog_text_entity::is_revealing()
 {
 	return mRevealing;
 }
 
-void dialog_text_node::reveal(const std::string & pText, bool pAppend)
+void dialog_text_entity::reveal(const std::string & pText, bool pAppend)
 {
 	if (pText.empty())
 		return;
@@ -2872,23 +2932,23 @@ void dialog_text_node::reveal(const std::string & pText, bool pAppend)
 	}
 }
 
-void dialog_text_node::skip_reveal()
+void dialog_text_entity::skip_reveal()
 {
 	if (mRevealing)
 		mCount = mFull_text.length();
 }
 
-void dialog_text_node::set_interval(float pMilliseconds)
+void dialog_text_entity::set_interval(float pMilliseconds)
 {
 	mTimer.set_interval(pMilliseconds*0.001f);
 }
 
-bool dialog_text_node::has_revealed_character()
+bool dialog_text_entity::has_revealed_character()
 {
 	return mNew_character;
 }
 
-void dialog_text_node::do_reveal()
+void dialog_text_entity::do_reveal()
 {
 	size_t iterations = mTimer.get_count();
 	if (iterations > 0)

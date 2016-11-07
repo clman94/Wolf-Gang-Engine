@@ -22,6 +22,7 @@
 #include <functional>
 #include <map>
 #include <fstream>
+#include <memory>
 
 #include <angelscript.h> // AS_USE_NAMESPACE will need to be defined
 #include <angelscript/add_on/contextmgr/contextmgr.h>
@@ -162,7 +163,6 @@ private:
 	std::array<bool, 11> mControls;
 };
 
-// The basic dynamic sprite object in game.
 class entity :
 	public engine::render_object,
 	public engine::node,
@@ -170,14 +170,32 @@ class entity :
 	public util::tracked_owner
 {
 public:
+	virtual ~entity(){}
 
-	entity();
+	enum class entity_type
+	{
+		empty,
+		sprite,
+		character_entity,
+		text
+	};
+
+	virtual entity_type get_entity_type()
+	{ return entity_type::empty; }
+};
+typedef util::tracking_ptr<entity> entity_reference;
+
+class sprite_entity :
+	public entity
+{
+public:
+	sprite_entity();
 	void play_animation();
 	void stop_animation();
 	void tick_animation();
 	bool set_animation(const std::string& pName, bool pSwap = false);
 	int draw(engine::renderer &pR);
-	int load_entity(std::string pName, texture_manager& pTexture_manager);
+	int set_texture(std::string pName, texture_manager& pTexture_manager);
 	void set_dynamic_depth(bool a);
 	void set_anchor(engine::anchor pAnchor);
 	void set_color(engine::color pColor);
@@ -186,7 +204,8 @@ public:
 	engine::fvector get_size() const;
 	bool is_playing() const;
 
-
+	virtual entity_type get_entity_type()
+	{ return entity_type::sprite; }
 
 private:
 	engine::texture*         mTexture;
@@ -194,12 +213,11 @@ private:
 
 	bool dynamic_depth;
 };
-typedef util::tracking_ptr<entity> entity_reference;
 
-// An entity that has a specific role as a character.
+// An sprite_entity that has a specific role as a character_entity.
 // Provides walk cycles.
-class character :
-	public entity
+class character_entity :
+	public sprite_entity
 {
 public:
 
@@ -213,13 +231,16 @@ public:
 		idle
 	};
 
-	character();
+	character_entity();
 	void set_cycle_group(std::string name);
 	void set_cycle(const std::string& name);
 	void set_cycle(e_cycle type);
 
 	void  set_speed(float f);
 	float get_speed();
+
+	virtual entity_type get_entity_type()
+	{ return entity_type::character_entity; }
 
 private:
 	std::string mCyclegroup;
@@ -408,7 +429,6 @@ private:
 	std::map<std::string, const engine::animation*> mAnimations;
 };
 
-// 
 class text_format_profile
 {
 public:
@@ -427,12 +447,11 @@ private:
 	//engine::color mColor; // TODO: Implement color
 };
 
-class dialog_text_node :
-	public engine::node,
-	public engine::render_object
+class dialog_text_entity :
+	public entity
 {
 public:
-	dialog_text_node();
+	dialog_text_entity();
 
 	void clear();
 
@@ -446,7 +465,7 @@ public:
 	void set_interval(float pMilliseconds);
 
 	// Returns whether or not the text has revealed a
-	// new character in this frame
+	// new character_entity in this frame
 	bool has_revealed_character();
 
 private:
@@ -507,9 +526,9 @@ protected:
 	void refresh_renderer(engine::renderer& r);
 
 private:
-	engine::sprite_node    mBox;
+	sprite_entity          mBox;
 	engine::sprite_node    mCursor;
-	dialog_text_node       mText;
+	dialog_text_entity     mText;
 	engine::text_node      mSelection;
 	text_format_profile    mFormat;
 
@@ -521,11 +540,21 @@ private:
 
 	void show_expression();
 	void reset_positions();
+
+	entity_reference script_get_narrative_box()
+	{
+		return mBox;
+	}
+
+	entity_reference script_get_narrative_text()
+	{
+		return mText;
+	}
 };
 
-// The main player character
+// The main player character_entity
 class player_character :
-	public character
+	public character_entity
 {
 public:
 	enum class direction
@@ -563,24 +592,31 @@ class entity_manager :
 public:
 	entity_manager();
 
-	util::optional_pointer<character> find_character(const std::string& pName);
 	util::optional_pointer<entity>    find_entity(const std::string& pName);
 
 	void clean();
 
 	void load_script_interface(script_system& pScript);
 	void set_texture_manager(texture_manager& pTexture_manager);
-	bool is_character(entity* pEntity);
+	bool is_character(sprite_entity* pEntity);
+
+	template<typename T>
+	T* construct_entity()
+	{
+		auto e = new T();
+		assert(dynamic_cast<entity*>(e) != nullptr);
+		mEntities.push_back(std::unique_ptr<entity>(dynamic_cast<entity*>(e)));
+		add_child(*e);
+		return e;
+	}
 
 private:
 	void register_entity_type(script_system& pScript);
 
 	texture_manager*  mTexture_manager;
-
 	script_system* mScript_system;
 
-	node_list<character> mCharacters;
-	node_list<entity>    mEntities;
+	std::vector<std::unique_ptr<entity>> mEntities;
 
 	bool check_entity(entity_reference& e);
 
@@ -601,12 +637,14 @@ private:
 	void             script_set_anchor(entity_reference& e, int pAnchor);
 	void             script_set_rotation(entity_reference& e, float pRotation);
 	void             script_set_color(entity_reference& e, int r, int g, int b, int a);
-	void             script_set_visibility(entity_reference& e, bool pIs_visible);
+	void             script_set_visible(entity_reference& e, bool pIs_visible);
+	void             script_set_texture(entity_reference& e, const std::string& name);
 
 	void             script_add_child(entity_reference& e1, entity_reference& e2);
 	void             script_set_parent(entity_reference& e1, entity_reference& e2);
 	void             script_detach_children(entity_reference& e);
 	void             script_detach_parent(entity_reference& e);
+	void             script_make_gui(entity_reference& e);
 };
 
 class background_music
