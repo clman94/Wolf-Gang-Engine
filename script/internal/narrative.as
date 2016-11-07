@@ -55,7 +55,8 @@ namespace priv
 	void show()
 	{
 		player::lock(true);
-		_showbox();
+		if (!_is_box_open())
+			_showbox();
 	}
 	
 	// Hide the dialog box. Use show() to make it appear again
