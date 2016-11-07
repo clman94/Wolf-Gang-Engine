@@ -351,23 +351,6 @@ bool player_character::is_locked()
 	return mLocked;
 }
 
-
-engine::frect player_character::get_collision(direction pDirection)
-{
-	const engine::fvector pos = get_position();
-	const engine::fvector size = get_size() - engine::fvector(2, 2);
-	const engine::fvector hsize = get_size() / 2;
-	switch (pDirection)
-	{
-	case direction::other: return{ pos, {32, 32} };
-	case direction::left:  return{ pos - engine::fvector(hsize.x, hsize.y / 2), { hsize.x, hsize.y / 2 } };
-	case direction::right: return{ pos - engine::fvector(0, hsize.y / 2),{ hsize.x, hsize.y / 2 } };
-	case direction::up:    return{ pos - engine::fvector(size.x / 2, hsize.y - 2), { size.x, hsize.y - 2 } };
-	case direction::down:  return{ pos - engine::fvector(size.x / 2, 0),  { size.x, 4 } };
-	}
-	return{ 0, 0 }; // Probably never reaches this point
-}
-
 void player_character::movement(controls& pControls, collision_system& pCollision_system, float pDelta)
 {
 	if (mLocked)
@@ -380,46 +363,59 @@ void player_character::movement(controls& pControls, collision_system& pCollisio
 
 	if (pControls.is_triggered(controls::control::left))
 	{
-		if (!pCollision_system.wall_collision(get_collision(direction::left)))
-			move.x -= 1;
+		move.x -= 1;
 		mFacing_direction = direction::left;
 		set_cycle(character_entity::e_cycle::left);
 	}
 
 	if (pControls.is_triggered(controls::control::right))
 	{
-		if (!pCollision_system.wall_collision(get_collision(direction::right)))
-			move.x += 1;
+		move.x += 1;
 		mFacing_direction = direction::right;
 		set_cycle(character_entity::e_cycle::right);
 	}
 
 	if (pControls.is_triggered(controls::control::up))
 	{
-		if (!pCollision_system.wall_collision(get_collision(direction::up)))
-			move.y -= 1;
+		move.y -= 1;
 		mFacing_direction = direction::up;
 		set_cycle(character_entity::e_cycle::up);
 	}
 
 	if (pControls.is_triggered(controls::control::down))
 	{
-		if (!pCollision_system.wall_collision(get_collision(direction::down)))
-			move.y += 1;
+		move.y += 1;
 		mFacing_direction = direction::down;
 		set_cycle(character_entity::e_cycle::down);
 	}
 
+	// Check collision if requested to move
 	if (move != engine::fvector(0, 0))
 	{
-
 		move.normalize();
-		move *= get_speed();
+		move *= get_speed()*pDelta;
 
+		const engine::fvector collision_size(26, 16);
+		const engine::fvector collision_offset
+			= get_position()
+			- engine::fvector(collision_size.x / 2, collision_size.y);
 
+		engine::frect collision(collision_offset, collision_size);
+
+		collision.set_offset(collision_offset + engine::fvector(move.x, 0));
+		if (pCollision_system.wall_collision(collision))
+			move.x = 0;
+
+		collision.set_offset(collision_offset + engine::fvector(0, move.y));
+		if (pCollision_system.wall_collision(collision))
+			move.y = 0;
+	}
+
+	// Move if possible
+	if (move != engine::fvector(0, 0))
+	{
 		set_move_direction(move); // Make sure the player is in the direction he's moving
-
-		set_position(get_position() + (move*pDelta));
+		set_position(get_position() + move);
 		play_animation();
 	}
 	else
@@ -865,7 +861,6 @@ scene::clean_scene(bool pFull)
 		mBackground_music.clean();
 	}
 }
-
 
 int scene::load_scene(std::string pPath)
 {

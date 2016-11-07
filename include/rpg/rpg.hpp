@@ -570,9 +570,6 @@ public:
 	void set_locked(bool pLocked);
 	bool is_locked();
 
-	// Get Collision box in a specific durection based on the size of the frame
-	engine::frect get_collision(direction pDirection);
-
 	// Do movement with collision detection
 	void movement(controls &pControls, collision_system& pCollision_system, float pDelta);
 	
