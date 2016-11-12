@@ -147,6 +147,8 @@ public:
 		down,
 		select_next,
 		select_previous,
+		select_up,
+		select_down,
 		reset,
 		menu,
 		editor_1,
@@ -160,7 +162,7 @@ public:
 	void update(engine::renderer& pR);
 
 private:
-	std::array<bool, 11> mControls;
+	std::array<bool, 13> mControls;
 };
 
 class entity :
@@ -177,14 +179,13 @@ public:
 
 	enum class entity_type
 	{
-		empty,
+		other,
 		sprite,
-		character_entity,
 		text
 	};
 
 	virtual entity_type get_entity_type()
-	{ return entity_type::empty; }
+	{ return entity_type::other; }
 
 	void set_dynamic_depth(bool pIs_dynamic);
 
@@ -244,9 +245,6 @@ public:
 
 	void  set_speed(float f);
 	float get_speed();
-
-	virtual entity_type get_entity_type()
-	{ return entity_type::character_entity; }
 
 private:
 	std::string mCyclegroup;
@@ -489,7 +487,13 @@ public:
 
 	void set_text(const std::string& pText);
 
+	void set_anchor(engine::anchor pAnchor);
+
 	int draw(engine::renderer & pR);
+
+	
+	virtual entity_type get_entity_type()
+	{ return entity_type::text; }
 
 protected:
 	engine::text_node mText;
@@ -688,6 +692,7 @@ private:
 	void             script_set_parent(entity_reference& e1, entity_reference& e2);
 	void             script_detach_children(entity_reference& e);
 	void             script_detach_parent(entity_reference& e);
+
 	void             script_make_gui(entity_reference& e, float pOffset);
 };
 

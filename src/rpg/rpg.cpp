@@ -504,6 +504,10 @@ void entity_manager::register_entity_type(script_system & pScript)
 	engine.RegisterObjectMethod("entity", "bool is_valid() const"
 		, asMETHOD(entity_reference, is_valid)
 		, asCALL_THISCALL);
+
+	engine.RegisterObjectMethod("entity", "void release()"
+		, asMETHOD(entity_reference, reset)
+		, asCALL_THISCALL);
 }
 
 bool entity_manager::check_entity(entity_reference & e)
@@ -709,13 +713,22 @@ void entity_manager::script_set_animation(entity_reference& e, const std::string
 void entity_manager::script_set_anchor(entity_reference& e, int pAnchor)
 {
 	if (!check_entity(e)) return;
-	auto se = dynamic_cast<sprite_entity*>(e.get());
-	if (!se)
+
+	if (e->get_entity_type() == entity::entity_type::sprite)
 	{
-		util::error("Entity is not sprite-based");
-		return;
+		auto se = dynamic_cast<sprite_entity*>(e.get());
+		se->set_anchor(static_cast<engine::anchor>(pAnchor));
 	}
-	se->set_anchor(static_cast<engine::anchor>(pAnchor));
+
+	else if (e->get_entity_type() == entity::entity_type::text)
+	{
+		auto se = dynamic_cast<text_entity*>(e.get());
+		se->set_anchor(static_cast<engine::anchor>(pAnchor));
+	}
+	else
+	{
+		util::error("Unsupported entity type");
+	}
 }
 
 void entity_manager::script_set_rotation(entity_reference& e, float pRotation)
@@ -1247,6 +1260,12 @@ void controls::update(engine::renderer & pR)
 	if (pR.is_key_down(key_type::Down))
 		trigger(control::down);
 
+	if (pR.is_key_pressed(key_type::Up))
+		trigger(control::select_up);
+
+	if (pR.is_key_pressed(key_type::Down))
+		trigger(control::select_down);
+
 	if (pR.is_key_pressed(key_type::Left))
 		trigger(control::select_previous);
 
@@ -1373,6 +1392,12 @@ void script_system::log_print(const std::string& pFile, int pLine, int pCol, log
 void
 script_system::debug_print(std::string &pMessage)
 {
+	if (!is_executing())
+	{
+		log_print("Unknown", 0, 0, log_entry_type::debug, pMessage);
+		return;
+	}
+
 	assert(mCtxmgr.GetCurrentContext() != nullptr);
 	assert(mCtxmgr.GetCurrentContext()->GetFunction() != nullptr);
 
@@ -1382,6 +1407,12 @@ script_system::debug_print(std::string &pMessage)
 
 void script_system::error_print(std::string & pMessage)
 {
+	if (!is_executing())
+	{
+		log_print("Unknown", 0, 0, log_entry_type::error, pMessage);
+		return;
+	}
+
 	assert(mCtxmgr.GetCurrentContext() != nullptr);
 	assert(mCtxmgr.GetCurrentContext()->GetFunction() != nullptr);
 
@@ -2123,7 +2154,7 @@ script_function::script_function() :
 
 script_function::~script_function()
 {
-	func->Release();
+	//func->Release();
 	//return_context();
 }
 
@@ -3092,6 +3123,11 @@ void text_entity::apply_format(const text_format_profile & pFormat)
 void text_entity::set_text(const std::string & pText)
 {
 	mText.set_text(pText);
+}
+
+void text_entity::set_anchor(engine::anchor pAnchor)
+{
+	mText.set_anchor(pAnchor);
 }
 
 int text_entity::draw(engine::renderer & pR)
