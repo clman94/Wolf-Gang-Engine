@@ -20,9 +20,26 @@ public:
 		mPointer = nullptr;
 	}
 
+	optional_pointer(const optional_pointer& pA)
+	{
+		mPointer = pA.mPointer;
+	}
+
 	optional_pointer(T* pPointer)
 	{
 		mPointer = pPointer;
+	}
+
+	optional_pointer& operator=(const optional_pointer& pR)
+	{
+		mPointer = pR.mPointer;
+		return *this;
+	}
+
+	optional_pointer& operator=(T* pPointer)
+	{
+		mPointer = pPointer;
+		return *this;
 	}
 
 	bool has_value() const

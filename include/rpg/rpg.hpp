@@ -170,6 +170,9 @@ class entity :
 	public util::tracked_owner
 {
 public:
+	entity() :
+		dynamic_depth(false)
+	{}
 	virtual ~entity(){}
 
 	enum class entity_type
@@ -182,6 +185,12 @@ public:
 
 	virtual entity_type get_entity_type()
 	{ return entity_type::empty; }
+
+	void set_dynamic_depth(bool pIs_dynamic);
+
+protected:
+	void update_depth();
+	bool dynamic_depth;
 };
 typedef util::tracking_ptr<entity> entity_reference;
 
@@ -196,7 +205,6 @@ public:
 	bool set_animation(const std::string& pName, bool pSwap = false);
 	int draw(engine::renderer &pR);
 	int set_texture(std::string pName, texture_manager& pTexture_manager);
-	void set_dynamic_depth(bool a);
 	void set_anchor(engine::anchor pAnchor);
 	void set_color(engine::color pColor);
 	void set_rotation(float pRotation);
@@ -210,8 +218,6 @@ public:
 private:
 	engine::texture*         mTexture;
 	engine::animation_node   mSprite;
-
-	bool dynamic_depth;
 };
 
 // An sprite_entity that has a specific role as a character_entity.
@@ -262,10 +268,10 @@ public:
 	bool call();
 
 private:
-	AS::asIScriptEngine *as_engine;
-	AS::asIScriptFunction *func;
-	AS::CContextMgr *ctx;
-	AS::asIScriptContext *func_ctx;
+	util::optional_pointer<AS::asIScriptEngine> as_engine;
+	util::optional_pointer<AS::asIScriptFunction> func;
+	util::optional_pointer<AS::CContextMgr> ctx;
+	util::optional_pointer<AS::asIScriptContext> func_ctx;
 	void return_context();
 };
 
@@ -323,6 +329,7 @@ public:
 	void add_trigger(trigger& t);
 	void add_button(trigger& t);
 	void clean();
+
 	int load_collision_boxes(tinyxml2::XMLElement* pEle);
 
 private:
@@ -335,26 +342,24 @@ private:
 // Angelscript wrapper
 // Excuse this mess, please -_-
 // TODO: Cleanup
+
+class script_context;
+
+
 class script_system
 {
 public:
 	script_system();
 	~script_system();
 
-	// Load the scene angelscript file
-	int load_scene_script(const std::string& pPath);
+	void load_context(script_context& pContext);
 
 	// Register a member function, will require the pointer to the instance
 	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr, void* pInstance);
 	
 	// Register a non-member/static function
 	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr);
-
-	// Constructs all triggers/buttons defined by functions
-	// with metadata "trigger" and "button"
-	// TODO: Stablize parsing of metadata
-	void setup_triggers(collision_system& pCollision_system);
-
+	
 	void about_all();
 
 	// Call all functions that contain the specific metadata
@@ -386,10 +391,9 @@ public:
 	{ ((T*)pMemory)->~T(); }
 
 private:
-	AS::asIScriptEngine *mEngine;
+	util::optional_pointer<AS::asIScriptEngine> mEngine;
 	AS::CContextMgr      mCtxmgr;
-	AS::asIScriptModule *mScene_module;
-	AS::CScriptBuilder   mBuilder;
+	util::optional_pointer<script_context> mContext;
 	std::ofstream        mLog_file;
 	bool                 mExecuting;
 
@@ -410,12 +414,41 @@ private:
 	void error_print(std::string &pMessage);
 	void register_vector_type();
 	void message_callback(const AS::asSMessageInfo * msg);
-	std::string get_metadata_type(const std::string &pMetadata);
 	void script_abort();
 	void script_create_thread(AS::asIScriptFunction *func, AS::CScriptDictionary *arg);
 	void script_create_thread_noargs(AS::asIScriptFunction *func);
 
 	void load_script_interface();
+
+	friend class script_context;
+};
+
+class script_context
+{
+public:
+	script_context();
+
+	void set_script_system(script_system& pScript);
+
+	bool build_script(const std::string& pPath);
+
+	bool is_valid();
+
+	void clean();
+
+	// Constructs all triggers/buttons defined by functions
+	// with metadata "trigger" and "button"
+	// TODO: Stablize parsing of metadata
+	void setup_triggers(collision_system& pCollision_system);
+
+private:
+	util::optional_pointer<script_system> mScript;
+	util::optional_pointer<AS::asIScriptModule> mScene_module;
+	AS::CScriptBuilder   mBuilder;
+
+	static std::string get_metadata_type(const std::string &pMetadata);
+
+	friend class script_system;
 };
 
 // Resource management of expression animations
@@ -447,15 +480,29 @@ private:
 	//engine::color mColor; // TODO: Implement color
 };
 
-class dialog_text_entity :
+class text_entity :
 	public entity
+{
+public:
+	text_entity();
+	void apply_format(const text_format_profile& pFormat);
+
+	void set_text(const std::string& pText);
+
+	int draw(engine::renderer & pR);
+
+protected:
+	engine::text_node mText;
+};
+
+class dialog_text_entity :
+	public text_entity
 {
 public:
 	dialog_text_entity();
 
 	void clear();
 
-	void apply_format(const text_format_profile& pFormat);
 	int draw(engine::renderer& pR);
 
 	bool is_revealing();
@@ -469,7 +516,6 @@ public:
 	bool has_revealed_character();
 
 private:
-	engine::text_node mText;
 	bool        mNew_character;
 	bool        mRevealing;
 	size_t      mCount;
@@ -483,6 +529,8 @@ private:
 // TODO: Make more flexible with the ability to only have the text displayed,
 //       move the text to any location, (possibly) automatically wrap text
 //       without cutting off words, and lots more that might be useful.
+// POSSIBLY: COMPLETELY REMOVE (or cut down) and use a script implementation 
+//             with dialog_text_entity to help
 class narrative_dialog :
 	public engine::render_object
 {
@@ -522,6 +570,8 @@ public:
 
 	int draw(engine::renderer &pR);
 
+	void set_text_format(const text_format_profile& pFormat);
+
 protected:
 	void refresh_renderer(engine::renderer& r);
 
@@ -530,26 +580,17 @@ private:
 	engine::sprite_node    mCursor;
 	dialog_text_entity     mText;
 	engine::text_node      mSelection;
-	text_format_profile    mFormat;
 
 	expression_manager     mExpression_manager;
 	engine::animation_node mExpression;
 
 	int load_box(tinyxml2::XMLElement* pEle, texture_manager& pTexture_manager);
-	int load_font(tinyxml2::XMLElement* pEle);
 
 	void show_expression();
 	void reset_positions();
 
-	entity_reference script_get_narrative_box()
-	{
-		return mBox;
-	}
-
-	entity_reference script_get_narrative_text()
-	{
-		return mText;
-	}
+	entity_reference script_get_narrative_box();
+	entity_reference script_get_narrative_text();
 };
 
 // The main player character_entity
@@ -607,11 +648,15 @@ public:
 		return e;
 	}
 
+	void set_text_format(const text_format_profile& pFormat);
+
 private:
 	void register_entity_type(script_system& pScript);
 
 	texture_manager*  mTexture_manager;
 	script_system* mScript_system;
+
+	const text_format_profile* mText_format;
 
 	std::vector<std::unique_ptr<entity>> mEntities;
 
@@ -619,6 +664,8 @@ private:
 
 	entity_reference script_add_entity(const std::string& tex);
 	entity_reference script_add_entity_atlas(const std::string& tex, const std::string& atlas);
+	entity_reference script_add_text();
+	void             script_set_text(entity_reference& e, const std::string& pText);
 	void             script_remove_entity(entity_reference& e);
 	entity_reference script_add_character(const std::string& tex);
 	void             script_set_name(entity_reference& e, const std::string& pName);
@@ -641,7 +688,7 @@ private:
 	void             script_set_parent(entity_reference& e1, entity_reference& e2);
 	void             script_detach_children(entity_reference& e);
 	void             script_detach_parent(entity_reference& e);
-	void             script_make_gui(entity_reference& e);
+	void             script_make_gui(entity_reference& e, float pOffset);
 };
 
 class background_music
@@ -690,17 +737,18 @@ private:
 	collision_system* mCollision_system;
 	engine::pathfinder mPathfinder;
 
-	bool script_find_path(AS::CScriptArray* pScript_path, engine::fvector pStart, engine::fvector pDestination);
-	bool script_find_path_partial(AS::CScriptArray* pScript_path, engine::fvector pStart, engine::fvector pDestination, int pCount);
+	bool script_find_path(AS::CScriptArray& pScript_path, engine::fvector pStart, engine::fvector pDestination);
+	bool script_find_path_partial(AS::CScriptArray& pScript_path, engine::fvector pStart, engine::fvector pDestination, int pCount);
 };
 
 class scene :
-	public engine::render_proxy,
-	public panning_node
+	public engine::render_proxy
 {
 public:
 	scene();
 	~scene();
+
+	panning_node& get_world_node();
 
 	collision_system& get_collision_system();
 
@@ -732,9 +780,15 @@ public:
 
 	void focus_player(bool pFocus);
 
+	void set_text_format(const text_format_profile& pFormat);
+
 private:
-	texture_manager*  mTexture_manager;
-	script_system*    mScript;
+	std::map<std::string, script_context> pScript_contexts;
+
+	panning_node mWorld_node;
+
+	texture_manager*   mTexture_manager;
+	script_system*     mScript;
 
 	tilemap_display    mTilemap_display;
 	tilemap_loader     mTilemap_loader;
@@ -746,6 +800,8 @@ private:
 	player_character   mPlayer;
 	colored_overlay    mColored_overlay;
 	pathfinding_system mPathfinding_system;
+
+	scene_loader mLoader;
 
 	bool              mFocus_player;
 
@@ -792,10 +848,10 @@ private:
 	tinyxml2::XMLElement *mEle_root;
 };
 
+
 // The main game
 class game :
-	public engine::render_proxy,
-	public util::nocopy
+	public engine::render_proxy
 {
 public:
 	game();
@@ -815,6 +871,8 @@ private:
 	script_system    mScript;
 	controls         mControls;
 	size_t           mSlot;
+
+	text_format_profile mDefault_format; //TODO: create manager of formats
 
 	bool        mRequest_load;
 	std::string mNew_scene_path;

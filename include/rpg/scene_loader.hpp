@@ -6,6 +6,7 @@
 
 #include <engine/vector.hpp>
 #include <engine/rect.hpp>
+#include <engine/utility.hpp>
 
 #include <string>
 #include <vector>
@@ -20,6 +21,8 @@ public:
 
 	int load(const std::string& pPath);
 
+	void clean();
+
 	bool has_boundary();
 	const engine::frect& get_boundary();
 	const std::string& get_name();
@@ -29,8 +32,8 @@ public:
 
 	std::vector<engine::frect> construct_wall_list();
 
-	tinyxml2::XMLElement* get_collisionboxes();
-	tinyxml2::XMLElement* get_tilemap();
+	util::optional_pointer<tinyxml2::XMLElement> get_collisionboxes();
+	util::optional_pointer<tinyxml2::XMLElement> get_tilemap();
 
 	tinyxml2::XMLDocument& get_document();
 
@@ -42,8 +45,8 @@ private:
 	std::string mScene_path;
 	engine::frect mBoundary;
 	bool mHas_boundary;
-	tinyxml2::XMLElement* mEle_collisionboxes;
-	tinyxml2::XMLElement* mEle_map;
+	util::optional_pointer<tinyxml2::XMLElement> mEle_collisionboxes;
+	util::optional_pointer<tinyxml2::XMLElement> mEle_map;
 };
 
 }

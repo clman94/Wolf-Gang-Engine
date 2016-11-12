@@ -48,7 +48,6 @@ struct color
 class render_object;
 class renderer;
 
-
 class renderer :
 	public util::nocopy
 {

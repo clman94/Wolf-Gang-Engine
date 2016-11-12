@@ -76,6 +76,19 @@ int scene_loader::load(const std::string & pPath)
 	return 0;
 }
 
+void scene_loader::clean()
+{
+	mXml_Document.Clear();
+	mScript_path.clear();
+	mScene_name.clear();
+	mTilemap_texture.clear();
+	mScene_path.clear();
+	mBoundary = engine::frect();
+	mHas_boundary = false;
+	mEle_collisionboxes = nullptr;
+	mEle_map = nullptr;
+}
+
 bool scene_loader::has_boundary()
 {
 	return mHas_boundary;
@@ -122,12 +135,12 @@ std::vector<engine::frect> scene_loader::construct_wall_list()
 	return walls;
 }
 
-tinyxml2::XMLElement* scene_loader::get_collisionboxes()
+util::optional_pointer<tinyxml2::XMLElement> scene_loader::get_collisionboxes()
 {
 	return mEle_collisionboxes;
 }
 
-tinyxml2::XMLElement* scene_loader::get_tilemap()
+util::optional_pointer<tinyxml2::XMLElement> scene_loader::get_tilemap()
 {
 	return mEle_map;
 }

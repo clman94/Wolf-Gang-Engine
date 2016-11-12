@@ -19,8 +19,11 @@ const engine::time_t  FADE_DURATION          = 0.2f;
 const float           TILES_DEPTH = 103;
 const float           TILE_DEPTH_RANGE_MIN   = 1;
 const float           TILE_DEPTH_RANGE_MAX = 100;
-const float           NARRATIVE_TEXT_DEPTH = -3;
-const float           NARRATIVE_BOX_DEPTH = -2;
+
+const float           GUI_DEPTH = -2;
+
+const float           NARRATIVE_TEXT_DEPTH = -3.1f;
+const float           NARRATIVE_BOX_DEPTH = -3.f;
 const float           FX_DEPTH = -1;
 const float           ABSOLUTE_OVERLAP_DEPTH = -100000;
 }

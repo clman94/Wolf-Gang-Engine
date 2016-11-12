@@ -43,6 +43,24 @@ void flag_container::clean()
 	mFlags.clear();
 }
 
+void entity::set_dynamic_depth(bool pIs_dynamic)
+{
+	dynamic_depth = pIs_dynamic;
+}
+
+void entity::update_depth()
+{
+	if (dynamic_depth)
+	{
+		float ndepth = defs::TILE_DEPTH_RANGE_MAX
+			- util::clamp(get_position().y / 32
+				, defs::TILE_DEPTH_RANGE_MIN
+				, defs::TILE_DEPTH_RANGE_MAX);
+		if (ndepth != get_depth())
+			set_depth(ndepth);
+	}
+}
+
 // #########
 // sprite_entity
 // #########
@@ -51,14 +69,12 @@ int sprite_entity::set_texture(std::string pName, texture_manager & pTexture_man
 {
 	auto texture = pTexture_manager.get_texture(pName);
 	if (!texture)
+	{
 		util::error("Cannot find texture for entity");
+		return 1;
+	}
 	mTexture = texture;
 	return 0;
-}
-
-void sprite_entity::set_dynamic_depth(bool a)
-{
-	dynamic_depth = a;
 }
 
 void sprite_entity::set_anchor(engine::anchor pAnchor)
@@ -90,7 +106,6 @@ sprite_entity::sprite_entity()
 {
 	dynamic_depth = true;
 	mSprite.set_anchor(engine::anchor::bottom);
-	add_child(mSprite);
 }
 
 void sprite_entity::play_animation()
@@ -123,16 +138,9 @@ bool sprite_entity::set_animation(const std::string& pName, bool pSwap)
 
 int sprite_entity::draw(engine::renderer &_r)
 {
-	if (dynamic_depth)
-	{
-		float ndepth = defs::TILE_DEPTH_RANGE_MAX
-			- util::clamp(get_position().y / 32
-				, defs::TILE_DEPTH_RANGE_MIN
-				, defs::TILE_DEPTH_RANGE_MAX);
-		if (ndepth != get_depth())
-			set_depth(ndepth);
-	}
-	//mSprite.set_position(get_exact_position().floor());
+	update_depth();
+
+	mSprite.set_exact_position(get_exact_position());
 	mSprite.draw(_r);
 	return 0;
 }
@@ -443,6 +451,7 @@ engine::fvector player_character::get_activation_point(float pDistance)
 
 entity_manager::entity_manager()
 {
+	mText_format = nullptr;
 }
 
 util::optional_pointer<entity> entity_manager::find_entity(const std::string& pName)
@@ -461,6 +470,11 @@ void entity_manager::clean()
 void entity_manager::set_texture_manager(texture_manager& pTexture_manager)
 {
 	mTexture_manager = &pTexture_manager;
+}
+
+void entity_manager::set_text_format(const text_format_profile & pFormat)
+{
+	mText_format = &pFormat;
 }
 
 void entity_manager::register_entity_type(script_system & pScript)
@@ -529,6 +543,36 @@ entity_reference entity_manager::script_add_entity_atlas(const std::string & pat
 	entity_reference e = script_add_entity(path);
 	dynamic_cast<sprite_entity*>(e.get())->set_animation(atlas);
 	return e;
+}
+
+entity_reference entity_manager::script_add_text()
+{
+	assert(get_renderer() != nullptr);
+	assert(mTexture_manager != nullptr);
+	assert(mText_format != nullptr);
+
+	if (mEntities.size() >= 256)
+	{
+		util::error("Reached upper limit of entities");
+		return entity_reference();
+	}
+
+	auto ne = construct_entity<text_entity>();
+	ne->apply_format(*mText_format);
+	get_renderer()->add_object(*ne);
+	return *ne;
+}
+
+void entity_manager::script_set_text(entity_reference& e, const std::string & pText)
+{
+	if (!check_entity(e)) return;
+	text_entity* c = dynamic_cast<text_entity*>(e.get());
+	if (!c)
+	{
+		util::error("Entity is not text");
+		return;
+	}
+	c->set_text(pText);
 }
 
 void entity_manager::script_remove_entity(entity_reference& e)
@@ -755,16 +799,18 @@ void entity_manager::script_detach_parent(entity_reference& e)
 	e->set_parent(*this);
 }
 
-void entity_manager::script_make_gui(entity_reference & e)
+void entity_manager::script_make_gui(entity_reference & e, float pOffset)
 {
 	if (!check_entity(e)) return;
 
 	// Gui elements essentually don't stick to anything
 	// So we just detach everything.
+
 	e->detach_children();
 	e->detach_parent();
 
-	e->set_depth(defs::NARRATIVE_TEXT_DEPTH);
+	e->set_dynamic_depth(false);
+	e->set_depth(defs::GUI_DEPTH - (pOffset/1000));
 }
 
 void entity_manager::load_script_interface(script_system& pScript)
@@ -775,6 +821,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 
 	pScript.add_function("entity add_entity(const string &in)",                      asMETHOD(entity_manager, script_add_entity), this);
 	pScript.add_function("entity add_entity(const string &in, const string &in)",    asMETHOD(entity_manager, script_add_entity_atlas), this);
+	pScript.add_function("entity add_text()",                                        asMETHOD(entity_manager, script_add_text), this);
 	pScript.add_function("entity add_character(const string &in)",                   asMETHOD(entity_manager, script_add_character), this);
 	pScript.add_function("void set_position(entity&in, const vec &in)",              asMETHOD(entity_manager, script_set_position), this);
 	pScript.add_function("vec get_position(entity&in)",                              asMETHOD(entity_manager, script_get_position), this);
@@ -792,14 +839,15 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void _set_anchor(entity&in, int)",                         asMETHOD(entity_manager, script_set_anchor), this);
 	pScript.add_function("void set_rotation(entity&in, float)",                      asMETHOD(entity_manager, script_set_rotation), this);
 	pScript.add_function("void set_color(entity&in, int, int, int, int)",            asMETHOD(entity_manager, script_set_color), this);
-	pScript.add_function("void set_visible(entity&in, bool)",                     asMETHOD(entity_manager, script_set_visible), this);
+	pScript.add_function("void set_visible(entity&in, bool)",                        asMETHOD(entity_manager, script_set_visible), this);
 	pScript.add_function("void set_texture(entity&in, const string&in)",             asMETHOD(entity_manager, script_set_texture), this);
+	pScript.add_function("void set_text(entity&in, const string &in)",               asMETHOD(entity_manager, script_set_text), this);
 
 	pScript.add_function("void add_child(entity&in, entity&in)",                     asMETHOD(entity_manager, script_add_child), this);
 	pScript.add_function("void set_parent(entity&in, entity&in)",                    asMETHOD(entity_manager, script_set_parent), this);
 	pScript.add_function("void detach_children(entity&in)",                          asMETHOD(entity_manager, script_detach_children), this);
 	pScript.add_function("void detach_parent(entity&in)",                            asMETHOD(entity_manager, script_detach_parent), this);
-	pScript.add_function("void make_gui(entity&in)",                            asMETHOD(entity_manager, script_make_gui), this);
+	pScript.add_function("void make_gui(entity&in, float)",                                 asMETHOD(entity_manager, script_make_gui), this);
 }
 
 bool entity_manager::is_character(sprite_entity* pEntity)
@@ -814,9 +862,9 @@ bool entity_manager::is_character(sprite_entity* pEntity)
 scene::scene()
 {
 	mTilemap_display.set_depth(defs::TILES_DEPTH);
-	add_child(mTilemap_display);
-	add_child(mEntity_manager);
-	add_child(mPlayer);
+	mWorld_node.add_child(mTilemap_display);
+	mWorld_node.add_child(mEntity_manager);
+	mWorld_node.add_child(mPlayer);
 	mFocus_player = true;
 
 	mPathfinding_system.set_collision_system(mCollision_system);
@@ -824,6 +872,11 @@ scene::scene()
 
 scene::~scene()
 {
+}
+
+panning_node& scene::get_world_node()
+{
+	return mWorld_node;
 }
 
 collision_system&
@@ -869,25 +922,39 @@ int scene::load_scene(std::string pPath)
 
 	clean_scene();
 
-	scene_loader loader;
-	if (loader.load(pPath))
+	if (mLoader.load(pPath))
 	{
 		util::error("Unable to open scene");
 		return 1;
 	}
 
 	mScene_path = pPath;
-	mScene_name = loader.get_name();
+	mScene_name = mLoader.get_name();
 
-	mCollision_system.load_collision_boxes(loader.get_collisionboxes());
+	auto collision_boxes = mLoader.get_collisionboxes();
+	if (collision_boxes)
+		mCollision_system.load_collision_boxes(collision_boxes);
 
-	set_boundary_enable(loader.has_boundary());
-	set_boundary(loader.get_boundary());
+	mWorld_node.set_boundary_enable(mLoader.has_boundary());
+	mWorld_node.set_boundary(mLoader.get_boundary());
 
-	if (!mScript->load_scene_script(loader.get_script_path()))
-		mScript->setup_triggers(mCollision_system);
+	auto context = pScript_contexts[mScene_path];
 
-	auto tilemap_texture = mTexture_manager->get_texture(loader.get_tilemap_texture());
+	// Compile script if not already
+	if (!context.is_valid())
+	{
+		context.set_script_system(*mScript);
+		context.build_script(mLoader.get_script_path());
+	}
+
+	// Set context if still valid
+	if (context.is_valid())
+	{
+		context.setup_triggers(mCollision_system);
+		mScript->load_context(context);
+	}
+
+	auto tilemap_texture = mTexture_manager->get_texture(mLoader.get_tilemap_texture());
 	if (!tilemap_texture)
 	{
 		util::error("Invalid tilemap texture");
@@ -895,7 +962,7 @@ int scene::load_scene(std::string pPath)
 	}
 	mTilemap_display.set_texture(*tilemap_texture);
 
-	mTilemap_loader.load_tilemap_xml(loader.get_tilemap());
+	mTilemap_loader.load_tilemap_xml(mLoader.get_tilemap());
 	mTilemap_loader.update_display(mTilemap_display);
 
 	// Pre-execute so the scene script can setup things before the render.
@@ -914,7 +981,12 @@ scene::reload_scene()
 		util::error("No scene to reload");
 		return 1;
 	}
-	mBackground_music.clean();
+
+	clean_scene(true);
+
+	// Recompile Scene
+	pScript_contexts[mScene_path].clean();
+
 	return load_scene(mScene_path);
 }
 
@@ -1015,15 +1087,21 @@ void scene::focus_player(bool pFocus)
 	mFocus_player = pFocus;
 }
 
+inline void rpg::scene::set_text_format(const text_format_profile & pFormat)
+{
+	mEntity_manager.set_text_format(pFormat);
+	mNarrative.set_text_format(pFormat);
+}
+
 void scene::script_set_focus(engine::fvector pPosition)
 {
 	mFocus_player = false;
-	set_focus(pPosition * 32);
+	mWorld_node.set_focus(pPosition * 32);
 }
 
 engine::fvector scene::script_get_focus()
 {
-	return get_focus() / 32;
+	return mWorld_node.get_focus() / 32;
 }
 
 entity_reference scene::script_get_player()
@@ -1033,22 +1111,22 @@ entity_reference scene::script_get_player()
 
 engine::fvector scene::script_get_boundary_position()
 {
-	return get_boundary().get_offset();
+	return mWorld_node.get_boundary().get_offset();
 }
 
 engine::fvector scene::script_get_boundary_size()
 {
-	return get_boundary().get_size();
+	return mWorld_node.get_boundary().get_size();
 }
 
 void scene::script_set_boundary_size(engine::fvector pSize)
 {
-	set_boundary(get_boundary().set_size(pSize));
+	mWorld_node.set_boundary(mWorld_node.get_boundary().set_size(pSize));
 }
 
 void scene::script_set_boundary_position(engine::fvector pPosition)
 {
-	set_boundary(get_boundary().set_offset(pPosition));
+	mWorld_node.set_boundary(mWorld_node.get_boundary().set_offset(pPosition));
 }
 
 void scene::script_set_tile(const std::string& pAtlas, engine::fvector pPosition
@@ -1066,7 +1144,7 @@ void scene::script_remove_tile(engine::fvector pPosition, int pLayer)
 
 void scene::refresh_renderer(engine::renderer& pR)
 {
-	set_viewport(pR.get_size());
+	mWorld_node.set_viewport(pR.get_size());
 	pR.add_object(mTilemap_display);
 	pR.add_object(mNarrative);
 	pR.add_object(mPlayer);
@@ -1074,10 +1152,10 @@ void scene::refresh_renderer(engine::renderer& pR)
 	mEntity_manager.set_renderer(pR);
 }
 
-void rpg::scene::update_focus()
+void scene::update_focus()
 {
 	if (mFocus_player)
-		set_focus(mPlayer.get_position(*this));
+		mWorld_node.set_focus(mPlayer.get_position(mWorld_node));
 }
 
 void scene::update_collision_interaction(controls & pControls)
@@ -1202,7 +1280,7 @@ void script_system::message_callback(const asSMessageInfo * msg)
 }
 
 std::string
-script_system::get_metadata_type(const std::string & pMetadata)
+script_context::get_metadata_type(const std::string & pMetadata)
 {
 	for (auto i = pMetadata.begin(); i != pMetadata.end(); i++)
 	{
@@ -1437,24 +1515,11 @@ script_system::~script_system()
 	mEngine->ShutDownAndRelease();
 }
 
-int
-script_system::load_scene_script(const std::string& pPath)
+void script_system::load_context(script_context & pContext)
 {
 	mCtxmgr.AbortAll();
-	mEngine->DiscardModule(pPath.c_str());
-	mBuilder.StartNewModule(mEngine, pPath.c_str());
-	mBuilder.AddSectionFromMemory("scene_commands", "#include 'data/internal/scene.as'");
-	mBuilder.AddSectionFromFile(pPath.c_str());
-	if (mBuilder.BuildModule())
-	{
-		util::error("Failed to load scene script");
-		return 1;
-	}
-
-	mScene_module = mBuilder.GetModule();
-
+	mContext = &pContext;
 	start_all_with_tag("start");
-	return 0;
 }
 
 void
@@ -1471,39 +1536,9 @@ script_system::add_function(const char * pDeclaration, const asSFuncPtr& pPtr)
 	assert(r >= 0);
 }
 
-void
-script_system::setup_triggers(collision_system& pCollision_system)
-{
-	size_t func_count = mScene_module->GetFunctionCount();
-	for (size_t i = 0; i < func_count; i++)
-	{
-		auto func = mScene_module->GetFunctionByIndex(i);
-		std::string metadata = parsers::remove_trailing_whitespace(mBuilder.GetMetadataStringForFunc(func));
-		std::string type = get_metadata_type(metadata);
-
-		if (type == "trigger" ||
-			type == "button")
-		{
-			trigger nt;
-			script_function& sfunc = nt.get_function();
-			sfunc.set_context_manager(&mCtxmgr);
-			sfunc.set_engine(mEngine);
-			sfunc.set_function(func);
-
-			std::string vectordata(metadata.begin() + type.length(), metadata.end());
-			nt.parse_function_metadata(metadata);
-
-			if (type == "trigger")
-				pCollision_system.add_trigger(nt);
-			if (type == "button")
-				pCollision_system.add_button(nt);
-		}
-	}
-}
-
 void script_system::about_all()
 {
-	if (mCtxmgr.GetCurrentContext())
+	if (is_executing())
 		mCtxmgr.PreAbout();
 	else
 		mCtxmgr.AbortAll();
@@ -1511,11 +1546,11 @@ void script_system::about_all()
 
 void script_system::start_all_with_tag(const std::string & pTag)
 {
-	size_t func_count = mScene_module->GetFunctionCount();
+	size_t func_count = mContext->mScene_module->GetFunctionCount();
 	for (size_t i = 0; i < func_count; i++)
 	{
-		auto func = mScene_module->GetFunctionByIndex(i);
-		std::string metadata = parsers::remove_trailing_whitespace(mBuilder.GetMetadataStringForFunc(func));
+		auto func = mContext->mScene_module->GetFunctionByIndex(i);
+		std::string metadata = parsers::remove_trailing_whitespace(mContext->mBuilder.GetMetadataStringForFunc(func));
 		if (metadata == pTag)
 		{
 			mCtxmgr.AddContext(mEngine, func);
@@ -1550,6 +1585,77 @@ AS::asIScriptEngine& rpg::script_system::get_engine()
 bool script_system::is_executing()
 {
 	return mExecuting;
+}
+
+// #########
+// script_context
+// #########
+
+script_context::script_context() :
+	mScene_module(nullptr)
+{}
+
+void script_context::set_script_system(script_system & pScript)
+{
+	mScript = &pScript;
+}
+
+bool script_context::build_script(const std::string & pPath)
+{
+	mBuilder.StartNewModule(&mScript->get_engine(), pPath.c_str());
+	mBuilder.AddSectionFromMemory("scene_commands", "#include 'data/internal/scene.as'");
+	mBuilder.AddSectionFromFile(pPath.c_str());
+	if (mBuilder.BuildModule())
+	{
+		util::error("Failed to load scene script");
+		return false;
+	}
+	mScene_module = mBuilder.GetModule();
+	return true;
+}
+
+bool script_context::is_valid()
+{
+	return mScene_module.has_value();
+}
+
+void script_context::clean()
+{
+	if (mScene_module)
+	{
+		mScene_module->Discard();
+		mScene_module = nullptr;
+	}
+}
+
+void
+script_context::setup_triggers(collision_system& pCollision_system)
+{
+	size_t func_count = mScene_module->GetFunctionCount();
+	for (size_t i = 0; i < func_count; i++)
+	{
+		auto func = mScene_module->GetFunctionByIndex(i);
+		std::string metadata = parsers::remove_trailing_whitespace(mBuilder.GetMetadataStringForFunc(func));
+		std::string type = get_metadata_type(metadata);
+
+		if (type == "trigger" ||
+			type == "button")
+		{
+			trigger nt;
+			script_function& sfunc = nt.get_function();
+			sfunc.set_context_manager(&mScript->mCtxmgr);
+			sfunc.set_engine(mScript->mEngine);
+			sfunc.set_function(func);
+
+			std::string vectordata(metadata.begin() + type.length(), metadata.end());
+			nt.parse_function_metadata(metadata);
+
+			if (type == "trigger")
+				pCollision_system.add_trigger(nt);
+			if (type == "button")
+				pCollision_system.add_button(nt);
+		}
+	}
 }
 
 // #########
@@ -1681,6 +1787,12 @@ game::load_game_xml(std::string pPath)
 	}
 	mTexture_manager.load_from_directory(ele_textures->Attribute("path"));
 
+	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
+	{
+		mDefault_format.load_settings(ele_narrative);
+	}
+
+	mScene.set_text_format(mDefault_format);
 	mScene.set_texture_manager(mTexture_manager);
 	mScene.load_game_xml(ele_root);
 	mScene.load_scene(scene_path);
@@ -1724,7 +1836,7 @@ game::tick()
 		mScene.load_scene(mNew_scene_path);
 	}
 
-	mEditor_manager.update_camera_position(mScene.get_exact_position());
+	mEditor_manager.update_camera_position(mScene.get_world_node().get_exact_position());
 }
 
 void
@@ -1818,16 +1930,6 @@ narrative_dialog::load_box(tinyxml2::XMLElement* pEle, texture_manager& pTexture
 	return 0;
 }
 
-int
-narrative_dialog::load_font(tinyxml2::XMLElement* pEle)
-{
-	mFormat.load_settings(pEle);
-
-	mText.apply_format(mFormat);
-	mFormat.apply_to(mSelection);
-	return 0;
-}
-
 void narrative_dialog::show_expression()
 {
 	mExpression.set_visible(true);
@@ -1842,6 +1944,16 @@ void narrative_dialog::reset_positions()
 {
 	set_box_position(position::bottom);
 	mText.set_position({ 10, 10 });
+}
+
+entity_reference narrative_dialog::script_get_narrative_box()
+{
+	return mBox;
+}
+
+entity_reference narrative_dialog::script_get_narrative_text()
+{
+	return mText;
 }
 
 narrative_dialog::narrative_dialog()
@@ -1944,7 +2056,6 @@ void narrative_dialog::set_expression(const std::string& pName)
 int narrative_dialog::load_narrative_xml(tinyxml2::XMLElement* pEle, texture_manager& pTexture_manager)
 {
 	load_box(pEle, pTexture_manager);
-	load_font(pEle);
 
 	if (auto ele_expressions = pEle->FirstChildElement("expressions"))
 	{
@@ -1984,6 +2095,12 @@ int narrative_dialog::draw(engine::renderer& pR)
 	return 0;
 }
 
+void narrative_dialog::set_text_format(const text_format_profile & pFormat)
+{
+	mText.apply_format(pFormat);
+	pFormat.apply_to(mSelection);
+}
+
 void narrative_dialog::refresh_renderer(engine::renderer& r)
 {
 	r.add_object(mBox);
@@ -2006,6 +2123,7 @@ script_function::script_function() :
 
 script_function::~script_function()
 {
+	func->Release();
 	//return_context();
 }
 
@@ -2040,8 +2158,6 @@ script_function::set_context_manager(AS::CContextMgr * cm)
 void
 script_function::set_arg(unsigned int index, void* ptr)
 {
-	assert(func_ctx != nullptr);
-	assert(func != nullptr);
 	if(index < func->GetParamCount())
 		func_ctx->SetArgObject(index, ptr);
 }
@@ -2049,9 +2165,6 @@ script_function::set_arg(unsigned int index, void* ptr)
 bool
 script_function::call()
 {
-	assert(as_engine != nullptr);
-	assert(func != nullptr);
-	assert(ctx != nullptr);
 	if (!is_running())
 	{
 		return_context();
@@ -2794,11 +2907,11 @@ void pathfinding_system::set_collision_system(collision_system & pCollision_syst
 
 void pathfinding_system::load_script_interface(script_system & pScript)
 {
-	pScript.add_function("bool find_path(array<vec>@, vec, vec)", asMETHOD(pathfinding_system, script_find_path), this);
-	pScript.add_function("bool find_path_partial(array<vec>@, vec, vec, int)", asMETHOD(pathfinding_system, script_find_path_partial), this);
+	pScript.add_function("bool find_path(array<vec>&inout, vec, vec)", asMETHOD(pathfinding_system, script_find_path), this);
+	pScript.add_function("bool find_path_partial(array<vec>&inout, vec, vec, int)", asMETHOD(pathfinding_system, script_find_path_partial), this);
 }
 
-bool pathfinding_system::script_find_path(AS::CScriptArray * pScript_path, engine::fvector pStart, engine::fvector pDestination)
+bool pathfinding_system::script_find_path(AS::CScriptArray& pScript_path, engine::fvector pStart, engine::fvector pDestination)
 {
 	mPathfinder.set_path_limit(1000);
 
@@ -2806,13 +2919,13 @@ bool pathfinding_system::script_find_path(AS::CScriptArray * pScript_path, engin
 	{
 		auto path = mPathfinder.construct_path();
 		for (auto& i : path)
-			pScript_path->InsertLast(&i);
+			pScript_path.InsertLast(&i);
 		return true;
 	}
 	return false;
 }
 
-bool pathfinding_system::script_find_path_partial(AS::CScriptArray * pScript_path, engine::fvector pStart, engine::fvector pDestination, int pCount)
+bool pathfinding_system::script_find_path_partial(AS::CScriptArray& pScript_path, engine::fvector pStart, engine::fvector pDestination, int pCount)
 {
 	mPathfinder.set_path_limit(pCount);
 
@@ -2820,10 +2933,13 @@ bool pathfinding_system::script_find_path_partial(AS::CScriptArray * pScript_pat
 
 	auto path = mPathfinder.construct_path();
 	for (auto& i : path)
-		pScript_path->InsertLast(&i);
-
+		pScript_path.InsertLast(&i);
 	return retval;
 }
+
+// #########
+// text_format_profile
+// #########
 
 int text_format_profile::load_settings(tinyxml2::XMLElement * pEle)
 {
@@ -2875,10 +2991,13 @@ void text_format_profile::apply_to(engine::text_node& pText) const
 	//pText.set_color(mColor);
 }
 
+// #########
+// dialog_text_entity
+// #########
+
 dialog_text_entity::dialog_text_entity()
 {
-	set_interval(25);
-	add_child(mText);
+	set_interval(defs::DEFAULT_DIALOG_SPEED);
 }
 
 void dialog_text_entity::clear()
@@ -2887,10 +3006,6 @@ void dialog_text_entity::clear()
 	mText.set_text("");
 }
 
-void dialog_text_entity::apply_format(const text_format_profile & pFormat)
-{
-	pFormat.apply_to(mText);
-}
 
 int dialog_text_entity::draw(engine::renderer & pR)
 {
@@ -2961,4 +3076,28 @@ void dialog_text_entity::do_reveal()
 
 		mTimer.start();
 	}
+}
+
+text_entity::text_entity()
+{
+	set_dynamic_depth(false);
+	add_child(mText);
+}
+
+void text_entity::apply_format(const text_format_profile & pFormat)
+{
+	pFormat.apply_to(mText);
+}
+
+void text_entity::set_text(const std::string & pText)
+{
+	mText.set_text(pText);
+}
+
+int text_entity::draw(engine::renderer & pR)
+{
+	update_depth();
+	mText.set_exact_position(get_exact_position());
+	mText.draw(pR);
+	return 0;
 }
