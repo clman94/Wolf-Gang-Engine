@@ -35,87 +35,34 @@ namespace rpg{
 
 class script_system;
 
-// A node that acts as a sophisticated camera that can focus on a point.
+/// A node that acts as a sophisticated camera that can focus on a point.
 class panning_node :
 	public engine::node
 {
 public:
 	panning_node();
 
-	// Set the region in which the camera will always stay within
+	/// Set the region in which the camera will always stay within
 	void set_boundary(engine::frect pBoundary);
 	engine::frect get_boundary();
 
-	// Set the camera's resolution
+	/// Set the camera's resolution
 	void set_viewport(engine::fvector pViewport);
 
-	// Set the focal point in which the camera will center on
+	/// Set the focal point in which the camera will center on
 	void set_focus(engine::fvector pFocus);
 	engine::fvector get_focus();
 
 	void set_boundary_enable(bool pEnable);
 
 private:
-	engine::frect mBoundary;     ///< Region that the viewport will stay within
-	engine::fvector mViewport;   ///< Size of the viewport
-	engine::fvector mFocus;      ///< Point of focus (typically in the center of the screen)
-	bool mBoundary_enabled;      ///< 
+	engine::frect mBoundary;
+	engine::fvector mViewport;
+	engine::fvector mFocus;
+	bool mBoundary_enabled;
 };
 
-// A list template that connects all nodes contained to a central node
-template<typename T>
-class node_list :
-	public engine::node
-{
-public:
-
-	void clear()
-	{
-		mItems.clear();
-	}
-
-	template<class... T_ARG>
-	auto& create_item(T_ARG&&... pArg)
-	{
-		mItems.emplace_back(std::forward<T_ARG>(pArg)...);
-		add_child(mItems.back());
-		return mItems.back();
-	}
-
-	auto& create_item()
-	{
-		mItems.emplace_back();
-		add_child(mItems.back());
-		return mItems.back();
-	}
-
-	bool remove_item(T* pPtr)
-	{
-		for (auto i = mItems.begin(); i != mItems.end(); i++)
-		{
-			if (&(*i) == pPtr)
-			{
-				mItems.erase(i);
-				return true;
-			}
-		}
-		return false;
-	}
-
-	size_t size()
-	{
-		return mItems.size();
-	}
-
-	auto begin() { return mItems.begin(); }
-	auto end()   { return mItems.end();   }
-	auto back()  { return mItems.back();  }
-
-private:
-	std::list<T> mItems;
-};
-
-// Contains all flags and an interface to them
+/// Contains all flags and an interface to them
 class flag_container
 {
 public:
@@ -165,10 +112,10 @@ private:
 	std::array<bool, 13> mControls;
 };
 
+/// An object that represents a graphical object in the game.
 class entity :
 	public engine::render_object,
 	public engine::node,
-	public util::named,
 	public util::tracked_owner
 {
 public:
@@ -187,12 +134,23 @@ public:
 	virtual entity_type get_entity_type()
 	{ return entity_type::other; }
 
+	/// Set the dynamically changing depth according to its
+	/// Y position.
 	void set_dynamic_depth(bool pIs_dynamic);
 
+	void set_name(const std::string& pName);
+	const std::string& get_name();
+
 protected:
+	/// Updates the depth of the entity to its Y position.
+	/// Should be called if draw() is overridden by a subclass.
 	void update_depth();
+
+private:
 	bool dynamic_depth;
+	std::string mName;
 };
+/// For referencing entities in scripts.
 typedef util::tracking_ptr<entity> entity_reference;
 
 class sprite_entity :
@@ -217,7 +175,7 @@ public:
 	{ return entity_type::sprite; }
 
 private:
-	engine::texture*         mTexture;
+	util::optional_pointer<engine::texture> mTexture;
 	engine::animation_node   mSprite;
 };
 
@@ -619,7 +577,7 @@ public:
 	void movement(controls &pControls, collision_system& pCollision_system, float pDelta);
 	
 	// Get point in front of player
-	engine::fvector get_activation_point(float pDistance = 18);
+	engine::fvector get_activation_point(float pDistance = 19);
 
 private:
 	bool mLocked;

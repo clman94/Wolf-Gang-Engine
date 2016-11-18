@@ -61,6 +61,7 @@ public:
 	}
 };
 
+/// A pool for sound objects
 class sound_spawner
 {
 	std::list<sound> mSounds;

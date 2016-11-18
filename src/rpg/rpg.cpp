@@ -48,6 +48,16 @@ void entity::set_dynamic_depth(bool pIs_dynamic)
 	dynamic_depth = pIs_dynamic;
 }
 
+void entity::set_name(const std::string & pName)
+{
+	mName = pName;
+}
+
+const std::string& entity::get_name()
+{
+	return mName;
+}
+
 void entity::update_depth()
 {
 	if (dynamic_depth)
@@ -104,7 +114,7 @@ bool sprite_entity::is_playing() const
 
 sprite_entity::sprite_entity()
 {
-	dynamic_depth = true;
+	set_dynamic_depth(true);
 	mSprite.set_anchor(engine::anchor::bottom);
 }
 
@@ -659,7 +669,10 @@ void entity_manager::script_set_cycle(entity_reference& e, const std::string& na
 void entity_manager::script_set_depth(entity_reference& e, float pDepth)
 {
 	if (!check_entity(e)) return;
-	e->set_depth(pDepth);
+	e->set_dynamic_depth(false);
+	e->set_depth(util::clamp(pDepth
+		, defs::TILE_DEPTH_RANGE_MIN
+		, defs::TILE_DEPTH_RANGE_MAX));
 }
 
 void entity_manager::script_set_depth_fixed(entity_reference& e, bool pFixed)
@@ -860,7 +873,8 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void set_parent(entity&in, entity&in)",                    asMETHOD(entity_manager, script_set_parent), this);
 	pScript.add_function("void detach_children(entity&in)",                          asMETHOD(entity_manager, script_detach_children), this);
 	pScript.add_function("void detach_parent(entity&in)",                            asMETHOD(entity_manager, script_detach_parent), this);
-	pScript.add_function("void make_gui(entity&in, float)",                                 asMETHOD(entity_manager, script_make_gui), this);
+
+	pScript.add_function("void make_gui(entity&in, float)",                          asMETHOD(entity_manager, script_make_gui), this);
 }
 
 bool entity_manager::is_character(sprite_entity* pEntity)

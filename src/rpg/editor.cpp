@@ -40,7 +40,7 @@ void editor_gui::initualize()
 	mLayout->add(mLb_fps);
 
 	mLb_mouse = tgui::Label::copy(mLb_mode);
-	mLb_mouse->setText("(n/a, n/a) : (n/a, n/a)");
+	mLb_mouse->setText("(n/a, n/a)\n(n/a, n/a)");
 	mLb_mouse->setTextSize(14);
 	mLayout->add(mLb_mouse);
 
@@ -95,13 +95,14 @@ int editor_gui::draw(engine::renderer& pR)
 	mUpdate_timer += pR.get_delta();
 	if (mUpdate_timer >= 0.5f)
 	{
-		auto mouse_position = pR.get_mouse_position(mCamera_offset);
+		const auto mouse_position_exact = pR.get_mouse_position();
+		const auto mouse_position = pR.get_mouse_position(mCamera_offset);
 		std::string position;
 		position += "(";
-		//position += std::to_string(mouse_position.x);
-		//position += ", ";
-		//position += std::to_string(mouse_position.y);
-		//position += ") : (";
+		position += std::to_string(static_cast<int>(mouse_position_exact.x));
+		position += ", ";
+		position += std::to_string(static_cast<int>(mouse_position_exact.y));
+		position += ")\n(";
 		position += std::to_string(static_cast<int>(std::floor(mouse_position.x / 32)));
 		position += ", ";
 		position += std::to_string(static_cast<int>(std::floor(mouse_position.y / 32)));

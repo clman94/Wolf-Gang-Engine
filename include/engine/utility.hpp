@@ -11,6 +11,8 @@
 namespace util
 {
 
+
+/// Similar to optional but optimized for a pointer
 template<typename T>
 class optional_pointer
 {
@@ -77,6 +79,11 @@ private:
 class in_place_t {};
 static const in_place_t in_place;
 
+/// Similar to boost/std's optional object.
+/// Prevents access when then there is no 
+/// contained object. This does not construct
+/// the object if there is none and doesn't
+/// dynamically allocate memory.
 template<typename T>
 class optional
 {
@@ -104,7 +111,7 @@ public:
 
 	optional(const T& pValue)
 	{
-		static_assert(std::is_copy_constructible<T>::value, "Type needs to be copy constructable");
+		static_assert(std::is_copy_constructible<T>::value, "T needs to be copy constructable");
 		new(get_data()) T(pValue);
 		mHas_value = true;
 	}
@@ -112,7 +119,7 @@ public:
 	template<typename...T_ARGS>
 	optional(in_place_t pIn_place, T_ARGS&&... pArgs)
 	{
-		static_assert(std::is_copy_constructible<T>::value, "Type needs to be copy constructable");
+		static_assert(std::is_copy_constructible<T>::value, "T needs to be copy constructable");
 		get_data()->T(std::forward<T_ARGS>(pArgs)...);
 		mHas_value = true;
 	}
@@ -163,6 +170,8 @@ private:
 	bool mHas_value;
 };
 
+/// Notifies all references (tracking_ptr) that it has
+/// been destroyed.
 class tracked_owner
 {
 public:
@@ -184,6 +193,11 @@ private:
 	std::shared_ptr<bool> mIs_valid;
 };
 
+/// References an object of tracked_owner.
+/// tracked_owner notifies this object whenever
+/// it has been destroyed. Also prevents unwanted
+/// access when referenced object is destroyed.
+/// Should be checked with tracking_ptr::is_valid beforehand
 template<typename T>
 class tracking_ptr
 {
@@ -268,13 +282,15 @@ private:
 	T* mPointer;
 };
 
-
+/// Floor a value to a specific alignment.
+/// Ex. 
 template<typename T>
-static T floor_align(T v, T scale)
+static T floor_align(T pVal, T pAlign)
 {
-	return std::floor(v / scale)*scale;
+	return std::floor(pVal / pAlign)*pAlign;
 }
 
+/// Prevents unwanted copying of a class
 class nocopy {
 public:
 	nocopy(){}
@@ -283,13 +299,16 @@ private:
 	nocopy& operator=(const nocopy&) = delete;
 };
 
+/// std::string doesn't like null pointers so this
+/// just returns an empty std::string when there is one.
 static std::string safe_string(const char* str)
 {
 	if (str == nullptr)
-		return std::string(); // Empty string
+		return std::string();
 	return str;
 }
 
+/// Templated version of the sto* functions
 template<typename T>
 inline T to_numeral(const std::string& str, size_t *i = nullptr)
 {
@@ -339,20 +358,6 @@ T to_numeral(const std::string& str, std::string::const_iterator& iter)
 	iter += i;
 	return val;
 }
-
-class named
-{
-	std::string name;
-public:
-	void set_name(const std::string& str)
-	{
-		name = str;
-	}
-	const std::string& get_name()
-	{
-		return name;
-	}
-};
 
 template<typename T>
 static inline T clamp(T v, T min, T max)

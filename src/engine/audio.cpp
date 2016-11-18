@@ -353,16 +353,14 @@ sample_mix::test_song()
 	gen.add_mix(seq, engine::sample_buffer::wave_saw, 3);
 	gen.add_mix(seq, engine::sample_buffer::wave_noise, 4);
 
-	teststream s;
-	s.open(gen);
-
-	sf::Music m;
-	m.openFromStream(s);
+	gen.generate_section(0, 30000);
 
 	printf("play\n");
 	std::getchar();
-
-	m.play();
-	std::getchar();
+	while (true)
+	{
+		gen.play();
+		std::getchar();
+	}
 }
 

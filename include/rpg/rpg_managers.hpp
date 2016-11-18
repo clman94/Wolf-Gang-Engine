@@ -14,12 +14,14 @@
 namespace rpg
 {
 
+/// Resource manager of textures.
+/// Add
 class texture_manager
 {
 public:
 
-	// Locates all png files in the directory and associates its
-	// atlas of the same name (if it exists)
+	/// Locates all png files in the directory and associates its
+	/// atlas of the same name (if it exists)
 	int load_from_directory(const std::string& pPath);
 	util::optional_pointer<engine::texture> get_texture(const std::string& pName);
 	std::vector<std::string> construct_list();
@@ -38,6 +40,8 @@ public:
 class sound_manager
 {
 public:
+	/// Load all sounds from directory. All sounds are named by the
+	/// filename without the extension.
 	int load_from_directory(const std::string& pPath);
 	bool spawn_sound(const std::string& pName, float pVolume = 100, float pPitch = 1);
 	void stop_all();

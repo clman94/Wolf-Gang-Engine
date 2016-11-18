@@ -36,7 +36,7 @@ int texture_manager::load_from_directory(const std::string& pPath)
 			if (fs::exists(atlas_path))
 				entry.atlas = atlas_path.string();
 
-			// TODO: Preload SMALL textures
+			// TODO: Possibly preload SMALL textures
 		}
 	}
 	return 0;
@@ -52,9 +52,12 @@ texture_manager::get_texture(const std::string& pName)
 		return{};
 	}
 
+	/// Make sure the texture is loaded
 	auto &entry = iter->second;
 	if (entry.ensure_loaded())
 		return &entry.texture;
+
+	/// Texture failed
 	return{};
 }
 
@@ -67,6 +70,7 @@ bool texture_manager::texture_entry::ensure_loaded()
 			util::error("Failed to load texture.");
 			return false;
 		}
+		// load the atlas if it exists
 		if (!atlas.empty())
 			texture.load_atlas_xml(atlas);
 
