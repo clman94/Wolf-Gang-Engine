@@ -1286,6 +1286,9 @@ void controls::update(engine::renderer & pR)
 	if (pR.is_key_pressed(key_type::Right))
 		trigger(control::select_next);
 
+	if (pR.is_key_pressed(key_type::X))
+		trigger(control::back);
+
 	if (pR.is_key_down(key_type::LControl))
 	{
 		if (pR.is_key_pressed(key_type::R))

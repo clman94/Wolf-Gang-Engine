@@ -96,6 +96,7 @@ public:
 		select_previous,
 		select_up,
 		select_down,
+		back,
 		reset,
 		menu,
 		editor_1,
@@ -109,7 +110,7 @@ public:
 	void update(engine::renderer& pR);
 
 private:
-	std::array<bool, 13> mControls;
+	std::array<bool, 14> mControls;
 };
 
 /// An object that represents a graphical object in the game.
