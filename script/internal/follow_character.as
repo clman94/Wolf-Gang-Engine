@@ -1,4 +1,3 @@
-
 namespace priv{
 
 void do_character_follow(dictionary@ args)
@@ -30,6 +29,13 @@ void do_character_follow(dictionary@ args)
 
 }
 
+/// \addtogroup Entity
+/// \{
+///
+
+/// Manipulates a character that follows the player. This provides a
+/// quick way to making a character entity follow the player
+/// using A* path-finding.
 class follow_character
 {
 	follow_character()
@@ -42,7 +48,7 @@ class follow_character
 	{
 		stop();
 	}
-
+	
 	follow_character& opAssign(entity pEntity)
 	{
 		mEntity	= pEntity;
@@ -54,6 +60,8 @@ class follow_character
 		return mEntity;
 	}
 	
+	/// Start the path-finding. A new thread is created
+	/// and this object can be destroyed.
 	void start()
 	{
 		mIs_following = true;
@@ -92,3 +100,6 @@ class follow_character
 	private entity mEntity;
 	private float mSpeed;
 }
+
+
+/// \}

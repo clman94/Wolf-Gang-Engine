@@ -1,0 +1,10 @@
+/*! \file */ 
+
+/// For doxygen main page
+
+/*! \mainpage Wolf-Gang Engine
+ *
+ * \section intro Introduction
+ *
+ * This is the Wolf-Gang Engine :D
+ */
