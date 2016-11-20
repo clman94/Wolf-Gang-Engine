@@ -48,16 +48,16 @@ node::set_position(fvector pos)
 	mPosition = pos;
 }
 
-node*
+util::optional_pointer<node>
 node::detach_parent()
 {
-	if (!mParent) return nullptr;
+	if (!mParent) return{};
 	node* temp = mParent->mChildren[mChild_index];
 	mParent->mChildren.erase(mParent->mChildren.begin() + mChild_index);
 	for (size_t i = 0; i < mParent->mChildren.size(); i++)
 		mParent->mChildren[i]->mChild_index = i;
 	mChild_index = -1;
-	mParent = nullptr;
+	mParent.reset();
 	return temp;
 }
 
@@ -67,12 +67,12 @@ node::detach_children()
 	if (!mChildren.size()) return node_arr();
 	node_arr temp = mChildren;
 	for (auto i : mChildren)
-		i->mParent = nullptr;
+		i->mParent.reset();
 	mChildren.clear();
 	return temp;
 }
 
-node*
+util::optional_pointer<node>
 node::get_parent()
 {
 	return mParent;

@@ -72,6 +72,11 @@ public:
 		return mPointer;
 	}
 
+	void reset()
+	{
+		mPointer = nullptr;
+	}
+
 private:
 	T* mPointer;
 };

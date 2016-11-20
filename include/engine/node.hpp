@@ -29,17 +29,17 @@ public:
 	fvector  get_position() const;
 	fvector  get_position(const node& pRelative) const;
 
-	node*    detach_parent();
-	node_arr detach_children();
+	util::optional_pointer<node> detach_parent();
+	node_arr                     detach_children();
 
-	node*    get_parent();
-	node_arr get_children();
+	util::optional_pointer<node> get_parent();
+	node_arr                     get_children();
 
 	int      set_parent(node& obj);
 	int      add_child(node& obj);
 
 private:
-	node* mParent;
+	util::optional_pointer<node> mParent;
 	node_arr mChildren;
 
 	size_t mChild_index;
