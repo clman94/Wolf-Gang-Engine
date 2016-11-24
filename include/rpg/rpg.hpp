@@ -28,10 +28,12 @@
 #include <angelscript/add_on/contextmgr/contextmgr.h>
 #include <angelscript/add_on/scriptbuilder/scriptbuilder.h>
 #include <angelscript/add_on/scriptarray/scriptarray.h>
+#include <angelscript/add_on/scripthandle/scripthandle.h>
 
 namespace AS = AngelScript;
 
 namespace rpg{
+
 
 class script_system;
 
@@ -187,20 +189,39 @@ class character_entity :
 {
 public:
 
-	enum struct e_cycle
+	enum class cycle
 	{
 		def, // "default" is apparently not allowed in gcc....
 		left,
 		right,
 		up,
 		down,
-		idle
+		idle,
+		idle_left,
+		idle_right,
+		idle_up,
+		idle_down
+	};
+
+	enum class direction
+	{
+		other,
+		left,
+		right,
+		up,
+		down,
 	};
 
 	character_entity();
-	void set_cycle_group(std::string name);
+	void set_cycle_group(const std::string& name);
 	void set_cycle(const std::string& name);
-	void set_cycle(e_cycle type);
+	void set_cycle(cycle type);
+
+	void set_direction(direction pDirection);
+	direction get_direction();
+
+	void set_idle(bool pIs_idle);
+	bool is_idle();
 
 	void  set_speed(float f);
 	float get_speed();
@@ -208,6 +229,8 @@ public:
 private:
 	std::string mCyclegroup;
 	std::string mCycle;
+	direction mDirection;
+	bool mIs_idle;
 	float mMove_speed;
 };
 
@@ -374,6 +397,11 @@ private:
 	void script_abort();
 	void script_create_thread(AS::asIScriptFunction *func, AS::CScriptDictionary *arg);
 	void script_create_thread_noargs(AS::asIScriptFunction *func);
+
+	std::map<std::string, AS::CScriptHandle> mShared_handles;
+
+	void script_make_shared(AS::CScriptHandle pHandle, const std::string& pName);
+	AS::CScriptHandle script_get_value(const std::string& pName);
 
 	void load_script_interface();
 
@@ -561,14 +589,6 @@ class player_character :
 	public character_entity
 {
 public:
-	enum class direction
-	{
-		other,
-		up,
-		down,
-		left,
-		right
-	};
 
 	player_character();
 	void set_locked(bool pLocked);
@@ -582,7 +602,6 @@ public:
 
 private:
 	bool mLocked;
-	direction mFacing_direction;
 	void set_move_direction(engine::fvector pVec);
 };
 
@@ -810,6 +829,19 @@ public:
 private:
 	tinyxml2::XMLDocument mDocument;
 	tinyxml2::XMLElement *mEle_root;
+};
+
+class game_service
+{
+public:
+	const text_format_profile& get_font_format() const;
+	engine::fvector get_tile_size() const;
+
+	int load_xml(const std::string& pPath);
+
+private:
+	text_format_profile mFont_format;
+	engine::fvector mTile_size;
 };
 
 

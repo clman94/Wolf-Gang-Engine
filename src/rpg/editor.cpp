@@ -192,13 +192,18 @@ int tilemap_editor::draw(engine::renderer & pR)
 
 	const engine::fvector mouse_position = pR.get_mouse_position(mTilemap_display.get_exact_position());
 
+	engine::fvector tile_position;
 	engine::fvector tile_position_exact;
 	if (mPreview.get_size() == engine::fvector(16, 16)) // Half-size tile
-		tile_position_exact = (mouse_position / 16) / 2;
+	{
+		tile_position_exact = (mouse_position / 16);
+		tile_position = tile_position_exact.floor() / 2;
+	}
 	else
+	{
 		tile_position_exact = (mouse_position / 32);
-
-	const engine::fvector tile_position = tile_position_exact.floor();
+		tile_position = tile_position_exact.floor();
+	}
 
 	const bool control_add_tile    = pR.is_mouse_down(engine::renderer::mouse_button::mouse_left);
 	const bool control_remove_tile = pR.is_mouse_down(engine::renderer::mouse_button::mouse_right);

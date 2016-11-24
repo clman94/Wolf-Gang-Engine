@@ -163,10 +163,11 @@ character_entity::character_entity()
 {
 	mCyclegroup = "default";
 	mMove_speed = 3.f* defs::TILE_SIZE.x;
+	mIs_idle = false;
 }
 
 void
-character_entity::set_cycle_group(std::string name)
+character_entity::set_cycle_group(const std::string& name)
 {
 	mCyclegroup = name;
 	set_animation(mCyclegroup + ":" + mCycle, is_playing());
@@ -183,17 +184,49 @@ character_entity::set_cycle(const std::string& name)
 }
 
 void
-character_entity::set_cycle(e_cycle type)
+character_entity::set_cycle(cycle type)
 {
 	switch (type)
 	{
-	case e_cycle::def:   set_cycle("default"); break;
-	case e_cycle::left:  set_cycle("left");    break;
-	case e_cycle::right: set_cycle("right");   break;
-	case e_cycle::up:    set_cycle("up");      break;
-	case e_cycle::down:  set_cycle("down");    break;
-	case e_cycle::idle:  set_cycle("idle");    break;
+	case cycle::def:        set_cycle("default");    break;
+	case cycle::left:       set_cycle("left");       break;
+	case cycle::right:      set_cycle("right");      break;
+	case cycle::up:         set_cycle("up");         break;
+	case cycle::down:       set_cycle("down");       break;
+	case cycle::idle:       set_cycle("idle");       break;
+	case cycle::idle_left:  set_cycle("idle_left");  break;
+	case cycle::idle_right: set_cycle("idle_right"); break;
+	case cycle::idle_up:    set_cycle("idle_up");    break;
+	case cycle::idle_down:  set_cycle("idle_down");  break;
 	}
+}
+
+void character_entity::set_direction(direction pDirection)
+{
+	mDirection = pDirection;
+
+	// Converting from direction to cycle type
+	/// TODO: Too messy, clean up
+	int offset = static_cast<int>(pDirection) - static_cast<int>(direction::left);
+	if (!mIs_idle)
+		set_cycle(static_cast<cycle>(static_cast<int>(cycle::left) + offset));
+	else
+		set_cycle(static_cast<cycle>(static_cast<int>(cycle::idle_left) + offset));
+}
+
+character_entity::direction character_entity::get_direction()
+{
+	return mDirection;
+}
+
+void character_entity::set_idle(bool pIs_idle)
+{
+	mIs_idle = pIs_idle;
+}
+
+bool character_entity::is_idle()
+{
+	return mIs_idle;
 }
 
 void
@@ -332,31 +365,21 @@ void player_character::set_move_direction(engine::fvector pVec)
 	if (std::abs(pVec.x) > std::abs(pVec.y))
 	{
 		if (pVec.x > 0)
-		{
-			mFacing_direction = direction::right;
-			set_cycle(character_entity::e_cycle::right);
-		}
-		else {
-			mFacing_direction = direction::left;
-			set_cycle(character_entity::e_cycle::left);
-		}
+			set_direction(direction::right);
+		else 
+			set_direction(direction::left);
 	}
-	else {
+	else
+	{
 		if (pVec.y > 0)
-		{
-			mFacing_direction = direction::down;
-			set_cycle(character_entity::e_cycle::down);
-		}
-		else {
-			mFacing_direction = direction::up;
-			set_cycle(character_entity::e_cycle::up);
-		}
+			set_direction(direction::down);
+		else
+			set_direction(direction::up);
 	}
 }
 
 player_character::player_character()
 {
-	mFacing_direction = direction::other;
 }
 
 void player_character::set_locked(bool pLocked)
@@ -382,29 +405,25 @@ void player_character::movement(controls& pControls, collision_system& pCollisio
 	if (pControls.is_triggered(controls::control::left))
 	{
 		move.x -= 1;
-		mFacing_direction = direction::left;
-		set_cycle(character_entity::e_cycle::left);
+		set_direction(direction::left);
 	}
 
 	if (pControls.is_triggered(controls::control::right))
 	{
 		move.x += 1;
-		mFacing_direction = direction::right;
-		set_cycle(character_entity::e_cycle::right);
+		set_direction(direction::right);
 	}
 
 	if (pControls.is_triggered(controls::control::up))
 	{
 		move.y -= 1;
-		mFacing_direction = direction::up;
-		set_cycle(character_entity::e_cycle::up);
+		set_direction(direction::up);
 	}
 
 	if (pControls.is_triggered(controls::control::down))
 	{
 		move.y += 1;
-		mFacing_direction = direction::down;
-		set_cycle(character_entity::e_cycle::down);
+		set_direction(direction::down);
 	}
 
 	// Check collision if requested to move
@@ -444,7 +463,7 @@ void player_character::movement(controls& pControls, collision_system& pCollisio
 
 engine::fvector player_character::get_activation_point(float pDistance)
 {
-	switch (mFacing_direction)
+	switch (get_direction())
 	{
 	case direction::other: return get_position();
 	case direction::left:  return get_position() + engine::fvector(-pDistance, 0);
@@ -618,7 +637,7 @@ entity_reference entity_manager::script_add_character(const std::string & path)
 
 	auto nc = construct_entity<character_entity>();
 	nc->set_texture(path, *mTexture_manager);
-	nc->set_cycle(character_entity::e_cycle::def);
+	nc->set_cycle(character_entity::cycle::def);
 	get_renderer()->add_object(*nc);
 
 	return *nc;
@@ -651,7 +670,7 @@ void entity_manager::script_set_direction(entity_reference& e, int dir)
 		util::error("Entity is not a character");
 		return;
 	}
-	c->set_cycle(static_cast<character_entity::e_cycle>(dir));
+	c->set_direction(static_cast<character_entity::direction>(dir));
 }
 
 void entity_manager::script_set_cycle(entity_reference& e, const std::string& name)
@@ -1076,7 +1095,7 @@ void scene::load_game_xml(tinyxml2::XMLElement * ele_root)
 	std::string att_texture = util::safe_string(ele_player->Attribute("texture"));
 
 	mPlayer.set_texture(att_texture, *mTexture_manager);
-	mPlayer.set_cycle(character_entity::e_cycle::def);
+	mPlayer.set_cycle(character_entity::cycle::def);
 
 	auto ele_sounds = ele_root->FirstChildElement("sounds");
 	if (ele_sounds)
@@ -1286,7 +1305,8 @@ void controls::update(engine::renderer & pR)
 	if (pR.is_key_pressed(key_type::Right))
 		trigger(control::select_next);
 
-	if (pR.is_key_pressed(key_type::X))
+	if (pR.is_key_pressed(key_type::X) ||
+		pR.is_key_pressed(key_type::RShift))
 		trigger(control::back);
 
 	if (pR.is_key_down(key_type::LControl))
@@ -1360,6 +1380,16 @@ void script_system::script_create_thread_noargs(AS::asIScriptFunction * func)
 	mCtxmgr.AddContext(mEngine, func);
 }
 
+void script_system::script_make_shared(AS::CScriptHandle pHandle, const std::string& pName)
+{
+	mShared_handles[pName] = pHandle;
+}
+
+AS::CScriptHandle script_system::script_get_shared(const std::string& pName)
+{
+	return mShared_handles[pName];
+}
+
 void script_system::load_script_interface()
 {
 	add_function("int rand()", asFUNCTION(std::rand));
@@ -1372,6 +1402,9 @@ void script_system::load_script_interface()
 	add_function("void dprint(const string &in)", asMETHOD(script_system, debug_print), this);
 	add_function("void eprint(const string &in)", asMETHOD(script_system, error_print), this);
 	add_function("void abort()", asMETHOD(script_system, script_abort), this);
+
+	add_function("void make_shared(ref@, const string&in)", asMETHOD(script_system, script_make_shared), this);
+	add_function("ref@ get_shared(const string&in)", asMETHOD(script_system, script_get_shared), this);
 }
 
 
@@ -1547,6 +1580,7 @@ script_system::script_system()
 	RegisterScriptMath(mEngine);
 	RegisterScriptArray(mEngine, true);
 	RegisterScriptDictionary(mEngine);
+	RegisterScriptHandle(mEngine);
 	mCtxmgr.RegisterCoRoutineSupport(mEngine);
 
 	register_vector_type();
@@ -1558,6 +1592,7 @@ script_system::script_system()
 
 script_system::~script_system()
 {
+	mShared_handles.clear();
 	mCtxmgr.AbortAll();
 	mCtxmgr.~CContextMgr(); // Destroy context manager before releasing engine
 	mEngine->ShutDownAndRelease();
@@ -3152,5 +3187,45 @@ int text_entity::draw(engine::renderer & pR)
 	update_depth();
 	mText.set_exact_position(get_exact_position());
 	mText.draw(pR);
+	return 0;
+}
+
+const text_format_profile& game_service::get_font_format() const
+{
+	return mFont_format;
+}
+
+engine::fvector game_service::get_tile_size() const
+{
+	return mTile_size;
+}
+
+int game_service::load_xml(const std::string& pPath)
+{
+	using namespace tinyxml2;
+
+	XMLDocument doc;
+	if (doc.LoadFile(pPath.c_str()))
+	{
+		util::error("Could not load game file at '" + pPath + "'");
+		return 1;
+	}
+	auto ele_root = doc.RootElement();
+
+	if (auto ele_font = ele_root->FirstChildElement("font"))
+	{
+		mFont_format.load_settings(ele_font);
+	}
+
+	if (auto ele_font = ele_root->FirstChildElement("tile"))
+	{
+		mTile_size.x = ele_font->FloatAttribute("w");
+		mTile_size.y = ele_font->FloatAttribute("h");
+	}
+	else
+	{
+		mTile_size = { 32.f, 32.f }; // Default
+	}
+
 	return 0;
 }

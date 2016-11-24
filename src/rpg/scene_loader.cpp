@@ -2,6 +2,9 @@
 
 #include <engine/utility.hpp>
 
+#include <filesystem>
+namespace fs = std::experimental::filesystem;
+
 using namespace rpg;
 
 scene_loader::scene_loader()
@@ -10,10 +13,21 @@ scene_loader::scene_loader()
 	mEle_map = nullptr;
 }
 
-int scene_loader::load(const std::string & pPath)
+int scene_loader::load(const std::string & pName)
 {
 	mXml_Document.Clear();
-	if (mXml_Document.LoadFile(pPath.c_str()))
+	fs::path scene_directory = fs::current_path()
+		/ "data/scenes";
+
+	fs::path scene_path = scene_directory
+		/ (pName + ".xml");
+	mScene_path = scene_path.string();
+
+	fs::path script_path = scene_directory
+		/ (pName + ".as");
+	mScript_path = script_path.string();
+
+	if (mXml_Document.LoadFile(mScene_path.c_str()))
 	{
 		util::error("Unable to open scene. Please check path.");
 		return 1;
@@ -28,18 +42,6 @@ int scene_loader::load(const std::string & pPath)
 
 	// Get collision boxes
 	mEle_collisionboxes = ele_root->FirstChildElement("collisionboxes");
-
-	// Get scene script path
-	if (auto ele_script = ele_root->FirstChildElement("script"))
-	{
-		auto path = ele_script->Attribute("path");
-		if (!path)
-		{
-			util::error("Please specify the path of the script");
-			return 1;
-		}
-		mScript_path = path;
-	}
 
 	// Get boundary
 	if (auto ele_boundary = ele_root->FirstChildElement("boundary"))
@@ -71,7 +73,6 @@ int scene_loader::load(const std::string & pPath)
 			return 1;
 		}
 	}
-	mScene_path = pPath;
 
 	return 0;
 }

@@ -19,7 +19,7 @@ class scene_loader
 public:
 	scene_loader();
 
-	int load(const std::string& pPath);
+	int load(const std::string& pName);
 
 	void clean();
 
