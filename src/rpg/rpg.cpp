@@ -557,25 +557,24 @@ entity_reference entity_manager::script_add_entity(const std::string & path)
 	assert(get_renderer() != nullptr);
 	assert(mTexture_manager != nullptr);
 
-	if (mEntities.size() >= 256)
-	{
-		util::error("Reached upper limit of entities");
-		return entity_reference();
-	}
+	auto new_entity = create_entity<sprite_entity>();
+	if (!new_entity)
+		return entity_reference(); // Return empty on error
 
-	auto ne = construct_entity<sprite_entity>();
-	ne->set_texture(path, *mTexture_manager);
-	ne->set_animation("default:default");
-	get_renderer()->add_object(*ne);
+	new_entity->set_texture(path, *mTexture_manager);
+	new_entity->set_animation("default:default");
 
-	return *ne;
+	return *new_entity;
 }
 
 entity_reference entity_manager::script_add_entity_atlas(const std::string & path, const std::string& atlas)
 {
-	entity_reference e = script_add_entity(path);
-	dynamic_cast<sprite_entity*>(e.get())->set_animation(atlas);
-	return e;
+	entity_reference new_entity = script_add_entity(path);
+	if (!new_entity)
+		return entity_reference(); // Error, return empty
+
+	dynamic_cast<sprite_entity*>(new_entity.get())->set_animation(atlas);
+	return new_entity;
 }
 
 entity_reference entity_manager::script_add_text()
@@ -584,16 +583,12 @@ entity_reference entity_manager::script_add_text()
 	assert(mTexture_manager != nullptr);
 	assert(mText_format != nullptr);
 
-	if (mEntities.size() >= 256)
-	{
-		util::error("Reached upper limit of entities");
-		return entity_reference();
-	}
+	auto new_entity = create_entity<text_entity>();
+	if (!new_entity)
+		return entity_reference(); // Return empty on error
 
-	auto ne = construct_entity<text_entity>();
-	ne->apply_format(*mText_format);
-	get_renderer()->add_object(*ne);
-	return *ne;
+	new_entity->apply_format(*mText_format);
+	return *new_entity;
 }
 
 void entity_manager::script_set_text(entity_reference& e, const std::string & pText)
@@ -629,18 +624,14 @@ entity_reference entity_manager::script_add_character(const std::string & path)
 	assert(get_renderer() != nullptr);
 	assert(mTexture_manager != nullptr);
 
-	if (mEntities.size() >= 256)
-	{
-		util::error("Reached upper limit of characters.");
-		return entity_reference();
-	}
+	auto new_entity = create_entity<character_entity>();
+	if (!new_entity)
+		return entity_reference(); // Return empty on error
 
-	auto nc = construct_entity<character_entity>();
-	nc->set_texture(path, *mTexture_manager);
-	nc->set_cycle(character_entity::cycle::def);
-	get_renderer()->add_object(*nc);
+	new_entity->set_texture(path, *mTexture_manager);
+	new_entity->set_cycle(character_entity::cycle::def);
 
-	return *nc;
+	return *new_entity;
 }
 
 void entity_manager::script_set_name(entity_reference& e, const std::string & pName)
@@ -855,7 +846,7 @@ void entity_manager::script_make_gui(entity_reference & e, float pOffset)
 	e->detach_parent();
 
 	e->set_dynamic_depth(false);
-	e->set_depth(defs::GUI_DEPTH - (pOffset/1000));
+	e->set_depth(defs::GUI_DEPTH - (util::clamp(pOffset, 0.f, 1000.f)/1000));
 }
 
 void entity_manager::load_script_interface(script_system& pScript)

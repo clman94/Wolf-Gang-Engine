@@ -401,7 +401,7 @@ private:
 	std::map<std::string, AS::CScriptHandle> mShared_handles;
 
 	void script_make_shared(AS::CScriptHandle pHandle, const std::string& pName);
-	AS::CScriptHandle script_get_value(const std::string& pName);
+	AS::CScriptHandle script_get_shared(const std::string& pName);
 
 	void load_script_interface();
 
@@ -612,7 +612,7 @@ class entity_manager :
 public:
 	entity_manager();
 
-	util::optional_pointer<entity>    find_entity(const std::string& pName);
+	util::optional_pointer<entity> find_entity(const std::string& pName);
 
 	void clean();
 
@@ -621,13 +621,19 @@ public:
 	bool is_character(sprite_entity* pEntity);
 
 	template<typename T>
-	T* construct_entity()
+	T* create_entity()
 	{
-		auto e = new T();
-		assert(dynamic_cast<entity*>(e) != nullptr);
-		mEntities.push_back(std::unique_ptr<entity>(dynamic_cast<entity*>(e)));
-		add_child(*e);
-		return e;
+		if (mEntities.size() >= 256)
+		{
+			util::error("Reached upper limit of characters.");
+			return nullptr;
+		}
+		auto new_entity = new T();
+		assert(dynamic_cast<entity*>(new_entity) != nullptr);
+		mEntities.push_back(std::unique_ptr<entity>(dynamic_cast<entity*>(new_entity)));
+		add_child(*new_entity);
+		get_renderer()->add_object(*new_entity);
+		return new_entity;
 	}
 
 	void set_text_format(const text_format_profile& pFormat);
@@ -638,6 +644,7 @@ private:
 	texture_manager*  mTexture_manager;
 	script_system* mScript_system;
 
+	/// Used for the text-based entities
 	const text_format_profile* mText_format;
 
 	std::vector<std::unique_ptr<entity>> mEntities;
