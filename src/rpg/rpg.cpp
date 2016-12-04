@@ -162,7 +162,7 @@ int sprite_entity::draw(engine::renderer &_r)
 character_entity::character_entity()
 {
 	mCyclegroup = "default";
-	mMove_speed = 3.f* defs::TILE_SIZE.x;
+	mMove_speed = 3.f * defs::TILE_SIZE.x;
 	mIs_idle = false;
 }
 
@@ -952,21 +952,18 @@ scene::clean_scene(bool pFull)
 	}
 }
 
-int scene::load_scene(std::string pPath)
+int scene::load_scene(std::string pName)
 {
 	assert(mTexture_manager != nullptr);
 	assert(mScript != nullptr);
 
 	clean_scene();
 
-	if (mLoader.load(pPath))
+	if (mLoader.load(pName))
 	{
 		util::error("Unable to open scene");
 		return 1;
 	}
-
-	mScene_path = pPath;
-	mScene_name = mLoader.get_name();
 
 	auto collision_boxes = mLoader.get_collisionboxes();
 	if (collision_boxes)
@@ -975,7 +972,7 @@ int scene::load_scene(std::string pPath)
 	mWorld_node.set_boundary_enable(mLoader.has_boundary());
 	mWorld_node.set_boundary(mLoader.get_boundary());
 
-	auto context = pScript_contexts[mScene_path];
+	auto context = pScript_contexts[mLoader.get_name()];
 
 	// Compile script if not already
 	if (!context.is_valid())
@@ -1013,7 +1010,7 @@ int scene::load_scene(std::string pPath)
 int
 scene::reload_scene()
 {
-	if (mScene_path.empty())
+	if (mLoader.get_name().empty())
 	{
 		util::error("No scene to reload");
 		return 1;
@@ -1022,19 +1019,19 @@ scene::reload_scene()
 	clean_scene(true);
 
 	// Recompile Scene
-	pScript_contexts[mScene_path].clean();
+	pScript_contexts[mLoader.get_name()].clean();
 
-	return load_scene(mScene_path);
+	return load_scene(mLoader.get_name());
 }
 
 const std::string& scene::get_path()
 {
-	return mScene_path;
+	return mLoader.get_name();
 }
 
 const std::string& scene::get_name()
 {
-	return mScene_name;
+	return mLoader.get_name();
 }
 
 void scene::load_script_interface(script_system& pScript)
@@ -1078,9 +1075,10 @@ void scene::load_game_xml(tinyxml2::XMLElement * ele_root)
 	assert(ele_root != nullptr);
 
 	auto ele_player = ele_root->FirstChildElement("player");
-	if (!ele_player)
+	if (!ele_player ||
+		!ele_player->Attribute("texture"))
 	{
-		util::error("Please specify the player");
+		util::error("Please specify the player and its texture to use.");
 		return;
 	}
 	std::string att_texture = util::safe_string(ele_player->Attribute("texture"));
@@ -1090,14 +1088,9 @@ void scene::load_game_xml(tinyxml2::XMLElement * ele_root)
 
 	auto ele_sounds = ele_root->FirstChildElement("sounds");
 	if (ele_sounds)
-	{
-		if (!ele_sounds->Attribute("path"))
-		{
-			util::error("Please specify path of sounds");
-			return;
-		}
 		mSound_FX.load_from_directory(ele_sounds->Attribute("path"));
-	}
+	else
+		mSound_FX.load_from_directory(defs::DEFAULT_SOUND_PATH.string());
 
 	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
 	{
@@ -1677,7 +1670,7 @@ void script_context::set_script_system(script_system & pScript)
 bool script_context::build_script(const std::string & pPath)
 {
 	mBuilder.StartNewModule(&mScript->get_engine(), pPath.c_str());
-	mBuilder.AddSectionFromMemory("scene_commands", "#include 'data/internal/scene.as'");
+	mBuilder.AddSectionFromMemory("scene_commands", defs::INTERNAL_SCRIPTS_INCLUDE.c_str());
 	mBuilder.AddSectionFromFile(pPath.c_str());
 	if (mBuilder.BuildModule())
 	{
@@ -1743,16 +1736,14 @@ game::game()
 	mSlot = 0;
 }
 
-std::string game::get_slot_path(size_t pSlot)
+engine::fs::path game::get_slot_path(size_t pSlot)
 {
-	return "./data/saves/slot_"
-		+ std::to_string(pSlot)
-		+ ".xml";
+	return defs::DEFAULT_SAVES_PATH / (std::to_string(pSlot) + ".xml");
 }
 
 void game::save_game()
 {
-	const std::string path = get_slot_path(mSlot);
+	const std::string path = get_slot_path(mSlot).string();
 	save_system file;
 	file.new_save();
 	file.save_flags(mFlags);
@@ -1763,7 +1754,7 @@ void game::save_game()
 
 void game::open_game()
 {
-	const std::string path = get_slot_path(mSlot);
+	const std::string path = get_slot_path(mSlot).string();
 	save_system file;
 	if (!file.open_save(path))
 	{
@@ -1777,7 +1768,7 @@ void game::open_game()
 	if (mScript.is_executing())
 	{
 		mRequest_load = true;
-		mNew_scene_path = file.get_scene_path();
+		mNew_scene_name = file.get_scene_path();
 	}
 	else
 	{
@@ -1787,7 +1778,7 @@ void game::open_game()
 
 bool game::is_slot_used(size_t pSlot)
 {
-	const std::string path = get_slot_path(pSlot);
+	const std::string path = get_slot_path(pSlot).string();
 	std::ifstream stream(path.c_str());
 	return stream.good();
 }
@@ -1802,10 +1793,10 @@ size_t game::get_slot()
 	return mSlot;
 }
 
-void game::script_load_scene(const std::string & pPath)
+void game::script_load_scene(const std::string & pName)
 {
 	mRequest_load = true;
-	mNew_scene_path = pPath;
+	mNew_scene_name = pName;
 }
 
 void
@@ -1853,13 +1844,11 @@ game::load_game_xml(std::string pPath)
 	std::string scene_path = util::safe_string(ele_scene->Attribute("path"));
 
 	auto ele_textures = ele_root->FirstChildElement("textures");
-	if (!ele_textures ||
-		!ele_textures->Attribute("path"))
-	{
-		util::error("Please specify the texture directory's path");
-		return 1;
-	}
-	mTexture_manager.load_from_directory(ele_textures->Attribute("path"));
+	if (ele_textures &&
+		ele_textures->Attribute("path"))
+		mTexture_manager.load_from_directory(ele_textures->Attribute("path"));
+	else
+		mTexture_manager.load_from_directory(defs::DEFAULT_TEXTURES_PATH.string());
 
 	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
 	{
@@ -1907,7 +1896,7 @@ game::tick()
 	if (mRequest_load)
 	{
 		mRequest_load = false;
-		mScene.load_scene(mNew_scene_path);
+		mScene.load_scene(mNew_scene_name);
 	}
 
 	mEditor_manager.update_camera_position(mScene.get_world_node().get_exact_position());
@@ -2578,6 +2567,11 @@ void tilemap_loader::clean()
 // background_music
 // ##########
 
+background_music::background_music()
+{
+	mRoot_directory = defs::DEFAULT_MUSIC_PATH;
+}
+
 void background_music::load_script_interface(script_system & pScript)
 {
 	pScript.add_function("void _music_play()", asMETHOD(engine::sound_stream, play), &mStream);
@@ -2596,12 +2590,18 @@ void background_music::clean()
 	mStream.stop();
 }
 
-int background_music::script_music_open(const std::string & pPath)
+void background_music::set_root_directory(const std::string & pPath)
 {
-	if (mPath != pPath)
+	mRoot_directory = pPath;
+}
+
+int background_music::script_music_open(const std::string & pName)
+{
+	const engine::fs::path file(mRoot_directory / (pName + ".ogg"));
+	if (mPath != file)
 	{
-		mPath = pPath;
-		return mStream.open(pPath);
+		mPath = file;
+		return mStream.open(file.string());
 	}
 	return 0;
 }

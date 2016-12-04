@@ -1,26 +1,19 @@
 #include <engine/utility.hpp>
+#include <engine/filesystem.hpp>
 
 #include <rpg/rpg_managers.hpp>
-
-#ifdef __MINGW32__
-#include <boost/filesystem.hpp>
-namespace fs = boost::filesystem;
-#else
-#include <filesystem>
-namespace fs = std::experimental::filesystem;
-#endif
 
 using namespace rpg;
 
 int texture_manager::load_from_directory(const std::string& pPath)
 {
-	if (!fs::exists(pPath))
+	if (!engine::fs::exists(pPath))
 	{
 		util::error("Textures directory does not exist");
 		return 1;
 	}
 
-	for (auto& i : fs::recursive_directory_iterator(pPath))
+	for (auto& i : engine::fs::recursive_directory_iterator(pPath))
 	{
 		auto& texture_path = i.path();
 
@@ -33,7 +26,7 @@ int texture_manager::load_from_directory(const std::string& pPath)
 			// Get atlas path (if it exists)
 			auto atlas_path = texture_path.parent_path();
 			atlas_path /= texture_path.stem().string() + ".xml";
-			if (fs::exists(atlas_path))
+			if (engine::fs::exists(atlas_path))
 				entry.atlas = atlas_path.string();
 
 			// TODO: Possibly preload SMALL textures
@@ -91,7 +84,7 @@ texture_manager::construct_list()
 
 int sound_manager::load_from_directory(const std::string& pPath)
 {
-	if (!fs::exists(pPath))
+	if (!engine::fs::exists(pPath))
 	{
 		util::error("Sound directory does not exist");
 		return 1;
@@ -104,12 +97,12 @@ int sound_manager::load_from_directory(const std::string& pPath)
 		".flac",
 	};
 
-	for (auto& i : fs::recursive_directory_iterator(pPath))
+	for (auto& i : engine::fs::recursive_directory_iterator(pPath))
 	{
 		auto& sound_path = i.path();
 		if (extensions.find(sound_path.extension().string()) != extensions.end())
 		{
-			if (fs::file_size(sound_path) >= 1049000)
+			if (engine::fs::file_size(sound_path) >= 1049000)
 			{
 				util::warning("It is highly recommended to have sound effects less than 1 MB");
 			}

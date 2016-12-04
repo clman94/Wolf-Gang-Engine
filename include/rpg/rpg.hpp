@@ -8,6 +8,7 @@
 #include <engine/particle_engine.hpp>
 #include <engine/your_soul.hpp>
 #include <engine/pathfinding.hpp>
+#include <engine/filesystem.hpp>
 
 #include <rpg/rpg_managers.hpp>
 #include <rpg/rpg_config.hpp>
@@ -684,13 +685,17 @@ private:
 class background_music
 {
 public:
+	background_music();
 	void load_script_interface(script_system& pScript);
 	void clean();
+	void set_root_directory(const std::string& pPath);
+
 private:
 	engine::sound_stream mStream;
-	std::string mPath;
+	engine::fs::path mRoot_directory;
+	engine::fs::path mPath;
 
-	int script_music_open(const std::string& pPath);
+	int script_music_open(const std::string& pName);
 };
 
 // A colored rectangle overlay of the entire screen for
@@ -749,7 +754,7 @@ public:
 
 	// Load scene xml file which loads the scene script.
 	// pPath is not a reference so cleanup doesn't cause issues.
-	int load_scene(std::string pPath);
+	int load_scene(std::string pName);
 
 	// Reload the currently loaded scene.
 	int reload_scene();
@@ -805,9 +810,6 @@ private:
 	engine::fvector  script_get_boundary_size();
 	void             script_set_boundary_position(engine::fvector pPosition);
 	void             script_set_boundary_size(engine::fvector pSize);
-
-	std::string mScene_path;
-	std::string mScene_name;
 
 	void refresh_renderer(engine::renderer& _r);
 	void update_focus();
@@ -877,19 +879,19 @@ private:
 
 	text_format_profile mDefault_format; //TODO: create manager of formats
 
-	bool        mRequest_load;
-	std::string mNew_scene_path;
-	
 	editors::editor_manager mEditor_manager;
 
-	std::string get_slot_path(size_t pSlot);
+	bool        mRequest_load;
+	std::string mNew_scene_name;
+
+	engine::fs::path get_slot_path(size_t pSlot);
 	void save_game();
 	void open_game();
 	bool is_slot_used(size_t pSlot);
 	void set_slot(size_t pSlot);
 	size_t get_slot();
 
-	void script_load_scene(const std::string& pPath);
+	void script_load_scene(const std::string& pName);
 	void load_script_interface();
 
 	float get_delta();

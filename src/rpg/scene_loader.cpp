@@ -1,9 +1,7 @@
 #include <rpg/scene_loader.hpp>
+#include <rpg/rpg_config.hpp>
 
 #include <engine/utility.hpp>
-
-#include <filesystem>
-namespace fs = std::experimental::filesystem;
 
 using namespace rpg;
 
@@ -16,18 +14,12 @@ scene_loader::scene_loader()
 int scene_loader::load(const std::string & pName)
 {
 	mXml_Document.Clear();
-	fs::path scene_directory = fs::current_path()
-		/ "data/scenes";
 
-	fs::path scene_path = scene_directory
-		/ (pName + ".xml");
-	mScene_path = scene_path.string();
+	mScene_path = defs::DEFAULT_SCENES_PATH / (pName + ".xml");
+	mScript_path = defs::DEFAULT_SCENES_PATH / (pName + ".as");
+	mScene_name = pName;
 
-	fs::path script_path = scene_directory
-		/ (pName + ".as");
-	mScript_path = script_path.string();
-
-	if (mXml_Document.LoadFile(mScene_path.c_str()))
+	if (mXml_Document.LoadFile(mScene_path.string().c_str()))
 	{
 		util::error("Unable to open scene. Please check path.");
 		return 1;
@@ -88,14 +80,15 @@ void scene_loader::clean()
 	mHas_boundary = false;
 	mEle_collisionboxes = nullptr;
 	mEle_map = nullptr;
+	mWalls.clear();
 }
 
-bool scene_loader::has_boundary()
+bool scene_loader::has_boundary() const
 {
 	return mHas_boundary;
 }
 
-const engine::frect& scene_loader::get_boundary()
+const engine::frect& scene_loader::get_boundary() const
 {
 	return mBoundary;
 }
@@ -105,35 +98,36 @@ const std::string& scene_loader::get_name()
 	return mScene_name;
 }
 
-const std::string& scene_loader::get_script_path()
+std::string scene_loader::get_script_path() const
 {
-	return mScript_path;
+	return mScript_path.string();
 }
 
-const std::string& scene_loader::get_tilemap_texture()
+std::string scene_loader::get_tilemap_texture() const
 {
-	return mTilemap_texture;
+	return mTilemap_texture.string();
 }
 
-const std::string & rpg::scene_loader::get_scene_path()
+std::string rpg::scene_loader::get_scene_path() const
 {
-	return mScene_path;
+	return mScene_path.string();
 }
 
-std::vector<engine::frect> scene_loader::construct_wall_list()
+const std::vector<engine::frect>& rpg::scene_loader::get_walls() const
+{
+	return mWalls;
+}
+
+void scene_loader::construct_wall_list()
 {
 	assert(mEle_collisionboxes != 0);
-
-	std::vector<engine::frect> walls;
 
 	auto ele_wall = mEle_collisionboxes->FirstChildElement("wall");
 	while (ele_wall)
 	{
-		walls.push_back(util::shortcuts::rect_float_att(ele_wall));
+		mWalls.push_back(util::shortcuts::rect_float_att(ele_wall));
 		ele_wall = ele_wall->NextSiblingElement("wall");
 	}
-
-	return walls;
 }
 
 util::optional_pointer<tinyxml2::XMLElement> scene_loader::get_collisionboxes()

@@ -7,6 +7,7 @@
 #include <engine/vector.hpp>
 #include <engine/rect.hpp>
 #include <engine/utility.hpp>
+#include <engine/filesystem.hpp>
 
 #include <string>
 #include <vector>
@@ -23,14 +24,13 @@ public:
 
 	void clean();
 
-	bool has_boundary();
-	const engine::frect& get_boundary();
+	bool has_boundary() const;
+	const engine::frect& get_boundary() const;
 	const std::string& get_name();
-	const std::string& get_script_path();
-	const std::string& get_tilemap_texture();
-	const std::string& get_scene_path();
-
-	std::vector<engine::frect> construct_wall_list();
+	std::string get_script_path() const;
+	std::string get_tilemap_texture() const;
+	std::string get_scene_path() const;
+	const std::vector<engine::frect>& get_walls() const;
 
 	util::optional_pointer<tinyxml2::XMLElement> get_collisionboxes();
 	util::optional_pointer<tinyxml2::XMLElement> get_tilemap();
@@ -38,13 +38,16 @@ public:
 	tinyxml2::XMLDocument& get_document();
 
 private:
-	tinyxml2::XMLDocument mXml_Document;
-	std::string mScript_path;
-	std::string mScene_name;
-	std::string mTilemap_texture;
-	std::string mScene_path;
-	engine::frect mBoundary;
-	bool mHas_boundary;
+	void construct_wall_list();
+
+	std::vector<engine::frect> mWalls;
+	tinyxml2::XMLDocument      mXml_Document;
+	std::string                mScene_name;
+	engine::fs::path           mScript_path;
+	engine::fs::path           mTilemap_texture;
+	engine::fs::path           mScene_path;
+	engine::frect              mBoundary;
+	bool                       mHas_boundary;
 	util::optional_pointer<tinyxml2::XMLElement> mEle_collisionboxes;
 	util::optional_pointer<tinyxml2::XMLElement> mEle_map;
 };

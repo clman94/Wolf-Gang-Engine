@@ -169,7 +169,6 @@ private:
 
 class render_proxy
 {
-	renderer* mR;
 public:
 	render_proxy() : mR(nullptr)
 	{
@@ -186,6 +185,9 @@ public:
 	}
 protected:
 	virtual void refresh_renderer(renderer& pR){}
+
+private:
+	renderer* mR;
 };
 
 class vertex_batch;
@@ -397,7 +399,7 @@ public:
 
 	engine::fvector get_size() const;
 
-	int tick();
+	bool tick(); // Returns true if the frame has changed.
 
 	bool is_playing() const;
 	void start();
@@ -425,6 +427,8 @@ private:
 
 	int mInterval;
 	bool mPlaying;
+
+	void update_frame();
 };
 
 

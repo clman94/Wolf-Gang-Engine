@@ -112,16 +112,17 @@ animation::calculate_frame(frame_t pCount) const
 {
 	if (mFrame_count == 0)
 		return 0;
-
-	if (mLoop == animation::e_loop::linear)
-		return pCount%mFrame_count;
-
-	if (mLoop == animation::e_loop::pingpong)
-		return util::pingpong_index(pCount, mFrame_count - 1);
-
-	if (mLoop == animation::e_loop::none)
+	switch (mLoop)
+	{
+	case animation::e_loop::none:
 		return pCount >= mFrame_count ? mFrame_count - 1 : pCount;
 
+	case animation::e_loop::linear:
+			return pCount%mFrame_count;
+
+	case animation::e_loop::pingpong:
+			return util::pingpong_index(pCount, mFrame_count - 1);
+	}
 	return 0;
 }
 
@@ -137,6 +138,9 @@ void
 animation_node::set_frame(frame_t pFrame)
 {
 	mFrame = pFrame;
+	mClock.restart();
+	mInterval = mAnimation->get_interval(mFrame);
+	update_frame();
 }
 
 void
@@ -147,6 +151,8 @@ animation_node::set_animation(const animation& pAnimation, bool pSwap)
 
 	if (!pSwap)
 		set_frame(pAnimation.get_default_frame());
+	else
+		update_frame();
 
 	if (pAnimation.get_texture())
 		set_texture(*pAnimation.get_texture());
@@ -161,14 +167,13 @@ animation_node::set_texture(texture& pTexture)
 engine::fvector animation_node::get_size() const
 {
 	if (!mAnimation)
-		return{ 0,0 };
+		return{ 0, 0 };
 	return mAnimation->get_size();
 }
 
-int
-animation_node::tick()
+bool animation_node::tick()
 {
-	if (!mAnimation) return 0;
+	if (!mAnimation) return false;
 
 	int time = mClock.get_elapse().ms_i();
 	if (time >= mInterval && mInterval > 0)
@@ -178,8 +183,11 @@ animation_node::tick()
 		mInterval = mAnimation->get_interval(mFrame);
 
 		mClock.restart();
+
+		update_frame();
+		return true;
 	}
-	return 0;
+	return false;
 }
 
 bool
@@ -214,8 +222,10 @@ void
 animation_node::restart()
 {
 	if (mAnimation)
+	{
 		set_frame(mAnimation->get_default_frame());
-	mClock.restart();
+		mClock.restart();
+	}
 }
 
 void animation_node::set_color(color pColor)
@@ -239,12 +249,16 @@ int
 animation_node::draw(renderer &r)
 {
 	if (!mAnimation) return 1;
-	if (mPlaying) tick();
+	if (mPlaying)
+		tick();
+	mSprite.draw(r);
+	return 0;
+}
 
+void animation_node::update_frame()
+{
+	if (!mAnimation) return;
 	frect rect = mAnimation->get_frame_at(mFrame);
 	mSprite.set_texture_rect(rect);
 	mSprite.set_anchor(mAnchor);
-
-	mSprite.draw(r);
-	return 0;
 }

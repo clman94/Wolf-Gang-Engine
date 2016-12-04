@@ -453,7 +453,7 @@ int collisionbox_editor::open_scene(std::string pPath)
 	mTilemap_loader.update_display(mTilemap_display);
 	mTilemap_display.set_color({ 100, 100, 255, 150 });
 	
-	mWalls = mLoader.construct_wall_list();
+	mWalls = mLoader.get_walls();
 
 	return 0;
 }
