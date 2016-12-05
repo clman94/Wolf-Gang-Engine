@@ -474,7 +474,7 @@ public:
 	void apply_format(const text_format_profile& pFormat);
 
 	void set_text(const std::string& pText);
-
+	void set_color(engine::color pColor);
 	void set_anchor(engine::anchor pAnchor);
 
 	int draw(engine::renderer & pR);

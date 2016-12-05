@@ -749,9 +749,7 @@ void entity_manager::script_set_anchor(entity_reference& e, int pAnchor)
 		se->set_anchor(static_cast<engine::anchor>(pAnchor));
 	}
 	else
-	{
 		util::error("Unsupported entity type");
-	}
 }
 
 void entity_manager::script_set_rotation(entity_reference& e, float pRotation)
@@ -769,13 +767,19 @@ void entity_manager::script_set_rotation(entity_reference& e, float pRotation)
 void entity_manager::script_set_color(entity_reference& e, int r, int g, int b, int a)
 {
 	if (!check_entity(e)) return;
-	auto se = dynamic_cast<sprite_entity*>(e.get());
-	if (!se)
+	
+	if (e->get_entity_type() == entity::entity_type::sprite)
 	{
-		util::error("Entity is not sprite-based");
-		return;
+		auto se = dynamic_cast<sprite_entity*>(e.get());
+		se->set_color(engine::color(r, g, b, a));
 	}
-	se->set_color(engine::color(r, g, b, a));
+	else if (e->get_entity_type() == entity::entity_type::text)
+	{
+		auto se = dynamic_cast<text_entity*>(e.get());
+		se->set_color(engine::color(r, g, b, a));
+	}
+	else
+		util::error("Unsupported entity type");
 }
 
 void entity_manager::script_set_visible(entity_reference & e, bool pIs_visible)
@@ -2026,13 +2030,13 @@ narrative_dialog::narrative_dialog()
 	mBox.set_depth(defs::NARRATIVE_BOX_DEPTH);
 
 	mText.set_depth(defs::NARRATIVE_TEXT_DEPTH);
-	mBox.add_child(mText);
+	mText.set_parent(mBox);
 
 	mSelection.set_depth(defs::NARRATIVE_TEXT_DEPTH);
-	mBox.add_child(mSelection);
+	mSelection.set_parent(mBox);
 
 	mExpression.set_depth(defs::NARRATIVE_TEXT_DEPTH);
-	mBox.add_child(mExpression);
+	mExpression.set_parent(mBox);
 
 	mExpression.set_position({ 10, 10 });
 
@@ -2121,9 +2125,7 @@ int narrative_dialog::load_narrative_xml(tinyxml2::XMLElement* pEle, texture_man
 	load_box(pEle, pTexture_manager);
 
 	if (auto ele_expressions = pEle->FirstChildElement("expressions"))
-	{
 		mExpression_manager.load_expressions_xml(ele_expressions, pTexture_manager);
-	}
 	return 0;
 }
 
@@ -2261,8 +2263,8 @@ tilemap_loader::tile::load_xml(tinyxml2::XMLElement * e, size_t _layer)
 	position.x = e->FloatAttribute("x");
 	position.y = e->FloatAttribute("y");
 
-	fill.x = e->IntAttribute("w");
-	fill.y = e->IntAttribute("h");
+	fill.x = static_cast<float>(e->IntAttribute("w"));
+	fill.y = static_cast<float>(e->IntAttribute("h"));
 	fill.x = fill.x <= 0 ? 1 : fill.x; // Default 1
 	fill.y = fill.y <= 0 ? 1 : fill.y;
 
@@ -3166,6 +3168,11 @@ void text_entity::apply_format(const text_format_profile & pFormat)
 void text_entity::set_text(const std::string & pText)
 {
 	mText.set_text(pText);
+}
+
+void text_entity::set_color(engine::color pColor)
+{
+	mText.set_color(pColor);
 }
 
 void text_entity::set_anchor(engine::anchor pAnchor)
