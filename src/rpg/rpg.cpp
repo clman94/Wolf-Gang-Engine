@@ -1216,7 +1216,9 @@ void scene::update_collision_interaction(controls & pControls)
 			if (!new_position)
 				util::error("Destination door '" + destination + "' does not exist");
 			else
+			{
 				mPlayer.set_position(*new_position);
+			}
 		}
 	}
 
@@ -2028,8 +2030,10 @@ narrative_dialog::narrative_dialog()
 {
 	hide_box();
 
+	mBox.set_dynamic_depth(false);
 	mBox.set_depth(defs::NARRATIVE_BOX_DEPTH);
 
+	mText.set_dynamic_depth(false);
 	mText.set_depth(defs::NARRATIVE_TEXT_DEPTH);
 	mText.set_parent(mBox);
 
