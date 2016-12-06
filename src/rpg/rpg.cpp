@@ -948,6 +948,7 @@ scene::clean_scene(bool pFull)
 	mPlayer.set_cycle_group("default");
 	mPlayer.set_cycle("default");
 	mPlayer.set_dynamic_depth(true);
+	mPlayer.set_visible(true);
 	mPlayer.set_rotation(0);
 
 	if (pFull)
@@ -1742,7 +1743,7 @@ game::game()
 
 engine::fs::path game::get_slot_path(size_t pSlot)
 {
-	return defs::DEFAULT_SAVES_PATH / (std::to_string(pSlot) + ".xml");
+	return defs::DEFAULT_SAVES_PATH / ("slot_" + std::to_string(pSlot) + ".xml");
 }
 
 void game::save_game()
@@ -2279,6 +2280,7 @@ tilemap_loader::tile::is_adjacent_above(tile & a)
 		&& position.x == a.position.x
 		&& position.y == a.position.y + a.fill.y
 		&& fill.x == a.fill.x
+		&& rotation == a.rotation
 		);
 }
 
@@ -2290,6 +2292,7 @@ tilemap_loader::tile::is_adjacent_right(tile & a)
 		&& position.y == a.position.y
 		&& position.x + fill.x == a.position.x
 		&& fill.y == a.fill.y
+		&& rotation == a.rotation
 		);
 }
 

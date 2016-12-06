@@ -34,6 +34,8 @@ int scene_loader::load(const std::string & pName)
 
 	// Get collision boxes
 	mEle_collisionboxes = ele_root->FirstChildElement("collisionboxes");
+	if (mEle_collisionboxes)
+		construct_wall_list();
 
 	// Get boundary
 	if (auto ele_boundary = ele_root->FirstChildElement("boundary"))
@@ -56,14 +58,13 @@ int scene_loader::load(const std::string & pName)
 	{
 		// Load tilemap texture
 		if (auto ele_texture = mEle_map->FirstChildElement("texture"))
-		{
 			mTilemap_texture = ele_texture->GetText();
-		}
 		else
 		{
 			util::error("Tilemap texture is not defined");
 			return 1;
 		}
+
 	}
 
 	return 0;
