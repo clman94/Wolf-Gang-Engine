@@ -19,13 +19,20 @@ int texture_manager::load_from_directory(const std::string& pPath)
 
 		if (texture_path.extension() == ".png")
 		{
-			texture_entry& entry = mTextures[texture_path.stem().string()];
+			const std::string texture_name = texture_path.stem().string();
+			if (mTextures.find(texture_name) != mTextures.end()) // Check if unique
+			{
+				util::error("Texture '" + texture_name + "' is not unique. Please give it a unique name.");
+				continue;
+			}
+
+			texture_entry& entry = mTextures[texture_name];
 			entry.path = texture_path.string();
 			entry.is_loaded = false;
 
 			// Get atlas path (if it exists)
 			auto atlas_path = texture_path.parent_path();
-			atlas_path /= texture_path.stem().string() + ".xml";
+			atlas_path /= texture_name + ".xml";
 			if (engine::fs::exists(atlas_path))
 				entry.atlas = atlas_path.string();
 
