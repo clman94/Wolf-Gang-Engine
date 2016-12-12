@@ -757,7 +757,7 @@ void scene::update_collision_interaction(controls & pControls)
 
 	if (pControls.is_triggered(controls::control::activate))
 	{
-		auto button = mCollision_system.button_collision(player_position);
+		auto button = mCollision_system.button_collision(mPlayer.get_activation_point());
 		if (button)
 		{
 			if (button->get_function().call())
