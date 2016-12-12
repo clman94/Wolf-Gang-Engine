@@ -15,6 +15,15 @@
 #include <rpg/tilemap_loader.hpp>
 #include <rpg/editor.hpp>
 #include <rpg/scene_loader.hpp>
+#include <rpg/script_system.hpp>
+#include <rpg/collision_system.hpp>
+#include <rpg/flag_container.hpp>
+#include <rpg/panning_node.hpp>
+#include <rpg/controls.hpp>
+#include <rpg/entity.hpp>
+#include <rpg/sprite_entity.hpp>
+#include <rpg/character_entity.hpp>
+#include <rpg/player_character.hpp>
 
 #include <set>
 #include <list>
@@ -25,417 +34,7 @@
 #include <fstream>
 #include <memory>
 
-#include <angelscript.h> // AS_USE_NAMESPACE will need to be defined
-#include <angelscript/add_on/contextmgr/contextmgr.h>
-#include <angelscript/add_on/scriptbuilder/scriptbuilder.h>
-#include <angelscript/add_on/scriptarray/scriptarray.h>
-#include <angelscript/add_on/scripthandle/scripthandle.h>
-
-namespace AS = AngelScript;
-
 namespace rpg{
-
-
-class script_system;
-
-/// A node that acts as a sophisticated camera that can focus on a point.
-class panning_node :
-	public engine::node
-{
-public:
-	panning_node();
-
-	/// Set the region in which the camera will always stay within
-	void set_boundary(engine::frect pBoundary);
-	engine::frect get_boundary();
-
-	/// Set the camera's resolution
-	void set_viewport(engine::fvector pViewport);
-
-	/// Set the focal point in which the camera will center on
-	void set_focus(engine::fvector pFocus);
-	engine::fvector get_focus();
-
-	void set_boundary_enable(bool pEnable);
-
-private:
-	engine::frect mBoundary;
-	engine::fvector mViewport;
-	engine::fvector mFocus;
-	bool mBoundary_enabled;
-};
-
-/// Contains all flags and an interface to them
-class flag_container
-{
-public:
-	bool set_flag(const std::string& pName);
-	bool unset_flag(const std::string& pName);
-	bool has_flag(const std::string& pName);
-	void load_script_interface(script_system& pScript);
-	void clean();
-
-	auto begin()
-	{ return mFlags.begin(); }
-
-	auto end()
-	{ return mFlags.end(); }
-
-private:
-	std::set<std::string> mFlags;
-};
-
-class controls
-{
-public:
-	enum class control
-	{
-		activate,
-		left,
-		right,
-		up,
-		down,
-		select_next,
-		select_previous,
-		select_up,
-		select_down,
-		back,
-		reset,
-		menu,
-		editor_1,
-		editor_2,
-	};
-	controls();
-	void trigger(control pControl);
-	bool is_triggered(control pControl);
-	void reset();
-
-	void update(engine::renderer& pR);
-
-private:
-	std::array<bool, 14> mControls;
-};
-
-/// An object that represents a graphical object in the game.
-class entity :
-	public engine::render_object,
-	public engine::node,
-	public util::tracked_owner
-{
-public:
-	entity() :
-		dynamic_depth(false)
-	{}
-	virtual ~entity(){}
-
-	enum class entity_type
-	{
-		other,
-		sprite,
-		text
-	};
-
-	virtual entity_type get_entity_type()
-	{ return entity_type::other; }
-
-	/// Set the dynamically changing depth according to its
-	/// Y position.
-	void set_dynamic_depth(bool pIs_dynamic);
-
-	void set_name(const std::string& pName);
-	const std::string& get_name();
-
-protected:
-	/// Updates the depth of the entity to its Y position.
-	/// Should be called if draw() is overridden by a subclass.
-	void update_depth();
-
-private:
-	bool dynamic_depth;
-	std::string mName;
-};
-/// For referencing entities in scripts.
-typedef util::tracking_ptr<entity> entity_reference;
-
-class sprite_entity :
-	public entity
-{
-public:
-	sprite_entity();
-	void play_animation();
-	void stop_animation();
-	void tick_animation();
-	bool set_animation(const std::string& pName, bool pSwap = false);
-	int draw(engine::renderer &pR);
-	int set_texture(std::string pName, texture_manager& pTexture_manager);
-	void set_anchor(engine::anchor pAnchor);
-	void set_color(engine::color pColor);
-	void set_rotation(float pRotation);
-
-	engine::fvector get_size() const;
-	bool is_playing() const;
-
-	virtual entity_type get_entity_type()
-	{ return entity_type::sprite; }
-
-private:
-	util::optional_pointer<engine::texture> mTexture;
-	engine::animation_node   mSprite;
-};
-
-// An sprite_entity that has a specific role as a character_entity.
-// Provides walk cycles.
-class character_entity :
-	public sprite_entity
-{
-public:
-
-	enum class cycle
-	{
-		def, // "default" is apparently not allowed in gcc....
-		left,
-		right,
-		up,
-		down,
-		idle,
-		idle_left,
-		idle_right,
-		idle_up,
-		idle_down
-	};
-
-	enum class direction
-	{
-		other,
-		left,
-		right,
-		up,
-		down,
-	};
-
-	character_entity();
-	void set_cycle_group(const std::string& name);
-	void set_cycle(const std::string& name);
-	void set_cycle(cycle type);
-
-	void set_direction(direction pDirection);
-	direction get_direction();
-
-	void set_idle(bool pIs_idle);
-	bool is_idle();
-
-	void  set_speed(float f);
-	float get_speed();
-
-private:
-	std::string mCyclegroup;
-	std::string mCycle;
-	direction mDirection;
-	bool mIs_idle;
-	float mMove_speed;
-};
-
-// A reference to a script function.
-class script_function
-{
-public:
-	script_function();
-	~script_function();
-	bool is_running();
-	void set_engine(AS::asIScriptEngine * e);
-	void set_function(AS::asIScriptFunction * f);
-	void set_context_manager(AS::CContextMgr * cm);
-	void set_arg(unsigned int index, void* ptr);
-	bool call();
-
-private:
-	util::optional_pointer<AS::asIScriptEngine> as_engine;
-	util::optional_pointer<AS::asIScriptFunction> func;
-	util::optional_pointer<AS::CContextMgr> ctx;
-	util::optional_pointer<AS::asIScriptContext> func_ctx;
-	void return_context();
-};
-
-// A basic collision box
-struct collision_box
-{
-public:
-	collision_box();
-	bool is_valid();
-	void validate(flag_container & pFlags);
-	void load_xml(tinyxml2::XMLElement* e);
-	engine::frect get_region();
-	void set_region(engine::frect pRegion);
-
-protected:
-	std::string mInvalid_on_flag;
-	std::string mSpawn_flag;
-	bool valid;
-	engine::frect mRegion;
-};
-
-// A collisionbox that is activated once the player has walked over it.
-struct trigger : public collision_box
-{
-public:
-	script_function& get_function();
-	void parse_function_metadata(const std::string& pMetadata);
-
-private:
-	script_function mFunc;
-};
-
-struct door : public collision_box
-{
-	std::string name;
-	std::string scene_path;
-	std::string destination;
-	engine::fvector offset;
-};
-
-// A simple static collision system for world interactivity
-class collision_system
-{
-public:
-	util::optional_pointer<collision_box> wall_collision(const engine::frect& r);
-	util::optional_pointer<door>          door_collision(const engine::fvector& pPosition);
-	util::optional_pointer<trigger>       trigger_collision(const engine::fvector& pPosition);
-	util::optional_pointer<trigger>       button_collision(const engine::fvector& pPosition);
-
-	util::optional<engine::fvector> get_door_entry(std::string pName);
-
-	void validate_all(flag_container& pFlags);
-
-	void add_wall(engine::frect r);
-	void add_trigger(trigger& t);
-	void add_button(trigger& t);
-	void clean();
-
-	int load_collision_boxes(tinyxml2::XMLElement* pEle);
-
-private:
-	std::list<collision_box> mWalls;
-	std::list<door> mDoors;
-	std::list<trigger> mTriggers;
-	std::list<trigger> mButtons;
-};
-
-// Angelscript wrapper
-// Excuse this mess, please -_-
-// TODO: Cleanup
-
-class script_context;
-
-
-class script_system
-{
-public:
-	script_system();
-	~script_system();
-
-	void load_context(script_context& pContext);
-
-	// Register a member function, will require the pointer to the instance
-	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr, void* pInstance);
-	
-	// Register a non-member/static function
-	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr);
-	
-	void about_all();
-
-	// Call all functions that contain the specific metadata
-	void start_all_with_tag(const std::string& pTag);
-
-	// Execute all scripts
-	int tick();
-
-	int get_current_line();
-
-	AS::asIScriptEngine& get_engine();
-
-	bool is_executing();
-
-	template<typename T>
-	static void script_default_constructor(void *pMemory)
-	{ new(pMemory) T(); }
-
-	template<typename T, typename Targ1>
-	static void script_constructor(Targ1 pArg1, void *pMemory)
-	{ new(pMemory) T(pArg1); }
-
-	template<typename T, typename Targ1, typename Targ2>
-	static void script_constructor(Targ1 pArg1, Targ2 pArg2, void *pMemory)
-	{ new(pMemory) T(pArg1, pArg2); }
-
-	template<typename T>
-	static void script_default_deconstructor(void *pMemory)
-	{ ((T*)pMemory)->~T(); }
-
-private:
-	util::optional_pointer<AS::asIScriptEngine> mEngine;
-	AS::CContextMgr      mCtxmgr;
-	util::optional_pointer<script_context> mContext;
-	std::ofstream        mLog_file;
-	bool                 mExecuting;
-
-	engine::timer mTimer;
-
-	enum class log_entry_type
-	{
-		error,
-		info,
-		warning,
-		debug
-	};
-	
-	void log_print(const std::string& pFile, int pLine, int pCol
-		, log_entry_type pType, const std::string& pMessage);
-
-	void debug_print(std::string &pMessage);
-	void error_print(std::string &pMessage);
-	void register_vector_type();
-	void message_callback(const AS::asSMessageInfo * msg);
-	void script_abort();
-	void script_create_thread(AS::asIScriptFunction *func, AS::CScriptDictionary *arg);
-	void script_create_thread_noargs(AS::asIScriptFunction *func);
-
-	std::map<std::string, AS::CScriptHandle> mShared_handles;
-
-	void script_make_shared(AS::CScriptHandle pHandle, const std::string& pName);
-	AS::CScriptHandle script_get_shared(const std::string& pName);
-
-	void load_script_interface();
-
-	friend class script_context;
-};
-
-class script_context
-{
-public:
-	script_context();
-
-	void set_script_system(script_system& pScript);
-
-	bool build_script(const std::string& pPath);
-
-	bool is_valid();
-
-	void clean();
-
-	// Constructs all triggers/buttons defined by functions
-	// with metadata "trigger" and "button"
-	// TODO: Stablize parsing of metadata
-	void setup_triggers(collision_system& pCollision_system);
-
-private:
-	util::optional_pointer<script_system> mScript;
-	util::optional_pointer<AS::asIScriptModule> mScene_module;
-	AS::CScriptBuilder   mBuilder;
-
-	static std::string get_metadata_type(const std::string &pMetadata);
-
-	friend class script_system;
-};
 
 // Resource management of expression animations
 class expression_manager
@@ -443,7 +42,7 @@ class expression_manager
 public:
 	util::optional_pointer<const engine::animation> find_animation(const std::string& mName);
 	int load_expressions_xml(tinyxml2::XMLElement * pRoot, texture_manager& pTexture_manager);
-	
+
 private:
 	std::map<std::string, const engine::animation*> mAnimations;
 };
@@ -585,26 +184,6 @@ private:
 	entity_reference script_get_narrative_text();
 };
 
-// The main player character_entity
-class player_character :
-	public character_entity
-{
-public:
-
-	player_character();
-	void set_locked(bool pLocked);
-	bool is_locked();
-
-	// Do movement with collision detection
-	void movement(controls &pControls, collision_system& pCollision_system, float pDelta);
-	
-	// Get point in front of player
-	engine::fvector get_activation_point(float pDistance = 19);
-
-private:
-	bool mLocked;
-	void set_move_direction(engine::fvector pVec);
-};
 
 class entity_manager :
 	public engine::render_proxy,
@@ -740,6 +319,7 @@ class scene :
 	public engine::render_proxy
 {
 public:
+
 	scene();
 	~scene();
 
@@ -750,7 +330,7 @@ public:
 	// Cleanups the scene for a new scene.
 	// Does not stop background music by default 
 	// so it can be continued in the next scene.
-	void clean_scene(bool pFull = false);
+	void clean(bool pFull = false);
 
 	// Load scene xml file which loads the scene script.
 	// pPath is not a reference so cleanup doesn't cause issues.
@@ -777,6 +357,8 @@ public:
 
 	void set_text_format(const text_format_profile& pFormat);
 
+	bool is_ending();
+
 private:
 	std::map<std::string, script_context> pScript_contexts;
 
@@ -798,7 +380,8 @@ private:
 
 	scene_loader mLoader;
 
-	bool              mFocus_player;
+	bool mFocus_player;
+	bool mIs_ending;
 
 	void             script_set_tile(const std::string& pAtlas
 		                  , engine::fvector pPosition, int pLayer, int pRotation);
