@@ -833,6 +833,9 @@ void controls::update(engine::renderer & pR)
 		pR.is_key_pressed(key_type::RShift))
 		trigger(control::back);
 
+	if (pR.is_key_pressed(key_type::M))
+		trigger(control::menu);
+
 	if (pR.is_key_down(key_type::LControl))
 	{
 		if (pR.is_key_pressed(key_type::R))
@@ -988,6 +991,7 @@ void game::script_load_scene(const std::string & pName)
 	mRequest_load = true;
 	mNew_scene_name = pName;
 }
+
 
 void
 game::load_script_interface()
