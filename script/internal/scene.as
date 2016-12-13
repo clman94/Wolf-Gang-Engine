@@ -29,6 +29,7 @@ enum control
 	select_up,        ///< Typically the up key (Pressed)
 	select_down,      ///< Typically the down key (Pressed)
 	back,             ///< X key, go back or exit (Pressed)
+	menu = 11,
 };
 
 namespace player

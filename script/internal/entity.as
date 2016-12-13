@@ -22,10 +22,11 @@ enum anchor
 
 enum direction
 {
-	left = 1,
+	other,
+	left,
 	right,
 	up,
-	down
+	down,
 };
 
 enum fixed_depth
@@ -37,7 +38,7 @@ enum fixed_depth
 
 /// Set the anchor of an object.
 ///
-/// Example: `set_anchor(e, anchor::left);`
+/// Example: `set_anchor(my_entity, anchor::left);`
 /// \see anchor
 void set_anchor(entity pEntity, anchor pAnchor)
 {

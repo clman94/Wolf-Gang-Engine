@@ -41,7 +41,7 @@ class vec
 	/// Copy another vector at construction.
 	vec(const vec&in pCopy);
 	
-	/// Find distance from(0, 0).
+	/// Find distance from (0, 0).
 	float distance() const;
 	
 	/// Find distance from pFrom.
@@ -71,6 +71,9 @@ class vec
 	///
 	/// `vec(2, 0).normalize() == vec(1, 0)`
 	vec& normalize();
+	
+	float x; ///< X coordinate
+	float y; ///< Y coordinate
 };
 
 /// Create a new sprite-based entity.
@@ -231,11 +234,14 @@ void load_scene(const string &in pPath);
 /// Print message for debugging.
 void dprint(const string &in pMessage);
 
+/// Print error message.
+void eprint(const string &in pMessage);
+
 /// Get delta (time between each frame).
 /// This can be used as a scale for movement or changes over time so then each
 /// frame is consistent.
 ///
-///  Ex. `set_position(get_position() + (move*speed*get_delta()));``
+///  Ex. `set_position(my_entity, get_position(my_entity) + (move*speed*get_delta()));``
 float get_delta();
 
 /// Set current save slot.
@@ -257,5 +263,55 @@ void open_game();
 
 /// Check if a save slot is being used.
 bool is_slot_used(uint);
+
+/// Store a handle globally so other scenes can
+/// receive it.
+/// The data will have be a [shared entity](http://www.angelcode.com/angelscript/sdk/docs/manual/doc_script_shared.html).
+///
+/// File 1:
+/// ```
+/// shared class my_type
+/// {
+///    int value;
+/// };
+/// 
+/// [start]
+/// void share_the_data()
+/// {
+///    my_type data;
+///    data.value = 0;
+///    make_shared(@data, "mydata"); // Share a handle to all scenes
+/// }
+/// ```
+///
+/// File 2:
+/// ```
+/// shared class my_type
+/// {
+///    int value;
+/// };
+/// 
+/// [start]
+/// void print_value()
+/// {
+///    // Retrieve the handle and cast it to the desired type.
+///    my_type@ data = cast<my_type>(get_shared("mydata"));
+///    if (data is null) // Failed to retrieve data
+///    {
+///       eprint("Wrong value!");
+///       return;
+///    }
+///    dprint(formatInt(data.value));
+/// }
+/// ```
+/// \param pData Handle of the object.
+/// \param pName Name to refer to data with.
+/// \see get_shared
+void make_shared(ref@ pData, const string&in pName);
+
+/// Retrieve handle of data
+/// \param pName Name to refer to data with
+/// \see make_shared
+ref@ get_shared(const string&in pName);
 
 /// \}
