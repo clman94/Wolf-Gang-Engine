@@ -82,7 +82,7 @@ public:
 
 	fvector get_size();
 
-	// Tells the renderer to resort all objects
+	// Resort all objects
 	void request_resort();
 
 	fvector get_mouse_position();

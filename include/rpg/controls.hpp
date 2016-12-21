@@ -18,8 +18,8 @@ public:
 		select_up,
 		select_down,
 		back,
-		reset,
 		menu,
+		reset,
 		editor_1,
 		editor_2,
 	};

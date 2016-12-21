@@ -582,7 +582,8 @@ void scene::load_script_interface(script_system& pScript)
 	pScript.add_function("void _stop_all()", asMETHOD(sound_manager, stop_all), &mSound_FX);
 
 	pScript.add_function("entity get_player()", asMETHOD(scene, script_get_player), this);
-	pScript.add_function("void _lockplayer(bool)", asMETHOD(player_character, set_locked), &mPlayer);
+	pScript.add_function("void _set_player_locked(bool)", asMETHOD(player_character, set_locked), &mPlayer);
+	pScript.add_function("bool _get_player_locked()", asMETHOD(player_character, is_locked), &mPlayer);
 
 	pScript.add_function("void set_focus(vec)", asMETHOD(scene, script_set_focus), this);
 	pScript.add_function("vec get_focus()", asMETHOD(scene, script_get_focus), this);
@@ -1146,6 +1147,7 @@ void narrative_dialog::reset_positions()
 {
 	set_box_position(position::bottom);
 	mText.set_position({ 10, 10 });
+	mText.set_color({ 255, 255, 255, 255 });
 }
 
 entity_reference narrative_dialog::script_get_narrative_box()
