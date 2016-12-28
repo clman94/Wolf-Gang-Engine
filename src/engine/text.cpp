@@ -36,8 +36,7 @@ text_node::append_text(const std::string& pText)
 	set_text(get_text() + pText);
 }
 
-std::string
-text_node::get_text()
+const std::string& text_node::get_text() const
 {
 	return mString;
 }

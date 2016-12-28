@@ -657,10 +657,6 @@ inline void rpg::scene::set_text_format(const text_format_profile & pFormat)
 	mNarrative.set_text_format(pFormat);
 }
 
-bool scene::is_ending()
-{
-	return mIs_ending;
-}
 
 void scene::script_set_focus(engine::fvector pPosition)
 {
@@ -961,8 +957,7 @@ void game::open_game()
 	mScript.about_all();
 	if (mScript.is_executing())
 	{
-		mRequest_load = true;
-		mNew_scene_name = file.get_scene_path();
+		mScene_load_request.request_load(file.get_scene_path());
 	}
 	else
 	{
@@ -989,10 +984,8 @@ size_t game::get_slot()
 
 void game::script_load_scene(const std::string & pName)
 {
-	mRequest_load = true;
-	mNew_scene_name = pName;
+	mScene_load_request.request_load(pName);
 }
-
 
 void
 game::load_script_interface()
@@ -1060,12 +1053,6 @@ game::load_game_xml(std::string pPath)
 void
 game::tick()
 {
-	if (mScene.is_ending())
-	{
-		mScript.tick();
-		return;
-	}
-
 	mControls.update(*get_renderer());
 	if (mControls.is_triggered(controls::control::reset))
 	{
@@ -1094,10 +1081,11 @@ game::tick()
 	mScene.tick(mControls);
 
 	mScript.tick();
-	if (mRequest_load)
+
+	if (mScene_load_request.is_requested())
 	{
-		mRequest_load = false;
-		mScene.load_scene(mNew_scene_name);
+		mScene.load_scene(mScene_load_request.get_scene_name());
+		mScene_load_request.complete();
 	}
 
 	mEditor_manager.update_camera_position(mScene.get_world_node().get_exact_position());
@@ -1939,4 +1927,93 @@ int game_service::load_xml(const std::string& pPath)
 	}
 
 	return 0;
+}
+
+bool game_settings_loader::load(const std::string & pPath)
+{
+	using namespace tinyxml2;
+	XMLDocument doc;
+	if (doc.LoadFile(pPath.c_str()))
+	{
+		util::error("Could not load game file at '" + pPath + "'");
+		return false;
+	}
+	auto ele_root = doc.RootElement();
+
+	auto ele_scene = ele_root->FirstChildElement("scene");
+	if (!ele_scene)
+	{
+		util::error("Please specify the scene to start with");
+		return false;
+	}
+	mStart_scene = util::safe_string(ele_scene->Attribute("name"));
+
+	auto ele_textures = ele_root->FirstChildElement("textures");
+	if (ele_textures &&
+		ele_textures->Attribute("path"))
+		mTextures_path = ele_textures->Attribute("path");
+	else
+		mTextures_path = defs::DEFAULT_TEXTURES_PATH.string();
+
+	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
+		mFont_format.load_settings(ele_narrative);
+
+	return true;
+}
+
+const std::string & game_settings_loader::get_start_scene() const
+{
+	return mStart_scene;
+}
+
+const std::string & game_settings_loader::get_textures_path() const
+{
+	return mTextures_path;
+}
+
+const std::string & game_settings_loader::get_sounds_path() const
+{
+	return mSounds_path;
+}
+
+const std::string & game_settings_loader::get_music_path() const
+{
+	return mMusic_path;
+}
+
+const text_format_profile & game_settings_loader::get_font_format() const
+{
+	return mFont_format;
+}
+
+const std::string & game_settings_loader::get_player_texture() const
+{
+	return mPlayer_texture;
+}
+
+rpg::scene_load_request::scene_load_request()
+{
+	mRequested = false;
+}
+
+void scene_load_request::request_load(const std::string & pScene_name)
+{
+	mRequested = true;
+	mScene_name = pScene_name;
+}
+
+bool scene_load_request::is_requested() const
+{
+	return mRequested;
+}
+
+const std::string & rpg::scene_load_request::get_scene_name() const
+{
+	return mScene_name;
+}
+
+void scene_load_request::complete()
+{
+	mRequested = false;
+	mScene_name.clear();
 }

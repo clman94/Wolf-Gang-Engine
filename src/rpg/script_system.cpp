@@ -94,8 +94,8 @@ void script_system::load_script_interface()
 	add_function("void create_thread(coroutine @+)", asMETHOD(script_system, script_create_thread_noargs), this);
 	add_function("void create_thread(coroutine @+, dictionary @+)", asMETHOD(script_system, script_create_thread), this);
 
-	add_function("void dprint(const string &in)", asMETHOD(script_system, debug_print), this);
-	add_function("void eprint(const string &in)", asMETHOD(script_system, error_print), this);
+	add_function("void dprint(const string &in)", asMETHOD(script_system, script_debug_print), this);
+	add_function("void eprint(const string &in)", asMETHOD(script_system, script_error_print), this);
 	add_function("void abort()", asMETHOD(script_system, script_abort), this);
 
 	add_function("void make_shared(ref@, const string&in)", asMETHOD(script_system, script_make_shared), this);
@@ -129,13 +129,13 @@ void script_system::log_print(const std::string& pFile, int pLine, int pCol, log
 	message += "\n";
 
 	if (mLog_file.is_open())
-		mLog_file << message;
+		mLog_file << message; // Save to file
 
-	std::cout << message;
+	std::cout << message; // Print to console
 }
 
 void
-script_system::debug_print(std::string &pMessage)
+script_system::script_debug_print(std::string &pMessage)
 {
 	if (!is_executing())
 	{
@@ -150,7 +150,7 @@ script_system::debug_print(std::string &pMessage)
 	log_print(name, get_current_line(), 0, log_entry_type::debug, pMessage);
 }
 
-void script_system::error_print(std::string & pMessage)
+void script_system::script_error_print(std::string & pMessage)
 {
 	if (!is_executing())
 	{

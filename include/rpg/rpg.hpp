@@ -357,8 +357,6 @@ public:
 
 	void set_text_format(const text_format_profile& pFormat);
 
-	bool is_ending();
-
 private:
 	std::map<std::string, script_context> pScript_contexts;
 
@@ -381,7 +379,6 @@ private:
 	scene_loader mLoader;
 
 	bool mFocus_player;
-	bool mIs_ending;
 
 	void             script_set_tile(const std::string& pAtlas
 		                  , engine::fvector pPosition, int pLayer, int pRotation);
@@ -436,6 +433,43 @@ private:
 	engine::fvector mTile_size;
 };
 
+class game_settings_loader
+{
+public:
+	bool load(const std::string& pPath);
+
+	const std::string& get_start_scene() const;
+	const std::string& get_textures_path() const;
+	const std::string& get_sounds_path() const;
+	const std::string& get_music_path() const;
+	const text_format_profile& get_font_format() const;
+	const std::string& get_player_texture() const;
+
+private:
+	std::string mStart_scene;
+	std::string mTextures_path;
+	std::string mSounds_path;
+	std::string mMusic_path;
+	text_format_profile mFont_format;
+
+	std::string mPlayer_texture;
+
+};
+
+
+class scene_load_request
+{
+public:
+	scene_load_request();
+
+	void request_load(const std::string& pScene_name);
+	bool is_requested() const;
+	const std::string& get_scene_name() const;
+	void complete();
+private:
+	bool mRequested;
+	std::string mScene_name;
+};
 
 // The main game
 class game :
@@ -464,8 +498,7 @@ private:
 
 	editors::editor_manager mEditor_manager;
 
-	bool        mRequest_load;
-	std::string mNew_scene_name;
+	scene_load_request mScene_load_request;
 
 	engine::fs::path get_slot_path(size_t pSlot);
 	void save_game();

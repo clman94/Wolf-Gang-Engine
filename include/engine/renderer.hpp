@@ -356,6 +356,7 @@ class font
 	sf::Font sf_font;
 public:
 	int load(const std::string& pPath);
+
 	friend class text_node;
 };
 
@@ -368,7 +369,7 @@ public:
 	void set_font(const font& pFont);
 	void set_text(const std::string& pText);
 	void append_text(const std::string& pText);
-	std::string get_text();
+	const std::string& get_text() const;
 	void set_character_size(int pPixels);
 	void set_anchor(anchor pAnchor);
 	void set_color(const color& pColor);
@@ -385,6 +386,7 @@ private:
 
 	void update_offset();
 };
+
 
 class animation_node :
 	public render_object,
