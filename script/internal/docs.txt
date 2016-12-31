@@ -1,8 +1,0 @@
-/// \file
-
-/*! \mainpage Wolf-Gang Engine
-The Wolf-Gang Engine is a 2D, RPG-styled engine for creating extremely interactive scenes. The goal is to encourage expressiveness in storytelling and the flexibility to do things as you please.
-
-This flexibility also means that this engine will not be simple. You have to understand how the things work before it becomes easy.
-
-*/
