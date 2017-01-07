@@ -10,7 +10,6 @@ namespace rpg {
 /// An object that represents a graphical object in the game.
 class entity :
 	public engine::render_object,
-	public engine::node,
 	public util::tracked_owner
 {
 public:

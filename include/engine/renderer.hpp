@@ -135,6 +135,7 @@ private:
 };
 
 class render_object :
+	public node,
 	public util::nocopy
 {
 public:
@@ -221,8 +222,7 @@ private:
 };
 
 class vertex_batch :
-	public render_object,
-	public node
+	public render_object
 {
 public:
 	void set_texture(texture &pTexture);
@@ -285,8 +285,7 @@ static vector<T> anchor_offset(const vector<T> pSize, anchor pType)
 }
 
 class rectangle_node :
-	public render_object,
-	public node
+	public render_object
 {
 	sf::RectangleShape shape;
 public:
@@ -328,8 +327,7 @@ public:
 };
 
 class sprite_node : 
-	public render_object, 
-	public node
+	public render_object
 {
 public:
 	sprite_node();
@@ -361,8 +359,7 @@ public:
 };
 
 class text_node :
-	public render_object,
-	public node
+	public render_object
 {
 public:
 	text_node();
@@ -389,8 +386,7 @@ private:
 
 
 class animation_node :
-	public render_object,
-	public node
+	public render_object
 {
 public:
 	animation_node();
@@ -427,7 +423,8 @@ private:
 
 	anchor mAnchor;
 
-	int mInterval;
+	float mInterval;
+	float mSpeed_multiplier;
 	bool mPlaying;
 
 	void update_frame();

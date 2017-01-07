@@ -186,8 +186,7 @@ private:
 
 
 class entity_manager :
-	public engine::render_proxy,
-	public engine::node
+	public engine::render_proxy
 {
 public:
 	entity_manager();
@@ -211,14 +210,19 @@ public:
 		auto new_entity = new T();
 		assert(dynamic_cast<entity*>(new_entity) != nullptr);
 		mEntities.push_back(std::unique_ptr<entity>(dynamic_cast<entity*>(new_entity)));
-		add_child(*new_entity);
+		mRoot_node->add_child(*new_entity);
 		get_renderer()->add_object(*new_entity);
 		return new_entity;
 	}
 
 	void set_text_format(const text_format_profile& pFormat);
 
+	void set_root_node(engine::node& pNode);
+
 private:
+
+	engine::node* mRoot_node;
+
 	void register_entity_type(script_system& pScript);
 
 	texture_manager*  mTexture_manager;

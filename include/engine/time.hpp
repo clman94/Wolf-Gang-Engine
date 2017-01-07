@@ -53,36 +53,36 @@ public:
 class clock
 {
 	bool play;
-	std::chrono::time_point<std::chrono::system_clock> 
+	std::chrono::time_point<std::chrono::high_resolution_clock>
 		start_point,
 		pause_point;
 public:
 	clock()
 	{
 		play = true;
-		start_point = std::chrono::system_clock::now();
+		start_point = std::chrono::high_resolution_clock::now();
 	}
 	utime get_elapse()
 	{
-		std::chrono::time_point<std::chrono::system_clock> end_point = std::chrono::system_clock::now();
+		std::chrono::time_point<std::chrono::high_resolution_clock> end_point = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<time_t> elapsed_seconds = end_point - start_point;
 		return elapsed_seconds.count();
 	}
 	void start()
 	{
 		if (!play)
-			start_point += std::chrono::system_clock::now() - pause_point;
+			start_point += std::chrono::high_resolution_clock::now() - pause_point;
 		play = true;
 	}
 	void pause()
 	{
 		play = false;
-		pause_point = std::chrono::system_clock::now();
+		pause_point = std::chrono::high_resolution_clock::now();
 	}
 	utime restart()
 	{
 		utime elapse_time = get_elapse();
-		start_point = std::chrono::system_clock::now();
+		start_point = std::chrono::high_resolution_clock::now();
 		return elapse_time;
 	}
 };
@@ -95,17 +95,17 @@ public:
 		if (pSeconds <= 0)
 			throw "Bad time";
 		mSeconds = pSeconds;
-		mStart_point = std::chrono::system_clock::now();
+		mStart_point = std::chrono::high_resolution_clock::now();
 	}
 
 	bool is_reached()
 	{
-		std::chrono::duration<time_t> time = std::chrono::system_clock::now() - mStart_point;
+		std::chrono::duration<time_t> time = std::chrono::high_resolution_clock::now() - mStart_point;
 		return time.count() >= mSeconds;
 	}
 
 private:
-	std::chrono::time_point<std::chrono::system_clock>
+	std::chrono::time_point<std::chrono::high_resolution_clock>
 		mStart_point;
 	time_t mSeconds;
 };
@@ -115,7 +115,7 @@ class counter_clock
 public:
 	void start()
 	{
-		mStart_point = std::chrono::system_clock::now();
+		mStart_point = std::chrono::high_resolution_clock::now();
 	}
 
 	void set_interval(float pInterval)
@@ -127,11 +127,11 @@ public:
 
 	size_t get_count()
 	{
-		std::chrono::duration<time_t> time = std::chrono::system_clock::now() - mStart_point;
+		std::chrono::duration<time_t> time = std::chrono::high_resolution_clock::now() - mStart_point;
 		return static_cast<size_t>(std::floor(time.count() / mInterval));
 	}
 private:
-	std::chrono::time_point<std::chrono::system_clock>
+	std::chrono::time_point<std::chrono::high_resolution_clock>
 		mStart_point;
 	time_t mInterval;
 };

@@ -131,6 +131,7 @@ animation_node::animation_node()
 	mAnchor = anchor::topleft;
 	mPlaying = false;
 	mAnimation = nullptr;
+	mSpeed_multiplier = 1.f;
 	add_child(mSprite);
 }
 
@@ -175,8 +176,8 @@ bool animation_node::tick()
 {
 	if (!mAnimation) return false;
 
-	int time = mClock.get_elapse().ms_i();
-	if (time >= mInterval && mInterval > 0)
+	float time = mClock.get_elapse().ms_i();
+	if (time >= mInterval*mSpeed_multiplier && mInterval > 0)
 	{
 		mFrame += time / mInterval;
 

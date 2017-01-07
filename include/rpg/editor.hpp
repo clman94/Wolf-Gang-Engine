@@ -64,8 +64,7 @@ public:
 };
 
 class editor :
-	public engine::render_object,
-	public engine::node
+	public engine::render_object
 {
 public:
 	virtual int open_scene(std::string pPath) = 0;

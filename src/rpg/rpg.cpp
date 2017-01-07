@@ -41,6 +41,11 @@ void entity_manager::set_text_format(const text_format_profile & pFormat)
 	mText_format = &pFormat;
 }
 
+void entity_manager::set_root_node(engine::node & pNode)
+{
+	mRoot_node = &pNode;
+}
+
 void entity_manager::register_entity_type(script_system & pScript)
 {
 	auto& engine = pScript.get_engine();
@@ -361,8 +366,8 @@ void entity_manager::script_detach_children(entity_reference& e)
 	auto children = e->get_children();
 	for (auto& i : children)
 	{
-		i->set_position(i->get_position(*this));
-		i->set_parent(*this);
+		i->set_position(i->get_position(*mRoot_node));
+		i->set_parent(*mRoot_node);
 	}
 }
 
@@ -370,8 +375,8 @@ void entity_manager::script_detach_parent(entity_reference& e)
 {
 	if (!check_entity(e)) return;
 
-	e->set_position(e->get_position(*this));
-	e->set_parent(*this);
+	e->set_position(e->get_position(*mRoot_node));
+	e->set_parent(*mRoot_node);
 }
 
 void entity_manager::script_make_gui(entity_reference & e, float pOffset)
@@ -439,11 +444,12 @@ scene::scene()
 {
 	mTilemap_display.set_depth(defs::TILES_DEPTH);
 	mWorld_node.add_child(mTilemap_display);
-	mWorld_node.add_child(mEntity_manager);
 	mWorld_node.add_child(mPlayer);
 	mFocus_player = true;
 
 	mPathfinding_system.set_collision_system(mCollision_system);
+
+	mEntity_manager.set_root_node(mWorld_node);
 }
 
 scene::~scene()

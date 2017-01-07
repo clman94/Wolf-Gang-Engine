@@ -6,8 +6,7 @@
 namespace rpg {
 
 class tilemap_display :
-	public engine::render_object,
-	public engine::node
+	public engine::render_object
 {
 public:
 	void set_texture(engine::texture& pTexture);
