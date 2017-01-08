@@ -31,9 +31,9 @@ void entity_manager::clean()
 	mEntities.clear();
 }
 
-void entity_manager::set_texture_manager(texture_manager& pTexture_manager)
+void entity_manager::set_resource_manager(engine::resource_manager& pResource_manager)
 {
-	mTexture_manager = &pTexture_manager;
+	mResource_manager = &pResource_manager;
 }
 
 void entity_manager::set_text_format(const text_format_profile & pFormat)
@@ -92,16 +92,22 @@ bool entity_manager::check_entity(entity_reference & e)
 	return true;
 }
 
-entity_reference entity_manager::script_add_entity(const std::string & path)
+entity_reference entity_manager::script_add_entity(const std::string & pName)
 {
 	assert(get_renderer() != nullptr);
-	assert(mTexture_manager != nullptr);
+	assert(mResource_manager != nullptr);
 
 	auto new_entity = create_entity<sprite_entity>();
 	if (!new_entity)
 		return entity_reference(); // Return empty on error
 
-	new_entity->set_texture(path, *mTexture_manager);
+	auto resource = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, pName);
+	if (!resource)
+	{
+		util::error("Could not load texture '" + pName + "'");
+	}
+
+	new_entity->set_texture(resource);
 	new_entity->set_animation("default:default");
 
 	return *new_entity;
@@ -120,7 +126,7 @@ entity_reference entity_manager::script_add_entity_atlas(const std::string & pat
 entity_reference entity_manager::script_add_text()
 {
 	assert(get_renderer() != nullptr);
-	assert(mTexture_manager != nullptr);
+	assert(mResource_manager != nullptr);
 	assert(mText_format != nullptr);
 
 	auto new_entity = create_entity<text_entity>();
@@ -159,16 +165,22 @@ void entity_manager::script_remove_entity(entity_reference& e)
 	util::error("Could not remove entity");
 }
 
-entity_reference entity_manager::script_add_character(const std::string & path)
+entity_reference entity_manager::script_add_character(const std::string & pName)
 {
 	assert(get_renderer() != nullptr);
-	assert(mTexture_manager != nullptr);
+	assert(mResource_manager != nullptr);
 
 	auto new_entity = create_entity<character_entity>();
 	if (!new_entity)
 		return entity_reference(); // Return empty on error
 
-	new_entity->set_texture(path, *mTexture_manager);
+	auto resource = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, pName);
+	if (!resource)
+	{
+		util::error("Could not load texture '" + pName + "'");
+	}
+
+	new_entity->set_texture(resource);
 	new_entity->set_cycle(character_entity::cycle::def);
 
 	return *new_entity;
@@ -337,7 +349,14 @@ void entity_manager::script_set_texture(entity_reference & e, const std::string 
 		util::error("Entity is not sprite-based");
 		return;
 	}
-	se->set_texture(name, *mTexture_manager);
+	auto resource = mResource_manager->get_resource(engine::resource_type::texture, name);
+	if (!resource)
+	{
+		util::error("Could not load texture '" + name + "'");
+		return;
+	}
+	auto texture = engine::cast_resource<engine::texture>(resource);
+	se->set_texture(texture);
 	se->set_animation("default:default");
 }
 
@@ -493,7 +512,7 @@ scene::clean(bool pFull)
 
 int scene::load_scene(std::string pName)
 {
-	assert(mTexture_manager != nullptr);
+	assert(mResource_manager != nullptr);
 	assert(mScript != nullptr);
 
 	clean();
@@ -527,13 +546,13 @@ int scene::load_scene(std::string pName)
 		mScript->load_context(context);
 	}
 
-	auto tilemap_texture = mTexture_manager->get_texture(mLoader.get_tilemap_texture());
+	auto tilemap_texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, mLoader.get_tilemap_texture());
 	if (!tilemap_texture)
 	{
 		util::error("Invalid tilemap texture");
 		return 1;
 	}
-	mTilemap_display.set_texture(*tilemap_texture);
+	mTilemap_display.set_texture(tilemap_texture);
 
 	mTilemap_loader.load_tilemap_xml(mLoader.get_tilemap());
 	mTilemap_loader.update_display(mTilemap_display);
@@ -542,6 +561,10 @@ int scene::load_scene(std::string pName)
 	mScript->tick();
 
 	update_focus();
+
+	// Ensure resources are ready and unused stuff is put away
+	mResource_manager->ensure_load();
+	mResource_manager->unload_unused();
 
 	return 0;
 }
@@ -584,8 +607,8 @@ void scene::load_script_interface(script_system& pScript)
 	pScript.add_function("void set_tile(const string &in, vec, int, int)", asMETHOD(scene, script_set_tile), this);
 	pScript.add_function("void remove_tile(vec, int)", asMETHOD(scene, script_remove_tile), this);
 
-	pScript.add_function("int _spawn_sound(const string&in, float, float)", asMETHOD(sound_manager, spawn_sound), &mSound_FX);
-	pScript.add_function("void _stop_all()", asMETHOD(sound_manager, stop_all), &mSound_FX);
+	pScript.add_function("int _spawn_sound(const string&in, float, float)", asMETHOD(scene, script_spawn_sound), this);
+	pScript.add_function("void _stop_all()", asMETHOD(engine::sound_spawner, stop_all), &mSound_FX);
 
 	pScript.add_function("entity get_player()", asMETHOD(scene, script_get_player), this);
 	pScript.add_function("void _set_player_locked(bool)", asMETHOD(player_character, set_locked), &mPlayer);
@@ -604,10 +627,10 @@ void scene::load_script_interface(script_system& pScript)
 	mScript = &pScript;
 }
 
-void scene::set_texture_manager(texture_manager& pTexture_manager)
+void scene::set_resource_manager(engine::resource_manager& pResource_manager)
 {
-	mTexture_manager = &pTexture_manager;
-	mEntity_manager.set_texture_manager(pTexture_manager);
+	mResource_manager = &pResource_manager;
+	mEntity_manager.set_resource_manager(pResource_manager);
 }
 
 void scene::load_game_xml(tinyxml2::XMLElement * ele_root)
@@ -623,19 +646,26 @@ void scene::load_game_xml(tinyxml2::XMLElement * ele_root)
 	}
 	std::string att_texture = util::safe_string(ele_player->Attribute("texture"));
 
-	mPlayer.set_texture(att_texture, *mTexture_manager);
+	auto texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, att_texture);
+	if (!texture)
+	{
+		util::error("Could not load texture '" + att_texture + "' for player character");
+		return;
+	}
+
+	mPlayer.set_texture(texture);
 	mPlayer.set_cycle(character_entity::cycle::def);
 
 	auto ele_sounds = ele_root->FirstChildElement("sounds");
 	if (ele_sounds)
-		mSound_FX.load_from_directory(ele_sounds->Attribute("path"));
+		load_sound_resources(ele_sounds->Attribute("path"), *mResource_manager);
 	else
-		mSound_FX.load_from_directory(defs::DEFAULT_SOUND_PATH.string());
+		load_sound_resources(defs::DEFAULT_SOUND_PATH.string(), *mResource_manager);
 
 	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
 	{
-		assert(mTexture_manager != nullptr);
-		mNarrative.load_narrative_xml(ele_narrative, *mTexture_manager);
+		assert(mResource_manager != nullptr);
+		mNarrative.load_narrative_xml(ele_narrative, *mResource_manager);
 	}
 }
 
@@ -693,6 +723,18 @@ engine::fvector scene::script_get_boundary_size()
 void scene::script_set_boundary_size(engine::fvector pSize)
 {
 	mWorld_node.set_boundary(mWorld_node.get_boundary().set_size(pSize));
+}
+
+void scene::script_spawn_sound(const std::string & pName, float pVolume, float pPitch)
+{
+	auto sound = mResource_manager->get_resource<engine::sound_buffer>(engine::resource_type::sound, pName);
+	if (!sound)
+	{
+		util::error("Could not spawn sound '" + pName + "'");
+		return;
+	}
+
+	mSound_FX.spawn(sound);
 }
 
 void scene::script_set_boundary_position(engine::fvector pPosition)
@@ -928,7 +970,7 @@ script_context::setup_triggers(collision_system& pCollision_system)
 game::game()
 {
 	load_script_interface();
-	mEditor_manager.set_texture_manager(mTexture_manager);
+	mEditor_manager.set_resource_manager(mResource_manager);
 	mSlot = 0;
 }
 
@@ -1040,9 +1082,9 @@ game::load_game_xml(std::string pPath)
 	auto ele_textures = ele_root->FirstChildElement("textures");
 	if (ele_textures &&
 		ele_textures->Attribute("path"))
-		mTexture_manager.load_from_directory(ele_textures->Attribute("path"));
+		load_texture_resources(ele_textures->Attribute("path"), mResource_manager);
 	else
-		mTexture_manager.load_from_directory(defs::DEFAULT_TEXTURES_PATH.string());
+		load_texture_resources(defs::DEFAULT_TEXTURES_PATH.string(), mResource_manager);
 
 	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
 	{
@@ -1050,7 +1092,7 @@ game::load_game_xml(std::string pPath)
 	}
 
 	mScene.set_text_format(mDefault_format);
-	mScene.set_texture_manager(mTexture_manager);
+	mScene.set_resource_manager(mResource_manager);
 	mScene.load_game_xml(ele_root);
 	mScene.load_scene(scene_path);
 	return 0;
@@ -1110,14 +1152,20 @@ game::refresh_renderer(engine::renderer & pR)
 // ##########
 
 int
-narrative_dialog::load_box(tinyxml2::XMLElement* pEle, texture_manager& pTexture_manager)
+narrative_dialog::load_box(tinyxml2::XMLElement* pEle, engine::resource_manager& pResource_manager)
 {
 	auto ele_box = pEle->FirstChildElement("box");
 
 	std::string att_box_tex = ele_box->Attribute("texture");
 	std::string att_box_atlas = ele_box->Attribute("atlas");
 
-	mBox.set_texture(att_box_tex, pTexture_manager);
+	auto texture = pResource_manager.get_resource<engine::texture>(engine::resource_type::texture, att_box_tex);
+	if (!texture)
+	{
+		util::error("Failed to load narrative box texture");
+		return 1;
+	}
+	mBox.set_texture(texture);
 	mBox.set_animation(att_box_atlas);
 
 	mBox.set_anchor(engine::anchor::topleft);
@@ -1253,12 +1301,12 @@ void narrative_dialog::set_expression(const std::string& pName)
 	show_expression();
 }
 
-int narrative_dialog::load_narrative_xml(tinyxml2::XMLElement* pEle, texture_manager& pTexture_manager)
+int narrative_dialog::load_narrative_xml(tinyxml2::XMLElement* pEle, engine::resource_manager& pResource_manager)
 {
-	load_box(pEle, pTexture_manager);
+	load_box(pEle, pResource_manager);
 
 	if (auto ele_expressions = pEle->FirstChildElement("expressions"))
-		mExpression_manager.load_expressions_xml(ele_expressions, pTexture_manager);
+		mExpression_manager.load_expressions_xml(ele_expressions, pResource_manager);
 	return 0;
 }
 
@@ -1592,7 +1640,7 @@ util::optional_pointer<const engine::animation> expression_manager::find_animati
 	return{};
 }
 
-int expression_manager::load_expressions_xml(tinyxml2::XMLElement * pRoot, texture_manager & pTexture_manager)
+int expression_manager::load_expressions_xml(tinyxml2::XMLElement * pRoot, engine::resource_manager& pResource_manager)
 {
 	assert(pRoot != nullptr);
 	auto ele_expression = pRoot->FirstChildElement();
@@ -1605,7 +1653,7 @@ int expression_manager::load_expressions_xml(tinyxml2::XMLElement * pRoot, textu
 			ele_expression = ele_expression->NextSiblingElement();
 			continue;
 		}
-		auto texture = pTexture_manager.get_texture(att_texture);
+		auto texture = pResource_manager.get_resource<engine::texture>(engine::resource_type::texture, att_texture);
 		if (!texture)
 		{
 			util::error("Failed to load expression '" + std::string(att_texture) + "'");
@@ -1619,7 +1667,8 @@ int expression_manager::load_expressions_xml(tinyxml2::XMLElement * pRoot, textu
 			ele_expression = ele_expression->NextSiblingElement();
 			continue;
 		}
-		mAnimations[ele_expression->Name()] = texture->get_animation(att_atlas);
+
+		mAnimations[ele_expression->Name()] = &texture->get_entry(att_atlas)->get_animation();
 
 		ele_expression = ele_expression->NextSiblingElement();
 	}
@@ -1734,7 +1783,9 @@ int text_format_profile::load_settings(tinyxml2::XMLElement * pEle)
 		util::error("Please specify font path");
 		return 1;
 	}
-	mFont.load(att_path);
+
+	mFont.set_font_source(att_path);
+	mFont.load();
 
 	auto att_size = ele_font->IntAttribute("size");
 	if (att_size > 0)
@@ -1768,7 +1819,7 @@ const engine::font& text_format_profile::get_font() const
 
 void text_format_profile::apply_to(engine::text_node& pText) const
 {
-	pText.set_font(mFont);
+	//pText.set_font(mFont);
 	pText.set_character_size(mCharacter_size);
 	pText.set_scale(mScale);
 	//pText.set_color(mColor);

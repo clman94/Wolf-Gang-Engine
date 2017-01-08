@@ -2,16 +2,9 @@
 
 using namespace rpg;
 
-int sprite_entity::set_texture(std::string pName, texture_manager & pTexture_manager)
+void sprite_entity::set_texture(std::shared_ptr<engine::texture> pTexture)
 {
-	auto texture = pTexture_manager.get_texture(pName);
-	if (!texture)
-	{
-		util::error("Cannot find texture for entity");
-		return 1;
-	}
-	mTexture = texture;
-	return 0;
+	mSprite.set_texture(pTexture);
 }
 
 void sprite_entity::set_anchor(engine::anchor pAnchor)
@@ -62,22 +55,14 @@ void sprite_entity::tick_animation()
 
 bool sprite_entity::set_animation(const std::string& pName, bool pSwap)
 {
-	if (!mTexture)
-		return false;
-
-	auto animation = mTexture->get_animation(pName);
-	if (!animation)
-		return false;
-
-	mSprite.set_animation(*animation, pSwap);
-	return true;
+	return mSprite.set_animation(pName, pSwap);
 }
 
-int sprite_entity::draw(engine::renderer &_r)
+int sprite_entity::draw(engine::renderer &pR)
 {
 	update_depth();
 
 	mSprite.set_exact_position(get_exact_position());
-	mSprite.draw(_r);
+	mSprite.draw(pR);
 	return 0;
 }

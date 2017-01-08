@@ -123,9 +123,9 @@ void editor::set_editor_gui(editor_gui & pEditor_gui)
 	setup_editor(pEditor_gui);
 }
 
-void editor::set_texture_manager(rpg::texture_manager & pTexture_manager)
+void editor::set_resource_manager(engine::resource_manager& pResource_manager)
 {
-	mTexture_manager = &pTexture_manager;
+	mResource_manager = &pResource_manager;
 }
 
 // ##########
@@ -163,13 +163,16 @@ int tilemap_editor::open_scene(std::string pPath)
 		return 1;
 	}
 	
-	mTexture = mTexture_manager->get_texture(mLoader.get_tilemap_texture());
-	if (!mTexture)
+	auto resource = mResource_manager->get_resource(engine::resource_type::texture, mLoader.get_tilemap_texture());
+	if (!resource)
 	{
 		util::error("Invalid tilemap texture");
 		return 1;
 	}
-	mTilemap_display.set_texture(*mTexture);
+	mTexture = engine::cast_resource<engine::texture>(resource);
+	assert(mTexture);
+
+	mTilemap_display.set_texture(mTexture);
 
 	mTilemap_loader.load_tilemap_xml(mLoader.get_tilemap());
 	mTilemap_loader.update_display(mTilemap_display);
@@ -255,7 +258,6 @@ int tilemap_editor::draw(engine::renderer & pR)
 	if (pR.is_key_pressed(engine::renderer::key_type::Period)) 
 	{
 		++mCurrent_tile %= mTile_list.size();
-		mPreview.set_texture(*mTexture, mTile_list[mCurrent_tile]);
 		update_preview();
 		update_labels();
 	}
@@ -353,7 +355,7 @@ void tilemap_editor::update_labels()
 
 void tilemap_editor::update_preview()
 {
-	mPreview.set_texture(*mTexture, mTile_list[mCurrent_tile]);
+	mPreview.set_texture_rect(mTexture->get_entry(mTile_list[mCurrent_tile])->get_root_rect());
 	mPreview.set_rotation(90.f * mRotation);
 	mPreview.set_anchor(engine::anchor::topleft);
 }
@@ -441,13 +443,16 @@ int collisionbox_editor::open_scene(std::string pPath)
 		return 1;
 	}
 
-	auto tilemap_texture = mTexture_manager->get_texture(mLoader.get_tilemap_texture());
-	if (!tilemap_texture)
+	auto resource = mResource_manager->get_resource(engine::resource_type::texture, mLoader.get_tilemap_texture());
+	if (!resource)
 	{
 		util::error("Invalid tilemap texture");
 		return 1;
 	}
-	mTilemap_display.set_texture(*tilemap_texture);
+	auto texture = engine::cast_resource<engine::texture>(resource);
+	assert(texture);
+
+	mTilemap_display.set_texture(texture);
 
 	mTilemap_loader.load_tilemap_xml(mLoader.get_tilemap());
 	mTilemap_loader.update_display(mTilemap_display);
@@ -662,10 +667,10 @@ void editor_manager::update_camera_position(engine::fvector pPosition)
 		mEditor_gui.update_camera_position(pPosition);
 }
 
-void editor_manager::set_texture_manager(rpg::texture_manager & pTexture_manager)
+void editor_manager::set_resource_manager(engine::resource_manager& pResource_manager)
 {
-	mTilemap_editor.set_texture_manager(pTexture_manager);
-	mCollisionbox_editor.set_texture_manager(pTexture_manager);
+	mTilemap_editor.set_resource_manager(pResource_manager);
+	mCollisionbox_editor.set_resource_manager(pResource_manager);
 }
 
 int editor_manager::draw(engine::renderer& pR)

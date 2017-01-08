@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "texture.hpp"
+#include "resource.hpp"
 #include "types.hpp"
 #include "rect.hpp"
 
@@ -18,15 +19,15 @@ class animation
 public:
 	animation();
 
-	enum class e_loop
+	enum class loop_type
 	{
 		none,
 		linear,
 		pingpong
 	};
 
-	void set_loop(e_loop pLoop);
-	e_loop  get_loop() const;
+	void set_loop(loop_type pLoop);
+	loop_type  get_loop() const;
 
 	void add_interval(frame_t pFrom, int pInterval);
 
@@ -41,10 +42,8 @@ public:
 	fvector get_size() const;
 
 	void set_default_frame(frame_t pFrame);
-	int  get_default_frame() const;
+	frame_t  get_default_frame() const;
 
-	void set_texture(engine::texture& pTexture);
-	engine::texture* get_texture() const;
 
 private:
 	struct sequence_frame
@@ -54,10 +53,9 @@ private:
 	};
 	std::vector<sequence_frame> mSequence;
 	engine::frect               mFrame_rect;
-	engine::texture*            mTexture;
 	frame_t                     mDefault_frame;
 	frame_t                     mFrame_count;
-	e_loop                      mLoop;
+	loop_type                   mLoop;
 	frame_t calculate_frame(frame_t pCount) const;
 };
 

@@ -9,7 +9,7 @@ class tilemap_display :
 	public engine::render_object
 {
 public:
-	void set_texture(engine::texture& pTexture);
+	void set_texture(std::shared_ptr<engine::texture> pTexture);
 	void set_tile(engine::fvector pPosition, const std::string& pAtlas, int pLayer, int pRotation);
 
 	int draw(engine::renderer &pR);
@@ -22,7 +22,7 @@ public:
 	void remove_highlight();
 
 private:
-	engine::texture *mTexture;
+	std::shared_ptr<engine::texture> mTexture;
 
 	class tile
 	{

@@ -10,7 +10,6 @@
 #include <engine/pathfinding.hpp>
 #include <engine/filesystem.hpp>
 
-#include <rpg/rpg_managers.hpp>
 #include <rpg/rpg_config.hpp>
 #include <rpg/tilemap_loader.hpp>
 #include <rpg/editor.hpp>
@@ -34,14 +33,15 @@
 #include <fstream>
 #include <memory>
 
-namespace rpg{
+namespace rpg
+{
 
 // Resource management of expression animations
 class expression_manager
 {
 public:
 	util::optional_pointer<const engine::animation> find_animation(const std::string& mName);
-	int load_expressions_xml(tinyxml2::XMLElement * pRoot, texture_manager& pTexture_manager);
+	int load_expressions_xml(tinyxml2::XMLElement * pRoot, engine::resource_manager& pResource_manager);
 
 private:
 	std::map<std::string, const engine::animation*> mAnimations;
@@ -155,7 +155,7 @@ public:
 
 	void set_expression(const std::string& pName);
 
-	int load_narrative_xml(tinyxml2::XMLElement* pEle, texture_manager& pTexture_manager);
+	int load_narrative_xml(tinyxml2::XMLElement* pEle, engine::resource_manager& pResource_manager);
 
 	void load_script_interface(script_system& pScript);
 
@@ -175,7 +175,7 @@ private:
 	expression_manager     mExpression_manager;
 	engine::animation_node mExpression;
 
-	int load_box(tinyxml2::XMLElement* pEle, texture_manager& pTexture_manager);
+	int load_box(tinyxml2::XMLElement* pEle, engine::resource_manager& pResource_manager);
 
 	void show_expression();
 	void reset_positions();
@@ -196,7 +196,7 @@ public:
 	void clean();
 
 	void load_script_interface(script_system& pScript);
-	void set_texture_manager(texture_manager& pTexture_manager);
+	void set_resource_manager(engine::resource_manager& pResource_manager);
 	bool is_character(sprite_entity* pEntity);
 
 	template<typename T>
@@ -225,7 +225,7 @@ private:
 
 	void register_entity_type(script_system& pScript);
 
-	texture_manager*  mTexture_manager;
+	engine::resource_manager*  mResource_manager;
 	script_system* mScript_system;
 
 	/// Used for the text-based entities
@@ -348,7 +348,7 @@ public:
 
 	void load_script_interface(script_system& pScript);
 
-	void set_texture_manager(texture_manager& pTexture_manager);
+	void set_resource_manager(engine::resource_manager& pResource_manager);
 
 	// Loads global scene settings from game.xml file.
 	void load_game_xml(tinyxml2::XMLElement* ele_root);
@@ -366,19 +366,19 @@ private:
 
 	panning_node mWorld_node;
 
-	texture_manager*   mTexture_manager;
+	engine::resource_manager* mResource_manager;
 	script_system*     mScript;
 
-	tilemap_display    mTilemap_display;
-	tilemap_loader     mTilemap_loader;
-	collision_system   mCollision_system;
-	entity_manager     mEntity_manager;
-	background_music   mBackground_music;
-	narrative_dialog   mNarrative;
-	sound_manager      mSound_FX;
-	player_character   mPlayer;
-	colored_overlay    mColored_overlay;
-	pathfinding_system mPathfinding_system;
+	tilemap_display       mTilemap_display;
+	tilemap_loader        mTilemap_loader;
+	collision_system      mCollision_system;
+	entity_manager        mEntity_manager;
+	background_music      mBackground_music;
+	narrative_dialog      mNarrative;
+	engine::sound_spawner mSound_FX;
+	player_character      mPlayer;
+	colored_overlay       mColored_overlay;
+	pathfinding_system    mPathfinding_system;
 
 	scene_loader mLoader;
 
@@ -394,6 +394,8 @@ private:
 	engine::fvector  script_get_boundary_size();
 	void             script_set_boundary_position(engine::fvector pPosition);
 	void             script_set_boundary_size(engine::fvector pSize);
+
+	void             script_spawn_sound(const std::string& pName, float pVolume, float pPitch);
 
 	void refresh_renderer(engine::renderer& _r);
 	void update_focus();
@@ -492,7 +494,7 @@ protected:
 
 private:
 	scene            mScene;
-	texture_manager  mTexture_manager;
+	engine::resource_manager mResource_manager;
 	flag_container   mFlags;
 	script_system    mScript;
 	controls         mControls;

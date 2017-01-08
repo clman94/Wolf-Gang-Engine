@@ -2,6 +2,8 @@
 #define RPG_SPRITE_ENTITY_HPP
 
 #include <rpg/rpg_managers.hpp>
+#include <engine/resource.hpp>
+#include <engine/texture.hpp>
 #include <rpg/entity.hpp>
 
 namespace rpg {
@@ -16,7 +18,7 @@ public:
 	void tick_animation();
 	bool set_animation(const std::string& pName, bool pSwap = false);
 	int draw(engine::renderer &pR);
-	int set_texture(std::string pName, texture_manager& pTexture_manager);
+	void set_texture(std::shared_ptr<engine::texture> pTexture);
 	void set_anchor(engine::anchor pAnchor);
 	void set_color(engine::color pColor);
 	void set_rotation(float pRotation);
@@ -30,8 +32,7 @@ public:
 	}
 
 private:
-	util::optional_pointer<engine::texture> mTexture;
-	engine::animation_node   mSprite;
+	engine::animation_node mSprite;
 };
 
 }

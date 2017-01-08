@@ -8,19 +8,18 @@ using namespace engine;
 
 animation::animation()
 {
-	mTexture = nullptr;
 	mDefault_frame = 0;
 	mFrame_count = 0;
-	mLoop = e_loop::linear;
+	mLoop = loop_type::linear;
 }
 
 void
-animation::set_loop(e_loop pLoop)
+animation::set_loop(loop_type pLoop)
 {
 	mLoop = pLoop;
 }
 
-animation::e_loop
+animation::loop_type
 animation::get_loop() const
 {
 	return mLoop;
@@ -89,22 +88,10 @@ animation::set_default_frame(frame_t pFrame)
 	mDefault_frame = pFrame;
 }
 
-int
+frame_t
 animation::get_default_frame() const
 {
 	return mDefault_frame;
-}
-
-void
-animation::set_texture(texture& pTexture)
-{
-	mTexture = &pTexture;
-}
-
-engine::texture*
-animation::get_texture() const
-{
-	return mTexture;
 }
 
 frame_t
@@ -114,13 +101,13 @@ animation::calculate_frame(frame_t pCount) const
 		return 0;
 	switch (mLoop)
 	{
-	case animation::e_loop::none:
+	case animation::loop_type::none:
 		return pCount >= mFrame_count ? mFrame_count - 1 : pCount;
 
-	case animation::e_loop::linear:
+	case animation::loop_type::linear:
 			return pCount%mFrame_count;
 
-	case animation::e_loop::pingpong:
+	case animation::loop_type::pingpong:
 			return util::pingpong_index(pCount, mFrame_count - 1);
 	}
 	return 0;
@@ -144,8 +131,7 @@ animation_node::set_frame(frame_t pFrame)
 	update_frame();
 }
 
-void
-animation_node::set_animation(const animation& pAnimation, bool pSwap)
+void animation_node::set_animation(const animation& pAnimation, bool pSwap)
 {
 	mAnimation = &pAnimation;
 	mInterval = pAnimation.get_interval();
@@ -155,17 +141,34 @@ animation_node::set_animation(const animation& pAnimation, bool pSwap)
 	else
 		update_frame();
 
-	if (pAnimation.get_texture())
-		set_texture(*pAnimation.get_texture());
+	//if (pAnimation.get_texture())
+	//	set_texture(*pAnimation.get_texture());
 }
 
-void
-animation_node::set_texture(texture& pTexture)
+bool animation_node::set_animation(const std::string& pName, bool pSwap)
+{
+	assert(mSprite.get_texture());
+
+	auto texture = mSprite.get_texture();
+	auto entry = texture->get_entry(pName);
+	if (!entry)
+		return false;
+	auto &animation = entry->get_animation();
+	set_animation(animation, pSwap);
+	return true;
+}
+
+void animation_node::set_texture(std::shared_ptr<texture> pTexture)
 {
 	mSprite.set_texture(pTexture);
 }
 
-engine::fvector animation_node::get_size() const
+std::shared_ptr<texture> animation_node::get_texture() const
+{
+	return mSprite.get_texture();
+}
+
+fvector animation_node::get_size() const
 {
 	if (!mAnimation)
 		return{ 0, 0 };

@@ -342,3 +342,4 @@ renderer::update_events()
 	}
 	return 0;
 }
+

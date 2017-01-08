@@ -4,21 +4,39 @@
 
 using namespace engine;
 
+void font::set_font_source(const std::string & pFilepath)
+{
+	mFont_source = pFilepath;
+}
+
+void font::load()
+{
+	assert(!mFont_source.empty());
+
+	if (!mIs_loaded)
+	{
+		mSFML_font.reset(new sf::Font);
+		mIs_loaded = mSFML_font->loadFromFile(mFont_source);
+	}
+}
+
+void font::unload()
+{
+	mSFML_font.reset();
+	mIs_loaded = false;
+}
+
 text_node::text_node()
 {
 	mAnchor = anchor::topleft;
 }
 
-int
-font::load(const std::string& pPath)
-{
-	return sf_font.loadFromFile(pPath);
-}
-
 void
-text_node::set_font(const font& pFont)
+text_node::set_font(std::shared_ptr<font> pFont)
 {
-	mSfml_text.setFont(pFont.sf_font);
+	mFont = pFont;
+	pFont->load();
+	mSfml_text.setFont(*pFont->mSFML_font);
 	update_offset();
 }
 

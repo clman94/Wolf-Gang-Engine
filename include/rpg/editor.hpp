@@ -71,13 +71,13 @@ public:
 
 	void set_editor_gui(editor_gui& pEditor_gui);
 
-	void set_texture_manager(rpg::texture_manager& pTexture_manager);
+	void set_resource_manager(engine::resource_manager& pResource_manager);
 
 	virtual int save() = 0;
 
 protected:
 	editor_gui* mEditor_gui;
-	rpg::texture_manager*  mTexture_manager;
+	engine::resource_manager* mResource_manager;
 
 	virtual void setup_editor(editor_gui& pEditor_gui){}
 };
@@ -103,7 +103,7 @@ private:
 
 	rpg::scene_loader mLoader;
 
-	engine::texture* mTexture;
+	std::shared_ptr<engine::texture> mTexture;
 
 	engine::sprite_node mPreview;
 
@@ -177,7 +177,7 @@ public:
 
 	void update_camera_position(engine::fvector pPosition);
 
-	void set_texture_manager(rpg::texture_manager& pTexture_manager);
+	void set_resource_manager(engine::resource_manager& pResource_manager);
 
 	int draw(engine::renderer& pR);
 

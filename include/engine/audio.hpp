@@ -1,33 +1,44 @@
+#ifndef ENGINE_AUDIO_HPP
+#define ENGINE_AUDIO_HPP
+
+#include <engine/resource.hpp>
+
 #include <string>
 #include <SFML\Audio.hpp>
 #include <list>
+#include <memory>
 // Wrapper class for sfml sound
 
 namespace engine
 {
-class sound_buffer
+class sound_buffer :
+	public resource
 {
-	sf::SoundBuffer buf;
 public:
-	bool load(const std::string path)
-	{
-		return buf.loadFromFile(path);
-	}
+	void set_sound_source(const std::string& pFilepath);
+	void load();
+	void unload();
+private:
+	std::string mSound_source;
+	std::unique_ptr<sf::SoundBuffer> mSFML_buffer;
+
 	friend class sound;
 };
 
 class sound
 {
+	std::shared_ptr<sound_buffer> mSound_buffer;
 	sf::Sound s;
 public:
-	sound(){}
-	sound(const sound_buffer& buf)
+	sound() {}
+	sound(std::shared_ptr<sound_buffer> buf)
 	{
 		set_buffer(buf);
 	}
-	void set_buffer(const sound_buffer& buf)
+	void set_buffer(std::shared_ptr<sound_buffer> buf)
 	{
-		s.setBuffer(buf.buf);
+		mSound_buffer = buf;
+		s.setBuffer(*buf->mSFML_buffer);
 	}
 	void play()
 	{
@@ -64,7 +75,7 @@ class sound_spawner
 {
 	std::list<sound> mSounds;
 public:
-	void spawn(sound_buffer& pBuffer, float pVolume = 100, float pPitch = 1)
+	void spawn(std::shared_ptr<sound_buffer> pBuffer, float pVolume = 100, float pPitch = 1)
 	{
 		for (auto &i : mSounds)
 		{
@@ -150,3 +161,5 @@ public:
 
 
 }
+
+#endif // !ENGINE_AUDIO_HPP

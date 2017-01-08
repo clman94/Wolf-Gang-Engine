@@ -2,6 +2,7 @@
 #define RPG_MANAGERS_HPP
 
 #include <engine/texture.hpp>
+#include <engine/resource.hpp>
 #include <engine/audio.hpp>
 #include <engine/utility.hpp>
 #include "../../tinyxml2/xmlshortcuts.hpp"
@@ -14,42 +15,8 @@
 namespace rpg
 {
 
-/// Resource manager of textures.
-/// Add
-class texture_manager
-{
-public:
-
-	/// Locates all png files in the directory and associates its
-	/// atlas of the same name (if it exists)
-	int load_from_directory(const std::string& pPath);
-	util::optional_pointer<engine::texture> get_texture(const std::string& pName);
-	std::vector<std::string> construct_list();
-
-public:
-	struct texture_entry
-	{
-		std::string path, atlas;
-		bool is_loaded;
-		engine::texture texture;
-		bool ensure_loaded();
-	};
-	std::map<std::string, texture_entry> mTextures;
-};
-
-class sound_manager
-{
-public:
-	/// Load all sounds from directory. All sounds are named by the
-	/// filename without the extension.
-	int load_from_directory(const std::string& pPath);
-	bool spawn_sound(const std::string& pName, float pVolume = 100, float pPitch = 1);
-	void stop_all();
-
-private:
-	std::unordered_map<std::string, engine::sound_buffer> mBuffers;
-	engine::sound_spawner mSounds;
-};
+bool load_texture_resources(const std::string& pDirectory, engine::resource_manager& pResource_manager);
+bool load_sound_resources(const std::string& pDirectory, engine::resource_manager& pResource_manager);
 
 }
 

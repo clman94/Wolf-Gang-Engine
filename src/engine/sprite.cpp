@@ -22,18 +22,14 @@ void sprite_node::set_scale(fvector pScale)
 	mScale = pScale;
 }
 
-int sprite_node::set_texture(texture& pTexture)
+void sprite_node::set_texture(std::shared_ptr<texture> pTexture)
 {
-	mTexture = &pTexture;
-	return 0;
+	mTexture = pTexture;
 }
 
-int sprite_node::set_texture(texture& pTexture, std::string pAtlas)
+std::shared_ptr<texture> sprite_node::get_texture() const
 {
-	mTexture = &pTexture;
-	auto crop = pTexture.get_entry(pAtlas);
-	set_texture_rect(crop);
-	return 0;
+	return mTexture;
 }
 
 sprite_node::sprite_node()

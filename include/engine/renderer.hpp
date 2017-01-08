@@ -22,6 +22,7 @@
 #include "types.hpp"
 #include "utility.hpp"
 #include "animation.hpp"
+#include "resource.hpp"
 
 namespace engine
 {
@@ -46,7 +47,6 @@ struct color
 };
 
 class render_object;
-class renderer;
 
 class renderer :
 	public util::nocopy
@@ -334,27 +334,33 @@ public:
 	void set_anchor(anchor pAnchor);
 	virtual int draw(renderer &pR);
 	void set_scale(fvector pScale);
-	int set_texture(texture& pTexture);
-	int set_texture(texture& pTexture, std::string pAtlas);
+	void set_texture(std::shared_ptr<texture> pTexture);
+	std::shared_ptr<texture> get_texture() const;
+
 	void set_texture_rect(const engine::frect& pRect);
 	void set_color(color pColor);
 	void set_rotation(float pRotation);
 	fvector get_size();
 
 private:
-	texture *mTexture;
+	std::shared_ptr<texture> mTexture;
 	sf::Vertex mVertices[4];
 	fvector mCenter;
 	fvector mScale;
 	float mRotation;
 };
 
-class font
+class font :
+	public resource
 {
-	sf::Font sf_font;
 public:
-	int load(const std::string& pPath);
-
+	void set_font_source(const std::string& pFilepath);
+	void load();
+	void unload();
+private:
+	bool mIs_loaded;
+	std::string mFont_source;
+	std::unique_ptr<sf::Font> mSFML_font;
 	friend class text_node;
 };
 
@@ -363,10 +369,13 @@ class text_node :
 {
 public:
 	text_node();
-	void set_font(const font& pFont);
+	void set_font(std::shared_ptr<font> pFont);
+
 	void set_text(const std::string& pText);
-	void append_text(const std::string& pText);
 	const std::string& get_text() const;
+
+	void append_text(const std::string& pText);
+
 	void set_character_size(int pPixels);
 	void set_anchor(anchor pAnchor);
 	void set_color(const color& pColor);
@@ -375,6 +384,8 @@ public:
 	virtual int draw(renderer &pR);
 
 private:
+	std::shared_ptr<font> mFont;
+
 	rectangle_node testrect;
 	sf::Text mSfml_text;
 	std::string mString; // Avoids reliance on sfml
@@ -393,7 +404,9 @@ public:
 
 	void set_frame(frame_t pFrame);
 	void set_animation(const animation& pAnimation, bool pSwap = false);
-	void set_texture(texture& pTexture);
+	bool set_animation(const std::string& pName, bool pSwap = false);
+	void set_texture(std::shared_ptr<texture> pTexture);
+	std::shared_ptr<texture> get_texture() const;
 
 	engine::fvector get_size() const;
 
