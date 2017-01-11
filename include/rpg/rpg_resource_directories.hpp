@@ -19,6 +19,19 @@ private:
 	std::string mPath;
 };
 
+class font_directory :
+	public engine::resource_directory
+{
+public:
+	font_directory();
+
+	bool load(engine::resource_manager& pResource_manager);
+
+	void set_path(const std::string& pPath);
+private:
+	std::string mPath;
+};
+
 class soundfx_directory :
 	public engine::resource_directory
 {

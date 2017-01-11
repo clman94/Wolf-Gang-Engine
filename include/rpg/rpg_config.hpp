@@ -23,6 +23,7 @@ const engine::fs::path DEFAULT_SAVES_PATH     = DEFAULT_DATA_PATH / "saves";
 const engine::fs::path DEFAULT_TEXTURES_PATH  = DEFAULT_DATA_PATH / "textures";
 const engine::fs::path DEFAULT_SCENES_PATH    = DEFAULT_DATA_PATH / "scenes";
 const engine::fs::path DEFAULT_INTERNALS_PATH = DEFAULT_DATA_PATH / "internal";
+const engine::fs::path DEFAULT_FONTS_PATH     = DEFAULT_DATA_PATH / "fonts";
 
 const engine::fs::path INTERNAL_SCRIPTS_PATH = DEFAULT_INTERNALS_PATH / "scene.as";
 const std::string INTERNAL_SCRIPTS_INCLUDE   = "#include \"" + INTERNAL_SCRIPTS_PATH.string() + "\"";

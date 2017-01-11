@@ -5,6 +5,7 @@
 #include <rpg/rpg_config.hpp>
 #include <engine/texture.hpp>
 #include <rpg/rpg_resource_directories.hpp>
+#include <engine/renderer.hpp>
 
 #include <string>
 #include <vector>
@@ -60,6 +61,50 @@ void texture_directory::set_path(const std::string & pPath)
 	mPath = pPath;
 }
 
+font_directory::font_directory()
+{
+	mPath = defs::DEFAULT_FONTS_PATH.string();
+}
+
+bool font_directory::load(engine::resource_manager& pResource_manager)
+{
+	if (!engine::fs::exists(mPath))
+	{
+		util::error("Textures directory does not exist");
+		return 1;
+	}
+
+	for (auto& i : engine::fs::recursive_directory_iterator(mPath))
+	{
+		auto& font_path = i.path();
+
+		if (font_path.extension() == ".ttf")
+		{
+			const std::string font_name = font_path.stem().string();
+			if (pResource_manager.has_resource(engine::resource_type::font, font_name)) // Check if unique
+			{
+				util::error("Texture '" + font_name + "' is not unique. Please give it a unique name.");
+				continue;
+			}
+			std::shared_ptr<engine::font> font(new engine::font());
+			font->set_font_source(font_path.string());
+
+			// Get preferences path (if it exists)
+			auto preferences_path = font_path.parent_path();
+			preferences_path /= font_name + ".xml";
+			if (engine::fs::exists(preferences_path))
+				font->set_preferences_source(preferences_path.string());
+
+			pResource_manager.add_resource(engine::resource_type::font, font_name, font);
+		}
+	}
+	return 0;
+}
+
+void font_directory::set_path(const std::string & pPath)
+{
+	mPath = pPath;
+}
 
 rpg::soundfx_directory::soundfx_directory()
 {

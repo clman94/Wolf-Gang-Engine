@@ -49,30 +49,13 @@ private:
 	std::map<std::string, std::shared_ptr<const engine::animation>> mAnimations;
 };
 
-class text_format_profile
-{
-public:
-	// Load xml settings:
-	// <font path="" size="" scale=""/>
-	int load_settings(tinyxml2::XMLElement* pEle);
-	int get_character_size() const;
-	float get_scale() const;
-	const engine::font& get_font() const;
-	void apply_to(engine::text_node& pText) const;
-
-private:
-	engine::font mFont;
-	int mCharacter_size;
-	float mScale;
-	//engine::color mColor; // TODO: Implement color
-};
 
 class text_entity :
 	public entity
 {
 public:
 	text_entity();
-	void apply_format(const text_format_profile& pFormat);
+	void set_font(std::shared_ptr<engine::font> pFont);
 
 	void set_text(const std::string& pText);
 	void set_color(engine::color pColor);
@@ -163,8 +146,6 @@ public:
 
 	int draw(engine::renderer &pR);
 
-	void set_text_format(const text_format_profile& pFormat);
-
 protected:
 	void refresh_renderer(engine::renderer& r);
 
@@ -217,7 +198,6 @@ public:
 		return new_entity;
 	}
 
-	void set_text_format(const text_format_profile& pFormat);
 
 	void set_root_node(engine::node& pNode);
 
@@ -229,9 +209,6 @@ private:
 
 	engine::resource_manager*  mResource_manager;
 	script_system* mScript_system;
-
-	/// Used for the text-based entities
-	const text_format_profile* mText_format;
 
 	std::vector<std::unique_ptr<entity>> mEntities;
 
@@ -258,6 +235,7 @@ private:
 	void             script_set_color(entity_reference& e, int r, int g, int b, int a);
 	void             script_set_visible(entity_reference& e, bool pIs_visible);
 	void             script_set_texture(entity_reference& e, const std::string& name);
+	void             script_set_font(entity_reference& e, const std::string& pName);
 
 	void             script_add_child(entity_reference& e1, entity_reference& e2);
 	void             script_set_parent(entity_reference& e1, entity_reference& e2);
@@ -361,7 +339,6 @@ public:
 
 	void focus_player(bool pFocus);
 
-	void set_text_format(const text_format_profile& pFormat);
 
 private:
 	std::map<std::string, script_context> pScript_contexts;
@@ -427,20 +404,6 @@ private:
 	tinyxml2::XMLDocument mDocument;
 	tinyxml2::XMLElement *mEle_root;
 };
-
-class game_service
-{
-public:
-	const text_format_profile& get_font_format() const;
-	engine::fvector get_tile_size() const;
-
-	int load_xml(const std::string& pPath);
-
-private:
-	text_format_profile mFont_format;
-	engine::fvector mTile_size;
-};
-
 class game_settings_loader
 {
 public:
@@ -450,7 +413,6 @@ public:
 	const std::string& get_textures_path() const;
 	const std::string& get_sounds_path() const;
 	const std::string& get_music_path() const;
-	const text_format_profile& get_font_format() const;
 	const std::string& get_player_texture() const;
 
 private:
@@ -458,7 +420,6 @@ private:
 	std::string mTextures_path;
 	std::string mSounds_path;
 	std::string mMusic_path;
-	text_format_profile mFont_format;
 
 	std::string mPlayer_texture;
 
@@ -501,8 +462,6 @@ private:
 	script_system    mScript;
 	controls         mControls;
 	size_t           mSlot;
-
-	text_format_profile mDefault_format; //TODO: create manager of formats
 
 	editors::editor_manager mEditor_manager;
 

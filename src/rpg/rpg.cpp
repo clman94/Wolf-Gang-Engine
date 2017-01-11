@@ -15,7 +15,6 @@ using namespace AS;
 
 entity_manager::entity_manager()
 {
-	mText_format = nullptr;
 }
 
 util::optional_pointer<entity> entity_manager::find_entity(const std::string& pName)
@@ -36,10 +35,6 @@ void entity_manager::set_resource_manager(engine::resource_manager& pResource_ma
 	mResource_manager = &pResource_manager;
 }
 
-void entity_manager::set_text_format(const text_format_profile & pFormat)
-{
-	mText_format = &pFormat;
-}
 
 void entity_manager::set_root_node(engine::node & pNode)
 {
@@ -127,13 +122,19 @@ entity_reference entity_manager::script_add_text()
 {
 	assert(get_renderer() != nullptr);
 	assert(mResource_manager != nullptr);
-	assert(mText_format != nullptr);
+
+	auto font = mResource_manager->get_resource<engine::font>(engine::resource_type::font, "default");
+	if (!font)
+	{
+		util::error("Could not find default font");
+		return{};
+	}
 
 	auto new_entity = create_entity<text_entity>();
 	if (!new_entity)
 		return entity_reference(); // Return empty on error
 
-	new_entity->apply_format(*mText_format);
+	new_entity->set_font(font);
 	return *new_entity;
 }
 
@@ -349,15 +350,34 @@ void entity_manager::script_set_texture(entity_reference & e, const std::string 
 		util::error("Entity is not sprite-based");
 		return;
 	}
-	auto resource = mResource_manager->get_resource(engine::resource_type::texture, name);
-	if (!resource)
+	auto texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, name);
+	if (!texture)
 	{
 		util::error("Could not load texture '" + name + "'");
 		return;
 	}
-	auto texture = engine::cast_resource<engine::texture>(resource);
 	se->set_texture(texture);
 	se->set_animation("default:default");
+}
+
+void entity_manager::script_set_font(entity_reference & e, const std::string & pName)
+{
+	if (!check_entity(e)) return;
+	auto te = dynamic_cast<text_entity*>(e.get());
+	if (!te)
+	{
+		util::error("Entity is not text-based");
+		return;
+	}
+
+	auto font = mResource_manager->get_resource<engine::font>(engine::resource_type::font, pName);
+	if (!font)
+	{
+		util::error("Could not load font '" + pName + "'");
+		return;
+	}
+	
+	te->set_font(font);
 }
 
 void entity_manager::script_add_child(entity_reference& e1, entity_reference& e2)
@@ -680,12 +700,6 @@ void scene::tick(controls &pControls)
 void scene::focus_player(bool pFocus)
 {
 	mFocus_player = pFocus;
-}
-
-inline void rpg::scene::set_text_format(const text_format_profile & pFormat)
-{
-	mEntity_manager.set_text_format(pFormat);
-	mNarrative.set_text_format(pFormat);
 }
 
 
@@ -1074,24 +1088,26 @@ game::load_game_xml(std::string pPath)
 	}
 	std::string start_scene_name = util::safe_string(ele_scene->Attribute("name"));
 
-	// Setup texture directory
+	// Setup textures directory
 	std::shared_ptr<texture_directory> texture_dir(std::make_shared<texture_directory>());
 	if (auto ele_textures = ele_root->FirstChildElement("textures"))
 		texture_dir->set_path(ele_textures->Attribute("path"));
 	mResource_manager.add_directory(texture_dir);
 
-	// Setup sound directory
+	// Setup sounds directory
 	std::shared_ptr<soundfx_directory> sound_dir(std::make_shared<soundfx_directory>());
 	if (auto ele_sounds = ele_root->FirstChildElement("sounds"))
 		sound_dir->set_path(ele_sounds->Attribute("path"));
 	mResource_manager.add_directory(sound_dir);
 
+	// Setup fonts directory
+	std::shared_ptr<font_directory> font_dir(std::make_shared<font_directory>());
+	if (auto ele_fonts = ele_root->FirstChildElement("fonts"))
+		font_dir->set_path(ele_fonts->Attribute("path"));
+	mResource_manager.add_directory(font_dir);
+
 	mResource_manager.reload_directories(); // Load the resources from the directories
 
-	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
-		mDefault_format.load_settings(ele_narrative);
-
-	mScene.set_text_format(mDefault_format);
 	mScene.set_resource_manager(mResource_manager);
 	mScene.load_game_xml(ele_root);
 	mScene.load_scene(start_scene_name);
@@ -1308,6 +1324,14 @@ int narrative_dialog::load_narrative_xml(tinyxml2::XMLElement* pEle, engine::res
 {
 	load_box(pEle, pResource_manager);
 
+	auto font = pResource_manager.get_resource<engine::font>(engine::resource_type::font, "default");
+	if (!font)
+	{
+		util::error("Faled to find font");
+		return 1;
+	}
+	mText.set_font(font);
+
 	if (auto ele_expressions = pEle->FirstChildElement("expressions"))
 		mExpression_manager.load_expressions_xml(ele_expressions, pResource_manager);
 	return 0;
@@ -1342,12 +1366,6 @@ void narrative_dialog::load_script_interface(script_system & pScript)
 int narrative_dialog::draw(engine::renderer& pR)
 {
 	return 0;
-}
-
-void narrative_dialog::set_text_format(const text_format_profile & pFormat)
-{
-	mText.apply_format(pFormat);
-	pFormat.apply_to(mSelection);
 }
 
 void narrative_dialog::refresh_renderer(engine::renderer& r)
@@ -1773,62 +1791,6 @@ bool pathfinding_system::script_find_path_partial(AS::CScriptArray& pScript_path
 }
 
 // #########
-// text_format_profile
-// #########
-
-int text_format_profile::load_settings(tinyxml2::XMLElement * pEle)
-{
-	auto ele_font = pEle->FirstChildElement("font");
-
-	std::string att_path = util::safe_string(ele_font->Attribute("path"));
-	if (att_path.empty())
-	{
-		util::error("Please specify font path");
-		return 1;
-	}
-
-	mFont.set_font_source(att_path);
-	mFont.load();
-
-	auto att_size = ele_font->IntAttribute("size");
-	if (att_size > 0)
-		mCharacter_size = att_size;
-	else
-		mCharacter_size = 9;
-
-	auto att_scale = ele_font->FloatAttribute("scale");
-	if (att_scale > 0)
-		mScale = att_scale;
-	else
-		mScale = 1;
-
-	return 0;
-}
-
-int text_format_profile::get_character_size() const
-{
-	return mCharacter_size;
-}
-
-float text_format_profile::get_scale() const
-{
-	return mScale;
-}
-
-const engine::font& text_format_profile::get_font() const
-{
-	return mFont;
-}
-
-void text_format_profile::apply_to(engine::text_node& pText) const
-{
-	//pText.set_font(mFont);
-	pText.set_character_size(mCharacter_size);
-	pText.set_scale(mScale);
-	//pText.set_color(mColor);
-}
-
-// #########
 // dialog_text_entity
 // #########
 
@@ -1921,10 +1883,11 @@ text_entity::text_entity()
 	add_child(mText);
 }
 
-void text_entity::apply_format(const text_format_profile & pFormat)
+void text_entity::set_font(std::shared_ptr<engine::font> pFont)
 {
-	pFormat.apply_to(mText);
+	mText.set_font(pFont, true);
 }
+
 
 void text_entity::set_text(const std::string & pText)
 {
@@ -1946,46 +1909,6 @@ int text_entity::draw(engine::renderer & pR)
 	update_depth();
 	mText.set_exact_position(get_exact_position());
 	mText.draw(pR);
-	return 0;
-}
-
-const text_format_profile& game_service::get_font_format() const
-{
-	return mFont_format;
-}
-
-engine::fvector game_service::get_tile_size() const
-{
-	return mTile_size;
-}
-
-int game_service::load_xml(const std::string& pPath)
-{
-	using namespace tinyxml2;
-
-	XMLDocument doc;
-	if (doc.LoadFile(pPath.c_str()))
-	{
-		util::error("Could not load game file at '" + pPath + "'");
-		return 1;
-	}
-	auto ele_root = doc.RootElement();
-
-	if (auto ele_font = ele_root->FirstChildElement("font"))
-	{
-		mFont_format.load_settings(ele_font);
-	}
-
-	if (auto ele_font = ele_root->FirstChildElement("tile"))
-	{
-		mTile_size.x = ele_font->FloatAttribute("w");
-		mTile_size.y = ele_font->FloatAttribute("h");
-	}
-	else
-	{
-		mTile_size = { 32.f, 32.f }; // Default
-	}
-
 	return 0;
 }
 
@@ -2015,9 +1938,6 @@ bool game_settings_loader::load(const std::string & pPath)
 	else
 		mTextures_path = defs::DEFAULT_TEXTURES_PATH.string();
 
-	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
-		mFont_format.load_settings(ele_narrative);
-
 	return true;
 }
 
@@ -2039,11 +1959,6 @@ const std::string & game_settings_loader::get_sounds_path() const
 const std::string & game_settings_loader::get_music_path() const
 {
 	return mMusic_path;
-}
-
-const text_format_profile & game_settings_loader::get_font_format() const
-{
-	return mFont_format;
 }
 
 const std::string & game_settings_loader::get_player_texture() const

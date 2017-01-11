@@ -355,12 +355,19 @@ class font :
 {
 public:
 	void set_font_source(const std::string& pFilepath);
+	void set_preferences_source(const std::string& pFilepath);
 	bool load();
 	bool unload();
+
 private:
-	bool mIs_loaded;
+	bool load_preferences();
+
 	std::string mFont_source;
+	std::string mPreferences_source;
+
 	std::unique_ptr<sf::Font> mSFML_font;
+	int mCharacter_size;
+	float mScale;
 	friend class text_node;
 };
 
@@ -369,7 +376,7 @@ class text_node :
 {
 public:
 	text_node();
-	void set_font(std::shared_ptr<font> pFont);
+	void set_font(std::shared_ptr<font> pFont, bool pApply_preferences = false);
 
 	void set_text(const std::string& pText);
 	const std::string& get_text() const;

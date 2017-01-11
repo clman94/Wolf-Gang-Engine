@@ -9,14 +9,29 @@ void font::set_font_source(const std::string & pFilepath)
 	mFont_source = pFilepath;
 }
 
+void font::set_preferences_source(const std::string & pFilepath)
+{
+	mPreferences_source = pFilepath;
+}
+
 bool font::load()
 {
 	assert(!mFont_source.empty());
 
-	if (!mIs_loaded)
+	if (!is_loaded())
 	{
 		mSFML_font.reset(new sf::Font);
-		mIs_loaded = mSFML_font->loadFromFile(mFont_source);
+		if (!mSFML_font->loadFromFile(mFont_source))
+		{
+			util::error("Failed to load font");
+			return false;
+		}
+		if (!load_preferences())
+		{
+			util::error("Failed to load font preferences");
+			return false;
+		}
+		set_loaded(true);
 	}
 	return is_loaded();
 }
@@ -24,7 +39,31 @@ bool font::load()
 bool font::unload()
 {
 	mSFML_font.reset();
-	mIs_loaded = false;
+	set_loaded(false);
+	return true;
+}
+
+bool font::load_preferences()
+{
+	using namespace tinyxml2;
+	XMLDocument doc;
+	if (doc.LoadFile(mPreferences_source.c_str()))
+		return false;
+
+	auto ele_root = doc.FirstChildElement("font_preferences");
+	if (!ele_root)
+		return false;
+
+	if (auto att_scale = ele_root->FloatAttribute("scale"))
+		mScale = att_scale;
+	else
+		mScale = 1;
+
+	if (auto att_size = ele_root->IntAttribute("size"))
+		mCharacter_size = att_size;
+	else
+		mCharacter_size = 30;
+
 	return true;
 }
 
@@ -34,11 +73,13 @@ text_node::text_node()
 }
 
 void
-text_node::set_font(std::shared_ptr<font> pFont)
+text_node::set_font(std::shared_ptr<font> pFont, bool pApply_preferences)
 {
 	mFont = pFont;
 	pFont->load();
 	mSfml_text.setFont(*pFont->mSFML_font);
+	mSfml_text.setScale({ pFont->mScale, pFont->mScale });
+	mSfml_text.setCharacterSize(pFont->mCharacter_size);
 	update_offset();
 }
 
@@ -64,6 +105,9 @@ const std::string& text_node::get_text() const
 int
 text_node::draw(renderer &pR)
 {
+	if (!mFont)
+		return 1;
+
 	auto position = get_exact_position();
 
 	// Remove annoying offset of text
