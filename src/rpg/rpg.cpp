@@ -1107,7 +1107,7 @@ game::tick()
 		mEditor_manager.close_editor();
 		std::cout << "Reloading scene...\n";
 
-		mResource_manager.unload_all();
+		mResource_manager.reload_directories();
 
 		mScene.reload_scene();
 		std::cout << "Done\n";
