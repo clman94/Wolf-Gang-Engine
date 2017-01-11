@@ -403,7 +403,7 @@ public:
 	animation_node();
 
 	void set_frame(frame_t pFrame);
-	void set_animation(const animation& pAnimation, bool pSwap = false);
+	void set_animation(std::shared_ptr<const engine::animation>, bool pSwap = false);
 	bool set_animation(const std::string& pName, bool pSwap = false);
 	void set_texture(std::shared_ptr<texture> pTexture);
 	std::shared_ptr<texture> get_texture() const;
@@ -432,7 +432,7 @@ private:
 
 	engine::clock  mClock;
 
-	const animation* mAnimation;
+	std::shared_ptr<const engine::animation> mAnimation;
 
 	frame_t mFrame;
 

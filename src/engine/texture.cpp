@@ -8,9 +8,14 @@
 
 using namespace engine;
 
+atlas_entry::atlas_entry()
+{
+	mAnimation = std::make_shared<animation>();
+}
+
 frect atlas_entry::get_root_rect() const
 {
-	return mAnimation.get_frame_at(0);
+	return mAnimation->get_frame_at(0);
 }
 
 bool atlas_entry::is_animation() const
@@ -18,7 +23,7 @@ bool atlas_entry::is_animation() const
 	return false;
 }
 
-const animation& atlas_entry::get_animation() const
+std::shared_ptr<const engine::animation> atlas_entry::get_animation() const
 {
 	return mAnimation;
 }
@@ -34,7 +39,7 @@ bool atlas_entry::load(tinyxml2::XMLElement * pEle)
 	rect.y = pEle->FloatAttribute("y");
 	rect.w = pEle->FloatAttribute("w");
 	rect.h = pEle->FloatAttribute("h");
-	mAnimation.set_frame_rect(rect);
+	mAnimation->set_frame_rect(rect);
 
 	int att_frames = pEle->IntAttribute("frames");
 	int att_interval = pEle->IntAttribute("interval");
@@ -49,16 +54,16 @@ bool atlas_entry::load(tinyxml2::XMLElement * pEle)
 	// Set frame count
 
 	engine::frame_t frame_count = (att_frames <= 0 ? 1 : att_frames);// Default one frame
-	mAnimation.set_frame_count(frame_count);
+	mAnimation->set_frame_count(frame_count);
 
 	// Set starting interval
 
-	mAnimation.add_interval(0, att_interval);
+	mAnimation->add_interval(0, att_interval);
 
 	// Set default frame (default : 0)
 
 	int att_default = pEle->IntAttribute("default");
-	mAnimation.set_default_frame(att_default);
+	mAnimation->set_default_frame(att_default);
 
 	// Set loop type (default : none)
 
@@ -68,14 +73,14 @@ bool atlas_entry::load(tinyxml2::XMLElement * pEle)
 	engine::animation::loop_type loop_type = engine::animation::loop_type::none;
 	if (att_loop)             loop_type = engine::animation::loop_type::linear;
 	if (att_pingpong)         loop_type = engine::animation::loop_type::pingpong;
-	mAnimation.set_loop(loop_type);
+	mAnimation->set_loop(loop_type);
 
 	// Setup sequence for changing of interval over time
 
 	auto ele_seq = pEle->FirstChildElement("seq");
 	while (ele_seq)
 	{
-		mAnimation.add_interval(
+		mAnimation->add_interval(
 			(engine::frame_t)ele_seq->IntAttribute("from"),
 			ele_seq->IntAttribute("interval"));
 		ele_seq = ele_seq->NextSiblingElement();

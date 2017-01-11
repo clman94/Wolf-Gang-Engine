@@ -21,9 +21,9 @@ void tilemap_display::set_tile(engine::fvector pPosition, const std::string & pA
 	auto animation = entry->get_animation();
 
 	auto &ntile = mLayers[pLayer].tiles[pPosition];
-	ntile.mRef = mLayers[pLayer].vertices.add_quad(pPosition, animation.get_frame_at(0), pRotation);
-	ntile.set_animation(&animation);
-	if (animation.get_frame_count() > 1)
+	ntile.mRef = mLayers[pLayer].vertices.add_quad(pPosition, animation->get_frame_at(0), pRotation);
+	ntile.set_animation(animation);
+	if (animation->get_frame_count() > 1)
 		mAnimated_tiles.push_back(&ntile);
 }
 
@@ -90,7 +90,7 @@ void tilemap_display::remove_highlight()
 	}
 }
 
-void tilemap_display::tile::set_animation(const engine::animation* pAnimation)
+void tilemap_display::tile::set_animation(std::shared_ptr<const engine::animation> pAnimation)
 {
 	mAnimation = pAnimation;
 	mFrame = 0;

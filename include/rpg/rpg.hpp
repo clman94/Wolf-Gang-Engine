@@ -42,11 +42,11 @@ namespace rpg
 class expression_manager
 {
 public:
-	util::optional_pointer<const engine::animation> find_animation(const std::string& mName);
+	std::shared_ptr<const engine::animation> find_animation(const std::string& mName);
 	int load_expressions_xml(tinyxml2::XMLElement * pRoot, engine::resource_manager& pResource_manager);
 
 private:
-	std::map<std::string, const engine::animation*> mAnimations;
+	std::map<std::string, std::shared_ptr<const engine::animation>> mAnimations;
 };
 
 class text_format_profile

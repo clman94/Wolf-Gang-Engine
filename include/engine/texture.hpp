@@ -22,14 +22,15 @@ namespace engine
 class atlas_entry
 {
 public:
+	atlas_entry();
 	frect get_root_rect() const;
 	bool is_animation() const;
-	const engine::animation& get_animation() const;
+	std::shared_ptr<const animation> get_animation() const;
 
 	bool load(tinyxml2::XMLElement* pEle);
 private:
 	bool mIs_animation;
-	engine::animation mAnimation;
+	std::shared_ptr<animation> mAnimation;
 };
 
 class texture_atlas

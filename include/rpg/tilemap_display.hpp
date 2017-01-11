@@ -31,14 +31,14 @@ private:
 
 		tile() : mAnimation(nullptr) {}
 
-		void set_animation(const engine::animation* pAnimation);
+		void set_animation(std::shared_ptr<const engine::animation> pAnimation);
 		void update_animation();
 
 	private:
 		int mRotation;
 		engine::timer mTimer;
 		engine::frame_t mFrame;
-		const engine::animation* mAnimation;
+		std::shared_ptr<const engine::animation> mAnimation;
 	};
 
 	struct layer

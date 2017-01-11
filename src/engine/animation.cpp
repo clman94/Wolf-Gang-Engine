@@ -130,13 +130,13 @@ animation_node::set_frame(frame_t pFrame)
 	update_frame();
 }
 
-void animation_node::set_animation(const animation& pAnimation, bool pSwap)
+void animation_node::set_animation(std::shared_ptr<const engine::animation> pAnimation, bool pSwap)
 {
-	mAnimation = &pAnimation;
-	mInterval = pAnimation.get_interval();
+	mAnimation = pAnimation;
+	mInterval = pAnimation->get_interval();
 
 	if (!pSwap)
-		set_frame(pAnimation.get_default_frame());
+		set_frame(pAnimation->get_default_frame());
 	else
 		update_frame();
 
