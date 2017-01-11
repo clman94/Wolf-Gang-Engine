@@ -42,11 +42,19 @@ namespace rpg
 class expression_manager
 {
 public:
-	std::shared_ptr<const engine::animation> find_animation(const std::string& mName);
+
+	struct expression
+	{
+		std::shared_ptr<engine::texture> texture;
+		std::shared_ptr<const engine::animation> animation;
+	};
+
+	util::optional_pointer<const expression> find_expression(const std::string& mName);
 	int load_expressions_xml(tinyxml2::XMLElement * pRoot, engine::resource_manager& pResource_manager);
 
 private:
-	std::map<std::string, std::shared_ptr<const engine::animation>> mAnimations;
+
+	std::map<std::string, expression> mExpressions;
 };
 
 

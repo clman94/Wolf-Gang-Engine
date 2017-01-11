@@ -1311,13 +1311,14 @@ void narrative_dialog::set_selection(const std::string& pText)
 
 void narrative_dialog::set_expression(const std::string& pName)
 {
-	auto animation = mExpression_manager.find_animation(pName);
-	if (!animation)
+	auto expression = mExpression_manager.find_expression(pName);
+	if (!expression)
 	{
 		util::error("Expression '" + pName + "' does not exist");
 		return;
 	}
-	mExpression.set_animation(animation);
+	mExpression.set_texture(expression->texture);
+	mExpression.set_animation(expression->animation);
 	show_expression();
 }
 
@@ -1652,12 +1653,12 @@ void save_system::save_player(player_character& pPlayer)
 // expression_manager
 // ##########
 
-std::shared_ptr<const engine::animation> expression_manager::find_animation(const std::string & mName)
+util::optional_pointer<const expression_manager::expression> expression_manager::find_expression(const std::string & mName)
 {
-	auto find = mAnimations.find(mName);
-	if (find != mAnimations.end())
+	auto find = mExpressions.find(mName);
+	if (find != mExpressions.end())
 	{
-		return find->second;
+		return &find->second;
 	}
 	return{};
 }
@@ -1690,7 +1691,8 @@ int expression_manager::load_expressions_xml(tinyxml2::XMLElement * pRoot, engin
 			continue;
 		}
 
-		mAnimations[ele_expression->Name()] = texture->get_entry(att_atlas)->get_animation();
+		mExpressions[ele_expression->Name()].texture = texture;
+		mExpressions[ele_expression->Name()].animation = texture->get_entry(att_atlas)->get_animation();
 
 		ele_expression = ele_expression->NextSiblingElement();
 	}
