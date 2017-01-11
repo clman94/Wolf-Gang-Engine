@@ -29,9 +29,9 @@ public:
 	void set_loop(loop_type pLoop);
 	loop_type  get_loop() const;
 
-	void add_interval(frame_t pFrom, int pInterval);
+	void add_interval(frame_t pFrom, float pInterval);
 
-	int  get_interval(frame_t pAt = 0) const;
+	float  get_interval(frame_t pAt = 0) const;
 
 	void set_frame_count(frame_t pCount);
 	frame_t get_frame_count() const;
@@ -48,7 +48,7 @@ public:
 private:
 	struct sequence_frame
 	{
-		int     interval;
+		float   interval;
 		frame_t from;
 	};
 	std::vector<sequence_frame> mSequence;

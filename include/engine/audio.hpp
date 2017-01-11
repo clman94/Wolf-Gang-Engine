@@ -16,8 +16,8 @@ class sound_buffer :
 {
 public:
 	void set_sound_source(const std::string& pFilepath);
-	void load();
-	void unload();
+	bool load();
+	bool unload();
 private:
 	std::string mSound_source;
 	std::unique_ptr<sf::SoundBuffer> mSFML_buffer;

@@ -53,8 +53,8 @@ class texture :
 public:
 	void set_texture_source(const std::string& pFilepath);
 	void set_atlas_source(const std::string& pFilepath);
-	void load();
-	void unload();
+	bool load();
+	bool unload();
 
 	util::optional_pointer<const atlas_entry> get_entry(const std::string& pName) const;
 

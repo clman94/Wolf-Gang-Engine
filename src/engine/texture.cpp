@@ -141,7 +141,7 @@ void texture::set_atlas_source(const std::string & pFilepath)
 	mAtlas_source = pFilepath;
 }
 
-void texture::load()
+bool texture::load()
 {
 	if (!is_loaded())
 	{
@@ -149,12 +149,14 @@ void texture::load()
 		set_loaded(mSFML_texture->loadFromFile(mTexture_source));
 		mAtlas.load(mAtlas_source);
 	}
+	return is_loaded();
 }
 
-void texture::unload()
+bool texture::unload()
 {
 	mSFML_texture.reset();
 	set_loaded(false);
+	return true;
 }
 
 util::optional_pointer<const atlas_entry> texture::get_entry(const std::string & pName) const

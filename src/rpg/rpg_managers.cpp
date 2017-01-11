@@ -1,19 +1,34 @@
 #include <engine/utility.hpp>
 #include <engine/filesystem.hpp>
+#include <engine/audio.hpp>
+#include <engine/utility.hpp>
+#include <rpg/rpg_config.hpp>
+#include <engine/texture.hpp>
+#include <rpg/rpg_resource_directories.hpp>
 
-#include <rpg/rpg_managers.hpp>
+#include <string>
+#include <vector>
+#include <list>
+#include <set>
+
+#include "../../tinyxml2/xmlshortcuts.hpp"
 
 using namespace rpg;
 
-bool rpg::load_texture_resources(const std::string& pDirectory, engine::resource_manager& pResource_manager)
+texture_directory::texture_directory()
 {
-	if (!engine::fs::exists(pDirectory))
+	mPath = defs::DEFAULT_TEXTURES_PATH.string();
+}
+
+bool texture_directory::load(engine::resource_manager& pResource_manager)
+{
+	if (!engine::fs::exists(mPath))
 	{
 		util::error("Textures directory does not exist");
 		return 1;
 	}
 
-	for (auto& i : engine::fs::recursive_directory_iterator(pDirectory))
+	for (auto& i : engine::fs::recursive_directory_iterator(mPath))
 	{
 		auto& texture_path = i.path();
 
@@ -40,10 +55,20 @@ bool rpg::load_texture_resources(const std::string& pDirectory, engine::resource
 	return 0;
 }
 
-
-bool rpg::load_sound_resources(const std::string& pDirectory, engine::resource_manager& pResource_manager)
+void texture_directory::set_path(const std::string & pPath)
 {
-	if (!engine::fs::exists(pDirectory))
+	mPath = pPath;
+}
+
+
+rpg::soundfx_directory::soundfx_directory()
+{
+	mPath = defs::DEFAULT_SOUND_PATH.string();
+}
+
+bool soundfx_directory::load(engine::resource_manager& pResource_manager)
+{
+	if (!engine::fs::exists(mPath))
 	{
 		util::error("Sound directory does not exist");
 		return false;
@@ -56,7 +81,7 @@ bool rpg::load_sound_resources(const std::string& pDirectory, engine::resource_m
 		".flac",
 	};
 
-	for (auto& i : engine::fs::recursive_directory_iterator(pDirectory))
+	for (auto& i : engine::fs::recursive_directory_iterator(mPath))
 	{
 		auto& sound_path = i.path();
 		if (extensions.find(sound_path.extension().string()) != extensions.end())
@@ -74,3 +99,7 @@ bool rpg::load_sound_resources(const std::string& pDirectory, engine::resource_m
 	return true;
 }
 
+void soundfx_directory::set_path(const std::string& pPath)
+{
+	mPath = pPath;
+}

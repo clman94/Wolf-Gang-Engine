@@ -355,8 +355,8 @@ class font :
 {
 public:
 	void set_font_source(const std::string& pFilepath);
-	void load();
-	void unload();
+	bool load();
+	bool unload();
 private:
 	bool mIs_loaded;
 	std::string mFont_source;
@@ -424,6 +424,9 @@ public:
 
 	int draw(renderer &r);
 
+	float get_speed_scaler() const;
+	void set_speed_scaler(float pScaler);
+
 private:
 	sprite_node mSprite;
 
@@ -431,13 +434,12 @@ private:
 
 	const animation* mAnimation;
 
-	frame_t mCount;
 	frame_t mFrame;
 
 	anchor mAnchor;
 
 	float mInterval;
-	float mSpeed_multiplier;
+	float mSpeed_scaler;
 	bool mPlaying;
 
 	void update_frame();

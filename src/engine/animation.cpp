@@ -26,16 +26,15 @@ animation::get_loop() const
 }
 
 void
-animation::add_interval(frame_t pFrom, int pInterval)
+animation::add_interval(frame_t pFrom, float pInterval)
 {
 	if (get_interval(pFrom) != pInterval)
 		mSequence.push_back({ pInterval, pFrom });
 }
 
-int
-animation::get_interval(frame_t pAt) const
+float animation::get_interval(frame_t pAt) const
 {
-	int retval = 0;
+	float retval = 0;
 	frame_t last = 0;
 	for (auto& i : mSequence)
 	{
@@ -118,7 +117,7 @@ animation_node::animation_node()
 	mAnchor = anchor::topleft;
 	mPlaying = false;
 	mAnimation = nullptr;
-	mSpeed_multiplier = 1.f;
+	mSpeed_scaler = 1.f;
 	add_child(mSprite);
 }
 
@@ -178,11 +177,14 @@ fvector animation_node::get_size() const
 bool animation_node::tick()
 {
 	if (!mAnimation) return false;
+	if (mInterval <= 0) return false;
 
-	float time = mClock.get_elapse().ms_i();
-	if (time >= mInterval*mSpeed_multiplier && mInterval > 0)
+	float time = mClock.get_elapse().ms();
+	float scaled_interval = mInterval*mSpeed_scaler;
+
+	if (time >= scaled_interval)
 	{
-		mFrame += time / mInterval;
+		mFrame += static_cast<frame_t>(std::floor(time / scaled_interval));
 
 		mInterval = mAnimation->get_interval(mFrame);
 
@@ -257,6 +259,16 @@ animation_node::draw(renderer &r)
 		tick();
 	mSprite.draw(r);
 	return 0;
+}
+
+float engine::animation_node::get_speed_scaler() const
+{
+	return mSpeed_scaler;
+}
+
+void engine::animation_node::set_speed_scaler(float pScaler)
+{
+	mSpeed_scaler = pScaler;
 }
 
 void animation_node::update_frame()

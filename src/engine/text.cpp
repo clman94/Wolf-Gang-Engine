@@ -9,7 +9,7 @@ void font::set_font_source(const std::string & pFilepath)
 	mFont_source = pFilepath;
 }
 
-void font::load()
+bool font::load()
 {
 	assert(!mFont_source.empty());
 
@@ -18,12 +18,14 @@ void font::load()
 		mSFML_font.reset(new sf::Font);
 		mIs_loaded = mSFML_font->loadFromFile(mFont_source);
 	}
+	return is_loaded();
 }
 
-void font::unload()
+bool font::unload()
 {
 	mSFML_font.reset();
 	mIs_loaded = false;
+	return true;
 }
 
 text_node::text_node()

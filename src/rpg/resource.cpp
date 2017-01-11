@@ -40,7 +40,7 @@ bool engine::resource_manager::has_resource(resource_type pType, const std::stri
 	return true;
 }
 
-std::shared_ptr<resource> resource_manager::get_resource_cast(resource_type pType, const std::string & pName)
+std::shared_ptr<resource> resource_manager::get_resource_precast(resource_type pType, const std::string & pName)
 {
 	auto find_type = mResources.find(pType);
 	if (find_type == mResources.end())
@@ -70,6 +70,18 @@ void resource_manager::unload_unused()
 		for (auto& j : i.second)
 			if (j.second.use_count() <= 1)
 				j.second->unload();
+}
+
+void resource_manager::add_directory(std::shared_ptr<resource_directory> pDirectory)
+{
+	mResource_directories.push_back(pDirectory);
+}
+
+void resource_manager::reload_directories()
+{
+	mResources.clear();
+	for (auto i : mResource_directories)
+		i->load(*this);
 }
 
 void resource_manager::ensure_load()

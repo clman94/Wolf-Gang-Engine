@@ -6,6 +6,9 @@ using namespace engine;
 
 int sprite_node::draw(renderer &pR)
 {
+	if (!mTexture)
+		return 1;
+
 	auto position = get_exact_position();
 
 	sf::RenderStates rs;

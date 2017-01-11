@@ -656,11 +656,6 @@ void scene::load_game_xml(tinyxml2::XMLElement * ele_root)
 	mPlayer.set_texture(texture);
 	mPlayer.set_cycle(character_entity::cycle::def);
 
-	auto ele_sounds = ele_root->FirstChildElement("sounds");
-	if (ele_sounds)
-		load_sound_resources(ele_sounds->Attribute("path"), *mResource_manager);
-	else
-		load_sound_resources(defs::DEFAULT_SOUND_PATH.string(), *mResource_manager);
 
 	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
 	{
@@ -1077,24 +1072,29 @@ game::load_game_xml(std::string pPath)
 		util::error("Please specify the scene to start with");
 		return 1;
 	}
-	std::string scene_path = util::safe_string(ele_scene->Attribute("path"));
+	std::string start_scene_name = util::safe_string(ele_scene->Attribute("name"));
 
-	auto ele_textures = ele_root->FirstChildElement("textures");
-	if (ele_textures &&
-		ele_textures->Attribute("path"))
-		load_texture_resources(ele_textures->Attribute("path"), mResource_manager);
-	else
-		load_texture_resources(defs::DEFAULT_TEXTURES_PATH.string(), mResource_manager);
+	// Setup texture directory
+	std::shared_ptr<texture_directory> texture_dir(std::make_shared<texture_directory>());
+	if (auto ele_textures = ele_root->FirstChildElement("textures"))
+		texture_dir->set_path(ele_textures->Attribute("path"));
+	mResource_manager.add_directory(texture_dir);
+
+	// Setup sound directory
+	std::shared_ptr<soundfx_directory> sound_dir(std::make_shared<soundfx_directory>());
+	if (auto ele_sounds = ele_root->FirstChildElement("sounds"))
+		sound_dir->set_path(ele_sounds->Attribute("path"));
+	mResource_manager.add_directory(sound_dir);
+
+	mResource_manager.reload_directories(); // Load the resources from the directories
 
 	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
-	{
 		mDefault_format.load_settings(ele_narrative);
-	}
 
 	mScene.set_text_format(mDefault_format);
 	mScene.set_resource_manager(mResource_manager);
 	mScene.load_game_xml(ele_root);
-	mScene.load_scene(scene_path);
+	mScene.load_scene(start_scene_name);
 	return 0;
 }
 
@@ -1106,6 +1106,9 @@ game::tick()
 	{
 		mEditor_manager.close_editor();
 		std::cout << "Reloading scene...\n";
+
+		mResource_manager.unload_all();
+
 		mScene.reload_scene();
 		std::cout << "Done\n";
 	}

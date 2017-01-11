@@ -1,7 +1,6 @@
 #ifndef RPG_SPRITE_ENTITY_HPP
 #define RPG_SPRITE_ENTITY_HPP
 
-#include <rpg/rpg_managers.hpp>
 #include <engine/resource.hpp>
 #include <engine/texture.hpp>
 #include <rpg/entity.hpp>

@@ -9,6 +9,7 @@
 #include <engine/your_soul.hpp>
 #include <engine/pathfinding.hpp>
 #include <engine/filesystem.hpp>
+#include <engine/audio.hpp>
 
 #include <rpg/rpg_config.hpp>
 #include <rpg/tilemap_loader.hpp>
@@ -23,6 +24,7 @@
 #include <rpg/sprite_entity.hpp>
 #include <rpg/character_entity.hpp>
 #include <rpg/player_character.hpp>
+#include <rpg/rpg_resource_directories.hpp>
 
 #include <set>
 #include <list>

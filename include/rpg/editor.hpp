@@ -5,7 +5,6 @@
 #include <engine/rect.hpp>
 
 #include <rpg/tilemap_loader.hpp>
-#include <rpg/rpg_managers.hpp>
 #include <rpg/scene_loader.hpp>
 
 #include <vector>
