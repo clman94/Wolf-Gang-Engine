@@ -1487,6 +1487,7 @@ void background_music::load_script_interface(script_system & pScript)
 void background_music::clean()
 {
 	mStream->stop();
+	mOverlap_stream->stop();
 }
 
 void background_music::set_root_directory(const std::string & pPath)
@@ -1520,10 +1521,11 @@ int background_music::script_music_swap(const std::string & pName)
 	// Open a second stream and set its position similar to
 	// the first one.
 	mOverlap_stream->open(file.string());
-	if (mOverlap_stream->get_duration() >= mStream->get_duration())
-		mOverlap_stream->set_position(mStream->get_position());
+	mOverlap_stream->set_loop(true);
 	mOverlap_stream->set_volume(mStream->get_volume());
 	mOverlap_stream->play();
+	if (mOverlap_stream->get_duration() >= mStream->get_duration())
+		mOverlap_stream->set_position(mStream->get_position());
 
 	// Make the new stream the main stream
 	mStream->stop();
