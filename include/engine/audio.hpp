@@ -75,88 +75,32 @@ class sound_spawner
 {
 	std::list<sound> mSounds;
 public:
-	void spawn(std::shared_ptr<sound_buffer> pBuffer, float pVolume = 100, float pPitch = 1)
-	{
-		for (auto &i : mSounds)
-		{
-			if (!i.is_playing())
-			{
-				i.set_buffer(pBuffer);
-				i.play();
-				return;
-			}
-		}
-		mSounds.emplace_back(pBuffer);
-		auto& newsound = mSounds.back();
-		newsound.set_volume(pVolume);
-		newsound.set_pitch(pPitch);
-		newsound.play();
-	}
-	void stop_all()
-	{
-		for (auto &i : mSounds)
-		{
-			i.stop();
-		}
-		mSounds.clear();
-	}
+	void spawn(std::shared_ptr<sound_buffer> pBuffer, float pVolume = 100, float pPitch = 1);
+	void stop_all();
 };
 
 class sound_stream
 {
-	sf::Music s;
+	sf::Music mSFML_music;
 	bool valid;
 public:
-	sound_stream()
-	{
-		valid = false;
-	}
-	int open(const std::string& path)
-	{
-		valid = s.openFromFile(path);
-		return !valid;
-	}
-	void play()
-	{
-		s.play();
-	}
-	void stop()
-	{
-		s.stop();
-	}
-	void pause()
-	{
-		s.pause();
-	}
-	void set_pitch(float pitch)
-	{
-		s.setPitch(pitch);
-	}
-	void set_loop(bool loop)
-	{
-		s.setLoop(loop);
-	}
-	void set_volume(float volume)
-	{
-		s.setVolume(volume);
-	}
-	bool is_playing()
-	{
-		return s.getStatus() == s.Playing;
-	}
-	float get_position()
-	{
-		return s.getPlayingOffset().asSeconds();
-	}
-	float get_duration()
-	{
-		return s.getDuration().asSeconds();
-	}
+	sound_stream();
 
-	bool is_valid()
-	{
-		return valid;
-	}
+	int open(const std::string& path);
+	void play();
+	void stop();
+	void pause();
+	void set_pitch(float pitch);
+	void set_loop(bool loop);
+	void set_volume(float volume);
+	float get_volume();
+	bool is_playing();
+	float get_position();
+	void set_position(float pSeconds);
+
+	float get_duration();
+
+	bool is_valid();
 };
 
 

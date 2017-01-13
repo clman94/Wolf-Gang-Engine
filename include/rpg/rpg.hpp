@@ -262,11 +262,18 @@ public:
 	void set_root_directory(const std::string& pPath);
 
 private:
-	engine::sound_stream mStream;
+	std::unique_ptr<engine::sound_stream> mStream;
+	std::unique_ptr<engine::sound_stream> mOverlap_stream;
+
 	engine::fs::path mRoot_directory;
 	engine::fs::path mPath;
 
 	int script_music_open(const std::string& pName);
+	int script_music_swap(const std::string& pName);
+	int script_music_start_transition_play(const std::string& pName);
+	void script_music_stop_transition_play();
+	void script_music_set_second_volume(float pVolume);
+
 };
 
 // A colored rectangle overlay of the entire screen for
@@ -412,6 +419,7 @@ private:
 	tinyxml2::XMLDocument mDocument;
 	tinyxml2::XMLElement *mEle_root;
 };
+
 class game_settings_loader
 {
 public:
