@@ -199,7 +199,6 @@ public:
 			return nullptr;
 		}
 		auto new_entity = new T();
-		assert(dynamic_cast<entity*>(new_entity) != nullptr);
 		mEntities.push_back(std::unique_ptr<entity>(dynamic_cast<entity*>(new_entity)));
 		mRoot_node->add_child(*new_entity);
 		get_renderer()->add_object(*new_entity);
@@ -353,7 +352,6 @@ public:
 	void tick(controls &pControls);
 
 	void focus_player(bool pFocus);
-
 
 private:
 	std::map<std::string, script_context> pScript_contexts;

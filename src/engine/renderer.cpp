@@ -82,16 +82,15 @@ renderer::~renderer()
 	close();
 }
 
-fvector
-renderer::get_size()
+void renderer::set_target_size(fvector pSize)
 {
-	auto px = mWindow.getView().getSize();
-	auto scale = mWindow.getView().getViewport();
-	return
-	{
-		px.x / scale.width,
-		px.y / scale.height
-	};
+	mTarget_size = pSize;
+	refresh_view();
+}
+
+fvector renderer::get_target_size()
+{
+	return mTarget_size;
 }
 
 void renderer::request_resort()
@@ -102,8 +101,7 @@ void renderer::request_resort()
 int
 renderer::initualize(ivector pSize, int pFps)
 {
-	mWindow.create(sf::VideoMode(pSize.x, pSize.y), "Wolf-Gang Engine", sf::Style::Titlebar | sf::Style::Close);
-	//mWindow.create(sf::VideoMode(pSize.x, pSize.y), "The Amazing Window", sf::Style::Fullscreen);
+	mWindow.create(sf::VideoMode(pSize.x, pSize.y), "Wolf-Gang Engine", sf::Style::Titlebar | sf::Style::Close | sf::Style::Resize);
 	if (pFps > 0)
 		mWindow.setFramerateLimit(pFps);
 	return 0;
@@ -139,6 +137,46 @@ int renderer::draw(render_object& pObject)
 {
 	return pObject.draw(*this);
 }
+
+void renderer::refresh_view()
+{
+	const fvector window_size(
+		static_cast<float>(mWindow.getSize().x)
+		, static_cast<float>(mWindow.getSize().y));
+
+	const fvector view_ratio = fvector(mTarget_size).normalize();
+	const fvector window_ratio = fvector(window_size).normalize();
+
+	sf::View view(sf::FloatRect(0, 0, mTarget_size.x, mTarget_size.y));
+	sf::FloatRect viewport;
+
+
+	// Resize view according to the ratio
+	if (view_ratio.x > window_ratio.x)
+	{
+		viewport.width = 1;
+		viewport.height = mTarget_size.y*(window_size.x / mTarget_size.x) / window_size.y;
+	}
+	else if (view_ratio.x < window_ratio.x)
+	{
+		viewport.width = mTarget_size.x*(window_size.y / mTarget_size.y) / window_size.x;
+		viewport.height = 1;
+	}
+	else
+	{
+		viewport.width = 1;
+		viewport.height = 1;
+	}
+
+	// Center view
+	viewport.left = 0.5f - (viewport.width  / 2);
+	viewport.top  = 0.5f - (viewport.height / 2);
+
+	view.setViewport(viewport);
+	mWindow.setView(view);
+	return;
+}
+
 
 void
 renderer::refresh_objects()
@@ -198,17 +236,6 @@ renderer::close()
 {
 	mWindow.close();
 	return 0;
-}
-
-void
-renderer::set_pixel_scale(float pScale)
-{
-	sf::View view = mWindow.getDefaultView();
-	sf::FloatRect fr = view.getViewport();
-	fr.width  *= pScale;
-	fr.height *= pScale;
-	view.setViewport(fr);
-	mWindow.setView(view);
 }
 
 fvector
@@ -336,6 +363,9 @@ renderer::update_events()
 	{
 		if (mEvent.type == sf::Event::Closed)
 			return 1;
+
+		if (mEvent.type == sf::Event::Resized)
+			refresh_view();
 		
 		if (mTgui)
 			mTgui->handleEvent(mEvent);

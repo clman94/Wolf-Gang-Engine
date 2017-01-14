@@ -42,7 +42,7 @@ bool atlas_entry::load(tinyxml2::XMLElement * pEle)
 	mAnimation->set_frame_rect(rect);
 
 	int att_frames = pEle->IntAttribute("frames");
-	int att_interval = pEle->IntAttribute("interval");
+	float att_interval = pEle->FloatAttribute("interval");
 
 	// "frames" and "interval" are required for animation both with a value > 0
 	if (att_frames <= 0 || att_interval <= 0)
@@ -82,7 +82,7 @@ bool atlas_entry::load(tinyxml2::XMLElement * pEle)
 	{
 		mAnimation->add_interval(
 			(engine::frame_t)ele_seq->IntAttribute("from"),
-			ele_seq->IntAttribute("interval"));
+			ele_seq->FloatAttribute("interval"));
 		ele_seq = ele_seq->NextSiblingElement();
 	}
 

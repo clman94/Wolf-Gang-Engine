@@ -38,7 +38,7 @@ int wolf_gang_engine::initualize()
 	engine::clock load_clock;
 
 	mRenderer.initualize(rpg::defs::SCREEN_SIZE);
-	mRenderer.set_pixel_scale(2);
+	mRenderer.set_target_size({ 320, 256 });
 
 	mGame.set_renderer(mRenderer);
 	mGame.load_game_xml("data/game.xml");

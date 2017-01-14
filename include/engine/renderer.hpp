@@ -75,12 +75,13 @@ public:
 	int draw();
 	int draw(render_object& pObject);
 
+
 	int close();
 	int add_object(render_object& pObject);
 	int remove_object(render_object& pObject);
-	void set_pixel_scale(float pScale);
 
-	fvector get_size();
+	void set_target_size(fvector pSize);
+	fvector get_target_size();
 
 	// Resort all objects
 	void request_resort();
@@ -114,6 +115,10 @@ public:
 	friend class rectangle_node;
 
 private:
+
+	fvector mTarget_size;
+
+	void refresh_view();
 
 	tgui::Gui* mTgui;
 

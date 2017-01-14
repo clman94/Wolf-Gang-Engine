@@ -528,6 +528,11 @@ scene::clean(bool pFull)
 	if (pFull) // Cleanup everything
 	{
 		mBackground_music.clean();
+
+		// Clear all contexts for recompiling
+		for (auto &i : pScript_contexts)
+			i.second.clean();
+		pScript_contexts.clear();
 	}
 }
 
@@ -600,9 +605,6 @@ scene::reload_scene()
 	}
 
 	clean(true);
-
-	// Recompile Scene
-	pScript_contexts[mLoader.get_name()].clean();
 
 	return load_scene(mLoader.get_name());
 }
@@ -1488,6 +1490,7 @@ void background_music::clean()
 {
 	mStream->stop();
 	mOverlap_stream->stop();
+	mPath.clear();
 }
 
 void background_music::set_root_directory(const std::string & pPath)
@@ -1546,6 +1549,7 @@ int background_music::script_music_start_transition_play(const std::string & pNa
 	mOverlap_stream->set_volume(0);
 	mOverlap_stream->play();
 
+	mPath = pName;
 	return 0;
 }
 
