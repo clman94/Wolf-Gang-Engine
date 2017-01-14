@@ -289,8 +289,10 @@ script_system::~script_system()
 {
 	mShared_handles.clear();
 	mCtxmgr.AbortAll();
-	mCtxmgr.~CContextMgr(); // Destroy context manager before releasing engine
-	mEngine->ShutDownAndRelease();
+	//mCtxmgr.~CContextMgr(); // Destroy context manager before releasing engine
+
+	// Just screw it!
+	//mEngine->ShutDownAndRelease();
 }
 
 void script_system::load_context(script_context & pContext)
@@ -314,7 +316,7 @@ script_system::add_function(const char * pDeclaration, const asSFuncPtr& pPtr)
 	assert(r >= 0);
 }
 
-void script_system::about_all()
+void script_system::abort_all()
 {
 	if (is_executing())
 		mCtxmgr.PreAbout();
@@ -354,7 +356,7 @@ int script_system::get_current_line()
 	return 0;
 }
 
-AS::asIScriptEngine& rpg::script_system::get_engine()
+AS::asIScriptEngine& script_system::get_engine()
 {
 	assert(mEngine != nullptr);
 	return *mEngine;

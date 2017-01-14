@@ -359,7 +359,7 @@ private:
 	panning_node mWorld_node;
 
 	engine::resource_manager* mResource_manager;
-	script_system*     mScript;
+	script_system*            mScript;
 
 	tilemap_display       mTilemap_display;
 	tilemap_loader        mTilemap_loader;
@@ -434,9 +434,7 @@ private:
 	std::string mTextures_path;
 	std::string mSounds_path;
 	std::string mMusic_path;
-
 	std::string mPlayer_texture;
-
 };
 
 
@@ -460,6 +458,7 @@ class game :
 {
 public:
 	game();
+	~game();
 
 	// Load the xml game settings
 	int load_game_xml(std::string pPath);

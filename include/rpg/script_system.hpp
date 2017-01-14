@@ -21,48 +21,6 @@ namespace AS = AngelScript;
 namespace rpg
 {
 
-/* TODO: Possible refactor. However; is not needed at this time.
-class script_interface
-{
-public:
-	// Register a member function, will require the pointer to the instance
-	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr, void* pInstance);
-
-	// Register a non-member/static function
-	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr);
-
-	void set_engine(AS::asIScriptEngine* pEngine);
-	AS::asIScriptEngine& get_engine();
-
-	template<typename T>
-	static void script_default_constructor(void *pMemory)
-	{
-		new(pMemory) T();
-	}
-
-	template<typename T, typename Targ1>
-	static void script_constructor(Targ1 pArg1, void *pMemory)
-	{
-		new(pMemory) T(pArg1);
-	}
-
-	template<typename T, typename Targ1, typename Targ2>
-	static void script_constructor(Targ1 pArg1, Targ2 pArg2, void *pMemory)
-	{
-		new(pMemory) T(pArg1, pArg2);
-	}
-
-	template<typename T>
-	static void script_default_deconstructor(void *pMemory)
-	{
-		((T*)pMemory)->~T();
-	}
-
-private:
-	util::optional_pointer<AS::asIScriptEngine> mEngine;
-	util::optional_pointer<script_system> mScript_system;
-};*/
-
 class script_context;
 
 class script_system
@@ -79,7 +37,7 @@ public:
 	// Register a non-member/static function
 	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr);
 
-	void about_all();
+	void abort_all();
 
 	// Call all functions that contain the specific metadata
 	void start_all_with_tag(const std::string& pTag);
@@ -160,6 +118,7 @@ class script_context
 {
 public:
 	script_context();
+	~script_context();
 
 	void set_script_system(script_system& pScript);
 
@@ -177,7 +136,7 @@ public:
 private:
 	util::optional_pointer<script_system> mScript;
 	util::optional_pointer<AS::asIScriptModule> mScene_module;
-	AS::CScriptBuilder   mBuilder;
+	AS::CScriptBuilder mBuilder;
 
 	static std::string get_metadata_type(const std::string &pMetadata);
 

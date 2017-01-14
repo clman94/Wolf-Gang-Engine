@@ -511,7 +511,7 @@ scene::get_collision_system()
 void
 scene::clean(bool pFull)
 {
-	mScript->about_all();
+	mScript->abort_all();
 
 	mTilemap_display.clean();
 	mTilemap_loader.clean();
@@ -556,7 +556,7 @@ int scene::load_scene(std::string pName)
 	mWorld_node.set_boundary_enable(mLoader.has_boundary());
 	mWorld_node.set_boundary(mLoader.get_boundary());
 
-	auto context = pScript_contexts[mLoader.get_name()];
+	auto &context = pScript_contexts[mLoader.get_name()];
 
 	// Compile script if not already
 	if (!context.is_valid())
@@ -912,6 +912,10 @@ script_context::script_context() :
 	mScene_module(nullptr)
 {}
 
+script_context::~script_context()
+{
+}
+
 void script_context::set_script_system(script_system & pScript)
 {
 	mScript = &pScript;
@@ -986,6 +990,11 @@ game::game()
 	mSlot = 0;
 }
 
+game::~game()
+{
+	mScene.clean();
+}
+
 engine::fs::path game::get_slot_path(size_t pSlot)
 {
 	return defs::DEFAULT_SAVES_PATH / ("slot_" + std::to_string(pSlot) + ".xml");
@@ -1014,7 +1023,7 @@ void game::open_game()
 	mFlags.clean();
 	file.load_flags(mFlags);
 	file.load_player(mScene.get_player());
-	mScript.about_all();
+	mScript.abort_all();
 	if (mScript.is_executing())
 	{
 		mScene_load_request.request_load(file.get_scene_path());
@@ -1394,7 +1403,6 @@ script_function::script_function() :
 
 script_function::~script_function()
 {
-	//func->Release();
 	//return_context();
 }
 
