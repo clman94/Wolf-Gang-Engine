@@ -1497,6 +1497,7 @@ void background_music::load_script_interface(script_system & pScript)
 void background_music::clean()
 {
 	mStream->stop();
+	mStream->set_volume(100);
 	mOverlap_stream->stop();
 	mPath.clear();
 }
@@ -1557,7 +1558,7 @@ int background_music::script_music_start_transition_play(const std::string & pNa
 	mOverlap_stream->set_volume(0);
 	mOverlap_stream->play();
 
-	mPath = pName;
+	mPath = file;
 	return 0;
 }
 
