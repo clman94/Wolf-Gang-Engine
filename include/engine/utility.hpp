@@ -85,7 +85,7 @@ class in_place_t {};
 static const in_place_t in_place;
 
 /// Similar to boost/std's optional object.
-/// Prevents access when then there is no 
+/// Prevents access when there is no 
 /// contained object. This does not construct
 /// the object if there is none and doesn't
 /// dynamically allocate memory.
@@ -111,7 +111,7 @@ public:
 	{
 		mHas_value = pOptional.mHas_value;
 		if (mHas_value)
-			get_data()->T(*pOptional->get_data());
+			new (get_data()) T(*reinterpret_cast<const T*>(pOptional.mData));
 	}
 
 	optional(const T& pValue)
@@ -125,7 +125,7 @@ public:
 	optional(in_place_t pIn_place, T_ARGS&&... pArgs)
 	{
 		static_assert(std::is_copy_constructible<T>::value, "T needs to be copy constructable");
-		get_data()->T(std::forward<T_ARGS>(pArgs)...);
+		new(get_data()) T(std::forward<T_ARGS>(pArgs)...);
 		mHas_value = true;
 	}
 

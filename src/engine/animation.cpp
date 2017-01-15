@@ -152,7 +152,7 @@ bool animation_node::set_animation(const std::string& pName, bool pSwap)
 	auto entry = texture->get_entry(pName);
 	if (!entry)
 		return false;
-	auto &animation = entry->get_animation();
+	auto animation = entry->get_animation();
 	set_animation(animation, pSwap);
 	return true;
 }

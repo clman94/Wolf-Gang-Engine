@@ -6,7 +6,7 @@
 #ifdef __MINGW32__
 #include <boost/filesystem.hpp>
 namespace engine {
-namespace engine::fs = boost::filesystem;
+namespace fs = boost::filesystem;
 }
 #else
 #include <filesystem>
