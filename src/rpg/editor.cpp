@@ -180,6 +180,8 @@ int tilemap_editor::open_scene(std::string pPath)
 	mTile_list = std::move(mTexture->compile_list());
 	assert(mTile_list.size() != 0);
 
+	mPreview.set_texture(mTexture);
+
 	update_preview();
 	update_labels();
 
@@ -356,8 +358,25 @@ void tilemap_editor::update_labels()
 void tilemap_editor::update_preview()
 {
 	mPreview.set_texture_rect(mTexture->get_entry(mTile_list[mCurrent_tile])->get_root_rect());
+
 	mPreview.set_rotation(90.f * mRotation);
-	mPreview.set_anchor(engine::anchor::topleft);
+
+	// Align the preview correctly after the rotation 
+	switch (mRotation)
+	{
+	case 0:
+		mPreview.set_anchor(engine::anchor::topleft);
+		break;
+	case 1:
+		mPreview.set_anchor(engine::anchor::bottomleft);
+		break;
+	case 2:
+		mPreview.set_anchor(engine::anchor::bottomright);
+		break;
+	case 3:
+		mPreview.set_anchor(engine::anchor::topright);
+		break;
+	}
 }
 
 void tilemap_editor::update_highlight()
