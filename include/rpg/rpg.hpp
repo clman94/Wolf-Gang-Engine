@@ -476,6 +476,8 @@ private:
 	controls         mControls;
 	size_t           mSlot;
 
+	std::string mStart_scene;
+
 	editors::editor_manager mEditor_manager;
 
 	scene_load_request mScene_load_request;

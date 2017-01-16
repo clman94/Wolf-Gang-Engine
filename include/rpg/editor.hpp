@@ -66,7 +66,7 @@ class editor :
 	public engine::render_object
 {
 public:
-	virtual int open_scene(std::string pPath) = 0;
+	virtual bool open_scene(std::string pPath) = 0;
 
 	void set_editor_gui(editor_gui& pEditor_gui);
 
@@ -86,7 +86,7 @@ class tilemap_editor :
 {
 public:
 	tilemap_editor();
-	int open_scene(std::string pPath);
+	bool open_scene(std::string pPath);
 	int draw(engine::renderer& pR);
 	int save();
 	
@@ -134,7 +134,7 @@ class collisionbox_editor :
 public:
 	collisionbox_editor();
 
-	int open_scene(std::string pPath);
+	bool open_scene(std::string pPath);
 	int draw(engine::renderer& pR);
 	int save();
 

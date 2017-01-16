@@ -11,7 +11,7 @@ scene_loader::scene_loader()
 	mEle_map = nullptr;
 }
 
-int scene_loader::load(const std::string & pName)
+bool scene_loader::load(const std::string & pName)
 {
 	mXml_Document.Clear();
 
@@ -24,6 +24,8 @@ int scene_loader::load(const std::string & pName)
 		util::error("Unable to open scene. Please check path.");
 		return 1;
 	}
+
+	fix();
 
 	auto ele_root = mXml_Document.FirstChildElement("scene");
 	if (!ele_root)
@@ -82,6 +84,31 @@ void scene_loader::clean()
 	mEle_collisionboxes = nullptr;
 	mEle_map = nullptr;
 	mWalls.clear();
+}
+
+void scene_loader::fix()
+{
+	auto ele_scene = mXml_Document.FirstChildElement("scene");
+	if (!ele_scene)
+	{
+		ele_scene = mXml_Document.NewElement("scene");
+		mXml_Document.InsertFirstChild(ele_scene);
+	}
+
+	auto ele_map = ele_scene->FirstChildElement("map");
+	if (!ele_map)
+	{
+		ele_map = mXml_Document.NewElement("map");
+		ele_scene->InsertFirstChild(ele_map);
+	}
+
+	auto ele_texture = ele_map->FirstChildElement("texture");
+	if (!ele_texture)
+		ele_map->InsertFirstChild(mXml_Document.NewElement("texture"));
+
+	auto ele_collisionboxes = ele_scene->FirstChildElement("collisionboxes");
+	if (!ele_collisionboxes)
+		ele_scene->InsertFirstChild(mXml_Document.NewElement("collisionboxes"));
 }
 
 bool scene_loader::has_boundary() const

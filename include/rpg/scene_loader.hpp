@@ -20,10 +20,9 @@ class scene_loader
 public:
 	scene_loader();
 
-	int load(const std::string& pName);
+	bool load(const std::string& pName);
 
 	void clean();
-
 	bool has_boundary() const;
 	const engine::frect& get_boundary() const;
 	const std::string& get_name();
@@ -38,6 +37,10 @@ public:
 	tinyxml2::XMLDocument& get_document();
 
 private:
+
+	// Make xml file well formed
+	void fix();
+
 	void construct_wall_list();
 
 	std::vector<engine::frect> mWalls;
@@ -50,6 +53,7 @@ private:
 	bool                       mHas_boundary;
 	util::optional_pointer<tinyxml2::XMLElement> mEle_collisionboxes;
 	util::optional_pointer<tinyxml2::XMLElement> mEle_map;
+	bool                       mIs_open;
 };
 
 }

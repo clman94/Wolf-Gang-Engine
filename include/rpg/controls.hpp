@@ -20,6 +20,7 @@ public:
 		back,
 		menu,
 		reset,
+		reset_game,
 		editor_1,
 		editor_2,
 	};
@@ -31,7 +32,7 @@ public:
 	void update(engine::renderer& pR);
 
 private:
-	std::array<bool, 14> mControls;
+	std::array<bool, 15> mControls;
 };
 
 }

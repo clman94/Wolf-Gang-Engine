@@ -155,19 +155,19 @@ tilemap_editor::tilemap_editor()
 	mIs_highlight = false;
 }
 
-int tilemap_editor::open_scene(std::string pPath)
+bool tilemap_editor::open_scene(std::string pPath)
 {
 	if (mLoader.load(pPath))
 	{
 		util::error("Could not load scene tilemap to edit");
-		return 1;
+		return false;
 	}
 	
 	auto resource = mResource_manager->get_resource(engine::resource_type::texture, mLoader.get_tilemap_texture());
 	if (!resource)
 	{
 		util::error("Invalid tilemap texture");
-		return 1;
+		return false;
 	}
 	mTexture = engine::cast_resource<engine::texture>(resource);
 	assert(mTexture);
@@ -187,7 +187,7 @@ int tilemap_editor::open_scene(std::string pPath)
 
 	update_lines(mLoader.get_boundary());
 
-	return 0;
+	return true;
 }
 
 int tilemap_editor::draw(engine::renderer & pR)
@@ -361,7 +361,8 @@ void tilemap_editor::update_preview()
 
 	mPreview.set_rotation(90.f * mRotation);
 
-	// Align the preview correctly after the rotation 
+	// Align the preview correctly after the rotation
+	// Possibly could just use engine::anchor::center
 	switch (mRotation)
 	{
 	case 0:
@@ -454,19 +455,18 @@ collisionbox_editor::collisionbox_editor()
 	mSize_mode = false;
 }
 
-int collisionbox_editor::open_scene(std::string pPath)
+bool collisionbox_editor::open_scene(std::string pPath)
 {
 	if (mLoader.load(pPath))
 	{
 		util::error("Unable to open scene");
-		return 1;
+		return false;
 	}
 
 	auto resource = mResource_manager->get_resource(engine::resource_type::texture, mLoader.get_tilemap_texture());
 	if (!resource)
 	{
-		util::error("Invalid tilemap texture");
-		return 1;
+		util::warning("Invalid tilemap texture in scene (Ignore)");
 	}
 	auto texture = engine::cast_resource<engine::texture>(resource);
 	assert(texture);
@@ -479,7 +479,7 @@ int collisionbox_editor::open_scene(std::string pPath)
 	
 	mWalls = mLoader.get_walls();
 
-	return 0;
+	return true;
 }
 
 int collisionbox_editor::draw(engine::renderer& pR)
@@ -660,15 +660,15 @@ bool editors::editor_manager::is_editor_open()
 void editor_manager::open_tilemap_editor(std::string pScene_path)
 {
 	mTilemap_editor.set_editor_gui(mEditor_gui);
-	mTilemap_editor.open_scene(pScene_path);
-	mCurrent_editor = &mTilemap_editor;
+	if (mTilemap_editor.open_scene(pScene_path))
+		mCurrent_editor = &mTilemap_editor;
 }
 
 void editor_manager::open_collisionbox_editor(std::string pScene_path)
 {
 	mCollisionbox_editor.set_editor_gui(mEditor_gui);
-	mCollisionbox_editor.open_scene(pScene_path);
-	mCurrent_editor = &mCollisionbox_editor;
+	if (mCollisionbox_editor.open_scene(pScene_path))
+		mCurrent_editor = &mCollisionbox_editor;
 }
 
 void editor_manager::close_editor()

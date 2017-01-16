@@ -895,8 +895,12 @@ void controls::update(engine::renderer & pR)
 
 	if (pR.is_key_down(key_type::LControl))
 	{
-		if (pR.is_key_pressed(key_type::R))
+		if (pR.is_key_down(key_type::LShift)
+			&& pR.is_key_pressed(key_type::R))
+			trigger(control::reset_game);
+		else if (pR.is_key_pressed(key_type::R))
 			trigger(control::reset);
+
 		if (pR.is_key_pressed(key_type::Num1))
 			trigger(control::editor_1);
 		if (pR.is_key_pressed(key_type::Num2))
@@ -1098,7 +1102,7 @@ game::load_game_xml(std::string pPath)
 		util::error("Please specify the scene to start with");
 		return 1;
 	}
-	std::string start_scene_name = util::safe_string(ele_scene->Attribute("name"));
+	mStart_scene = util::safe_string(ele_scene->Attribute("name"));
 
 	// Setup textures directory
 	std::shared_ptr<texture_directory> texture_dir(std::make_shared<texture_directory>());
@@ -1122,7 +1126,7 @@ game::load_game_xml(std::string pPath)
 
 	mScene.set_resource_manager(mResource_manager);
 	mScene.load_game_xml(ele_root);
-	mScene.load_scene(start_scene_name);
+	mScene.load_scene(mStart_scene);
 	return 0;
 }
 
@@ -1138,6 +1142,21 @@ game::tick()
 		mResource_manager.reload_directories();
 
 		mScene.reload_scene();
+		std::cout << "Done\n";
+	}
+
+	if (mControls.is_triggered(controls::control::reset_game))
+	{
+		mEditor_manager.close_editor();
+		std::cout << "Reloading game...\n";
+
+		mResource_manager.reload_directories();
+
+		mFlags.clean();
+
+		mScene.clean(true);
+		mScene.load_scene(mStart_scene);
+
 		std::cout << "Done\n";
 	}
 
@@ -1685,6 +1704,10 @@ std::string save_system::get_scene_name()
 
 void save_system::new_save()
 {
+	// Create saves folder if it doesn't exist
+	if (!engine::fs::exists(defs::DEFAULT_SAVES_PATH))
+		engine::fs::create_directory(defs::DEFAULT_SAVES_PATH);
+
 	mDocument.Clear();
 	mEle_root = mDocument.NewElement("save_file");
 	mDocument.InsertEndChild(mEle_root);
