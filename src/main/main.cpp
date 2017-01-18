@@ -37,14 +37,16 @@ int wolf_gang_engine::initualize()
 {
 	engine::clock load_clock;
 
+	util::info("Loading renderer...");
 	mRenderer.initualize(rpg::defs::SCREEN_SIZE);
 	mRenderer.set_target_size({ 320, 256 });
+	util::info("Renderer loaded");
 
 	mGame.set_renderer(mRenderer);
 	mGame.load_game_xml("data/game.xml");
 	
 	float load_time = load_clock.get_elapse().s();
-	std::cout << "Load time : " << load_time << " seconds\n";
+	util::info("Load time : " + std::to_string(load_time) + " seconds");
 	return 0;
 }
 
@@ -63,12 +65,16 @@ void wolf_gang_engine::update_events()
 {
 	if (mRenderer.update_events())
 	{
+		util::info("Closing with window event");
 		mRunning = false;
 		return;
 	}
 
 	if (mRenderer.is_key_down(engine::renderer::key_type::Escape))
+	{
+		util::info("Closing with 'Escape'");
 		mRunning = false;
+	}
 
 	if (mRenderer.is_key_pressed(engine::renderer::key_type::T))
 		std::cout << "FPS: " << mRenderer.get_fps() << "\n";

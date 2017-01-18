@@ -178,11 +178,13 @@ entity_reference entity_manager::script_add_character(const std::string & pName)
 	auto resource = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, pName);
 	if (!resource)
 	{
-		util::error("Could not load texture '" + pName + "'");
+		util::error("Could not load texture '" + pName + "' (Entity will not have a texture)");
 	}
-
-	new_entity->set_texture(resource);
-	new_entity->set_cycle(character_entity::cycle::def);
+	else
+	{
+		new_entity->set_texture(resource);
+		new_entity->set_cycle(character_entity::cycle::def);
+	}
 
 	return *new_entity;
 }
@@ -494,6 +496,7 @@ scene::scene()
 
 scene::~scene()
 {
+	util::info("Destroying scene");
 }
 
 panning_node& scene::get_world_node()
@@ -543,11 +546,13 @@ int scene::load_scene(std::string pName)
 
 	clean();
 
-	if (mLoader.load(pName))
+	if (!mLoader.load(pName))
 	{
-		util::error("Unable to open scene");
+		util::error("Unable to open scene '" + pName + "'");
 		return 1;
 	}
+
+	util::info("Loading scene '" + pName + "'");
 
 	auto collision_boxes = mLoader.get_collisionboxes();
 	if (collision_boxes)
@@ -564,6 +569,8 @@ int scene::load_scene(std::string pName)
 		context.set_script_system(*mScript);
 		context.build_script(mLoader.get_script_path());
 	}
+	else
+		util::info("Script is already compiled");
 
 	// Set context if still valid
 	if (context.is_valid())
@@ -588,9 +595,11 @@ int scene::load_scene(std::string pName)
 
 	update_focus();
 
+	util::info("Cleaning up resources...");
 	// Ensure resources are ready and unused stuff is put away
 	mResource_manager->ensure_load();
 	mResource_manager->unload_unused();
+	util::info("Resources ready");
 
 	return 0;
 }
@@ -912,6 +921,7 @@ script_context::script_context() :
 
 script_context::~script_context()
 {
+	
 }
 
 void script_context::set_script_system(script_system & pScript)
@@ -921,6 +931,10 @@ void script_context::set_script_system(script_system & pScript)
 
 bool script_context::build_script(const std::string & pPath)
 {
+	util::info("Compiling script '" + pPath + "'...");
+
+	clean();
+
 	mBuilder.StartNewModule(&mScript->get_engine(), pPath.c_str());
 	mBuilder.AddSectionFromMemory("scene_commands", defs::INTERNAL_SCRIPTS_INCLUDE.c_str());
 	mBuilder.AddSectionFromFile(pPath.c_str());
@@ -932,6 +946,8 @@ bool script_context::build_script(const std::string & pPath)
 	mScene_module = mBuilder.GetModule();
 
 	parse_script_defined_triggers();
+
+	util::info("Script compiled");
 	return true;
 }
 
@@ -966,6 +982,7 @@ const std::vector<trigger>& script_context::get_script_defined_buttons() const
 
 void script_context::parse_script_defined_triggers()
 {
+	util::info("Loading script defined triggers...");
 	size_t func_count = mScene_module->GetFunctionCount();
 	for (size_t i = 0; i < func_count; i++)
 	{
@@ -994,6 +1011,9 @@ void script_context::parse_script_defined_triggers()
 				mScript_defined_buttons.push_back(nt);
 		}
 	}
+
+	util::info("Loaded " + std::to_string(mScript_defined_triggers.size()) + " trigger(s)");
+	util::info("Loaded " + std::to_string(mScript_defined_buttons.size()) + " button(s)");
 }
 
 // #########
@@ -1009,6 +1029,7 @@ game::game()
 
 game::~game()
 {
+	util::info("Destroying game");
 	mScene.clean();
 }
 
@@ -1021,11 +1042,14 @@ void game::save_game()
 {
 	const std::string path = get_slot_path(mSlot).string();
 	save_system file;
+
+	util::info("Saving game...");
 	file.new_save();
 	file.save_flags(mFlags);
 	file.save_scene(mScene);
 	file.save_player(mScene.get_player());
 	file.save(path);
+	util::info("Game saved to '" + path + "'");
 }
 
 void game::open_game()
@@ -1037,6 +1061,7 @@ void game::open_game()
 		util::error("Invalid slot");
 		return;
 	}
+	util::info("Opening game...");
 	mFlags.clean();
 	file.load_flags(mFlags);
 	file.load_player(mScene.get_player());
@@ -1049,6 +1074,8 @@ void game::open_game()
 	{
 		mScene.load_scene(file.get_scene_path());
 	}
+
+	util::info("Game opened from '" + path + "'");
 }
 
 bool game::is_slot_used(size_t pSlot)
@@ -1070,6 +1097,7 @@ size_t game::get_slot()
 
 void game::script_load_scene(const std::string & pName)
 {
+	util::info("Requesting scene load '" + pName + "'");
 	mScene_load_request.request_load(pName);
 }
 
@@ -1117,6 +1145,9 @@ game::load_game_xml(std::string pPath)
 	}
 	mStart_scene = util::safe_string(ele_scene->Attribute("name"));
 
+
+	util::info("Loading Resources...");
+
 	// Setup textures directory
 	std::shared_ptr<texture_directory> texture_dir(std::make_shared<texture_directory>());
 	if (auto ele_textures = ele_root->FirstChildElement("textures"))
@@ -1136,6 +1167,8 @@ game::load_game_xml(std::string pPath)
 	mResource_manager.add_directory(font_dir);
 
 	mResource_manager.reload_directories(); // Load the resources from the directories
+	
+	util::info("Resources loaded");
 
 	mScene.set_resource_manager(mResource_manager);
 	mScene.load_game_xml(ele_root);
@@ -1150,18 +1183,18 @@ game::tick()
 	if (mControls.is_triggered(controls::control::reset))
 	{
 		mEditor_manager.close_editor();
-		std::cout << "Reloading scene...\n";
+		util::info("Reloading scene...");
 
 		mResource_manager.reload_directories();
 
 		mScene.reload_scene();
-		std::cout << "Done\n";
+		util::info("Scene reloaded");
 	}
 
 	if (mControls.is_triggered(controls::control::reset_game))
 	{
 		mEditor_manager.close_editor();
-		std::cout << "Reloading game...\n";
+		util::info("Reloading entire game...");
 
 		mResource_manager.reload_directories();
 
@@ -1170,7 +1203,7 @@ game::tick()
 		mScene.clean(true);
 		mScene.load_scene(mStart_scene);
 
-		std::cout << "Done\n";
+		util::info("Game reloaded");
 	}
 
 	if (mControls.is_triggered(controls::control::editor_1))

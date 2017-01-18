@@ -289,6 +289,36 @@ static vector<T> anchor_offset(const vector<T> pSize, anchor pType)
 	return center_offset(pSize, pType) * -1;
 }
 
+/* Something to consider
+typedef fvector offset;
+typedef fvector center;
+
+class anchor_thing
+{
+public:
+	anchor_thing();
+
+	anchor_thing(anchor pAnchor);
+	anchor_thing(offset pOffset);
+	
+	fvector calculate_offset();
+	fvector calculate_offset(fvector pSize);
+
+private:
+	enum anchor_by
+	{
+		by_offset,
+		by_center,
+		by_anchor_point
+	};
+
+	fvector mPoint;
+	anchor mAnchor;
+
+	anchor_by mAnchor_by;
+};
+*/
+
 class rectangle_node :
 	public render_object
 {

@@ -157,16 +157,16 @@ tilemap_editor::tilemap_editor()
 
 bool tilemap_editor::open_scene(std::string pPath)
 {
-	if (mLoader.load(pPath))
+	if (!mLoader.load(pPath))
 	{
-		util::error("Could not load scene tilemap to edit");
+		util::error("Could not load scene '" + pPath + "'");
 		return false;
 	}
 	
 	auto resource = mResource_manager->get_resource(engine::resource_type::texture, mLoader.get_tilemap_texture());
 	if (!resource)
 	{
-		util::error("Invalid tilemap texture");
+		util::error("Invalid tilemap texture '" + mLoader.get_tilemap_texture() + "'");
 		return false;
 	}
 	mTexture = engine::cast_resource<engine::texture>(resource);
@@ -457,9 +457,9 @@ collisionbox_editor::collisionbox_editor()
 
 bool collisionbox_editor::open_scene(std::string pPath)
 {
-	if (mLoader.load(pPath))
+	if (!mLoader.load(pPath))
 	{
-		util::error("Unable to open scene");
+		util::error("Unable to open scene '" + pPath + "'");
 		return false;
 	}
 
@@ -663,25 +663,32 @@ bool editors::editor_manager::is_editor_open()
 
 void editor_manager::open_tilemap_editor(std::string pScene_path)
 {
+	util::info("Opening tilemap editor...");
 	mTilemap_editor.set_editor_gui(mEditor_gui);
 	if (mTilemap_editor.open_scene(pScene_path))
 		mCurrent_editor = &mTilemap_editor;
+	util::info("Editor loaded");
 }
 
 void editor_manager::open_collisionbox_editor(std::string pScene_path)
 {
+	util::info("Opening collisionbox editor...");
 	mCollisionbox_editor.set_editor_gui(mEditor_gui);
 	if (mCollisionbox_editor.open_scene(pScene_path))
 		mCurrent_editor = &mCollisionbox_editor;
+	util::info("Editor opened");
 }
 
 void editor_manager::close_editor()
 {
 	if (!mCurrent_editor)
 		return;
+
+	util::info("Closing Editor...");
 	mCurrent_editor->save();
 	mCurrent_editor = nullptr;
 	mEditor_gui.clear();
+	util::info("Editor closed");
 }
 
 void editor_manager::update_camera_position(engine::fvector pPosition)

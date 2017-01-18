@@ -372,4 +372,30 @@ renderer::update_events()
 	}
 	return 0;
 }
+/*
+anchor_thing::anchor_thing()
+{
+	mAnchor_by = anchor_by::by_offset;
+}
 
+anchor_thing::anchor_thing(anchor pAnchor)
+{
+	mAnchor_by = anchor_by::by_anchor_point;
+	mAnchor = pAnchor;
+}
+
+anchor_thing::anchor_thing(offset pOffset)
+{
+	mAnchor_by = anchor_by::by_offset;
+	mPoint = pOffset;
+}
+
+fvector anchor_thing::calculate_offset()
+{
+	if (mAnchor_by == anchor_by::by_offset)
+	{
+		return mPoint;
+	}
+	return fvector();
+}
+*/

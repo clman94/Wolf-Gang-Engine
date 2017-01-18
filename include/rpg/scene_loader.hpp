@@ -54,7 +54,6 @@ private:
 	bool                       mHas_boundary;
 	util::optional_pointer<tinyxml2::XMLElement> mEle_collisionboxes;
 	util::optional_pointer<tinyxml2::XMLElement> mEle_map;
-	bool                       mIs_open;
 };
 
 }

@@ -146,9 +146,10 @@ void animation_node::set_animation(std::shared_ptr<const engine::animation> pAni
 
 bool animation_node::set_animation(const std::string& pName, bool pSwap)
 {
-	assert(mSprite.get_texture());
-
 	auto texture = mSprite.get_texture();
+	if (!texture)
+		return false;
+
 	auto entry = texture->get_entry(pName);
 	if (!entry)
 		return false;

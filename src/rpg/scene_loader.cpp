@@ -22,7 +22,7 @@ bool scene_loader::load(const std::string & pName)
 	if (mXml_Document.LoadFile(mScene_path.string().c_str()))
 	{
 		util::error("Unable to open scene. Please check path.");
-		return 1;
+		return false;
 	}
 
 	fix();
@@ -31,7 +31,7 @@ bool scene_loader::load(const std::string & pName)
 	if (!ele_root)
 	{
 		util::error("Unable to get root element 'scene'.");
-		return 1;
+		return false;
 	}
 
 	// Get collision boxes
@@ -64,12 +64,12 @@ bool scene_loader::load(const std::string & pName)
 		else
 		{
 			util::error("Tilemap texture is not defined");
-			return 1;
+			return false;
 		}
 
 	}
 
-	return 0;
+	return true;
 }
 
 bool scene_loader::save()
@@ -96,6 +96,7 @@ void scene_loader::fix()
 	auto ele_scene = mXml_Document.FirstChildElement("scene");
 	if (!ele_scene)
 	{
+		util::info("Fixing missing 'scene' element");
 		ele_scene = mXml_Document.NewElement("scene");
 		mXml_Document.InsertFirstChild(ele_scene);
 	}
@@ -103,17 +104,24 @@ void scene_loader::fix()
 	auto ele_map = ele_scene->FirstChildElement("map");
 	if (!ele_map)
 	{
+		util::info("Fixing missing 'map' element");
 		ele_map = mXml_Document.NewElement("map");
 		ele_scene->InsertFirstChild(ele_map);
 	}
 
 	auto ele_texture = ele_map->FirstChildElement("texture");
 	if (!ele_texture)
+	{
+		util::info("Fixing missing 'texture' element (The texture may need to be specified for tilemaps to work)");
 		ele_map->InsertFirstChild(mXml_Document.NewElement("texture"));
+	}
 
 	auto ele_collisionboxes = ele_scene->FirstChildElement("collisionboxes");
 	if (!ele_collisionboxes)
+	{
+		util::info("Fixing missing 'collisionboxes' element");
 		ele_scene->InsertFirstChild(mXml_Document.NewElement("collisionboxes"));
+	}
 }
 
 bool scene_loader::has_boundary() const
@@ -161,6 +169,8 @@ void scene_loader::construct_wall_list()
 		mWalls.push_back(util::shortcuts::rect_float_att(ele_wall));
 		ele_wall = ele_wall->NextSiblingElement("wall");
 	}
+
+	util::info("Loaded " + std::to_string(mWalls.size()) + " walls");
 }
 
 util::optional_pointer<tinyxml2::XMLElement> scene_loader::get_collisionboxes()

@@ -53,6 +53,7 @@ bool texture_directory::load(engine::resource_manager& pResource_manager)
 			pResource_manager.add_resource(engine::resource_type::texture, texture_name, texture);
 		}
 	}
+
 	return 0;
 }
 
