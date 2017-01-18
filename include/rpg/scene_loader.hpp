@@ -21,6 +21,7 @@ public:
 	scene_loader();
 
 	bool load(const std::string& pName);
+	bool save();
 
 	void clean();
 	bool has_boundary() const;

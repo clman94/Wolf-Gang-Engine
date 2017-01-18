@@ -529,11 +529,13 @@ int collisionbox_editor::draw(engine::renderer& pR)
 	// Remove tile
 	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_right))
 	{
-		tile_selection(exact_tile_position);
-		if (mSelection < mWalls.size())
-			mWalls.erase(mWalls.begin() + mSelection);
-		mSelection = 0;
-		update_labels();
+		if (tile_selection(exact_tile_position))
+		{
+			if (mSelection < mWalls.size())
+				mWalls.erase(mWalls.begin() + mSelection);
+			mSelection = 0;
+			update_labels();
+		}
 	}
 
 	mBlackout.draw(pR);
@@ -568,6 +570,8 @@ int collisionbox_editor::save()
 		ele_wall = ele_collisionboxes->FirstChildElement("wall");
 	}
 
+	util::log_print(util::log_level::info, "Saving " + std::to_string(mWalls.size()) + " walls");
+
 	for (auto& i : mWalls)
 	{
 		auto new_wall = doc.NewElement("wall");
@@ -577,8 +581,8 @@ int collisionbox_editor::save()
 		new_wall->SetAttribute("h", i.h);
 		ele_collisionboxes->InsertEndChild(new_wall);
 	}
-
-	doc.SaveFile(mLoader.get_scene_path().c_str());
+	
+	mLoader.save();
 	return 0;
 }
 

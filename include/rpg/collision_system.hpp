@@ -8,9 +8,8 @@
 #include <engine/rect.hpp>
 #include <engine/utility.hpp>
 
-#include <rpg/script_function.hpp>
+#include <rpg/script_system.hpp>
 #include <rpg/flag_container.hpp>
-
 #include <rpg/collision_box.hpp>
 
 namespace rpg {
@@ -35,11 +34,13 @@ public:
 
 	int load_collision_boxes(tinyxml2::XMLElement* pEle);
 
+	void setup_script_defined_triggers(const script_context& pContext);
+
 private:
-	std::list<collision_box> mWalls;
-	std::list<door> mDoors;
-	std::list<trigger> mTriggers;
-	std::list<trigger> mButtons;
+	std::vector<collision_box> mWalls;
+	std::vector<door> mDoors;
+	std::vector<trigger> mTriggers;
+	std::vector<trigger> mButtons;
 };
 
 

@@ -17,7 +17,6 @@ namespace rpg {
 struct collision_box
 {
 public:
-
 	collision_box();
 	bool is_valid();
 	void validate(flag_container & pFlags);
@@ -36,11 +35,13 @@ protected:
 struct trigger : public collision_box
 {
 public:
-	script_function& get_function();
+	void set_function(std::shared_ptr<script_function> pFunction);
+	bool call_function();
+
 	void parse_function_metadata(const std::string& pMetadata);
 
 private:
-	script_function mFunc;
+	std::shared_ptr<script_function> mFunction;
 };
 
 struct door : public collision_box

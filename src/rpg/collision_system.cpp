@@ -112,3 +112,9 @@ int collision_system::load_collision_boxes(tinyxml2::XMLElement* pEle)
 	}
 	return 0;
 }
+
+void collision_system::setup_script_defined_triggers(const script_context & pContext)
+{
+	mTriggers = pContext.get_script_defined_triggers();
+	mButtons = pContext.get_script_defined_buttons();
+}

@@ -568,7 +568,7 @@ int scene::load_scene(std::string pName)
 	// Set context if still valid
 	if (context.is_valid())
 	{
-		context.setup_triggers(mCollision_system);
+		mCollision_system.setup_script_defined_triggers(context);
 		mScript->load_context(context);
 	}
 
@@ -790,10 +790,7 @@ void scene::update_collision_interaction(controls & pControls)
 	{
 		auto trigger = mCollision_system.trigger_collision(player_position);
 		if (trigger)
-		{
-			if (trigger->get_function().call())
-				trigger->get_function().set_arg(0, &player_position);
-		}
+			trigger->call_function();
 	}
 
 	{
@@ -816,10 +813,7 @@ void scene::update_collision_interaction(controls & pControls)
 	{
 		auto button = mCollision_system.button_collision(mPlayer.get_activation_point());
 		if (button)
-		{
-			if (button->get_function().call())
-				button->get_function().set_arg(0, &player_position);
-		}
+			button->call_function();
 	}
 }
 
@@ -936,16 +930,23 @@ bool script_context::build_script(const std::string & pPath)
 		return false;
 	}
 	mScene_module = mBuilder.GetModule();
+
+	parse_script_defined_triggers();
 	return true;
 }
 
-bool script_context::is_valid()
+bool script_context::is_valid() const
 {
 	return mScene_module.has_value();
 }
 
 void script_context::clean()
 {
+	mTrigger_functions.clear();
+
+	mScript_defined_triggers.clear();
+	mScript_defined_buttons.clear();
+
 	if (mScene_module)
 	{
 		mScene_module->Discard();
@@ -953,32 +954,44 @@ void script_context::clean()
 	}
 }
 
-void
-script_context::setup_triggers(collision_system& pCollision_system)
+const std::vector<trigger>& script_context::get_script_defined_triggers() const
+{
+	return mScript_defined_triggers;
+}
+
+const std::vector<trigger>& script_context::get_script_defined_buttons() const
+{
+	return mScript_defined_buttons;
+}
+
+void script_context::parse_script_defined_triggers()
 {
 	size_t func_count = mScene_module->GetFunctionCount();
 	for (size_t i = 0; i < func_count; i++)
 	{
-		auto func = mScene_module->GetFunctionByIndex(i);
-		const std::string metadata = parsers::remove_trailing_whitespace(mBuilder.GetMetadataStringForFunc(func));
+		auto as_function = mScene_module->GetFunctionByIndex(i);
+		const std::string metadata = parsers::remove_trailing_whitespace(mBuilder.GetMetadataStringForFunc(as_function));
 		const std::string type = get_metadata_type(metadata);
 
 		if (type == "trigger" ||
 			type == "button")
 		{
+			std::shared_ptr<script_function> function(std::make_shared<script_function>());
+			mTrigger_functions[as_function->GetDeclaration(true, true)] = function;
+			function->set_context_manager(&mScript->mCtxmgr);
+			function->set_engine(mScript->mEngine);
+			function->set_function(as_function);
+
 			trigger nt;
-			script_function& sfunc = nt.get_function();
-			sfunc.set_context_manager(&mScript->mCtxmgr);
-			sfunc.set_engine(mScript->mEngine);
-			sfunc.set_function(func);
+			nt.set_function(function);
 
 			const std::string vectordata(metadata.begin() + type.length(), metadata.end());
 			nt.parse_function_metadata(metadata);
 
 			if (type == "trigger")
-				pCollision_system.add_trigger(nt);
+				mScript_defined_triggers.push_back(nt);
 			if (type == "button")
-				pCollision_system.add_button(nt);
+				mScript_defined_buttons.push_back(nt);
 		}
 	}
 }
@@ -1422,7 +1435,7 @@ script_function::script_function() :
 
 script_function::~script_function()
 {
-	//return_context();
+	return_context();
 }
 
 bool
@@ -1637,9 +1650,18 @@ void collision_box::set_region(engine::frect pRegion)
 	mRegion = pRegion;
 }
 
-script_function& trigger::get_function()
+void trigger::set_function(std::shared_ptr<script_function> pFunction)
 {
-	return mFunc;
+	mFunction = pFunction;
+}
+
+bool trigger::call_function()
+{
+	if (mFunction)
+	{
+		return mFunction->call();
+	}
+	return false;
 }
 
 void trigger::parse_function_metadata(const std::string & pMetadata)
@@ -2068,7 +2090,7 @@ const std::string & game_settings_loader::get_player_texture() const
 	return mPlayer_texture;
 }
 
-rpg::scene_load_request::scene_load_request()
+scene_load_request::scene_load_request()
 {
 	mRequested = false;
 }

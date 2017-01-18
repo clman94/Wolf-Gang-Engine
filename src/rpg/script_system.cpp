@@ -21,13 +21,13 @@ using namespace AS;
 
 void script_system::message_callback(const asSMessageInfo * msg)
 {
-	log_entry_type type = log_entry_type::error;
+	util::log_level type = util::log_level::error;
 	if (msg->type == asEMsgType::asMSGTYPE_INFORMATION)
-		type = log_entry_type::info;
+		type = util::log_level::info;
 	else if (msg->type == asEMsgType::asMSGTYPE_WARNING)
-		type = log_entry_type::warning;
+		type = util::log_level::warning;
 
-	log_print(msg->section, msg->row, msg->col, type, msg->message);
+	util::log_print(msg->section, msg->row, msg->col, type, msg->message);
 }
 
 std::string
@@ -102,44 +102,12 @@ void script_system::load_script_interface()
 	add_function("ref@ get_shared(const string&in)", asMETHOD(script_system, script_get_shared), this);
 }
 
-
-void script_system::log_print(const std::string& pFile, int pLine, int pCol, log_entry_type pType, const std::string& pMessage)
-{
-	if (!mLog_file.is_open()) // Open the log file when needed
-		mLog_file.open("./data/log.txt");
-
-	std::string type;
-	switch (pType)
-	{
-	case log_entry_type::error:   type = "ERROR";   break;
-	case log_entry_type::info:    type = "INFO";    break;
-	case log_entry_type::warning: type = "WARNING"; break;
-	case log_entry_type::debug:   type = "DEBUG";   break;
-	}
-
-	std::string message = pFile;
-	message += " ( ";
-	message += std::to_string(pLine);
-	message += ", ";
-	message += std::to_string(pCol);
-	message += " ) : ";
-	message += type;
-	message += " : ";
-	message += pMessage;
-	message += "\n";
-
-	if (mLog_file.is_open())
-		mLog_file << message; // Save to file
-
-	std::cout << message; // Print to console
-}
-
 void
 script_system::script_debug_print(std::string &pMessage)
 {
 	if (!is_executing())
 	{
-		log_print("Unknown", 0, 0, log_entry_type::debug, pMessage);
+		util::log_print("Unknown", 0, 0, util::log_level::debug, pMessage);
 		return;
 	}
 
@@ -147,14 +115,14 @@ script_system::script_debug_print(std::string &pMessage)
 	assert(mCtxmgr.GetCurrentContext()->GetFunction() != nullptr);
 
 	std::string name = mCtxmgr.GetCurrentContext()->GetFunction()->GetName();
-	log_print(name, get_current_line(), 0, log_entry_type::debug, pMessage);
+	util::log_print(name, get_current_line(), 0, util::log_level::debug, pMessage);
 }
 
 void script_system::script_error_print(std::string & pMessage)
 {
 	if (!is_executing())
 	{
-		log_print("Unknown", 0, 0, log_entry_type::error, pMessage);
+		util::log_print("Unknown", 0, 0, util::log_level::error, pMessage);
 		return;
 	}
 
@@ -162,7 +130,7 @@ void script_system::script_error_print(std::string & pMessage)
 	assert(mCtxmgr.GetCurrentContext()->GetFunction() != nullptr);
 
 	std::string name = mCtxmgr.GetCurrentContext()->GetFunction()->GetName();
-	log_print(name, get_current_line(), 0, log_entry_type::error, pMessage);
+	util::log_print(name, get_current_line(), 0, util::log_level::error, pMessage);
 }
 
 void

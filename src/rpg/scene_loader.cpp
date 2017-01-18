@@ -13,7 +13,7 @@ scene_loader::scene_loader()
 
 bool scene_loader::load(const std::string & pName)
 {
-	mXml_Document.Clear();
+	clean();
 
 	mScene_path = defs::DEFAULT_SCENES_PATH / (pName + ".xml");
 	mScript_path = defs::DEFAULT_SCENES_PATH / (pName + ".as");
@@ -70,6 +70,11 @@ bool scene_loader::load(const std::string & pName)
 	}
 
 	return 0;
+}
+
+bool scene_loader::save()
+{
+	return !mXml_Document.SaveFile(mScene_path.string().c_str());
 }
 
 void scene_loader::clean()
