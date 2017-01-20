@@ -189,7 +189,6 @@ public:
 
 	void load_script_interface(script_system& pScript);
 	void set_resource_manager(engine::resource_manager& pResource_manager);
-	bool is_character(sprite_entity* pEntity);
 
 	template<typename T>
 	T* create_entity()
@@ -205,7 +204,6 @@ public:
 		get_renderer()->add_object(*new_entity);
 		return new_entity;
 	}
-
 
 	void set_root_node(engine::node& pNode);
 
@@ -244,6 +242,7 @@ private:
 	void             script_set_visible(entity_reference& e, bool pIs_visible);
 	void             script_set_texture(entity_reference& e, const std::string& name);
 	void             script_set_font(entity_reference& e, const std::string& pName);
+	bool             script_is_character(entity_reference& e);
 
 	void             script_add_child(entity_reference& e1, entity_reference& e2);
 	void             script_set_parent(entity_reference& e1, entity_reference& e2);

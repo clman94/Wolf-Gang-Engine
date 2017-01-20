@@ -6,6 +6,7 @@
 #include <engine/utility.hpp>
 #include <engine/time.hpp>
 
+
 #include <angelscript.h> // AS_USE_NAMESPACE will need to be defined
 #include <angelscript/add_on/scriptbuilder/scriptbuilder.h>
 #include <angelscript/add_on/scriptarray/scriptarray.h>

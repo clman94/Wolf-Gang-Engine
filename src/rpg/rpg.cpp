@@ -434,6 +434,12 @@ void entity_manager::script_make_gui(entity_reference & e, float pOffset)
 	e->set_depth(defs::GUI_DEPTH - (util::clamp(pOffset, 0.f, 1000.f)/1000));
 }
 
+bool entity_manager::script_is_character(entity_reference& e)
+{
+	if (!check_entity(e)) return false;
+	return dynamic_cast<character_entity*>(e.get()) != nullptr;
+}
+
 void entity_manager::load_script_interface(script_system& pScript)
 {
 	mScript_system = &pScript;
@@ -452,7 +458,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void stop_animation(entity&in)",                           asMETHOD(entity_manager, script_stop_animation), this);
 	pScript.add_function("void set_animation(entity&in, const string &in)",          asMETHOD(entity_manager, script_set_animation), this);
 	pScript.add_function("entity find_entity(const string &in)",                     asMETHOD(entity_manager, find_entity), this);
-	pScript.add_function("bool is_character(entity&in)",                             asMETHOD(entity_manager, is_character), this);
+	pScript.add_function("bool is_character(entity&in)",                             asMETHOD(entity_manager, script_is_character), this);
 	pScript.add_function("void remove_entity(entity&in)",                            asMETHOD(entity_manager, script_remove_entity), this);
 	pScript.add_function("void set_depth(entity&in, float)",                         asMETHOD(entity_manager, script_set_depth), this);
 	pScript.add_function("void set_depth_fixed(entity&in, bool)",                    asMETHOD(entity_manager, script_set_depth_fixed), this);
@@ -473,10 +479,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void make_gui(entity&in, float)",                          asMETHOD(entity_manager, script_make_gui), this);
 }
 
-bool entity_manager::is_character(sprite_entity* pEntity)
-{
-	return dynamic_cast<character_entity*>(pEntity) != nullptr;
-}
+
 
 // #########
 // scene
