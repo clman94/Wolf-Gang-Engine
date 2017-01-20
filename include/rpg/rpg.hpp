@@ -25,6 +25,7 @@
 #include <rpg/character_entity.hpp>
 #include <rpg/player_character.hpp>
 #include <rpg/rpg_resource_directories.hpp>
+#include <rpg/script_context.hpp>
 
 #include <set>
 #include <list>

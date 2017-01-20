@@ -3,8 +3,8 @@
 
 #include <engine/utility.hpp>
 
-#include <angelscript.h> // AS_USE_NAMESPACE will need to be defined
-#include <angelscript/add_on/contextmgr/contextmgr.h>
+#include <rpg/script_system.hpp>
+
 namespace AS = AngelScript;
 
 namespace rpg {
@@ -16,17 +16,15 @@ public:
 	script_function();
 	~script_function();
 	bool is_running();
-	void set_engine(AS::asIScriptEngine * e);
-	void set_function(AS::asIScriptFunction * f);
-	void set_context_manager(AS::CContextMgr * cm);
+	void set_function(AS::asIScriptFunction * pFunction);
+	void set_script_system(script_system& pScript_system);
 	void set_arg(unsigned int index, void* ptr);
 	bool call();
 
 private:
-	util::optional_pointer<AS::asIScriptEngine> as_engine;
-	util::optional_pointer<AS::asIScriptFunction> func;
-	util::optional_pointer<AS::CContextMgr> ctx;
-	util::optional_pointer<AS::asIScriptContext> func_ctx;
+	util::optional_pointer<AS::asIScriptFunction> mFunction;
+	util::optional_pointer<script_system>         mScript_system;
+	util::optional_pointer<AS::asIScriptContext>  func_ctx;
 	void return_context();
 };
 

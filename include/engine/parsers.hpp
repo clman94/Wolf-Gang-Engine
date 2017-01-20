@@ -4,6 +4,7 @@
 #include <string>
 #include "utility.hpp"
 #include "vector.hpp"
+#include "rect.hpp"
 
 // A series of random string parsers for random things
 

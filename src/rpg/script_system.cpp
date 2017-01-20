@@ -3,7 +3,6 @@
 
 #include <angelscript/add_on/scriptstdstring/scriptstdstring.h>
 #include <angelscript/add_on/scriptmath/scriptmath.h>
-#include <angelscript/add_on/scriptdictionary/scriptdictionary.h>
 
 #include <engine/parsers.hpp>
 
@@ -30,22 +29,10 @@ void script_system::message_callback(const asSMessageInfo * msg)
 	util::log_print(msg->section, msg->row, msg->col, type, msg->message);
 }
 
-std::string
-script_context::get_metadata_type(const std::string & pMetadata)
-{
-	for (auto i = pMetadata.begin(); i != pMetadata.end(); i++)
-	{
-		if (!parsers::is_letter(*i))
-			return std::string(pMetadata.begin(), i);
-	}
-	return pMetadata;
-}
-
 void script_system::script_abort()
 {
-	auto c_ctx = mCtxmgr.GetCurrentContext();
-	assert(c_ctx != nullptr);
-	c_ctx->Abort();
+	assert(mCurrect_thread_context != nullptr);
+	mCurrect_thread_context->context->Abort();
 }
 
 void script_system::script_create_thread(AS::asIScriptFunction * func, AS::CScriptDictionary * arg)
@@ -57,7 +44,7 @@ void script_system::script_create_thread(AS::asIScriptFunction * func, AS::CScri
 	}
 
 	// Create a new context for the co-routine
-	asIScriptContext *ctx = mCtxmgr.AddContext(mEngine, func);
+	asIScriptContext *ctx = create_thread(func);
 
 	// Pass the argument to the context
 	ctx->SetArgObject(0, arg);
@@ -71,8 +58,13 @@ void script_system::script_create_thread_noargs(AS::asIScriptFunction * func)
 		return;
 	}
 
-	// Create a new context for the co-routine
-	mCtxmgr.AddContext(mEngine, func);
+	create_thread(func);
+}
+
+void script_system::script_yield()
+{
+	assert(mCurrect_thread_context != nullptr);
+	mCurrect_thread_context->context->Suspend();
 }
 
 void script_system::script_make_shared(AS::CScriptHandle pHandle, const std::string& pName)
@@ -90,13 +82,16 @@ void script_system::load_script_interface()
 	add_function("int rand()", asFUNCTION(std::rand));
 	add_function("void _timer_start(float)", asMETHOD(engine::timer, start), &mTimer);
 	add_function("bool _timer_reached()", asMETHOD(engine::timer, is_reached), &mTimer);
+	
 
+	mEngine->RegisterFuncdef("void coroutine(dictionary@)");
 	add_function("void create_thread(coroutine @+)", asMETHOD(script_system, script_create_thread_noargs), this);
 	add_function("void create_thread(coroutine @+, dictionary @+)", asMETHOD(script_system, script_create_thread), this);
 
 	add_function("void dprint(const string &in)", asMETHOD(script_system, script_debug_print), this);
 	add_function("void eprint(const string &in)", asMETHOD(script_system, script_error_print), this);
 	add_function("void abort()", asMETHOD(script_system, script_abort), this);
+	add_function("void yield()", asMETHOD(script_system, script_yield), this);
 
 	add_function("void make_shared(ref@, const string&in)", asMETHOD(script_system, script_make_shared), this);
 	add_function("ref@ get_shared(const string&in)", asMETHOD(script_system, script_get_shared), this);
@@ -111,10 +106,10 @@ script_system::script_debug_print(std::string &pMessage)
 		return;
 	}
 
-	assert(mCtxmgr.GetCurrentContext() != nullptr);
-	assert(mCtxmgr.GetCurrentContext()->GetFunction() != nullptr);
+	assert(mCurrect_thread_context->context != nullptr);
+	assert(mCurrect_thread_context->context->GetFunction() != nullptr);
 
-	std::string name = mCtxmgr.GetCurrentContext()->GetFunction()->GetName();
+	std::string name = mCurrect_thread_context->context->GetFunction()->GetName();
 	util::log_print(name, get_current_line(), 0, util::log_level::debug, pMessage);
 }
 
@@ -126,10 +121,10 @@ void script_system::script_error_print(std::string & pMessage)
 		return;
 	}
 
-	assert(mCtxmgr.GetCurrentContext() != nullptr);
-	assert(mCtxmgr.GetCurrentContext()->GetFunction() != nullptr);
+	assert(mCurrect_thread_context->context != nullptr);
+	assert(mCurrect_thread_context->context->GetFunction() != nullptr);
 
-	std::string name = mCtxmgr.GetCurrentContext()->GetFunction()->GetName();
+	std::string name = mCurrect_thread_context->context->GetFunction()->GetName();
 	util::log_print(name, get_current_line(), 0, util::log_level::error, pMessage);
 }
 
@@ -244,31 +239,21 @@ script_system::script_system()
 	RegisterScriptArray(mEngine, true);
 	RegisterScriptDictionary(mEngine);
 	RegisterScriptHandle(mEngine);
-	mCtxmgr.RegisterCoRoutineSupport(mEngine);
 
 	register_vector_type();
 
 	load_script_interface();
-
-	mExecuting = false;
 }
 
 script_system::~script_system()
 {
 	mShared_handles.clear();
-	mCtxmgr.AbortAll();
-	//mCtxmgr.~CContextMgr(); // Destroy context manager before releasing engine
+	abort_all();
 
 	// Just screw it!
-	//mEngine->ShutDownAndRelease();
+	mEngine->ShutDownAndRelease();
 }
 
-void script_system::load_context(script_context & pContext)
-{
-	mCtxmgr.AbortAll();
-	mContext = &pContext;
-	start_all_with_tag("start");
-}
 
 void
 script_system::add_function(const char* pDeclaration, const asSFuncPtr& pPtr, void* pInstance)
@@ -286,40 +271,49 @@ script_system::add_function(const char * pDeclaration, const asSFuncPtr& pPtr)
 
 void script_system::abort_all()
 {
-	if (is_executing())
-		mCtxmgr.PreAbout();
-	else
-		mCtxmgr.AbortAll();
-}
-
-void script_system::start_all_with_tag(const std::string & pTag)
-{
-	size_t func_count = mContext->mScene_module->GetFunctionCount();
-	for (size_t i = 0; i < func_count; i++)
+	for (auto& i : mThread_contexts)
 	{
-		auto func = mContext->mScene_module->GetFunctionByIndex(i);
-		std::string metadata = parsers::remove_trailing_whitespace(mContext->mBuilder.GetMetadataStringForFunc(func));
-		if (metadata == pTag)
-		{
-			mCtxmgr.AddContext(mEngine, func);
-		}
+		i.context->Abort();
+		mEngine->ReturnContext(i.context);
 	}
+	mThread_contexts.clear();
+	mEngine->GarbageCollect(asGC_FULL_CYCLE | asGC_DESTROY_GARBAGE);
 }
 
-int
-script_system::tick()
+void script_system::return_context(AS::asIScriptContext * pContext)
 {
-	mExecuting = true;
-	int r = mCtxmgr.ExecuteScripts();
-	mExecuting = false;
-	return r;
+	mEngine->ReturnContext(pContext);
+}
+
+int script_system::tick()
+{
+	for (size_t i = 0; i < mThread_contexts.size(); i++)
+	{
+		mCurrect_thread_context = &mThread_contexts[i];
+
+		int r = mCurrect_thread_context->context->Execute();
+
+		if (r != AS::asEXECUTION_SUSPENDED)
+		{
+			if (!mCurrect_thread_context->keep_context)
+				mEngine->ReturnContext(mCurrect_thread_context->context);
+			mThread_contexts.erase(mThread_contexts.begin() + i);
+			--i;
+		}
+
+		mCurrect_thread_context = nullptr;
+
+		mEngine->GarbageCollect(asGC_ONE_STEP | asGC_DETECT_GARBAGE);
+	}
+
+	return mThread_contexts.size();
 }
 
 int script_system::get_current_line()
 {
-	if (mCtxmgr.GetCurrentContext())
+	if (mCurrect_thread_context)
 	{
-		return mCtxmgr.GetCurrentContext()->GetLineNumber();
+		return mCurrect_thread_context->context->GetLineNumber();
 	}
 	return 0;
 }
@@ -330,8 +324,30 @@ AS::asIScriptEngine& script_system::get_engine()
 	return *mEngine;
 }
 
+AS::asIScriptContext* script_system::create_thread(AS::asIScriptFunction * pFunc, bool pKeep_context)
+{
+	asIScriptContext* context = mEngine->RequestContext();
+	if (!context)
+		return nullptr;
+
+	int r = context->Prepare(pFunc);
+	if (r < 0)
+	{
+		mEngine->ReturnContext(context);
+		return nullptr;
+	}
+
+	// Create a new one if necessary
+	thread new_thread;
+	new_thread.context = context;
+	new_thread.keep_context = pKeep_context;
+	mThread_contexts.push_back(new_thread);
+
+	return context;
+}
+
 bool script_system::is_executing()
 {
-	return mExecuting;
+	return mCurrect_thread_context != nullptr;
 }
 

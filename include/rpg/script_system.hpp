@@ -7,28 +7,23 @@
 #include <engine/time.hpp>
 
 #include <angelscript.h> // AS_USE_NAMESPACE will need to be defined
-#include <angelscript/add_on/contextmgr/contextmgr.h>
 #include <angelscript/add_on/scriptbuilder/scriptbuilder.h>
 #include <angelscript/add_on/scriptarray/scriptarray.h>
 #include <angelscript/add_on/scripthandle/scripthandle.h>
+#include <angelscript/add_on/scriptdictionary/scriptdictionary.h>
 
-#include <rpg/collision_box.hpp>
-
+#include <memory>
 
 namespace AS = AngelScript;
 
 namespace rpg
 {
 
-class script_context;
-
 class script_system
 {
 public:
 	script_system();
 	~script_system();
-
-	void load_context(script_context& pContext);
 
 	// Register a member function, will require the pointer to the instance
 	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr, void* pInstance);
@@ -37,16 +32,13 @@ public:
 	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr);
 
 	void abort_all();
-
-	// Call all functions that contain the specific metadata
-	void start_all_with_tag(const std::string& pTag);
-
-	// Execute all scripts
+	void return_context(AS::asIScriptContext* pContext);
 	int tick();
-
 	int get_current_line();
 
 	AS::asIScriptEngine& get_engine();
+
+	AS::asIScriptContext* create_thread(AS::asIScriptFunction *pFunc, bool keep_context = false);
 
 	bool is_executing();
 
@@ -75,15 +67,19 @@ public:
 	}
 
 private:
+
+	struct thread
+	{
+		AS::asIScriptContext* context;
+		bool keep_context;
+	};
+
+	thread* mCurrect_thread_context;
+	std::vector<thread> mThread_contexts;
+
 	util::optional_pointer<AS::asIScriptEngine> mEngine;
-	AS::CContextMgr      mCtxmgr;
-	util::optional_pointer<script_context> mContext;
-	std::ofstream        mLog_file;
-	bool                 mExecuting;
 
 	engine::timer mTimer;
-
-
 
 	void register_vector_type();
 	void message_callback(const AS::asSMessageInfo * msg);
@@ -93,6 +89,7 @@ private:
 	void script_error_print(std::string &pMessage);
 	void script_create_thread(AS::asIScriptFunction *func, AS::CScriptDictionary *arg);
 	void script_create_thread_noargs(AS::asIScriptFunction *func);
+	void script_yield();
 
 	std::map<std::string, AS::CScriptHandle> mShared_handles;
 
@@ -100,45 +97,9 @@ private:
 	AS::CScriptHandle script_get_shared(const std::string& pName);
 
 	void load_script_interface();
-
-	friend class script_context;
 };
 
 
-class script_context
-{
-public:
-	script_context();
-	~script_context();
-
-	void set_script_system(script_system& pScript);
-	bool build_script(const std::string& pPath);
-	bool is_valid() const;
-	void clean();
-
-	const std::vector<trigger>& get_script_defined_triggers() const;
-	const std::vector<trigger>& get_script_defined_buttons() const;
-
-private:
-
-	// Constructs all triggers/buttons defined by functions
-	// with metadata "trigger" and "button"
-	// TODO: Stablize parsing of metadata
-	void parse_script_defined_triggers();
-
-	util::optional_pointer<script_system> mScript;
-	util::optional_pointer<AS::asIScriptModule> mScene_module;
-	AS::CScriptBuilder mBuilder;
-
-	std::vector<trigger> mScript_defined_triggers;
-	std::vector<trigger> mScript_defined_buttons;
-
-	std::map<std::string, std::shared_ptr<script_function>> mTrigger_functions;
-
-	static std::string get_metadata_type(const std::string &pMetadata);
-
-	friend class script_system;
-};
 
 }
 #endif // !RPG_SCRIPT_SYSTEM_HPP

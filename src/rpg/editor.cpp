@@ -415,6 +415,8 @@ int tilemap_editor::save()
 	auto& doc = mLoader.get_document();
 	auto ele_map = mLoader.get_tilemap();
 
+	util::info("Saving tilemap...");
+
 	auto ele_layer = ele_map->FirstChildElement("layer");
 	while (ele_layer)
 	{
@@ -425,6 +427,9 @@ int tilemap_editor::save()
 	mTilemap_loader.condense_tiles();
 	mTilemap_loader.generate(doc, ele_map);
 	doc.SaveFile(mLoader.get_scene_path().c_str());
+
+	util::info("Tilemap saved");
+
 	return 0;
 }
 
@@ -570,7 +575,7 @@ int collisionbox_editor::save()
 		ele_wall = ele_collisionboxes->FirstChildElement("wall");
 	}
 
-	util::log_print(util::log_level::info, "Saving " + std::to_string(mWalls.size()) + " walls");
+	util::info("Saving " + std::to_string(mWalls.size()) + " walls");
 
 	for (auto& i : mWalls)
 	{
@@ -583,6 +588,9 @@ int collisionbox_editor::save()
 	}
 	
 	mLoader.save();
+
+	util::info("Wall(s) saved");
+
 	return 0;
 }
 

@@ -170,7 +170,7 @@ void scene_loader::construct_wall_list()
 		ele_wall = ele_wall->NextSiblingElement("wall");
 	}
 
-	util::info("Loaded " + std::to_string(mWalls.size()) + " walls");
+	util::info("Loaded " + std::to_string(mWalls.size()) + " wall(s)");
 }
 
 util::optional_pointer<tinyxml2::XMLElement> scene_loader::get_collisionboxes()

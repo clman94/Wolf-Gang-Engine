@@ -11,6 +11,7 @@
 #include <rpg/script_function.hpp>
 #include <rpg/flag_container.hpp>
 
+
 namespace rpg {
 
 // A basic collision box
@@ -35,13 +36,14 @@ protected:
 struct trigger : public collision_box
 {
 public:
-	void set_function(std::shared_ptr<script_function> pFunction);
+	trigger();
+	void set_function(script_function& pFunction);
 	bool call_function();
 
 	void parse_function_metadata(const std::string& pMetadata);
 
 private:
-	std::shared_ptr<script_function> mFunction;
+	script_function* mFunction;
 };
 
 struct door : public collision_box

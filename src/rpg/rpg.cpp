@@ -546,13 +546,13 @@ int scene::load_scene(std::string pName)
 
 	clean();
 
+	util::info("Loading scene '" + pName + "'");
+
 	if (!mLoader.load(pName))
 	{
 		util::error("Unable to open scene '" + pName + "'");
 		return 1;
 	}
-
-	util::info("Loading scene '" + pName + "'");
 
 	auto collision_boxes = mLoader.get_collisionboxes();
 	if (collision_boxes)
@@ -576,7 +576,7 @@ int scene::load_scene(std::string pName)
 	if (context.is_valid())
 	{
 		mCollision_system.setup_script_defined_triggers(context);
-		mScript->load_context(context);
+		context.start_all_with_tag("start");
 	}
 
 	auto tilemap_texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, mLoader.get_tilemap_texture());
@@ -951,6 +951,16 @@ bool script_context::build_script(const std::string & pPath)
 	return true;
 }
 
+std::string script_context::get_metadata_type(const std::string & pMetadata)
+{
+	for (auto i = pMetadata.begin(); i != pMetadata.end(); i++)
+	{
+		if (!parsers::is_letter(*i))
+			return std::string(pMetadata.begin(), i);
+	}
+	return pMetadata;
+}
+
 bool script_context::is_valid() const
 {
 	return mScene_module.has_value();
@@ -967,6 +977,20 @@ void script_context::clean()
 	{
 		mScene_module->Discard();
 		mScene_module = nullptr;
+	}
+}
+
+void script_context::start_all_with_tag(const std::string & pTag)
+{
+	size_t func_count = mScene_module->GetFunctionCount();
+	for (size_t i = 0; i < func_count; i++)
+	{
+		auto func = mScene_module->GetFunctionByIndex(i);
+		std::string metadata = parsers::remove_trailing_whitespace(mBuilder.GetMetadataStringForFunc(func));
+		if (metadata == pTag)
+		{
+			mScript->create_thread(func);
+		}
 	}
 }
 
@@ -993,14 +1017,14 @@ void script_context::parse_script_defined_triggers()
 		if (type == "trigger" ||
 			type == "button")
 		{
-			std::shared_ptr<script_function> function(std::make_shared<script_function>());
-			mTrigger_functions[as_function->GetDeclaration(true, true)] = function;
-			function->set_context_manager(&mScript->mCtxmgr);
-			function->set_engine(mScript->mEngine);
+			std::unique_ptr<script_function> function(new script_function);
+			function->set_script_system(*mScript);
 			function->set_function(as_function);
 
 			trigger nt;
-			nt.set_function(function);
+			nt.set_function(*function);
+
+			mTrigger_functions[as_function->GetDeclaration(true, true)].swap(function);
 
 			const std::string vectordata(metadata.begin() + type.length(), metadata.end());
 			nt.parse_function_metadata(metadata);
@@ -1458,17 +1482,12 @@ void narrative_dialog::refresh_renderer(engine::renderer& r)
 // script_function
 // ##########
 
-script_function::script_function() :
-	as_engine(nullptr),
-	func(nullptr),
-	ctx(nullptr),
-	func_ctx(nullptr)
+script_function::script_function()
 {
 }
 
 script_function::~script_function()
 {
-	return_context();
 }
 
 bool
@@ -1481,28 +1500,23 @@ script_function::is_running()
 	return true;
 }
 
+
 void
-script_function::set_engine(AS::asIScriptEngine * e)
+script_function::set_function(AS::asIScriptFunction * pFunction)
 {
-	as_engine = e;
+	mFunction = pFunction;
 }
 
 void
-script_function::set_function(AS::asIScriptFunction * f)
+script_function::set_script_system(script_system& pScript_system)
 {
-	func = f;
-}
-
-void
-script_function::set_context_manager(AS::CContextMgr * cm)
-{
-	ctx = cm;
+	mScript_system = &pScript_system;
 }
 
 void
 script_function::set_arg(unsigned int index, void* ptr)
 {
-	if(index < func->GetParamCount())
+	if(index < mFunction->GetParamCount())
 		func_ctx->SetArgObject(index, ptr);
 }
 
@@ -1512,7 +1526,7 @@ script_function::call()
 	if (!is_running())
 	{
 		return_context();
-		func_ctx = ctx->AddContext(as_engine, func, true);
+		func_ctx = mScript_system->create_thread(mFunction, true);
 		return true;
 	}
 	return false;
@@ -1523,7 +1537,7 @@ void script_function::return_context()
 	if (func_ctx)
 	{
 		func_ctx->Abort();
-		ctx->DoneWithContext(func_ctx);
+		mScript_system->return_context(func_ctx);
 		func_ctx = nullptr;
 	}
 }
@@ -1683,9 +1697,14 @@ void collision_box::set_region(engine::frect pRegion)
 	mRegion = pRegion;
 }
 
-void trigger::set_function(std::shared_ptr<script_function> pFunction)
+trigger::trigger()
 {
-	mFunction = pFunction;
+	mFunction = nullptr;
+}
+
+void trigger::set_function(script_function& pFunction)
+{
+	mFunction = &pFunction;
 }
 
 bool trigger::call_function()

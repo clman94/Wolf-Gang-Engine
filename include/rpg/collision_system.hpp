@@ -8,7 +8,7 @@
 #include <engine/rect.hpp>
 #include <engine/utility.hpp>
 
-#include <rpg/script_system.hpp>
+#include <rpg/script_context.hpp>
 #include <rpg/flag_container.hpp>
 #include <rpg/collision_box.hpp>
 
