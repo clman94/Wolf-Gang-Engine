@@ -64,7 +64,7 @@ void entity_manager::register_entity_type(script_system & pScript)
 		, asMETHODPR(entity_reference, operator=, (const entity_reference&), entity_reference&)
 		, asCALL_THISCALL);
 
-	// is_valid
+	// is_enabled
 	engine.RegisterObjectMethod("entity", "bool is_valid() const"
 		, asMETHOD(entity_reference, is_valid)
 		, asCALL_THISCALL);
@@ -549,6 +549,8 @@ int scene::load_scene(std::string pName)
 
 	clean();
 
+	mCurrent_scene_name = pName;
+
 	util::info("Loading scene '" + pName + "'");
 
 	if (!mLoader.load(pName))
@@ -559,7 +561,7 @@ int scene::load_scene(std::string pName)
 
 	auto collision_boxes = mLoader.get_collisionboxes();
 	if (collision_boxes)
-		mCollision_system.load_collision_boxes(collision_boxes);
+		mCollision_system.load_collision_boxes(collision_boxes, mLoader);
 
 	mWorld_node.set_boundary_enable(mLoader.has_boundary());
 	mWorld_node.set_boundary(mLoader.get_boundary());
@@ -575,7 +577,7 @@ int scene::load_scene(std::string pName)
 	else
 		util::info("Script is already compiled");
 
-	// Set context if still valid
+	// Set context if still mEnabled
 	if (context.is_valid())
 	{
 		mCollision_system.setup_script_defined_triggers(context);
@@ -610,7 +612,7 @@ int scene::load_scene(std::string pName)
 int
 scene::reload_scene()
 {
-	if (mLoader.get_name().empty())
+	if (mCurrent_scene_name.empty())
 	{
 		util::error("No scene to reload");
 		return 1;
@@ -618,7 +620,7 @@ scene::reload_scene()
 
 	clean(true);
 
-	return load_scene(mLoader.get_name());
+	return load_scene(mCurrent_scene_name);
 }
 
 const std::string& scene::get_path()
@@ -638,6 +640,7 @@ void scene::load_script_interface(script_system& pScript)
 	mBackground_music.load_script_interface(pScript);
 	mColored_overlay.load_script_interface(pScript);
 	mPathfinding_system.load_script_interface(pScript);
+	mCollision_system.load_script_interface(pScript);
 
 	pScript.add_function("void set_tile(const string &in, vec, int, int)", asMETHOD(scene, script_set_tile), this);
 	pScript.add_function("void remove_tile(vec, int)", asMETHOD(scene, script_remove_tile), this);
@@ -1085,7 +1088,7 @@ void game::open_game()
 	save_system file;
 	if (!file.open_save(path))
 	{
-		util::error("Invalid slot");
+		util::error("Invalid slot '" + std::to_string(mSlot) + "'");
 		return;
 	}
 	util::info("Opening game...");
@@ -1102,6 +1105,7 @@ void game::open_game()
 		mScene.load_scene(file.get_scene_path());
 	}
 
+	util::info("Loaded " + std::to_string(mFlags.get_count()) + " flag(s)");
 	util::info("Game opened from '" + path + "'");
 }
 
@@ -1393,7 +1397,6 @@ bool narrative_dialog::is_box_open()
 {
 	return mBox.is_visible() || mText.is_visible();
 }
-
 void narrative_dialog::show_selection()
 {
 	if (mBox.is_visible())
@@ -1660,28 +1663,29 @@ void background_music::script_music_set_second_volume(float pVolume)
 // ##########
 
 collision_box::collision_box()
-	: valid(true)
+	: mEnabled(true)
 {
 }
 
-bool collision_box::is_valid()
+collision_box::collision_box(engine::frect pRect)
 {
-	return valid;
+	mEnabled = true;
+	mRegion = pRect;
 }
 
-void collision_box::validate(flag_container & pFlags)
+bool collision_box::is_enabled() const
 {
-	if (!mInvalid_on_flag.empty())
-		valid = !pFlags.has_flag(mInvalid_on_flag);
-	if (!mSpawn_flag.empty())
-		pFlags.set_flag(mSpawn_flag);
+	return mEnabled;
 }
+
+void collision_box::set_enable(bool pEnabled)
+{
+	mEnabled = pEnabled;
+}
+
 
 void collision_box::load_xml(tinyxml2::XMLElement * e)
 {
-	mInvalid_on_flag = util::safe_string(e->Attribute("invalid"));
-	mSpawn_flag = util::safe_string(e->Attribute("spawn"));
-
 	engine::frect rect;
 	rect.x = e->FloatAttribute("x");
 	rect.y = e->FloatAttribute("y");
@@ -1690,7 +1694,7 @@ void collision_box::load_xml(tinyxml2::XMLElement * e)
 	mRegion = engine::scale(rect, defs::TILE_SIZE);
 }
 
-engine::frect collision_box::get_region()
+engine::frect collision_box::get_region() const
 {
 	return mRegion;
 }

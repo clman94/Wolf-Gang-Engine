@@ -8,12 +8,15 @@
 #include <engine/rect.hpp>
 #include <engine/utility.hpp>
 #include <engine/filesystem.hpp>
+#include <rpg/collision_box.hpp>
 
 #include <string>
 #include <vector>
-
+#include <map>
 
 namespace rpg {
+
+typedef std::map<std::string, std::vector<size_t>> wall_groups_t;
 
 class scene_loader
 {
@@ -31,6 +34,7 @@ public:
 	std::string get_tilemap_texture() const;
 	std::string get_scene_path() const;
 	const std::vector<engine::frect>& get_walls() const;
+	const wall_groups_t& get_wall_groups() const;
 
 	util::optional_pointer<tinyxml2::XMLElement> get_collisionboxes();
 	util::optional_pointer<tinyxml2::XMLElement> get_tilemap();
@@ -44,6 +48,7 @@ private:
 
 	void construct_wall_list();
 
+	wall_groups_t              mWall_groups;
 	std::vector<engine::frect> mWalls;
 	tinyxml2::XMLDocument      mXml_Document;
 	std::string                mScene_name;

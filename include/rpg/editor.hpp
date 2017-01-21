@@ -6,6 +6,7 @@
 
 #include <rpg/tilemap_loader.hpp>
 #include <rpg/scene_loader.hpp>
+#include <rpg/collision_box.hpp>
 
 #include <vector>
 #include <string>
@@ -139,14 +140,26 @@ public:
 	int save();
 
 private:
+
+	// Siply extends the frect with a group name string
+	struct wall :
+		public engine::frect
+	{
+		wall() {};
+		wall(engine::frect r) : engine::frect(r) {};
+		std::string group;
+	};
+
 	size_t mSelection;
 
 	bool mSize_mode;
 	engine::fvector mDrag_from;
 
-	tgui::Label::Ptr mLb_tilesize;
+	tgui::Label::Ptr   mLb_tilesize;
+	tgui::TextBox::Ptr mTb_wallgroup;
 
-	std::vector<engine::frect> mWalls;
+
+	std::vector<wall> mWalls;
 
 	engine::rectangle_node mTile_preview;
 	engine::rectangle_node mWall_display;

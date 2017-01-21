@@ -19,16 +19,15 @@ struct collision_box
 {
 public:
 	collision_box();
-	bool is_valid();
-	void validate(flag_container & pFlags);
+	collision_box(engine::frect pRect);
+	bool is_enabled() const;
+	void set_enable(bool pEnabled);
 	void load_xml(tinyxml2::XMLElement* e);
-	engine::frect get_region();
+	engine::frect get_region() const;
 	void set_region(engine::frect pRegion);
 
 protected:
-	std::string mInvalid_on_flag;
-	std::string mSpawn_flag;
-	bool valid;
+	bool mEnabled;
 	engine::frect mRegion;
 };
 

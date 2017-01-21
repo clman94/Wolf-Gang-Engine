@@ -482,16 +482,23 @@ bool collisionbox_editor::open_scene(std::string pPath)
 	mTilemap_loader.update_display(mTilemap_display);
 	mTilemap_display.set_color({ 100, 100, 255, 150 });
 	
-	mWalls = mLoader.get_walls();
+	// Copy the walls
+	mWalls.clear();
+	for (auto i : mLoader.get_walls())
+		mWalls.push_back(i);
+
+	// Copy group names to the individual walls.
+	// The names are decentralized for more flexibilty since
+	// tiles are going to be added and removed often.
+	for (auto& i : mLoader.get_wall_groups())
+		for (auto j : i.second)
+			mWalls[j].group = i.first;
 
 	return true;
 }
 
 int collisionbox_editor::draw(engine::renderer& pR)
 {
-	if (pR.is_key_down(engine::renderer::key_type::Return))
-		save();
-
 	const engine::fvector mouse_position = pR.get_mouse_position(get_exact_position());
 	const engine::fvector exact_tile_position = mouse_position / 32;
 	const engine::fvector tile_position = engine::fvector(exact_tile_position).floor();
@@ -503,9 +510,11 @@ int collisionbox_editor::draw(engine::renderer& pR)
 		{
 			mSelection = mWalls.size();
 			mWalls.push_back(engine::frect(tile_position, { 1, 1 }));
+			mWalls.back().group = mTb_wallgroup->getText();
 			mSize_mode = true;
 			mDrag_from = tile_position;
 		}
+		update_labels();
 	}
 
 	// Resize mode
@@ -548,9 +557,14 @@ int collisionbox_editor::draw(engine::renderer& pR)
 	for (size_t i = 0; i < mWalls.size(); i++) // TODO: Optimize
 	{
 		if (i == mSelection)
-			mWall_display.set_outline_color({ 255, 90, 90, 255 });
+			mWall_display.set_outline_color({ 180, 90, 90, 255 });
 		else
 			mWall_display.set_outline_color({ 255, 255, 255, 255 });
+
+		if (mWalls[i].group.empty())
+			mWall_display.set_color({ 100, 255, 100, 200 });
+		else
+			mWall_display.set_color({ 200, 100, 200, 200 });
 
 		mWall_display.set_position(mWalls[i].get_offset() * 32);
 		mWall_display.set_size(mWalls[i].get_size() * 32);
@@ -584,6 +598,8 @@ int collisionbox_editor::save()
 		new_wall->SetAttribute("y", i.y);
 		new_wall->SetAttribute("w", i.w);
 		new_wall->SetAttribute("h", i.h);
+		if (!i.group.empty())
+			new_wall->SetAttribute("group", i.group.c_str());
 		ele_collisionboxes->InsertEndChild(new_wall);
 	}
 	
@@ -596,7 +612,13 @@ int collisionbox_editor::save()
 
 void collisionbox_editor::setup_editor(editor_gui & pEditor_gui)
 {
-	mLb_tilesize = pEditor_gui.add_label("n/a, n/a");
+	mLb_tilesize  = pEditor_gui.add_label("n/a, n/a");
+
+	auto lb_wall_group = pEditor_gui.add_label("Wall Group: ");
+	lb_wall_group->setTextSize(10);
+
+	mTb_wallgroup = pEditor_gui.add_textbox();
+	mTb_wallgroup->setSize(sf::Vector2f(200, 25));
 }
 
 bool collisionbox_editor::tile_selection(engine::fvector pCursor)
@@ -615,7 +637,6 @@ bool collisionbox_editor::tile_selection(engine::fvector pCursor)
 			break;
 		}
 	}
-	update_labels();
 
 	return new_selection;
 }
@@ -631,6 +652,8 @@ void collisionbox_editor::update_labels()
 	size_text += ", ";
 	size_text += std::to_string(mWalls[mSelection].get_size().y);
 	mLb_tilesize->setText(size_text);
+
+	mTb_wallgroup->setText(mWalls[mSelection].group);
 }
 
 // ##########

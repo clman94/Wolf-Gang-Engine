@@ -110,6 +110,12 @@ private:
 	void do_reveal();
 };
 
+class rectangle_entity :
+	public entity
+{
+	
+};
+
 // The dialog object with text reveal
 // TODO: Make more flexible with the ability to only have the text displayed,
 //       move the text to any location, (possibly) automatically wrap text
@@ -372,6 +378,7 @@ private:
 	colored_overlay       mColored_overlay;
 	pathfinding_system    mPathfinding_system;
 
+	std::string mCurrent_scene_name;
 	scene_loader mLoader;
 
 	bool mFocus_player;

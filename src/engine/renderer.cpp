@@ -258,6 +258,8 @@ renderer::is_focused()
 	return mWindow.hasFocus();
 }
 
+
+
 int renderer::set_icon(const std::string & pPath)
 {
 	sf::Image image;
@@ -265,6 +267,11 @@ int renderer::set_icon(const std::string & pPath)
 		return 1;
 	mWindow.setIcon(image.getSize().x, image.getSize().y, image.getPixelsPtr());
 	return 0;
+}
+
+void renderer::set_window_title(const std::string & pTitle)
+{
+	mWindow.setTitle(pTitle);
 }
 
 void
@@ -365,7 +372,13 @@ renderer::update_events()
 			return 1;
 
 		if (mEvent.type == sf::Event::Resized)
+		{
 			refresh_view();
+
+			// Adjust view of gui so it won't stretch
+			if (mTgui)
+				mTgui->setView(sf::View(sf::FloatRect(0, 0, static_cast<float>(mWindow.getSize().x), static_cast<float>(mWindow.getSize().y))));
+		}
 		
 		if (mTgui)
 			mTgui->handleEvent(mEvent);

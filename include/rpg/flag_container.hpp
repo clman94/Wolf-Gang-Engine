@@ -18,6 +18,9 @@ public:
 	void load_script_interface(script_system& pScript);
 	void clean();
 
+
+	size_t get_count() const;
+
 	auto begin()
 	{
 		return mFlags.begin();

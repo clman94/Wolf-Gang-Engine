@@ -28,3 +28,8 @@ void flag_container::clean()
 {
 	mFlags.clear();
 }
+
+size_t flag_container::get_count() const
+{
+	return mFlags.size();
+}

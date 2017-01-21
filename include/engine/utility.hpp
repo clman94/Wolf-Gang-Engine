@@ -202,7 +202,7 @@ private:
 /// tracked_owner notifies this object whenever
 /// it has been destroyed. Also prevents unwanted
 /// access when referenced object is destroyed.
-/// Should be checked with tracking_ptr::is_valid beforehand
+/// Should be checked with tracking_ptr::is_enabled beforehand
 template<typename T>
 class tracking_ptr
 {

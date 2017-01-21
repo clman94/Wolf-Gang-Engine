@@ -93,6 +93,7 @@ public:
 
 	int set_icon(const std::string& pPath);
 
+	void set_window_title(const std::string& pTitle);
 	void set_visible(bool pVisible);
 	void set_background_color(color pColor);
 
