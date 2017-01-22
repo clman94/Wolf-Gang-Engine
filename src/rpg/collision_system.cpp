@@ -94,7 +94,7 @@ int collision_system::load_collision_boxes(tinyxml2::XMLElement* pEle, const sce
 		nd.offset.y    = ele_item->FloatAttribute("offsety") * 32;
 		mDoors.push_back(nd);
 
-		ele_item = ele_item->NextSiblingElement();
+		ele_item = ele_item->NextSiblingElement("door");
 	}
 	return 0;
 }

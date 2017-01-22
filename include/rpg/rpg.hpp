@@ -338,10 +338,10 @@ public:
 
 	// Load scene xml file which loads the scene script.
 	// pPath is not a reference so cleanup doesn't cause issues.
-	int load_scene(std::string pName);
+	bool load_scene(std::string pName);
 
 	// Reload the currently loaded scene.
-	int reload_scene();
+	bool reload_scene();
 
 	const std::string& get_path();
 	const std::string& get_name();

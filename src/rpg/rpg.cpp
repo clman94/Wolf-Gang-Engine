@@ -542,7 +542,7 @@ scene::clean(bool pFull)
 	}
 }
 
-int scene::load_scene(std::string pName)
+bool scene::load_scene(std::string pName)
 {
 	assert(mResource_manager != nullptr);
 	assert(mScript != nullptr);
@@ -556,7 +556,7 @@ int scene::load_scene(std::string pName)
 	if (!mLoader.load(pName))
 	{
 		util::error("Unable to open scene '" + pName + "'");
-		return 1;
+		return false;
 	}
 
 	auto collision_boxes = mLoader.get_collisionboxes();
@@ -577,7 +577,7 @@ int scene::load_scene(std::string pName)
 	else
 		util::info("Script is already compiled");
 
-	// Set context if still mEnabled
+	// Set context if still valid
 	if (context.is_valid())
 	{
 		mCollision_system.setup_script_defined_triggers(context);
@@ -588,7 +588,7 @@ int scene::load_scene(std::string pName)
 	if (!tilemap_texture)
 	{
 		util::error("Invalid tilemap texture");
-		return 1;
+		return false;
 	}
 	mTilemap_display.set_texture(tilemap_texture);
 
@@ -606,11 +606,10 @@ int scene::load_scene(std::string pName)
 	mResource_manager->unload_unused();
 	util::info("Resources ready");
 
-	return 0;
+	return true;
 }
 
-int
-scene::reload_scene()
+bool scene::reload_scene()
 {
 	if (mCurrent_scene_name.empty())
 	{

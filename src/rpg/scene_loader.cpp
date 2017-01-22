@@ -21,7 +21,7 @@ bool scene_loader::load(const std::string & pName)
 
 	if (mXml_Document.LoadFile(mScene_path.string().c_str()))
 	{
-		util::error("Unable to open scene. Please check path.");
+		util::error("Unable to open scene XML file.");
 		return false;
 	}
 

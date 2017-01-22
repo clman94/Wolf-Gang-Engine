@@ -12,9 +12,9 @@ void tilemap_display::set_tile(engine::fvector pPosition, const std::string & pA
 	assert(mTexture != nullptr);
 
 	auto entry = mTexture->get_entry(pAtlas);
-	if (entry == nullptr)
+	if (!entry)
 	{
-		util::error("Tile not found");
+		util::error("Tile not found '" + pAtlas + "'");
 		return;
 	}
 
