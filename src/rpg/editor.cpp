@@ -14,11 +14,18 @@ void tgui_list_layout::updateWidgetPositions()
 		{
 			auto pos = last->getPosition();
 			pos.y += last->getSize().y;
-			i->setPosition(pos.x, pos.y);
+			i->setPosition(pos);
 		}
 
 		last = i;
 	}
+}
+
+void tgui_list_layout::collapse_size()
+{
+	if (!getWidgets().empty())
+		setSize(getSize().x, getWidgets().back()->getPosition().y
+			+ getWidgets().back()->getSize().y);
 }
 
 void editor_gui::initualize()
@@ -45,7 +52,7 @@ void editor_gui::initualize()
 	mLayout->add(mLb_mouse);
 
 	mEditor_layout = std::make_shared<tgui_list_layout>();
-	mEditor_layout->setSize(mLayout->getSize().x, 400);
+	mEditor_layout->setSize(mLayout->getSize().x, 200);
 	mEditor_layout->setBackgroundColor({ 0, 0, 0, 0 });
 	mLayout->add(mEditor_layout);
 }
@@ -64,7 +71,7 @@ tgui::Label::Ptr editor_gui::add_label(const std::string & pText)
 	return nlb;
 }
 
-tgui::TextBox::Ptr editors::editor_gui::add_textbox()
+tgui::TextBox::Ptr editor_gui::add_textbox()
 {
 	auto ntb = std::make_shared<tgui::TextBox>();
 	mEditor_layout->add(ntb);
@@ -477,10 +484,10 @@ bool collisionbox_editor::open_scene(std::string pPath)
 	assert(texture);
 
 	mTilemap_display.set_texture(texture);
+	mTilemap_display.set_color({ 100, 100, 255, 150 });
 
 	mTilemap_loader.load_tilemap_xml(mLoader.get_tilemap());
 	mTilemap_loader.update_display(mTilemap_display);
-	mTilemap_display.set_color({ 100, 100, 255, 150 });
 	
 	// Copy the walls
 	mWalls.clear();

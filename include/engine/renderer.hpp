@@ -122,6 +122,8 @@ private:
 	void refresh_view();
 
 	tgui::Gui* mTgui;
+	bool mIs_mouse_busy;
+	bool mIs_keyboard_busy;
 
 	sf::RenderWindow mWindow;
 	std::vector<render_object*> mObjects;

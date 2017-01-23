@@ -321,7 +321,7 @@ renderer::refresh_pressed()
 bool
 renderer::is_key_pressed(key_type pKey_type)
 {
-	if (!mWindow.hasFocus())
+	if (!mWindow.hasFocus() || mIs_keyboard_busy)
 		return false;
 	bool is_pressed = sf::Keyboard::isKeyPressed(pKey_type);
 	if (mPressed_keys[pKey_type] == -1 && is_pressed)
@@ -333,7 +333,7 @@ renderer::is_key_pressed(key_type pKey_type)
 bool
 renderer::is_key_down(key_type pKey_type)
 {
-	if (!mWindow.hasFocus())
+	if (!mWindow.hasFocus() || mIs_keyboard_busy)
 		return false;
 	return sf::Keyboard::isKeyPressed(pKey_type);
 }
@@ -341,7 +341,7 @@ renderer::is_key_down(key_type pKey_type)
 bool
 renderer::is_mouse_pressed(mouse_button pButton_type)
 {
-	if (!mWindow.hasFocus())
+	if (!mWindow.hasFocus() || mIs_mouse_busy)
 		return false;
 	bool is_pressed = sf::Mouse::isButtonPressed((sf::Mouse::Button)pButton_type);
 	if (mPressed_buttons[pButton_type] == -1 && is_pressed)
@@ -353,7 +353,7 @@ renderer::is_mouse_pressed(mouse_button pButton_type)
 bool
 renderer::is_mouse_down(mouse_button pButton_type)
 {
-	if (!mWindow.hasFocus())
+	if (!mWindow.hasFocus() || mIs_mouse_busy)
 		return false;
 	return sf::Mouse::isButtonPressed((sf::Mouse::Button)pButton_type);
 }
@@ -381,7 +381,22 @@ renderer::update_events()
 		}
 		
 		if (mTgui)
-			mTgui->handleEvent(mEvent);
+		{
+			bool is_consumed = mTgui->handleEvent(mEvent);
+
+			if (is_consumed)
+			{
+				mIs_mouse_busy = mEvent.type >= sf::Event::MouseWheelMoved
+					&& mEvent.type <= sf::Event::MouseLeft;
+				mIs_keyboard_busy = mEvent.type == sf::Event::KeyPressed
+					|| mEvent.type == sf::Event::KeyReleased;
+			}
+			else
+			{
+				mIs_mouse_busy = false;
+				mIs_keyboard_busy = false;
+			}
+		}
 	}
 	return 0;
 }

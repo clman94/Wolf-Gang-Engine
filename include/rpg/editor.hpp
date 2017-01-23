@@ -20,6 +20,8 @@ namespace editors
 class tgui_list_layout :
 	public tgui::BoxLayout
 {
+public:
+	void collapse_size();
 private:
 	void updateWidgetPositions();
 };
