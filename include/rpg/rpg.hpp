@@ -196,6 +196,10 @@ public:
 	void load_script_interface(script_system& pScript);
 	void set_resource_manager(engine::resource_manager& pResource_manager);
 
+	void set_root_node(engine::node& pNode);
+
+private:
+
 	template<typename T>
 	T* create_entity()
 	{
@@ -210,10 +214,6 @@ public:
 		get_renderer()->add_object(*new_entity);
 		return new_entity;
 	}
-
-	void set_root_node(engine::node& pNode);
-
-private:
 
 	engine::node* mRoot_node;
 

@@ -74,8 +74,24 @@ tgui::Label::Ptr editor_gui::add_label(const std::string & pText)
 tgui::TextBox::Ptr editor_gui::add_textbox()
 {
 	auto ntb = std::make_shared<tgui::TextBox>();
+	ntb->setSize(sf::Vector2f(200, 25));
 	mEditor_layout->add(ntb);
 	return ntb;
+}
+
+tgui::ComboBox::Ptr editors::editor_gui::add_combobox()
+{
+	auto ncb = std::make_shared<tgui::ComboBox>();
+	mEditor_layout->add(ncb);
+	return ncb;
+}
+
+tgui::Button::Ptr editors::editor_gui::add_button(const std::string& text)
+{
+	auto nbt = std::make_shared<tgui::Button>();
+	nbt->setText(text);
+	mEditor_layout->add(nbt);
+	return nbt;
 }
 
 void editor_gui::update_camera_position(engine::fvector pPosition)
@@ -164,31 +180,40 @@ tilemap_editor::tilemap_editor()
 
 bool tilemap_editor::open_scene(std::string pPath)
 {
+	clean();
+
 	if (!mLoader.load(pPath))
 	{
 		util::error("Could not load scene '" + pPath + "'");
 		return false;
 	}
 	
-	auto resource = mResource_manager->get_resource(engine::resource_type::texture, mLoader.get_tilemap_texture());
-	if (!resource)
+
+	// Get tilemap texture
+	// The user should be allowed to add a texture when there isn't any.
+	mTexture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, mLoader.get_tilemap_texture());
+	if (!mTexture)
 	{
-		util::error("Invalid tilemap texture '" + mLoader.get_tilemap_texture() + "'");
-		return false;
+		util::warning("Invalid tilemap texture '" + mLoader.get_tilemap_texture() + "'");
+		util::info("Please specify texture");
 	}
-	mTexture = engine::cast_resource<engine::texture>(resource);
-	assert(mTexture);
+	else
+	{
+		mCurrent_texture_name = mLoader.get_tilemap_texture();
 
-	mTilemap_display.set_texture(mTexture);
+		mTilemap_display.set_texture(mTexture);
 
-	mTilemap_loader.load_tilemap_xml(mLoader.get_tilemap());
-	mTilemap_loader.update_display(mTilemap_display);
+		mTilemap_loader.load_tilemap_xml(mLoader.get_tilemap());
+		mTilemap_loader.update_display(mTilemap_display);
 
-	mTile_list = std::move(mTexture->compile_list());
-	assert(mTile_list.size() != 0);
+		mTile_list = std::move(mTexture->compile_list());
 
-	mPreview.set_texture(mTexture);
+		mPreview.set_texture(mTexture);
+	}
 
+	mTb_texture->setText(mLoader.get_tilemap_texture());
+
+	update_tile_combobox_list();
 	update_preview();
 	update_labels();
 
@@ -199,8 +224,12 @@ bool tilemap_editor::open_scene(std::string pPath)
 
 int tilemap_editor::draw(engine::renderer & pR)
 {
-	if (pR.is_key_down(engine::renderer::key_type::Return))
-		save();
+	// Editing is not allowed it there are no tiles to use.
+	if (mTile_list.empty())
+		return 1;
+
+	//if (pR.is_key_down(engine::renderer::key_type::Return))
+	//	save();
 
 	const engine::fvector mouse_position = pR.get_mouse_position(mTilemap_display.get_exact_position());
 
@@ -259,6 +288,7 @@ int tilemap_editor::draw(engine::renderer & pR)
 					mCurrent_tile = i;
 					update_preview();
 					update_labels();
+					update_tile_combobox_selected();
 					break;
 				}
 	}
@@ -267,6 +297,7 @@ int tilemap_editor::draw(engine::renderer & pR)
 	if (pR.is_key_pressed(engine::renderer::key_type::Period)) 
 	{
 		++mCurrent_tile %= mTile_list.size();
+		update_tile_combobox_selected();
 		update_preview();
 		update_labels();
 	}
@@ -275,6 +306,7 @@ int tilemap_editor::draw(engine::renderer & pR)
 	if (pR.is_key_pressed(engine::renderer::key_type::Comma))
 	{
 		mCurrent_tile = mCurrent_tile == 0 ? (mTile_list.size() - 1) : (mCurrent_tile - 1);
+		update_tile_combobox_selected();
 		update_preview();
 		update_labels();
 	}
@@ -329,9 +361,30 @@ int tilemap_editor::draw(engine::renderer & pR)
 
 void tilemap_editor::setup_editor(editor_gui & pEditor_gui)
 {
+	mCb_tile = pEditor_gui.add_combobox();
+	mCb_tile->setItemsToDisplay(5);
+	mCb_tile->connect("ItemSelected", 
+		[&]() {
+			const int item = mCb_tile->getSelectedItemIndex();
+			if (item == -1)
+			{
+				util::warning("No item selected");
+			}
+			mCurrent_tile = static_cast<size_t>(item);
+			update_labels();
+			update_preview();
+		});
+
 	mLb_layer = pEditor_gui.add_label("Layer: 0");
-	mLb_tile = pEditor_gui.add_label("Tile: N/A");
 	mLb_rotation = pEditor_gui.add_label("Rotation: N/A");
+
+	auto lb_texture = pEditor_gui.add_label("Texture:");
+	lb_texture->setTextSize(14);
+
+	mTb_texture = pEditor_gui.add_textbox();
+
+	auto bt_apply_texture = pEditor_gui.add_button("Apply Texture");
+	bt_apply_texture->connect("pressed", [&]() { apply_texture(); });
 }
 
 void tilemap_editor::setup_lines()
@@ -351,14 +404,26 @@ void tilemap_editor::setup_lines()
 	mLines[3].set_parent(*this);
 }
 
+void editors::tilemap_editor::update_tile_combobox_list()
+{
+	assert(mCb_tile != nullptr);
+	mCb_tile->removeAllItems();
+	for (auto& i : mTile_list)
+		mCb_tile->addItem(i);
+	update_tile_combobox_selected();
+}
+
+void tilemap_editor::update_tile_combobox_selected()
+{
+	mCb_tile->setSelectedItemByIndex(mCurrent_tile);
+}
+
 void tilemap_editor::update_labels()
 {
-	assert(mLb_tile != nullptr);
 	assert(mLb_layer != nullptr);
 	assert(mLb_rotation != nullptr);
 
 	mLb_layer->setText(std::string("Layer: ") + std::to_string(mLayer));
-	mLb_tile->setText(std::string("Tile: ") + mTile_list[mCurrent_tile]);
 	mLb_rotation->setText(std::string("Rotation: ") + std::to_string(mRotation));
 }
 
@@ -417,12 +482,44 @@ void tilemap_editor::tick_highlight(engine::renderer& pR)
 	}
 }
 
+void tilemap_editor::apply_texture()
+{
+	const std::string tilemap_texture_name = mTb_texture->getText();
+
+	util::info("Applying tilemap Texture '" + tilemap_texture_name + "'...");
+	auto new_texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, tilemap_texture_name);
+	if (!new_texture)
+	{
+		util::error("Failed to load texture '" + tilemap_texture_name + "'");
+		return;
+	}
+
+	mTexture = new_texture;
+
+	mTilemap_display.set_texture(mTexture);
+	mTilemap_loader.update_display(mTilemap_display);
+	mTile_list = std::move(mTexture->compile_list());
+	assert(mTile_list.size() != 0);
+
+	update_tile_combobox_list();
+	update_preview();
+	update_labels();
+
+	mCurrent_texture_name = tilemap_texture_name;
+
+	util::info("Tilemap texture applied");
+}
+
 int tilemap_editor::save()
 {
 	auto& doc = mLoader.get_document();
 	auto ele_map = mLoader.get_tilemap();
 
 	util::info("Saving tilemap...");
+
+	// Update tilemap texture name
+	auto ele_texture = ele_map->FirstChildElement("texture");
+	ele_texture->SetText(mCurrent_texture_name.c_str());
 
 	auto ele_layer = ele_map->FirstChildElement("layer");
 	while (ele_layer)
@@ -438,6 +535,21 @@ int tilemap_editor::save()
 	util::info("Tilemap saved");
 
 	return 0;
+}
+
+void tilemap_editor::clean()
+{
+	mLoader.clean();
+	mTile_list.clear();
+	mLayer = 0;
+	mRotation = 0;
+	mIs_highlight = false;
+	mCurrent_tile = 0;
+	mTexture = nullptr;
+	mCurrent_texture_name.clear();
+	mPreview.set_texture(nullptr);
+	mTilemap_loader.clean();
+	mTilemap_display.clean();
 }
 
 // ##########
@@ -475,19 +587,19 @@ bool collisionbox_editor::open_scene(std::string pPath)
 		return false;
 	}
 
-	auto resource = mResource_manager->get_resource(engine::resource_type::texture, mLoader.get_tilemap_texture());
-	if (!resource)
+	auto texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, mLoader.get_tilemap_texture());
+	if (!texture)
 	{
-		util::warning("Invalid tilemap texture in scene (Ignore)");
+		util::warning("Invalid tilemap texture in scene");
 	}
-	auto texture = engine::cast_resource<engine::texture>(resource);
-	assert(texture);
+	else
+	{
+		mTilemap_display.set_texture(texture);
+		mTilemap_display.set_color({ 100, 100, 255, 150 });
 
-	mTilemap_display.set_texture(texture);
-	mTilemap_display.set_color({ 100, 100, 255, 150 });
-
-	mTilemap_loader.load_tilemap_xml(mLoader.get_tilemap());
-	mTilemap_loader.update_display(mTilemap_display);
+		mTilemap_loader.load_tilemap_xml(mLoader.get_tilemap());
+		mTilemap_loader.update_display(mTilemap_display);
+	}
 	
 	// Copy the walls
 	mWalls.clear();
@@ -513,7 +625,7 @@ int collisionbox_editor::draw(engine::renderer& pR)
 	// Selection
 	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left))
 	{
-		if (!tile_selection(tile_position))
+		if (!tile_selection(exact_tile_position))
 		{
 			mSelection = mWalls.size();
 			mWalls.push_back(engine::frect(tile_position, { 1, 1 }));
@@ -625,7 +737,6 @@ void collisionbox_editor::setup_editor(editor_gui & pEditor_gui)
 	lb_wall_group->setTextSize(10);
 
 	mTb_wallgroup = pEditor_gui.add_textbox();
-	mTb_wallgroup->setSize(sf::Vector2f(200, 25));
 }
 
 bool collisionbox_editor::tile_selection(engine::fvector pCursor)
