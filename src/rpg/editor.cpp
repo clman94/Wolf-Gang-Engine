@@ -6,14 +6,13 @@ using namespace editors;
 void tgui_list_layout::updateWidgetPositions()
 {
 	auto& widgets = getWidgets();
-
 	Widget::Ptr last;
 	for (auto i : widgets)
 	{
 		if (last)
 		{
 			auto pos = last->getPosition();
-			pos.y += last->getSize().y;
+			pos.y += last->getFullSize().y;
 			i->setPosition(pos);
 		}
 
@@ -32,7 +31,7 @@ void editor_gui::initualize()
 {
 	mLayout = std::make_shared<tgui_list_layout>();
 	mLayout->setBackgroundColor({ 0, 0, 0,  90});
-	mLayout->setSize(300, 500);
+	mLayout->setSize(200, 1000);
 	mLayout->hide();
 	mTgui.add(mLayout);
 
@@ -52,7 +51,7 @@ void editor_gui::initualize()
 	mLayout->add(mLb_mouse);
 
 	mEditor_layout = std::make_shared<tgui_list_layout>();
-	mEditor_layout->setSize(mLayout->getSize().x, 200);
+	mEditor_layout->setSize(mLayout->getSize().x, 1000);
 	mEditor_layout->setBackgroundColor({ 0, 0, 0, 0 });
 	mLayout->add(mEditor_layout);
 }
@@ -62,36 +61,61 @@ void editor_gui::clear()
 	mEditor_layout->removeAllWidgets();
 }
 
-tgui::Label::Ptr editor_gui::add_label(const std::string & pText)
+tgui::Label::Ptr editor_gui::add_label(const std::string & pText, tgui::Container::Ptr pContainer)
 {
 	auto nlb = tgui::Label::copy(mLb_mode);
 	nlb->setText(pText);
 	nlb->setTextStyle(sf::Text::Bold);
-	mEditor_layout->add(nlb);
+	if (pContainer)
+		pContainer->add(nlb);
+	else
+		mEditor_layout->add(nlb);
 	return nlb;
 }
 
-tgui::TextBox::Ptr editor_gui::add_textbox()
+tgui::TextBox::Ptr editor_gui::add_textbox(tgui::Container::Ptr pContainer)
 {
 	auto ntb = std::make_shared<tgui::TextBox>();
 	ntb->setSize(sf::Vector2f(200, 25));
-	mEditor_layout->add(ntb);
+	if (pContainer)
+		pContainer->add(ntb);
+	else
+		mEditor_layout->add(ntb);
 	return ntb;
 }
 
-tgui::ComboBox::Ptr editors::editor_gui::add_combobox()
+tgui::ComboBox::Ptr editors::editor_gui::add_combobox(tgui::Container::Ptr pContainer)
 {
 	auto ncb = std::make_shared<tgui::ComboBox>();
-	mEditor_layout->add(ncb);
+	ncb->setSize(sf::Vector2f(200, 25));
+	if (pContainer)
+		pContainer->add(ncb);
+	else
+		mEditor_layout->add(ncb);
 	return ncb;
 }
 
-tgui::Button::Ptr editors::editor_gui::add_button(const std::string& text)
+tgui::Button::Ptr editors::editor_gui::add_button(const std::string& text, tgui::Container::Ptr pContainer)
 {
 	auto nbt = std::make_shared<tgui::Button>();
 	nbt->setText(text);
-	mEditor_layout->add(nbt);
+	if (pContainer)
+		pContainer->add(nbt);
+	else
+		mEditor_layout->add(nbt);
 	return nbt;
+}
+
+std::shared_ptr<tgui_list_layout> editors::editor_gui::add_sub_container(tgui::Container::Ptr pContainer)
+{
+	auto slo = std::make_shared<tgui_list_layout>();
+	slo->setBackgroundColor({ 0, 0, 0,  0 });
+	slo->setSize(200, 500);
+	if (pContainer)
+		pContainer->add(slo);
+	else
+		mEditor_layout->add(slo);
+	return slo;
 }
 
 void editor_gui::update_camera_position(engine::fvector pPosition)
@@ -576,6 +600,8 @@ collisionbox_editor::collisionbox_editor()
 	mTile_preview.set_size({ 32, 32 });
 	add_child(mTile_preview);
 
+	mCurrent_type = rpg::collision_box::type::wall;
+
 	mSize_mode = false;
 }
 
@@ -600,18 +626,8 @@ bool collisionbox_editor::open_scene(std::string pPath)
 		mTilemap_loader.load_tilemap_xml(mLoader.get_tilemap());
 		mTilemap_loader.update_display(mTilemap_display);
 	}
-	
-	// Copy the walls
-	mWalls.clear();
-	for (auto i : mLoader.get_walls())
-		mWalls.push_back(i);
 
-	// Copy group names to the individual walls.
-	// The names are decentralized for more flexibilty since
-	// tiles are going to be added and removed often.
-	for (auto& i : mLoader.get_wall_groups())
-		for (auto j : i.second)
-			mWalls[j].group = i.first;
+	mContainer.load_xml(mLoader.get_collisionboxes());
 
 	return true;
 }
@@ -619,17 +635,18 @@ bool collisionbox_editor::open_scene(std::string pPath)
 int collisionbox_editor::draw(engine::renderer& pR)
 {
 	const engine::fvector mouse_position = pR.get_mouse_position(get_exact_position());
-	const engine::fvector exact_tile_position = mouse_position / 32;
+	const engine::fvector exact_tile_position = mouse_position / 32.f;
 	const engine::fvector tile_position = engine::fvector(exact_tile_position).floor();
 
 	// Selection
 	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left))
 	{
-		if (!tile_selection(exact_tile_position))
+		if (!tile_selection(exact_tile_position) 
+			|| pR.is_key_down(engine::renderer::key_type::LShift)) // Left shift allows use to place wall on another wall
 		{
-			mSelection = mWalls.size();
-			mWalls.push_back(engine::frect(tile_position, { 1, 1 }));
-			mWalls.back().group = mTb_wallgroup->getText();
+			mSelection = mContainer.add_collision_box(mCurrent_type);
+			mSelection->set_region({ tile_position, { 1, 1 } });
+
 			mSize_mode = true;
 			mDrag_from = tile_position;
 		}
@@ -641,18 +658,20 @@ int collisionbox_editor::draw(engine::renderer& pR)
 		&& mSize_mode)
 	{
 		engine::fvector resize_to = tile_position;
+		engine::frect   rect = mSelection->get_region();
 
 		if (tile_position.x <= mDrag_from.x)
 		{
-			mWalls[mSelection].x = tile_position.x;
+			rect.x = tile_position.x;
 			resize_to.x = mDrag_from.x;
 		}
 		if (tile_position.y <= mDrag_from.y)
 		{
-			mWalls[mSelection].y = tile_position.y;
+			rect.y = tile_position.y;
 			resize_to.y = mDrag_from.y;
 		}
-		mWalls[mSelection].set_size(resize_to - mWalls[mSelection].get_offset() + engine::fvector(1, 1));
+		rect.set_size(resize_to - rect.get_offset() + engine::fvector(1, 1));
+		mSelection->set_region(rect);
 	}
 	else
 	{
@@ -664,33 +683,32 @@ int collisionbox_editor::draw(engine::renderer& pR)
 	{
 		if (tile_selection(exact_tile_position))
 		{
-			if (mSelection < mWalls.size())
-				mWalls.erase(mWalls.begin() + mSelection);
-			mSelection = 0;
+			mContainer.remove_box(mSelection);
+			mSelection = nullptr;
 			update_labels();
 		}
 	}
 
 	mBlackout.draw(pR);
 	mTilemap_display.draw(pR);
-	for (size_t i = 0; i < mWalls.size(); i++) // TODO: Optimize
+	for (auto& i : mContainer.get_boxes()) // TODO: Optimize
 	{
 		if (i == mSelection)
 			mWall_display.set_outline_color({ 180, 90, 90, 255 });
 		else
 			mWall_display.set_outline_color({ 255, 255, 255, 255 });
 
-		if (mWalls[i].group.empty())
+		if (!i->get_wall_group())
 			mWall_display.set_color({ 100, 255, 100, 200 });
 		else
 			mWall_display.set_color({ 200, 100, 200, 200 });
 
-		mWall_display.set_position(mWalls[i].get_offset() * 32);
-		mWall_display.set_size(mWalls[i].get_size() * 32);
+		mWall_display.set_position(i->get_region().get_offset() * 32);
+		mWall_display.set_size(i->get_region().get_size() * 32);
 		mWall_display.draw(pR);
 	}
 
-	mTile_preview.set_position(tile_position *32);
+	mTile_preview.set_position(tile_position* 32);
 	mTile_preview.draw(pR);
 
 	return 0;
@@ -698,45 +716,87 @@ int collisionbox_editor::draw(engine::renderer& pR)
 
 int collisionbox_editor::save()
 {
-	auto& doc = mLoader.get_document();
-	auto ele_collisionboxes = mLoader.get_collisionboxes();
+	util::info("Saving collision boxes");
 
-	auto ele_wall = ele_collisionboxes->FirstChildElement("wall");
-	while (ele_wall)
-	{
-		doc.DeleteNode(ele_wall);
-		ele_wall = ele_collisionboxes->FirstChildElement("wall");
-	}
-
-	util::info("Saving " + std::to_string(mWalls.size()) + " walls");
-
-	for (auto& i : mWalls)
-	{
-		auto new_wall = doc.NewElement("wall");
-		new_wall->SetAttribute("x", i.x);
-		new_wall->SetAttribute("y", i.y);
-		new_wall->SetAttribute("w", i.w);
-		new_wall->SetAttribute("h", i.h);
-		if (!i.group.empty())
-			new_wall->SetAttribute("group", i.group.c_str());
-		ele_collisionboxes->InsertEndChild(new_wall);
-	}
+	mContainer.generate_xml(mLoader.get_document(), mLoader.get_collisionboxes());
 	
 	mLoader.save();
 
-	util::info("Wall(s) saved");
+	util::info("Saved " + std::to_string(mContainer.get_count()) +" collision box(es)");
 
 	return 0;
 }
 
 void collisionbox_editor::setup_editor(editor_gui & pEditor_gui)
 {
+	mCb_type = pEditor_gui.add_combobox();
+	mCb_type->addItem("Wall");
+	mCb_type->addItem("Trigger");
+	mCb_type->addItem("Button");
+	mCb_type->addItem("Door");
+	mCb_type->connect("ItemSelected",
+		[&]() {
+		const int item = mCb_type->getSelectedItemIndex();
+		if (item == -1)
+		{
+			util::warning("No item selected");
+		}
+		mCurrent_type = static_cast<rpg::collision_box::type>(item); // Lazy cast
+	});
+	mCb_type->setSelectedItemByIndex(0);
+
 	mLb_tilesize  = pEditor_gui.add_label("n/a, n/a");
+
+	auto bt_apply = pEditor_gui.add_button("Apply");
+	bt_apply->connect("pressed", [&]() { apply_wall_settings(); });
 
 	auto lb_wall_group = pEditor_gui.add_label("Wall Group: ");
 	lb_wall_group->setTextSize(10);
 
 	mTb_wallgroup = pEditor_gui.add_textbox();
+
+	{
+		mLo_door = pEditor_gui.add_sub_container();
+
+		auto lb_door_name = pEditor_gui.add_label("Door name:", mLo_door);
+		lb_door_name->setTextSize(10);
+		mTb_door_name = pEditor_gui.add_textbox(mLo_door);
+
+		auto lb_door_scene = pEditor_gui.add_label("Door scene:", mLo_door);
+		lb_door_scene->setTextSize(10);
+		mTb_door_scene = pEditor_gui.add_textbox(mLo_door);
+
+		auto lb_door_destination = pEditor_gui.add_label("Door destination:", mLo_door);
+		lb_door_destination->setTextSize(10);
+		mTb_door_destination = pEditor_gui.add_textbox(mLo_door);
+
+		auto lb_door_offset = pEditor_gui.add_label("Door player offset:", mLo_door);
+		lb_door_offset->setTextSize(10);
+		mTb_door_offsetx = pEditor_gui.add_textbox(mLo_door);
+		mTb_door_offsety = pEditor_gui.add_textbox(mLo_door);
+
+		mLo_door->hide();
+	}
+}
+
+void editors::collisionbox_editor::apply_wall_settings()
+{
+	if (!mSelection)
+		return;
+	if (mTb_wallgroup->getText().isEmpty())
+		mSelection->set_wall_group(nullptr);
+	else
+		mSelection->set_wall_group(mContainer.create_group(mTb_wallgroup->getText()));
+
+	if (mSelection->get_type() == rpg::collision_box::type::door)
+	{
+		auto door = std::dynamic_pointer_cast<rpg::door>(mSelection);
+		door->name = mTb_door_name->getText();
+		door->scene_path = mTb_door_scene->getText();
+		door->destination = mTb_door_destination->getText();
+		door->offset.x = util::to_numeral<float>(mTb_door_offsetx->getText());
+		door->offset.y = util::to_numeral<float>(mTb_door_offsety->getText());
+	}
 }
 
 bool collisionbox_editor::tile_selection(engine::fvector pCursor)
@@ -744,34 +804,61 @@ bool collisionbox_editor::tile_selection(engine::fvector pCursor)
 	if (mSize_mode)
 		return false;
 
-	bool new_selection = false;
-
-	for (size_t i = 0; i < mWalls.size(); i++)
+	auto hits = mContainer.collision(pCursor);
+	if (hits.empty())
 	{
-		if (mWalls[i].is_intersect(pCursor))
-		{
-			mSelection = i;
-			new_selection = true;
-			break;
-		}
+		mSelection = nullptr;
+		return false;
 	}
 
-	return new_selection;
+	mSelection = hits.back(); // Top hit
+	return true;
 }
 
 void collisionbox_editor::update_labels()
 {
 	assert(mLb_tilesize != nullptr);
 
-	if (!mWalls.size())
+	if (!mSelection)
 		return;
 
-	std::string size_text = std::to_string(mWalls[mSelection].get_size().x);
+	const auto rect = mSelection->get_region();
+
+	// Update size
+	std::string size_text = std::to_string(rect.get_size().x);
 	size_text += ", ";
-	size_text += std::to_string(mWalls[mSelection].get_size().y);
+	size_text += std::to_string(rect.get_size().y);
 	mLb_tilesize->setText(size_text);
 
-	mTb_wallgroup->setText(mWalls[mSelection].group);
+	// Update current wall group tb
+	if (!mSelection->get_wall_group())
+		mTb_wallgroup->setText("");
+	else
+		mTb_wallgroup->setText(mSelection->get_wall_group()->get_name());
+
+	// Update current type
+	mCurrent_type = mSelection->get_type();
+	mCb_type->setSelectedItemByIndex(static_cast<size_t>(mCurrent_type));
+
+	update_door_settings_labels();
+}
+
+void collisionbox_editor::update_door_settings_labels()
+{
+	if (mSelection->get_type() != rpg::collision_box::type::door)
+	{
+		mLo_door->hide();
+		return;
+	}
+	
+	mLo_door->show();
+
+	auto door = std::dynamic_pointer_cast<rpg::door>(mSelection);
+	mTb_door_name->setText(door->name);
+	mTb_door_scene->setText(door->scene_path);
+	mTb_door_destination->setText(door->destination);
+	mTb_door_offsetx->setText(std::to_string(door->offset.x));
+	mTb_door_offsety->setText(std::to_string(door->offset.y));
 }
 
 // ##########

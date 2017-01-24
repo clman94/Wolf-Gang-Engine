@@ -561,7 +561,7 @@ bool scene::load_scene(std::string pName)
 
 	auto collision_boxes = mLoader.get_collisionboxes();
 	if (collision_boxes)
-		mCollision_system.load_collision_boxes(collision_boxes, mLoader);
+		mCollision_system.load_collision_boxes(collision_boxes);
 
 	mWorld_node.set_boundary_enable(mLoader.has_boundary());
 	mWorld_node.set_boundary(mLoader.get_boundary());
@@ -799,20 +799,23 @@ void scene::update_focus()
 
 void scene::update_collision_interaction(controls & pControls)
 {
-	auto player_position = mPlayer.get_position();
+	collision_box_container& container = mCollision_system.get_container();
+
+	auto player_position = mPlayer.get_position() / 32;
 
 	{
-		auto trigger = mCollision_system.trigger_collision(player_position);
-		if (trigger)
-			trigger->call_function();
+		auto triggers = container.collision(collision_box::type::trigger, player_position);
+		for (auto& i : triggers)
+			std::dynamic_pointer_cast<trigger>(i)->call_function();
 	}
 
 	{
-		auto door = mCollision_system.door_collision(player_position);
-		if (door)
+		auto doors = container.collision(collision_box::type::door, player_position);
+		if (!doors.empty())
 		{
-			std::string destination = door->destination;
-			load_scene(door->scene_path);
+			auto first_hit = std::dynamic_pointer_cast<door>(doors.front());
+			std::string destination = first_hit->destination;
+			load_scene(first_hit->scene_path);
 			auto new_position = mCollision_system.get_door_entry(destination);
 			if (!new_position)
 				util::error("Destination door '" + destination + "' does not exist");
@@ -825,9 +828,9 @@ void scene::update_collision_interaction(controls & pControls)
 
 	if (pControls.is_triggered(controls::control::activate))
 	{
-		auto button = mCollision_system.button_collision(mPlayer.get_activation_point());
-		if (button)
-			button->call_function();
+		auto buttons = container.collision(collision_box::type::button, mPlayer.get_activation_point() / 32);
+		for (auto& i : buttons)
+			std::dynamic_pointer_cast<button>(i)->call_function();
 	}
 }
 
@@ -950,7 +953,7 @@ bool script_context::build_script(const std::string & pPath)
 	}
 	mScene_module = mBuilder.GetModule();
 
-	parse_script_defined_triggers();
+	parse_wall_group_functions();
 
 	util::info("Script compiled");
 	return true;
@@ -975,8 +978,7 @@ void script_context::clean()
 {
 	mTrigger_functions.clear();
 
-	mScript_defined_triggers.clear();
-	mScript_defined_buttons.clear();
+	mWall_group_functions.clear();
 
 	if (mScene_module)
 	{
@@ -999,19 +1001,15 @@ void script_context::start_all_with_tag(const std::string & pTag)
 	}
 }
 
-const std::vector<trigger>& script_context::get_script_defined_triggers() const
+const std::vector<script_context::wall_group_function>& script_context::get_wall_group_functions() const
 {
-	return mScript_defined_triggers;
+	return mWall_group_functions;
 }
 
-const std::vector<trigger>& script_context::get_script_defined_buttons() const
-{
-	return mScript_defined_buttons;
-}
 
-void script_context::parse_script_defined_triggers()
+void script_context::parse_wall_group_functions()
 {
-	util::info("Loading script defined triggers...");
+	util::info("Binding functions to wall groups...");
 	size_t func_count = mScene_module->GetFunctionCount();
 	for (size_t i = 0; i < func_count; i++)
 	{
@@ -1019,30 +1017,25 @@ void script_context::parse_script_defined_triggers()
 		const std::string metadata = parsers::remove_trailing_whitespace(mBuilder.GetMetadataStringForFunc(as_function));
 		const std::string type = get_metadata_type(metadata);
 
-		if (type == "trigger" ||
-			type == "button")
+		if (type == "group")
 		{
 			std::unique_ptr<script_function> function(new script_function);
 			function->set_script_system(*mScript);
 			function->set_function(as_function);
 
-			trigger nt;
-			nt.set_function(*function);
+			wall_group_function wgf;
+			wgf.function = function.get();
 
 			mTrigger_functions[as_function->GetDeclaration(true, true)].swap(function);
 
-			const std::string vectordata(metadata.begin() + type.length(), metadata.end());
-			nt.parse_function_metadata(metadata);
+			const std::string group(metadata.begin() + type.length() + 1, metadata.end());
+			wgf.group = group;
 
-			if (type == "trigger")
-				mScript_defined_triggers.push_back(nt);
-			if (type == "button")
-				mScript_defined_buttons.push_back(nt);
+			mWall_group_functions.push_back(wgf);
 		}
 	}
 
-	util::info("Loaded " + std::to_string(mScript_defined_triggers.size()) + " trigger(s)");
-	util::info("Loaded " + std::to_string(mScript_defined_buttons.size()) + " button(s)");
+	util::info(std::to_string(mWall_group_functions.size()) + " function(s) bound");
 }
 
 // #########
@@ -1661,39 +1654,21 @@ void background_music::script_music_set_second_volume(float pVolume)
 // collision_box
 // ##########
 
-collision_box::collision_box()
-	: mEnabled(true)
-{
-}
+collision_box::collision_box() {}
 
 collision_box::collision_box(engine::frect pRect)
 {
-	mEnabled = true;
 	mRegion = pRect;
 }
 
 bool collision_box::is_enabled() const
 {
-	return mEnabled;
+	if (!mWall_group.expired())
+		return std::shared_ptr<wall_group>(mWall_group)->is_enabled();
+	return true;
 }
 
-void collision_box::set_enable(bool pEnabled)
-{
-	mEnabled = pEnabled;
-}
-
-
-void collision_box::load_xml(tinyxml2::XMLElement * e)
-{
-	engine::frect rect;
-	rect.x = e->FloatAttribute("x");
-	rect.y = e->FloatAttribute("y");
-	rect.w = e->FloatAttribute("w");
-	rect.h = e->FloatAttribute("h");
-	mRegion = engine::scale(rect, defs::TILE_SIZE);
-}
-
-engine::frect collision_box::get_region() const
+const engine::frect& collision_box::get_region() const
 {
 	return mRegion;
 }
@@ -1703,29 +1678,31 @@ void collision_box::set_region(engine::frect pRegion)
 	mRegion = pRegion;
 }
 
-trigger::trigger()
+void collision_box::set_wall_group(std::shared_ptr<wall_group> pWall_group)
 {
-	mFunction = nullptr;
+	mWall_group = pWall_group;
 }
 
-void trigger::set_function(script_function& pFunction)
+std::shared_ptr<wall_group> rpg::collision_box::get_wall_group()
 {
-	mFunction = &pFunction;
+	if (mWall_group.expired())
+		return{};
+	return std::shared_ptr<wall_group>(mWall_group);
 }
 
-bool trigger::call_function()
+void collision_box::generate_xml_attibutes(tinyxml2::XMLElement * pEle) const
 {
-	if (mFunction)
-	{
-		return mFunction->call();
-	}
-	return false;
+	generate_basic_attributes(pEle);
 }
 
-void trigger::parse_function_metadata(const std::string & pMetadata)
+void collision_box::generate_basic_attributes(tinyxml2::XMLElement * pEle) const
 {
-	auto rect = parsers::parse_attribute_rect<float>(pMetadata);
-	mRegion = engine::scale(rect, 32);
+	pEle->SetAttribute("x", mRegion.x);
+	pEle->SetAttribute("y", mRegion.y);
+	pEle->SetAttribute("w", mRegion.w);
+	pEle->SetAttribute("h", mRegion.h);
+	if (!mWall_group.expired())
+		pEle->SetAttribute("group", std::shared_ptr<wall_group>(mWall_group)->get_name().c_str());
 }
 
 // ##########
@@ -1931,7 +1908,7 @@ pathfinding_system::pathfinding_system()
 	mPathfinder.set_collision_callback(
 		[&](engine::fvector& pos) ->bool
 	{
-		return mCollision_system->wall_collision({ (pos * 32), { 31, 31 } }).has_value();
+		return !mCollision_system->get_container().collision(collision_box::type::wall, { pos, { 0.9f, 0.9f } }).empty();
 	});
 }
 

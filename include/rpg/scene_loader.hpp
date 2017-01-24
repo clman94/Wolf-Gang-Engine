@@ -33,8 +33,6 @@ public:
 	std::string get_script_path() const;
 	std::string get_tilemap_texture() const;
 	std::string get_scene_path() const;
-	const std::vector<engine::frect>& get_walls() const;
-	const wall_groups_t& get_wall_groups() const;
 
 	util::optional_pointer<tinyxml2::XMLElement> get_collisionboxes();
 	util::optional_pointer<tinyxml2::XMLElement> get_tilemap();
@@ -45,11 +43,6 @@ private:
 
 	// Make xml file well formed
 	void fix();
-
-	void construct_wall_list();
-
-	wall_groups_t              mWall_groups;
-	std::vector<engine::frect> mWalls;
 	tinyxml2::XMLDocument      mXml_Document;
 	std::string                mScene_name;
 	engine::fs::path           mScript_path;

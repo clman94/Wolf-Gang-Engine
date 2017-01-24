@@ -83,17 +83,17 @@ void wolf_gang_engine::update_events()
 // Entry point of application
 int main(int argc, char* argv[])
 {
-	try
-	{
+	//try
+	//{
 		wolf_gang_engine wge;
 		wge.initualize();
 		wge.run();
-	}
-	catch (std::exception& e)
-	{
-		std::cout << "A main exception occurred: " << e.what() << "\n";
-		std::getchar();
-	}
+	//}
+	//catch (std::exception& e)
+	//{
+	//	std::cout << "A main exception occurred: " << e.what() << "\n";
+	//	std::getchar();
+	//}
 
 	return 0;
 }

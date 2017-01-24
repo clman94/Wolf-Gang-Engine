@@ -36,8 +36,6 @@ bool scene_loader::load(const std::string & pName)
 
 	// Get collision boxes
 	mEle_collisionboxes = ele_root->FirstChildElement("collisionboxes");
-	if (mEle_collisionboxes)
-		construct_wall_list();
 
 	// Get boundary
 	if (auto ele_boundary = ele_root->FirstChildElement("boundary"))
@@ -88,8 +86,6 @@ void scene_loader::clean()
 	mHas_boundary = false;
 	mEle_collisionboxes = nullptr;
 	mEle_map = nullptr;
-	mWalls.clear();
-	mWall_groups.clear();
 }
 
 void scene_loader::fix()
@@ -153,33 +149,6 @@ std::string scene_loader::get_tilemap_texture() const
 std::string scene_loader::get_scene_path() const
 {
 	return mScene_path.string();
-}
-
-const std::vector<engine::frect>& scene_loader::get_walls() const
-{
-	return mWalls;
-}
-
-const wall_groups_t & scene_loader::get_wall_groups() const
-{
-	return mWall_groups;
-}
-
-void scene_loader::construct_wall_list()
-{
-	assert(mEle_collisionboxes != 0);
-
-	auto ele_wall = mEle_collisionboxes->FirstChildElement("wall");
-	while (ele_wall)
-	{
-		mWalls.push_back(util::shortcuts::rect_float_att(ele_wall));
-		if (auto att_group = ele_wall->Attribute("group"))
-			mWall_groups[att_group].push_back(mWalls.size() - 1);
-		ele_wall = ele_wall->NextSiblingElement("wall");
-	}
-
-	util::info("Loaded " + std::to_string(mWalls.size()) + " wall(s)");
-	util::info("Loaded " + std::to_string(mWall_groups.size()) + " wall group(s)");
 }
 
 util::optional_pointer<tinyxml2::XMLElement> scene_loader::get_collisionboxes()

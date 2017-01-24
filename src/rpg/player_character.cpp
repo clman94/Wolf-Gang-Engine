@@ -94,11 +94,11 @@ void player_character::movement(controls& pControls, collision_system& pCollisio
 		engine::frect collision(collision_offset, collision_size);
 
 		collision.set_offset(collision_offset + engine::fvector(move.x, 0));
-		if (pCollision_system.wall_collision(collision))
+		if (!pCollision_system.get_container().collision(collision_box::type::wall, engine::scale(collision, 1.f / 32)).empty())
 			move.x = 0;
 
 		collision.set_offset(collision_offset + engine::fvector(0, move.y));
-		if (pCollision_system.wall_collision(collision))
+		if (!pCollision_system.get_container().collision(collision_box::type::wall, engine::scale(collision, 1.f / 32)).empty())
 			move.y = 0;
 	}
 

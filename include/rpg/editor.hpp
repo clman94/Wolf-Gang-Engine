@@ -35,10 +35,11 @@ public:
 
 	void clear();
 
-	tgui::Label::Ptr add_label(const std::string& text);
-	tgui::TextBox::Ptr add_textbox();
-	tgui::ComboBox::Ptr add_combobox();
-	tgui::Button::Ptr add_button(const std::string& text);
+	tgui::Label::Ptr add_label(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
+	tgui::TextBox::Ptr add_textbox(tgui::Container::Ptr pContainer = nullptr);
+	tgui::ComboBox::Ptr add_combobox(tgui::Container::Ptr pContainer = nullptr);
+	tgui::Button::Ptr add_button(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
+	std::shared_ptr<tgui_list_layout> add_sub_container(tgui::Container::Ptr pContainer = nullptr);
 
 	void update_camera_position(engine::fvector pPosition);
 
@@ -161,15 +162,24 @@ private:
 		std::string group;
 	};
 
-	size_t mSelection;
+	std::shared_ptr<rpg::collision_box> mSelection;
 
 	bool mSize_mode;
 	engine::fvector mDrag_from;
 
-	tgui::Label::Ptr   mLb_tilesize;
-	tgui::TextBox::Ptr mTb_wallgroup;
+	tgui::ComboBox::Ptr mCb_type;
+	tgui::Label::Ptr    mLb_tilesize;
+	tgui::TextBox::Ptr  mTb_wallgroup;
 
-	std::vector<wall> mWalls;
+	std::shared_ptr<tgui_list_layout> mLo_door;
+	tgui::TextBox::Ptr mTb_door_name;
+	tgui::TextBox::Ptr mTb_door_destination;
+	tgui::TextBox::Ptr mTb_door_scene;
+	tgui::TextBox::Ptr mTb_door_offsetx;
+	tgui::TextBox::Ptr mTb_door_offsety;
+
+	rpg::collision_box::type     mCurrent_type;
+	rpg::collision_box_container mContainer;
 
 	engine::rectangle_node mTile_preview;
 	engine::rectangle_node mWall_display;
@@ -182,8 +192,11 @@ private:
 
 	void setup_editor(editor_gui& pEditor_gui);
 
+	void apply_wall_settings();
+
 	bool tile_selection(engine::fvector pCursor);
 	void update_labels();
+	void update_door_settings_labels();
 };
 
 class editor_manager :

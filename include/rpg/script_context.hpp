@@ -16,9 +16,17 @@ namespace AS = AngelScript;
 
 namespace rpg{
 
+
+
 class script_context
 {
 public:
+	struct wall_group_function
+	{
+		std::string group;
+		script_function* function;
+	};
+
 	script_context();
 	~script_context();
 
@@ -28,22 +36,20 @@ public:
 	void clean();
 	void start_all_with_tag(const std::string& pTag);
 
-	const std::vector<trigger>& get_script_defined_triggers() const;
-	const std::vector<trigger>& get_script_defined_buttons() const;
+	const std::vector<wall_group_function>& get_wall_group_functions() const;
 
 private:
 
 	// Constructs all triggers/buttons defined by functions
 	// with metadata "trigger" and "button"
 	// TODO: Stablize parsing of metadata
-	void parse_script_defined_triggers();
+	void parse_wall_group_functions();
 
 	util::optional_pointer<script_system> mScript;
 	util::optional_pointer<AS::asIScriptModule> mScene_module;
 	AS::CScriptBuilder mBuilder;
 
-	std::vector<trigger> mScript_defined_triggers;
-	std::vector<trigger> mScript_defined_buttons;
+	std::vector<wall_group_function> mWall_group_functions;
 
 	std::map<std::string, std::unique_ptr<script_function>> mTrigger_functions;
 
