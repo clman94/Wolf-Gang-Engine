@@ -324,24 +324,32 @@ inline T to_numeral(const std::string& str, size_t *i = nullptr)
 template<>
 inline char to_numeral<char>(const std::string& str, size_t *i)
 {
+	if (str.empty())
+		return 0;
 	return static_cast<char>(std::stoi(str, i));
 }
 
 template<>
 inline int to_numeral<int>(const std::string& str, size_t *i)
 {
+	if (str.empty())
+		return 0;
 	return std::stoi(str, i);
 }
 
 template<>
 inline float to_numeral<float>(const std::string& str, size_t *i)
 {
+	if (str.empty())
+		return 0;
 	return std::stof(str, i);
 }
 
 template<>
 inline double to_numeral<double>(const std::string& str, size_t *i)
 {
+	if (str.empty())
+		return 0;
 	return std::stod(str, i);
 }
 
@@ -349,6 +357,8 @@ inline double to_numeral<double>(const std::string& str, size_t *i)
 template<typename T>
 T to_numeral(const std::string& str, std::string::iterator& iter)
 {
+	if (str.empty())
+		return 0;
 	size_t i = 0;
 	T val = to_numeral<T>(std::string(iter, str.end()), &i);
 	iter += i;
