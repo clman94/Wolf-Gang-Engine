@@ -137,8 +137,6 @@ public:
 	size_t get_count() const;
 
 private:
-
-
 	std::vector<std::shared_ptr<wall_group>> mWall_groups;
 	std::vector<std::shared_ptr<collision_box>> mBoxes;
 };

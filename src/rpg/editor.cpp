@@ -525,6 +525,8 @@ void tilemap_editor::apply_texture()
 	mTile_list = std::move(mTexture->compile_list());
 	assert(mTile_list.size() != 0);
 
+	mCurrent_tile = 0;
+
 	update_tile_combobox_list();
 	update_preview();
 	update_labels();
@@ -645,6 +647,7 @@ int collisionbox_editor::draw(engine::renderer& pR)
 			|| pR.is_key_down(engine::renderer::key_type::LShift)) // Left shift allows use to place wall on another wall
 		{
 			mSelection = mContainer.add_collision_box(mCurrent_type);
+			apply_wall_settings();
 			mSelection->set_region({ tile_position, { 1, 1 } });
 
 			mSize_mode = true;
