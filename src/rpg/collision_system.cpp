@@ -9,11 +9,11 @@ util::optional<engine::fvector> collision_system::get_door_entry(std::string pNa
 		if (i->get_type() == collision_box::type::door)
 		{
 			std::shared_ptr<const door> find = std::dynamic_pointer_cast<const door>(i);
-			if (find->name != pName)
+			if (find->get_name() != pName)
 				continue;
 
 			const engine::frect& region = find->get_region()*32;
-			return region.get_offset() + (region.get_size()*0.5f) + find->offset*32;
+			return region.get_offset() + (region.get_size()*0.5f) + find->get_offset()*32;
 		}
 	}
 	return{};

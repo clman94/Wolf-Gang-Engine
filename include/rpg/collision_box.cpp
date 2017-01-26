@@ -161,6 +161,44 @@ std::vector<std::shared_ptr<collision_box>> collision_box_container::collision(c
 	return hits;
 }
 
+std::shared_ptr<collision_box> rpg::collision_box_container::first_collision(engine::frect pRect)
+{
+	for (auto& i : mBoxes)
+		if (i->is_enabled()
+			&& i->get_region().is_intersect(pRect))
+			return i;
+	return{};
+}
+
+std::shared_ptr<collision_box> rpg::collision_box_container::first_collision(engine::fvector pPoint)
+{
+	for (auto& i : mBoxes)
+		if (i->is_enabled()
+			&& i->get_region().is_intersect(pPoint))
+			return i;
+	return{};
+}
+
+std::shared_ptr<collision_box> collision_box_container::first_collision(collision_box::type pType, engine::frect pRect)
+{
+	for (auto& i : mBoxes)
+		if (i->is_enabled()
+			&& i->get_type() == pType
+			&& i->get_region().is_intersect(pRect))
+			return i;
+	return{};
+}
+
+std::shared_ptr<collision_box> rpg::collision_box_container::first_collision(collision_box::type pType, engine::fvector pPoint)
+{
+	for (auto& i : mBoxes)
+		if (i->is_enabled()
+			&& i->get_type() == pType
+			&& i->get_region().is_intersect(pPoint))
+			return i;
+	return{};
+}
+
 bool collision_box_container::load_xml(tinyxml2::XMLElement * pEle)
 {
 	clean();
@@ -186,17 +224,17 @@ bool collision_box_container::load_xml(tinyxml2::XMLElement * pEle)
 		}
 		else if (type == "door")
 		{
-			auto door = add_door();
-			door->name        = util::safe_string(ele_box->Attribute("name"));
-			door->destination = util::safe_string(ele_box->Attribute("destination"));
-			door->scene_path  = util::safe_string(ele_box->Attribute("scene"));
-			door->offset.x    = ele_box->FloatAttribute("offsetx");
-			door->offset.y    = ele_box->FloatAttribute("offsety");
-			box = door;
+			auto ndoor = add_door();
+			ndoor->set_name        (util::safe_string(ele_box->Attribute("name")));
+			ndoor->set_destination (util::safe_string(ele_box->Attribute("destination")));
+			ndoor->set_scene       (util::safe_string(ele_box->Attribute("scene")));
+			ndoor->set_offset      ({ele_box->FloatAttribute("offsetx")
+				                   , ele_box->FloatAttribute("offsety") });
+			box = ndoor;
 		}
 		else
 		{
-			util::error("Unknown collision box type '" + type + "'");
+			util::warning("Unknown collision box type '" + type + "'");
 			ele_box = ele_box->NextSiblingElement();
 			continue;
 		}
@@ -275,12 +313,52 @@ size_t collision_box_container::get_count() const
 	return mBoxes.size();
 }
 
+void door::set_name(const std::string & pName)
+{
+	mName = pName;
+}
+
+const std::string & door::get_name() const
+{
+	return mName;
+}
+
+void door::set_destination(const std::string & pName)
+{
+	mDestination = pName;
+}
+
+const std::string & door::get_destination() const
+{
+	return mDestination;
+}
+
+void door::set_scene(const std::string & pName)
+{
+	mScene = pName;
+}
+
+const std::string & door::get_scene() const
+{
+	return mScene;
+}
+
+void door::set_offset(engine::fvector pOffset)
+{
+	mOffset = pOffset;
+}
+
+engine::fvector door::get_offset() const
+{
+	return mOffset;
+}
+
 void door::generate_xml_attibutes(tinyxml2::XMLElement * pEle) const
 {
 	generate_basic_attributes(pEle);
-	pEle->SetAttribute("name", name.c_str());
-	pEle->SetAttribute("destination", destination.c_str());
-	pEle->SetAttribute("scene", scene_path.c_str());
-	pEle->SetAttribute("offsetx", offset.x);
-	pEle->SetAttribute("offsety", offset.y);
+	pEle->SetAttribute("name", mName.c_str());
+	pEle->SetAttribute("destination", mDestination.c_str());
+	pEle->SetAttribute("scene", mScene.c_str());
+	pEle->SetAttribute("offsetx", mOffset.x);
+	pEle->SetAttribute("offsety", mOffset.y);
 }

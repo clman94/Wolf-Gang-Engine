@@ -164,7 +164,13 @@ private:
 
 	std::shared_ptr<rpg::collision_box> mSelection;
 
-	bool mSize_mode;
+	enum class state
+	{
+		normal,
+		size_mode
+	};
+
+	state mState;
 	engine::fvector mDrag_from;
 
 	tgui::ComboBox::Ptr mCb_type;

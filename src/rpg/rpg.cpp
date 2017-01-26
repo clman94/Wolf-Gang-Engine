@@ -803,29 +803,30 @@ void scene::update_collision_interaction(controls & pControls)
 
 	const auto collision_box = engine::scale(mPlayer.get_collision_box(), 1.f/32);
 
+	// Check collision with triggers
 	{
 		auto triggers = container.collision(collision_box::type::trigger, collision_box);
 		for (auto& i : triggers)
 			std::dynamic_pointer_cast<trigger>(i)->call_function();
 	}
 
+	// Check collision with doors
 	{
-		auto doors = container.collision(collision_box::type::door, collision_box);
-		if (!doors.empty())
+		const auto hit = container.first_collision(collision_box::type::door, collision_box);
+		if (hit)
 		{
-			auto first_hit = std::dynamic_pointer_cast<door>(doors.front());
-			std::string destination = first_hit->destination;
-			load_scene(first_hit->scene_path);
+			const auto hit_door = std::dynamic_pointer_cast<door>(hit);
+			const std::string destination = hit_door->get_destination();
+			load_scene(hit_door->get_scene());
 			auto new_position = mCollision_system.get_door_entry(destination);
 			if (!new_position)
 				util::error("Destination door '" + destination + "' does not exist");
 			else
-			{
 				mPlayer.set_position(*new_position);
-			}
 		}
 	}
 
+	// Check collision with buttons on when "activate" is triggered
 	if (pControls.is_triggered(controls::control::activate))
 	{
 		auto buttons = container.collision(collision_box::type::button, mPlayer.get_activation_point() / 32);
