@@ -801,16 +801,16 @@ void scene::update_collision_interaction(controls & pControls)
 {
 	collision_box_container& container = mCollision_system.get_container();
 
-	auto player_position = mPlayer.get_position() / 32;
+	const auto collision_box = engine::scale(mPlayer.get_collision_box(), 1.f/32);
 
 	{
-		auto triggers = container.collision(collision_box::type::trigger, player_position);
+		auto triggers = container.collision(collision_box::type::trigger, collision_box);
 		for (auto& i : triggers)
 			std::dynamic_pointer_cast<trigger>(i)->call_function();
 	}
 
 	{
-		auto doors = container.collision(collision_box::type::door, player_position);
+		auto doors = container.collision(collision_box::type::door, collision_box);
 		if (!doors.empty())
 		{
 			auto first_hit = std::dynamic_pointer_cast<door>(doors.front());

@@ -23,6 +23,7 @@ public:
 
 	// Get point in front of player
 	engine::fvector get_activation_point(float pDistance = 19);
+	engine::frect   get_collision_box() const;
 
 private:
 	bool mLocked;

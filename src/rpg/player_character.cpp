@@ -86,19 +86,16 @@ void player_character::movement(controls& pControls, collision_system& pCollisio
 		move.normalize();
 		move *= get_speed()*pDelta;
 
-		const engine::fvector collision_size(26, 16);
-		const engine::fvector collision_offset
-			= get_position()
-			- engine::fvector(collision_size.x / 2, collision_size.y);
+		const engine::frect collision_box = get_collision_box();
+		
+		engine::frect collision_box_modified = collision_box;
 
-		engine::frect collision(collision_offset, collision_size);
-
-		collision.set_offset(collision_offset + engine::fvector(move.x, 0));
-		if (!pCollision_system.get_container().collision(collision_box::type::wall, engine::scale(collision, 1.f / 32)).empty())
+		collision_box_modified.set_offset(collision_box.get_offset() + engine::fvector(move.x, 0));
+		if (!pCollision_system.get_container().collision(collision_box::type::wall, engine::scale(collision_box_modified, 1.f / 32)).empty())
 			move.x = 0;
 
-		collision.set_offset(collision_offset + engine::fvector(0, move.y));
-		if (!pCollision_system.get_container().collision(collision_box::type::wall, engine::scale(collision, 1.f / 32)).empty())
+		collision_box_modified.set_offset(collision_box.get_offset() + engine::fvector(0, move.y));
+		if (!pCollision_system.get_container().collision(collision_box::type::wall, engine::scale(collision_box_modified, 1.f / 32)).empty())
 			move.y = 0;
 	}
 
@@ -126,4 +123,13 @@ engine::fvector player_character::get_activation_point(float pDistance)
 	case direction::down:  return get_position() + engine::fvector(0, pDistance);
 	}
 	return{ 0, 0 };
+}
+
+engine::frect rpg::player_character::get_collision_box() const
+{
+	const engine::fvector collision_size(26, 16);
+	const engine::fvector collision_offset
+		= get_position()
+		- engine::fvector(collision_size.x / 2, collision_size.y);
+	return engine::frect(collision_offset, collision_size);
 }
