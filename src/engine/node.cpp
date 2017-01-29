@@ -87,6 +87,7 @@ node::get_children()
 int
 node::set_parent(node& obj)
 {
+	assert(&obj != this);
 	return obj.add_child(*this);
 }
 

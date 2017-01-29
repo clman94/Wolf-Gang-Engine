@@ -77,6 +77,7 @@ public:
 	{ return entity_type::text; }
 
 protected:
+	virtual void update_z();
 	engine::text_node mText;
 };
 
@@ -249,6 +250,8 @@ private:
 	void             script_set_texture(entity_reference& e, const std::string& name);
 	void             script_set_font(entity_reference& e, const std::string& pName);
 	bool             script_is_character(entity_reference& e);
+	void             script_set_z(entity_reference& e, float pZ);
+	float            script_get_z(entity_reference& e);
 
 	void             script_add_child(entity_reference& e1, entity_reference& e2);
 	void             script_set_parent(entity_reference& e1, entity_reference& e2);
@@ -442,6 +445,8 @@ private:
 	std::string mSounds_path;
 	std::string mMusic_path;
 	std::string mPlayer_texture;
+
+	std::string load_setting_path(tinyxml2::XMLElement* pRoot, const std::string& pName, const std::string& pDefault);
 };
 
 

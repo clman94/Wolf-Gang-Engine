@@ -31,6 +31,9 @@ public:
 	}
 
 private:
+	virtual void update_z();
+
+private:
 	engine::animation_node mSprite;
 };
 

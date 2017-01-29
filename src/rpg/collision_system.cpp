@@ -37,16 +37,17 @@ void collision_system::setup_script_defined_triggers(const script_context & pCon
 		auto group = mContainer.get_group(i.group);
 		if (!group)
 		{
-			util::error("Group '" + i.group + "' does not exist");
+			util::warning("Group '" + i.group + "' does not exist");
 			continue;
 		}
-		group->set_function(*i.function);
+		group->add_function(*i.function);
 	}
 }
 
 void collision_system::load_script_interface(script_system & pScript)
 {
-	pScript.add_function("void set_wall_group_enabled(const string&in, bool)", AS::asMETHOD(collision_system, script_set_wall_group_enabled), this);
+	pScript.add_function("void _set_wall_group_enabled(const string&in, bool)", AS::asMETHOD(collision_system, script_set_wall_group_enabled), this);
+	pScript.add_function("bool _get_wall_group_enabled(const string&in)", AS::asMETHOD(collision_system, script_get_wall_group_enabled), this);
 }
 
 collision_box_container& collision_system::get_container()
@@ -59,9 +60,21 @@ void collision_system::script_set_wall_group_enabled(const std::string& pName, b
 	auto group = mContainer.get_group(pName);
 	if (!group)
 	{
-		util::error("Enable to find wall group '" + pName + "'");
+		util::warning("Enable to find wall group '" + pName + "'");
 		return;
 	}
 
 	group->set_enabled(pEnabled);
+}
+
+bool collision_system::script_get_wall_group_enabled(const std::string & pName)
+{
+	auto group = mContainer.get_group(pName);
+	if (!group)
+	{
+		util::warning("Enable to find wall group '" + pName + "'");
+		return false;
+	}
+
+	return group->is_enabled();
 }

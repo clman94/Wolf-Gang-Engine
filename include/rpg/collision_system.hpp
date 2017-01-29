@@ -34,6 +34,7 @@ private:
 	collision_box_container mContainer;
 
 	void script_set_wall_group_enabled(const std::string& pName, bool pEnabled);
+	bool script_get_wall_group_enabled(const std::string& pName);
 };
 
 }

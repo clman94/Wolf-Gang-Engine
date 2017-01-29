@@ -13,9 +13,7 @@ class entity :
 	public util::tracked_owner
 {
 public:
-	entity() :
-		dynamic_depth(false)
-	{}
+	entity();
 	virtual ~entity() {}
 
 	enum class entity_type
@@ -37,14 +35,20 @@ public:
 	void set_name(const std::string& pName);
 	const std::string& get_name();
 
+	void set_z(float pZ);
+	float get_z() const;
+
 protected:
 	/// Updates the depth of the entity to its Y position.
 	/// Should be called if draw() is overridden by a subclass.
 	void update_depth();
 
+	virtual void update_z() {}
+
 private:
 	bool dynamic_depth;
 	std::string mName;
+	float mZ;
 };
 /// For referencing entities in scripts.
 typedef util::tracking_ptr<entity> entity_reference;

@@ -108,11 +108,11 @@ text_node::draw(renderer &pR)
 	if (!mFont)
 		return 1;
 
-	auto position = get_exact_position();
+	const auto position = get_exact_position();
 
 	// Remove annoying offset of text
-	engine::frect lbounds = mSfml_text.getLocalBounds();
-	engine::fvector loffset(0, lbounds.get_offset().y*mSfml_text.getScale().y);
+	const engine::frect lbounds = mSfml_text.getLocalBounds();
+	const engine::fvector loffset(0, lbounds.get_offset().y*mSfml_text.getScale().y);
 	mSfml_text.setPosition(position + mOffset - loffset);
 
 	/*engine::frect bounds = mSfml_text.getLocalBounds();

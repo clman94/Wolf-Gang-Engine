@@ -80,7 +80,7 @@ bool entity_manager::check_entity(entity_reference & e)
 
 	if (!e.is_valid())
 	{
-		util::error("(" + std::to_string(mScript_system->get_current_line()) + ") "
+		util::warning("(" + std::to_string(mScript_system->get_current_line()) + ") "
 			+ "Entity object invalid.");
 		return false;
 	}
@@ -349,13 +349,13 @@ void entity_manager::script_set_texture(entity_reference & e, const std::string 
 	auto se = dynamic_cast<sprite_entity*>(e.get());
 	if (!se)
 	{
-		util::error("Entity is not sprite-based");
+		util::warning("Entity is not sprite-based");
 		return;
 	}
 	auto texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, name);
 	if (!texture)
 	{
-		util::error("Could not load texture '" + name + "'");
+		util::warning("Could not load texture '" + name + "'");
 		return;
 	}
 	se->set_texture(texture);
@@ -368,14 +368,14 @@ void entity_manager::script_set_font(entity_reference & e, const std::string & p
 	auto te = dynamic_cast<text_entity*>(e.get());
 	if (!te)
 	{
-		util::error("Entity is not text-based");
+		util::warning("Entity is not text-based");
 		return;
 	}
 
 	auto font = mResource_manager->get_resource<engine::font>(engine::resource_type::font, pName);
 	if (!font)
 	{
-		util::error("Could not load font '" + pName + "'");
+		util::warning("Could not load font '" + pName + "'");
 		return;
 	}
 	
@@ -440,6 +440,18 @@ bool entity_manager::script_is_character(entity_reference& e)
 	return dynamic_cast<character_entity*>(e.get()) != nullptr;
 }
 
+void entity_manager::script_set_z(entity_reference & e, float pZ)
+{
+	if (!check_entity(e)) return;
+	e->set_z(pZ*32.f);
+}
+
+float entity_manager::script_get_z(entity_reference & e)
+{
+	if (!check_entity(e)) return 0;
+	return e->get_z()/32.f;
+}
+
 void entity_manager::load_script_interface(script_system& pScript)
 {
 	mScript_system = &pScript;
@@ -470,6 +482,8 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void set_texture(entity&in, const string&in)",             asMETHOD(entity_manager, script_set_texture), this);
 	pScript.add_function("void set_text(entity&in, const string &in)",               asMETHOD(entity_manager, script_set_text), this);
 	pScript.add_function("void set_font(entity&in, const string &in)",               asMETHOD(entity_manager, script_set_font), this);
+	pScript.add_function("void set_z(entity&in, float)",                             asMETHOD(entity_manager, script_set_z), this);
+	pScript.add_function("float get_z(entity&in)",                                   asMETHOD(entity_manager, script_get_z), this);
 
 	pScript.add_function("void add_child(entity&in, entity&in)",                     asMETHOD(entity_manager, script_add_child), this);
 	pScript.add_function("void set_parent(entity&in, entity&in)",                    asMETHOD(entity_manager, script_set_parent), this);
@@ -2040,7 +2054,7 @@ void dialog_text_entity::do_reveal()
 text_entity::text_entity()
 {
 	set_dynamic_depth(false);
-	add_child(mText);
+	mText.set_parent(*this);
 }
 
 void text_entity::set_font(std::shared_ptr<engine::font> pFont)
@@ -2072,6 +2086,11 @@ int text_entity::draw(engine::renderer & pR)
 	return 0;
 }
 
+void text_entity::update_z()
+{
+	mText.set_position(-engine::fvector(0, get_z()));
+}
+
 bool game_settings_loader::load(const std::string & pPath)
 {
 	using namespace tinyxml2;
@@ -2091,12 +2110,9 @@ bool game_settings_loader::load(const std::string & pPath)
 	}
 	mStart_scene = util::safe_string(ele_scene->Attribute("name"));
 
-	auto ele_textures = ele_root->FirstChildElement("textures");
-	if (ele_textures &&
-		ele_textures->Attribute("path"))
-		mTextures_path = ele_textures->Attribute("path");
-	else
-		mTextures_path = defs::DEFAULT_TEXTURES_PATH.string();
+	mTextures_path = load_setting_path(ele_root, "textures", defs::DEFAULT_TEXTURES_PATH.string());
+	mSounds_path   = load_setting_path(ele_root, "sounds"  , defs::DEFAULT_SOUND_PATH.string());
+	mMusic_path    = load_setting_path(ele_root, "music"   , defs::DEFAULT_MUSIC_PATH.string());
 
 	return true;
 }
@@ -2124,6 +2140,16 @@ const std::string & game_settings_loader::get_music_path() const
 const std::string & game_settings_loader::get_player_texture() const
 {
 	return mPlayer_texture;
+}
+
+std::string game_settings_loader::load_setting_path(tinyxml2::XMLElement* pRoot, const std::string & pName, const std::string& pDefault)
+{
+	auto ele = pRoot->FirstChildElement("textures");
+	if (ele &&
+		ele->Attribute("path"))
+		return util::safe_string(ele->Attribute("path"));
+	else
+		return pDefault;
 }
 
 scene_load_request::scene_load_request()

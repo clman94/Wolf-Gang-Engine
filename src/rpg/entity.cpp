@@ -5,6 +5,12 @@
 
 using namespace rpg;
 
+entity::entity()
+{
+	dynamic_depth = true;
+	mZ = 0;
+}
+
 void entity::set_dynamic_depth(bool pIs_dynamic)
 {
 	dynamic_depth = pIs_dynamic;
@@ -18,6 +24,17 @@ void entity::set_name(const std::string & pName)
 const std::string& entity::get_name()
 {
 	return mName;
+}
+
+void entity::set_z(float pZ)
+{
+	mZ = pZ;
+	update_z();
+}
+
+float entity::get_z() const
+{
+	return mZ;
 }
 
 void entity::update_depth()

@@ -5,21 +5,17 @@ using namespace rpg;
 wall_group::wall_group()
 {
 	mIs_enabled = true;
-	mFunction = nullptr;
 }
 
-void wall_group::set_function(script_function & pFunction)
+void wall_group::add_function(script_function & pFunction)
 {
-	mFunction = &pFunction;
+	mFunctions.push_back(&pFunction);
 }
 
-bool wall_group::call_function()
+void wall_group::call_function()
 {
-	if (mFunction)
-	{
-		return mFunction->call();
-	}
-	return false;
+	for (auto i : mFunctions)
+		i->call();
 }
 
 void wall_group::set_name(const std::string & pName)
@@ -44,9 +40,10 @@ bool wall_group::is_enabled()const
 
 bool trigger::call_function()
 {
-	if (!mWall_group.expired())
-		return std::shared_ptr<wall_group>(mWall_group)->call_function();
-	return false;
+	if (mWall_group.expired())
+		return false;
+	std::shared_ptr<wall_group>(mWall_group)->call_function();
+	return true;
 }
 
 

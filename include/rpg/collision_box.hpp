@@ -11,7 +11,6 @@
 #include <rpg/script_function.hpp>
 #include <rpg/flag_container.hpp>
 
-
 namespace rpg {
 
 class wall_group
@@ -19,8 +18,8 @@ class wall_group
 public:
 	wall_group();
 
-	void set_function(script_function& pFunction);
-	bool call_function();
+	void add_function(script_function& pFunction);
+	void call_function();
 
 	void set_name(const std::string& pName);
 	const std::string& get_name() const;
@@ -31,10 +30,9 @@ public:
 private:
 	std::string mName;
 	bool mIs_enabled;
-	script_function* mFunction;
+	std::vector<script_function*> mFunctions;
 };
 
-// A basic collision box
 class collision_box
 {
 public:
@@ -69,7 +67,6 @@ protected:
 	void generate_basic_attributes(tinyxml2::XMLElement* pEle) const;
 };
 
-// A collisionbox that is activated once the player has walked over it.
 class trigger : public collision_box
 {
 public:
@@ -132,7 +129,6 @@ public:
 	std::shared_ptr<trigger>       add_trigger();
 	std::shared_ptr<button>        add_button();
 	std::shared_ptr<door>          add_door();
-
 	std::shared_ptr<collision_box> add_collision_box(collision_box::type pType);
 
 	std::vector<std::shared_ptr<collision_box>> collision(engine::frect pRect);

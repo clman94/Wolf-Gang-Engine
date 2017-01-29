@@ -32,9 +32,15 @@ bool sprite_entity::is_playing() const
 	return mSprite.is_playing();
 }
 
+void sprite_entity::update_z()
+{
+	mSprite.set_position(-engine::fvector(0, get_z()));
+}
+
 sprite_entity::sprite_entity()
 {
 	set_dynamic_depth(true);
+	mSprite.set_parent(*this);
 	mSprite.set_anchor(engine::anchor::bottom);
 }
 
@@ -61,8 +67,6 @@ bool sprite_entity::set_animation(const std::string& pName, bool pSwap)
 int sprite_entity::draw(engine::renderer &pR)
 {
 	update_depth();
-
-	mSprite.set_exact_position(get_exact_position());
 	mSprite.draw(pR);
 	return 0;
 }
