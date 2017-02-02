@@ -67,21 +67,44 @@ public:
 	void movement(engine::renderer& pR);
 };
 
+class editor_boundary_visualization :
+	public engine::render_object
+{
+public:
+	editor_boundary_visualization();
+	void set_boundary(engine::frect pBoundary);
+
+	virtual int draw(engine::renderer &pR);
+private:
+	std::array<engine::rectangle_node, 4> mLines;
+	void setup_lines();
+};
+
 class editor :
 	public engine::render_object
 {
 public:
-	virtual bool open_scene(std::string pPath) = 0;
-
+	editor();
+	bool open_scene(std::string pPath);
 	void set_editor_gui(editor_gui& pEditor_gui);
-
 	void set_resource_manager(engine::resource_manager& pResource_manager);
 
 	virtual int save() = 0;
 
 protected:
+	virtual bool editor_open() = 0;
+
+	engine::rectangle_node mBlackout;
+
+	rpg::tilemap_manipulator    mTilemap_loader;
+	rpg::tilemap_display   mTilemap_display;
+
+	rpg::scene_loader mLoader;
+
 	editor_gui* mEditor_gui;
 	engine::resource_manager* mResource_manager;
+
+	editor_boundary_visualization mBoundary_visualization;
 
 	virtual void setup_editor(editor_gui& pEditor_gui){}
 };
@@ -91,11 +114,13 @@ class tilemap_editor :
 {
 public:
 	tilemap_editor();
-	bool open_scene(std::string pPath);
 	int draw(engine::renderer& pR);
 	int save();
 
 	void clean();
+
+protected:
+	virtual bool editor_open();
 	
 private:
 	size_t mCurrent_tile;
@@ -107,18 +132,10 @@ private:
 
 	std::vector<std::string> mTile_list;
 
-	rpg::scene_loader mLoader;
-
 	std::shared_ptr<engine::texture> mTexture;
 	std::string mCurrent_texture_name;
 
 	engine::sprite_node mPreview;
-
-	engine::rectangle_node mBlackout;
-	engine::rectangle_node mLines[4];
-
-	rpg::tilemap_loader    mTilemap_loader;
-	rpg::tilemap_display   mTilemap_display;
 
 	tgui::ComboBox::Ptr mCb_tile;
 	tgui::Label::Ptr mLb_layer;
@@ -126,14 +143,12 @@ private:
 	tgui::TextBox::Ptr mTb_texture;
 
 	void setup_editor(editor_gui& pEditor_gui);
-	void setup_lines();
 
 	void update_tile_combobox_list();
 	void update_tile_combobox_selected();
 	void update_labels();
 	void update_preview();
 	void update_highlight();
-	void update_lines(engine::frect pBoundary);
 
 	void tick_highlight(engine::renderer& pR);
 
@@ -147,9 +162,11 @@ class collisionbox_editor :
 public:
 	collisionbox_editor();
 
-	bool open_scene(std::string pPath);
 	int draw(engine::renderer& pR);
 	int save();
+
+protected:
+	virtual bool editor_open();
 
 private:
 
@@ -190,11 +207,6 @@ private:
 	engine::rectangle_node mTile_preview;
 	engine::rectangle_node mWall_display;
 	engine::rectangle_node mResize_display;
-
-	engine::rectangle_node mBlackout;
-	rpg::tilemap_loader    mTilemap_loader;
-	rpg::tilemap_display   mTilemap_display;
-	rpg::scene_loader      mLoader;
 
 	void setup_editor(editor_gui& pEditor_gui);
 

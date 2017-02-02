@@ -2,6 +2,11 @@
 
 using namespace rpg;
 
+
+// ##########
+// wall_group
+// ##########
+
 wall_group::wall_group()
 {
 	mIs_enabled = true;
@@ -46,6 +51,9 @@ bool trigger::call_function()
 	return true;
 }
 
+// ##########
+// collision_box_container
+// ##########
 
 void collision_box_container::clean()
 {
@@ -251,7 +259,7 @@ bool collision_box_container::load_xml(tinyxml2::XMLElement * pEle)
 
 		ele_box = ele_box->NextSiblingElement();
 	}
-	return false;
+	return true;
 }
 
 bool collision_box_container::generate_xml(tinyxml2::XMLDocument & pDocument, tinyxml2::XMLElement * pEle) const
@@ -309,6 +317,66 @@ size_t collision_box_container::get_count() const
 {
 	return mBoxes.size();
 }
+
+
+// ##########
+// collision_box
+// ##########
+
+collision_box::collision_box() {}
+
+collision_box::collision_box(engine::frect pRect)
+{
+	mRegion = pRect;
+}
+
+bool collision_box::is_enabled() const
+{
+	if (!mWall_group.expired())
+		return std::shared_ptr<wall_group>(mWall_group)->is_enabled();
+	return true;
+}
+
+const engine::frect& collision_box::get_region() const
+{
+	return mRegion;
+}
+
+void collision_box::set_region(engine::frect pRegion)
+{
+	mRegion = pRegion;
+}
+
+void collision_box::set_wall_group(std::shared_ptr<wall_group> pWall_group)
+{
+	mWall_group = pWall_group;
+}
+
+std::shared_ptr<wall_group> rpg::collision_box::get_wall_group()
+{
+	if (mWall_group.expired())
+		return{};
+	return std::shared_ptr<wall_group>(mWall_group);
+}
+
+void collision_box::generate_xml_attibutes(tinyxml2::XMLElement * pEle) const
+{
+	generate_basic_attributes(pEle);
+}
+
+void collision_box::generate_basic_attributes(tinyxml2::XMLElement * pEle) const
+{
+	pEle->SetAttribute("x", mRegion.x);
+	pEle->SetAttribute("y", mRegion.y);
+	pEle->SetAttribute("w", mRegion.w);
+	pEle->SetAttribute("h", mRegion.h);
+	if (!mWall_group.expired())
+		pEle->SetAttribute("group", std::shared_ptr<wall_group>(mWall_group)->get_name().c_str());
+}
+
+// ##########
+// door
+// ##########
 
 void door::set_name(const std::string & pName)
 {

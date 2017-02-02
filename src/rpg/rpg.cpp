@@ -623,6 +623,22 @@ bool scene::load_scene(std::string pName)
 	return true;
 }
 
+bool scene::load_scene(std::string pName, std::string pDoor)
+{
+	if (!load_scene(pName))
+		return false;
+
+	auto position = mCollision_system.get_door_entry(pDoor);
+	if (!position)
+	{
+		util::warning("Enable to find door '" + pDoor + "'");
+		return false;
+	}
+	mPlayer.set_position(*position);
+
+	return true;
+}
+
 bool scene::reload_scene()
 {
 	if (mCurrent_scene_name.empty())
@@ -830,13 +846,7 @@ void scene::update_collision_interaction(controls & pControls)
 		if (hit)
 		{
 			const auto hit_door = std::dynamic_pointer_cast<door>(hit);
-			const std::string destination = hit_door->get_destination();
-			load_scene(hit_door->get_scene());
-			auto new_position = mCollision_system.get_door_entry(destination);
-			if (!new_position)
-				util::error("Destination door '" + destination + "' does not exist");
-			else
-				mPlayer.set_position(*new_position);
+			load_scene(hit_door->get_scene(), hit_door->get_destination());
 		}
 	}
 
@@ -1139,6 +1149,20 @@ void game::script_load_scene(const std::string & pName)
 	mScene_load_request.request_load(pName);
 }
 
+void game::script_load_scene_to_door(const std::string & pName, const std::string & pDoor)
+{
+	util::info("Requesting scene load '" + pName + "'");
+	mScene_load_request.request_load(pName);
+	mScene_load_request.set_player_position(pDoor);
+}
+
+void game::script_load_scene_to_position(const std::string & pName, engine::fvector pPosition)
+{
+	util::info("Requesting scene load '" + pName + "'");
+	mScene_load_request.request_load(pName);
+	mScene_load_request.set_player_position(pPosition * 32.f);
+}
+
 void
 game::load_script_interface()
 {
@@ -1152,6 +1176,8 @@ game::load_script_interface()
 	mScript.add_function("void set_slot(uint)", asMETHOD(game, set_slot), this);
 	mScript.add_function("bool is_slot_used(uint)", asMETHOD(game, is_slot_used), this);
 	mScript.add_function("void load_scene(const string &in)", asMETHOD(game, script_load_scene), this);
+	mScript.add_function("void load_scene(const string &in, const string &in)", asMETHOD(game, script_load_scene_to_door), this);
+	mScript.add_function("void load_scene(const string &in, vec)", asMETHOD(game, script_load_scene_to_position), this);
 
 	mFlags.load_script_interface(mScript);
 	mScene.load_script_interface(mScript);
@@ -1257,6 +1283,7 @@ game::tick()
 		mEditor_manager.open_collisionbox_editor(mScene.get_path());
 		mScene.clean(true);
 	}
+	// Dont go any further if editor is open
 	if (mEditor_manager.is_editor_open())
 		return;
 
@@ -1266,7 +1293,22 @@ game::tick()
 
 	if (mScene_load_request.is_requested())
 	{
-		mScene.load_scene(mScene_load_request.get_scene_name());
+		switch (mScene_load_request.get_player_position_type())
+		{
+		case scene_load_request::to_position::door:
+			mScene.load_scene(mScene_load_request.get_scene_name()
+				, mScene_load_request.get_player_door());
+			break;
+
+		case scene_load_request::to_position::position:
+			mScene.load_scene(mScene_load_request.get_scene_name());
+			mScene.get_player().set_position(mScene_load_request.get_player_position());
+			break;
+
+		case scene_load_request::to_position::none:
+			mScene.load_scene(mScene_load_request.get_scene_name());
+			break;
+		}
 		mScene_load_request.complete();
 	}
 
@@ -1665,60 +1707,6 @@ void background_music::script_music_set_second_volume(float pVolume)
 	mOverlap_stream->set_volume(pVolume);
 }
 
-// ##########
-// collision_box
-// ##########
-
-collision_box::collision_box() {}
-
-collision_box::collision_box(engine::frect pRect)
-{
-	mRegion = pRect;
-}
-
-bool collision_box::is_enabled() const
-{
-	if (!mWall_group.expired())
-		return std::shared_ptr<wall_group>(mWall_group)->is_enabled();
-	return true;
-}
-
-const engine::frect& collision_box::get_region() const
-{
-	return mRegion;
-}
-
-void collision_box::set_region(engine::frect pRegion)
-{
-	mRegion = pRegion;
-}
-
-void collision_box::set_wall_group(std::shared_ptr<wall_group> pWall_group)
-{
-	mWall_group = pWall_group;
-}
-
-std::shared_ptr<wall_group> rpg::collision_box::get_wall_group()
-{
-	if (mWall_group.expired())
-		return{};
-	return std::shared_ptr<wall_group>(mWall_group);
-}
-
-void collision_box::generate_xml_attibutes(tinyxml2::XMLElement * pEle) const
-{
-	generate_basic_attributes(pEle);
-}
-
-void collision_box::generate_basic_attributes(tinyxml2::XMLElement * pEle) const
-{
-	pEle->SetAttribute("x", mRegion.x);
-	pEle->SetAttribute("y", mRegion.y);
-	pEle->SetAttribute("w", mRegion.w);
-	pEle->SetAttribute("h", mRegion.h);
-	if (!mWall_group.expired())
-		pEle->SetAttribute("group", std::shared_ptr<wall_group>(mWall_group)->get_name().c_str());
-}
 
 // ##########
 // save_system
@@ -2155,6 +2143,7 @@ std::string game_settings_loader::load_setting_path(tinyxml2::XMLElement* pRoot,
 scene_load_request::scene_load_request()
 {
 	mRequested = false;
+	mTo_position = to_position::none;
 }
 
 void scene_load_request::request_load(const std::string & pScene_name)
@@ -2176,5 +2165,33 @@ const std::string & rpg::scene_load_request::get_scene_name() const
 void scene_load_request::complete()
 {
 	mRequested = false;
+	mTo_position = to_position::none;
 	mScene_name.clear();
+}
+
+void scene_load_request::set_player_position(engine::fvector pPosition)
+{
+	mTo_position = to_position::position;
+	mPosition = pPosition;
+}
+
+void scene_load_request::set_player_position(const std::string & pDoor)
+{
+	mTo_position = to_position::door;
+	mDoor = pDoor;
+}
+
+scene_load_request::to_position scene_load_request::get_player_position_type() const
+{
+	return mTo_position;
+}
+
+const std::string & rpg::scene_load_request::get_player_door() const
+{
+	return mDoor;
+}
+
+engine::fvector rpg::scene_load_request::get_player_position() const
+{
+	return mPosition;
 }

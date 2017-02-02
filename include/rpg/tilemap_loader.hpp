@@ -11,10 +11,11 @@
 
 namespace rpg {
 
-class tilemap_loader
+
+class tilemap_manipulator
 {
 public:
-	tilemap_loader();
+	tilemap_manipulator();
 
 	void condense_tiles();
 
@@ -38,7 +39,6 @@ public:
 	void clean();
 
 private:
-
 
 	struct tile
 	{

@@ -163,6 +163,48 @@ int editor_gui::draw(engine::renderer& pR)
 	return 0;
 }
 
+editors::editor::editor()
+{
+	mBoundary_visualization.set_parent(*this);
+
+	mTilemap_display.set_parent(*this);
+	mTilemap_display.set_depth(-1001);
+
+	mBlackout.set_color({ 0, 0, 0, 255 });
+	mBlackout.set_size({ 1000, 1000 });
+	mBlackout.set_depth(-1000);
+}
+
+bool editor::open_scene(std::string pPath)
+{
+	mTilemap_loader.clean();
+	mTilemap_display.clean();
+
+	if (!mLoader.load(pPath))
+	{
+		util::error("Unable to open scene '" + pPath + "'");
+		return false;
+	}
+
+	auto texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, mLoader.get_tilemap_texture());
+	if (!texture)
+	{
+		util::warning("Invalid tilemap texture in scene");
+	}
+	else
+	{
+		mTilemap_display.set_texture(texture);
+		mTilemap_display.set_color({ 100, 100, 255, 150 });
+
+		mTilemap_loader.load_tilemap_xml(mLoader.get_tilemap());
+		mTilemap_loader.update_display(mTilemap_display);
+	}
+
+	mBoundary_visualization.set_boundary(mLoader.get_boundary());
+
+	return editor_open();
+}
+
 void editor::set_editor_gui(editor_gui & pEditor_gui)
 {
 	pEditor_gui.clear();
@@ -175,6 +217,8 @@ void editor::set_resource_manager(engine::resource_manager& pResource_manager)
 	mResource_manager = &pResource_manager;
 }
 
+
+
 // ##########
 // tilemap_editor
 // ##########
@@ -183,14 +227,7 @@ tilemap_editor::tilemap_editor()
 {
 	set_depth(-1000);
 
-	mTilemap_display.set_parent(*this);
-	mTilemap_display.set_depth(-1001);
 
-	mBlackout.set_color({ 0, 0, 0, 255 });
-	mBlackout.set_size({ 1000, 1000 });
-	mBlackout.set_depth(-1000);
-
-	setup_lines();
 
 	mPreview.set_color({ 255, 255, 255, 150 });
 	mPreview.set_parent(*this);
@@ -202,33 +239,16 @@ tilemap_editor::tilemap_editor()
 	mIs_highlight = false;
 }
 
-bool tilemap_editor::open_scene(std::string pPath)
+bool tilemap_editor::editor_open()
 {
 	clean();
 
-	if (!mLoader.load(pPath))
-	{
-		util::error("Could not load scene '" + pPath + "'");
-		return false;
-	}
-	
-
 	// Get tilemap texture
 	// The user should be allowed to add a texture when there isn't any.
-	mTexture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, mLoader.get_tilemap_texture());
-	if (!mTexture)
-	{
-		util::warning("Invalid tilemap texture '" + mLoader.get_tilemap_texture() + "'");
-		util::info("Please specify texture");
-	}
-	else
+	mTexture = mTilemap_display.get_texture();
+	if (mTexture)
 	{
 		mCurrent_texture_name = mLoader.get_tilemap_texture();
-
-		mTilemap_display.set_texture(mTexture);
-
-		mTilemap_loader.load_tilemap_xml(mLoader.get_tilemap());
-		mTilemap_loader.update_display(mTilemap_display);
 
 		mTile_list = std::move(mTexture->compile_list());
 
@@ -240,8 +260,6 @@ bool tilemap_editor::open_scene(std::string pPath)
 	update_tile_combobox_list();
 	update_preview();
 	update_labels();
-
-	update_lines(mLoader.get_boundary());
 
 	return true;
 }
@@ -270,7 +288,7 @@ int tilemap_editor::draw(engine::renderer & pR)
 	const bool control_add_tile    = pR.is_mouse_down(engine::renderer::mouse_button::mouse_left);
 	const bool control_remove_tile = pR.is_mouse_down(engine::renderer::mouse_button::mouse_right);
 	if (!control_add_tile && !control_remove_tile)
-		last_tile = { -10000000, -1000000 }; // Temporary
+		last_tile = { -10000000, -1000000 }; // Temporary until refactor
 
 	// Add tile
 	if (control_add_tile
@@ -370,8 +388,7 @@ int tilemap_editor::draw(engine::renderer & pR)
 	mBlackout.draw(pR);
 	mTilemap_display.draw(pR);
 
-	for (int i = 0; i < 4; i++)
-		mLines[i].draw(pR);
+	mBoundary_visualization.draw(pR);
 
 	mPreview.set_position(tile_position * 32);
 	mPreview.draw(pR);
@@ -408,22 +425,6 @@ void tilemap_editor::setup_editor(editor_gui & pEditor_gui)
 	bt_apply_texture->connect("pressed", [&]() { apply_texture(); });
 }
 
-void tilemap_editor::setup_lines()
-{
-	const engine::color line_color(255, 255, 255, 150);
-
-	mLines[0].set_color(line_color);
-	mLines[0].set_parent(*this);
-
-	mLines[1].set_color(line_color);
-	mLines[1].set_parent(*this);
-
-	mLines[2].set_color(line_color);
-	mLines[2].set_parent(*this);
-
-	mLines[3].set_color(line_color);
-	mLines[3].set_parent(*this);
-}
 
 void editors::tilemap_editor::update_tile_combobox_list()
 {
@@ -450,6 +451,8 @@ void tilemap_editor::update_labels()
 
 void tilemap_editor::update_preview()
 {
+	if (!mTexture)
+		return;
 	mPreview.set_texture_rect(mTexture->get_entry(mTile_list[mCurrent_tile])->get_root_rect());
 
 	mPreview.set_rotation(90.f * mRotation);
@@ -481,18 +484,7 @@ void tilemap_editor::update_highlight()
 		mTilemap_display.remove_highlight();
 }
 
-void tilemap_editor::update_lines(engine::frect pBoundary)
-{
-	mLines[0].set_size({ pBoundary.w, 1 });
-	mLines[1].set_size({ 1, pBoundary.h });
-	mLines[2].set_size({ pBoundary.w, 1 });
-	mLines[3].set_size({ 1, pBoundary.h });
 
-	mLines[0].set_position(pBoundary.get_offset());
-	mLines[1].set_position(pBoundary.get_offset());
-	mLines[2].set_position(pBoundary.get_corner() - mLines[2].get_size());
-	mLines[3].set_position(pBoundary.get_corner() - mLines[3].get_size());
-}
 
 void tilemap_editor::tick_highlight(engine::renderer& pR)
 {
@@ -562,7 +554,6 @@ int tilemap_editor::save()
 
 void tilemap_editor::clean()
 {
-	mLoader.clean();
 	mTile_list.clear();
 	mLayer = 0;
 	mRotation = 0;
@@ -571,8 +562,6 @@ void tilemap_editor::clean()
 	mTexture = nullptr;
 	mCurrent_texture_name.clear();
 	mPreview.set_texture(nullptr);
-	mTilemap_loader.clean();
-	mTilemap_display.clean();
 }
 
 // ##########
@@ -604,31 +593,9 @@ collisionbox_editor::collisionbox_editor()
 	mState = state::normal;
 }
 
-bool collisionbox_editor::open_scene(std::string pPath)
+bool collisionbox_editor::editor_open()
 {
-	if (!mLoader.load(pPath))
-	{
-		util::error("Unable to open scene '" + pPath + "'");
-		return false;
-	}
-
-	auto texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, mLoader.get_tilemap_texture());
-	if (!texture)
-	{
-		util::warning("Invalid tilemap texture in scene");
-	}
-	else
-	{
-		mTilemap_display.set_texture(texture);
-		mTilemap_display.set_color({ 100, 100, 255, 150 });
-
-		mTilemap_loader.load_tilemap_xml(mLoader.get_tilemap());
-		mTilemap_loader.update_display(mTilemap_display);
-	}
-
-	mContainer.load_xml(mLoader.get_collisionboxes());
-
-	return true;
+	return mContainer.load_xml(mLoader.get_collisionboxes());
 }
 
 int collisionbox_editor::draw(engine::renderer& pR)
@@ -954,6 +921,7 @@ void editor_manager::close_editor()
 
 void editor_manager::update_camera_position(engine::fvector pPosition)
 {
+	mRoot_node.set_exact_position(pPosition);
 	if (!mCurrent_editor)
 		mEditor_gui.update_camera_position(pPosition);
 }
@@ -981,3 +949,46 @@ void editor_manager::refresh_renderer(engine::renderer & pR)
 	mEditor_gui.set_depth(-1001);
 	mEditor_gui.initualize();
 }
+
+editor_boundary_visualization::editor_boundary_visualization()
+{
+	setup_lines();
+}
+
+void editor_boundary_visualization::setup_lines()
+{
+	const engine::color line_color(255, 255, 255, 150);
+
+	mLines[0].set_color(line_color);
+	mLines[0].set_parent(*this);
+
+	mLines[1].set_color(line_color);
+	mLines[1].set_parent(*this);
+
+	mLines[2].set_color(line_color);
+	mLines[2].set_parent(*this);
+
+	mLines[3].set_color(line_color);
+	mLines[3].set_parent(*this);
+}
+
+void editor_boundary_visualization::set_boundary(engine::frect pBoundary)
+{
+	mLines[0].set_size({ pBoundary.w, 1 });
+	mLines[1].set_size({ 1, pBoundary.h });
+	mLines[2].set_size({ pBoundary.w, 1 });
+	mLines[3].set_size({ 1, pBoundary.h });
+
+	mLines[0].set_position(pBoundary.get_offset());
+	mLines[1].set_position(pBoundary.get_offset());
+	mLines[2].set_position(pBoundary.get_corner() - mLines[2].get_size());
+	mLines[3].set_position(pBoundary.get_corner() - mLines[3].get_size());
+}
+
+int editor_boundary_visualization::draw(engine::renderer & pR)
+{
+	for (auto& i : mLines)
+		i.draw(pR);
+	return 0;
+}
+

@@ -7,6 +7,11 @@ void tilemap_display::set_texture(std::shared_ptr<engine::texture> pTexture)
 	mTexture = pTexture;
 }
 
+std::shared_ptr<engine::texture> tilemap_display::get_texture()
+{
+	return mTexture;
+}
+
 void tilemap_display::set_tile(engine::fvector pPosition, const std::string & pAtlas, int pLayer, int pRotation)
 {
 	assert(mTexture != nullptr);

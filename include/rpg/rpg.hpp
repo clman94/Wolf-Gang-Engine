@@ -343,6 +343,9 @@ public:
 	// pPath is not a reference so cleanup doesn't cause issues.
 	bool load_scene(std::string pName);
 
+
+	bool load_scene(std::string pName, std::string pDoor);
+
 	// Reload the currently loaded scene.
 	bool reload_scene();
 
@@ -371,7 +374,7 @@ private:
 	script_system*            mScript;
 
 	tilemap_display       mTilemap_display;
-	tilemap_loader        mTilemap_loader;
+	tilemap_manipulator        mTilemap_loader;
 	collision_system      mCollision_system;
 	entity_manager        mEntity_manager;
 	background_music      mBackground_music;
@@ -453,15 +456,36 @@ private:
 class scene_load_request
 {
 public:
+
+	enum class to_position
+	{
+		none,
+		door,
+		position
+	};
+
 	scene_load_request();
 
 	void request_load(const std::string& pScene_name);
 	bool is_requested() const;
 	const std::string& get_scene_name() const;
 	void complete();
+
+	void set_player_position(engine::fvector pPosition);
+	void set_player_position(const std::string& pDoor);
+	
+	to_position get_player_position_type() const;
+
+	const std::string& get_player_door() const;
+	engine::fvector get_player_position() const;
+
 private:
 	bool mRequested;
 	std::string mScene_name;
+
+	to_position mTo_position;
+	std::string mDoor;
+	engine::fvector mPosition;
 };
 
 // The main game
@@ -502,6 +526,8 @@ private:
 	size_t get_slot();
 
 	void script_load_scene(const std::string& pName);
+	void script_load_scene_to_door(const std::string& pName, const std::string& pDoor);
+	void script_load_scene_to_position(const std::string& pName, engine::fvector pPosition);
 	void load_script_interface();
 
 	float get_delta();

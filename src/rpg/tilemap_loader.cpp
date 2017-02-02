@@ -4,7 +4,7 @@
 using namespace rpg;
 
 void
-tilemap_loader::tile::load_xml(tinyxml2::XMLElement * e, size_t _layer)
+tilemap_manipulator::tile::load_xml(tinyxml2::XMLElement * e, size_t _layer)
 {
 	assert(e != nullptr);
 
@@ -22,7 +22,7 @@ tilemap_loader::tile::load_xml(tinyxml2::XMLElement * e, size_t _layer)
 }
 
 bool
-tilemap_loader::tile::is_adjacent_above(tile & a)
+tilemap_manipulator::tile::is_adjacent_above(tile & a)
 {
 	return (
 		atlas == a.atlas
@@ -34,7 +34,7 @@ tilemap_loader::tile::is_adjacent_above(tile & a)
 }
 
 bool
-tilemap_loader::tile::is_adjacent_right(tile & a)
+tilemap_manipulator::tile::is_adjacent_right(tile & a)
 {
 	return (
 		atlas == a.atlas
@@ -45,8 +45,8 @@ tilemap_loader::tile::is_adjacent_right(tile & a)
 		);
 }
 
-tilemap_loader::tile*
-tilemap_loader::find_tile(engine::fvector pos, int layer)
+tilemap_manipulator::tile*
+tilemap_manipulator::find_tile(engine::fvector pos, int layer)
 {
 	for (auto &i : mMap[layer])
 	{
@@ -58,7 +58,7 @@ tilemap_loader::find_tile(engine::fvector pos, int layer)
 
 // Uses brute force to merge adjacent tiles (still a little wonky)
 void
-tilemap_loader::condense_layer(layer &pMap)
+tilemap_manipulator::condense_layer(layer &pMap)
 {
 	if (pMap.size() < 2)
 		return;
@@ -102,7 +102,7 @@ tilemap_loader::condense_layer(layer &pMap)
 }
 
 void
-tilemap_loader::condense_tiles()
+tilemap_manipulator::condense_tiles()
 {
 	if (!mMap.size()) return;
 	for (auto &i : mMap)
@@ -112,7 +112,7 @@ tilemap_loader::condense_tiles()
 }
 
 int
-tilemap_loader::load_layer(tinyxml2::XMLElement * pEle, int pLayer)
+tilemap_manipulator::load_layer(tinyxml2::XMLElement * pEle, int pLayer)
 {
 	auto i = pEle->FirstChildElement();
 	while (i)
@@ -125,13 +125,13 @@ tilemap_loader::load_layer(tinyxml2::XMLElement * pEle, int pLayer)
 	return 0;
 }
 
-tilemap_loader::tilemap_loader()
+tilemap_manipulator::tilemap_manipulator()
 {
 	mTile_size = defs::TILE_SIZE;
 }
 
 int
-tilemap_loader::load_tilemap_xml(tinyxml2::XMLElement *pRoot)
+tilemap_manipulator::load_tilemap_xml(tinyxml2::XMLElement *pRoot)
 {
 	clean();
 
@@ -150,8 +150,7 @@ tilemap_loader::load_tilemap_xml(tinyxml2::XMLElement *pRoot)
 	return 0;
 }
 
-int
-tilemap_loader::load_tilemap_xml(std::string pPath)
+int tilemap_manipulator::load_tilemap_xml(std::string pPath)
 {
 	using namespace tinyxml2;
 	XMLDocument doc;
@@ -165,8 +164,7 @@ tilemap_loader::load_tilemap_xml(std::string pPath)
 	return 0;
 }
 
-tilemap_loader::tile*
-tilemap_loader::find_tile_at(engine::fvector pPosition, int pLayer)
+tilemap_manipulator::tile* tilemap_manipulator::find_tile_at(engine::fvector pPosition, int pLayer)
 {
 	for (auto &i : mMap[pLayer])
 	{
@@ -179,7 +177,7 @@ tilemap_loader::find_tile_at(engine::fvector pPosition, int pLayer)
 	return nullptr;
 }
 
-void tilemap_loader::explode_tile(tile* pTile, int pLayer)
+void tilemap_manipulator::explode_tile(tile* pTile, int pLayer)
 {
 	auto atlas = pTile->atlas;
 	auto fill = pTile->fill;
@@ -191,8 +189,7 @@ void tilemap_loader::explode_tile(tile* pTile, int pLayer)
 			set_tile(position + engine::fvector(x, y), pLayer, atlas, rotation);
 }
 
-void
-tilemap_loader::explode_tile(engine::fvector pPosition, int pLayer)
+void tilemap_manipulator::explode_tile(engine::fvector pPosition, int pLayer)
 {
 	auto t = find_tile_at(pPosition, pLayer);
 	if (!t || t->fill == engine::fvector(1, 1))
@@ -200,15 +197,14 @@ tilemap_loader::explode_tile(engine::fvector pPosition, int pLayer)
 	explode_tile(t, pLayer);
 }
 
-void tilemap_loader::explode_all()
+void tilemap_manipulator::explode_all()
 {
 	for (auto &l : mMap)
 		for (auto& i : l.second)
 			explode_tile(&i.second, l.first);
 }
 
-void
-tilemap_loader::generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode * root)
+void tilemap_manipulator::generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode * root)
 {
 	std::map<int, tinyxml2::XMLElement *> layers;
 
@@ -236,8 +232,7 @@ tilemap_loader::generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode * root)
 	}
 }
 
-void
-tilemap_loader::generate(const std::string& pPath)
+void tilemap_manipulator::generate(const std::string& pPath)
 {
 	using namespace tinyxml2;
 	XMLDocument doc;
@@ -246,8 +241,7 @@ tilemap_loader::generate(const std::string& pPath)
 	doc.SaveFile(pPath.c_str());
 }
 
-int
-tilemap_loader::set_tile(engine::fvector pPosition, engine::fvector pFill, int pLayer, const std::string& pAtlas, int pRotation)
+int tilemap_manipulator::set_tile(engine::fvector pPosition, engine::fvector pFill, int pLayer, const std::string& pAtlas, int pRotation)
 {
 	engine::fvector off(0, 0);
 	for (off.y = 0; off.y <= pFill.y; off.y++)
@@ -260,8 +254,7 @@ tilemap_loader::set_tile(engine::fvector pPosition, engine::fvector pFill, int p
 	return 0;
 }
 
-int
-tilemap_loader::set_tile(engine::fvector pPosition, int pLayer, const std::string& pAtlas, int pRotation)
+int tilemap_manipulator::set_tile(engine::fvector pPosition, int pLayer, const std::string& pAtlas, int pRotation)
 {
 	auto &nt = mMap[pLayer][pPosition];
 	nt.position = pPosition;
@@ -271,7 +264,7 @@ tilemap_loader::set_tile(engine::fvector pPosition, int pLayer, const std::strin
 	return 0;
 }
 
-void tilemap_loader::remove_tile(engine::fvector pPosition, int pLayer)
+void tilemap_manipulator::remove_tile(engine::fvector pPosition, int pLayer)
 {
 	for (auto i = mMap[pLayer].begin(); i != mMap[pLayer].end(); i++)
 	{
@@ -283,7 +276,7 @@ void tilemap_loader::remove_tile(engine::fvector pPosition, int pLayer)
 	}
 }
 
-std::string tilemap_loader::find_tile_name(engine::fvector pPosition, int pLayer)
+std::string tilemap_manipulator::find_tile_name(engine::fvector pPosition, int pLayer)
 {
 	auto f = find_tile_at(pPosition, pLayer);
 	if (!f)
@@ -291,8 +284,7 @@ std::string tilemap_loader::find_tile_name(engine::fvector pPosition, int pLayer
 	return f->atlas;
 }
 
-void
-tilemap_loader::update_display(tilemap_display& tmA)
+void tilemap_manipulator::update_display(tilemap_display& tmA)
 {
 	tmA.clean();
 	for (auto &l : mMap) // Current layer
@@ -314,7 +306,7 @@ tilemap_loader::update_display(tilemap_display& tmA)
 	}
 }
 
-void tilemap_loader::clean()
+void tilemap_manipulator::clean()
 {
 	mMap.clear();
 }
