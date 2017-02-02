@@ -31,8 +31,8 @@ struct vector
 	template<typename T1>
 	vector(const vector<T1>& v)
 	{
-		x = (T)v.x;
-		y = (T)v.y;
+		x = static_cast<T>(v.x);
+		y = static_cast<T>(v.y);
 	}
 
 	T distance() const

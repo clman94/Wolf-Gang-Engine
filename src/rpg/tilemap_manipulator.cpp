@@ -1,35 +1,37 @@
-#include <rpg/tilemap_loader.hpp>
+#include <rpg/tilemap_manipulator.hpp>
 #include <rpg/rpg_config.hpp>
 
 using namespace rpg;
 
 void
-tilemap_manipulator::tile::load_xml(tinyxml2::XMLElement * e, size_t _layer)
+tilemap_manipulator::tile::load_xml(tinyxml2::XMLElement * pEle)
 {
-	assert(e != nullptr);
+	assert(pEle != nullptr);
 
-	atlas = util::safe_string(e->Name());
+	mAtlas = util::safe_string(pEle->Name());
 
-	position.x = e->FloatAttribute("x");
-	position.y = e->FloatAttribute("y");
+	mPosition.x = pEle->FloatAttribute("x");
+	mPosition.y = pEle->FloatAttribute("y");
 
-	fill.x = static_cast<float>(e->IntAttribute("w"));
-	fill.y = static_cast<float>(e->IntAttribute("h"));
-	fill.x = fill.x <= 0 ? 1 : fill.x; // Default 1
-	fill.y = fill.y <= 0 ? 1 : fill.y;
+	mFill.x = pEle->UnsignedAttribute("w");
+	mFill.y = pEle->UnsignedAttribute("h");
 
-	rotation = e->IntAttribute("r") % 4;
+	// Default fill to 1 for 1x1 tile
+	mFill.x = (mFill.x == 0 ? 1 : mFill.x);
+	mFill.y = (mFill.y == 0 ? 1 : mFill.y);
+
+	mRotation = pEle->UnsignedAttribute("r") % 4;
 }
 
 bool
 tilemap_manipulator::tile::is_adjacent_above(tile & a)
 {
 	return (
-		atlas == a.atlas
-		&& position.x == a.position.x
-		&& position.y == a.position.y + a.fill.y
-		&& fill.x == a.fill.x
-		&& rotation == a.rotation
+		mAtlas == a.mAtlas
+		&& mPosition.x == a.mPosition.x
+		&& mPosition.y == a.mPosition.y + a.mFill.y
+		&& mFill.x == a.mFill.x
+		&& mRotation == a.mRotation
 		);
 }
 
@@ -37,12 +39,17 @@ bool
 tilemap_manipulator::tile::is_adjacent_right(tile & a)
 {
 	return (
-		atlas == a.atlas
-		&& position.y == a.position.y
-		&& position.x + fill.x == a.position.x
-		&& fill.y == a.fill.y
-		&& rotation == a.rotation
+		mAtlas == a.mAtlas
+		&& mPosition.y == a.mPosition.y
+		&& mPosition.x + static_cast<float>(mFill.x) == a.mPosition.x
+		&& mFill.y == a.mFill.y
+		&& mRotation == a.mRotation
 		);
+}
+
+bool tilemap_manipulator::tile::operator<(const tile & pTile)
+{
+	return mPosition < pTile.mPosition;
 }
 
 tilemap_manipulator::tile*
@@ -50,7 +57,7 @@ tilemap_manipulator::find_tile(engine::fvector pos, int layer)
 {
 	for (auto &i : mMap[layer])
 	{
-		if (i.second.position == pos)
+		if (i.second.get_position() == pos)
 			return &i.second;
 	}
 	return nullptr;
@@ -60,6 +67,7 @@ tilemap_manipulator::find_tile(engine::fvector pos, int layer)
 void
 tilemap_manipulator::condense_layer(layer &pMap)
 {
+	// 2 or more tiles present are required
 	if (pMap.size() < 2)
 		return;
 
@@ -75,7 +83,9 @@ tilemap_manipulator::condense_layer(layer &pMap)
 		// Merge adjacent tile
 		if (new_tile.is_adjacent_right(current_tile))
 		{
-			new_tile.fill.x += current_tile.fill.x;
+			auto fill = new_tile.get_fill();
+			fill.x += current_tile.get_fill().x;
+			new_tile.set_fill(fill);
 		}
 		else // No more tiles to the right
 		{
@@ -84,20 +94,22 @@ tilemap_manipulator::condense_layer(layer &pMap)
 			{
 				if (new_tile.is_adjacent_above(j.second))
 				{
-					j.second.fill.y += new_tile.fill.y;
+					auto fill = j.second.get_fill();
+					fill.y += new_tile.get_fill().y;
+					j.second.set_fill(fill);
 					merged = true;
-					break;
+					break; //
 				}
 			}
 			if (!merged) // Do not add when it was merged to another tile
 			{
-				nmap[new_tile.position] = new_tile;
+				nmap[new_tile.get_position()] = new_tile;
 			}
 			merged = false;
 			new_tile = current_tile;
 		}
 	}
-	nmap[new_tile.position] = new_tile; // add last tile
+	nmap[new_tile.get_position()] = new_tile; // add last tile
 	pMap = std::move(nmap);
 }
 
@@ -118,8 +130,8 @@ tilemap_manipulator::load_layer(tinyxml2::XMLElement * pEle, int pLayer)
 	while (i)
 	{
 		tile ntile;
-		ntile.load_xml(i, pLayer);
-		mMap[pLayer][ntile.position] = ntile;
+		ntile.load_xml(i);
+		mMap[pLayer][ntile.get_position()] = ntile;
 		i = i->NextSiblingElement();
 	}
 	return 0;
@@ -169,7 +181,7 @@ tilemap_manipulator::tile* tilemap_manipulator::find_tile_at(engine::fvector pPo
 	for (auto &i : mMap[pLayer])
 	{
 		auto& tile = i.second;
-		if (engine::frect(tile.position, tile.fill).is_intersect(pPosition))
+		if (engine::frect(tile.get_position(), tile.get_fill()).is_intersect(pPosition))
 		{
 			return &tile;
 		}
@@ -179,11 +191,11 @@ tilemap_manipulator::tile* tilemap_manipulator::find_tile_at(engine::fvector pPo
 
 void tilemap_manipulator::explode_tile(tile* pTile, int pLayer)
 {
-	auto atlas = pTile->atlas;
-	auto fill = pTile->fill;
-	int rotation = pTile->rotation;
-	auto position = pTile->position;
-	pTile->fill = { 1, 1 };
+	auto atlas = pTile->get_atlas();
+	auto fill = pTile->get_fill();
+	auto rotation = pTile->get_rotation();
+	auto position = pTile->get_position();
+	pTile->set_fill({ 1, 1 });
 	for (float x = 0; x < fill.x; x += 1)
 		for (float y = 0; y < fill.y; y += 1)
 			set_tile(position + engine::fvector(x, y), pLayer, atlas, rotation);
@@ -192,7 +204,7 @@ void tilemap_manipulator::explode_tile(tile* pTile, int pLayer)
 void tilemap_manipulator::explode_tile(engine::fvector pPosition, int pLayer)
 {
 	auto t = find_tile_at(pPosition, pLayer);
-	if (!t || t->fill == engine::fvector(1, 1))
+	if (!t || t->get_fill() == tile::fill_t(1, 1))
 		return;
 	explode_tile(t, pLayer);
 }
@@ -221,12 +233,12 @@ void tilemap_manipulator::generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode
 		for (auto &i : l.second)
 		{
 			auto& tile = i.second;
-			auto ele = doc.NewElement(tile.atlas.c_str());
-			ele->SetAttribute("x", tile.position.x);
-			ele->SetAttribute("y", tile.position.y);
-			if (tile.fill.x > 1)    ele->SetAttribute("w", tile.fill.x);
-			if (tile.fill.y > 1)    ele->SetAttribute("h", tile.fill.y);
-			if (tile.rotation != 0) ele->SetAttribute("r", tile.rotation);
+			auto ele = doc.NewElement(tile.get_atlas().c_str());
+			ele->SetAttribute("x", tile.get_position().x);
+			ele->SetAttribute("y", tile.get_position().y);
+			if (tile.get_fill().x > 1)    ele->SetAttribute("w", tile.get_fill().x);
+			if (tile.get_fill().y > 1)    ele->SetAttribute("h", tile.get_fill().y);
+			if (tile.get_rotation() != 0) ele->SetAttribute("r", tile.get_rotation());
 			layers[l.first]->InsertEndChild(ele);
 		}
 	}
@@ -257,10 +269,10 @@ int tilemap_manipulator::set_tile(engine::fvector pPosition, engine::fvector pFi
 int tilemap_manipulator::set_tile(engine::fvector pPosition, int pLayer, const std::string& pAtlas, int pRotation)
 {
 	auto &nt = mMap[pLayer][pPosition];
-	nt.position = pPosition;
-	nt.fill = { 1, 1 };
-	nt.atlas = pAtlas;
-	nt.rotation = pRotation;
+	nt.set_position(pPosition);
+	nt.set_fill({ 1, 1 });
+	nt.set_atlas(pAtlas);
+	nt.set_rotation(pRotation);
 	return 0;
 }
 
@@ -268,7 +280,7 @@ void tilemap_manipulator::remove_tile(engine::fvector pPosition, int pLayer)
 {
 	for (auto i = mMap[pLayer].begin(); i != mMap[pLayer].end(); i++)
 	{
-		if (i->second.position == pPosition)
+		if (i->second.get_position() == pPosition)
 		{
 			mMap[pLayer].erase(i);
 			break;
@@ -281,7 +293,7 @@ std::string tilemap_manipulator::find_tile_name(engine::fvector pPosition, int p
 	auto f = find_tile_at(pPosition, pLayer);
 	if (!f)
 		return std::string();
-	return f->atlas;
+	return f->get_atlas();
 }
 
 void tilemap_manipulator::update_display(tilemap_display& tmA)
@@ -295,11 +307,11 @@ void tilemap_manipulator::update_display(tilemap_display& tmA)
 
 			// Fill an area with a tile (be it 1x1 or other larger sizes)
 			engine::fvector off(0, 0);
-			for (off.y = 0; off.y < tile.fill.y; off.y++)
+			for (off.y = 0; off.y < static_cast<float>(tile.get_fill().y); off.y++)
 			{
-				for (off.x = 0; off.x < tile.fill.x; off.x++)
+				for (off.x = 0; off.x < static_cast<float>(tile.get_fill().x); off.x++)
 				{
-					tmA.set_tile((tile.position + off)*mTile_size, tile.atlas, l.first, tile.rotation);
+					tmA.set_tile((tile.get_position() + off)*mTile_size, tile.get_atlas(), l.first, tile.get_rotation());
 				}
 			}
 		}
@@ -309,4 +321,44 @@ void tilemap_manipulator::update_display(tilemap_display& tmA)
 void tilemap_manipulator::clean()
 {
 	mMap.clear();
+}
+
+void tilemap_manipulator::tile::set_position(engine::fvector pPosition)
+{
+	mPosition = pPosition;
+}
+
+engine::fvector tilemap_manipulator::tile::get_position() const
+{
+	return mPosition;
+}
+
+void tilemap_manipulator::tile::set_fill(fill_t pFill)
+{
+	mFill = pFill;
+}
+
+tilemap_manipulator::tile::fill_t tilemap_manipulator::tile::get_fill() const
+{
+	return mFill;
+}
+
+void tilemap_manipulator::tile::set_rotation(rotation_t pRotation)
+{
+	mRotation = pRotation;
+}
+
+tilemap_manipulator::tile::rotation_t tilemap_manipulator::tile::get_rotation() const
+{
+	return mRotation;
+}
+
+void tilemap_manipulator::tile::set_atlas(const std::string & pAtlas)
+{
+	mAtlas = pAtlas;
+}
+
+const std::string& tilemap_manipulator::tile::get_atlas() const
+{
+	return mAtlas;
 }

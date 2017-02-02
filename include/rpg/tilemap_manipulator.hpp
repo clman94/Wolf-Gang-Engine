@@ -11,7 +11,6 @@
 
 namespace rpg {
 
-
 class tilemap_manipulator
 {
 public:
@@ -40,14 +39,35 @@ public:
 
 private:
 
-	struct tile
+	class tile
 	{
-		engine::fvector position, fill;
-		int rotation;
-		std::string atlas;
-		void load_xml(tinyxml2::XMLElement *e, size_t layer);
+	public:
+		typedef engine::vector<unsigned int> fill_t;
+		typedef unsigned int rotation_t;
+
+		void set_position(engine::fvector pPosition);
+		engine::fvector get_position() const;
+
+		void set_fill(fill_t pFill);
+		fill_t get_fill() const;
+
+		void set_rotation(rotation_t pRotation);
+		rotation_t get_rotation() const;
+
+		void set_atlas(const std::string& pAtlas);
+		const std::string& get_atlas() const;
+
+		void load_xml(tinyxml2::XMLElement* pEle);
 		bool is_adjacent_above(tile& a);
 		bool is_adjacent_right(tile& a);
+
+		bool operator<(const tile& pTile);
+
+	private:
+		engine::fvector mPosition;
+		fill_t mFill;
+		rotation_t mRotation;
+		std::string mAtlas;
 	};
 
 	typedef std::map<engine::fvector, tile> layer;

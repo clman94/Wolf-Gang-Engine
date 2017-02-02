@@ -12,7 +12,7 @@
 #include <engine/audio.hpp>
 
 #include <rpg/rpg_config.hpp>
-#include <rpg/tilemap_loader.hpp>
+#include <rpg/tilemap_manipulator.hpp>
 #include <rpg/editor.hpp>
 #include <rpg/scene_loader.hpp>
 #include <rpg/script_system.hpp>

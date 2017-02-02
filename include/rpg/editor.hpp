@@ -4,7 +4,7 @@
 #include <engine/renderer.hpp>
 #include <engine/rect.hpp>
 
-#include <rpg/tilemap_loader.hpp>
+#include <rpg/tilemap_manipulator.hpp>
 #include <rpg/scene_loader.hpp>
 #include <rpg/collision_box.hpp>
 
