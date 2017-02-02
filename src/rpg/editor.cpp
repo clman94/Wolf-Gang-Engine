@@ -803,6 +803,20 @@ bool collisionbox_editor::tile_selection(engine::fvector pCursor)
 		return false;
 	}
 
+	// Cycle through overlapping walls.
+	// Check if selection is selected again.
+	if (mSelection
+		&& mSelection->get_region().is_intersect(pCursor))
+	{
+		// Find the hit that is underneath the current selection
+		for (size_t i = 1; i < hits.size(); i++)
+			if (hits[i] == mSelection)
+			{
+				mSelection = hits[i - 1];
+				return true;
+			}
+	}
+
 	mSelection = hits.back(); // Top hit
 	return true;
 }
