@@ -31,7 +31,7 @@ class editor_gui :
 	public engine::render_object
 {
 public:
-	void initualize();
+	editor_gui();
 
 	void clear();
 
@@ -48,7 +48,6 @@ public:
 private:
 
 	float mUpdate_timer;
-	tgui::Label::Ptr mLb_mode;
 	tgui::Label::Ptr mLb_mouse;
 	tgui::Label::Ptr mLb_fps;
 	std::shared_ptr<tgui_list_layout> mLayout;
@@ -212,7 +211,7 @@ private:
 
 	void apply_wall_settings();
 
-	bool tile_selection(engine::fvector pCursor);
+	bool tile_selection(engine::fvector pCursor, bool pCycle = true);
 	void update_labels();
 	void update_door_settings_labels();
 };

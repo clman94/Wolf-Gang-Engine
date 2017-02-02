@@ -27,7 +27,7 @@ void tgui_list_layout::collapse_size()
 			+ getWidgets().back()->getSize().y);
 }
 
-void editor_gui::initualize()
+editor_gui::editor_gui()
 {
 	mLayout = std::make_shared<tgui_list_layout>();
 	mLayout->setBackgroundColor({ 0, 0, 0,  90});
@@ -35,17 +35,13 @@ void editor_gui::initualize()
 	mLayout->hide();
 	mTgui.add(mLayout);
 
-	mLb_mode = std::make_shared<tgui::Label>();
-	mLb_mode->setMaximumTextWidth(0);
-	mLb_mode->setTextColor({ 200, 200, 200, 255 });
-	mLb_mode->setText("Mode: Normal Play");
-	mLayout->add(mLb_mode);
-
-	mLb_fps = tgui::Label::copy(mLb_mode);
-	mLb_fps->setText("FPS: n/a");
+	mLb_fps = std::make_shared<tgui::Label>();
+	mLb_fps->setMaximumTextWidth(0);
+	mLb_fps->setTextColor({ 200, 200, 200, 255 });
+	mLb_fps->setText("FPS: N/A");
 	mLayout->add(mLb_fps);
 
-	mLb_mouse = tgui::Label::copy(mLb_mode);
+	mLb_mouse = tgui::Label::copy(mLb_fps);
 	mLb_mouse->setText("(n/a, n/a)\n(n/a, n/a)");
 	mLb_mouse->setTextSize(14);
 	mLayout->add(mLb_mouse);
@@ -63,7 +59,7 @@ void editor_gui::clear()
 
 tgui::Label::Ptr editor_gui::add_label(const std::string & pText, tgui::Container::Ptr pContainer)
 {
-	auto nlb = tgui::Label::copy(mLb_mode);
+	auto nlb = tgui::Label::copy(mLb_fps);
 	nlb->setText(pText);
 	nlb->setTextStyle(sf::Text::Bold);
 	if (pContainer)
@@ -168,11 +164,9 @@ editors::editor::editor()
 	mBoundary_visualization.set_parent(*this);
 
 	mTilemap_display.set_parent(*this);
-	mTilemap_display.set_depth(-1001);
 
 	mBlackout.set_color({ 0, 0, 0, 255 });
 	mBlackout.set_size({ 1000, 1000 });
-	mBlackout.set_depth(-1000);
 }
 
 bool editor::open_scene(std::string pPath)
@@ -226,8 +220,6 @@ void editor::set_resource_manager(engine::resource_manager& pResource_manager)
 tilemap_editor::tilemap_editor()
 {
 	set_depth(-1000);
-
-
 
 	mPreview.set_color({ 255, 255, 255, 150 });
 	mPreview.set_parent(*this);
@@ -573,10 +565,6 @@ collisionbox_editor::collisionbox_editor()
 	set_depth(-1000);
 
 	add_child(mTilemap_display);
-
-	mBlackout.set_color({ 0, 0, 0, 255 });
-	mBlackout.set_size({ 1000, 1000 });
-
 	mWall_display.set_color({ 100, 255, 100, 200 });
 	mWall_display.set_outline_color({ 255, 255, 255, 255 });
 	mWall_display.set_outline_thinkness(1);
@@ -616,7 +604,7 @@ int collisionbox_editor::draw(engine::renderer& pR)
 			{
 				mSelection = mContainer.add_collision_box(mCurrent_type);
 				apply_wall_settings();
-				mSelection->set_region({ tile_position,{ 1, 1 } });
+				mSelection->set_region({ tile_position, { 1, 1 } });
 
 				mState = state::size_mode;
 				mDrag_from = tile_position;
@@ -627,7 +615,8 @@ int collisionbox_editor::draw(engine::renderer& pR)
 		// Remove tile
 		if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_right))
 		{
-			if (tile_selection(exact_tile_position))
+			// No cycling when removing tile.
+			if (tile_selection(exact_tile_position, false))
 			{
 				mContainer.remove_box(mSelection);
 				mSelection = nullptr;
@@ -691,6 +680,8 @@ int collisionbox_editor::draw(engine::renderer& pR)
 
 	mTile_preview.set_position(tile_position* 32);
 	mTile_preview.draw(pR);
+
+	mBoundary_visualization.draw(pR);
 
 	return 0;
 }
@@ -771,7 +762,7 @@ void collisionbox_editor::setup_editor(editor_gui & pEditor_gui)
 	}
 }
 
-void editors::collisionbox_editor::apply_wall_settings()
+void collisionbox_editor::apply_wall_settings()
 {
 	if (!mSelection)
 		return;
@@ -794,9 +785,9 @@ void editors::collisionbox_editor::apply_wall_settings()
 	}
 }
 
-bool collisionbox_editor::tile_selection(engine::fvector pCursor)
+bool collisionbox_editor::tile_selection(engine::fvector pCursor, bool pCycle)
 {
-	auto hits = mContainer.collision(pCursor);
+	const auto hits = mContainer.collision(pCursor);
 	if (hits.empty())
 	{
 		mSelection = nullptr;
@@ -808,7 +799,14 @@ bool collisionbox_editor::tile_selection(engine::fvector pCursor)
 	if (mSelection
 		&& mSelection->get_region().is_intersect(pCursor))
 	{
-		// Find the hit that is underneath the current selection
+		// It will not select the tile underneath by it will retain the current
+		// selection if selected
+		if (!pCycle)
+			return true;
+
+		// Find the hit that is underneath the current selection.
+		// Start at 1 because it does require that there is one wall underneath
+		// and overall works well when looping through.
 		for (size_t i = 1; i < hits.size(); i++)
 			if (hits[i] == mSelection)
 			{
@@ -961,7 +959,6 @@ void editor_manager::refresh_renderer(engine::renderer & pR)
 {
 	mEditor_gui.set_renderer(pR);
 	mEditor_gui.set_depth(-1001);
-	mEditor_gui.initualize();
 }
 
 editor_boundary_visualization::editor_boundary_visualization()
