@@ -31,7 +31,7 @@ public:
 
 	void add_interval(frame_t pFrom, float pInterval);
 
-	float  get_interval(frame_t pAt = 0) const;
+	float get_interval(frame_t pAt = 0) const;
 
 	void set_frame_count(frame_t pCount);
 	frame_t get_frame_count() const;

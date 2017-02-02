@@ -188,6 +188,8 @@ struct vector
 	vector& normalize()
 	{
 		T d = distance();
+		if (d == 0)
+			return *this;
 		x /= d;
 		y /= d;
 		return *this;

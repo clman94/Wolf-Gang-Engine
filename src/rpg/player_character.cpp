@@ -129,7 +129,7 @@ engine::fvector player_character::get_activation_point(float pDistance)
 
 engine::frect player_character::get_collision_box() const
 {
-	const engine::fvector collision_size(26, 15);
+	const engine::fvector collision_size(get_size().x, get_size().y/2);
 	const engine::fvector collision_offset
 		= get_position()
 		- engine::fvector(collision_size.x / 2, collision_size.y);
