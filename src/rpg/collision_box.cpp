@@ -1,4 +1,4 @@
-#include "collision_box.hpp"
+#include <rpg/collision_box.hpp>
 
 using namespace rpg;
 
