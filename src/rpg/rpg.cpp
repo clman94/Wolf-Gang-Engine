@@ -276,7 +276,7 @@ void entity_manager::script_stop_animation(entity_reference& e)
 	se->stop_animation();
 }
 
-void entity_manager::script_set_animation(entity_reference& e, const std::string & name)
+void entity_manager::script_set_atlas(entity_reference& e, const std::string & name)
 {
 	if (!check_entity(e)) return;
 	auto se = dynamic_cast<sprite_entity*>(e.get());
@@ -468,7 +468,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void set_cycle(entity&in, const string &in)",              asMETHOD(entity_manager, script_set_cycle), this);
 	pScript.add_function("void start_animation(entity&in)",                          asMETHOD(entity_manager, script_start_animation), this);
 	pScript.add_function("void stop_animation(entity&in)",                           asMETHOD(entity_manager, script_stop_animation), this);
-	pScript.add_function("void set_animation(entity&in, const string &in)",          asMETHOD(entity_manager, script_set_animation), this);
+	pScript.add_function("void set_atlas(entity&in, const string &in)",              asMETHOD(entity_manager, script_set_atlas), this);
 	pScript.add_function("entity find_entity(const string &in)",                     asMETHOD(entity_manager, find_entity), this);
 	pScript.add_function("bool is_character(entity&in)",                             asMETHOD(entity_manager, script_is_character), this);
 	pScript.add_function("void remove_entity(entity&in)",                            asMETHOD(entity_manager, script_remove_entity), this);
@@ -534,7 +534,7 @@ scene::clean(bool pFull)
 	mScript->abort_all();
 
 	mTilemap_display.clean();
-	mTilemap_loader.clean();
+	mTilemap_manipulator.clean();
 	mCollision_system.clean();
 	mEntity_manager.clean();
 	mColored_overlay.clean();
@@ -606,8 +606,8 @@ bool scene::load_scene(std::string pName)
 	}
 	mTilemap_display.set_texture(tilemap_texture);
 
-	mTilemap_loader.load_tilemap_xml(mLoader.get_tilemap());
-	mTilemap_loader.update_display(mTilemap_display);
+	mTilemap_manipulator.load_tilemap_xml(mLoader.get_tilemap());
+	mTilemap_manipulator.update_display(mTilemap_display);
 
 	// Pre-execute so the scene script can setup things before the render.
 	mScript->tick();
@@ -681,9 +681,9 @@ void scene::load_script_interface(script_system& pScript)
 	pScript.add_function("void _set_player_locked(bool)", asMETHOD(player_character, set_locked), &mPlayer);
 	pScript.add_function("bool _get_player_locked()", asMETHOD(player_character, is_locked), &mPlayer);
 
-	pScript.add_function("void set_focus(vec)", asMETHOD(scene, script_set_focus), this);
-	pScript.add_function("vec get_focus()", asMETHOD(scene, script_get_focus), this);
-	pScript.add_function("void focus_player(bool)", asMETHOD(scene, focus_player), this);
+	pScript.add_function("void _set_focus(vec)", asMETHOD(scene, script_set_focus), this);
+	pScript.add_function("vec _get_focus()", asMETHOD(scene, script_get_focus), this);
+	pScript.add_function("void _focus_player(bool)", asMETHOD(scene, focus_player), this);
 
 	pScript.add_function("vec get_boundary_position()", asMETHOD(scene, script_get_boundary_position), this);
 	pScript.add_function("vec get_boundary_size()", asMETHOD(scene, script_get_boundary_size), this);
@@ -801,14 +801,14 @@ void scene::script_set_boundary_position(engine::fvector pPosition)
 void scene::script_set_tile(const std::string& pAtlas, engine::fvector pPosition
 	, int pLayer, int pRotation)
 {
-	mTilemap_loader.set_tile(pPosition, pLayer, pAtlas, pRotation);
-	mTilemap_loader.update_display(mTilemap_display);
+	mTilemap_manipulator.set_tile(pPosition, pLayer, pAtlas, pRotation);
+	mTilemap_manipulator.update_display(mTilemap_display);
 }
 
 void scene::script_remove_tile(engine::fvector pPosition, int pLayer)
 {
-	mTilemap_loader.remove_tile(pPosition, pLayer);
-	mTilemap_loader.update_display(mTilemap_display);
+	mTilemap_manipulator.remove_tile(pPosition, pLayer);
+	mTilemap_manipulator.update_display(mTilemap_display);
 }
 
 void scene::refresh_renderer(engine::renderer& pR)

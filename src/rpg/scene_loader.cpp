@@ -5,6 +5,20 @@
 
 using namespace rpg;
 
+std::vector<std::string> rpg::get_scene_list()
+{
+	std::vector<std::string> ret;
+
+	for (auto& i : engine::fs::recursive_directory_iterator(defs::DEFAULT_SCENES_PATH))
+	{
+		auto& path = i.path();
+		if (path.extension() == ".xml")
+			ret.push_back(path.stem().string());
+	}
+
+	return ret;
+}
+
 scene_loader::scene_loader()
 {
 	mEle_collisionboxes = nullptr;

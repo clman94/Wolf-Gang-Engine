@@ -20,12 +20,6 @@ void tgui_list_layout::updateWidgetPositions()
 	}
 }
 
-void tgui_list_layout::collapse_size()
-{
-	if (!getWidgets().empty())
-		setSize(getSize().x, getWidgets().back()->getPosition().y
-			+ getWidgets().back()->getSize().y);
-}
 
 editor_gui::editor_gui()
 {
@@ -171,7 +165,7 @@ editors::editor::editor()
 
 bool editor::open_scene(std::string pPath)
 {
-	mTilemap_loader.clean();
+	mTilemap_manipulator.clean();
 	mTilemap_display.clean();
 
 	if (!mLoader.load(pPath))
@@ -190,8 +184,8 @@ bool editor::open_scene(std::string pPath)
 		mTilemap_display.set_texture(texture);
 		mTilemap_display.set_color({ 100, 100, 255, 150 });
 
-		mTilemap_loader.load_tilemap_xml(mLoader.get_tilemap());
-		mTilemap_loader.update_display(mTilemap_display);
+		mTilemap_manipulator.load_tilemap_xml(mLoader.get_tilemap());
+		mTilemap_manipulator.update_display(mTilemap_display);
 	}
 
 	mBoundary_visualization.set_boundary(mLoader.get_boundary());
@@ -229,6 +223,8 @@ tilemap_editor::tilemap_editor()
 	mLayer = 0;
 
 	mIs_highlight = false;
+
+	mState = state::none;
 }
 
 bool tilemap_editor::editor_open()
@@ -264,117 +260,114 @@ int tilemap_editor::draw(engine::renderer & pR)
 
 	const engine::fvector mouse_position = pR.get_mouse_position(mTilemap_display.get_exact_position());
 
-	engine::fvector tile_position;
-	engine::fvector tile_position_exact;
-	if (mPreview.get_size() == engine::fvector(16, 16)) // Half-size tile
+	const bool half_tile = (mPreview.get_size() == engine::fvector(16, 16));
+
+	const engine::fvector tile_position_exact = mouse_position / 32;
+	const engine::fvector tile_position
+		= (half_tile
+			? engine::fvector(tile_position_exact * 2).floor() / 2
+			: engine::fvector(tile_position_exact).floor());
+
+	if (mState == state::none)
 	{
-		tile_position_exact = (mouse_position / 16);
-		tile_position = tile_position_exact.floor() / 2;
-	}
-	else
-	{
-		tile_position_exact = (mouse_position / 32);
-		tile_position = tile_position_exact.floor();
-	}
-
-	const bool control_add_tile    = pR.is_mouse_down(engine::renderer::mouse_button::mouse_left);
-	const bool control_remove_tile = pR.is_mouse_down(engine::renderer::mouse_button::mouse_right);
-	if (!control_add_tile && !control_remove_tile)
-		last_tile = { -10000000, -1000000 }; // Temporary until refactor
-
-	// Add tile
-	if (control_add_tile
-		&& last_tile != tile_position)
-	{
-		assert(mTile_list.size() != 0);
-		last_tile = tile_position;
-
-		mTilemap_loader.explode_tile(tile_position, mLayer);
-		mTilemap_loader.set_tile(tile_position, mLayer, mTile_list[mCurrent_tile], mRotation);
-		mTilemap_loader.update_display(mTilemap_display);
-		update_highlight();
-	}
-
-	// Remove tile
-	if (control_remove_tile
-		&& last_tile != tile_position)
-	{
-		assert(mTile_list.size() != 0);
-		last_tile = tile_position;
-
-		mTilemap_loader.explode_tile(tile_position, mLayer);
-		mTilemap_loader.remove_tile(tile_position, mLayer);
-		mTilemap_loader.update_display(mTilemap_display);
-		update_highlight();
-	}
-
-	// Copy tile
-	if (pR.is_mouse_down(engine::renderer::mouse_button::mouse_middle))
-	{
-		std::string atlas = mTilemap_loader.find_tile_name(tile_position_exact, mLayer);
-		if (!atlas.empty())
-			for (size_t i = 0; i < mTile_list.size(); i++) // Find tile in tile_list and set it as current tile
-				if (mTile_list[i] == atlas)
-				{
-					mCurrent_tile = i;
-					update_preview();
-					update_labels();
-					update_tile_combobox_selected();
-					break;
-				}
+		if (pR.is_mouse_down(engine::renderer::mouse_button::mouse_left)
+			&& pR.is_key_down(engine::renderer::key_type::LShift))
+		{
+			mState = state::drawing_region;
+			mLast_tile = tile_position;
+		}
+		else if (pR.is_mouse_down(engine::renderer::mouse_button::mouse_left))
+		{
+			mState = state::drawing;
+			draw_tile_at(tile_position); // Draw first tile
+			mLast_tile = tile_position;
+		}
+		else if (pR.is_mouse_down(engine::renderer::mouse_button::mouse_right))
+		{
+			mState = state::erasing;
+			erase_tile_at(tile_position); // Erase first tile
+			mLast_tile = tile_position;
+		}
+		else if (pR.is_mouse_down(engine::renderer::mouse_button::mouse_middle))
+		{
+			copy_tile_type_at(tile_position_exact); // Copy tile (no need for a specific state for this)
+		}
+		else if (pR.is_key_pressed(engine::renderer::key_type::Period))
+		{
+			next_tile();
+		}
+		else if (pR.is_key_pressed(engine::renderer::key_type::Comma))
+		{
+			previous_tile();
+		}
+		else if (pR.is_key_pressed(engine::renderer::key_type::Quote))
+		{
+			layer_up();
+		}
+		else if (pR.is_key_pressed(engine::renderer::key_type::Slash))
+		{
+			layer_down();
+		}
+		else if (pR.is_key_pressed(engine::renderer::key_type::SemiColon))
+		{
+			rotate_clockwise();
+		}
+		else if (pR.is_key_pressed(engine::renderer::key_type::L))
+		{
+			rotate_counter_clockwise();
+		}
 	}
 
-	// Next tile
-	if (pR.is_key_pressed(engine::renderer::key_type::Period)) 
+	switch (mState)
 	{
-		++mCurrent_tile %= mTile_list.size();
-		update_tile_combobox_selected();
-		update_preview();
-		update_labels();
+	case state::drawing:
+	{
+		if (!pR.is_mouse_down(engine::renderer::mouse_button::mouse_left))
+		{
+			mState = state::none;
+			break;
+		}
+
+		// Don't draw at the same place twice
+		if (mLast_tile == tile_position)
+			break;
+		mLast_tile = tile_position;
+
+		draw_tile_at(tile_position);
+
+		break;
+	}
+	case state::erasing:
+	{
+		if (!pR.is_mouse_down(engine::renderer::mouse_button::mouse_right))
+		{
+			mState = state::none;
+			break;
+		}
+
+		// Don't erase at the same place twice
+		if (mLast_tile == tile_position)
+			break;
+		mLast_tile = tile_position;
+
+		erase_tile_at(tile_position);
+
+		break;
+	}
+	case state::drawing_region:
+	{
+		// Apply the region only after releasing left mouse button
+		if (!pR.is_mouse_down(engine::renderer::mouse_button::mouse_left))
+		{
+			mState = state::none;
+
+			// TODO : Place tiles
+		}
+
+		break;
+	}
 	}
 
-	// Previous tile
-	if (pR.is_key_pressed(engine::renderer::key_type::Comma))
-	{
-		mCurrent_tile = mCurrent_tile == 0 ? (mTile_list.size() - 1) : (mCurrent_tile - 1);
-		update_tile_combobox_selected();
-		update_preview();
-		update_labels();
-	}
-
-	// Layer +1
-	if (pR.is_key_pressed(engine::renderer::key_type::Quote))
-	{
-		++mLayer;
-		update_labels();
-		update_highlight();
-	}
-
-	// Layer -1
-	if (pR.is_key_pressed(engine::renderer::key_type::Slash))
-	{
-		--mLayer;
-		update_labels();
-		update_highlight();
-	}
-
-	// Rotate Clockwise
-	if (pR.is_key_pressed(engine::renderer::key_type::SemiColon))
-	{
-		++mRotation %= 4;
-		update_preview();
-		update_labels();
-	}
-
-
-	// Rotate Counter-clockwise
-	if (pR.is_key_pressed(engine::renderer::key_type::L))
-	{
-		mRotation = mRotation == 0 ? 3 : (mRotation - 1);
-		update_preview();
-		update_labels();
-	}
-	
 	tick_highlight(pR);
 
 	mBlackout.draw(pR);
@@ -382,8 +375,15 @@ int tilemap_editor::draw(engine::renderer & pR)
 
 	mBoundary_visualization.draw(pR);
 
-	mPreview.set_position(tile_position * 32);
-	mPreview.draw(pR);
+	if (mState == state::drawing_region)
+	{
+		// TODO : Draw rectangle specifying region
+	}
+	else
+	{
+		mPreview.set_position(tile_position * 32);
+		mPreview.draw(pR);
+	}
 
 	return 0;
 }
@@ -417,8 +417,83 @@ void tilemap_editor::setup_editor(editor_gui & pEditor_gui)
 	bt_apply_texture->connect("pressed", [&]() { apply_texture(); });
 }
 
+void editors::tilemap_editor::copy_tile_type_at(engine::fvector pAt)
+{
+	const std::string atlas = mTilemap_manipulator.find_tile_name(pAt, mLayer);
+	if (!atlas.empty())
+		for (size_t i = 0; i < mTile_list.size(); i++) // Find tile in tile_list and set it as current tile
+			if (mTile_list[i] == atlas)
+			{
+				mCurrent_tile = i;
+				update_preview();
+				update_labels();
+				update_tile_combobox_selected();
+				break;
+			}
+}
 
-void editors::tilemap_editor::update_tile_combobox_list()
+void tilemap_editor::draw_tile_at(engine::fvector pAt)
+{
+	assert(mTile_list.size() != 0);
+	mTilemap_manipulator.explode_tile(pAt, mLayer);
+	mTilemap_manipulator.set_tile(pAt, mLayer, mTile_list[mCurrent_tile], mRotation);
+	mTilemap_manipulator.update_display(mTilemap_display);
+	update_highlight();
+}
+
+void tilemap_editor::erase_tile_at(engine::fvector pAt)
+{
+	mTilemap_manipulator.explode_tile(pAt, mLayer);
+	mTilemap_manipulator.remove_tile(pAt, mLayer);
+	mTilemap_manipulator.update_display(mTilemap_display);
+	update_highlight();
+}
+
+void tilemap_editor::next_tile()
+{
+	++mCurrent_tile %= mTile_list.size();
+	update_tile_combobox_selected();
+	update_preview();
+	update_labels();
+}
+
+void tilemap_editor::previous_tile()
+{
+	mCurrent_tile = mCurrent_tile == 0 ? (mTile_list.size() - 1) : (mCurrent_tile - 1);
+	update_tile_combobox_selected();
+	update_preview();
+	update_labels();
+}
+
+void tilemap_editor::layer_up()
+{
+	++mLayer;
+	update_labels();
+	update_highlight();
+}
+
+void tilemap_editor::layer_down()
+{
+	--mLayer;
+	update_labels();
+	update_highlight();
+}
+
+void tilemap_editor::rotate_clockwise()
+{
+	++mRotation %= 4;
+	update_preview();
+	update_labels();
+}
+
+void tilemap_editor::rotate_counter_clockwise()
+{
+	mRotation = mRotation == 0 ? 3 : (mRotation - 1);
+	update_preview();
+	update_labels();
+}
+
+void tilemap_editor::update_tile_combobox_list()
 {
 	assert(mCb_tile != nullptr);
 	mCb_tile->removeAllItems();
@@ -502,7 +577,7 @@ void tilemap_editor::apply_texture()
 	mTexture = new_texture;
 
 	mTilemap_display.set_texture(mTexture);
-	mTilemap_loader.update_display(mTilemap_display);
+	mTilemap_manipulator.update_display(mTilemap_display);
 	mTile_list = std::move(mTexture->compile_list());
 	assert(mTile_list.size() != 0);
 
@@ -535,8 +610,8 @@ int tilemap_editor::save()
 		doc.DeleteNode(ele_layer);
 		ele_layer = ele_map->FirstChildElement("layer");
 	}
-	mTilemap_loader.condense_tiles();
-	mTilemap_loader.generate(doc, ele_map);
+	mTilemap_manipulator.condense_tiles();
+	mTilemap_manipulator.generate(doc, ele_map);
 	doc.SaveFile(mLoader.get_scene_path().c_str());
 
 	util::info("Tilemap saved");

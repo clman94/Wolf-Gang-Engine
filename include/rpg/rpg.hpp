@@ -242,7 +242,7 @@ private:
 	void             script_set_depth_fixed(entity_reference& e, bool pFixed);
 	void             script_start_animation(entity_reference& e);
 	void             script_stop_animation(entity_reference& e);
-	void             script_set_animation(entity_reference& e, const std::string& name);
+	void             script_set_atlas(entity_reference& e, const std::string& name);
 	void             script_set_anchor(entity_reference& e, int pAnchor);
 	void             script_set_rotation(entity_reference& e, float pRotation);
 	void             script_set_color(entity_reference& e, int r, int g, int b, int a);
@@ -374,7 +374,7 @@ private:
 	script_system*            mScript;
 
 	tilemap_display       mTilemap_display;
-	tilemap_manipulator        mTilemap_loader;
+	tilemap_manipulator        mTilemap_manipulator;
 	collision_system      mCollision_system;
 	entity_manager        mEntity_manager;
 	background_music      mBackground_music;

@@ -12,16 +12,13 @@ std::shared_ptr<engine::texture> tilemap_display::get_texture()
 	return mTexture;
 }
 
-void tilemap_display::set_tile(engine::fvector pPosition, const std::string & pAtlas, int pLayer, int pRotation)
+bool tilemap_display::set_tile(engine::fvector pPosition, const std::string & pAtlas, int pLayer, int pRotation)
 {
 	assert(mTexture != nullptr);
 
 	auto entry = mTexture->get_entry(pAtlas);
 	if (!entry)
-	{
-		util::error("Tile not found '" + pAtlas + "'");
-		return;
-	}
+		return false;
 
 	auto animation = entry->get_animation();
 
@@ -30,6 +27,8 @@ void tilemap_display::set_tile(engine::fvector pPosition, const std::string & pA
 	ntile.set_animation(animation);
 	if (animation->get_frame_count() > 1)
 		mAnimated_tiles.push_back(&ntile);
+
+	return true;
 }
 
 int tilemap_display::draw(engine::renderer& pR)

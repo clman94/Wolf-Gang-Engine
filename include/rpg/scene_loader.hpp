@@ -16,6 +16,8 @@
 
 namespace rpg {
 
+std::vector<std::string> get_scene_list();
+
 typedef std::map<std::string, std::vector<size_t>> wall_groups_t;
 
 class scene_loader

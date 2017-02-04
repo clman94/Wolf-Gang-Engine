@@ -280,10 +280,11 @@ void tilemap_manipulator::remove_tile(engine::fvector pPosition, int pLayer)
 {
 	for (auto i = mMap[pLayer].begin(); i != mMap[pLayer].end(); i++)
 	{
-		if (i->second.get_position() == pPosition)
+		auto& tile = i->second;
+		if (tile.get_position() == pPosition)
 		{
 			mMap[pLayer].erase(i);
-			break;
+			return;
 		}
 	}
 }

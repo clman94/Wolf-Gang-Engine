@@ -20,10 +20,15 @@ namespace editors
 class tgui_list_layout :
 	public tgui::BoxLayout
 {
-public:
-	void collapse_size();
 private:
 	void updateWidgetPositions();
+};
+
+class scene_settings_gui
+{
+public:
+private:
+
 };
 
 
@@ -95,8 +100,8 @@ protected:
 
 	engine::rectangle_node mBlackout;
 
-	rpg::tilemap_manipulator    mTilemap_loader;
-	rpg::tilemap_display   mTilemap_display;
+	rpg::tilemap_manipulator mTilemap_manipulator;
+	rpg::tilemap_display     mTilemap_display;
 
 	rpg::scene_loader mLoader;
 
@@ -122,12 +127,23 @@ protected:
 	virtual bool editor_open();
 	
 private:
-	size_t mCurrent_tile;
+
+	enum class state
+	{
+		none,
+		drawing,
+		drawing_region,
+		erasing,
+	};
+
+	state mState;
+
+	size_t mCurrent_tile; // Index of mTile_list
 	int    mRotation;
 	int    mLayer;
 	bool   mIs_highlight;
 
-	engine::fvector last_tile;
+	engine::fvector mLast_tile;
 
 	std::vector<std::string> mTile_list;
 
@@ -142,6 +158,18 @@ private:
 	tgui::TextBox::Ptr mTb_texture;
 
 	void setup_editor(editor_gui& pEditor_gui);
+
+	// User Actions
+
+	void copy_tile_type_at(engine::fvector pAt);
+	void draw_tile_at(engine::fvector pAt);
+	void erase_tile_at(engine::fvector pAt);
+	void next_tile();
+	void previous_tile();
+	void layer_up();
+	void layer_down();
+	void rotate_clockwise();
+	void rotate_counter_clockwise();
 
 	void update_tile_combobox_list();
 	void update_tile_combobox_selected();

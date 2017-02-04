@@ -12,7 +12,7 @@ public:
 	void set_texture(std::shared_ptr<engine::texture> pTexture);
 	std::shared_ptr<engine::texture> get_texture();
 
-	void set_tile(engine::fvector pPosition, const std::string& pAtlas, int pLayer, int pRotation);
+	bool set_tile(engine::fvector pPosition, const std::string& pAtlas, int pLayer, int pRotation);
 
 	int draw(engine::renderer &pR);
 	void update_animations();
