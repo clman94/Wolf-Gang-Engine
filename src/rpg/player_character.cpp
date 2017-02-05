@@ -30,6 +30,7 @@ void player_character::clean()
 	set_dynamic_depth(true);
 	set_visible(true);
 	set_rotation(0);
+	set_z(0);
 }
 
 player_character::player_character()

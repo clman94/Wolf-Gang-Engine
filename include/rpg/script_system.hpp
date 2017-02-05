@@ -14,6 +14,7 @@
 #include <angelscript/add_on/scriptdictionary/scriptdictionary.h>
 
 #include <memory>
+#include <list>
 
 namespace AS = AngelScript;
 
@@ -76,7 +77,7 @@ private:
 	};
 
 	thread* mCurrect_thread_context;
-	std::vector<thread> mThread_contexts;
+	std::vector<std::unique_ptr<thread>> mThread_contexts;
 
 	util::optional_pointer<AS::asIScriptEngine> mEngine;
 
@@ -90,7 +91,7 @@ private:
 	void script_error_print(std::string &pMessage);
 	void script_create_thread(AS::asIScriptFunction *func, AS::CScriptDictionary *arg);
 	void script_create_thread_noargs(AS::asIScriptFunction *func);
-	void script_yield();
+	bool script_yield();
 
 	std::map<std::string, AS::CScriptHandle> mShared_handles;
 

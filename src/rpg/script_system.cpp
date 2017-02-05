@@ -15,7 +15,7 @@ using namespace rpg;
 using namespace AS;
 
 // #########
-// angelscript
+// script_system
 // #########
 
 void script_system::message_callback(const asSMessageInfo * msg)
@@ -61,10 +61,11 @@ void script_system::script_create_thread_noargs(AS::asIScriptFunction * func)
 	create_thread(func);
 }
 
-void script_system::script_yield()
+bool script_system::script_yield()
 {
 	assert(mCurrect_thread_context != nullptr);
 	mCurrect_thread_context->context->Suspend();
+	return true;
 }
 
 void script_system::script_make_shared(AS::CScriptHandle pHandle, const std::string& pName)
@@ -91,7 +92,7 @@ void script_system::load_script_interface()
 	add_function("void dprint(const string &in)", asMETHOD(script_system, script_debug_print), this);
 	add_function("void eprint(const string &in)", asMETHOD(script_system, script_error_print), this);
 	add_function("void abort()", asMETHOD(script_system, script_abort), this);
-	add_function("void yield()", asMETHOD(script_system, script_yield), this);
+	add_function("bool yield()", asMETHOD(script_system, script_yield), this);
 
 	add_function("void make_shared(ref@, const string&in)", asMETHOD(script_system, script_make_shared), this);
 	add_function("ref@ get_shared(const string&in)", asMETHOD(script_system, script_get_shared), this);
@@ -240,6 +241,8 @@ script_system::script_system()
 	RegisterScriptDictionary(mEngine);
 	RegisterScriptHandle(mEngine);
 
+	mCurrect_thread_context = nullptr;
+
 	register_vector_type();
 
 	load_script_interface();
@@ -273,8 +276,8 @@ void script_system::abort_all()
 {
 	for (auto& i : mThread_contexts)
 	{
-		i.context->Abort();
-		mEngine->ReturnContext(i.context);
+		i->context->Abort();
+		mEngine->ReturnContext(i->context);
 	}
 	mThread_contexts.clear();
 	mEngine->GarbageCollect(asGC_FULL_CYCLE | asGC_DESTROY_GARBAGE);
@@ -289,7 +292,7 @@ int script_system::tick()
 {
 	for (size_t i = 0; i < mThread_contexts.size(); i++)
 	{
-		mCurrect_thread_context = &mThread_contexts[i];
+		mCurrect_thread_context = mThread_contexts[i].get();
 
 		int r = mCurrect_thread_context->context->Execute();
 
@@ -338,10 +341,10 @@ AS::asIScriptContext* script_system::create_thread(AS::asIScriptFunction * pFunc
 	}
 
 	// Create a new one if necessary
-	thread new_thread;
-	new_thread.context = context;
-	new_thread.keep_context = pKeep_context;
-	mThread_contexts.push_back(new_thread);
+	std::unique_ptr<thread> new_thread(new thread);
+	new_thread->context = context;
+	new_thread->keep_context = pKeep_context;
+	mThread_contexts.push_back(std::move(new_thread));
 
 	return context;
 }
