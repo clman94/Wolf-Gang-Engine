@@ -6,6 +6,12 @@
 
 using namespace engine;
 
+vertex_reference::vertex_reference(const vertex_reference & A)
+{
+	mBatch = A.mBatch;
+	mIndex = A.mIndex;
+}
+
 void vertex_reference::set_position(fvector pPosition)
 {
 	auto ref = get_reference();
@@ -56,9 +62,9 @@ sf::Vertex * vertex_reference::get_reference()
 }
 
 void
-vertex_batch::set_texture(texture &t)
+vertex_batch::set_texture(std::shared_ptr<texture> pTexture)
 {
-	mTexture = &t;
+	mTexture = pTexture;
 }
 
 vertex_reference
@@ -78,7 +84,7 @@ vertex_batch::add_quad(fvector pPosition, frect pTexture_rect, int pRotation)
 }
 
 int
-vertex_batch::draw(renderer &_r)
+vertex_batch::draw(renderer &pR)
 {
 	if (!mTexture || !mVertices.size())
 		return 1;
@@ -86,7 +92,10 @@ vertex_batch::draw(renderer &_r)
 	sf::RenderStates rs;
 	rs.transform.translate(get_exact_position());
 	rs.texture = &mTexture->sfml_get_texture();
-	_r.get_sfml_render().draw(&mVertices[0], mVertices.size(), sf::Quads, rs);
+	if (mShader)
+		rs.shader = mShader->get_sfml_shader();
+
+	pR.get_sfml_render().draw(&mVertices[0], mVertices.size(), sf::Quads, rs);
 	return 0;
 }
 

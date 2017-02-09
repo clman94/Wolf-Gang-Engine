@@ -22,7 +22,7 @@ public:
 	void movement(controls &pControls, collision_system& pCollision_system, float pDelta);
 
 	// Get point in front of player
-	engine::fvector get_activation_point(float pDistance = 19);
+	engine::fvector get_activation_point(float pDistance = 0.6f);
 	engine::frect   get_collision_box() const;
 
 private:

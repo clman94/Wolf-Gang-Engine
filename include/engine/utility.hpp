@@ -12,6 +12,71 @@
 
 namespace util
 {
+
+template<std::intmax_t Tnum, std::intmax_t Tden = 1>
+class ratio
+{
+public:
+	static constexpr std::intmax_t num = Tnum;
+	static constexpr std::intmax_t den = Tden;
+};
+
+template <class T, class Tratio = ratio<1>>
+class fraction
+{
+public:
+	T get_rep() const
+	{
+		const T num = mVal * static_cast<T>(Tratio::num);
+		const T rep = num / static_cast<T>(Tratio::den);
+		return rep;
+	}
+
+	fraction()
+	{}
+
+	fraction(T pVal)
+	{
+		mVal = pVal;
+	}
+
+	template<class T1>
+	fraction(const fraction<T, T1>& pRatio)
+	{
+		mVal = convert(pRatio);
+	}
+
+	template<class T1>
+	fraction& operator=(fraction<T, T1> pRatio)
+	{
+		mVal = convert(pRatio);
+		return *this;
+	}
+
+	template<class T1>
+	fraction operator+(fraction<T, T1> pRatio)
+	{
+		fraction ret(*this);
+		ret.mVal += convert(pRatio);
+		return ret;
+	}
+
+	T get_value() const
+	{
+		return mVal;
+	}
+
+private:
+
+	template<class T1>
+	static T convert(const fraction<T, T1>& pRatio)
+	{
+		return (pRatio.get_rep() * static_cast<T>(Tratio::den)) / static_cast<T>(Tratio::num);
+	}
+
+	T mVal;
+};
+
 /// Similar to optional but optimized for a pointer
 template<typename T>
 class optional_pointer
@@ -84,95 +149,125 @@ private:
 class in_place_t {};
 static const in_place_t in_place;
 
-/// Similar to boost/std's optional object.
-/// Prevents access when there is no 
-/// contained object. This does not construct
-/// the object if there is none and doesn't
-/// dynamically allocate memory.
+template<class T>
+class static_allocate
+{
+public:
+	static_allocate()
+	{
+		mConstructed = false;
+	}
+
+	~static_allocate()
+	{
+		deconstruct();
+	}
+
+	void construct()
+	{
+		if (!mConstructed
+			&& std::is_constructible<T>::value)
+			new (cast()) T();
+		
+		mConstructed = true;
+	}	
+
+	template<typename...T_ARGS>
+	void construct(in_place_t pIn_place, T_ARGS&&... pArgs)
+	{
+		if (!mConstructed
+			&& std::is_constructible<T>::value)
+			new (cast()) T(std::forward<T_ARGS>(pArgs)...);
+	}
+
+	void deconstruct()
+	{
+		if (mConstructed 
+			&& std::is_destructible<T>::value)
+			cast()->~T();
+		mConstructed = false;
+	}
+
+	T* get()
+	{
+		return cast();
+	}
+
+	bool is_constructed() const
+	{
+		return mConstructed;
+	}
+
+private:
+	// Allocates space for the object WITHOUT any construction
+	char mData[sizeof(T)];
+
+	bool mConstructed;
+
+	T* cast()
+	{
+		return reinterpret_cast<T*>(&mData);
+	}
+};
+
 template<typename T>
 class optional
 {
 public:
-	optional()
-	{
-		mHas_value = false;
-	}
-
-	~optional()
-	{
-		if (mHas_value &&
-			std::is_destructible<T>::value)
-		{
-			get_data()->~T();
-		}
-	}
+	optional(){}
 
 	optional(const optional& pOptional)
 	{
-		mHas_value = pOptional.mHas_value;
-		if (mHas_value)
-			new (get_data()) T(*reinterpret_cast<const T*>(pOptional.mData));
+		if (pOptional.mData.is_constructed())
+			mData.construct(in_place, pOptional.mData);
 	}
 
 	optional(const T& pValue)
 	{
-		static_assert(std::is_copy_constructible<T>::value, "T needs to be copy constructable");
-		new(get_data()) T(pValue);
-		mHas_value = true;
+		mData.construct(in_place, pValue);
 	}
 
 	template<typename...T_ARGS>
 	optional(in_place_t pIn_place, T_ARGS&&... pArgs)
 	{
-		static_assert(std::is_copy_constructible<T>::value, "T needs to be copy constructable");
-		new(get_data()) T(std::forward<T_ARGS>(pArgs)...);
-		mHas_value = true;
+		mData.construct(pIn_place, pArgs...);
 	}
 
 	T& operator*()&
 	{
-		assert(mHas_value);
-		return *get_data();
+		assert(mData.is_constructed());
+		return *mData.get();
 	}
 
 	const T& operator*() const&
 	{
-		assert(mHas_value);
-		return *get_data();
+		assert(mData.is_constructed());
+		return *mData.get();
 	}
 
 	T& operator->()
 	{
-		assert(mHas_value);
-		return *get_data();
+		assert(mData.is_constructed());
+		return *mData.get();
 	}
 
 	const T& operator->() const
 	{
-		assert(mHas_value);
-		return *get_data();
+		assert(mData.is_constructed());
+		return *mData.get();
 	}
 
 	bool has_value() const
 	{
-		return mHas_value;
+		return mData.is_constructed();
 	}
 
 	operator bool() const
 	{
-		return mHas_value;
+		return mData.is_constructed();
 	}
 private:
-
-	T* get_data()
-	{
-		return reinterpret_cast<T*>(&mData);
-	}
-
-	// Allocates space for the object WITHOUT any construction
-	char mData[sizeof(T)];
-
-	bool mHas_value;
+	static_allocate<T> mData;
 };
 
 /// Notifies all references (tracking_ptr) that it has

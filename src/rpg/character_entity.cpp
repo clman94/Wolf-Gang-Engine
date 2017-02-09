@@ -6,7 +6,7 @@ using namespace rpg;
 character_entity::character_entity()
 {
 	mCyclegroup = "default";
-	mMove_speed = 3.f * defs::TILE_SIZE.x;
+	mMove_speed = 3.f;
 	mIs_idle = false;
 }
 
@@ -74,9 +74,9 @@ bool character_entity::is_idle()
 }
 
 void
-character_entity::set_speed(float f)
+character_entity::set_speed(float pSpeed)
 {
-	mMove_speed = f;
+	mMove_speed = pSpeed;
 }
 
 float

@@ -121,8 +121,16 @@ text_node::draw(renderer &pR)
 	testrect.set_size(bounds.get_size()*engine::fvector(mSfml_text.getScale()));
 	testrect.draw(pR);*/
 
-	pR.get_sfml_render().draw(mSfml_text);
+	if (mShader)
+		pR.get_sfml_render().draw(mSfml_text, mShader->get_sfml_shader());
+	else
+		pR.get_sfml_render().draw(mSfml_text);
 	return 0;
+}
+
+void text_node::set_shader(std::shared_ptr<shader> pShader)
+{
+	mShader = pShader;
 }
 
 void text_node::update_offset()

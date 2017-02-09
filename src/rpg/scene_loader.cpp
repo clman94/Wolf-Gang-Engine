@@ -54,12 +54,10 @@ bool scene_loader::load(const std::string & pName)
 	// Get boundary
 	if (auto ele_boundary = ele_root->FirstChildElement("boundary"))
 	{
-		engine::frect boundary;
-		boundary.x = ele_boundary->FloatAttribute("x");
-		boundary.y = ele_boundary->FloatAttribute("y");
-		boundary.w = ele_boundary->FloatAttribute("w");
-		boundary.h = ele_boundary->FloatAttribute("h");
-		mBoundary = boundary * 32.f;
+		mBoundary.x = ele_boundary->FloatAttribute("x");
+		mBoundary.y = ele_boundary->FloatAttribute("y");
+		mBoundary.w = ele_boundary->FloatAttribute("w");
+		mBoundary.h = ele_boundary->FloatAttribute("h");
 		mHas_boundary = true;
 	}
 	else

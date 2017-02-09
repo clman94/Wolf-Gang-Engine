@@ -46,8 +46,6 @@ public:
 	tgui::Button::Ptr add_button(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
 	std::shared_ptr<tgui_list_layout> add_sub_container(tgui::Container::Ptr pContainer = nullptr);
 
-	void update_camera_position(engine::fvector pPosition);
-
 	int draw(engine::renderer& pR);
 
 private:
@@ -59,7 +57,6 @@ private:
 	std::shared_ptr<tgui_list_layout> mEditor_layout;
 	tgui::Gui mTgui;
 
-	engine::fvector mCamera_offset;
 
 	void refresh_renderer(engine::renderer& pR);
 };
@@ -231,7 +228,7 @@ private:
 	rpg::collision_box::type     mCurrent_type;
 	rpg::collision_box_container mContainer;
 
-	engine::rectangle_node mTile_preview;
+	engine::rectangle_node mSelection_preview;
 	engine::rectangle_node mWall_display;
 	engine::rectangle_node mResize_display;
 
@@ -255,7 +252,7 @@ public:
 	void open_collisionbox_editor(std::string pScene_path);
 	void close_editor();
 
-	void update_camera_position(engine::fvector pPosition);
+	void set_world_node(node& pNode);
 
 	void set_resource_manager(engine::resource_manager& pResource_manager);
 

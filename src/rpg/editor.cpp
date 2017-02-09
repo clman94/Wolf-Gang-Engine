@@ -108,11 +108,6 @@ std::shared_ptr<tgui_list_layout> editors::editor_gui::add_sub_container(tgui::C
 	return slo;
 }
 
-void editor_gui::update_camera_position(engine::fvector pPosition)
-{
-	mCamera_offset = pPosition;
-}
-
 void editor_gui::refresh_renderer(engine::renderer & pR)
 {
 	pR.set_gui(&mTgui);
@@ -133,16 +128,16 @@ int editor_gui::draw(engine::renderer& pR)
 	if (mUpdate_timer >= 0.5f)
 	{
 		const auto mouse_position_exact = pR.get_mouse_position();
-		const auto mouse_position = pR.get_mouse_position(mCamera_offset);
+		const auto mouse_position = pR.get_mouse_position(get_exact_position()) / get_unit();
 		std::string position;
 		position += "(";
 		position += std::to_string(static_cast<int>(mouse_position_exact.x));
 		position += ", ";
 		position += std::to_string(static_cast<int>(mouse_position_exact.y));
 		position += ")\n(";
-		position += std::to_string(static_cast<int>(std::floor(mouse_position.x / 32)));
+		position += std::to_string(static_cast<int>(std::floor(mouse_position.x)));
 		position += ", ";
-		position += std::to_string(static_cast<int>(std::floor(mouse_position.y / 32)));
+		position += std::to_string(static_cast<int>(std::floor(mouse_position.y)));
 		position += ")";
 		mLb_mouse->setText(position);
 
@@ -206,7 +201,6 @@ void editor::set_resource_manager(engine::resource_manager& pResource_manager)
 }
 
 
-
 // ##########
 // tilemap_editor
 // ##########
@@ -260,11 +254,12 @@ int tilemap_editor::draw(engine::renderer & pR)
 
 	const engine::fvector mouse_position = pR.get_mouse_position(mTilemap_display.get_exact_position());
 
-	const bool half_tile = (mPreview.get_size() == engine::fvector(16, 16));
+	const float half_tile_side = get_unit() / 2;
+	const bool is_half_tile = (mPreview.get_size() == engine::fvector(half_tile_side, half_tile_side));
 
-	const engine::fvector tile_position_exact = mouse_position / 32;
+	const engine::fvector tile_position_exact = mouse_position / get_unit();
 	const engine::fvector tile_position
-		= (half_tile
+		= (is_half_tile
 			? engine::fvector(tile_position_exact * 2).floor() / 2
 			: engine::fvector(tile_position_exact).floor());
 
@@ -645,11 +640,11 @@ collisionbox_editor::collisionbox_editor()
 	mWall_display.set_outline_thinkness(1);
 	add_child(mWall_display);
 
-	mTile_preview.set_color({ 0, 0, 0, 0 });
-	mTile_preview.set_outline_color({ 255, 255, 255, 100 });
-	mTile_preview.set_outline_thinkness(1);
-	mTile_preview.set_size({ 32, 32 });
-	add_child(mTile_preview);
+	mSelection_preview.set_color({ 0, 0, 0, 0 });
+	mSelection_preview.set_outline_color({ 255, 255, 255, 100 });
+	mSelection_preview.set_outline_thinkness(1);
+	mSelection_preview.set_size({ get_unit(), get_unit() });
+	add_child(mSelection_preview);
 
 	mCurrent_type = rpg::collision_box::type::wall;
 
@@ -664,7 +659,7 @@ bool collisionbox_editor::editor_open()
 int collisionbox_editor::draw(engine::renderer& pR)
 {
 	const engine::fvector mouse_position = pR.get_mouse_position(get_exact_position());
-	const engine::fvector exact_tile_position = mouse_position / 32.f;
+	const engine::fvector exact_tile_position = mouse_position / get_unit();
 	const engine::fvector tile_position = engine::fvector(exact_tile_position).floor();
 
 	switch (mState)
@@ -748,13 +743,13 @@ int collisionbox_editor::draw(engine::renderer& pR)
 			mWall_display.set_color({ 200, 100, 200, 200 }); // ...Purple-ish otherwise
 
 		// The wall region has to be scaled to pixel coordinates
-		mWall_display.set_position(i->get_region().get_offset() * 32);
-		mWall_display.set_size(i->get_region().get_size() * 32);
+		mWall_display.set_position(i->get_region().get_offset());
+		mWall_display.set_size(i->get_region().get_size() * get_unit());
 		mWall_display.draw(pR);
 	}
 
-	mTile_preview.set_position(tile_position* 32);
-	mTile_preview.draw(pR);
+	mSelection_preview.set_position(tile_position);
+	mSelection_preview.draw(pR);
 
 	mBoundary_visualization.draw(pR);
 
@@ -946,7 +941,7 @@ void collisionbox_editor::update_door_settings_labels()
 
 void scroll_control_node::movement(engine::renderer & pR)
 {
-	float speed = pR.get_delta() * 128;
+	float speed = pR.get_delta() * 4;
 	engine::fvector position = get_position();
 	if (pR.is_key_down(engine::renderer::key_type::Left))
 		position += engine::fvector(1, 0)*speed;
@@ -1006,11 +1001,10 @@ void editor_manager::close_editor()
 	util::info("Editor closed");
 }
 
-void editor_manager::update_camera_position(engine::fvector pPosition)
+void editor_manager::set_world_node(node& pNode)
 {
-	mRoot_node.set_exact_position(pPosition);
-	if (!mCurrent_editor)
-		mEditor_gui.update_camera_position(pPosition);
+	mRoot_node.set_parent(pNode);
+	mEditor_gui.set_parent(mRoot_node);
 }
 
 void editor_manager::set_resource_manager(engine::resource_manager& pResource_manager)
@@ -1024,9 +1018,9 @@ int editor_manager::draw(engine::renderer& pR)
 	if (mCurrent_editor != nullptr)
 	{
 		mRoot_node.movement(pR);
-		mEditor_gui.update_camera_position(mRoot_node.get_exact_position());
 		mCurrent_editor->draw(pR);
-	}
+	}else
+		mRoot_node.set_position({ 0, 0 });
 	return 0;
 }
 

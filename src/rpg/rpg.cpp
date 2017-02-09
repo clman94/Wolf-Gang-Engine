@@ -154,6 +154,7 @@ void entity_manager::script_remove_entity(entity_reference& e)
 {
 	if (!check_entity(e)) return;
 
+	// Find entity and remove it
 	for (auto i = mEntities.begin(); i != mEntities.end(); i++)
 	{
 		if (i->get() == e.get())
@@ -185,7 +186,6 @@ entity_reference entity_manager::script_add_character(const std::string & pName)
 		new_entity->set_texture(resource);
 		new_entity->set_cycle(character_entity::cycle::def);
 	}
-
 	return *new_entity;
 }
 
@@ -198,13 +198,13 @@ void entity_manager::script_set_name(entity_reference& e, const std::string & pN
 void entity_manager::script_set_position(entity_reference& e, const engine::fvector & pos)
 {
 	if (!check_entity(e)) return;
-	e->set_position(pos * 32);
+	e->set_position(pos);
 }
 
 engine::fvector entity_manager::script_get_position(entity_reference& e)
 {
 	if (!check_entity(e)) return engine::fvector(0, 0);
-	return e->get_position()/32;
+	return e->get_position();
 }
 
 void entity_manager::script_set_direction(entity_reference& e, int dir)
@@ -443,13 +443,13 @@ bool entity_manager::script_is_character(entity_reference& e)
 void entity_manager::script_set_z(entity_reference & e, float pZ)
 {
 	if (!check_entity(e)) return;
-	e->set_z(pZ*32.f);
+	e->set_z(pZ);
 }
 
 float entity_manager::script_get_z(entity_reference & e)
 {
 	if (!check_entity(e)) return 0;
-	return e->get_z()/32.f;
+	return e->get_z();
 }
 
 void entity_manager::load_script_interface(script_system& pScript)
@@ -502,6 +502,10 @@ void entity_manager::load_script_interface(script_system& pScript)
 scene::scene()
 {
 	mTilemap_display.set_depth(defs::TILES_DEPTH);
+
+	// World space will be 32x32 pixels per unit
+	mWorld_node.set_unit(32);
+
 	mWorld_node.add_child(mTilemap_display);
 	mWorld_node.add_child(mPlayer);
 	mFocus_player = true;
@@ -672,24 +676,24 @@ void scene::load_script_interface(script_system& pScript)
 	mCollision_system.load_script_interface(pScript);
 
 	pScript.add_function("void set_tile(const string &in, vec, int, int)", asMETHOD(scene, script_set_tile), this);
-	pScript.add_function("void remove_tile(vec, int)", asMETHOD(scene, script_remove_tile), this);
+	pScript.add_function("void remove_tile(vec, int)",      asMETHOD(scene, script_remove_tile), this);
 
 	pScript.add_function("int _spawn_sound(const string&in, float, float)", asMETHOD(scene, script_spawn_sound), this);
-	pScript.add_function("void _stop_all()", asMETHOD(engine::sound_spawner, stop_all), &mSound_FX);
+	pScript.add_function("void _stop_all()",                asMETHOD(engine::sound_spawner, stop_all), &mSound_FX);
 
-	pScript.add_function("entity get_player()", asMETHOD(scene, script_get_player), this);
-	pScript.add_function("void _set_player_locked(bool)", asMETHOD(player_character, set_locked), &mPlayer);
-	pScript.add_function("bool _get_player_locked()", asMETHOD(player_character, is_locked), &mPlayer);
+	pScript.add_function("entity get_player()",             asMETHOD(scene, script_get_player), this);
+	pScript.add_function("void _set_player_locked(bool)",   asMETHOD(player_character, set_locked), &mPlayer);
+	pScript.add_function("bool _get_player_locked()",       asMETHOD(player_character, is_locked), &mPlayer);
 
-	pScript.add_function("void _set_focus(vec)", asMETHOD(scene, script_set_focus), this);
-	pScript.add_function("vec _get_focus()", asMETHOD(scene, script_get_focus), this);
-	pScript.add_function("void _focus_player(bool)", asMETHOD(scene, focus_player), this);
+	pScript.add_function("void _set_focus(vec)",            asMETHOD(scene, script_set_focus), this);
+	pScript.add_function("vec _get_focus()",                asMETHOD(scene, script_get_focus), this);
+	pScript.add_function("void _focus_player(bool)",        asMETHOD(scene, focus_player), this);
 
-	pScript.add_function("vec get_boundary_position()", asMETHOD(scene, script_get_boundary_position), this);
-	pScript.add_function("vec get_boundary_size()", asMETHOD(scene, script_get_boundary_size), this);
+	pScript.add_function("vec get_boundary_position()",     asMETHOD(scene, script_get_boundary_position), this);
+	pScript.add_function("vec get_boundary_size()",         asMETHOD(scene, script_get_boundary_size), this);
 	pScript.add_function("void get_boundary_position(vec)", asMETHOD(scene, script_set_boundary_position), this);
-	pScript.add_function("void get_boundary_size(vec)", asMETHOD(scene, script_set_boundary_size), this);
-	pScript.add_function("void set_boundary_enable(bool)", asMETHOD(panning_node, set_boundary_enable), this);
+	pScript.add_function("void get_boundary_size(vec)",     asMETHOD(scene, script_set_boundary_size), this);
+	pScript.add_function("void set_boundary_enable(bool)",  asMETHOD(panning_node, set_boundary_enable), this);
 
 	mScript = &pScript;
 }
@@ -711,7 +715,7 @@ void scene::load_game_xml(tinyxml2::XMLElement * ele_root)
 		util::error("Please specify the player and its texture to use.");
 		return;
 	}
-	std::string att_texture = util::safe_string(ele_player->Attribute("texture"));
+	const std::string att_texture = util::safe_string(ele_player->Attribute("texture"));
 
 	auto texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, att_texture);
 	if (!texture)
@@ -753,12 +757,12 @@ void scene::focus_player(bool pFocus)
 void scene::script_set_focus(engine::fvector pPosition)
 {
 	mFocus_player = false;
-	mWorld_node.set_focus(pPosition * 32);
+	mWorld_node.set_focus(pPosition);
 }
 
 engine::fvector scene::script_get_focus()
 {
-	return mWorld_node.get_focus() / 32;
+	return mWorld_node.get_focus();
 }
 
 entity_reference scene::script_get_player()
@@ -831,7 +835,7 @@ void scene::update_collision_interaction(controls & pControls)
 {
 	collision_box_container& container = mCollision_system.get_container();
 
-	const auto collision_box = engine::scale(mPlayer.get_collision_box(), 1.f/32);
+	const auto collision_box = mPlayer.get_collision_box();
 
 	// Check collision with triggers
 	{
@@ -853,7 +857,7 @@ void scene::update_collision_interaction(controls & pControls)
 	// Check collision with buttons on when "activate" is triggered
 	if (pControls.is_triggered(controls::control::activate))
 	{
-		auto buttons = container.collision(collision_box::type::button, mPlayer.get_activation_point() / 32);
+		auto buttons = container.collision(collision_box::type::button, mPlayer.get_activation_point());
 		for (auto& i : buttons)
 			std::dynamic_pointer_cast<button>(i)->call_function();
 	}
@@ -1071,6 +1075,7 @@ game::game()
 {
 	load_script_interface();
 	mEditor_manager.set_resource_manager(mResource_manager);
+	mEditor_manager.set_world_node(mScene.get_world_node());
 	mSlot = 0;
 }
 
@@ -1311,8 +1316,6 @@ game::tick()
 		}
 		mScene_load_request.complete();
 	}
-
-	mEditor_manager.update_camera_position(mScene.get_world_node().get_exact_position());
 }
 
 void
@@ -1911,7 +1914,8 @@ pathfinding_system::pathfinding_system()
 	mPathfinder.set_collision_callback(
 		[&](engine::fvector& pos) ->bool
 	{
-		return !mCollision_system->get_container().collision(collision_box::type::wall, { pos, { 0.9f, 0.9f } }).empty();
+		auto hit = mCollision_system->get_container().first_collision(collision_box::type::wall, { pos, { 0.9f, 0.9f } });
+		return (bool)hit;
 	});
 }
 
@@ -2069,7 +2073,6 @@ void text_entity::set_anchor(engine::anchor pAnchor)
 int text_entity::draw(engine::renderer & pR)
 {
 	update_depth();
-	mText.set_exact_position(get_exact_position());
 	mText.draw(pR);
 	return 0;
 }
@@ -2186,12 +2189,12 @@ scene_load_request::to_position scene_load_request::get_player_position_type() c
 	return mTo_position;
 }
 
-const std::string & rpg::scene_load_request::get_player_door() const
+const std::string & scene_load_request::get_player_door() const
 {
 	return mDoor;
 }
 
-engine::fvector rpg::scene_load_request::get_player_position() const
+engine::fvector scene_load_request::get_player_position() const
 {
 	return mPosition;
 }

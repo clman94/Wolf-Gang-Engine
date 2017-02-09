@@ -76,8 +76,6 @@ private:
 	map mMap;
 	tile* find_tile(engine::fvector pos, int layer);
 
-	engine::fvector mTile_size;
-
 	void condense_layer(layer &pMap);
 
 	int load_layer(tinyxml2::XMLElement *pEle, int pLayer);

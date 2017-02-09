@@ -104,9 +104,9 @@ particle_emitter::set_rate(float a)
 }
 
 void
-particle_emitter::set_texture(texture &t)
+particle_emitter::set_texture(std::shared_ptr<texture> pTexture)
 {
-	mSprites.set_texture(t);
+	mSprites.set_texture(pTexture);
 }
 
 void
@@ -116,9 +116,9 @@ particle_emitter::set_texture_rect(frect r)
 }
 
 int
-particle_emitter::draw(renderer &_r)
+particle_emitter::draw(renderer & pR)
 {
 	tick();
-	mSprites.draw(_r);
+	mSprites.draw(pR);
 	return 0;
 }

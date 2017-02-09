@@ -22,8 +22,11 @@ public:
 
 	virtual ~node();
 
-	void     set_exact_position(fvector pos);
+	// Absolute position scaled by unit scale
 	fvector  get_exact_position() const;
+
+	void     set_absolute_position(fvector pos);
+	fvector  get_absolute_position() const;
 
 	void     set_position(fvector pos);
 	fvector  get_position() const;
@@ -38,6 +41,9 @@ public:
 	int      set_parent(node& obj);
 	int      add_child(node& obj);
 
+	void set_unit(float pUnit);
+	float get_unit() const;
+
 private:
 	util::optional_pointer<node> mParent;
 	node_arr mChildren;
@@ -45,6 +51,8 @@ private:
 	size_t mChild_index;
 
 	fvector mPosition;
+
+	float mUnit;
 };
 
 }

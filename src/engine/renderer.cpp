@@ -1,3 +1,5 @@
+#define ENGINE_INTERNAL
+
 #include <engine/renderer.hpp>
 
 using namespace engine;
@@ -427,3 +429,113 @@ fvector anchor_thing::calculate_offset()
 	return fvector();
 }
 */
+
+bool shader::load()
+{
+	if (!is_loaded())
+	{
+		if (!sf::Shader::isAvailable())
+		{
+			util::warning("Shaders are not supported on this platform");
+			return false;
+		}
+
+		mSFML_shader.reset(new sf::Shader());
+
+		bool success = false;
+
+		if (mVertex_shader_path.empty())
+		{
+			success = mSFML_shader->loadFromFile(mFragment_shader_path, sf::Shader::Fragment); // Load only fragment
+		}
+		else if (mFragment_shader_path.empty())
+		{
+			success = mSFML_shader->loadFromFile(mVertex_shader_path, sf::Shader::Vertex); // Load only vertex
+		}
+		else
+		{
+			success = mSFML_shader->loadFromFile(mVertex_shader_path, mFragment_shader_path); // Load both
+		}
+		if (success)
+		{
+			mSFML_shader->setUniform("texture", sf::Shader::CurrentTexture);
+		}
+
+		set_loaded(success);
+		return success;
+	}
+	return false;
+}
+
+bool shader::unload()
+{
+	mSFML_shader.reset();
+	return true;
+}
+
+void shader::set_vertex_path(const std::string & pPath)
+{
+	mVertex_shader_path = pPath;
+}
+
+void shader::set_fragment_path(const std::string & pPath)
+{
+	mFragment_shader_path = pPath;
+}
+
+render_proxy::render_proxy() : mR(nullptr)
+{
+}
+
+void render_proxy::set_renderer(renderer & pR)
+{
+	mR = &pR;
+	refresh_renderer(pR);
+}
+
+renderer * render_proxy::get_renderer()
+{
+	return mR;
+}
+
+void rectangle_node::set_color(const color & c)
+{
+	shape.setFillColor(sf::Color(c.r, c.g, c.b, c.a));
+}
+
+color rectangle_node::get_color()
+{
+	auto c = shape.getFillColor();
+	return{ c.r, c.g, c.b, c.a };
+}
+
+void rectangle_node::set_size(fvector s)
+{
+	shape.setSize({ s.x, s.y });
+}
+
+fvector rectangle_node::get_size()
+{
+	return{ shape.getSize().x, shape.getSize().y };
+}
+
+void rectangle_node::set_outline_color(color pColor)
+{
+	shape.setOutlineColor(pColor);
+}
+
+void rectangle_node::set_outline_thinkness(float pThickness)
+{
+	shape.setOutlineThickness(pThickness);
+}
+
+int rectangle_node::draw(renderer & pR)
+{
+	auto pos = get_exact_position();
+	shape.setPosition({ pos.x, pos.y });
+	if (mShader)
+		pR.get_sfml_render().draw(shape, mShader->get_sfml_shader());
+	else
+		pR.get_sfml_render().draw(shape);
+	return 0;
+}

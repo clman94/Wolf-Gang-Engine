@@ -12,8 +12,8 @@ util::optional<engine::fvector> collision_system::get_door_entry(std::string pNa
 			if (find->get_name() != pName)
 				continue;
 
-			const engine::frect& region = find->get_region()*32;
-			return region.get_offset() + (region.get_size()*0.5f) + find->get_offset()*32;
+			const engine::frect& region = find->get_region();
+			return region.get_offset() + (region.get_size()*0.5f) + find->get_offset();
 		}
 	}
 	return{};

@@ -11,9 +11,6 @@ namespace rpg::defs{
 
 const engine::fvector DISPLAY_SIZE           = { 320, 256 };
 const engine::fvector SCREEN_SIZE            = { DISPLAY_SIZE.x * 2, DISPLAY_SIZE.y * 2 };
-const int             TILE_WIDTH_PX          = 32;
-const int             TILE_HEIGHT_PX         = 32;
-const engine::ivector TILE_SIZE              = { TILE_WIDTH_PX, TILE_HEIGHT_PX };
 const engine::time_t  DEFAULT_DIALOG_SPEED   = 30;
 
 const engine::fs::path DEFAULT_DATA_PATH      = "./data";

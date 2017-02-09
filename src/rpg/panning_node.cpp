@@ -24,22 +24,25 @@ panning_node::set_focus(engine::fvector pFocus)
 {
 	mFocus = pFocus;
 
+	const engine::fvector viewport = mViewport / get_unit();
+
 	if (!mBoundary_enabled)
 	{
-		set_position(-(pFocus - (mViewport * 0.5f)));
+		set_position(-(pFocus - (viewport * 0.5f)));
 		return;
 	}
 
-	engine::fvector offset = pFocus - (mViewport * 0.5f) - mBoundary.get_offset();
-	if (mBoundary.w < mViewport.x)
-		offset.x = (mBoundary.w * 0.5f) - (mViewport.x * 0.5f);
-	else
-		offset.x = util::clamp(offset.x, 0.f, mBoundary.w - mViewport.x);
+	engine::fvector offset = pFocus - (viewport * 0.5f) - mBoundary.get_offset();
 
-	if (mBoundary.h < mViewport.y)
-		offset.y = (mBoundary.h * 0.5f) - (mViewport.y * 0.5f);
+	if (mBoundary.w < viewport.x)
+		offset.x = (mBoundary.w * 0.5f) - (viewport.x * 0.5f);
 	else
-		offset.y = util::clamp(offset.y, 0.f, mBoundary.h - mViewport.y);
+		offset.x = util::clamp(offset.x, 0.f, mBoundary.w - viewport.x);
+
+	if (mBoundary.h < viewport.y)
+		offset.y = (mBoundary.h * 0.5f) - (viewport.y * 0.5f);
+	else
+		offset.y = util::clamp(offset.y, 0.f, mBoundary.h - viewport.y);
 
 	set_position(-(offset + mBoundary.get_offset()));
 }

@@ -21,7 +21,7 @@ public:
 	void set_acceleration(fvector a);
 	void set_velocity(fvector a);
 	void set_rate(float a);
-	void set_texture(texture &t);
+	void set_texture(std::shared_ptr<texture> pTexture);
 	void set_texture_rect(frect r);
 	int draw(renderer &_r);
 

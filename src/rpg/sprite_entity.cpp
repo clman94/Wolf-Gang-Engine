@@ -22,6 +22,11 @@ void sprite_entity::set_rotation(float pRotation)
 	mSprite.set_rotation(pRotation);
 }
 
+void sprite_entity::set_shader(std::shared_ptr<engine::shader> pShader)
+{
+	mSprite.set_shader(pShader);
+}
+
 engine::fvector sprite_entity::get_size() const
 {
 	return mSprite.get_size();

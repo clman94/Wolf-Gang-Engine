@@ -21,6 +21,7 @@ public:
 	void set_anchor(engine::anchor pAnchor);
 	void set_color(engine::color pColor);
 	void set_rotation(float pRotation);
+	void set_shader(std::shared_ptr<engine::shader> pShader);
 
 	engine::fvector get_size() const;
 	bool is_playing() const;

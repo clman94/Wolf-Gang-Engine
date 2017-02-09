@@ -9,13 +9,17 @@ int sprite_node::draw(renderer &pR)
 	if (!mTexture)
 		return 1;
 
-	auto position = get_exact_position();
+	const auto position = get_exact_position();
 
 	sf::RenderStates rs;
 	rs.transform.translate(position - mCenter);
 	rs.transform.rotate(mRotation, mCenter);
 	rs.texture = &mTexture->sfml_get_texture();
 	rs.transform.scale(mScale);
+
+	if (mShader)
+		rs.shader = mShader->get_sfml_shader();
+
 	pR.get_sfml_render().draw(&mVertices[0], 4, sf::Quads , rs);
 	return 0;
 }
@@ -38,7 +42,6 @@ std::shared_ptr<texture> sprite_node::get_texture() const
 sprite_node::sprite_node()
 {
 	mScale = { 1, 1 };
-	mTexture = nullptr;
 	mRotation = 0;
 }
 
@@ -52,6 +55,11 @@ fvector
 sprite_node::get_size()
 {
 	return fvector(mVertices[2].texCoords - mVertices[0].texCoords)*mScale;
+}
+
+void sprite_node::set_shader(std::shared_ptr<shader> pShader)
+{
+	mShader = pShader;
 }
 
 void

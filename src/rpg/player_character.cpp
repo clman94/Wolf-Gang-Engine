@@ -81,6 +81,8 @@ void player_character::movement(controls& pControls, collision_system& pCollisio
 		set_direction(direction::down);
 	}
 
+	// TODO: Improve the logic behind this
+
 	// Check collision if requested to move
 	if (move != engine::fvector(0, 0))
 	{
@@ -93,12 +95,12 @@ void player_character::movement(controls& pControls, collision_system& pCollisio
 
 		// Check if there is a tile blocking the x axis
 		collision_box_modified.set_offset(collision_box.get_offset() + engine::fvector(move.x, 0));
-		if (pCollision_system.get_container().first_collision(collision_box::type::wall, engine::scale(collision_box_modified, 1.f / 32)))
+		if (pCollision_system.get_container().first_collision(collision_box::type::wall, collision_box_modified))
 			move.x = 0; // Player is unable to move in the X directions
 
 		// Check if there is a tile blocking the y axis
 		collision_box_modified.set_offset(collision_box.get_offset() + engine::fvector(0, move.y));
-		if (pCollision_system.get_container().first_collision(collision_box::type::wall, engine::scale(collision_box_modified, 1.f / 32)))
+		if (pCollision_system.get_container().first_collision(collision_box::type::wall, collision_box_modified))
 			move.y = 0; // Player is unable to move in the Y directions
 	}
 
@@ -130,7 +132,7 @@ engine::fvector player_character::get_activation_point(float pDistance)
 
 engine::frect player_character::get_collision_box() const
 {
-	const engine::fvector collision_size(get_size().x, get_size().y / 2);
+	const engine::fvector collision_size = engine::fvector(get_size().x, get_size().y / 2) / get_unit(); // get_size returns pixels; convert to tile grid
 	const engine::fvector collision_offset
 		= get_position()
 		- engine::fvector(collision_size.x / 2, collision_size.y);

@@ -139,7 +139,6 @@ tilemap_manipulator::load_layer(tinyxml2::XMLElement * pEle, int pLayer)
 
 tilemap_manipulator::tilemap_manipulator()
 {
-	mTile_size = defs::TILE_SIZE;
 }
 
 int
@@ -312,7 +311,7 @@ void tilemap_manipulator::update_display(tilemap_display& tmA)
 			{
 				for (off.x = 0; off.x < static_cast<float>(tile.get_fill().x); off.x++)
 				{
-					tmA.set_tile((tile.get_position() + off)*mTile_size, tile.get_atlas(), l.first, tile.get_rotation());
+					tmA.set_tile(tile.get_position() + off, tile.get_atlas(), l.first, tile.get_rotation());
 				}
 			}
 		}

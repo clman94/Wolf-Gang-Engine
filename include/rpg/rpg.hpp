@@ -98,7 +98,7 @@ public:
 	void set_interval(float pMilliseconds);
 
 	// Returns whether or not the text has revealed a
-	// new character_entity in this frame
+	// new letter in this frame
 	bool has_revealed_character();
 
 private:
@@ -183,7 +183,6 @@ private:
 	entity_reference script_get_narrative_text();
 };
 
-
 class entity_manager :
 	public engine::render_proxy
 {
@@ -204,7 +203,7 @@ private:
 	template<typename T>
 	T* create_entity()
 	{
-		if (mEntities.size() >= 256)
+		if (mEntities.size() >= 1024)
 		{
 			util::error("Reached upper limit of characters.");
 			return nullptr;
@@ -374,7 +373,7 @@ private:
 	script_system*            mScript;
 
 	tilemap_display       mTilemap_display;
-	tilemap_manipulator        mTilemap_manipulator;
+	tilemap_manipulator   mTilemap_manipulator;
 	collision_system      mCollision_system;
 	entity_manager        mEntity_manager;
 	background_music      mBackground_music;

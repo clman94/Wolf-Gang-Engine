@@ -113,8 +113,6 @@ public:
 
 #endif
 
-	friend class rectangle_node;
-
 private:
 
 	fvector mTarget_size;
@@ -140,6 +138,31 @@ private:
 	void refresh_objects(); // Updates the indexs of all objects
 
 	color mBackground_color;
+};
+
+class shader :
+	public resource
+{
+public:
+	bool load();
+	bool unload();
+
+	void set_vertex_path(const std::string& pPath);
+	void set_fragment_path(const std::string& pPath);
+
+#ifdef ENGINE_INTERNAL
+	sf::Shader* get_sfml_shader()
+	{
+		if (!mSFML_shader)
+			return nullptr;
+		return mSFML_shader.get();
+	}
+#endif
+
+private:
+	std::string mVertex_shader_path;
+	std::string mFragment_shader_path;
+	std::unique_ptr<sf::Shader> mSFML_shader;
 };
 
 class render_object :
@@ -179,19 +202,10 @@ private:
 class render_proxy
 {
 public:
-	render_proxy() : mR(nullptr)
-	{
-	}
+	render_proxy();
 
-	void set_renderer(renderer& pR)
-	{
-		mR = &pR;
-		refresh_renderer(pR);
-	}
-	renderer* get_renderer()
-	{
-		return mR;
-	}
+	void set_renderer(renderer& pR);
+	renderer* get_renderer();
 protected:
 	virtual void refresh_renderer(renderer& pR){}
 
@@ -208,11 +222,7 @@ public:
 		: mBatch(nullptr)
 	{}
 
-	vertex_reference(const vertex_reference& A)
-	{
-		mBatch = A.mBatch;
-		mIndex = A.mIndex;
-	}
+	vertex_reference(const vertex_reference& A);
 
 	void set_position(fvector pPosition);
 	fvector get_position();
@@ -233,7 +243,7 @@ class vertex_batch :
 	public render_object
 {
 public:
-	void set_texture(texture &pTexture);
+	void set_texture(std::shared_ptr<texture> pTexture);
 	vertex_reference add_quad(fvector pPosition, frect pTexture_rect, int pRotation = 0);
 	int draw(renderer &pR);
 
@@ -243,7 +253,8 @@ public:
 
 private:
 	std::vector<sf::Vertex> mVertices;
-	texture *mTexture;
+	std::shared_ptr<shader>  mShader;
+	std::shared_ptr<texture> mTexture;
 };
 
 enum struct anchor
@@ -325,43 +336,21 @@ private:
 class rectangle_node :
 	public render_object
 {
-	sf::RectangleShape shape;
 public:
-	void set_color(const color& c)
-	{
-		shape.setFillColor(sf::Color(c.r, c.g, c.b, c.a));
-	}
-	color get_color()
-	{
-		auto c = shape.getFillColor();
-		return{ c.r, c.g, c.b, c.a };
-	}
-	void set_size(fvector s)
-	{
-		shape.setSize({s.x, s.y});
-	}
-	fvector get_size()
-	{
-		return{ shape.getSize().x, shape.getSize().y };
-	}
+	void set_color(const color& c);
+	color get_color();
+	void set_size(fvector s);
+	fvector get_size();
 
-	void set_outline_color(color pColor)
-	{
-		shape.setOutlineColor(pColor);
-	}
+	void set_outline_color(color pColor);
 
-	void set_outline_thinkness(float pThickness)
-	{
-		shape.setOutlineThickness(pThickness);
-	}
+	void set_outline_thinkness(float pThickness);
 
-	virtual int draw(renderer &pR)
-	{
-		auto pos = get_exact_position();
-		shape.setPosition({pos.x, pos.y});
-		pR.mWindow.draw(shape);
-		return 0;
-	}
+	virtual int draw(renderer &pR);
+
+private:
+	std::shared_ptr<shader>  mShader;
+	sf::RectangleShape shape;
 };
 
 class sprite_node : 
@@ -380,8 +369,11 @@ public:
 	void set_rotation(float pRotation);
 	fvector get_size();
 
+	void set_shader(std::shared_ptr<shader> pShader);
+
 private:
 	std::shared_ptr<texture> mTexture;
+	std::shared_ptr<shader>  mShader;
 	sf::Vertex mVertices[4];
 	fvector mCenter;
 	fvector mScale;
@@ -428,8 +420,11 @@ public:
 	void copy_format(const text_node& pText_node);
 	virtual int draw(renderer &pR);
 
+	void set_shader(std::shared_ptr<shader> pShader);
+
 private:
 	std::shared_ptr<font> mFont;
+	std::shared_ptr<shader> mShader;
 
 	rectangle_node testrect;
 	sf::Text mSfml_text;
@@ -471,6 +466,8 @@ public:
 
 	float get_speed_scaler() const;
 	void set_speed_scaler(float pScaler);
+
+	void set_shader(std::shared_ptr<shader> pShader);
 
 private:
 	sprite_node mSprite;

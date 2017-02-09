@@ -6,6 +6,7 @@ using namespace engine;
 node::node()
 {
 	mParent = nullptr;
+	mUnit = 1;
 }
 
 node::~node()
@@ -15,11 +16,16 @@ node::~node()
 	detach_parent();
 }
 
+fvector node::get_exact_position() const
+{
+	return get_absolute_position()*mUnit;
+}
+
 fvector
-node::get_exact_position() const
+node::get_absolute_position() const
 {
 	if (!mParent) return mPosition;
-	return mPosition + mParent->get_exact_position();
+	return mPosition + mParent->get_absolute_position();
 }
 
 fvector
@@ -30,14 +36,14 @@ node::get_position() const
 
 fvector node::get_position(const node& pRelative) const
 {
-	return get_exact_position() - pRelative.get_exact_position();
+	return get_absolute_position() - pRelative.get_absolute_position();
 }
 
 void
-node::set_exact_position(fvector pos)
+node::set_absolute_position(fvector pos)
 {
 	if (mParent)
-		mPosition = pos - mParent->get_exact_position();
+		mPosition = pos - mParent->get_absolute_position();
 	else
 		mPosition = pos;
 }
@@ -97,6 +103,22 @@ node::add_child(node& obj)
 	if (obj.mParent) obj.detach_parent();
 	obj.mChild_index = mChildren.size();
 	obj.mParent = this;
+	obj.set_unit(mUnit);
 	mChildren.push_back(&obj);
 	return 0;
+}
+
+void node::set_unit(float pUnit)
+{
+	assert(pUnit > 0);
+	mUnit = pUnit;
+
+	// Set unit of children
+	for (auto i : mChildren)
+		i->set_unit(pUnit);
+}
+
+float node::get_unit() const
+{
+	return mUnit;
 }

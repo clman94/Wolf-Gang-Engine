@@ -163,6 +163,11 @@ void animation_node::set_texture(std::shared_ptr<texture> pTexture)
 	mSprite.set_texture(pTexture);
 }
 
+void animation_node::set_shader(std::shared_ptr<shader> pShader)
+{
+	mSprite.set_shader(pShader);
+}
+
 std::shared_ptr<texture> animation_node::get_texture() const
 {
 	return mSprite.get_texture();
