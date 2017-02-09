@@ -168,7 +168,6 @@ public:
 		if (!mConstructed
 			&& std::is_constructible<T>::value)
 			new (cast()) T();
-		
 		mConstructed = true;
 	}	
 
@@ -178,6 +177,7 @@ public:
 		if (!mConstructed
 			&& std::is_constructible<T>::value)
 			new (cast()) T(std::forward<T_ARGS>(pArgs)...);
+		mConstructed = true;
 	}
 
 	void deconstruct()
@@ -230,7 +230,7 @@ public:
 	template<typename...T_ARGS>
 	optional(in_place_t pIn_place, T_ARGS&&... pArgs)
 	{
-		mData.construct(pIn_place, pArgs...);
+		mData.construct(pIn_place, std::forward<T_ARGS>(pArgs)...);
 	}
 
 	T& operator*()&

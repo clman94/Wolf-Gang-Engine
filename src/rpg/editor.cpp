@@ -643,7 +643,6 @@ collisionbox_editor::collisionbox_editor()
 	mSelection_preview.set_color({ 0, 0, 0, 0 });
 	mSelection_preview.set_outline_color({ 255, 255, 255, 100 });
 	mSelection_preview.set_outline_thinkness(1);
-	mSelection_preview.set_size({ get_unit(), get_unit() });
 	add_child(mSelection_preview);
 
 	mCurrent_type = rpg::collision_box::type::wall;
@@ -653,6 +652,7 @@ collisionbox_editor::collisionbox_editor()
 
 bool collisionbox_editor::editor_open()
 {
+	mSelection_preview.set_size({ get_unit(), get_unit() });
 	return mContainer.load_xml(mLoader.get_collisionboxes());
 }
 
@@ -1054,15 +1054,17 @@ void editor_boundary_visualization::setup_lines()
 
 void editor_boundary_visualization::set_boundary(engine::frect pBoundary)
 {
-	mLines[0].set_size({ pBoundary.w, 1 });
-	mLines[1].set_size({ 1, pBoundary.h });
-	mLines[2].set_size({ pBoundary.w, 1 });
-	mLines[3].set_size({ 1, pBoundary.h });
+	const auto boundary = engine::scale(pBoundary, get_unit());
 
-	mLines[0].set_position(pBoundary.get_offset());
-	mLines[1].set_position(pBoundary.get_offset());
-	mLines[2].set_position(pBoundary.get_corner() - mLines[2].get_size());
-	mLines[3].set_position(pBoundary.get_corner() - mLines[3].get_size());
+	mLines[0].set_size({ boundary.w, 1 });
+	mLines[1].set_size({ 1, boundary.h });
+	mLines[2].set_size({ boundary.w, 1 });
+	mLines[3].set_size({ 1, boundary.h });
+
+	mLines[0].set_position(boundary.get_offset());
+	mLines[1].set_position(boundary.get_offset());
+	mLines[2].set_position(boundary.get_corner() - mLines[2].get_size());
+	mLines[3].set_position(boundary.get_corner() - mLines[3].get_size());
 }
 
 int editor_boundary_visualization::draw(engine::renderer & pR)
