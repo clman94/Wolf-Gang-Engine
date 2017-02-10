@@ -708,6 +708,16 @@ void scene::load_game_xml(tinyxml2::XMLElement * ele_root)
 {
 	assert(ele_root != nullptr);
 
+	if (auto ele_tile_size = ele_root->FirstChildElement("tile_size"))
+	{
+		mWorld_node.set_unit(ele_tile_size->FloatAttribute("pixels"));
+	}
+	else
+	{
+		util::error("Please specify Tile size");
+		return;
+	}
+
 	auto ele_player = ele_root->FirstChildElement("player");
 	if (!ele_player ||
 		!ele_player->Attribute("texture"))

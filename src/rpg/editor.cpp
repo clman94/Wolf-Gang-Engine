@@ -376,7 +376,7 @@ int tilemap_editor::draw(engine::renderer & pR)
 	}
 	else
 	{
-		mPreview.set_position(tile_position * 32);
+		mPreview.set_position(tile_position);
 		mPreview.draw(pR);
 	}
 
