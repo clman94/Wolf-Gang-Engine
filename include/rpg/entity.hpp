@@ -31,10 +31,7 @@ public:
 	/// Set the dynamically changing depth according to its
 	/// Y position.
 	void set_dynamic_depth(bool pIs_dynamic);
-
-	void set_name(const std::string& pName);
-	const std::string& get_name();
-
+	
 	void set_z(float pZ);
 	float get_z() const;
 
@@ -46,7 +43,7 @@ protected:
 	virtual void update_z() {}
 
 private:
-	bool dynamic_depth;
+	bool mDynamic_depth;
 	std::string mName;
 	float mZ;
 };

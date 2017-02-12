@@ -38,7 +38,7 @@ bool texture_directory::load(engine::resource_manager& pResource_manager)
 			const std::string texture_name = texture_path.stem().string();
 			if (pResource_manager.has_resource(engine::resource_type::texture, texture_name)) // Check if unique
 			{
-				util::error("Texture '" + texture_name + "' is not unique. Please give it a unique name.");
+				util::warning("Texture '" + texture_name + "' is not unique. Please give it a unique name.");
 				continue;
 			}
 			std::shared_ptr<engine::texture> texture(new engine::texture());
@@ -84,7 +84,7 @@ bool font_directory::load(engine::resource_manager& pResource_manager)
 			const std::string font_name = font_path.stem().string();
 			if (pResource_manager.has_resource(engine::resource_type::font, font_name)) // Check if unique
 			{
-				util::error("Texture '" + font_name + "' is not unique. Please give it a unique name.");
+				util::warning("Font '" + font_name + "' is not unique. Please give it a unique name.");
 				continue;
 			}
 			std::shared_ptr<engine::font> font(new engine::font());

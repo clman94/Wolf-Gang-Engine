@@ -189,8 +189,6 @@ class entity_manager :
 public:
 	entity_manager();
 
-	util::optional_pointer<entity> find_entity(const std::string& pName);
-
 	void clean();
 
 	void load_script_interface(script_system& pScript);
@@ -232,7 +230,6 @@ private:
 	void             script_set_text(entity_reference& e, const std::string& pText);
 	void             script_remove_entity(entity_reference& e);
 	entity_reference script_add_character(const std::string& tex);
-	void             script_set_name(entity_reference& e, const std::string& pName);
 	void             script_set_position(entity_reference& e, const engine::fvector& pos);
 	engine::fvector  script_get_position(entity_reference& e);
 	void             script_set_direction(entity_reference& e, int dir);

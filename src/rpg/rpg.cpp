@@ -17,14 +17,6 @@ entity_manager::entity_manager()
 {
 }
 
-util::optional_pointer<entity> entity_manager::find_entity(const std::string& pName)
-{
-	for (auto &i : mEntities)
-		if (i->get_name() == pName)
-			return i.get();
-	return{};
-}
-
 void entity_manager::clean()
 {
 	mEntities.clear();
@@ -34,7 +26,6 @@ void entity_manager::set_resource_manager(engine::resource_manager& pResource_ma
 {
 	mResource_manager = &pResource_manager;
 }
-
 
 void entity_manager::set_root_node(engine::node & pNode)
 {
@@ -187,12 +178,6 @@ entity_reference entity_manager::script_add_character(const std::string & pName)
 		new_entity->set_cycle(character_entity::cycle::def);
 	}
 	return *new_entity;
-}
-
-void entity_manager::script_set_name(entity_reference& e, const std::string & pName)
-{
-	if (!check_entity(e)) return;
-	e->set_name(pName);
 }
 
 void entity_manager::script_set_position(entity_reference& e, const engine::fvector & pos)
@@ -469,12 +454,10 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void start_animation(entity&in)",                          asMETHOD(entity_manager, script_start_animation), this);
 	pScript.add_function("void stop_animation(entity&in)",                           asMETHOD(entity_manager, script_stop_animation), this);
 	pScript.add_function("void set_atlas(entity&in, const string &in)",              asMETHOD(entity_manager, script_set_atlas), this);
-	pScript.add_function("entity find_entity(const string &in)",                     asMETHOD(entity_manager, find_entity), this);
 	pScript.add_function("bool is_character(entity&in)",                             asMETHOD(entity_manager, script_is_character), this);
 	pScript.add_function("void remove_entity(entity&in)",                            asMETHOD(entity_manager, script_remove_entity), this);
 	pScript.add_function("void set_depth(entity&in, float)",                         asMETHOD(entity_manager, script_set_depth), this);
 	pScript.add_function("void set_depth_fixed(entity&in, bool)",                    asMETHOD(entity_manager, script_set_depth_fixed), this);
-	pScript.add_function("void set_name(entity&in, const string &in)",               asMETHOD(entity_manager, script_set_name), this);
 	pScript.add_function("void _set_anchor(entity&in, int)",                         asMETHOD(entity_manager, script_set_anchor), this);
 	pScript.add_function("void set_rotation(entity&in, float)",                      asMETHOD(entity_manager, script_set_rotation), this);
 	pScript.add_function("void set_color(entity&in, int, int, int, int)",            asMETHOD(entity_manager, script_set_color), this);
@@ -595,7 +578,7 @@ bool scene::load_scene(std::string pName)
 	else
 		util::info("Script is already compiled");
 
-	// Set context if still valid
+	// Setup context if still valid
 	if (context.is_valid())
 	{
 		mCollision_system.setup_script_defined_triggers(context);
