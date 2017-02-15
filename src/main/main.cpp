@@ -91,7 +91,7 @@ int main(int argc, char* argv[])
 	}
 	catch (std::exception& e)
 	{
-		std::cout << "A main exception occurred: " << e.what() << "\n";
+		util::error("A main exception occurred: " + std::string(e.what()) + "\n");
 		std::getchar();
 	}
 

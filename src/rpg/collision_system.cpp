@@ -60,7 +60,7 @@ void collision_system::script_set_wall_group_enabled(const std::string& pName, b
 	auto group = mContainer.get_group(pName);
 	if (!group)
 	{
-		util::warning("Enable to find wall group '" + pName + "'");
+		util::warning("Unable to find wall group '" + pName + "'");
 		return;
 	}
 
@@ -72,7 +72,7 @@ bool collision_system::script_get_wall_group_enabled(const std::string & pName)
 	auto group = mContainer.get_group(pName);
 	if (!group)
 	{
-		util::warning("Enable to find wall group '" + pName + "'");
+		util::warning("Unable to find wall group '" + pName + "'");
 		return false;
 	}
 

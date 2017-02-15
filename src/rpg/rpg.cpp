@@ -869,13 +869,13 @@ controls::controls()
 void
 controls::trigger(control pControl)
 {
-	mControls[(int)pControl] = true;
+	mControls[static_cast<size_t>(pControl)] = true;
 }
 
 bool
 controls::is_triggered(control pControl)
 {
-	return mControls[(int)pControl];
+	return mControls[static_cast<size_t>(pControl)];
 }
 
 void

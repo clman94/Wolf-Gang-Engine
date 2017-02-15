@@ -11,12 +11,14 @@ void
 panning_node::set_boundary(engine::frect pBoundary)
 {
 	mBoundary = pBoundary;
+	set_focus(mFocus); // Update focus
 }
 
 void
 panning_node::set_viewport(engine::fvector pViewport)
 {
 	mViewport = pViewport;
+	set_focus(mFocus); // Update focus
 }
 
 void
@@ -24,6 +26,7 @@ panning_node::set_focus(engine::fvector pFocus)
 {
 	mFocus = pFocus;
 
+	// Convert viewport coords to ingame coords
 	const engine::fvector viewport = mViewport / get_unit();
 
 	if (!mBoundary_enabled)
