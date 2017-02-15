@@ -117,72 +117,6 @@ class rectangle_entity :
 	
 };
 
-// The dialog object with text reveal
-// TODO: Make more flexible with the ability to only have the text displayed,
-//       move the text to any location, (possibly) automatically wrap text
-//       without cutting off words, and lots more that might be useful.
-// POSSIBLY: COMPLETELY REMOVE (or cut down) and use a script implementation 
-//             with dialog_text_entity to help
-class narrative_dialog :
-	public engine::render_object
-{
-public:
-	enum class position
-	{
-		top,
-		bottom
-	};
-
-	narrative_dialog();
-
-	void set_box_position(position pPosition);
-
-	// Show the dialog box
-	void show_box();
-
-	// Hide the dialog box
-	void hide_box();
-	
-	// Cleanup the current session
-	void end_narrative();
-
-	bool is_box_open();
-
-	// The selection is just a simple text object, nothing really special.
-	// TODO: Make special
-	void show_selection();
-	void hide_selection();
-	void set_selection(const std::string& pText);
-
-	void set_expression(const std::string& pName);
-
-	int load_narrative_xml(tinyxml2::XMLElement* pEle, engine::resource_manager& pResource_manager);
-
-	void load_script_interface(script_system& pScript);
-
-	int draw(engine::renderer &pR);
-
-protected:
-	void refresh_renderer(engine::renderer& r);
-
-private:
-	sprite_entity          mBox;
-	engine::sprite_node    mCursor;
-	dialog_text_entity     mText;
-	engine::text_node      mSelection;
-
-	expression_manager     mExpression_manager;
-	engine::animation_node mExpression;
-
-	int load_box(tinyxml2::XMLElement* pEle, engine::resource_manager& pResource_manager);
-
-	void show_expression();
-	void reset_positions();
-
-	entity_reference script_get_narrative_box();
-	entity_reference script_get_narrative_text();
-};
-
 class entity_manager :
 	public engine::render_proxy
 {
@@ -232,6 +166,7 @@ private:
 	entity_reference script_add_character(const std::string& tex);
 	void             script_set_position(entity_reference& e, const engine::fvector& pos);
 	engine::fvector  script_get_position(entity_reference& e);
+	engine::fvector  script_get_size(entity_reference& e);
 	void             script_set_direction(entity_reference& e, int dir);
 	void             script_set_cycle(entity_reference& e, const std::string& name);
 	void             script_set_depth(entity_reference& e, float pDepth);
@@ -248,6 +183,15 @@ private:
 	bool             script_is_character(entity_reference& e);
 	void             script_set_z(entity_reference& e, float pZ);
 	float            script_get_z(entity_reference& e);
+
+	// For dialog_text_entity
+	entity_reference script_add_dialog_text();
+	void             script_reveal(entity_reference& e, const std::string& pText, bool pAppend);
+	bool             script_is_revealing(entity_reference& e);
+	void             script_skip_reveal(entity_reference& e);
+	void             script_set_interval(entity_reference& e, float pMilli);
+	bool             script_has_displayed_new_character(entity_reference& e);
+
 
 	void             script_add_child(entity_reference& e1, entity_reference& e2);
 	void             script_set_parent(entity_reference& e1, entity_reference& e2);
@@ -374,7 +318,6 @@ private:
 	collision_system      mCollision_system;
 	entity_manager        mEntity_manager;
 	background_music      mBackground_music;
-	narrative_dialog      mNarrative;
 	engine::sound_spawner mSound_FX;
 	player_character      mPlayer;
 	colored_overlay       mColored_overlay;
@@ -397,6 +340,8 @@ private:
 	void             script_set_boundary_size(engine::fvector pSize);
 
 	void             script_spawn_sound(const std::string& pName, float pVolume, float pPitch);
+
+	engine::fvector  script_get_display_size();
 
 	void refresh_renderer(engine::renderer& _r);
 	void update_focus();

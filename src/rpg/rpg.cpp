@@ -85,7 +85,7 @@ entity_reference entity_manager::script_add_entity(const std::string & pName)
 
 	auto new_entity = create_entity<sprite_entity>();
 	if (!new_entity)
-		return entity_reference(); // Return empty on error
+		return{}; // Return empty on error
 
 	auto resource = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, pName);
 	if (!resource)
@@ -103,7 +103,7 @@ entity_reference entity_manager::script_add_entity_atlas(const std::string & pat
 {
 	entity_reference new_entity = script_add_entity(path);
 	if (!new_entity)
-		return entity_reference(); // Error, return empty
+		return{}; // Error, return empty
 
 	dynamic_cast<sprite_entity*>(new_entity.get())->set_animation(atlas);
 	return new_entity;
@@ -123,7 +123,7 @@ entity_reference entity_manager::script_add_text()
 
 	auto new_entity = create_entity<text_entity>();
 	if (!new_entity)
-		return entity_reference(); // Return empty on error
+		return{}; // Return empty on error
 
 	new_entity->set_font(font);
 	return *new_entity;
@@ -190,6 +190,20 @@ engine::fvector entity_manager::script_get_position(entity_reference& e)
 {
 	if (!check_entity(e)) return engine::fvector(0, 0);
 	return e->get_position();
+}
+
+engine::fvector entity_manager::script_get_size(entity_reference & e)
+{
+	if (!check_entity(e)) return{};
+
+	if (e->get_entity_type() == entity::entity_type::sprite)
+	{
+		auto se = dynamic_cast<sprite_entity*>(e.get());
+		return se->get_size();
+	}
+	else
+		util::error("Unsupported entity type");
+	return{};
 }
 
 void entity_manager::script_set_direction(entity_reference& e, int dir)
@@ -437,6 +451,78 @@ float entity_manager::script_get_z(entity_reference & e)
 	return e->get_z();
 }
 
+entity_reference entity_manager::script_add_dialog_text()
+{
+	auto new_entity = create_entity<dialog_text_entity>();
+	if (!new_entity)
+		return{};
+	return *new_entity;
+}
+
+void entity_manager::script_reveal(entity_reference & e, const std::string& pText, bool pAppend)
+{
+	if (!check_entity(e)) return;
+	auto te = dynamic_cast<dialog_text_entity*>(e.get());
+	if (!te)
+	{
+		util::warning("Entity is not a dialog_text_entity");
+		return;
+	}
+
+	te->reveal(pText, pAppend);
+}
+
+bool entity_manager::script_is_revealing(entity_reference & e)
+{
+	if (!check_entity(e)) return false;
+	auto te = dynamic_cast<dialog_text_entity*>(e.get());
+	if (!te)
+	{
+		util::warning("Entity is not a dialog_text_entity");
+		return false;
+	}
+	
+	return te->is_revealing();
+}
+
+void entity_manager::script_skip_reveal(entity_reference & e)
+{
+	if (!check_entity(e)) return;
+	auto te = dynamic_cast<dialog_text_entity*>(e.get());
+	if (!te)
+	{
+		util::warning("Entity is not a dialog_text_entity");
+		return;
+	}
+	te->skip_reveal();
+}
+
+void entity_manager::script_set_interval(entity_reference & e, float pMilli)
+{
+	if (!check_entity(e)) return;
+	auto te = dynamic_cast<dialog_text_entity*>(e.get());
+	if (!te)
+	{
+		util::warning("Entity is not a dialog_text_entity");
+		return;
+	}
+
+	te->set_interval(pMilli);
+}
+
+bool entity_manager::script_has_displayed_new_character(entity_reference & e)
+{
+	if (!check_entity(e)) return false;
+	auto te = dynamic_cast<dialog_text_entity*>(e.get());
+	if (!te)
+	{
+		util::warning("Entity is not a dialog_text_entity");
+		return false;
+	}
+
+	return te->has_revealed_character();
+}
+
 void entity_manager::load_script_interface(script_system& pScript)
 {
 	mScript_system = &pScript;
@@ -449,6 +535,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("entity add_character(const string &in)",                   asMETHOD(entity_manager, script_add_character), this);
 	pScript.add_function("void set_position(entity&in, const vec &in)",              asMETHOD(entity_manager, script_set_position), this);
 	pScript.add_function("vec get_position(entity&in)",                              asMETHOD(entity_manager, script_get_position), this);
+	pScript.add_function("vec get_size(entity&in)",                                  asMETHOD(entity_manager, script_get_size), this);
 	pScript.add_function("void set_direction(entity&in, int)",                       asMETHOD(entity_manager, script_set_direction), this);
 	pScript.add_function("void set_cycle(entity&in, const string &in)",              asMETHOD(entity_manager, script_set_cycle), this);
 	pScript.add_function("void start_animation(entity&in)",                          asMETHOD(entity_manager, script_start_animation), this);
@@ -472,6 +559,13 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void set_parent(entity&in, entity&in)",                    asMETHOD(entity_manager, script_set_parent), this);
 	pScript.add_function("void detach_children(entity&in)",                          asMETHOD(entity_manager, script_detach_children), this);
 	pScript.add_function("void detach_parent(entity&in)",                            asMETHOD(entity_manager, script_detach_parent), this);
+	
+	pScript.add_function("entity _add_dialog_text()",                                asMETHOD(entity_manager, script_add_dialog_text), this);
+	pScript.add_function("void _reveal(entity&in,const string&in, bool)",            asMETHOD(entity_manager, script_reveal), this);
+	pScript.add_function("bool _is_revealing(entity&in)",                            asMETHOD(entity_manager, script_is_revealing), this);
+	pScript.add_function("void _skip_reveal(entity&in)",                             asMETHOD(entity_manager, script_skip_reveal), this);
+	pScript.add_function("void _set_interval(entity&in, float)",                     asMETHOD(entity_manager, script_set_interval), this);
+	pScript.add_function("bool _has_displayed_new_character(entity&in)",             asMETHOD(entity_manager, script_has_displayed_new_character), this);
 
 	pScript.add_function("void make_gui(entity&in, float)",                          asMETHOD(entity_manager, script_make_gui), this);
 }
@@ -525,7 +619,6 @@ scene::clean(bool pFull)
 	mCollision_system.clean();
 	mEntity_manager.clean();
 	mColored_overlay.clean();
-	mNarrative.end_narrative();
 	mSound_FX.stop_all();
 
 	focus_player(true);
@@ -652,7 +745,6 @@ const std::string& scene::get_name()
 void scene::load_script_interface(script_system& pScript)
 {
 	mEntity_manager.load_script_interface(pScript);
-	mNarrative.load_script_interface(pScript);
 	mBackground_music.load_script_interface(pScript);
 	mColored_overlay.load_script_interface(pScript);
 	mPathfinding_system.load_script_interface(pScript);
@@ -677,6 +769,8 @@ void scene::load_script_interface(script_system& pScript)
 	pScript.add_function("void get_boundary_position(vec)", asMETHOD(scene, script_set_boundary_position), this);
 	pScript.add_function("void get_boundary_size(vec)",     asMETHOD(scene, script_set_boundary_size), this);
 	pScript.add_function("void set_boundary_enable(bool)",  asMETHOD(panning_node, set_boundary_enable), this);
+
+	pScript.add_function("vec get_display_size()",          asMETHOD(scene, script_get_display_size), this);
 
 	mScript = &pScript;
 }
@@ -719,13 +813,6 @@ void scene::load_game_xml(tinyxml2::XMLElement * ele_root)
 
 	mPlayer.set_texture(texture);
 	mPlayer.set_cycle(character_entity::cycle::def);
-
-
-	if (auto ele_narrative = ele_root->FirstChildElement("narrative"))
-	{
-		assert(mResource_manager != nullptr);
-		mNarrative.load_narrative_xml(ele_narrative, *mResource_manager);
-	}
 }
 
 player_character& scene::get_player()
@@ -745,7 +832,6 @@ void scene::focus_player(bool pFocus)
 {
 	mFocus_player = pFocus;
 }
-
 
 void scene::script_set_focus(engine::fvector pPosition)
 {
@@ -790,6 +876,12 @@ void scene::script_spawn_sound(const std::string & pName, float pVolume, float p
 	mSound_FX.spawn(sound);
 }
 
+engine::fvector scene::script_get_display_size()
+{
+	assert(get_renderer() != nullptr);
+	return get_renderer()->get_target_size();
+}
+
 void scene::script_set_boundary_position(engine::fvector pPosition)
 {
 	mWorld_node.set_boundary(mWorld_node.get_boundary().set_offset(pPosition));
@@ -812,7 +904,6 @@ void scene::refresh_renderer(engine::renderer& pR)
 {
 	mWorld_node.set_viewport(pR.get_target_size());
 	pR.add_object(mTilemap_display);
-	pR.add_object(mNarrative);
 	pR.add_object(mPlayer);
 	mColored_overlay.set_renderer(pR);
 	mEntity_manager.set_renderer(pR);
@@ -1317,216 +1408,6 @@ game::refresh_renderer(engine::renderer & pR)
 	mScene.set_renderer(pR);
 	pR.add_object(mEditor_manager);
 	pR.set_icon("data/icon.png");
-}
-
-// ##########
-// narrative_dialog
-// ##########
-
-int
-narrative_dialog::load_box(tinyxml2::XMLElement* pEle, engine::resource_manager& pResource_manager)
-{
-	auto ele_box = pEle->FirstChildElement("box");
-
-	std::string att_box_tex = ele_box->Attribute("texture");
-	std::string att_box_atlas = ele_box->Attribute("atlas");
-
-	auto texture = pResource_manager.get_resource<engine::texture>(engine::resource_type::texture, att_box_tex);
-	if (!texture)
-	{
-		util::error("Failed to load narrative box texture");
-		return 1;
-	}
-	mBox.set_texture(texture);
-	mBox.set_animation(att_box_atlas);
-
-	mBox.set_anchor(engine::anchor::topleft);
-	set_box_position(position::bottom);
-
-	mSelection.set_position(mBox.get_size() - engine::fvector(20, 10));
-	return 0;
-}
-
-void narrative_dialog::show_expression()
-{
-	mExpression.set_visible(true);
-	engine::fvector position =
-		mExpression.get_position()
-		+ engine::fvector(mExpression.get_size().x, 0)
-		+ engine::fvector(10, 10);
-	mText.set_position(position);
-}
-
-void narrative_dialog::reset_positions()
-{
-	set_box_position(position::bottom);
-	mText.set_position({ 10, 10 });
-	mText.set_color({ 255, 255, 255, 255 });
-}
-
-entity_reference narrative_dialog::script_get_narrative_box()
-{
-	return mBox;
-}
-
-entity_reference narrative_dialog::script_get_narrative_text()
-{
-	return mText;
-}
-
-narrative_dialog::narrative_dialog()
-{
-	hide_box();
-
-	mBox.set_dynamic_depth(false);
-	mBox.set_depth(defs::NARRATIVE_BOX_DEPTH);
-
-	mText.set_dynamic_depth(false);
-	mText.set_depth(defs::NARRATIVE_TEXT_DEPTH);
-	mText.set_parent(mBox);
-
-	mSelection.set_depth(defs::NARRATIVE_TEXT_DEPTH);
-	mSelection.set_parent(mBox);
-
-	mExpression.set_depth(defs::NARRATIVE_TEXT_DEPTH);
-	mExpression.set_parent(mBox);
-
-	mExpression.set_position({ 10, 10 });
-
-	mSelection.set_anchor(engine::anchor::bottomright);
-
-	reset_positions();
-}
-
-void
-narrative_dialog::set_box_position(position pPosition)
-{
-	float offx = (defs::DISPLAY_SIZE.x - mBox.get_size().x) / 2;
-
-	switch (pPosition)
-	{
-	case position::top:
-	{
-		mBox.set_position({ offx, 10 });
-		break;
-	}
-	case position::bottom:
-	{
-		mBox.set_position({ offx, defs::DISPLAY_SIZE.y - mBox.get_size().y - 10 });
-		break;
-	}
-	}
-}
-void narrative_dialog::show_box()
-{
-	mText.set_visible(true);
-	mBox.set_visible(true);
-}
-
-void narrative_dialog::hide_box()
-{
-	mText.set_visible(false);
-	mBox.set_visible(false);
-}
-
-void narrative_dialog::end_narrative()
-{
-	hide_box();
-	mSelection.set_visible(false);
-	mExpression.set_visible(false);
-	reset_positions();
-	mText.set_interval(defs::DEFAULT_DIALOG_SPEED);
-}
-
-bool narrative_dialog::is_box_open()
-{
-	return mBox.is_visible() || mText.is_visible();
-}
-void narrative_dialog::show_selection()
-{
-	if (mBox.is_visible())
-	{
-		mSelection.set_visible(true);
-	}
-}
-
-void narrative_dialog::hide_selection()
-{
-	mSelection.set_visible(false);
-}
-
-void narrative_dialog::set_selection(const std::string& pText)
-{
-	mSelection.set_text(pText);
-}
-
-void narrative_dialog::set_expression(const std::string& pName)
-{
-	auto expression = mExpression_manager.find_expression(pName);
-	if (!expression)
-	{
-		util::error("Expression '" + pName + "' does not exist");
-		return;
-	}
-	mExpression.set_texture(expression->texture);
-	mExpression.set_animation(expression->animation);
-	show_expression();
-}
-
-int narrative_dialog::load_narrative_xml(tinyxml2::XMLElement* pEle, engine::resource_manager& pResource_manager)
-{
-	load_box(pEle, pResource_manager);
-
-	auto font = pResource_manager.get_resource<engine::font>(engine::resource_type::font, "default");
-	if (!font)
-	{
-		util::error("Faled to find font");
-		return 1;
-	}
-	mText.set_font(font);
-
-	if (auto ele_expressions = pEle->FirstChildElement("expressions"))
-		mExpression_manager.load_expressions_xml(ele_expressions, pResource_manager);
-	return 0;
-}
-
-void narrative_dialog::load_script_interface(script_system & pScript)
-{
-	pScript.add_function("void _say(const string &in, bool)", asMETHOD(dialog_text_entity, reveal), &mText);
-	pScript.add_function("bool _is_revealing()", asMETHOD(dialog_text_entity, is_revealing), &mText);
-	pScript.add_function("void _skip_reveal()", asMETHOD(dialog_text_entity, skip_reveal), &mText);
-	pScript.add_function("void _set_interval(float)", asMETHOD(dialog_text_entity, set_interval), &mText);
-	pScript.add_function("bool _has_displayed_new_character()", asMETHOD(dialog_text_entity, has_revealed_character), &mText);
-
-	pScript.add_function("void _showbox()", asMETHOD(narrative_dialog, show_box), this);
-	pScript.add_function("void _hidebox()", asMETHOD(narrative_dialog, hide_box), this);
-	pScript.add_function("void _end_narrative()", asMETHOD(narrative_dialog, end_narrative), this);
-	pScript.add_function("void _show_selection()", asMETHOD(narrative_dialog, show_selection), this);
-	pScript.add_function("void _hide_selection()", asMETHOD(narrative_dialog, hide_selection), this);
-	pScript.add_function("void _set_box_position(int)", asMETHOD(narrative_dialog, set_box_position), this);
-	pScript.add_function("void _set_selection(const string &in)", asMETHOD(narrative_dialog, set_selection), this);
-	pScript.add_function("bool _is_box_open()", asMETHOD(narrative_dialog, is_box_open), this);
-
-	pScript.add_function("void _set_expression(const string &in)", asMETHOD(narrative_dialog, set_expression), this);
-	pScript.add_function("void _start_expression_animation()", asMETHOD(engine::animation_node, start), &mExpression);
-	pScript.add_function("void _stop_expression_animation()", asMETHOD(engine::animation_node, stop), &mExpression);
-
-	pScript.add_function("entity _get_narrative_box()", asMETHOD(narrative_dialog, script_get_narrative_box), this);
-	pScript.add_function("entity _get_narrative_text()", asMETHOD(narrative_dialog, script_get_narrative_text), this);
-
-}
-
-int narrative_dialog::draw(engine::renderer& pR)
-{
-	return 0;
-}
-
-void narrative_dialog::refresh_renderer(engine::renderer& r)
-{
-	r.add_object(mBox);
-	r.add_object(mText);
-	r.add_object(mSelection);
-	r.add_object(mExpression);
 }
 
 // ##########
