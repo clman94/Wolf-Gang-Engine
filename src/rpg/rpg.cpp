@@ -188,7 +188,7 @@ void entity_manager::script_set_position(entity_reference& e, const engine::fvec
 
 engine::fvector entity_manager::script_get_position(entity_reference& e)
 {
-	if (!check_entity(e)) return engine::fvector(0, 0);
+	if (!check_entity(e)) return{};
 	return e->get_position();
 }
 
@@ -453,9 +453,21 @@ float entity_manager::script_get_z(entity_reference & e)
 
 entity_reference entity_manager::script_add_dialog_text()
 {
+	assert(get_renderer() != nullptr);
+	assert(mResource_manager != nullptr);
+
+	auto font = mResource_manager->get_resource<engine::font>(engine::resource_type::font, "default");
+	if (!font)
+	{
+		util::error("Could not find default font");
+		return{};
+	}
+
 	auto new_entity = create_entity<dialog_text_entity>();
 	if (!new_entity)
-		return{};
+		return{}; // Return empty on error
+
+	new_entity->set_font(font);
 	return *new_entity;
 }
 
@@ -607,7 +619,6 @@ scene::get_collision_system()
 {
 	return mCollision_system;
 }
-
 
 void
 scene::clean(bool pFull)
