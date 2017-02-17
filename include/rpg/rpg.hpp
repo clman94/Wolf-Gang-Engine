@@ -192,7 +192,6 @@ private:
 	void             script_set_interval(entity_reference& e, float pMilli);
 	bool             script_has_displayed_new_character(entity_reference& e);
 
-
 	void             script_add_child(entity_reference& e1, entity_reference& e2);
 	void             script_set_parent(entity_reference& e1, entity_reference& e2);
 	void             script_detach_children(entity_reference& e);

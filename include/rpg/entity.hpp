@@ -44,7 +44,6 @@ protected:
 
 private:
 	bool mDynamic_depth;
-	std::string mName;
 	float mZ;
 };
 /// For referencing entities in scripts.

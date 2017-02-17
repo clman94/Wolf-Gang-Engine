@@ -1032,39 +1032,28 @@ void editor_manager::refresh_renderer(engine::renderer & pR)
 
 editor_boundary_visualization::editor_boundary_visualization()
 {
-	setup_lines();
-}
-
-void editor_boundary_visualization::setup_lines()
-{
 	const engine::color line_color(255, 255, 255, 150);
 
-	mLines[0].set_color(line_color);
-	mLines[0].set_parent(*this);
-
-	mLines[1].set_color(line_color);
-	mLines[1].set_parent(*this);
-
-	mLines[2].set_color(line_color);
-	mLines[2].set_parent(*this);
-
-	mLines[3].set_color(line_color);
-	mLines[3].set_parent(*this);
+	for (size_t i = 0; i < mLines.size(); i++)
+	{
+		mLines[i].set_color(line_color);
+		mLines[i].set_parent(*this);
+	}
 }
 
 void editor_boundary_visualization::set_boundary(engine::frect pBoundary)
 {
+	// get_size requires pixel input
 	const auto boundary = engine::scale(pBoundary, get_unit());
-
 	mLines[0].set_size({ boundary.w, 1 });
 	mLines[1].set_size({ 1, boundary.h });
 	mLines[2].set_size({ boundary.w, 1 });
 	mLines[3].set_size({ 1, boundary.h });
 
-	mLines[0].set_position(boundary.get_offset());
-	mLines[1].set_position(boundary.get_offset());
-	mLines[2].set_position(boundary.get_corner() - mLines[2].get_size());
-	mLines[3].set_position(boundary.get_corner() - mLines[3].get_size());
+	mLines[0].set_position(pBoundary.get_offset());
+	mLines[1].set_position(pBoundary.get_offset());
+	mLines[2].set_position({ 0, pBoundary.get_corner().y });
+	mLines[3].set_position({ pBoundary.get_corner().x, 0 });
 }
 
 int editor_boundary_visualization::draw(engine::renderer & pR)

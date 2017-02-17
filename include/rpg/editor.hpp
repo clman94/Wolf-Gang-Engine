@@ -68,6 +68,8 @@ public:
 	void movement(engine::renderer& pR);
 };
 
+
+// TODO: Replace with just a simple rectangle_node (with a transparent fill)
 class editor_boundary_visualization :
 	public engine::render_object
 {
@@ -78,7 +80,6 @@ public:
 	virtual int draw(engine::renderer &pR);
 private:
 	std::array<engine::rectangle_node, 4> mLines;
-	void setup_lines();
 };
 
 class editor :
