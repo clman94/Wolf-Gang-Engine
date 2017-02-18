@@ -105,6 +105,7 @@ entity_reference entity_manager::script_add_entity_atlas(const std::string & pat
 	if (!new_entity)
 		return{}; // Error, return empty
 
+	assert(new_entity->get_type() == entity::type::sprite);
 	dynamic_cast<sprite_entity*>(new_entity.get())->set_animation(atlas);
 	return new_entity;
 }
@@ -196,7 +197,7 @@ engine::fvector entity_manager::script_get_size(entity_reference & e)
 {
 	if (!check_entity(e)) return{};
 
-	if (e->get_entity_type() == entity::entity_type::sprite)
+	if (e->get_type() == entity::type::sprite)
 	{
 		auto se = dynamic_cast<sprite_entity*>(e.get());
 		return se->get_size();
@@ -291,13 +292,13 @@ void entity_manager::script_set_anchor(entity_reference& e, int pAnchor)
 {
 	if (!check_entity(e)) return;
 
-	if (e->get_entity_type() == entity::entity_type::sprite)
+	if (e->get_type() == entity::type::sprite)
 	{
 		auto se = dynamic_cast<sprite_entity*>(e.get());
 		se->set_anchor(static_cast<engine::anchor>(pAnchor));
 	}
 
-	else if (e->get_entity_type() == entity::entity_type::text)
+	else if (e->get_type() == entity::type::text)
 	{
 		auto se = dynamic_cast<text_entity*>(e.get());
 		se->set_anchor(static_cast<engine::anchor>(pAnchor));
@@ -322,12 +323,12 @@ void entity_manager::script_set_color(entity_reference& e, int r, int g, int b, 
 {
 	if (!check_entity(e)) return;
 	
-	if (e->get_entity_type() == entity::entity_type::sprite)
+	if (e->get_type() == entity::type::sprite)
 	{
 		auto se = dynamic_cast<sprite_entity*>(e.get());
 		se->set_color(engine::color(r, g, b, a));
 	}
-	else if (e->get_entity_type() == entity::entity_type::text)
+	else if (e->get_type() == entity::type::text)
 	{
 		auto se = dynamic_cast<text_entity*>(e.get());
 		se->set_color(engine::color(r, g, b, a));
@@ -426,7 +427,6 @@ void entity_manager::script_make_gui(entity_reference & e, float pOffset)
 	// Gui elements essentually don't stick to anything
 	// So we just detach everything.
 
-	e->detach_children();
 	e->detach_parent();
 
 	e->set_dynamic_depth(false);

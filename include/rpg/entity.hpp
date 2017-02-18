@@ -16,16 +16,16 @@ public:
 	entity();
 	virtual ~entity() {}
 
-	enum class entity_type
+	enum class type
 	{
 		other,
 		sprite,
 		text
 	};
 
-	virtual entity_type get_entity_type()
+	virtual type get_type()
 	{
-		return entity_type::other;
+		return type::other;
 	}
 
 	/// Set the dynamically changing depth according to its

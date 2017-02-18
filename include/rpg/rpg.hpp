@@ -73,8 +73,8 @@ public:
 	int draw(engine::renderer & pR);
 
 	
-	virtual entity_type get_entity_type()
-	{ return entity_type::text; }
+	virtual type get_entity_type()
+	{ return type::text; }
 
 protected:
 	virtual void update_z();

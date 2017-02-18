@@ -26,9 +26,9 @@ public:
 	engine::fvector get_size() const;
 	bool is_playing() const;
 
-	virtual entity_type get_entity_type()
+	virtual type get_type()
 	{
-		return entity_type::sprite;
+		return type::sprite;
 	}
 
 private:
