@@ -884,7 +884,7 @@ void scene::script_spawn_sound(const std::string & pName, float pVolume, float p
 		return;
 	}
 
-	mSound_FX.spawn(sound);
+	mSound_FX.spawn(sound, pVolume, pPitch);
 }
 
 engine::fvector scene::script_get_display_size()

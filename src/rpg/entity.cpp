@@ -31,8 +31,9 @@ void entity::update_depth()
 {
 	if (mDynamic_depth)
 	{
-		float ndepth = defs::TILE_DEPTH_RANGE_MAX
-			- util::clamp(get_position().y / get_unit()
+		float ndepth = 
+			util::clamp((defs::TILE_DEPTH_RANGE_MAX*0.5f) 
+				- (get_position().y / 1000.f)
 				, defs::TILE_DEPTH_RANGE_MIN
 				, defs::TILE_DEPTH_RANGE_MAX);
 		if (ndepth != get_depth())

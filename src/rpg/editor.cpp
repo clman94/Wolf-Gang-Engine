@@ -546,8 +546,6 @@ void tilemap_editor::update_highlight()
 		mTilemap_display.remove_highlight();
 }
 
-
-
 void tilemap_editor::tick_highlight(engine::renderer& pR)
 {
 	if (pR.is_key_pressed(engine::renderer::key_type::RShift))
