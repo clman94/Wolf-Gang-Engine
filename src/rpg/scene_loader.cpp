@@ -102,6 +102,9 @@ void scene_loader::clean()
 
 void scene_loader::fix()
 {
+	if (mXml_Document.Error())
+		mXml_Document.Clear();
+
 	auto ele_scene = mXml_Document.FirstChildElement("scene");
 	if (!ele_scene)
 	{

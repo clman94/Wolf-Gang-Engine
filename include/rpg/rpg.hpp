@@ -261,6 +261,19 @@ private:
 	bool script_find_path_partial(AS::CScriptArray& pScript_path, engine::fvector pStart, engine::fvector pDestination, int pCount);
 };
 
+class scenes_directory :
+	public engine::resource_directory
+{
+public:
+	scenes_directory();
+	bool load(engine::resource_manager& pResource_manager);
+	void set_path(const std::string& pFilepath);
+	void set_script_system(script_system& pScript);
+private:
+	std::string mPath;
+	script_system* mScript;
+};
+
 class scene :
 	public engine::render_proxy
 {

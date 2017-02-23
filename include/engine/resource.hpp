@@ -44,6 +44,7 @@ enum class resource_type
 	texture,
 	sound,
 	font,
+	script,
 };
 
 class resource_manager

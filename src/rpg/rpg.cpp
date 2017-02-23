@@ -1053,7 +1053,23 @@ script_context::script_context() :
 
 script_context::~script_context()
 {
-	
+}
+
+void script_context::set_path(const std::string & pFilepath)
+{
+	mScript_path = pFilepath;
+}
+
+bool script_context::load()
+{
+	assert(!mScript_path.empty());
+	return build_script(mScript_path);
+}
+
+bool script_context::unload()
+{
+	clean();
+	return true;
 }
 
 void script_context::set_script_system(script_system & pScript)
@@ -2082,4 +2098,41 @@ const std::string & scene_load_request::get_player_door() const
 engine::fvector scene_load_request::get_player_position() const
 {
 	return mPosition;
+}
+
+scenes_directory::scenes_directory()
+{
+	mPath = defs::DEFAULT_SCENES_PATH.string();
+}
+
+bool scenes_directory::load(engine::resource_manager & pResource_manager)
+{
+	if (!engine::fs::exists(mPath))
+	{
+		util::error("Scenes directory does not exist");
+		return false;
+	}
+
+	for (const auto& i : engine::fs::recursive_directory_iterator(mPath))
+	{
+		const auto& script_path = i.path();
+
+		if (script_path.extension().string() == ".xml")
+		{
+			std::shared_ptr<script_context> context(new script_context);
+			//context->set_path(script_path.parent_path() + (script_path.stem().string() + ".as"));
+			//pResource_manager.add_resource(engine::resource_type::script, , context);
+		}
+	}
+	return true;
+}
+
+void scenes_directory::set_path(const std::string & pFilepath)
+{
+	mPath = pFilepath;
+}
+
+void scenes_directory::set_script_system(script_system & pScript)
+{
+	mScript = &pScript;
 }

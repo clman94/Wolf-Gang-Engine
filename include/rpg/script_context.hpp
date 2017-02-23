@@ -6,6 +6,7 @@
 
 #include <engine/utility.hpp>
 #include <engine/time.hpp>
+#include <engine/resource.hpp>
 
 #include <rpg/script_system.hpp>
 #include <rpg/collision_box.hpp>
@@ -18,7 +19,8 @@ namespace rpg{
 
 
 
-class script_context
+class script_context :
+	public engine::resource
 {
 public:
 	struct wall_group_function
@@ -30,6 +32,10 @@ public:
 	script_context();
 	~script_context();
 
+	void set_path(const std::string& pFilepath);
+	bool load();
+	bool unload();
+
 	void set_script_system(script_system& pScript);
 	bool build_script(const std::string& pPath);
 	bool is_valid() const;
@@ -39,6 +45,7 @@ public:
 	const std::vector<wall_group_function>& get_wall_group_functions() const;
 
 private:
+	std::string mScript_path;
 
 	// Constructs all triggers/buttons defined by functions
 	// with metadata "trigger" and "button"
