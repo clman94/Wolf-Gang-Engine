@@ -23,7 +23,17 @@ bool tilemap_display::set_tile(engine::fvector pPosition, const std::string & pA
 	auto animation = entry->get_animation();
 
 	auto &ntile = mLayers[pLayer].tiles[pPosition];
-	ntile.mRef = mLayers[pLayer].vertices.add_quad(pPosition*get_unit(), animation->get_frame_at(0), pRotation);
+	auto rect = animation->get_frame_at(0);
+
+	// A very slight margin to leviate lines
+	rect.set_offset(rect.get_offset()
+		+ engine::fvector(0.00001f, 0.00001f));
+	rect.set_size(rect.get_size()
+		- engine::fvector(0.00002f, 0.00002f));
+
+	ntile.mRef = mLayers[pLayer].vertices.add_quad(pPosition*get_unit()
+		, rect
+		, pRotation);
 	ntile.set_animation(animation);
 	if (animation->get_frame_count() > 1)
 		mAnimated_tiles.push_back(&ntile);
