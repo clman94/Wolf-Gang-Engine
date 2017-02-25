@@ -35,6 +35,7 @@ void player_character::clean()
 
 player_character::player_character()
 {
+	mIs_walking = false;
 }
 
 void player_character::set_locked(bool pLocked)
@@ -51,7 +52,11 @@ void player_character::movement(controls& pControls, collision_system& pCollisio
 {
 	if (mLocked)
 	{
-		stop_animation();
+		if (mIs_walking) // Reset animation
+		{
+			mIs_walking = false;
+			stop_animation();
+		}
 		return;
 	}
 
@@ -109,10 +114,12 @@ void player_character::movement(controls& pControls, collision_system& pCollisio
 	{
 		set_move_direction(move); // Make sure the player is in the direction he's moving
 		set_position(get_position() + move);
+		mIs_walking = true;
 		play_animation();
 	}
-	else
+	else if (mIs_walking) // Reset animation
 	{
+		mIs_walking = false;
 		stop_animation();
 	}
 }

@@ -185,8 +185,8 @@ bool animation_node::tick()
 	if (!mAnimation) return false;
 	if (mInterval <= 0) return false;
 
-	float time = mClock.get_elapse().ms();
-	float scaled_interval = mInterval*mSpeed_scaler;
+	const float time = mClock.get_elapse().ms();
+	const float scaled_interval = mInterval*mSpeed_scaler;
 
 	if (time >= scaled_interval)
 	{
@@ -211,6 +211,12 @@ animation_node::is_playing() const
 void
 animation_node::start()
 {
+	// Restart animation if reached end
+	if (mAnimation)
+		if (mAnimation->get_loop() == engine::animation::loop_type::none
+			&&  mFrame >= mAnimation->get_frame_count())
+			restart();
+
 	if (!mPlaying)
 		mClock.restart();
 	mPlaying = true;

@@ -27,6 +27,7 @@ public:
 
 private:
 	bool mLocked;
+	bool mIs_walking;
 	void set_move_direction(engine::fvector pVec);
 };
 
