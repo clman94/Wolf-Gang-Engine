@@ -90,11 +90,11 @@ entity_reference entity_manager::script_add_entity(const std::string & pName)
 	auto resource = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, pName);
 	if (!resource)
 	{
-		util::error("Could not load texture '" + pName + "'");
+		util::warning("Could not load texture '" + pName + "'");
 	}
 
 	new_entity->set_texture(resource);
-	new_entity->set_animation("default:default");
+	new_entity->set_animation("default:default"); // No warning because scripter might set it later
 
 	return *new_entity;
 }
@@ -106,7 +106,8 @@ entity_reference entity_manager::script_add_entity_atlas(const std::string & pat
 		return{}; // Error, return empty
 
 	assert(new_entity->get_type() == entity::type::sprite);
-	dynamic_cast<sprite_entity*>(new_entity.get())->set_animation(atlas);
+	if (!dynamic_cast<sprite_entity*>(new_entity.get())->set_animation(atlas))
+		util::warning("Could not load atlas entry '" + atlas + "'");
 	return new_entity;
 }
 
@@ -118,7 +119,7 @@ entity_reference entity_manager::script_add_text()
 	auto font = mResource_manager->get_resource<engine::font>(engine::resource_type::font, "default");
 	if (!font)
 	{
-		util::error("Could not find default font");
+		util::warning("Could not find default font");
 		return{};
 	}
 
@@ -203,7 +204,7 @@ engine::fvector entity_manager::script_get_size(entity_reference & e)
 		return se->get_size();
 	}
 	else
-		util::error("Unsupported entity type");
+		util::warning("Unsupported entity type");
 	return{};
 }
 
@@ -270,7 +271,7 @@ void entity_manager::script_stop_animation(entity_reference& e)
 	auto se = dynamic_cast<sprite_entity*>(e.get());
 	if (!se)
 	{
-		util::error("Entity is not sprite-based");
+		util::warning("Entity is not sprite-based");
 		return;
 	}
 	se->stop_animation();
@@ -685,6 +686,7 @@ bool scene::load_scene(std::string pName)
 	// Setup context if still valid
 	if (context.is_valid())
 	{
+		context.clean_globals();
 		mCollision_system.setup_script_defined_triggers(context);
 		context.start_all_with_tag("start");
 	}
@@ -1139,6 +1141,11 @@ void script_context::start_all_with_tag(const std::string & pTag)
 			mScript->create_thread(func);
 		}
 	}
+}
+
+void script_context::clean_globals()
+{
+	mScene_module->ResetGlobalVars();
 }
 
 const std::vector<script_context::wall_group_function>& script_context::get_wall_group_functions() const

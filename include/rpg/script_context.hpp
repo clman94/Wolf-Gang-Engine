@@ -42,6 +42,8 @@ public:
 	void clean();
 	void start_all_with_tag(const std::string& pTag);
 
+	void clean_globals();
+
 	const std::vector<wall_group_function>& get_wall_group_functions() const;
 
 private:
