@@ -29,6 +29,7 @@ public:
 	bool add(std::shared_ptr<command> pCommand);
 	bool undo();
 	bool redo();
+	void clean();
 
 private:
 	std::vector<std::shared_ptr<command>> mUndo;

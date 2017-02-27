@@ -40,6 +40,11 @@ bool command_manager::redo()
 	return redo_cmd->redo();
 }
 
+void command_manager::clean()
+{
+	mUndo.clear();
+	mRedo.clear();
+}
 
 class command_set_tiles :
 	public command
@@ -810,6 +815,7 @@ void tilemap_editor::clean()
 	mTexture = nullptr;
 	mCurrent_texture_name.clear();
 	mPreview.set_texture(nullptr);
+	mCommand_manager.clean();
 }
 
 // ##########
@@ -897,6 +903,7 @@ collisionbox_editor::collisionbox_editor()
 
 bool collisionbox_editor::editor_open()
 {
+	mCommand_manager.clean();
 	mSelection_preview.set_size({ get_unit(), get_unit() });
 	return mContainer.load_xml(mLoader.get_collisionboxes());
 }
