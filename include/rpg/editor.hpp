@@ -14,6 +14,27 @@
 
 #include "../tinyxml2/xmlshortcuts.hpp"
 
+class command
+{
+public:
+	virtual bool execute() = 0;
+	virtual bool undo() = 0;
+	virtual bool redo() = 0;
+};
+
+class command_manager
+{
+public:
+	bool execute(std::shared_ptr<command> pCommand);
+	bool add(std::shared_ptr<command> pCommand);
+	bool undo();
+	bool redo();
+
+private:
+	std::vector<std::shared_ptr<command>> mUndo;
+	std::vector<std::shared_ptr<command>> mRedo;
+};
+
 namespace editors
 {
 
@@ -157,6 +178,8 @@ private:
 
 	void setup_editor(editor_gui& pEditor_gui);
 
+	command_manager mCommand_manager;
+
 	// User Actions
 
 	void copy_tile_type_at(engine::fvector pAt);
@@ -167,13 +190,13 @@ private:
 	void layer_up();
 	void layer_down();
 	void rotate_clockwise();
-	void rotate_counter_clockwise();
 
 	void update_tile_combobox_list();
 	void update_tile_combobox_selected();
 	void update_labels();
 	void update_preview();
 	void update_highlight();
+	void update_tilemap();
 
 	void tick_highlight(engine::renderer& pR);
 
@@ -194,6 +217,8 @@ protected:
 	virtual bool editor_open();
 
 private:
+
+	command_manager mCommand_manager;
 
 	// Siply extends the frect with a group name string
 	struct wall :

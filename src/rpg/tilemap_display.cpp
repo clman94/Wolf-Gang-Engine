@@ -112,7 +112,7 @@ void tilemap_display::remove_highlight()
 	}
 }
 
-void tilemap_display::tile::set_animation(std::shared_ptr<const engine::animation> pAnimation)
+void tilemap_display::displayed_tile::set_animation(std::shared_ptr<const engine::animation> pAnimation)
 {
 	mAnimation = pAnimation;
 	mFrame = 0;
@@ -121,7 +121,7 @@ void tilemap_display::tile::set_animation(std::shared_ptr<const engine::animatio
 		mTimer.start(pAnimation->get_interval()*0.001f);
 }
 
-void tilemap_display::tile::update_animation()
+void tilemap_display::displayed_tile::update_animation()
 {
 	if (!mAnimation) return;
 	if (!mAnimation->get_frame_count()) return;

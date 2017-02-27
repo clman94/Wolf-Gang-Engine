@@ -4,7 +4,7 @@
 using namespace rpg;
 
 void
-tilemap_manipulator::tile::load_xml(tinyxml2::XMLElement * pEle)
+tile::load_xml(tinyxml2::XMLElement * pEle)
 {
 	assert(pEle != nullptr);
 
@@ -24,7 +24,7 @@ tilemap_manipulator::tile::load_xml(tinyxml2::XMLElement * pEle)
 }
 
 bool
-tilemap_manipulator::tile::is_adjacent_above(tile & a)
+tile::is_adjacent_above(tile & a)
 {
 	return (
 		mAtlas == a.mAtlas
@@ -36,7 +36,7 @@ tilemap_manipulator::tile::is_adjacent_above(tile & a)
 }
 
 bool
-tilemap_manipulator::tile::is_adjacent_right(tile & a)
+tile::is_adjacent_right(tile & a)
 {
 	return (
 		mAtlas == a.mAtlas
@@ -47,13 +47,12 @@ tilemap_manipulator::tile::is_adjacent_right(tile & a)
 		);
 }
 
-bool tilemap_manipulator::tile::operator<(const tile & pTile)
+bool tile::operator<(const tile & pTile)
 {
 	return mPosition < pTile.mPosition;
 }
 
-tilemap_manipulator::tile*
-tilemap_manipulator::find_tile(engine::fvector pos, int layer)
+tile* tilemap_manipulator::find_tile(engine::fvector pos, int layer)
 {
 	for (auto &i : mMap[layer])
 	{
@@ -64,8 +63,7 @@ tilemap_manipulator::find_tile(engine::fvector pos, int layer)
 }
 
 // Uses brute force to merge adjacent tiles (still a little wonky)
-void
-tilemap_manipulator::condense_layer(layer &pMap)
+void tilemap_manipulator::condense_layer(layer &pMap)
 {
 	// 2 or more tiles present are required
 	if (pMap.size() < 2)
@@ -175,7 +173,7 @@ int tilemap_manipulator::load_tilemap_xml(std::string pPath)
 	return 0;
 }
 
-tilemap_manipulator::tile* tilemap_manipulator::find_tile_at(engine::fvector pPosition, int pLayer)
+tile* tilemap_manipulator::find_tile_at(engine::fvector pPosition, int pLayer)
 {
 	for (auto &i : mMap[pLayer])
 	{
@@ -252,6 +250,35 @@ void tilemap_manipulator::generate(const std::string& pPath)
 	doc.SaveFile(pPath.c_str());
 }
 
+util::optional<tile> tilemap_manipulator::get_tile(engine::fvector pPosition, int pLayer)
+{
+	auto hit = find_tile(pPosition, pLayer);
+	if (!hit)
+		return{};
+	return *hit;
+}
+
+util::optional<tile> tilemap_manipulator::get_tile_at(engine::fvector pPosition, int pLayer)
+{
+	auto hit = find_tile_at(pPosition, pLayer);
+	if (!hit)
+		return{};
+	return *hit;
+}
+
+int tilemap_manipulator::set_tile(const tile & pTile, int pLayer)
+{
+	engine::fvector off(0, 0);
+	for (off.y = 0; off.y <= pTile.get_fill().y; off.y++)
+	{
+		for (off.x = 0; off.x <= pTile.get_fill().x; off.x++)
+		{
+			mMap[pLayer][pTile.get_position()] = pTile;
+		}
+	}
+	return 0;
+}
+
 int tilemap_manipulator::set_tile(engine::fvector pPosition, engine::fvector pFill, int pLayer, const std::string& pAtlas, int pRotation)
 {
 	engine::fvector off(0, 0);
@@ -288,11 +315,22 @@ void tilemap_manipulator::remove_tile(engine::fvector pPosition, int pLayer)
 	}
 }
 
+tilemap_manipulator::layer tilemap_manipulator::get_layer(int pLayer)
+{
+	return mMap[pLayer];
+}
+
+void tilemap_manipulator::set_layer(const layer & pTiles, int pLayer)
+{
+	mMap[pLayer] = pTiles;
+}
+
+
 std::string tilemap_manipulator::find_tile_name(engine::fvector pPosition, int pLayer)
 {
 	auto f = find_tile_at(pPosition, pLayer);
 	if (!f)
-		return std::string();
+		return{};
 	return f->get_atlas();
 }
 
@@ -323,42 +361,93 @@ void tilemap_manipulator::clean()
 	mMap.clear();
 }
 
-void tilemap_manipulator::tile::set_position(engine::fvector pPosition)
+tile::tile()
+{
+	mFill = engine::fvector(1, 1);
+}
+
+tile::tile(tile && pMove)
+{
+	mPosition = pMove.mPosition;
+	mFill = pMove.mFill;
+	mRotation = pMove.mRotation;
+	mAtlas = std::move(pMove.mAtlas);
+}
+
+tile::tile(const tile & pTile)
+{
+	mPosition = pTile.mPosition;
+	mFill = pTile.mFill;
+	mRotation = pTile.mRotation;
+	mAtlas = pTile.mAtlas;
+}
+
+tile & tile::operator=(const tile & pTile)
+{
+	mPosition = pTile.mPosition;
+	mFill = pTile.mFill;
+	mRotation = pTile.mRotation;
+	mAtlas = pTile.mAtlas;
+	return *this;
+}
+
+bool tile::operator==(const tile & pRight)
+{
+	if (mPosition != pRight.mPosition)
+		return false;
+	if (mFill != pRight.mFill)
+		return false;
+	if (mRotation != pRight.mRotation)
+		return false;
+	if (mAtlas != pRight.mAtlas)
+		return false;
+	return true;
+}
+
+bool tile::operator!=(const tile & pRight)
+{
+	return !(*this == pRight);
+}
+
+void tile::set_position(engine::fvector pPosition)
 {
 	mPosition = pPosition;
 }
 
-engine::fvector tilemap_manipulator::tile::get_position() const
+engine::fvector tile::get_position() const
 {
 	return mPosition;
 }
 
-void tilemap_manipulator::tile::set_fill(fill_t pFill)
+void tile::set_fill(fill_t pFill)
 {
+	assert(pFill.x >= 1);
+	assert(pFill.y >= 1);
 	mFill = pFill;
 }
 
-tilemap_manipulator::tile::fill_t tilemap_manipulator::tile::get_fill() const
+tile::fill_t tile::get_fill() const
 {
 	return mFill;
 }
 
-void tilemap_manipulator::tile::set_rotation(rotation_t pRotation)
+void tile::set_rotation(rotation_t pRotation)
 {
 	mRotation = pRotation;
 }
 
-tilemap_manipulator::tile::rotation_t tilemap_manipulator::tile::get_rotation() const
+tile::rotation_t tile::get_rotation() const
 {
 	return mRotation;
 }
 
-void tilemap_manipulator::tile::set_atlas(const std::string & pAtlas)
+void tile::set_atlas(const std::string & pAtlas)
 {
 	mAtlas = pAtlas;
 }
 
-const std::string& tilemap_manipulator::tile::get_atlas() const
+const std::string& tile::get_atlas() const
 {
 	return mAtlas;
 }
+

@@ -1,5 +1,5 @@
 #include <engine/utility.hpp>
-
+#include <engine/filesystem.hpp>
 
 void util::log_print(log_level pType, const std::string& pMessage)
 {

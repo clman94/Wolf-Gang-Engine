@@ -130,6 +130,7 @@ public:
 	std::shared_ptr<button>        add_button();
 	std::shared_ptr<door>          add_door();
 	std::shared_ptr<collision_box> add_collision_box(collision_box::type pType);
+	std::shared_ptr<collision_box> add_collision_box(std::shared_ptr<collision_box> pBox);
 
 	std::vector<std::shared_ptr<collision_box>> collision(engine::frect pRect);
 	std::vector<std::shared_ptr<collision_box>> collision(engine::fvector pPoint);

@@ -91,6 +91,7 @@ entity_reference entity_manager::script_add_entity(const std::string & pName)
 	if (!resource)
 	{
 		util::warning("Could not load texture '" + pName + "'");
+		return{};
 	}
 
 	new_entity->set_texture(resource);

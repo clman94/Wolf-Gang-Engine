@@ -26,12 +26,12 @@ public:
 private:
 	std::shared_ptr<engine::texture> mTexture;
 
-	class tile
+	class displayed_tile
 	{
 	public:
 		engine::vertex_reference mRef;
 
-		tile() : mAnimation(nullptr) {}
+		displayed_tile() : mAnimation(nullptr) {}
 
 		void set_animation(std::shared_ptr<const engine::animation> pAnimation);
 		void update_animation();
@@ -46,10 +46,10 @@ private:
 	struct layer
 	{
 		engine::vertex_batch vertices;
-		std::map<engine::fvector, tile> tiles;
+		std::map<engine::fvector, displayed_tile> tiles;
 	};
 
-	std::vector<tile*> mAnimated_tiles;
+	std::vector<displayed_tile*> mAnimated_tiles;
 
 	std::map<int, layer> mLayers;
 };

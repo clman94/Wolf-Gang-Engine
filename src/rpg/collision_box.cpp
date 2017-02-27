@@ -124,6 +124,12 @@ std::shared_ptr<collision_box> rpg::collision_box_container::add_collision_box(c
 	return{}; // Should never reach this point
 }
 
+std::shared_ptr<collision_box> collision_box_container::add_collision_box(std::shared_ptr<collision_box> pBox)
+{
+	mBoxes.push_back(pBox);
+	return pBox;
+}
+
 std::vector<std::shared_ptr<collision_box>> collision_box_container::collision(engine::frect pRect)
 {
 	std::vector<std::shared_ptr<collision_box>> hits;
