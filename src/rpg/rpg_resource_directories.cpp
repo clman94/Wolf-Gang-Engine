@@ -12,7 +12,7 @@
 #include <list>
 #include <set>
 
-#include "../../tinyxml2/xmlshortcuts.hpp"
+#include "../xmlshortcuts.hpp"
 
 using namespace rpg;
 

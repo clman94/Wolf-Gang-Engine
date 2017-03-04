@@ -12,7 +12,7 @@
 #include <string>
 #include <list>
 
-#include "../tinyxml2/xmlshortcuts.hpp"
+#include "../xmlshortcuts.hpp"
 
 class command
 {
@@ -101,7 +101,7 @@ public:
 
 	virtual int draw(engine::renderer &pR);
 private:
-	std::array<engine::rectangle_node, 4> mLines;
+	engine::rectangle_node mLines;
 };
 
 class editor :

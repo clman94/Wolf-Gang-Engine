@@ -4,7 +4,7 @@
 #include <engine/vector.hpp>
 #include <engine/rect.hpp>
 
-#include "tinyxml2.h"
+#include "../tinyxml2/tinyxml2.h"
 
 #include <cassert>
 

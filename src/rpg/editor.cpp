@@ -1300,32 +1300,23 @@ editor_boundary_visualization::editor_boundary_visualization()
 {
 	const engine::color line_color(255, 255, 255, 150);
 
-	for (size_t i = 0; i < mLines.size(); i++)
-	{
-		mLines[i].set_color(line_color);
-		mLines[i].set_parent(*this);
-	}
+	mLines.set_outline_color(line_color);
+	mLines.set_color(engine::color(0, 0, 0, 0));
+	mLines.set_parent(*this);
 }
 
 void editor_boundary_visualization::set_boundary(engine::frect pBoundary)
 {
 	// get_size requires pixel input
 	const auto boundary = engine::scale(pBoundary, get_unit());
-	mLines[0].set_size({ boundary.w, 1 });
-	mLines[1].set_size({ 1, boundary.h });
-	mLines[2].set_size({ boundary.w, 1 });
-	mLines[3].set_size({ 1, boundary.h });
 
-	mLines[0].set_position(pBoundary.get_offset());
-	mLines[1].set_position(pBoundary.get_offset());
-	mLines[2].set_position({ 0, pBoundary.get_corner().y });
-	mLines[3].set_position({ pBoundary.get_corner().x, 0 });
+	mLines.set_position(boundary.get_offset());
+	mLines.set_size(boundary.get_size());
 }
 
 int editor_boundary_visualization::draw(engine::renderer & pR)
 {
-	for (auto& i : mLines)
-		i.draw(pR);
+	mLines.draw(pR);
 	return 0;
 }
 

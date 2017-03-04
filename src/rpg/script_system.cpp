@@ -6,7 +6,7 @@
 
 #include <engine/parsers.hpp>
 
-#include "../tinyxml2/xmlshortcuts.hpp"
+#include "../xmlshortcuts.hpp"
 
 #include <functional>
 #include <algorithm>
