@@ -325,6 +325,16 @@ void tilemap_manipulator::set_layer(const layer & pTiles, int pLayer)
 	mMap[pLayer] = pTiles;
 }
 
+inline bool rpg::tilemap_manipulator::move_layer(int pFrom, int pTo)
+{
+	if (mMap.find(pFrom) == mMap.end())
+		return false;
+
+	mMap[pTo] = std::move(mMap[pFrom]);
+
+	return true;
+}
+
 
 std::string tilemap_manipulator::find_tile_name(engine::fvector pPosition, int pLayer)
 {

@@ -7,7 +7,8 @@
 
 #include <string>
 
-namespace rpg::defs{
+namespace rpg{
+namespace defs{
 
 const engine::fvector DISPLAY_SIZE           = { 320, 256 };
 const engine::fvector SCREEN_SIZE            = { DISPLAY_SIZE.x * 2, DISPLAY_SIZE.y * 2 };
@@ -31,5 +32,7 @@ const float TILE_DEPTH_RANGE_MAX   = 100;
 const float GUI_DEPTH              = -2;
 const float FX_DEPTH               = -1;
 const float ABSOLUTE_OVERLAP_DEPTH = -100000;
+
+}
 }
 #endif

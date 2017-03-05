@@ -149,7 +149,7 @@ private:
 class in_place_t {};
 static const in_place_t in_place;
 
-template<class T>
+/*template<class T>
 class static_allocate
 {
 public:
@@ -193,6 +193,11 @@ public:
 		return cast();
 	}
 
+	T const* get() const
+	{
+		return cast();
+	}
+
 	bool is_constructed() const
 	{
 		return mConstructed;
@@ -208,7 +213,7 @@ private:
 	{
 		return reinterpret_cast<T*>(&mData);
 	}
-};
+};*/
 
 template<typename T>
 class optional
@@ -218,56 +223,57 @@ public:
 
 	optional(const optional& pOptional)
 	{
-		if (pOptional.mData.is_constructed())
-			mData.construct(in_place, pOptional.mData);
+		if (pOptional.has_value())
+			mData = T(*pOptional);
 	}
 
-	optional(const T& pValue)
+	optional(const T& pValue) :
+		mData(pValue)
 	{
-		mData.construct(in_place, pValue);
 	}
 
 	template<typename...T_ARGS>
-	optional(in_place_t pIn_place, T_ARGS&&... pArgs)
+	optional(in_place_t pIn_place, T_ARGS&&... pArgs) :
+		mData(std::forward<T_ARGS>(pArgs)...)
 	{
-		mData.construct(pIn_place, std::forward<T_ARGS>(pArgs)...);
 	}
 
 	T& operator*()&
 	{
-		assert(mData.is_constructed());
-		return *mData.get();
+		assert(mHas_value);
+		return mData;
 	}
 
 	const T& operator*() const&
 	{
-		assert(mData.is_constructed());
-		return *mData.get();
+		assert(mHas_value);
+		return mData;
 	}
 
 	T& operator->()
 	{
-		assert(mData.is_constructed());
-		return *mData.get();
+		assert(mHas_value);
+		return mData;
 	}
 
 	const T& operator->() const
 	{
-		assert(mData.is_constructed());
-		return *mData.get();
+		assert(mHas_value);
+		return mData;
 	}
 
 	bool has_value() const
 	{
-		return mData.is_constructed();
+		return mHas_value;
 	}
 
 	operator bool() const
 	{
-		return mData.is_constructed();
+		return mHas_value;
 	}
 private:
-	static_allocate<T> mData;
+	T mData;
+	bool mHas_value;
 };
 
 /// Notifies all references (tracking_ptr) that it has

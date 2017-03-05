@@ -8,6 +8,8 @@ using namespace engine;
 
 vertex_reference::vertex_reference(const vertex_reference & A)
 {
+	mRotation = A.mRotation;
+	mTexture_rect = A.mTexture_rect;
 	mBatch = A.mBatch;
 	mIndex = A.mIndex;
 }
@@ -28,13 +30,10 @@ fvector vertex_reference::get_position()
 	return ref[0].position;
 }
 
-void vertex_reference::set_texture_rect(frect pRect, int pRotation)
+void vertex_reference::set_texture_rect(frect pRect)
 {
-	auto ref = get_reference();
-	ref[(pRotation    ) % 4].texCoords = pRect.get_offset();
-	ref[(pRotation + 1) % 4].texCoords = pRect.get_offset() + fvector(pRect.w, 0);
-	ref[(pRotation + 2) % 4].texCoords = pRect.get_offset() + pRect.get_size();
-	ref[(pRotation + 3) % 4].texCoords = pRect.get_offset() + fvector(0, pRect.h);
+	mTexture_rect = pRect;
+	update_rect();
 	reset_size(pRect.get_size());
 }
 
@@ -55,6 +54,28 @@ void vertex_reference::hide()
 	ref[3] = ref[0];
 }
 
+void vertex_reference::set_rotation(int pRotation)
+{
+	mRotation = std::abs(pRotation) % 4;
+	update_rect();
+}
+
+int vertex_reference::get_rotation() const
+{
+	return mRotation;
+}
+
+void vertex_reference::update_rect()
+{
+	if (!mBatch)
+		return;
+	auto ref = get_reference();
+	ref[(mRotation)     % 4].texCoords = mTexture_rect.get_offset();
+	ref[(mRotation + 1) % 4].texCoords = mTexture_rect.get_offset() + fvector(mTexture_rect.w, 0);
+	ref[(mRotation + 2) % 4].texCoords = mTexture_rect.get_offset() + mTexture_rect.get_size();
+	ref[(mRotation + 3) % 4].texCoords = mTexture_rect.get_offset() + fvector(0, mTexture_rect.h);
+}
+
 sf::Vertex * vertex_reference::get_reference()
 {
 	assert(mBatch != nullptr);
@@ -70,15 +91,14 @@ vertex_batch::set_texture(std::shared_ptr<texture> pTexture)
 vertex_reference
 vertex_batch::add_quad(fvector pPosition, frect pTexture_rect, int pRotation)
 {
-	mVertices.emplace_back();
-	mVertices.emplace_back();
-	mVertices.emplace_back();
-	mVertices.emplace_back();
+	for (size_t i = 0; i < 4; i++)
+		mVertices.emplace_back();
 
 	vertex_reference ref;
 	ref.mBatch = this;
 	ref.mIndex = mVertices.size() - 4;
-	ref.set_texture_rect(pTexture_rect, pRotation);
+	ref.set_rotation(pRotation);
+	ref.set_texture_rect(pTexture_rect);
 	ref.set_position(pPosition);
 	return ref;
 }

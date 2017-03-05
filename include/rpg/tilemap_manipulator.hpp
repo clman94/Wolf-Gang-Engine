@@ -81,16 +81,7 @@ public:
 	layer get_layer(int pLayer);
 	void set_layer(const layer& pTiles, int pLayer);
 
-	bool move_layer(int pFrom, int pTo)
-	{
-		auto from = mMap.find(pFrom);
-		if (from == mMap.end())
-			return false;
-
-		mMap[pTo] = std::move(mMap[pFrom]);
-
-		return true;
-	}
+	bool move_layer(int pFrom, int pTo);
 
 	std::string find_tile_name(engine::fvector pPosition, int pLayer);
 

@@ -219,19 +219,28 @@ class vertex_reference
 {
 public:
 	vertex_reference()
-		: mBatch(nullptr)
+		: mBatch(nullptr),
+		mRotation(0)
 	{}
 
 	vertex_reference(const vertex_reference& A);
 
 	void set_position(fvector pPosition);
 	fvector get_position();
-	void set_texture_rect(frect pRect, int rotation);
+	void set_texture_rect(frect pRect);
 	void reset_size(fvector pSize);
 	void hide();
 
+	void set_rotation(int pRotation);
+	int get_rotation() const;
+
 	friend class vertex_batch;
 private:
+	int mRotation;
+	engine::frect mTexture_rect;
+
+	void update_rect();
+
 	//int mRotation;
 	vertex_batch* mBatch;
 	size_t mIndex;

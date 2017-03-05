@@ -129,6 +129,6 @@ void tilemap_display::displayed_tile::update_animation()
 	{
 		++mFrame;
 		mTimer.start(mAnimation->get_interval(mFrame)*0.001f);
-		mRef.set_texture_rect(mAnimation->get_frame_at(mFrame), 0);
+		mRef.set_texture_rect(mAnimation->get_frame_at(mFrame));
 	}
 }
