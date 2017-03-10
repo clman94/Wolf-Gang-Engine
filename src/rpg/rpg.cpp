@@ -733,6 +733,33 @@ bool scene::load_scene(std::string pName, std::string pDoor)
 	return true;
 }
 
+bool scene::create_scene(const std::string & pName)
+{
+	const auto xml_path = defs::DEFAULT_SCENES_PATH / (pName + ".xml");
+	const auto script_path = defs::DEFAULT_SCENES_PATH / (pName + ".as");
+
+	if (engine::fs::exists(xml_path) || engine::fs::exists(script_path))
+	{
+		util::error("Scene '" + pName + "' already exists");
+		return false;
+	}
+
+	// Ensure the existance of the directories
+	engine::fs::create_directories(xml_path.parent_path());
+
+	// Create xml file
+	std::ofstream xml(xml_path);
+	xml << defs::MINIMAL_XML_SCENE;
+	xml.close();
+
+	// Create script file
+	std::ofstream script(script_path);
+	script << defs::MINIMAL_SCRIPT_SCENE;
+	script.close();
+
+	return true;
+}
+
 bool scene::reload_scene()
 {
 	if (mCurrent_scene_name.empty())
@@ -787,6 +814,50 @@ void scene::load_script_interface(script_system& pScript)
 	pScript.add_function("vec get_display_size()",          asMETHOD(scene, script_get_display_size), this);
 
 	mScript = &pScript;
+}
+
+void scene::load_terminal_interface(engine::terminal_system & pTerminal)
+{
+	mTerminal_cmd_group = std::make_shared<engine::terminal_command_group>();
+
+	mTerminal_cmd_group->set_root_command("scene");
+
+	mTerminal_cmd_group->add_command("reload",
+		[&](const std::vector<engine::terminal_argument>& pArgs)->bool
+	{
+		return reload_scene();
+	});
+
+	mTerminal_cmd_group->add_command("load",
+		[&](const engine::terminal_arglist& pArgs)->bool
+	{
+		if (pArgs.size() <= 0)
+		{
+			util::error("Not enough arguments");
+			util::info("scene load <Scene Name>");
+			return false;
+		}
+
+		return load_scene(pArgs[0]);
+	});
+
+	mTerminal_cmd_group->add_command("new",
+		[&](const engine::terminal_arglist& pArgs)->bool
+	{
+		if (pArgs.size() <= 0)
+		{
+			util::error("Not enough arguments");
+			util::info("scene new <Scene Name>");
+			return false;
+		}
+
+		if (!create_scene(pArgs[0]))
+			return false;
+
+		return load_scene(pArgs[0]);
+	});
+
+	pTerminal.add_group(mTerminal_cmd_group);
 }
 
 void scene::set_resource_manager(engine::resource_manager& pResource_manager)
@@ -1193,6 +1264,9 @@ void script_context::parse_wall_group_functions()
 game::game()
 {
 	load_script_interface();
+	load_terminal_interface();
+	mScene.load_terminal_interface(mTerminal_system);
+	mTerminal_gui.set_terminal_system(mTerminal_system);
 	mEditor_manager.set_resource_manager(mResource_manager);
 	mEditor_manager.set_world_node(mScene.get_world_node());
 	mSlot = 0;
@@ -1307,6 +1381,56 @@ game::load_script_interface()
 	mScene.load_script_interface(mScript);
 }
 
+void game::load_terminal_interface()
+{
+	mGroup_flags = std::make_shared<engine::terminal_command_group>();
+	mGroup_flags->set_root_command("flags");
+	mGroup_flags->add_command("set",
+		[&](const engine::terminal_arglist& pArgs)->bool
+	{
+		if (pArgs.empty())
+		{
+			util::error("Not enough arguments");
+			util::warning("flags set <Flag>");
+			return false;
+		}
+		mFlags.set_flag(pArgs[0]);
+		return true;
+	});
+
+	mGroup_flags->add_command("unset",
+		[&](const engine::terminal_arglist& pArgs)->bool
+	{
+		if (pArgs.empty())
+		{
+			util::error("Not enough arguments");
+			util::warning("flags unset <Flag>");
+			return false;
+		}
+		mFlags.unset_flag(pArgs[0]);
+		return true;
+	});
+
+	mGroup_flags->add_command("clear",
+		[&](const engine::terminal_arglist& pArgs)->bool
+	{
+		mFlags.clean();
+		return true;
+	});
+
+	mGroup_game = std::make_shared<engine::terminal_command_group>();
+	mGroup_game->set_root_command("game");
+	mGroup_game->add_command("reset",
+		[&](const engine::terminal_arglist& pArgs)->bool
+	{
+		mScene.clean(true);
+		return mScene.load_scene(mStart_scene);
+	});
+
+	mTerminal_system.add_group(mGroup_flags);
+	mTerminal_system.add_group(mGroup_game);
+}
+
 float game::get_delta()
 {
 	return get_renderer()->get_delta();
@@ -1332,7 +1456,6 @@ game::load_game_xml(std::string pPath)
 		return 1;
 	}
 	mStart_scene = util::safe_string(ele_scene->Attribute("name"));
-
 
 	util::info("Loading Resources...");
 
@@ -1367,6 +1490,7 @@ game::load_game_xml(std::string pPath)
 void
 game::tick()
 {
+	mTerminal_gui.update(*get_renderer());
 	mControls.update(*get_renderer());
 	if (mControls.is_triggered(controls::control::reset))
 	{
@@ -1441,6 +1565,7 @@ void
 game::refresh_renderer(engine::renderer & pR)
 {
 	mScene.set_renderer(pR);
+	mTerminal_gui.load_gui(pR);
 	pR.add_object(mEditor_manager);
 	pR.set_icon("data/icon.png");
 }
@@ -2143,4 +2268,64 @@ void scenes_directory::set_path(const std::string & pFilepath)
 void scenes_directory::set_script_system(script_system & pScript)
 {
 	mScript = &pScript;
+}
+
+terminal_gui::terminal_gui()
+{
+	mEb_input = std::make_shared<tgui::EditBox>();
+	mEb_input->hide();
+}
+
+void terminal_gui::set_terminal_system(engine::terminal_system & pTerminal_system)
+{
+	mEb_input->connect("ReturnKeyPressed",
+		[&](sf::String pText)
+	{
+		if (!pTerminal_system.execute(pText))
+		{
+			util::error("Command failed '" + std::string(pText) + "'");
+		}
+		mEb_input->setText("");
+		mHistory.push_back(std::string(pText));
+		mCurrent_history_entry = mHistory.size() - 1;
+	});
+}
+
+void terminal_gui::load_gui(engine::renderer & pR)
+{
+	mEb_input->setPosition("&.width - width", "&.height - height");
+	pR.get_tgui().add(mEb_input);
+}
+
+void terminal_gui::update(engine::renderer& pR)
+{
+	if (pR.is_key_down(engine::renderer::key_type::LControl, true) // Toggle visibility
+		&& pR.is_key_pressed(engine::renderer::key_type::T, true))
+	{
+		if (mEb_input->isVisible())
+			mEb_input->hide();
+		else
+		{
+			mEb_input->show();
+			mEb_input->focus();
+		}
+	}
+
+	// History is still a little buggy will fix later
+	if (mEb_input->isFocused())
+	{
+		if (pR.is_key_pressed(engine::renderer::key_type::Up, true)
+			&& mCurrent_history_entry >= 1)
+		{
+			--mCurrent_history_entry;
+			mEb_input->setText(mHistory[mCurrent_history_entry]);
+		}
+
+		if (pR.is_key_pressed(engine::renderer::key_type::Down, true)
+			&& mCurrent_history_entry < mHistory.size() - 1)
+		{
+			++mCurrent_history_entry;
+			mEb_input->setText(mHistory[mCurrent_history_entry]);
+		}
+	}
 }

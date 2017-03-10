@@ -1,4 +1,3 @@
-
 #include <rpg/editor.hpp>
 
 using namespace editors;
@@ -196,7 +195,6 @@ editor_gui::editor_gui()
 	mLayout->setBackgroundColor({ 0, 0, 0,  90});
 	mLayout->setSize(200, 1000);
 	mLayout->hide();
-	mTgui.add(mLayout);
 
 	mLb_fps = std::make_shared<tgui::Label>();
 	mLb_fps->setMaximumTextWidth(0);
@@ -277,9 +275,10 @@ std::shared_ptr<tgui_list_layout> editors::editor_gui::add_sub_container(tgui::C
 	return slo;
 }
 
+
 void editor_gui::refresh_renderer(engine::renderer & pR)
 {
-	pR.set_gui(&mTgui);
+	pR.get_tgui().add(mLayout);
 }
 
 int editor_gui::draw(engine::renderer& pR)
@@ -768,6 +767,8 @@ void tilemap_editor::apply_texture()
 	assert(mTile_list.size() != 0);
 
 	mCurrent_tile = 0;
+
+	mPreview.set_texture(mTexture);
 
 	update_tile_combobox_list();
 	update_preview();

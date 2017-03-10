@@ -3,6 +3,7 @@
 
 #include <engine/renderer.hpp>
 #include <engine/rect.hpp>
+#include <engine/terminal.hpp>
 
 #include <rpg/tilemap_manipulator.hpp>
 #include <rpg/scene_loader.hpp>
@@ -53,7 +54,6 @@ private:
 
 };
 
-
 class editor_gui :
 	public engine::render_object
 {
@@ -77,7 +77,7 @@ private:
 	tgui::Label::Ptr mLb_fps;
 	std::shared_ptr<tgui_list_layout> mLayout;
 	std::shared_ptr<tgui_list_layout> mEditor_layout;
-	tgui::Gui mTgui;
+	
 
 
 	void refresh_renderer(engine::renderer& pR);

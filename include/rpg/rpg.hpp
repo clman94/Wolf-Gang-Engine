@@ -10,6 +10,7 @@
 #include <engine/pathfinding.hpp>
 #include <engine/filesystem.hpp>
 #include <engine/audio.hpp>
+#include <engine/terminal.hpp>
 
 #include <rpg/rpg_config.hpp>
 #include <rpg/tilemap_manipulator.hpp>
@@ -38,6 +39,20 @@
 
 namespace rpg
 {
+
+class terminal_gui
+{
+public:
+	terminal_gui();
+	void set_terminal_system(engine::terminal_system& pTerminal_system);
+	void load_gui(engine::renderer& pR);
+	void update(engine::renderer& pR);
+
+private:
+	size_t mCurrent_history_entry;
+	std::vector<std::string> mHistory;
+	tgui::EditBox::Ptr mEb_input;
+};
 
 // Resource management of expression animations
 class expression_manager
@@ -294,9 +309,9 @@ public:
 	// Load scene xml file which loads the scene script.
 	// pPath is not a reference so cleanup doesn't cause issues.
 	bool load_scene(std::string pName);
-
-
 	bool load_scene(std::string pName, std::string pDoor);
+
+	bool create_scene(const std::string& pName);
 
 	// Reload the currently loaded scene.
 	bool reload_scene();
@@ -305,6 +320,8 @@ public:
 	const std::string& get_name();
 
 	void load_script_interface(script_system& pScript);
+	void load_terminal_interface(engine::terminal_system& pTerminal);
+
 
 	void set_resource_manager(engine::resource_manager& pResource_manager);
 
@@ -334,6 +351,8 @@ private:
 	player_character      mPlayer;
 	colored_overlay       mColored_overlay;
 	pathfinding_system    mPathfinding_system;
+
+	std::shared_ptr<engine::terminal_command_group> mTerminal_cmd_group;
 
 	std::string mCurrent_scene_name;
 	scene_loader mLoader;
@@ -465,6 +484,9 @@ private:
 	controls         mControls;
 	size_t           mSlot;
 
+	terminal_gui mTerminal_gui;
+	engine::terminal_system mTerminal_system;
+
 	std::string mStart_scene;
 
 	editors::editor_manager mEditor_manager;
@@ -482,6 +504,11 @@ private:
 	void script_load_scene_to_door(const std::string& pName, const std::string& pDoor);
 	void script_load_scene_to_position(const std::string& pName, engine::fvector pPosition);
 	void load_script_interface();
+	void load_terminal_interface();
+
+	std::shared_ptr<engine::terminal_command_group> mGroup_flags;
+	std::shared_ptr<engine::terminal_command_group> mGroup_game;
+
 
 	float get_delta();
 };

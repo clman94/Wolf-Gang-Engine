@@ -21,6 +21,7 @@ namespace AS = AngelScript;
 namespace rpg
 {
 
+
 class script_system
 {
 public:

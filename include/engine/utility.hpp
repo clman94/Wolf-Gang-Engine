@@ -9,72 +9,119 @@
 #include <type_traits>
 #include <cmath>
 #include <fstream>
+#include <typeinfo>
 
 namespace util
 {
 
-template<std::intmax_t Tnum, std::intmax_t Tden = 1>
-class ratio
+class any
 {
 public:
-	static constexpr std::intmax_t num = Tnum;
-	static constexpr std::intmax_t den = Tden;
-};
-
-template <class T, class Tratio = ratio<1>>
-class fraction
-{
-public:
-	T get_rep() const
+	any()
 	{
-		const T num = mVal * static_cast<T>(Tratio::num);
-		const T rep = num / static_cast<T>(Tratio::den);
-		return rep;
 	}
 
-	fraction()
-	{}
-
-	fraction(T pVal)
+	~any()
 	{
-		mVal = pVal;
+		clear();
 	}
 
-	template<class T1>
-	fraction(const fraction<T, T1>& pRatio)
+	any(any& pA)
 	{
-		mVal = convert(pRatio);
 	}
 
-	template<class T1>
-	fraction& operator=(fraction<T, T1> pRatio)
+	template<class T>
+	void set()
 	{
-		mVal = convert(pRatio);
+		typedef std::decay<T>::type type;
+		mData.reset(dynamic_cast<placeholder*>(new holder<type>()));
+	}
+
+	template<class T>
+	void set(const T& pData)
+	{
+		typedef std::decay<T>::type type;
+		mData.reset(dynamic_cast<placeholder*>(new holder<type>(pData)));
+	}
+
+	template<class T>
+	any(const T& pData)
+	{
+		set(pData);
+	}
+
+	template<class T>
+	any& operator=(const T& pData)
+	{
+		set(pData);
 		return *this;
 	}
 
-	template<class T1>
-	fraction operator+(fraction<T, T1> pRatio)
+	bool empty() const
 	{
-		fraction ret(*this);
-		ret.mVal += convert(pRatio);
-		return ret;
+		return !mData;
 	}
 
-	T get_value() const
+	template<class T>
+	bool check() const
 	{
-		return mVal;
+		typedef std::decay<T>::type type;
+		if (empty())
+			return false;
+		return typeid(type) == mData->get_type_info();
+	}
+
+	template<class T>
+	T& get() const
+	{
+		typedef std::decay<T>::type type;
+		assert(check<T>());
+		return dynamic_cast<holder<type>*>(mData.get())->get();
+	}
+
+	void clear()
+	{
+		mData.reset();
 	}
 
 private:
-
-	template<class T1>
-	static T convert(const fraction<T, T1>& pRatio)
+	class placeholder
 	{
-		return (pRatio.get_rep() * static_cast<T>(Tratio::den)) / static_cast<T>(Tratio::num);
-	}
+	public:
+		virtual ~placeholder() {}
+		virtual const std::type_info& get_type_info() const = 0;
+		virtual placeholder* clone() const = 0;
+	};
 
-	T mVal;
+	template<class T>
+	class holder : public placeholder
+	{
+	public:
+		holder() {}
+		holder(const T& pData)
+			: mData(pData)
+		{}
+		~holder() { }
+
+		virtual const std::type_info& get_type_info() const
+		{
+			return typeid(T);
+		}
+
+		virtual placeholder* clone() const
+		{
+			return new holder<T>(mData);
+		}
+
+		T& get()
+		{
+			return mData;
+		}
+	private:
+		T mData;
+	};
+
+	std::unique_ptr<placeholder> mData;
 };
 
 /// Similar to optional but optimized for a pointer
@@ -148,72 +195,6 @@ private:
 
 class in_place_t {};
 static const in_place_t in_place;
-
-/*template<class T>
-class static_allocate
-{
-public:
-	static_allocate()
-	{
-		mConstructed = false;
-	}
-
-	~static_allocate()
-	{
-		deconstruct();
-	}
-
-	void construct()
-	{
-		if (!mConstructed
-			&& std::is_constructible<T>::value)
-			new (cast()) T();
-		mConstructed = true;
-	}	
-
-	template<typename...T_ARGS>
-	void construct(in_place_t pIn_place, T_ARGS&&... pArgs)
-	{
-		if (!mConstructed
-			&& std::is_constructible<T>::value)
-			new (cast()) T(std::forward<T_ARGS>(pArgs)...);
-		mConstructed = true;
-	}
-
-	void deconstruct()
-	{
-		if (mConstructed 
-			&& std::is_destructible<T>::value)
-			cast()->~T();
-		mConstructed = false;
-	}
-
-	T* get()
-	{
-		return cast();
-	}
-
-	T const* get() const
-	{
-		return cast();
-	}
-
-	bool is_constructed() const
-	{
-		return mConstructed;
-	}
-
-private:
-	// Allocates space for the object WITHOUT any construction
-	char mData[sizeof(T)];
-
-	bool mConstructed;
-
-	T* cast()
-	{
-		return reinterpret_cast<T*>(&mData);
-	}
-};*/
 
 template<typename T>
 class optional
@@ -391,7 +372,7 @@ private:
 /// Floor a value to a specific alignment.
 /// Ex. 
 template<typename T>
-static T floor_align(T pVal, T pAlign)
+inline T floor_align(T pVal, T pAlign)
 {
 	return std::floor(pVal / pAlign)*pAlign;
 }
@@ -407,7 +388,7 @@ private:
 
 /// std::string doesn't like null pointers so this
 /// just returns an empty std::string when there is one.
-static std::string safe_string(const char* str)
+inline std::string safe_string(const char* str)
 {
 	if (str == nullptr)
 		return std::string();
@@ -476,7 +457,7 @@ T to_numeral(const std::string& str, std::string::const_iterator& iter)
 }
 
 template<typename T>
-static inline T clamp(T v, T min, T max)
+inline T clamp(T v, T min, T max)
 {
 	if (v < min) return min;
 	if (v > max) return max;
@@ -486,7 +467,7 @@ static inline T clamp(T v, T min, T max)
 
 // Pingpong array
 template<typename T>
-T pingpong_index(T v, T end)
+inline T pingpong_index(T v, T end)
 {
 	assert(end != 0);
 	return ((v / end) % 2) ? end - (v%end) : (v%end);

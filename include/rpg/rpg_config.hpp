@@ -33,6 +33,19 @@ const float GUI_DEPTH              = -2;
 const float FX_DEPTH               = -1;
 const float ABSOLUTE_OVERLAP_DEPTH = -100000;
 
+const std::string MINIMAL_XML_SCENE =
+	"<scene>\n"
+	"\t<map><texture/></map>\n"
+	"\t<collisionboxes/>\n"
+	"</scene>";
+
+const std::string MINIMAL_SCRIPT_SCENE =
+	"[start]\n"
+	"void start()\n"
+	"{\n"
+	"\t//set_position(get_player(), vec(0, 0))\n"
+	"}\n";
+
 }
 }
 #endif

@@ -74,7 +74,7 @@ render_object::get_depth()
 renderer::renderer()
 {
 	mRequest_resort = false;
-	mTgui = nullptr;
+	mTgui.setWindow(mWindow);
 }
 
 renderer::~renderer()
@@ -106,6 +106,8 @@ renderer::initualize(ivector pSize, int pFps)
 	mWindow.create(sf::VideoMode(pSize.x, pSize.y), "Wolf-Gang Engine", sf::Style::Titlebar | sf::Style::Close | sf::Style::Resize);
 	if (pFps > 0)
 		mWindow.setFramerateLimit(pFps);
+
+	refresh_gui_view();
 	return 0;
 }
 
@@ -130,7 +132,7 @@ int renderer::draw()
 	}
 	mWindow.clear(mBackground_color);
 	draw_objects();
-	if (mTgui) mTgui->draw();
+	mTgui.draw();
 	mWindow.display();
 	return 0;
 }
@@ -138,6 +140,11 @@ int renderer::draw()
 int renderer::draw(render_object& pObject)
 {
 	return pObject.draw(*this);
+}
+
+tgui::Gui & renderer::get_tgui()
+{
+	return mTgui;
 }
 
 void renderer::refresh_view()
@@ -177,6 +184,11 @@ void renderer::refresh_view()
 	view.setViewport(viewport);
 	mWindow.setView(view);
 	return;
+}
+
+void renderer::refresh_gui_view()
+{
+	mTgui.setView(sf::View(sf::FloatRect(0, 0, static_cast<float>(mWindow.getSize().x), static_cast<float>(mWindow.getSize().y))));
 }
 
 
@@ -300,8 +312,6 @@ float renderer::get_delta()
 
 void renderer::set_gui(tgui::Gui * pTgui)
 {
-	mTgui = pTgui;
-	pTgui->setWindow(mWindow);
 }
 
 void
@@ -321,9 +331,9 @@ renderer::refresh_pressed()
 }
 
 bool
-renderer::is_key_pressed(key_type pKey_type)
+renderer::is_key_pressed(key_type pKey_type, bool pIgnore_gui)
 {
-	if (!mWindow.hasFocus() || mIs_keyboard_busy)
+	if (!mWindow.hasFocus() || (mIs_keyboard_busy && !pIgnore_gui))
 		return false;
 	bool is_pressed = sf::Keyboard::isKeyPressed(pKey_type);
 	if (mPressed_keys[pKey_type] == -1 && is_pressed)
@@ -333,17 +343,17 @@ renderer::is_key_pressed(key_type pKey_type)
 }
 
 bool
-renderer::is_key_down(key_type pKey_type)
+renderer::is_key_down(key_type pKey_type, bool pIgnore_gui)
 {
-	if (!mWindow.hasFocus() || mIs_keyboard_busy)
+	if (!mWindow.hasFocus() || (mIs_keyboard_busy && !pIgnore_gui))
 		return false;
 	return sf::Keyboard::isKeyPressed(pKey_type);
 }
 
 bool
-renderer::is_mouse_pressed(mouse_button pButton_type)
+renderer::is_mouse_pressed(mouse_button pButton_type, bool pIgnore_gui)
 {
-	if (!mWindow.hasFocus() || mIs_mouse_busy)
+	if (!mWindow.hasFocus() || (mIs_mouse_busy && !pIgnore_gui))
 		return false;
 	bool is_pressed = sf::Mouse::isButtonPressed((sf::Mouse::Button)pButton_type);
 	if (mPressed_buttons[pButton_type] == -1 && is_pressed)
@@ -353,9 +363,9 @@ renderer::is_mouse_pressed(mouse_button pButton_type)
 }
 
 bool
-renderer::is_mouse_down(mouse_button pButton_type)
+renderer::is_mouse_down(mouse_button pButton_type, bool pIgnore_gui)
 {
-	if (!mWindow.hasFocus() || mIs_mouse_busy)
+	if (!mWindow.hasFocus() || (mIs_mouse_busy && !pIgnore_gui))
 		return false;
 	return sf::Mouse::isButtonPressed((sf::Mouse::Button)pButton_type);
 }
@@ -378,15 +388,12 @@ renderer::update_events()
 			refresh_view();
 
 			// Adjust view of gui so it won't stretch
-			if (mTgui)
-				mTgui->setView(sf::View(sf::FloatRect(0, 0, static_cast<float>(mWindow.getSize().x), static_cast<float>(mWindow.getSize().y))));
+			refresh_gui_view();
 		}
 		
-		if (mTgui)
+		// Update tgui events
 		{
-			bool is_consumed = mTgui->handleEvent(mEvent);
-
-			if (is_consumed)
+			if (mTgui.handleEvent(mEvent))
 			{
 				mIs_mouse_busy = mEvent.type >= sf::Event::MouseWheelMoved
 					&& mEvent.type <= sf::Event::MouseLeft;
@@ -402,6 +409,7 @@ renderer::update_events()
 	}
 	return 0;
 }
+
 /*
 anchor_thing::anchor_thing()
 {

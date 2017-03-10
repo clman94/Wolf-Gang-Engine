@@ -64,10 +64,10 @@ public:
 		mouse_middle
 	};
 
-	bool is_key_pressed(key_type pKey_type);
-	bool is_key_down(key_type pKey_type);
-	bool is_mouse_pressed(mouse_button pButton_type);
-	bool is_mouse_down(mouse_button pButton_type);
+	bool is_key_pressed(key_type pKey_type, bool pIgnore_gui = false);
+	bool is_key_down(key_type pKey_type, bool pIgnore_gui = false);
+	bool is_mouse_pressed(mouse_button pButton_type, bool pIgnore_gui = false);
+	bool is_mouse_down(mouse_button pButton_type, bool pIgnore_gui = false);
 
 	int update_events();
 
@@ -111,15 +111,19 @@ public:
 	sf::RenderTarget& get_sfml_render()
 	{ return mWindow; }
 
+
 #endif
+
+	tgui::Gui& get_tgui();
 
 private:
 
 	fvector mTarget_size;
 
 	void refresh_view();
+	void refresh_gui_view();
 
-	tgui::Gui* mTgui;
+	tgui::Gui mTgui;
 	bool mIs_mouse_busy;
 	bool mIs_keyboard_busy;
 

@@ -37,7 +37,7 @@ void script_system::script_abort()
 
 void script_system::script_create_thread(AS::asIScriptFunction * func, AS::CScriptDictionary * arg)
 {
-	if (func == 0)
+	if (!func)
 	{
 		util::error("Invalid function");
 		return;

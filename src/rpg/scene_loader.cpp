@@ -70,12 +70,9 @@ bool scene_loader::load(const std::string & pName)
 	{
 		// Load tilemap texture
 		if (auto ele_texture = mEle_map->FirstChildElement("texture"))
-			mTilemap_texture = ele_texture->GetText();
+			mTilemap_texture = util::safe_string(ele_texture->GetText());
 		else
-		{
-			util::error("Tilemap texture is not defined");
-			return false;
-		}
+			util::warning("Tilemap texture is not defined");
 
 	}
 

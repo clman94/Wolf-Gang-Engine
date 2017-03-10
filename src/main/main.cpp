@@ -75,14 +75,12 @@ void wolf_gang_engine::update_events()
 		util::info("Closing with 'Escape'");
 		mRunning = false;
 	}
-
-	if (mRenderer.is_key_pressed(engine::renderer::key_type::T))
-		std::cout << "FPS: " << mRenderer.get_fps() << "\n";
 }
 
 // Entry point of application
 int main(int argc, char* argv[])
 {
+	
 	try
 	{
 		wolf_gang_engine wge;
@@ -94,6 +92,6 @@ int main(int argc, char* argv[])
 		util::error("A main exception occurred: " + std::string(e.what()) + "\n");
 		std::getchar();
 	}
-
+	
 	return 0;
 }

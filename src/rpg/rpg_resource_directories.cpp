@@ -48,7 +48,14 @@ bool texture_directory::load(engine::resource_manager& pResource_manager)
 			auto atlas_path = texture_path.parent_path();
 			atlas_path /= texture_name + ".xml";
 			if (engine::fs::exists(atlas_path))
+			{
 				texture->set_atlas_source(atlas_path.string());
+			}
+			else
+			{
+				util::warning("Atlas of texture '" + texture_name + "' does not exist");
+				continue; // Texture requires atlas
+			}
 
 			pResource_manager.add_resource(engine::resource_type::texture, texture_name, texture);
 		}
