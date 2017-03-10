@@ -85,7 +85,8 @@ bool terminal_system::execute(const std::string & pCommand)
 			}
 
 			// Group requires the input of a subcommand
-			else if (args.size() >= 1)
+			else if (args.size() >= 1
+				&& command == group->get_root_command())
 			{
 				const std::string sub_command(args[0]);
 				const terminal_arglist sub_args(args.begin() + 1, args.end());

@@ -325,7 +325,29 @@ void tilemap_manipulator::set_layer(const layer & pTiles, int pLayer)
 	mMap[pLayer] = pTiles;
 }
 
-inline bool rpg::tilemap_manipulator::move_layer(int pFrom, int pTo)
+bool tilemap_manipulator::shift(engine::fvector pAmount)
+{
+	for (auto &l : mMap) // Current layer
+	{
+		shift(pAmount, l.first);
+	}
+	return true;
+}
+
+bool tilemap_manipulator::shift(engine::fvector pAmount, int pLayer)
+{
+	layer new_layer;
+	for (auto &i : mMap[pLayer]) // Tile
+	{
+		tile new_tile = i.second;
+		new_tile.set_position(new_tile.get_position() + pAmount);
+		new_layer[new_tile.get_position()] = new_tile;
+	}
+	mMap[pLayer] = std::move(new_layer);
+	return true;
+}
+
+inline bool tilemap_manipulator::move_layer(int pFrom, int pTo)
 {
 	if (mMap.find(pFrom) == mMap.end())
 		return false;

@@ -139,6 +139,8 @@ class tilemap_editor :
 public:
 	tilemap_editor();
 	int draw(engine::renderer& pR);
+	void load_terminal_interface(engine::terminal_system& pTerminal);
+
 	int save();
 
 	void clean();
@@ -147,6 +149,8 @@ protected:
 	virtual bool editor_open();
 	
 private:
+
+	std::shared_ptr<engine::terminal_command_group> mTilemap_group;
 
 	enum class state
 	{
@@ -212,6 +216,8 @@ public:
 	collisionbox_editor();
 
 	int draw(engine::renderer& pR);
+	void load_terminal_interface(engine::terminal_system& pTerminal);
+
 	int save();
 
 protected:
@@ -282,6 +288,7 @@ public:
 	void set_world_node(node& pNode);
 
 	void set_resource_manager(engine::resource_manager& pResource_manager);
+	void load_terminal_interface(engine::terminal_system& pTerminal);
 
 	int draw(engine::renderer& pR);
 

@@ -81,6 +81,9 @@ public:
 	layer get_layer(int pLayer);
 	void set_layer(const layer& pTiles, int pLayer);
 
+	bool shift(engine::fvector pAmount);
+	bool shift(engine::fvector pAmount, int pLayer);
+
 	bool move_layer(int pFrom, int pTo);
 
 	std::string find_tile_name(engine::fvector pPosition, int pLayer);

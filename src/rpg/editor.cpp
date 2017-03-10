@@ -411,6 +411,8 @@ bool tilemap_editor::editor_open()
 	update_preview();
 	update_labels();
 
+	mTilemap_group->set_enabled(true);
+
 	return true;
 }
 
@@ -560,6 +562,72 @@ int tilemap_editor::draw(engine::renderer & pR)
 	return 0;
 }
 
+void tilemap_editor::load_terminal_interface(engine::terminal_system & pTerminal)
+{
+	mTilemap_group = std::make_shared<engine::terminal_command_group>();
+	mTilemap_group->set_root_command("tilemap");
+
+	mTilemap_group->add_command("clear",
+		[&](const engine::terminal_arglist& pArgs)->bool
+	{
+		mTilemap_manipulator.clean();
+		update_tilemap();
+		return true;
+	}, "- Clear the entire tilemap (Warning: Can't undo)");
+
+	mTilemap_group->add_command("shift",
+		[&](const engine::terminal_arglist& pArgs)->bool
+	{
+		if (pArgs.size() < 2)
+		{
+			util::error("Not enough arguments");
+			return false;
+		}
+
+		engine::fvector shift_amount;
+		try {
+			shift_amount.x = util::to_numeral<float>(pArgs[0]);
+			shift_amount.y = util::to_numeral<float>(pArgs[1]);
+		}
+		catch (...)
+		{
+			util::error("Invalid offset input");
+			return false;
+		}
+
+		if (pArgs.size() >= 3)
+		{
+			if (pArgs[2].get_raw() == "current")
+			{
+				mTilemap_manipulator.shift(shift_amount, mLayer);
+			}
+			else
+			{
+				int layer;
+				try {
+					layer = util::to_numeral<int>(pArgs[2]);
+				}
+				catch (...)
+				{
+					util::error("Invalid layer input");
+					return false;
+				}
+
+				mTilemap_manipulator.shift(shift_amount, layer);
+			}
+		}
+		else
+		{
+			mTilemap_manipulator.shift(shift_amount); // Shift entire tilemap
+		}
+		update_tilemap();
+		return true;
+	}, "<X> <Y> [Layer#/current] - Shift the tilemap (Warning: Can't undo)");
+
+	mTilemap_group->set_enabled(false);
+	pTerminal.add_group(mTilemap_group);
+}
+
 
 void tilemap_editor::setup_editor(editor_gui & pEditor_gui)
 {
@@ -589,7 +657,7 @@ void tilemap_editor::setup_editor(editor_gui & pEditor_gui)
 	bt_apply_texture->connect("pressed", [&]() { apply_texture(); });
 }
 
-void editors::tilemap_editor::copy_tile_type_at(engine::fvector pAt)
+void tilemap_editor::copy_tile_type_at(engine::fvector pAt)
 {
 	const std::string atlas = mTilemap_manipulator.find_tile_name(pAt, mLayer);
 	if (!atlas.empty())
@@ -817,6 +885,7 @@ void tilemap_editor::clean()
 	mCurrent_texture_name.clear();
 	mPreview.set_texture(nullptr);
 	mCommand_manager.clean();
+	mTilemap_group->set_enabled(false);
 }
 
 // ##########
@@ -1278,6 +1347,11 @@ void editor_manager::set_resource_manager(engine::resource_manager& pResource_ma
 {
 	mTilemap_editor.set_resource_manager(pResource_manager);
 	mCollisionbox_editor.set_resource_manager(pResource_manager);
+}
+
+void editor_manager::load_terminal_interface(engine::terminal_system & pTerminal)
+{
+	mTilemap_editor.load_terminal_interface(pTerminal);
 }
 
 int editor_manager::draw(engine::renderer& pR)

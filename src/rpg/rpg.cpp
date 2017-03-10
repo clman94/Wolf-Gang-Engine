@@ -1266,6 +1266,7 @@ game::game()
 	load_script_interface();
 	load_terminal_interface();
 	mScene.load_terminal_interface(mTerminal_system);
+	mEditor_manager.load_terminal_interface(mTerminal_system);
 	mTerminal_gui.set_terminal_system(mTerminal_system);
 	mEditor_manager.set_resource_manager(mResource_manager);
 	mEditor_manager.set_world_node(mScene.get_world_node());
