@@ -46,7 +46,7 @@ public:
 	terminal_command_group()
 		: mIs_enabled(true) {}
 
-	void add_command(const std::string& pCommand, terminal_function pFunction);
+	void add_command(const std::string& pCommand, terminal_function pFunction, const std::string& pHelp = std::string());
 	bool remove_command(const std::string& pCommand);
 	terminal_function find_command(const std::string& pCommand) const;
 
@@ -56,12 +56,16 @@ public:
 	void set_root_command(const std::string& pCommand);
 	const std::string& get_root_command() const;
 
+	std::string generate_help() const;
+	std::string generate_help(std::string pCommand) const;
+
 private:
 	std::string mRoot_command;
 	bool mIs_enabled;
 
 	struct entry
 	{
+		std::string help;
 		std::string command;
 		terminal_function function;
 	};
@@ -74,6 +78,8 @@ class terminal_system
 public:
 	bool execute(const std::string& pCommand);
 	void add_group(std::shared_ptr<terminal_command_group> pGroup);
+
+	std::string generate_help() const;
 
 private:
 	std::vector<std::weak_ptr<terminal_command_group>> pGroups;

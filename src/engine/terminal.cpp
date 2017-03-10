@@ -103,7 +103,18 @@ void terminal_system::add_group(std::shared_ptr<terminal_command_group> pGroup)
 	pGroups.push_back(pGroup);
 }
 
-void terminal_command_group::add_command(const std::string & pCommand, terminal_function pFunction)
+std::string terminal_system::generate_help() const
+{
+	std::string retval;
+	for (auto& i : pGroups)
+	{
+		std::shared_ptr<terminal_command_group> group(i);
+		retval += group->generate_help();
+	}
+	return retval;
+}
+
+void terminal_command_group::add_command(const std::string & pCommand, terminal_function pFunction, const std::string& pHelp)
 {
 	// TODO: possibly check if pName has whitespace
 
@@ -121,6 +132,7 @@ void terminal_command_group::add_command(const std::string & pCommand, terminal_
 	entry nentry;
 	nentry.command = pCommand;
 	nentry.function = pFunction;
+	nentry.help = pHelp;
 	mCommand_entries.push_back(nentry);
 }
 
@@ -165,6 +177,52 @@ void engine::terminal_command_group::set_root_command(const std::string & pComma
 const std::string & engine::terminal_command_group::get_root_command() const
 {
 	return mRoot_command;
+}
+
+std::string terminal_command_group::generate_help() const
+{
+	std::string retval;
+	const bool has_root = !mRoot_command.empty();
+	
+	if (has_root)
+		retval += mRoot_command + "\n";
+
+	for (auto& i : mCommand_entries)
+	{
+		if (has_root)
+			retval += "  ";
+
+		retval += i.command;
+
+		if (!i.help.empty())
+			retval += " " + i.help;
+
+		retval += "\n";
+	}
+	return retval;
+}
+
+std::string terminal_command_group::generate_help(std::string pCommand) const
+{
+	std::string retval;
+	const bool has_root = !mRoot_command.empty();
+
+	for (const auto& i : mCommand_entries)
+	{
+		if (i.command == pCommand)
+		{
+			if (has_root)
+				retval += mRoot_command + " "; // "[Root]"
+
+			retval += i.command; // "[Root] <Command>"
+
+			if (!i.help.empty())
+				retval += " " + i.help; // [Root] <Command> [Help]"
+
+			retval += "\n";
+		}
+	}
+	return retval;
 }
 
 terminal_argument::terminal_argument()

@@ -826,7 +826,7 @@ void scene::load_terminal_interface(engine::terminal_system & pTerminal)
 		[&](const std::vector<engine::terminal_argument>& pArgs)->bool
 	{
 		return reload_scene();
-	});
+	}, "- Reload the scene");
 
 	mTerminal_cmd_group->add_command("load",
 		[&](const engine::terminal_arglist& pArgs)->bool
@@ -834,12 +834,12 @@ void scene::load_terminal_interface(engine::terminal_system & pTerminal)
 		if (pArgs.size() <= 0)
 		{
 			util::error("Not enough arguments");
-			util::info("scene load <Scene Name>");
+			util::info("scene load <scene_name>");
 			return false;
 		}
 
 		return load_scene(pArgs[0]);
-	});
+	}, "<Scene Name> - Load a scene by name");
 
 	mTerminal_cmd_group->add_command("new",
 		[&](const engine::terminal_arglist& pArgs)->bool
@@ -847,7 +847,7 @@ void scene::load_terminal_interface(engine::terminal_system & pTerminal)
 		if (pArgs.size() <= 0)
 		{
 			util::error("Not enough arguments");
-			util::info("scene new <Scene Name>");
+			util::info("scene new <scene_name>");
 			return false;
 		}
 
@@ -855,7 +855,7 @@ void scene::load_terminal_interface(engine::terminal_system & pTerminal)
 			return false;
 
 		return load_scene(pArgs[0]);
-	});
+	}, "<Scene Name> - Create a new scene");
 
 	pTerminal.add_group(mTerminal_cmd_group);
 }
@@ -1396,7 +1396,7 @@ void game::load_terminal_interface()
 		}
 		mFlags.set_flag(pArgs[0]);
 		return true;
-	});
+	}, "<Flag> - Create flag");
 
 	mGroup_flags->add_command("unset",
 		[&](const engine::terminal_arglist& pArgs)->bool
@@ -1409,14 +1409,14 @@ void game::load_terminal_interface()
 		}
 		mFlags.unset_flag(pArgs[0]);
 		return true;
-	});
+	}, "<Flag> - Remove flag");
 
 	mGroup_flags->add_command("clear",
 		[&](const engine::terminal_arglist& pArgs)->bool
 	{
 		mFlags.clean();
 		return true;
-	});
+	}, "- Remove all flags");
 
 	mGroup_game = std::make_shared<engine::terminal_command_group>();
 	mGroup_game->set_root_command("game");
@@ -1425,10 +1425,19 @@ void game::load_terminal_interface()
 	{
 		mScene.clean(true);
 		return mScene.load_scene(mStart_scene);
-	});
+	}, "- Reset game");
+
+	mGroup_global1 = std::make_shared<engine::terminal_command_group>();
+	mGroup_global1->add_command("help",
+		[&](const engine::terminal_arglist& pArgs)->bool
+	{
+		std::cout << mTerminal_system.generate_help();
+		return true;
+	}, "- Display this help");
 
 	mTerminal_system.add_group(mGroup_flags);
 	mTerminal_system.add_group(mGroup_game);
+	mTerminal_system.add_group(mGroup_global1);
 }
 
 float game::get_delta()
@@ -2286,8 +2295,8 @@ void terminal_gui::set_terminal_system(engine::terminal_system & pTerminal_syste
 			util::error("Command failed '" + std::string(pText) + "'");
 		}
 		mEb_input->setText("");
-		mHistory.push_back(std::string(pText));
-		mCurrent_history_entry = mHistory.size() - 1;
+		//mHistory.push_back(std::string(pText));
+		//mCurrent_history_entry = mHistory.size();
 	});
 }
 
@@ -2312,7 +2321,7 @@ void terminal_gui::update(engine::renderer& pR)
 	}
 
 	// History is still a little buggy will fix later
-	if (mEb_input->isFocused())
+	/*if (mEb_input->isFocused())
 	{
 		if (pR.is_key_pressed(engine::renderer::key_type::Up, true)
 			&& mCurrent_history_entry >= 1)
@@ -2322,10 +2331,13 @@ void terminal_gui::update(engine::renderer& pR)
 		}
 
 		if (pR.is_key_pressed(engine::renderer::key_type::Down, true)
-			&& mCurrent_history_entry < mHistory.size() - 1)
+			&& mCurrent_history_entry < mHistory.size())
 		{
 			++mCurrent_history_entry;
-			mEb_input->setText(mHistory[mCurrent_history_entry]);
+			if (mCurrent_history_entry == mHistory.size())
+				mEb_input->setText("");
+			else
+				mEb_input->setText(mHistory[mCurrent_history_entry]);
 		}
-	}
+	}*/
 }

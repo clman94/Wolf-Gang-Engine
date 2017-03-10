@@ -49,8 +49,8 @@ public:
 	void update(engine::renderer& pR);
 
 private:
-	size_t mCurrent_history_entry;
-	std::vector<std::string> mHistory;
+	//size_t mCurrent_history_entry;
+	//std::vector<std::string> mHistory;
 	tgui::EditBox::Ptr mEb_input;
 };
 
@@ -508,6 +508,7 @@ private:
 
 	std::shared_ptr<engine::terminal_command_group> mGroup_flags;
 	std::shared_ptr<engine::terminal_command_group> mGroup_game;
+	std::shared_ptr<engine::terminal_command_group> mGroup_global1;
 
 
 	float get_delta();
