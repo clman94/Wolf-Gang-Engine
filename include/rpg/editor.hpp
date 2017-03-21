@@ -77,8 +77,6 @@ private:
 	tgui::Label::Ptr mLb_fps;
 	std::shared_ptr<tgui_list_layout> mLayout;
 	std::shared_ptr<tgui_list_layout> mEditor_layout;
-	
-
 
 	void refresh_renderer(engine::renderer& pR);
 };
@@ -116,7 +114,7 @@ public:
 	virtual int save() = 0;
 
 protected:
-	virtual bool editor_open() = 0;
+	virtual bool editor_open() { return true; };
 
 	engine::rectangle_node mBlackout;
 
@@ -224,6 +222,7 @@ protected:
 	virtual bool editor_open();
 
 private:
+	std::shared_ptr<engine::terminal_command_group> mCollision_editor_group;
 
 	command_manager mCommand_manager;
 

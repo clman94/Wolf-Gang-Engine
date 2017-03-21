@@ -870,6 +870,8 @@ void scene::load_game_xml(tinyxml2::XMLElement * ele_root)
 {
 	assert(ele_root != nullptr);
 
+	util::info("Loading XML settings...");
+
 	if (auto ele_tile_size = ele_root->FirstChildElement("tile_size"))
 	{
 		mWorld_node.set_unit(ele_tile_size->FloatAttribute("pixels"));
@@ -898,6 +900,8 @@ void scene::load_game_xml(tinyxml2::XMLElement * ele_root)
 
 	mPlayer.set_texture(texture);
 	mPlayer.set_cycle(character_entity::cycle::def);
+
+	util::info("Settings loaded");
 }
 
 player_character& scene::get_player()

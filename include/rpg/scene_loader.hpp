@@ -2,14 +2,14 @@
 #define RPG_SCENE_LOADER_HPP
 
 #include "../../tinyxml2/tinyxml2.h"
-#include "../xmlshortcuts.hpp"
+#include "../../src/xmlshortcuts.hpp"
 
 #include <engine/vector.hpp>
 #include <engine/rect.hpp>
 #include <engine/utility.hpp>
 #include <engine/filesystem.hpp>
 #include <rpg/collision_box.hpp>
-
+ 
 #include <string>
 #include <vector>
 #include <map>

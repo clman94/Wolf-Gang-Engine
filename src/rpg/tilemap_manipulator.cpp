@@ -215,8 +215,6 @@ void tilemap_manipulator::explode_all()
 
 void tilemap_manipulator::generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode * root)
 {
-	std::map<int, tinyxml2::XMLElement *> layers;
-
 	for (auto &l : mMap)
 	{
 		if (!l.second.size())
@@ -225,7 +223,6 @@ void tilemap_manipulator::generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode
 		auto ele_layer = doc.NewElement("layer");
 		ele_layer->SetAttribute("id", l.first);
 		root->InsertEndChild(ele_layer);
-		layers[l.first] = ele_layer;
 
 		for (auto &i : l.second)
 		{
@@ -236,7 +233,7 @@ void tilemap_manipulator::generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode
 			if (tile.get_fill().x > 1)    ele->SetAttribute("w", tile.get_fill().x);
 			if (tile.get_fill().y > 1)    ele->SetAttribute("h", tile.get_fill().y);
 			if (tile.get_rotation() != 0) ele->SetAttribute("r", tile.get_rotation());
-			layers[l.first]->InsertEndChild(ele);
+			ele_layer->InsertEndChild(ele);
 		}
 	}
 }

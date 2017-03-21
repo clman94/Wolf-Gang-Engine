@@ -5,6 +5,23 @@ using namespace editors;
 #include <vector>
 #include <memory>
 
+
+inline engine::fvector read_args_vector(const engine::terminal_arglist& pArgs, float pDefx = 0, float pDefy = 0, size_t pIndex = 0)
+{
+	engine::fvector ret;
+	if (pArgs[pIndex].get_raw() == "-")
+		ret.x = pDefx;
+	else
+		ret.x = util::to_numeral<float>(pArgs[pIndex]);
+
+	if (pArgs[pIndex + 1].get_raw() == "-")
+		ret.y = pDefy;
+	else
+		ret.y = util::to_numeral<float>(pArgs[pIndex + 1]);
+	return ret;
+}
+
+
 bool command_manager::execute(std::shared_ptr<command> pCommand)
 {
 	mRedo.clear();
@@ -187,7 +204,6 @@ void tgui_list_layout::updateWidgetPositions()
 		last = i;
 	}
 }
-
 
 editor_gui::editor_gui()
 {
@@ -586,8 +602,7 @@ void tilemap_editor::load_terminal_interface(engine::terminal_system & pTerminal
 
 		engine::fvector shift_amount;
 		try {
-			shift_amount.x = util::to_numeral<float>(pArgs[0]);
-			shift_amount.y = util::to_numeral<float>(pArgs[1]);
+			shift_amount = read_args_vector(pArgs);
 		}
 		catch (...)
 		{
@@ -622,7 +637,7 @@ void tilemap_editor::load_terminal_interface(engine::terminal_system & pTerminal
 		}
 		update_tilemap();
 		return true;
-	}, "<X> <Y> [Layer#/current] - Shift the tilemap (Warning: Can't undo)");
+	}, "<X> <Y> [Layer#/current] - Shift the entire/layer of tilemap (Warning: Can't undo)");
 
 	mTilemap_group->set_enabled(false);
 	pTerminal.add_group(mTilemap_group);
@@ -1092,6 +1107,94 @@ int collisionbox_editor::draw(engine::renderer& pR)
 	return 0;
 }
 
+void collisionbox_editor::load_terminal_interface(engine::terminal_system & pTerminal)
+{
+	mCollision_editor_group = std::make_shared<engine::terminal_command_group>();
+	mCollision_editor_group->set_root_command("collision");
+	mCollision_editor_group->add_command("clear",
+		[&](const engine::terminal_arglist& pArgs)->bool
+	{
+		mContainer.clean();
+		mSelection.reset();
+		return true;
+	}, "- Clear all collision boxes (Warning: Can't undo)");
+
+	mCollision_editor_group->add_command("offset",
+		[&](const engine::terminal_arglist& pArgs)->bool
+	{
+		if (!mSelection)
+		{
+			util::error("Invalid selection");
+			return false;
+		}
+		
+		if (pArgs.size() < 1)
+		{
+			util::error("Not enough arguments");
+			return false;
+		}
+
+		if (pArgs[0].get_raw() == "reset")
+		{
+
+		}
+
+		if (pArgs.size() < 2)
+		{
+			util::error("Not enough arguments");
+			return false;
+		}
+
+		engine::fvector offset;
+		try {
+			offset = read_args_vector(pArgs, mSelection->get_region().x, mSelection->get_region().y);
+		}
+		catch (...)
+		{
+			util::error("Invalid offset input");
+			return false;
+		}
+		engine::frect changed = mSelection->get_region();
+		changed.set_offset(changed.get_offset() + offset);
+		mSelection->set_region(changed);
+
+		return true;
+	}, "<X> <Y> or reset - Offset collisionbox (Warning: Can't undo)");
+
+	mCollision_editor_group->add_command("size",
+		[&](const engine::terminal_arglist& pArgs)->bool
+	{
+		if (!mSelection)
+		{
+			util::error("Invalid selection");
+			return false;
+		}
+
+		if (pArgs.size() < 2)
+		{
+			util::error("Not enough arguments");
+			return false;
+		}
+
+		engine::fvector size;
+		try {
+			size = read_args_vector(pArgs, mSelection->get_region().w, mSelection->get_region().h);
+		}
+		catch (...)
+		{
+			util::error("Invalid offset input");
+			return false;
+		}
+
+		engine::frect changed = mSelection->get_region();
+		changed.set_size(size);
+		mSelection->set_region(changed);
+
+		return true;
+	}, "<X> <Y> - Set size of collisionbox (Warning: Can't undo)");
+	pTerminal.add_group(mCollision_editor_group);
+}
+
 int collisionbox_editor::save()
 {
 	util::info("Saving collision boxes");
@@ -1352,6 +1455,7 @@ void editor_manager::set_resource_manager(engine::resource_manager& pResource_ma
 void editor_manager::load_terminal_interface(engine::terminal_system & pTerminal)
 {
 	mTilemap_editor.load_terminal_interface(pTerminal);
+	mCollisionbox_editor.load_terminal_interface(pTerminal);
 }
 
 int editor_manager::draw(engine::renderer& pR)
