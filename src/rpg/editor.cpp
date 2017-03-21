@@ -880,7 +880,7 @@ int tilemap_editor::save()
 		doc.DeleteNode(ele_layer);
 		ele_layer = ele_map->FirstChildElement("layer");
 	}
-	mTilemap_manipulator.condense_tiles();
+	mTilemap_manipulator.condense_map();
 	mTilemap_manipulator.generate(doc, ele_map);
 	doc.SaveFile(mLoader.get_scene_path().c_str());
 

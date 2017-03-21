@@ -59,7 +59,7 @@ public:
 
 	tilemap_manipulator();
 
-	void condense_tiles();
+	void condense_map();
 
 	int load_tilemap_xml(tinyxml2::XMLElement *root);
 	int load_tilemap_xml(std::string pPath);

@@ -112,7 +112,7 @@ void tilemap_manipulator::condense_layer(layer &pMap)
 }
 
 void
-tilemap_manipulator::condense_tiles()
+tilemap_manipulator::condense_map()
 {
 	if (!mMap.size()) return;
 	for (auto &i : mMap)
