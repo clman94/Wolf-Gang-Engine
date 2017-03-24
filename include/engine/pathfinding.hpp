@@ -1,7 +1,7 @@
 #ifndef ENGINE_PATHFINDING_HPP
 #define ENGINE_PATHFINDING_HPP
 
-#include <engine\vector.hpp>
+#include <engine/vector.hpp>
 #include <vector>
 #include <deque>
 #include <array>

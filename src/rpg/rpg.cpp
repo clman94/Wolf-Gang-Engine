@@ -5,6 +5,7 @@
 #include "../xmlshortcuts.hpp"
 
 #include <algorithm>
+#include <fstream>
 
 using namespace rpg;
 using namespace AS;
@@ -751,12 +752,12 @@ bool scene::create_scene(const std::string & pName)
 	engine::fs::create_directories(xml_path.parent_path());
 
 	// Create xml file
-	std::ofstream xml(xml_path);
+	std::ofstream xml(xml_path.string().c_str());
 	xml << defs::MINIMAL_XML_SCENE;
 	xml.close();
 
 	// Create script file
-	std::ofstream script(script_path);
+	std::ofstream script(script_path.string().c_str());
 	script << defs::MINIMAL_SCRIPT_SCENE;
 	script.close();
 

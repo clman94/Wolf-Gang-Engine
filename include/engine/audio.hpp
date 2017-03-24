@@ -4,7 +4,7 @@
 #include <engine/resource.hpp>
 
 #include <string>
-#include <SFML\Audio.hpp>
+#include <SFML/Audio.hpp>
 #include <list>
 #include <memory>
 // Wrapper class for sfml sound

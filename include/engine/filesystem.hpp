@@ -3,7 +3,7 @@
 #ifndef ENGINE_FILESYSTEM_HPP
 #define ENGINE_FILESYSTEM_HPP
 
-#ifdef __MINGW32__
+#if defined(__MINGW32__) || defined(__GNUC__)
 #include <boost/filesystem.hpp>
 namespace engine {
 namespace fs = boost::filesystem;

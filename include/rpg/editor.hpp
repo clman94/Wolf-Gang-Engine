@@ -13,7 +13,7 @@
 #include <string>
 #include <list>
 
-#include "../xmlshortcuts.hpp"
+#include "../../src/xmlshortcuts.hpp"
 
 class command
 {
