@@ -88,7 +88,6 @@ public:
 	void movement(engine::renderer& pR);
 };
 
-
 // TODO: Replace with just a simple rectangle_node (with a transparent fill)
 class editor_boundary_visualization :
 	public engine::render_object

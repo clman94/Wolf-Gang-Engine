@@ -18,8 +18,7 @@ namespace AS = AngelScript;
 namespace rpg{
 
 
-
-class script_context :
+class scene_script_context :
 	public engine::resource
 {
 public:
@@ -29,8 +28,8 @@ public:
 		script_function* function;
 	};
 
-	script_context();
-	~script_context();
+	scene_script_context();
+	~scene_script_context();
 
 	void set_path(const std::string& pFilepath);
 	bool load();
@@ -41,6 +40,8 @@ public:
 	bool is_valid() const;
 	void clean();
 	void start_all_with_tag(const std::string& pTag);
+
+	std::vector<script_function> get_all_with_tag(const std::string& pTag);
 
 	void clean_globals();
 

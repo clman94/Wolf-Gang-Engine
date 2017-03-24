@@ -132,7 +132,8 @@ void script_system::script_error_print(std::string & pMessage)
 void
 script_system::register_vector_type()
 {
-	mEngine->RegisterObjectType("vec", sizeof(engine::fvector), asOBJ_VALUE | asGetTypeTraits<engine::fvector>());
+	// Added asOBJ_APP_CLASS_ALLFLOATS so linux won't complain
+	mEngine->RegisterObjectType("vec", sizeof(engine::fvector), asOBJ_VALUE | asOBJ_APP_CLASS_ALLFLOATS | asGetTypeTraits<engine::fvector>());
 
 	// Constructors and deconstructors
 	mEngine->RegisterObjectBehaviour("vec", asBEHAVE_CONSTRUCT, "void f()"
@@ -280,7 +281,7 @@ void script_system::abort_all()
 		mEngine->ReturnContext(i->context);
 	}
 	mThread_contexts.clear();
-	mEngine->GarbageCollect(asGC_FULL_CYCLE | asGC_DESTROY_GARBAGE);
+	//mEngine->GarbageCollect(asGC_FULL_CYCLE | asGC_DESTROY_GARBAGE);
 }
 
 void script_system::return_context(AS::asIScriptContext * pContext)

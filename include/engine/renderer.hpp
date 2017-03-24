@@ -1,8 +1,8 @@
 #ifndef RENDERER_HPP
 #define RENDERER_HPP
 
-#include <SFML\Graphics.hpp>
-#include <TGUI\TGUI.hpp>
+#include <SFML/Graphics.hpp>
+#include <TGUI/TGUI.hpp>
 
 #include <memory>
 #include <vector>

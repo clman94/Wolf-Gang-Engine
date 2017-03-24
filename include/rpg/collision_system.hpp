@@ -24,7 +24,7 @@ public:
 	void clean();
 
 	int load_collision_boxes(tinyxml2::XMLElement* pEle);
-	void setup_script_defined_triggers(const script_context& pContext);
+	void setup_script_defined_triggers(const scene_script_context& pContext);
 	void load_script_interface(script_system& pScript);
 
 	collision_box_container& get_container();

@@ -335,7 +335,9 @@ public:
 	void focus_player(bool pFocus);
 
 private:
-	std::map<std::string, script_context> pScript_contexts;
+	std::vector<script_function> mEnd_functions;
+
+	std::map<std::string, scene_script_context> pScript_contexts;
 
 	panning_node mWorld_node;
 

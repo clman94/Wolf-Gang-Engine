@@ -37,14 +37,13 @@ class texture_atlas
 {
 public:
 	bool load(const std::string& pPath);
-
 	void clean();
 
 	util::optional_pointer<const atlas_entry> get_entry(const std::string& pName) const;
 
 	std::vector<std::string> compile_list() const;
 
-private:
+protected:
 	std::unordered_map<std::string, atlas_entry> mAtlas;
 };
 

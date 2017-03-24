@@ -30,7 +30,7 @@ int collision_system::load_collision_boxes(tinyxml2::XMLElement* pEle)
 	return 0;
 }
 
-void collision_system::setup_script_defined_triggers(const script_context & pContext)
+void collision_system::setup_script_defined_triggers(const scene_script_context & pContext)
 {
 	for (auto& i : pContext.get_wall_group_functions())
 	{

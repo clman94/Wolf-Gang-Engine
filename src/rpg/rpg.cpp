@@ -627,6 +627,8 @@ scene::clean(bool pFull)
 {
 	mScript->abort_all();
 
+	mEnd_functions.clear();
+
 	mTilemap_display.clean();
 	mTilemap_manipulator.clean();
 	mCollision_system.clean();
@@ -690,6 +692,7 @@ bool scene::load_scene(std::string pName)
 		context.clean_globals();
 		mCollision_system.setup_script_defined_triggers(context);
 		context.start_all_with_tag("start");
+		mEnd_functions = context.get_all_with_tag("door");
 	}
 
 	auto tilemap_texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, mLoader.get_tilemap_texture());
@@ -1022,8 +1025,19 @@ void scene::update_collision_interaction(controls & pControls)
 		const auto hit = container.first_collision(collision_box::type::door, collision_box);
 		if (hit)
 		{
-			const auto hit_door = std::dynamic_pointer_cast<door>(hit);
-			load_scene(hit_door->get_scene(), hit_door->get_destination());
+			if (!mEnd_functions[0].is_running())
+			{
+				mScript->abort_all();
+				const auto hit_door = std::dynamic_pointer_cast<door>(hit);
+				for (auto& i : mEnd_functions)
+				{
+					if (i.call())
+					{
+						i.set_arg(0, (void*)&hit_door->get_scene());
+						i.set_arg(1, (void*)&hit_door->get_destination());
+					}
+				}
+			}
 		}
 	}
 
@@ -1125,37 +1139,37 @@ void controls::update(engine::renderer & pR)
 // script_context
 // #########
 
-script_context::script_context() :
+scene_script_context::scene_script_context() :
 	mScene_module(nullptr)
 {}
 
-script_context::~script_context()
+scene_script_context::~scene_script_context()
 {
 }
 
-void script_context::set_path(const std::string & pFilepath)
+void scene_script_context::set_path(const std::string & pFilepath)
 {
 	mScript_path = pFilepath;
 }
 
-bool script_context::load()
+bool scene_script_context::load()
 {
 	assert(!mScript_path.empty());
 	return build_script(mScript_path);
 }
 
-bool script_context::unload()
+bool scene_script_context::unload()
 {
 	clean();
 	return true;
 }
 
-void script_context::set_script_system(script_system & pScript)
+void scene_script_context::set_script_system(script_system & pScript)
 {
 	mScript = &pScript;
 }
 
-bool script_context::build_script(const std::string & pPath)
+bool scene_script_context::build_script(const std::string & pPath)
 {
 	util::info("Compiling script '" + pPath + "'...");
 
@@ -1177,7 +1191,7 @@ bool script_context::build_script(const std::string & pPath)
 	return true;
 }
 
-std::string script_context::get_metadata_type(const std::string & pMetadata)
+std::string scene_script_context::get_metadata_type(const std::string & pMetadata)
 {
 	for (auto i = pMetadata.begin(); i != pMetadata.end(); i++)
 	{
@@ -1187,12 +1201,12 @@ std::string script_context::get_metadata_type(const std::string & pMetadata)
 	return pMetadata;
 }
 
-bool script_context::is_valid() const
+bool scene_script_context::is_valid() const
 {
 	return mScene_module.has_value();
 }
 
-void script_context::clean()
+void scene_script_context::clean()
 {
 	mTrigger_functions.clear();
 
@@ -1205,8 +1219,19 @@ void script_context::clean()
 	}
 }
 
-void script_context::start_all_with_tag(const std::string & pTag)
+void scene_script_context::start_all_with_tag(const std::string & pTag)
 {
+	auto funcs = get_all_with_tag(pTag);
+
+	for (auto& i : funcs)
+	{
+		i.call();
+	}
+}
+
+std::vector<script_function> scene_script_context::get_all_with_tag(const std::string & pTag)
+{
+	std::vector<script_function> ret;
 	size_t func_count = mScene_module->GetFunctionCount();
 	for (size_t i = 0; i < func_count; i++)
 	{
@@ -1214,23 +1239,27 @@ void script_context::start_all_with_tag(const std::string & pTag)
 		std::string metadata = parsers::remove_trailing_whitespace(mBuilder.GetMetadataStringForFunc(func));
 		if (metadata == pTag)
 		{
-			mScript->create_thread(func);
+			script_function sfunc;
+			sfunc.set_function(func);
+			sfunc.set_script_system(*mScript);
+			ret.push_back(sfunc);
 		}
 	}
+	return ret;
 }
 
-void script_context::clean_globals()
+void scene_script_context::clean_globals()
 {
 	mScene_module->ResetGlobalVars();
 }
 
-const std::vector<script_context::wall_group_function>& script_context::get_wall_group_functions() const
+const std::vector<scene_script_context::wall_group_function>& scene_script_context::get_wall_group_functions() const
 {
 	return mWall_group_functions;
 }
 
 
-void script_context::parse_wall_group_functions()
+void scene_script_context::parse_wall_group_functions()
 {
 	util::info("Binding functions to wall groups...");
 	size_t func_count = mScene_module->GetFunctionCount();
@@ -1363,7 +1392,7 @@ void game::script_load_scene_to_position(const std::string & pName, engine::fvec
 {
 	util::info("Requesting scene load '" + pName + "'");
 	mScene_load_request.request_load(pName);
-	mScene_load_request.set_player_position(pPosition * 32.f);
+	mScene_load_request.set_player_position(pPosition);
 }
 
 void
@@ -1400,6 +1429,7 @@ void game::load_terminal_interface()
 			return false;
 		}
 		mFlags.set_flag(pArgs[0]);
+		util::info("Flag '" + pArgs[0].get_raw() + "' has been set");
 		return true;
 	}, "<Flag> - Create flag");
 
@@ -1413,6 +1443,7 @@ void game::load_terminal_interface()
 			return false;
 		}
 		mFlags.unset_flag(pArgs[0]);
+		util::info("Flag '" + pArgs[0].get_raw() + "' has been unset");
 		return true;
 	}, "<Flag> - Remove flag");
 
@@ -1420,6 +1451,7 @@ void game::load_terminal_interface()
 		[&](const engine::terminal_arglist& pArgs)->bool
 	{
 		mFlags.clean();
+		util::info("All flags cleared");
 		return true;
 	}, "- Remove all flags");
 
@@ -1605,7 +1637,6 @@ script_function::is_running()
 		return false;
 	return true;
 }
-
 
 void
 script_function::set_function(AS::asIScriptFunction * pFunction)
@@ -2266,7 +2297,7 @@ bool scenes_directory::load(engine::resource_manager & pResource_manager)
 
 		if (script_path.extension().string() == ".xml")
 		{
-			std::shared_ptr<script_context> context(new script_context);
+			std::shared_ptr<scene_script_context> context(new scene_script_context);
 			//context->set_path(script_path.parent_path() + (script_path.stem().string() + ".as"));
 			//pResource_manager.add_resource(engine::resource_type::script, , context);
 		}
