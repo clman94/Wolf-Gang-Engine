@@ -82,7 +82,6 @@ public:
 
 	int draw(engine::renderer & pR);
 
-	
 	virtual type get_entity_type()
 	{ return type::text; }
 
@@ -169,35 +168,51 @@ private:
 
 	bool check_entity(entity_reference& e);
 
-	entity_reference script_add_entity(const std::string& tex);
-	entity_reference script_add_entity_atlas(const std::string& tex, const std::string& atlas);
-	entity_reference script_add_text();
-	void             script_set_text(entity_reference& e, const std::string& pText);
+	// General
 	void             script_remove_entity(entity_reference& e);
-	entity_reference script_add_character(const std::string& tex);
 	void             script_set_position(entity_reference& e, const engine::fvector& pos);
 	engine::fvector  script_get_position(entity_reference& e);
-	engine::fvector  script_get_size(entity_reference& e);
-	void             script_set_direction(entity_reference& e, int dir);
-	void             script_set_cycle(entity_reference& e, const std::string& name);
 	void             script_set_depth_direct(entity_reference& e, float pDepth);
 	void             script_set_depth(entity_reference& e, float pDepth);
 	void             script_set_depth_fixed(entity_reference& e, bool pFixed);
+	void             script_set_anchor(entity_reference& e, int pAnchor);
+	void             script_set_visible(entity_reference& e, bool pIs_visible);
+	void             script_add_child(entity_reference& e1, entity_reference& e2);
+	void             script_set_parent(entity_reference& e1, entity_reference& e2);
+	void             script_detach_children(entity_reference& e);
+	void             script_detach_parent(entity_reference& e);
+	void             script_make_gui(entity_reference& e, float pOffset);
+	void             script_set_z(entity_reference& e, float pZ);
+	float            script_get_z(entity_reference& e);
+	bool             script_is_character(entity_reference& e);
+
+	// Text-based
+	entity_reference script_add_text();
+	void             script_set_text(entity_reference& e, const std::string& pText);
+	void             script_set_font(entity_reference& e, const std::string& pName);
+	
+	// Sprite-based
+	entity_reference script_add_entity(const std::string& tex);
+	entity_reference script_add_entity_atlas(const std::string& tex, const std::string& atlas);
+	engine::fvector  script_get_size(entity_reference& e);
 	void             script_start_animation(entity_reference& e);
 	void             script_stop_animation(entity_reference& e);
 	void             script_set_atlas(entity_reference& e, const std::string& name);
-	void             script_set_anchor(entity_reference& e, int pAnchor);
 	void             script_set_rotation(entity_reference& e, float pRotation);
 	float            script_get_rotation(entity_reference& e);
 	void             script_set_color(entity_reference& e, int r, int g, int b, int a);
-	void             script_set_visible(entity_reference& e, bool pIs_visible);
-	void             script_set_texture(entity_reference& e, const std::string& name);
-	void             script_set_font(entity_reference& e, const std::string& pName);
-	bool             script_is_character(entity_reference& e);
-	void             script_set_z(entity_reference& e, float pZ);
-	float            script_get_z(entity_reference& e);
+	void             script_set_animation_speed(entity_reference& e, float pSpeed);
+	float            script_get_animation_speed(entity_reference& e);
+	void             script_set_texture(entity_reference & e, const std::string & name);
+	void             script_set_scale(entity_reference& e, const engine::fvector& pScale);
+	engine::fvector  script_get_scale(entity_reference& e);
 
-	// For dialog_text_entity
+	// Character
+	entity_reference script_add_character(const std::string& tex);
+	void             script_set_direction(entity_reference& e, int dir);
+	void             script_set_cycle(entity_reference& e, const std::string& name);
+
+	// Dialog Text
 	entity_reference script_add_dialog_text();
 	void             script_reveal(entity_reference& e, const std::string& pText, bool pAppend);
 	bool             script_is_revealing(entity_reference& e);
@@ -205,12 +220,6 @@ private:
 	void             script_set_interval(entity_reference& e, float pMilli);
 	bool             script_has_displayed_new_character(entity_reference& e);
 
-	void             script_add_child(entity_reference& e1, entity_reference& e2);
-	void             script_set_parent(entity_reference& e1, entity_reference& e2);
-	void             script_detach_children(entity_reference& e);
-	void             script_detach_parent(entity_reference& e);
-
-	void             script_make_gui(entity_reference& e, float pOffset);
 };
 
 class background_music

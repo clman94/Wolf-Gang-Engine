@@ -15,6 +15,11 @@ void sprite_node::set_scale(fvector pScale)
 	set_anchor(mAnchor);
 }
 
+fvector sprite_node::get_scale() const
+{
+	return mScale;
+}
+
 void sprite_node::set_texture(std::shared_ptr<texture> pTexture)
 {
 	mTexture = pTexture;

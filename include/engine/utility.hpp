@@ -254,6 +254,11 @@ public:
 		return is_valid();
 	}
 
+	bool operator==(const tracking_ptr& pA) const
+	{
+		return mPointer == pA.mPointer;
+	}
+
 private:
 	std::shared_ptr<bool> mIs_valid;
 	T* mPointer;

@@ -117,7 +117,7 @@ animation_node::animation_node()
 	mAnchor = anchor::topleft;
 	mPlaying = false;
 	mAnimation = nullptr;
-	mSpeed_scaler = 1.f;
+	mSpeed = 1.f;
 }
 
 void
@@ -163,7 +163,7 @@ bool animation_node::tick()
 	if (mInterval <= 0) return false;
 
 	const float time = mClock.get_elapse().ms();
-	const float scaled_interval = mInterval*mSpeed_scaler;
+	const float scaled_interval = mInterval*mSpeed;
 
 	if (time >= scaled_interval)
 	{
@@ -233,14 +233,14 @@ animation_node::draw(renderer &pR)
 	return 0;
 }
 
-float animation_node::get_speed_scaler() const
+float animation_node::get_speed() const
 {
-	return mSpeed_scaler;
+	return mSpeed;
 }
 
-void animation_node::set_speed_scaler(float pScaler)
+void animation_node::set_speed(float pSpeed)
 {
-	mSpeed_scaler = pScaler;
+	mSpeed = pSpeed;
 }
 
 void animation_node::update_frame()

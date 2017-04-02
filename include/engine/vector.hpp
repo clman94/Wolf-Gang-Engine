@@ -204,6 +204,15 @@ struct vector
 		return std::fmod(a + 360, static_cast<T>(360));
 	}
 
+	T angle(const vector& A) const
+	{
+		if (!std::is_floating_point<T>::value)
+			return 0;
+
+		T a = std::atan2(y - A.y, x - A.x) * static_cast<T>(180 / 3.14159265); // Compiler complains without these casts
+		return std::fmod(a + 360, static_cast<T>(360));
+	}
+
 #ifdef SFML_VERTEX_HPP
 	vector(const sf::Vector2<T>& A)
 	{

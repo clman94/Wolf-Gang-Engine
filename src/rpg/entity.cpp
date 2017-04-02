@@ -26,6 +26,7 @@ float entity::get_z() const
 	return mZ;
 }
 
+
 void entity::update_depth()
 {
 	if (mDynamic_depth)

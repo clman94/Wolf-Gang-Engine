@@ -373,7 +373,8 @@ public:
 	sprite_node();
 	void set_anchor(anchor pAnchor);
 	virtual int draw(renderer &pR);
-	void set_scale(fvector pScale);
+	void    set_scale(fvector pScale);
+	fvector get_scale() const;
 	void set_texture(std::shared_ptr<texture> pTexture);
 	std::shared_ptr<texture> get_texture() const;
 
@@ -474,8 +475,8 @@ public:
 
 	virtual int draw(renderer &r);
 
-	float get_speed_scaler() const;
-	void set_speed_scaler(float pScaler);
+	float get_speed() const;
+	void set_speed(float pSpeed);
 
 private:
 	engine::clock  mClock;
@@ -487,7 +488,7 @@ private:
 	anchor mAnchor;
 
 	float mInterval;
-	float mSpeed_scaler;
+	float mSpeed;
 	bool mPlaying;
 
 	void update_frame();

@@ -219,7 +219,11 @@ script_system::register_vector_type()
 		, asCALL_THISCALL);
 
 	mEngine->RegisterObjectMethod("vec", "float angle() const"
-		, asMETHOD(engine::fvector, angle)
+		, asMETHODPR(engine::fvector, angle, () const, float)
+		, asCALL_THISCALL);
+
+	mEngine->RegisterObjectMethod("vec", "float angle(const vec&in) const"
+		, asMETHODPR(engine::fvector, angle, (const engine::fvector&) const, float)
 		, asCALL_THISCALL);
 
 	// Members

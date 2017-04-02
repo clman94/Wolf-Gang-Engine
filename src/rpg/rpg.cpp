@@ -56,6 +56,11 @@ void entity_manager::register_entity_type(script_system & pScript)
 		, asMETHODPR(entity_reference, operator=, (const entity_reference&), entity_reference&)
 		, asCALL_THISCALL);
 
+	engine.RegisterObjectMethod("entity", "bool opEquals(const entity&in) const"
+		, asMETHODPR(entity_reference, operator==, (const entity_reference&) const, bool)
+		, asCALL_THISCALL);
+
+
 	// is_enabled
 	engine.RegisterObjectMethod("entity", "bool is_valid() const"
 		, asMETHOD(entity_reference, is_valid)
@@ -358,6 +363,30 @@ void entity_manager::script_set_color(entity_reference& e, int r, int g, int b, 
 		util::error("Unsupported entity type");
 }
 
+void entity_manager::script_set_animation_speed(entity_reference & e, float pSpeed)
+{
+	if (!check_entity(e)) return;
+	auto se = dynamic_cast<sprite_entity*>(e.get());
+	if (!se)
+	{
+		util::error("Entity is not sprite-based");
+		return;
+	}
+	se->mSprite.set_speed(pSpeed);
+}
+
+float entity_manager::script_get_animation_speed(entity_reference & e)
+{
+	if (!check_entity(e)) return 0;
+	auto se = dynamic_cast<sprite_entity*>(e.get());
+	if (!se)
+	{
+		util::error("Entity is not sprite-based");
+		return 0;
+	}
+	return se->mSprite.get_speed();
+}
+
 void entity_manager::script_set_visible(entity_reference & e, bool pIs_visible)
 {
 	if (!check_entity(e)) return;
@@ -459,6 +488,30 @@ bool entity_manager::script_is_character(entity_reference& e)
 {
 	if (!check_entity(e)) return false;
 	return dynamic_cast<character_entity*>(e.get()) != nullptr;
+}
+
+void entity_manager::script_set_scale(entity_reference & e, const engine::fvector & pScale)
+{
+	if (!check_entity(e)) return;
+	auto se = dynamic_cast<sprite_entity*>(e.get());
+	if (!se)
+	{
+		util::error("Entity is not sprite-based");
+		return;
+	}
+	se->mSprite.set_scale(pScale);
+}
+
+engine::fvector entity_manager::script_get_scale(entity_reference & e)
+{
+	if (!check_entity(e)) return{};
+	auto se = dynamic_cast<sprite_entity*>(e.get());
+	if (!se)
+	{
+		util::error("Entity is not sprite-based");
+		return{};
+	}
+	return se->mSprite.get_scale();
 }
 
 void entity_manager::script_set_z(entity_reference & e, float pZ)
@@ -567,6 +620,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("entity add_entity(const string &in, const string &in)",    asMETHOD(entity_manager, script_add_entity_atlas), this);
 	pScript.add_function("entity add_text()",                                        asMETHOD(entity_manager, script_add_text), this);
 	pScript.add_function("entity add_character(const string &in)",                   asMETHOD(entity_manager, script_add_character), this);
+
 	pScript.add_function("void set_position(entity&in, const vec &in)",              asMETHOD(entity_manager, script_set_position), this);
 	pScript.add_function("vec get_position(entity&in)",                              asMETHOD(entity_manager, script_get_position), this);
 	pScript.add_function("vec get_size(entity&in)",                                  asMETHOD(entity_manager, script_get_size), this);
@@ -582,6 +636,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void set_depth_fixed(entity&in, bool)",                    asMETHOD(entity_manager, script_set_depth_fixed), this);
 	pScript.add_function("void _set_anchor(entity&in, int)",                         asMETHOD(entity_manager, script_set_anchor), this);
 	pScript.add_function("void set_rotation(entity&in, float)",                      asMETHOD(entity_manager, script_set_rotation), this);
+	pScript.add_function("float get_rotation(entity&in)",                            asMETHOD(entity_manager, script_get_rotation), this);
 	pScript.add_function("void set_color(entity&in, int, int, int, int)",            asMETHOD(entity_manager, script_set_color), this);
 	pScript.add_function("void set_visible(entity&in, bool)",                        asMETHOD(entity_manager, script_set_visible), this);
 	pScript.add_function("void set_texture(entity&in, const string&in)",             asMETHOD(entity_manager, script_set_texture), this);
@@ -589,6 +644,10 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void set_font(entity&in, const string &in)",               asMETHOD(entity_manager, script_set_font), this);
 	pScript.add_function("void set_z(entity&in, float)",                             asMETHOD(entity_manager, script_set_z), this);
 	pScript.add_function("float get_z(entity&in)",                                   asMETHOD(entity_manager, script_get_z), this);
+	pScript.add_function("void set_animation_speed(entity&in, float)",               asMETHOD(entity_manager, script_set_animation_speed), this);
+	pScript.add_function("float get_animation_speed(entity&in)",                     asMETHOD(entity_manager, script_get_animation_speed), this);
+	pScript.add_function("void set_scale(entity&in, float)",                         asMETHOD(entity_manager, script_set_scale), this);
+	pScript.add_function("float get_scale(entity&in)",                               asMETHOD(entity_manager, script_get_scale), this);
 
 	pScript.add_function("void add_child(entity&in, entity&in)",                     asMETHOD(entity_manager, script_add_child), this);
 	pScript.add_function("void set_parent(entity&in, entity&in)",                    asMETHOD(entity_manager, script_set_parent), this);
