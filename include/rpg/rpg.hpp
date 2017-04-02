@@ -79,11 +79,6 @@ class text_entity :
 {
 public:
 	text_entity();
-	void set_font(std::shared_ptr<engine::font> pFont);
-
-	void set_text(const std::string& pText);
-	void set_color(engine::color pColor);
-	void set_anchor(engine::anchor pAnchor);
 
 	int draw(engine::renderer & pR);
 
@@ -91,9 +86,10 @@ public:
 	virtual type get_entity_type()
 	{ return type::text; }
 
-protected:
-	virtual void update_z();
 	engine::text_node mText;
+
+protected:
+	int draw_text(engine::renderer & pR);
 };
 
 class dialog_text_entity :
@@ -184,6 +180,7 @@ private:
 	engine::fvector  script_get_size(entity_reference& e);
 	void             script_set_direction(entity_reference& e, int dir);
 	void             script_set_cycle(entity_reference& e, const std::string& name);
+	void             script_set_depth_direct(entity_reference& e, float pDepth);
 	void             script_set_depth(entity_reference& e, float pDepth);
 	void             script_set_depth_fixed(entity_reference& e, bool pFixed);
 	void             script_start_animation(entity_reference& e);
@@ -191,6 +188,7 @@ private:
 	void             script_set_atlas(entity_reference& e, const std::string& name);
 	void             script_set_anchor(entity_reference& e, int pAnchor);
 	void             script_set_rotation(entity_reference& e, float pRotation);
+	float            script_get_rotation(entity_reference& e);
 	void             script_set_color(entity_reference& e, int r, int g, int b, int a);
 	void             script_set_visible(entity_reference& e, bool pIs_visible);
 	void             script_set_texture(entity_reference& e, const std::string& name);
@@ -229,6 +227,7 @@ private:
 
 	engine::fs::path mRoot_directory;
 	engine::fs::path mPath;
+	engine::fs::path mOverlay_path;
 
 	int script_music_open(const std::string& pName);
 	int script_music_swap(const std::string& pName);

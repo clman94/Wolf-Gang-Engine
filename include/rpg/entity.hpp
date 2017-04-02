@@ -40,8 +40,6 @@ protected:
 	/// Should be called if draw() is overridden by a subclass.
 	void update_depth();
 
-	virtual void update_z() {}
-
 private:
 	bool mDynamic_depth;
 	float mZ;

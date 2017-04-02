@@ -95,8 +95,8 @@ entity_reference entity_manager::script_add_entity(const std::string & pName)
 		return{};
 	}
 
-	new_entity->set_texture(resource);
-	new_entity->set_animation("default:default"); // No warning because scripter might set it later
+	new_entity->mSprite.set_texture(resource);
+	new_entity->mSprite.set_animation("default:default"); // No warning because scripter might set it later
 
 	return *new_entity;
 }
@@ -108,7 +108,7 @@ entity_reference entity_manager::script_add_entity_atlas(const std::string & pat
 		return{}; // Error, return empty
 
 	assert(new_entity->get_type() == entity::type::sprite);
-	if (!dynamic_cast<sprite_entity*>(new_entity.get())->set_animation(atlas))
+	if (!dynamic_cast<sprite_entity*>(new_entity.get())->mSprite.set_animation(atlas))
 		util::warning("Could not load atlas entry '" + atlas + "'");
 	return new_entity;
 }
@@ -129,7 +129,7 @@ entity_reference entity_manager::script_add_text()
 	if (!new_entity)
 		return{}; // Return empty on error
 
-	new_entity->set_font(font);
+	new_entity->mText.set_font(font);
 	return *new_entity;
 }
 
@@ -142,7 +142,7 @@ void entity_manager::script_set_text(entity_reference& e, const std::string & pT
 		util::error("Entity is not text");
 		return;
 	}
-	c->set_text(pText);
+	c->mText.set_text(pText);
 }
 
 void entity_manager::script_remove_entity(entity_reference& e)
@@ -178,7 +178,7 @@ entity_reference entity_manager::script_add_character(const std::string & pName)
 	}
 	else
 	{
-		new_entity->set_texture(resource);
+		new_entity->mSprite.set_texture(resource);
 		new_entity->set_cycle(character_entity::cycle::def);
 	}
 	return *new_entity;
@@ -203,7 +203,7 @@ engine::fvector entity_manager::script_get_size(entity_reference & e)
 	if (e->get_type() == entity::type::sprite)
 	{
 		auto se = dynamic_cast<sprite_entity*>(e.get());
-		return se->get_size();
+		return se->mSprite.get_size();
 	}
 	else
 		util::warning("Unsupported entity type");
@@ -232,6 +232,12 @@ void entity_manager::script_set_cycle(entity_reference& e, const std::string& na
 		return;
 	}
 	c->set_cycle_group(name);
+}
+
+void entity_manager::script_set_depth_direct(entity_reference & e, float pDepth)
+{
+	if (!check_entity(e)) return;
+	e->set_depth(pDepth);
 }
 
 void entity_manager::script_set_depth(entity_reference& e, float pDepth)
@@ -264,7 +270,7 @@ void entity_manager::script_start_animation(entity_reference& e)
 		util::error("Entity is not sprite-based");
 		return;
 	}
-	se->play_animation();
+	se->mSprite.start();
 }
 
 void entity_manager::script_stop_animation(entity_reference& e)
@@ -276,7 +282,7 @@ void entity_manager::script_stop_animation(entity_reference& e)
 		util::warning("Entity is not sprite-based");
 		return;
 	}
-	se->stop_animation();
+	se->mSprite.stop();
 }
 
 void entity_manager::script_set_atlas(entity_reference& e, const std::string & name)
@@ -288,7 +294,7 @@ void entity_manager::script_set_atlas(entity_reference& e, const std::string & n
 		util::error("Entity is not sprite-based");
 		return;
 	}
-	se->set_animation(name);
+	se->mSprite.set_animation(name);
 }
 
 void entity_manager::script_set_anchor(entity_reference& e, int pAnchor)
@@ -298,13 +304,13 @@ void entity_manager::script_set_anchor(entity_reference& e, int pAnchor)
 	if (e->get_type() == entity::type::sprite)
 	{
 		auto se = dynamic_cast<sprite_entity*>(e.get());
-		se->set_anchor(static_cast<engine::anchor>(pAnchor));
+		se->mSprite.set_anchor(static_cast<engine::anchor>(pAnchor));
 	}
 
 	else if (e->get_type() == entity::type::text)
 	{
 		auto se = dynamic_cast<text_entity*>(e.get());
-		se->set_anchor(static_cast<engine::anchor>(pAnchor));
+		se->mText.set_anchor(static_cast<engine::anchor>(pAnchor));
 	}
 	else
 		util::error("Unsupported entity type");
@@ -319,7 +325,19 @@ void entity_manager::script_set_rotation(entity_reference& e, float pRotation)
 		util::error("Entity is not sprite-based");
 		return;
 	}
-	se->set_rotation(std::fmod(std::abs(pRotation), 360.f));
+	se->mSprite.set_rotation(std::fmod(std::abs(pRotation), 360.f));
+}
+
+float entity_manager::script_get_rotation(entity_reference & e)
+{
+	if (!check_entity(e)) return 0;
+	auto se = dynamic_cast<sprite_entity*>(e.get());
+	if (!se)
+	{
+		util::error("Entity is not sprite-based");
+		return 0;
+	}
+	return se->mSprite.get_rotation();
 }
 
 void entity_manager::script_set_color(entity_reference& e, int r, int g, int b, int a)
@@ -329,12 +347,12 @@ void entity_manager::script_set_color(entity_reference& e, int r, int g, int b, 
 	if (e->get_type() == entity::type::sprite)
 	{
 		auto se = dynamic_cast<sprite_entity*>(e.get());
-		se->set_color(engine::color(r, g, b, a));
+		se->mSprite.set_color(engine::color(r, g, b, a));
 	}
 	else if (e->get_type() == entity::type::text)
 	{
 		auto se = dynamic_cast<text_entity*>(e.get());
-		se->set_color(engine::color(r, g, b, a));
+		se->mText.set_color(engine::color(r, g, b, a));
 	}
 	else
 		util::error("Unsupported entity type");
@@ -361,8 +379,8 @@ void entity_manager::script_set_texture(entity_reference & e, const std::string 
 		util::warning("Could not load texture '" + name + "'");
 		return;
 	}
-	se->set_texture(texture);
-	se->set_animation("default:default");
+	se->mSprite.set_texture(texture);
+	se->mSprite.set_animation("default:default");
 }
 
 void entity_manager::script_set_font(entity_reference & e, const std::string & pName)
@@ -382,7 +400,7 @@ void entity_manager::script_set_font(entity_reference & e, const std::string & p
 		return;
 	}
 	
-	te->set_font(font);
+	te->mText.set_font(font);
 }
 
 void entity_manager::script_add_child(entity_reference& e1, entity_reference& e2)
@@ -427,10 +445,11 @@ void entity_manager::script_make_gui(entity_reference & e, float pOffset)
 {
 	if (!check_entity(e)) return;
 
-	// Gui elements essentually don't stick to anything
+	// Gui elements essentually don't stick to anything in the world.
 	// So we just detach everything.
 
 	e->detach_parent();
+
 
 	e->set_dynamic_depth(false);
 	e->set_depth(defs::GUI_DEPTH - (util::clamp(pOffset, 0.f, 1000.f)/1000));
@@ -470,7 +489,7 @@ entity_reference entity_manager::script_add_dialog_text()
 	if (!new_entity)
 		return{}; // Return empty on error
 
-	new_entity->set_font(font);
+	new_entity->mText.set_font(font);
 	return *new_entity;
 }
 
@@ -558,6 +577,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void set_atlas(entity&in, const string &in)",              asMETHOD(entity_manager, script_set_atlas), this);
 	pScript.add_function("bool is_character(entity&in)",                             asMETHOD(entity_manager, script_is_character), this);
 	pScript.add_function("void remove_entity(entity&in)",                            asMETHOD(entity_manager, script_remove_entity), this);
+	pScript.add_function("void _set_depth_direct(entity&in, float)",                 asMETHOD(entity_manager, script_set_depth_direct), this);
 	pScript.add_function("void set_depth(entity&in, float)",                         asMETHOD(entity_manager, script_set_depth), this);
 	pScript.add_function("void set_depth_fixed(entity&in, bool)",                    asMETHOD(entity_manager, script_set_depth_fixed), this);
 	pScript.add_function("void _set_anchor(entity&in, int)",                         asMETHOD(entity_manager, script_set_anchor), this);
@@ -902,7 +922,7 @@ void scene::load_game_xml(tinyxml2::XMLElement * ele_root)
 		return;
 	}
 
-	mPlayer.set_texture(texture);
+	mPlayer.mSprite.set_texture(texture);
 	mPlayer.set_cycle(character_entity::cycle::def);
 
 	util::info("Settings loaded");
@@ -1026,10 +1046,14 @@ void scene::update_collision_interaction(controls & pControls)
 		const auto hit = container.first_collision(collision_box::type::door, collision_box);
 		if (hit)
 		{
-			if (!mEnd_functions[0].is_running())
+			const auto hit_door = std::dynamic_pointer_cast<door>(hit);
+			if (mEnd_functions.empty()) // No end functions to call
+			{
+				load_scene(hit_door->get_scene(), hit_door->get_destination());
+			}
+			else if (!mEnd_functions[0].is_running())
 			{
 				mScript->abort_all();
-				const auto hit_door = std::dynamic_pointer_cast<door>(hit);
 				for (auto& i : mEnd_functions)
 				{
 					if (i.call())
@@ -1717,6 +1741,7 @@ void background_music::clean()
 	mStream->set_volume(100);
 	mOverlap_stream->stop();
 	mPath.clear();
+	mOverlay_path.clear();
 }
 
 void background_music::set_root_directory(const std::string & pPath)
@@ -1774,8 +1799,7 @@ int background_music::script_music_start_transition_play(const std::string & pNa
 	mOverlap_stream->set_loop(true);
 	mOverlap_stream->set_volume(0);
 	mOverlap_stream->play();
-
-	mPath = file;
+	mOverlay_path = file;
 	return 0;
 }
 
@@ -1783,6 +1807,7 @@ void background_music::script_music_stop_transition_play()
 {
 	mStream->stop();
 	mStream.swap(mOverlap_stream);
+	mPath.swap(mOverlay_path);
 }
 
 void background_music::script_music_set_second_volume(float pVolume)
@@ -2058,8 +2083,7 @@ int dialog_text_entity::draw(engine::renderer & pR)
 	if (mRevealing)
 		do_reveal();
 
-	mText.draw(pR);
-	return 0;
+	return draw_text(pR);
 }
 
 bool dialog_text_entity::is_revealing()
@@ -2126,40 +2150,20 @@ void dialog_text_entity::do_reveal()
 text_entity::text_entity()
 {
 	set_dynamic_depth(false);
-	mText.set_parent(*this);
-}
-
-void text_entity::set_font(std::shared_ptr<engine::font> pFont)
-{
-	mText.set_font(pFont, true);
-}
-
-
-void text_entity::set_text(const std::string & pText)
-{
-	mText.set_text(pText);
-}
-
-void text_entity::set_color(engine::color pColor)
-{
-	mText.set_color(pColor);
-}
-
-void text_entity::set_anchor(engine::anchor pAnchor)
-{
-	mText.set_anchor(pAnchor);
 }
 
 int text_entity::draw(engine::renderer & pR)
 {
-	update_depth();
-	mText.draw(pR);
-	return 0;
+	return draw_text(pR);
 }
 
-void text_entity::update_z()
+int text_entity::draw_text(engine::renderer & pR)
 {
-	mText.set_position(-engine::fvector(0, get_z()));
+	update_depth();
+	mText.set_unit(get_unit());
+	mText.set_position(get_absolute_position() - engine::fvector(0, get_z()));
+	mText.draw(pR);
+	return 0;
 }
 
 bool game_settings_loader::load(const std::string & pPath)

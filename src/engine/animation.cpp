@@ -118,7 +118,6 @@ animation_node::animation_node()
 	mPlaying = false;
 	mAnimation = nullptr;
 	mSpeed_scaler = 1.f;
-	add_child(mSprite);
 }
 
 void
@@ -146,7 +145,7 @@ void animation_node::set_animation(std::shared_ptr<const engine::animation> pAni
 
 bool animation_node::set_animation(const std::string& pName, bool pSwap)
 {
-	auto texture = mSprite.get_texture();
+	auto texture = get_texture();
 	if (!texture)
 		return false;
 
@@ -156,28 +155,6 @@ bool animation_node::set_animation(const std::string& pName, bool pSwap)
 	auto animation = entry->get_animation();
 	set_animation(animation, pSwap);
 	return true;
-}
-
-void animation_node::set_texture(std::shared_ptr<texture> pTexture)
-{
-	mSprite.set_texture(pTexture);
-}
-
-void animation_node::set_shader(std::shared_ptr<shader> pShader)
-{
-	mSprite.set_shader(pShader);
-}
-
-std::shared_ptr<texture> animation_node::get_texture() const
-{
-	return mSprite.get_texture();
-}
-
-fvector animation_node::get_size() const
-{
-	if (!mAnimation)
-		return{ 0, 0 };
-	return mAnimation->get_size();
 }
 
 bool animation_node::tick()
@@ -246,39 +223,22 @@ animation_node::restart()
 	}
 }
 
-void animation_node::set_color(color pColor)
-{
-	mSprite.set_color(pColor);
-}
-
-void
-animation_node::set_anchor(engine::anchor pAnchor)
-{
-	mAnchor = pAnchor;
-	mSprite.set_anchor(pAnchor);
-}
-
-void animation_node::set_rotation(float pRotation)
-{
-	mSprite.set_rotation(pRotation);
-}
-
 int
-animation_node::draw(renderer &r)
+animation_node::draw(renderer &pR)
 {
 	if (!mAnimation) return 1;
 	if (mPlaying)
 		tick();
-	mSprite.draw(r);
+	draw_sprite(pR);
 	return 0;
 }
 
-float engine::animation_node::get_speed_scaler() const
+float animation_node::get_speed_scaler() const
 {
 	return mSpeed_scaler;
 }
 
-void engine::animation_node::set_speed_scaler(float pScaler)
+void animation_node::set_speed_scaler(float pScaler)
 {
 	mSpeed_scaler = pScaler;
 }
@@ -287,6 +247,5 @@ void animation_node::update_frame()
 {
 	if (!mAnimation) return;
 	frect rect = mAnimation->get_frame_at(mFrame);
-	mSprite.set_texture_rect(rect);
-	mSprite.set_anchor(mAnchor);
+	set_texture_rect(rect);
 }

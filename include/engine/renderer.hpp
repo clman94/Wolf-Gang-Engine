@@ -380,9 +380,13 @@ public:
 	void set_texture_rect(const engine::frect& pRect);
 	void set_color(color pColor);
 	void set_rotation(float pRotation);
-	fvector get_size();
+	fvector get_size() const;
+	float get_rotation() const;
 
 	void set_shader(std::shared_ptr<shader> pShader);
+
+protected:
+	int draw_sprite(renderer &pR);
 
 private:
 	std::shared_ptr<texture> mTexture;
@@ -391,6 +395,7 @@ private:
 	fvector mCenter;
 	fvector mScale;
 	float mRotation;
+	anchor mAnchor;
 };
 
 class font :
@@ -450,7 +455,7 @@ private:
 
 
 class animation_node :
-	public render_object
+	public sprite_node
 {
 public:
 	animation_node();
@@ -458,10 +463,6 @@ public:
 	void set_frame(frame_t pFrame);
 	void set_animation(std::shared_ptr<const engine::animation>, bool pSwap = false);
 	bool set_animation(const std::string& pName, bool pSwap = false);
-	void set_texture(std::shared_ptr<texture> pTexture);
-	std::shared_ptr<texture> get_texture() const;
-
-	engine::fvector get_size() const;
 
 	bool tick(); // Returns true if the frame has changed.
 
@@ -471,20 +472,12 @@ public:
 	void stop();
 	void restart();
 
-	void set_color(color pColor);
-	void set_anchor(anchor pAnchor);
-	void set_rotation(float pRotation);
-
-	int draw(renderer &r);
+	virtual int draw(renderer &r);
 
 	float get_speed_scaler() const;
 	void set_speed_scaler(float pScaler);
 
-	void set_shader(std::shared_ptr<shader> pShader);
-
 private:
-	sprite_node mSprite;
-
 	engine::clock  mClock;
 
 	std::shared_ptr<const engine::animation> mAnimation;

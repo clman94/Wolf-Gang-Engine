@@ -19,7 +19,6 @@ void entity::set_dynamic_depth(bool pIs_dynamic)
 void entity::set_z(float pZ)
 {
 	mZ = pZ;
-	update_z();
 }
 
 float entity::get_z() const

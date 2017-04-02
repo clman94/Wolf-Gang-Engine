@@ -14,7 +14,7 @@ void
 character_entity::set_cycle_group(const std::string& name)
 {
 	mCyclegroup = name;
-	set_animation(mCyclegroup + ":" + mCycle, is_playing());
+	mSprite.set_animation(mCyclegroup + ":" + mCycle, mSprite.is_playing());
 }
 
 void
@@ -22,7 +22,7 @@ character_entity::set_cycle(const std::string& name)
 {
 	if (mCycle != name)
 	{
-		set_animation(mCyclegroup + ":" + name, is_playing());
+		mSprite.set_animation(mCyclegroup + ":" + name, mSprite.is_playing());
 		mCycle = name;
 	}
 }

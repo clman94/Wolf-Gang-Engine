@@ -22,14 +22,15 @@ void player_character::set_move_direction(engine::fvector pVec)
 
 void player_character::clean()
 {
-	set_color({ 255, 255, 255, 255 });
+	mSprite.set_color({ 255, 255, 255, 255 });
+	mSprite.set_rotation(0);
+
 	set_position({ 0, 0 });
 	set_locked(false);
 	set_cycle_group("default");
 	set_cycle("default");
 	set_dynamic_depth(true);
 	set_visible(true);
-	set_rotation(0);
 	set_z(0);
 }
 
@@ -55,7 +56,7 @@ void player_character::movement(controls& pControls, collision_system& pCollisio
 		if (mIs_walking) // Reset animation
 		{
 			mIs_walking = false;
-			stop_animation();
+			mSprite.stop();
 		}
 		return;
 	}
@@ -115,12 +116,12 @@ void player_character::movement(controls& pControls, collision_system& pCollisio
 		set_move_direction(move); // Make sure the player is in the direction he's moving
 		set_position(get_position() + move);
 		mIs_walking = true;
-		play_animation();
+		mSprite.tick();
 	}
 	else if (mIs_walking) // Reset animation
 	{
 		mIs_walking = false;
-		stop_animation();
+		mSprite.stop();
 	}
 }
 
@@ -139,7 +140,7 @@ engine::fvector player_character::get_activation_point(float pDistance)
 
 engine::frect player_character::get_collision_box() const
 {
-	const engine::fvector collision_size = engine::fvector(get_size().x, get_size().y / 2) / get_unit(); // get_size returns pixels; convert to tile grid
+	const engine::fvector collision_size = engine::fvector(mSprite.get_size().x, mSprite.get_size().y / 2) / get_unit(); // get_size returns pixels; convert to tile grid
 	const engine::fvector collision_offset
 		= get_position()
 		- engine::fvector(collision_size.x / 2, collision_size.y);
