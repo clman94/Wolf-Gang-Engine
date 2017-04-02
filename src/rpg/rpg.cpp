@@ -1355,6 +1355,11 @@ void scene_script_context::parse_wall_group_functions()
 
 		if (type == "group")
 		{
+			if (metadata == type) // There is no specified group name
+			{
+				util::warning("Group name is not specified");
+			}
+
 			std::unique_ptr<script_function> function(new script_function);
 			function->set_script_system(*mScript);
 			function->set_function(as_function);
@@ -1363,6 +1368,7 @@ void scene_script_context::parse_wall_group_functions()
 			wgf.function = function.get();
 
 			mTrigger_functions[as_function->GetDeclaration(true, true)].swap(function);
+
 
 			const std::string group(metadata.begin() + type.length() + 1, metadata.end());
 			wgf.group = group;
