@@ -197,6 +197,8 @@ private:
 	engine::fvector  script_get_size(entity_reference& e);
 	void             script_start_animation(entity_reference& e);
 	void             script_stop_animation(entity_reference& e);
+	void             script_pause_animation(entity_reference& e);
+	bool             script_is_animation_playing(entity_reference& e);
 	void             script_set_atlas(entity_reference& e, const std::string& name);
 	void             script_set_rotation(entity_reference& e, float pRotation);
 	float            script_get_rotation(entity_reference& e);
@@ -329,7 +331,6 @@ public:
 
 	void load_script_interface(script_system& pScript);
 	void load_terminal_interface(engine::terminal_system& pTerminal);
-
 
 	void set_resource_manager(engine::resource_manager& pResource_manager);
 

@@ -326,6 +326,16 @@ int script_system::get_current_line()
 	return 0;
 }
 
+void script_system::set_namespace(const std::string & pName)
+{
+	mEngine->SetDefaultNamespace(pName.c_str());
+}
+
+void script_system::reset_namespace()
+{
+	mEngine->SetDefaultNamespace("");
+}
+
 AS::asIScriptEngine& script_system::get_engine()
 {
 	assert(mEngine != nullptr);

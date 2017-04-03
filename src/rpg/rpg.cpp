@@ -290,6 +290,30 @@ void entity_manager::script_stop_animation(entity_reference& e)
 	se->mSprite.stop();
 }
 
+void entity_manager::script_pause_animation(entity_reference & e)
+{
+	if (!check_entity(e)) return;
+	auto se = dynamic_cast<sprite_entity*>(e.get());
+	if (!se)
+	{
+		util::error("Entity is not sprite-based");
+		return;
+	}
+	se->mSprite.pause();
+}
+
+bool entity_manager::script_is_animation_playing(entity_reference & e)
+{
+	if (!check_entity(e)) return false;
+	auto se = dynamic_cast<sprite_entity*>(e.get());
+	if (!se)
+	{
+		util::error("Entity is not sprite-based");
+		return false;
+	}
+	return se->mSprite.is_playing();
+}
+
 void entity_manager::script_set_atlas(entity_reference& e, const std::string & name)
 {
 	if (!check_entity(e)) return;
@@ -626,8 +650,6 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("vec get_size(entity&in)",                                  asMETHOD(entity_manager, script_get_size), this);
 	pScript.add_function("void set_direction(entity&in, int)",                       asMETHOD(entity_manager, script_set_direction), this);
 	pScript.add_function("void set_cycle(entity&in, const string &in)",              asMETHOD(entity_manager, script_set_cycle), this);
-	pScript.add_function("void start_animation(entity&in)",                          asMETHOD(entity_manager, script_start_animation), this);
-	pScript.add_function("void stop_animation(entity&in)",                           asMETHOD(entity_manager, script_stop_animation), this);
 	pScript.add_function("void set_atlas(entity&in, const string &in)",              asMETHOD(entity_manager, script_set_atlas), this);
 	pScript.add_function("bool is_character(entity&in)",                             asMETHOD(entity_manager, script_is_character), this);
 	pScript.add_function("void remove_entity(entity&in)",                            asMETHOD(entity_manager, script_remove_entity), this);
@@ -644,8 +666,16 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void set_font(entity&in, const string &in)",               asMETHOD(entity_manager, script_set_font), this);
 	pScript.add_function("void set_z(entity&in, float)",                             asMETHOD(entity_manager, script_set_z), this);
 	pScript.add_function("float get_z(entity&in)",                                   asMETHOD(entity_manager, script_get_z), this);
-	pScript.add_function("void set_animation_speed(entity&in, float)",               asMETHOD(entity_manager, script_set_animation_speed), this);
-	pScript.add_function("float get_animation_speed(entity&in)",                     asMETHOD(entity_manager, script_get_animation_speed), this);
+
+	pScript.set_namespace("animation");
+	pScript.add_function("void start(entity&in)",                                    asMETHOD(entity_manager, script_start_animation), this);
+	pScript.add_function("void stop(entity&in)",                                     asMETHOD(entity_manager, script_stop_animation), this);
+	pScript.add_function("void pause(entity&in)",                                    asMETHOD(entity_manager, script_pause_animation), this);
+	pScript.add_function("bool is_playing(entity&in)",                               asMETHOD(entity_manager, script_is_animation_playing), this);
+	pScript.add_function("void set_speed(entity&in, float)",                         asMETHOD(entity_manager, script_set_animation_speed), this);
+	pScript.add_function("float get_speed(entity&in)",                               asMETHOD(entity_manager, script_get_animation_speed), this);
+	pScript.reset_namespace();
+
 	pScript.add_function("void set_scale(entity&in, float)",                         asMETHOD(entity_manager, script_set_scale), this);
 	pScript.add_function("float get_scale(entity&in)",                               asMETHOD(entity_manager, script_get_scale), this);
 

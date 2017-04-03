@@ -39,6 +39,9 @@ public:
 	int tick();
 	int get_current_line();
 
+	void set_namespace(const std::string& pName);
+	void reset_namespace();
+
 	AS::asIScriptEngine& get_engine();
 
 	AS::asIScriptContext* create_thread(AS::asIScriptFunction *pFunc, bool keep_context = false);
