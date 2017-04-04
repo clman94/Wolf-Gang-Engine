@@ -300,18 +300,14 @@ renderer::set_background_color(color pColor)
 	mBackground_color = pColor;
 }
 
-float renderer::get_fps()
+float renderer::get_fps() const
 {
 	return mFrame_clock.get_fps();
 }
 
-float renderer::get_delta()
+float renderer::get_delta() const
 {
 	return mFrame_clock.get_delta();
-}
-
-void renderer::set_gui(tgui::Gui * pTgui)
-{
 }
 
 void

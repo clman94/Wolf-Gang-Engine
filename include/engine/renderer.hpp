@@ -97,11 +97,9 @@ public:
 	void set_visible(bool pVisible);
 	void set_background_color(color pColor);
 
-	float get_fps();
+	float get_fps() const;
 
-	float get_delta();
-
-	void set_gui(tgui::Gui* pTgui);
+	float get_delta() const;
 
 #ifdef ENGINE_INTERNAL
 

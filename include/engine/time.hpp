@@ -15,31 +15,31 @@ public:
 
 
 	// Seconds
-	time_t s()
+	time_t s() const
 	{
 		return t;
 	}
 
 	// Seconds as integer
-	int s_i()
+	int s_i() const
 	{
 		return (int)t;
 	}
 
 	// Microseconds
-	time_t ms()
+	time_t ms() const
 	{
 		return t * 1000;
 	}
 
 	// Microseconds as integer
-	int ms_i()
+	int ms_i() const
 	{
 		return (int)(t * 1000);
 	}
 
 	// Nanoseconds
-	time_t ns()
+	time_t ns() const
 	{
 		return t*1000*1000;
 	}
@@ -62,7 +62,7 @@ public:
 		play = true;
 		start_point = std::chrono::high_resolution_clock::now();
 	}
-	utime get_elapse()
+	utime get_elapse() const
 	{
 		std::chrono::time_point<std::chrono::high_resolution_clock> end_point = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<time_t> elapsed_seconds = end_point - start_point;
@@ -98,7 +98,7 @@ public:
 		mStart_point = std::chrono::high_resolution_clock::now();
 	}
 
-	bool is_reached()
+	bool is_reached() const
 	{
 		std::chrono::duration<time_t> time = std::chrono::high_resolution_clock::now() - mStart_point;
 		return time.count() >= mSeconds;
@@ -125,7 +125,7 @@ public:
 		mInterval = pInterval;
 	}
 
-	size_t get_count()
+	size_t get_count() const
 	{
 		std::chrono::duration<time_t> time = std::chrono::high_resolution_clock::now() - mStart_point;
 		return static_cast<size_t>(std::floor(time.count() / mInterval));
@@ -157,12 +157,12 @@ public:
 		mInterval = seconds;
 	}
 	
-	float get_delta()
+	float get_delta() const
 	{
 		return mDelta;
 	}
 
-	float get_fps()
+	float get_fps() const
 	{
 		return mFps;
 	}

@@ -285,7 +285,7 @@ void script_system::abort_all()
 		mEngine->ReturnContext(i->context);
 	}
 	mThread_contexts.clear();
-	//mEngine->GarbageCollect(asGC_FULL_CYCLE | asGC_DESTROY_GARBAGE);
+	mEngine->GarbageCollect(asGC_FULL_CYCLE | asGC_DESTROY_GARBAGE);
 }
 
 void script_system::return_context(AS::asIScriptContext * pContext)

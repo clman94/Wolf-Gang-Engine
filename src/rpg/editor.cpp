@@ -332,7 +332,7 @@ int editor_gui::draw(engine::renderer& pR)
 	return 0;
 }
 
-editors::editor::editor()
+editor::editor()
 {
 	mBoundary_visualization.set_parent(*this);
 
@@ -434,7 +434,10 @@ bool tilemap_editor::editor_open()
 
 int tilemap_editor::draw(engine::renderer & pR)
 {
-	// Editing is not allowed it there are no tiles to use.
+	// Draw the black thing first
+	mBlackout.draw(pR);
+
+	// Editing is not allowed as there are no tiles to use.
 	if (mTile_list.empty())
 		return 1;
 
@@ -560,7 +563,6 @@ int tilemap_editor::draw(engine::renderer & pR)
 
 	tick_highlight(pR);
 
-	mBlackout.draw(pR);
 	mTilemap_display.draw(pR);
 
 	mBoundary_visualization.draw(pR);

@@ -299,6 +299,31 @@ private:
 	script_system* mScript;
 };
 
+class game_settings_loader
+{
+public:
+	bool load(const std::string& pPath);
+
+	const std::string& get_start_scene() const;
+	const std::string& get_textures_path() const;
+	const std::string& get_sounds_path() const;
+	const std::string& get_music_path() const;
+	const std::string& get_fonts_path() const;
+	const std::string& get_player_texture() const;
+	float get_unit_pixels() const;
+
+private:
+	std::string mStart_scene;
+	std::string mTextures_path;
+	std::string mSounds_path;
+	std::string mMusic_path;
+	std::string mPlayer_texture;
+	std::string mFonts_path;
+	float pUnit_pixels;
+
+	std::string load_setting_path(tinyxml2::XMLElement* pRoot, const std::string& pName, const std::string& pDefault);
+};
+
 class scene :
 	public engine::render_proxy
 {
@@ -335,7 +360,7 @@ public:
 	void set_resource_manager(engine::resource_manager& pResource_manager);
 
 	// Loads global scene settings from game.xml file.
-	void load_game_xml(tinyxml2::XMLElement* ele_root);
+	bool load_settings(const game_settings_loader& pSettings);
 
 	player_character& get_player();
 
@@ -414,28 +439,6 @@ private:
 	tinyxml2::XMLElement *mEle_root;
 };
 
-class game_settings_loader
-{
-public:
-	bool load(const std::string& pPath);
-
-	const std::string& get_start_scene() const;
-	const std::string& get_textures_path() const;
-	const std::string& get_sounds_path() const;
-	const std::string& get_music_path() const;
-	const std::string& get_player_texture() const;
-
-private:
-	std::string mStart_scene;
-	std::string mTextures_path;
-	std::string mSounds_path;
-	std::string mMusic_path;
-	std::string mPlayer_texture;
-
-	std::string load_setting_path(tinyxml2::XMLElement* pRoot, const std::string& pName, const std::string& pDefault);
-};
-
-
 class scene_load_request
 {
 public:
@@ -480,14 +483,20 @@ public:
 	~game();
 
 	// Load the xml game settings
-	int load_game_xml(std::string pPath);
+	bool load_settings(engine::fs::path pData_dir);
 
 	void tick();
+
+	bool restart_game();
 
 protected:
 	void refresh_renderer(engine::renderer& r);
 
 private:
+
+	// Everything is good and settings are loaded
+	bool mIs_ready;
+
 	scene            mScene;
 	engine::resource_manager mResource_manager;
 	flag_container   mFlags;
@@ -498,7 +507,7 @@ private:
 	terminal_gui mTerminal_gui;
 	engine::terminal_system mTerminal_system;
 
-	std::string mStart_scene;
+	engine::fs::path mData_directory;
 
 	editors::editor_manager mEditor_manager;
 
@@ -514,13 +523,13 @@ private:
 	void script_load_scene(const std::string& pName);
 	void script_load_scene_to_door(const std::string& pName, const std::string& pDoor);
 	void script_load_scene_to_position(const std::string& pName, engine::fvector pPosition);
+
 	void load_script_interface();
 	void load_terminal_interface();
 
 	std::shared_ptr<engine::terminal_command_group> mGroup_flags;
 	std::shared_ptr<engine::terminal_command_group> mGroup_game;
 	std::shared_ptr<engine::terminal_command_group> mGroup_global1;
-
 
 	float get_delta();
 };

@@ -979,42 +979,24 @@ void scene::set_resource_manager(engine::resource_manager& pResource_manager)
 	mEntity_manager.set_resource_manager(pResource_manager);
 }
 
-void scene::load_game_xml(tinyxml2::XMLElement * ele_root)
+bool scene::load_settings(const game_settings_loader& pSettings)
 {
-	assert(ele_root != nullptr);
-
 	util::info("Loading XML settings...");
 
-	if (auto ele_tile_size = ele_root->FirstChildElement("tile_size"))
-	{
-		mWorld_node.set_unit(ele_tile_size->FloatAttribute("pixels"));
-	}
-	else
-	{
-		util::error("Please specify Tile size");
-		return;
-	}
+	mWorld_node.set_unit(pSettings.get_unit_pixels());
 
-	auto ele_player = ele_root->FirstChildElement("player");
-	if (!ele_player ||
-		!ele_player->Attribute("texture"))
-	{
-		util::error("Please specify the player and its texture to use.");
-		return;
-	}
-	const std::string att_texture = util::safe_string(ele_player->Attribute("texture"));
-
-	auto texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, att_texture);
+	auto texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, pSettings.get_player_texture());
 	if (!texture)
 	{
-		util::error("Could not load texture '" + att_texture + "' for player character");
-		return;
+		util::error("Could not load texture '" + pSettings.get_player_texture() + "' for player character");
+		return false;
 	}
-
 	mPlayer.mSprite.set_texture(texture);
 	mPlayer.set_cycle(character_entity::cycle::def);
 
 	util::info("Settings loaded");
+
+	return true;
 }
 
 player_character& scene::get_player()
@@ -1416,6 +1398,7 @@ void scene_script_context::parse_wall_group_functions()
 
 game::game()
 {
+	mIs_ready = false;
 	load_script_interface();
 	load_terminal_interface();
 	mScene.load_terminal_interface(mTerminal_system);
@@ -1518,6 +1501,7 @@ void game::script_load_scene_to_position(const std::string & pName, engine::fvec
 void
 game::load_script_interface()
 {
+	util::info("Loading script interface...");
 	mScript.add_function("float get_delta()", asMETHOD(game, get_delta), this);
 
 	mScript.add_function("bool _is_triggered(int)", asMETHOD(controls, is_triggered), &mControls);
@@ -1533,6 +1517,7 @@ game::load_script_interface()
 
 	mFlags.load_script_interface(mScript);
 	mScene.load_script_interface(mScript);
+	util::info("Script interface loaded");
 }
 
 void game::load_terminal_interface()
@@ -1580,8 +1565,7 @@ void game::load_terminal_interface()
 	mGroup_game->add_command("reset",
 		[&](const engine::terminal_arglist& pArgs)->bool
 	{
-		mScene.clean(true);
-		return mScene.load_scene(mStart_scene);
+		return restart_game();
 	}, "- Reset game");
 
 	mGroup_global1 = std::make_shared<engine::terminal_command_group>();
@@ -1602,55 +1586,60 @@ float game::get_delta()
 	return get_renderer()->get_delta();
 }
 
-int
-game::load_game_xml(std::string pPath)
+bool game::load_settings(engine::fs::path pData_dir)
 {
 	using namespace tinyxml2;
+	
+	mData_directory = pData_dir;
 
-	XMLDocument doc;
-	if (doc.LoadFile(pPath.c_str()))
-	{
-		util::error("Could not load game file at '" + pPath + "'");
-		return 1;
-	}
-	auto ele_root = doc.RootElement();
+	std::string settings_path = (pData_dir / "game.xml").string();
 
-	auto ele_scene = ele_root->FirstChildElement("scene");
-	if (!ele_scene)
+	game_settings_loader settings;
+
+	if (!settings.load(settings_path))
 	{
-		util::error("Please specify the scene to start with");
-		return 1;
+		util::error("Could not load game settings file at '" + settings_path + "'");
+		return (mIs_ready = false, false);
 	}
-	mStart_scene = util::safe_string(ele_scene->Attribute("name"));
 
 	util::info("Loading Resources...");
 
+	mResource_manager.clear_directories();
+
 	// Setup textures directory
 	std::shared_ptr<texture_directory> texture_dir(std::make_shared<texture_directory>());
-	if (auto ele_textures = ele_root->FirstChildElement("textures"))
-		texture_dir->set_path(ele_textures->Attribute("path"));
+	texture_dir->set_path(settings.get_textures_path());
 	mResource_manager.add_directory(texture_dir);
 
 	// Setup sounds directory
 	std::shared_ptr<soundfx_directory> sound_dir(std::make_shared<soundfx_directory>());
-	if (auto ele_sounds = ele_root->FirstChildElement("sounds"))
-		sound_dir->set_path(ele_sounds->Attribute("path"));
+	sound_dir->set_path(settings.get_sounds_path());
 	mResource_manager.add_directory(sound_dir);
 
 	// Setup fonts directory
 	std::shared_ptr<font_directory> font_dir(std::make_shared<font_directory>());
-	if (auto ele_fonts = ele_root->FirstChildElement("fonts"))
-		font_dir->set_path(ele_fonts->Attribute("path"));
+	font_dir->set_path(settings.get_fonts_path());
 	mResource_manager.add_directory(font_dir);
 
-	mResource_manager.reload_directories(); // Load the resources from the directories
-	
+	if (!mResource_manager.reload_directories()) // Load the resources from the directories
+	{
+		util::error("Resources failed to load");
+		return (mIs_ready = false, false);
+	}
+
 	util::info("Resources loaded");
 
 	mScene.set_resource_manager(mResource_manager);
-	mScene.load_game_xml(ele_root);
-	mScene.load_scene(mStart_scene);
-	return 0;
+	if (!mScene.load_settings(settings))
+		return (mIs_ready = false, false);
+
+	mIs_ready = true;
+
+	mFlags.clean();
+
+	mScene.clean(true);
+	mScene.load_scene(settings.get_start_scene());
+	return true;
 }
 
 void
@@ -1658,6 +1647,17 @@ game::tick()
 {
 	mTerminal_gui.update(*get_renderer());
 	mControls.update(*get_renderer());
+
+	if (mControls.is_triggered(controls::control::reset_game))
+	{
+		mEditor_manager.close_editor();
+		restart_game();
+	}
+
+	// Do not go beyond this point if not ready
+	if (!mIs_ready)
+		return;
+
 	if (mControls.is_triggered(controls::control::reset))
 	{
 		mEditor_manager.close_editor();
@@ -1669,20 +1669,6 @@ game::tick()
 		util::info("Scene reloaded");
 	}
 
-	if (mControls.is_triggered(controls::control::reset_game))
-	{
-		mEditor_manager.close_editor();
-		util::info("Reloading entire game...");
-
-		mResource_manager.reload_directories();
-
-		mFlags.clean();
-
-		mScene.clean(true);
-		mScene.load_scene(mStart_scene);
-
-		util::info("Game reloaded");
-	}
 
 	if (mControls.is_triggered(controls::control::editor_1))
 	{
@@ -1725,6 +1711,16 @@ game::tick()
 		}
 		mScene_load_request.complete();
 	}
+}
+
+bool game::restart_game()
+{
+	util::info("Reloading entire game...");
+
+	bool succ = load_settings(mData_directory);
+
+	util::info("Game reloaded");
+	return succ;
 }
 
 void
@@ -2280,9 +2276,26 @@ bool game_settings_loader::load(const std::string & pPath)
 	}
 	mStart_scene = util::safe_string(ele_scene->Attribute("name"));
 
+	auto ele_player = ele_root->FirstChildElement("player");
+	if (!ele_player)
+	{
+		util::error("Please specify the player texture");
+		return false;
+	}
+	mPlayer_texture = util::safe_string(ele_player->Attribute("texture"));
+
+	auto ele_tile_size = ele_root->FirstChildElement("tile_size");
+	if (!ele_tile_size)
+	{
+		util::error("Please specify the player texture");
+		return false;
+	}
+	pUnit_pixels = ele_tile_size->FloatAttribute("pixels");
+
 	mTextures_path = load_setting_path(ele_root, "textures", defs::DEFAULT_TEXTURES_PATH.string());
 	mSounds_path   = load_setting_path(ele_root, "sounds"  , defs::DEFAULT_SOUND_PATH.string());
 	mMusic_path    = load_setting_path(ele_root, "music"   , defs::DEFAULT_MUSIC_PATH.string());
+	mFonts_path    = load_setting_path(ele_root, "fonts"   , defs::DEFAULT_FONTS_PATH.string());
 
 	return true;
 }
@@ -2307,9 +2320,19 @@ const std::string & game_settings_loader::get_music_path() const
 	return mMusic_path;
 }
 
+const std::string & rpg::game_settings_loader::get_fonts_path() const
+{
+	return mFonts_path;
+}
+
 const std::string & game_settings_loader::get_player_texture() const
 {
 	return mPlayer_texture;
+}
+
+float game_settings_loader::get_unit_pixels() const
+{
+	return pUnit_pixels;
 }
 
 std::string game_settings_loader::load_setting_path(tinyxml2::XMLElement* pRoot, const std::string & pName, const std::string& pDefault)
@@ -2318,8 +2341,7 @@ std::string game_settings_loader::load_setting_path(tinyxml2::XMLElement* pRoot,
 	if (ele &&
 		ele->Attribute("path"))
 		return util::safe_string(ele->Attribute("path"));
-	else
-		return pDefault;
+	return pDefault;
 }
 
 scene_load_request::scene_load_request()

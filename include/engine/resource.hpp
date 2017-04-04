@@ -34,7 +34,7 @@ public:
 };
 
 template<typename T1, typename T2>
-std::shared_ptr<T1> cast_resource(std::shared_ptr<T2> pSrc)
+inline std::shared_ptr<T1> cast_resource(std::shared_ptr<T2> pSrc)
 {
 	return std::dynamic_pointer_cast<T1>(pSrc);
 }
@@ -61,7 +61,8 @@ public:
 	}
 
 	void add_directory(std::shared_ptr<resource_directory> pDirectory);
-	void reload_directories();
+	bool reload_directories();
+	void clear_directories();
 
 	void ensure_load();
 	void unload_all();

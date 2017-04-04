@@ -77,11 +77,21 @@ void resource_manager::add_directory(std::shared_ptr<resource_directory> pDirect
 	mResource_directories.push_back(pDirectory);
 }
 
-void resource_manager::reload_directories()
+bool resource_manager::reload_directories()
 {
 	mResources.clear();
 	for (auto i : mResource_directories)
-		i->load(*this);
+		if (!i->load(*this))
+		{
+			return false;
+		}
+	return true;
+}
+
+void resource_manager::clear_directories()
+{
+	mResources.clear();
+	mResource_directories.clear();
 }
 
 void resource_manager::ensure_load()

@@ -26,7 +26,7 @@ bool texture_directory::load(engine::resource_manager& pResource_manager)
 	if (!engine::fs::exists(mPath))
 	{
 		util::error("Textures directory does not exist");
-		return 1;
+		return false;
 	}
 
 	for (auto& i : engine::fs::recursive_directory_iterator(mPath))
@@ -61,7 +61,7 @@ bool texture_directory::load(engine::resource_manager& pResource_manager)
 		}
 	}
 
-	return 0;
+	return true;
 }
 
 void texture_directory::set_path(const std::string & pPath)
@@ -79,7 +79,7 @@ bool font_directory::load(engine::resource_manager& pResource_manager)
 	if (!engine::fs::exists(mPath))
 	{
 		util::error("Textures directory does not exist");
-		return 1;
+		return false;
 	}
 
 	for (auto& i : engine::fs::recursive_directory_iterator(mPath))
@@ -106,7 +106,7 @@ bool font_directory::load(engine::resource_manager& pResource_manager)
 			pResource_manager.add_resource(engine::resource_type::font, font_name, font);
 		}
 	}
-	return 0;
+	return true;
 }
 
 void font_directory::set_path(const std::string & pPath)
