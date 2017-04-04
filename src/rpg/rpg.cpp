@@ -1568,6 +1568,23 @@ void game::load_terminal_interface()
 		return restart_game();
 	}, "- Reset game");
 
+	mGroup_game->add_command("load",
+		[&](const engine::terminal_arglist& pArgs)->bool
+	{
+		if (pArgs.empty())
+		{
+			util::error("Not enough arguments");
+			return false;
+		}
+		if (!engine::fs::exists(pArgs[0].get_raw()))
+		{
+			util::error("Path '" + pArgs[0].get_raw() + "' does not exist");
+			return false;
+		}
+		mData_directory = pArgs[0].get_raw();
+		return restart_game();
+	}, "<directory> - Load a game data folder (Default: data)");
+
 	mGroup_global1 = std::make_shared<engine::terminal_command_group>();
 	mGroup_global1->add_command("help",
 		[&](const engine::terminal_arglist& pArgs)->bool
