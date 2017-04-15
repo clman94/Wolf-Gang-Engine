@@ -85,9 +85,8 @@ private:
 
 	util::optional_pointer<AS::asIScriptEngine> mEngine;
 
-	engine::timer mTimer;
-
 	void register_vector_type();
+	void register_timer_type();
 	void message_callback(const AS::asSMessageInfo * msg);
 
 	void script_abort();

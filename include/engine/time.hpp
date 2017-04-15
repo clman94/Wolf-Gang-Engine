@@ -93,7 +93,7 @@ public:
 	void start(float pSeconds)
 	{
 		if (pSeconds <= 0)
-			throw "Bad time";
+			return;
 		mSeconds = pSeconds;
 		mStart_point = std::chrono::high_resolution_clock::now();
 	}

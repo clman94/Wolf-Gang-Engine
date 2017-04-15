@@ -174,7 +174,7 @@ private:
 /// tracked_owner notifies this object whenever
 /// it has been destroyed. Also prevents unwanted
 /// access when referenced object is destroyed.
-/// Should be checked with tracking_ptr::is_enabled beforehand
+/// Should be checked with tracking_ptr::is_valid beforehand
 template<typename T>
 class tracking_ptr
 {
@@ -234,8 +234,7 @@ public:
 
 	T* get() const
 	{
-		assert(mIs_valid != nullptr);
-		assert(*mIs_valid != false);
+		assert(is_valid());
 		return mPointer;
 	}
 

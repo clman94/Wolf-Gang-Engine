@@ -229,7 +229,7 @@ animation_node::draw(renderer &pR)
 	if (!mAnimation) return 1;
 	if (mPlaying)
 		tick();
-	draw_sprite(pR);
+	sprite_node::draw(pR);
 	return 0;
 }
 

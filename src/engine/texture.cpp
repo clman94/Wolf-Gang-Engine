@@ -71,8 +71,8 @@ bool atlas_entry::load(tinyxml2::XMLElement * pEle)
 	bool att_pingpong = pEle->BoolAttribute("pingpong");
 
 	engine::animation::loop_type loop_type = engine::animation::loop_type::none;
-	if (att_loop)             loop_type = engine::animation::loop_type::linear;
-	if (att_pingpong)         loop_type = engine::animation::loop_type::pingpong;
+	if (att_loop)                loop_type = engine::animation::loop_type::linear;
+	if (att_pingpong)            loop_type = engine::animation::loop_type::pingpong;
 	mAnimation->set_loop(loop_type);
 
 	// Setup sequence for changing of interval over time

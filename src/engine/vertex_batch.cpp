@@ -69,6 +69,7 @@ void vertex_reference::update_rect()
 {
 	if (!mBatch)
 		return;
+
 	auto ref = get_reference();
 	ref[(mRotation)     % 4].texCoords = mTexture_rect.get_offset();
 	ref[(mRotation + 1) % 4].texCoords = mTexture_rect.get_offset() + fvector(mTexture_rect.w, 0);

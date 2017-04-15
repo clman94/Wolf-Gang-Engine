@@ -81,9 +81,6 @@ AS::CScriptHandle script_system::script_get_shared(const std::string& pName)
 void script_system::load_script_interface()
 {
 	add_function("int rand()", asFUNCTION(std::rand));
-	add_function("void _timer_start(float)", asMETHOD(engine::timer, start), &mTimer);
-	add_function("bool _timer_reached()", asMETHOD(engine::timer, is_reached), &mTimer);
-	
 
 	mEngine->RegisterFuncdef("void coroutine(dictionary@)");
 	add_function("void create_thread(coroutine @+)", asMETHOD(script_system, script_create_thread_noargs), this);
@@ -231,6 +228,28 @@ script_system::register_vector_type()
 	mEngine->RegisterObjectProperty("vec", "float y", asOFFSET(engine::fvector, y));
 }
 
+void script_system::register_timer_type()
+{
+	set_namespace("util");
+	mEngine->RegisterObjectType("timer", sizeof(engine::timer), asOBJ_VALUE | asGetTypeTraits<engine::timer>());
+
+	// Constructors and deconstructors
+	mEngine->RegisterObjectBehaviour("timer", asBEHAVE_CONSTRUCT, "void f()"
+		, asFUNCTION(script_default_constructor<engine::timer>)
+		, asCALL_CDECL_OBJLAST);
+	mEngine->RegisterObjectBehaviour("timer", asBEHAVE_DESTRUCT, "void f()"
+		, asFUNCTION(script_default_deconstructor<engine::timer>)
+		, asCALL_CDECL_OBJLAST);
+
+	mEngine->RegisterObjectMethod("timer", "void start(float)"
+		, asMETHOD(engine::timer, start)
+		, asCALL_THISCALL);
+	mEngine->RegisterObjectMethod("timer", "bool is_reached() const"
+		, asMETHOD(engine::timer, is_reached)
+		, asCALL_THISCALL);
+	reset_namespace();
+}
+
 script_system::script_system()
 {
 	mEngine = asCreateScriptEngine();
@@ -249,6 +268,7 @@ script_system::script_system()
 	mCurrect_thread_context = nullptr;
 
 	register_vector_type();
+	register_timer_type();
 
 	load_script_interface();
 }

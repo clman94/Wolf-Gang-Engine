@@ -198,13 +198,13 @@ private:
 	void             script_start_animation(entity_reference& e);
 	void             script_stop_animation(entity_reference& e);
 	void             script_pause_animation(entity_reference& e);
+	void             script_set_animation_speed(entity_reference& e, float pSpeed);
+	float            script_get_animation_speed(entity_reference& e);
 	bool             script_is_animation_playing(entity_reference& e);
 	void             script_set_atlas(entity_reference& e, const std::string& name);
 	void             script_set_rotation(entity_reference& e, float pRotation);
 	float            script_get_rotation(entity_reference& e);
 	void             script_set_color(entity_reference& e, int r, int g, int b, int a);
-	void             script_set_animation_speed(entity_reference& e, float pSpeed);
-	float            script_get_animation_speed(entity_reference& e);
 	void             script_set_texture(entity_reference & e, const std::string & name);
 	void             script_set_scale(entity_reference& e, const engine::fvector& pScale);
 	engine::fvector  script_get_scale(entity_reference& e);

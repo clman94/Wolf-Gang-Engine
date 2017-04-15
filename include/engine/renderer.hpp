@@ -243,9 +243,12 @@ private:
 
 	void update_rect();
 
-	//int mRotation;
 	vertex_batch* mBatch;
 	size_t mIndex;
+	
+	// TODO: Flipping
+	//bool mH_flip;
+	//bool mV_flip;
 
 	sf::Vertex* get_reference();
 };
@@ -384,8 +387,6 @@ public:
 
 	void set_shader(std::shared_ptr<shader> pShader);
 
-protected:
-	int draw_sprite(renderer &pR);
 
 private:
 	std::shared_ptr<texture> mTexture;

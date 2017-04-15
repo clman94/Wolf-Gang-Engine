@@ -994,6 +994,8 @@ bool scene::load_settings(const game_settings_loader& pSettings)
 	mPlayer.mSprite.set_texture(texture);
 	mPlayer.set_cycle(character_entity::cycle::def);
 
+	mBackground_music.set_root_directory(pSettings.get_music_path());
+
 	util::info("Settings loaded");
 
 	return true;
@@ -2285,8 +2287,14 @@ bool game_settings_loader::load(const std::string & pPath)
 	}
 	auto ele_root = doc.RootElement();
 
+	if (!ele_root)
+	{
+		util::error("Root element missing in settings");
+		return false;
+	}
+
 	auto ele_scene = ele_root->FirstChildElement("scene");
-	if (!ele_scene)
+	if (!ele_scene || !ele_scene->Attribute("name"))
 	{
 		util::error("Please specify the scene to start with");
 		return false;
@@ -2294,7 +2302,7 @@ bool game_settings_loader::load(const std::string & pPath)
 	mStart_scene = util::safe_string(ele_scene->Attribute("name"));
 
 	auto ele_player = ele_root->FirstChildElement("player");
-	if (!ele_player)
+	if (!ele_player || !ele_player->Attribute("texture"))
 	{
 		util::error("Please specify the player texture");
 		return false;
@@ -2302,7 +2310,7 @@ bool game_settings_loader::load(const std::string & pPath)
 	mPlayer_texture = util::safe_string(ele_player->Attribute("texture"));
 
 	auto ele_tile_size = ele_root->FirstChildElement("tile_size");
-	if (!ele_tile_size)
+	if (!ele_tile_size || !ele_tile_size->Attribute("pixels"))
 	{
 		util::error("Please specify the player texture");
 		return false;
