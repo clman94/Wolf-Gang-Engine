@@ -22,8 +22,6 @@ public:
 	// Calculate F=H+G for the cost of the node
 	float calculate_cost(fvector pStart, fvector pDestination);
 
-	float get_f() const;
-
 	void set_position(fvector pPosition);
 	fvector get_position() const;
 	ivector get_grid_position() const;
@@ -32,8 +30,11 @@ public:
 	void set_predecessor(path_node& pPath_node);
 	path_node& get_predecessor();
 
+	bool is_less_costly(const path_node& pNode) const;
+
 private:
 	float mF;
+	float mH;
 	engine::fvector mPosition;
 	path_node* mPredecessor;
 };
@@ -43,7 +44,7 @@ class grid_set
 public:
 
 	// Returns all neighboring nodes that are available
-	std::vector<fvector> get_empty_neighbors_positions(path_node& pNode);
+	std::vector<fvector> get_empty_neighbors_positions(path_node& pNode) const;
 
 	// Register a node
 	void add_node(path_node& pNode);
@@ -72,7 +73,7 @@ public:
 		collision_callback pCollision_callback);
 
 	// Check if there is no more paths to make
-	bool is_openset_empty();
+	bool is_openset_empty() const;
 
 private:
 	path_node& add_node(engine::fvector pPosition);
@@ -104,6 +105,7 @@ public:
 
 	// Trace the shortest path (even if its incomplete)
 	path_t construct_path();
+
 
 private:
 	size_t mPath_limit;

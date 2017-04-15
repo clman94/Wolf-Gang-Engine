@@ -19,6 +19,7 @@ enum neighbor_position
 
 path_node::path_node() :
 	mF(0),
+	mH(0),
 	mPredecessor(nullptr)
 {
 }
@@ -26,16 +27,10 @@ path_node::path_node() :
 float path_node::calculate_cost(fvector pStart, fvector pDestination)
 {
 	float G = mPosition.distance(pStart);
-	float H = mPosition.distance(pDestination);
-	mF = G + H;
+	mH = mPosition.distance(pDestination);
+	mF = G + mH;
 	return mF;
 }
-
-float path_node::get_f() const
-{
-	return mF;
-}
-
 void path_node::set_position(fvector pPosition)
 {
 	mPosition = pPosition;
@@ -65,6 +60,13 @@ path_node& path_node::get_predecessor()
 {
 	assert(mPredecessor != nullptr);
 	return *mPredecessor;
+}
+
+bool path_node::is_less_costly(const path_node & pNode) const
+{
+	return (mF < pNode.mF)
+		|| (mF == pNode.mF
+			&& mH < pNode.mH);
 }
 
 void path_set::clean()
@@ -108,8 +110,8 @@ void path_set::create_neighbors(path_node& pNode, collision_callback pCollision_
 	for (auto i : neighbor_positions)
 	{
 		// Check collision with custom function
-		if (pCollision_callback != nullptr
-		&&  pCollision_callback(i))
+		if (pCollision_callback
+			&& pCollision_callback(i))
 			continue;
 
 		// Create new node
@@ -118,7 +120,7 @@ void path_set::create_neighbors(path_node& pNode, collision_callback pCollision_
 	}
 }
 
-bool path_set::is_openset_empty()
+bool path_set::is_openset_empty() const
 {
 	return mOpen_set.empty();
 }
@@ -137,11 +139,12 @@ path_node& path_set::add_node(fvector pPosition)
 		return mOpen_set.back();
 	}
 
-	// Insert node according to its f value
-	auto i = mOpen_set.begin();
-	for (; i != mOpen_set.end(); i++)
+	// Insert node according to its cost values
+	// Automatically keeps things sorted without
+	//   calling an expensive sort function every time.
+	for (auto i = mOpen_set.begin(); i != mOpen_set.end(); i++)
 	{
-		if (new_node.get_f() <= i->get_f())
+		if (new_node.is_less_costly(*i))
 		{
 			mOpen_set.insert(i, new_node);
 			--i;
@@ -172,7 +175,7 @@ path_t path_set::construct_path()
 	return path;
 }
 
-std::vector<fvector> grid_set::get_empty_neighbors_positions(path_node& pNode)
+std::vector<fvector> grid_set::get_empty_neighbors_positions(path_node& pNode) const
 {
 	std::array<fvector, 4> neighbors;
 
