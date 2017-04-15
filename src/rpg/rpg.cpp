@@ -1573,6 +1573,11 @@ void game::load_terminal_interface()
 	mGroup_game->add_command("load",
 		[&](const engine::terminal_arglist& pArgs)->bool
 	{
+		util::error("Incomplete implementation");
+		return false;
+
+
+
 		if (pArgs.empty())
 		{
 			util::error("Not enough arguments");
