@@ -1278,6 +1278,18 @@ void collisionbox_editor::apply_wall_settings()
 	if (!mSelection)
 		return;
 
+	if (mSelection->get_type() != (rpg::collision_box::type)mCb_type->getSelectedItemIndex())
+	{
+		auto temp = mSelection;
+		mContainer.remove_box(mSelection);
+		auto new_box = mContainer.add_collision_box((rpg::collision_box::type)mCb_type->getSelectedItemIndex());
+		new_box->set_region(temp->get_region());
+		new_box->set_wall_group(temp->get_wall_group());
+		mSelection = new_box;
+		update_door_settings_labels();
+	}
+
+
 	// Apply wall group
 	if (mTb_wallgroup->getText().isEmpty())
 		mSelection->set_wall_group(nullptr);
