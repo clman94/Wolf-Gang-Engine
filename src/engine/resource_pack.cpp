@@ -59,10 +59,8 @@ public:
 	/*
 	Pack Settings Format
 
-	[whitelist or blacklist]
-	file <path>
-	 ...
-	dir <path>
+	<whitelist or blacklist>
+	<path relative to this text file>
 	 ...
 	*/
 
@@ -71,7 +69,7 @@ public:
 		mIs_valid = false;
 	}
 
-	bool open(const encoded_path& pPath)
+	bool open(const encoded_path& pPath, bool pIgnore_self = true)
 	{
 		mIs_valid = false;
 		std::ifstream stream(pPath.string().c_str());
@@ -105,6 +103,16 @@ public:
 			nentry.path = path;
 			mFiles.push_back(std::move(nentry));
 		}
+
+		// Add entry so it can ignore itself when validating files
+		if (pIgnore_self && !mIs_whitelist)
+		{
+			entry self_entry;
+			self_entry.is_directory = false;
+			self_entry.path = pPath;
+			mFiles.push_back(std::move(self_entry));
+		}
+
 		mIs_valid = true;
 		return true;
 	}
@@ -235,12 +243,6 @@ bool create_resource_pack(const std::string& pSrc_directory, const std::string& 
 
 	return true;
 }
-
-class resource_pack
-{
-public:
-
-};
 
 encoded_path::encoded_path(const std::string & pString)
 {
@@ -414,7 +416,7 @@ bool pack_header::parse(std::istream & pStream)
 		file.position = read_unsignedint_binary<uint64_t>(pStream);
 		file.size = read_unsignedint_binary<uint64_t>(pStream);
 	}
-	mHeader_size = pStream.tellg().seekpos();
+	mHeader_size = pStream.tellg();
 	return true;
 }
 
@@ -439,7 +441,7 @@ std::vector<char> pack_stream::read(uint64_t pCount)
 		return{};
 
 	// Check bounds
-	if (mStream.tellg().seekpos() + pCount - mHeader_offset
+	if ((uint64_t)mStream.tellg() + pCount - mHeader_offset
 		>= mFile.position + mFile.size)
 		return{};
 	std::vector<char> retval;
@@ -476,7 +478,7 @@ uint64_t pack_stream::tell()
 	if (!is_valid())
 		return 0;
 
-	return mStream.tellg().seekpos() - mFile.position - mHeader_offset;
+	return (uint64_t)mStream.tellg() - mFile.position - mHeader_offset;
 }
 
 bool pack_stream::is_valid()
