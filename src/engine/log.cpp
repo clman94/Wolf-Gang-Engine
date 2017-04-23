@@ -3,7 +3,7 @@
 
 void util::log_print(log_level pType, const std::string& pMessage)
 {
-#ifndef DISABLE_DEBUG_INFO
+#ifndef LOCKED_RELEASE_MODE
 	static std::ofstream mLog_file;
 
 	if (!mLog_file.is_open()) // Open the log file when needed
@@ -29,13 +29,13 @@ void util::log_print(log_level pType, const std::string& pMessage)
 	}
 
 	std::cout << message; // Print to console  
-#endif // !DISABLE_DEBUG_INFO
+#endif // !LOCKED_RELEASE_MODE
 
 }
 
 void util::log_print(const std::string& pFile, int pLine, int pCol, log_level pType, const std::string& pMessage)
 {
-#ifndef DISABLE_DEBUG_INFO
+#ifndef LOCKED_RELEASE_MODE
 	std::string message = pFile;
 	message += " ( ";
 	message += std::to_string(pLine);
@@ -45,7 +45,7 @@ void util::log_print(const std::string& pFile, int pLine, int pCol, log_level pT
 	message += pMessage;
 
 	log_print(pType, message);
-#endif // !DISABLE_DEBUG_INFO
+#endif // !LOCKED_RELEASE_MODE
 }
 
 void util::error(const std::string& pMessage)

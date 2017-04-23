@@ -212,6 +212,7 @@ private:
 	// Character
 	entity_reference script_add_character(const std::string& tex);
 	void             script_set_direction(entity_reference& e, int dir);
+	int              script_get_direction(entity_reference& e);
 	void             script_set_cycle(entity_reference& e, const std::string& name);
 
 	// Dialog Text
@@ -231,6 +232,7 @@ public:
 	void load_script_interface(script_system& pScript);
 	void clean();
 	void set_root_directory(const std::string& pPath);
+	void pause_music();
 
 private:
 	std::unique_ptr<engine::sound_stream> mStream;

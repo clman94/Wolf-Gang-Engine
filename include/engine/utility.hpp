@@ -121,16 +121,16 @@ public:
 		return mData;
 	}
 
-	T& operator->()
+	T* operator->()
 	{
 		assert(mHas_value);
-		return mData;
+		return &mData;
 	}
 
-	const T& operator->() const
+	const T* operator->() const
 	{
 		assert(mHas_value);
-		return mData;
+		return &mData;
 	}
 
 	bool has_value() const

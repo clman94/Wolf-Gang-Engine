@@ -171,6 +171,10 @@ bool animation_node::tick()
 
 		mInterval = mAnimation->get_interval(mFrame);
 
+		if (mFrame > mAnimation->get_frame_count()
+			&& mAnimation->get_loop() == animation::loop_type::none)
+			pause();
+
 		mClock.restart();
 
 		update_frame();

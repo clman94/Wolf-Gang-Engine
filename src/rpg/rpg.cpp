@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <engine/resource_pack.hpp>
 
 using namespace rpg;
 using namespace AS;
@@ -225,6 +226,18 @@ void entity_manager::script_set_direction(entity_reference& e, int dir)
 		return;
 	}
 	c->set_direction(static_cast<character_entity::direction>(dir));
+}
+
+int entity_manager::script_get_direction(entity_reference& e)
+{
+	if (!check_entity(e)) return 0;
+	character_entity* c = dynamic_cast<character_entity*>(e.get());
+	if (!c)
+	{
+		util::error("Entity is not a character");
+		return 0;
+	}
+	return static_cast<int>(c->get_direction());
 }
 
 void entity_manager::script_set_cycle(entity_reference& e, const std::string& name)
@@ -648,7 +661,8 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void set_position(entity&in, const vec &in)",              asMETHOD(entity_manager, script_set_position), this);
 	pScript.add_function("vec get_position(entity&in)",                              asMETHOD(entity_manager, script_get_position), this);
 	pScript.add_function("vec get_size(entity&in)",                                  asMETHOD(entity_manager, script_get_size), this);
-	pScript.add_function("void set_direction(entity&in, int)",                       asMETHOD(entity_manager, script_set_direction), this);
+	pScript.add_function("void _set_direction(entity&in, int)",                      asMETHOD(entity_manager, script_set_direction), this);
+	pScript.add_function("int _get_direction(entity&in)",                            asMETHOD(entity_manager, script_get_direction), this);
 	pScript.add_function("void set_cycle(entity&in, const string &in)",              asMETHOD(entity_manager, script_set_cycle), this);
 	pScript.add_function("void set_atlas(entity&in, const string &in)",              asMETHOD(entity_manager, script_set_atlas), this);
 	pScript.add_function("bool is_character(entity&in)",                             asMETHOD(entity_manager, script_is_character), this);
@@ -676,7 +690,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("float get_speed(entity&in)",                               asMETHOD(entity_manager, script_get_animation_speed), this);
 	pScript.reset_namespace();
 
-	pScript.add_function("void set_scale(entity&in, float)",                         asMETHOD(entity_manager, script_set_scale), this);
+	pScript.add_function("void set_scale(entity&in, vec)",                           asMETHOD(entity_manager, script_set_scale), this);
 	pScript.add_function("float get_scale(entity&in)",                               asMETHOD(entity_manager, script_get_scale), this);
 
 	pScript.add_function("void add_child(entity&in, entity&in)",                     asMETHOD(entity_manager, script_add_child), this);
@@ -745,6 +759,7 @@ scene::clean(bool pFull)
 	mEntity_manager.clean();
 	mColored_overlay.clean();
 	mSound_FX.stop_all();
+	mBackground_music.pause_music();
 
 	focus_player(true);
 
@@ -1600,6 +1615,29 @@ void game::load_terminal_interface()
 		return true;
 	}, "- Display this help");
 
+	mGroup_global1->add_command("pack",
+		[&](const engine::terminal_arglist& pArgs)->bool
+	{
+		std::string destination = "./data.pack";
+		bool overwrite = false;
+		for (auto& i : pArgs)
+			if (i.get_raw() == "-o")
+				overwrite = true;
+			else
+				destination = i.get_raw();
+
+		if (engine::fs::exists(destination) && !overwrite)
+		{
+			util::error("Pack file '" + destination + "' already exists. Please specify '-o' option to overwrite.");
+			return false;
+		}
+
+		util::info("Packing data folder to '" + destination + "'");
+		bool suc = create_resource_pack("data", destination);
+		util::info("Packing completed");
+		return suc;
+	}, "[Destination] - Pack data folder to a pack file for releasing your game");
+
 	mTerminal_system.add_group(mGroup_flags);
 	mTerminal_system.add_group(mGroup_game);
 	mTerminal_system.add_group(mGroup_global1);
@@ -1862,6 +1900,11 @@ void background_music::clean()
 void background_music::set_root_directory(const std::string & pPath)
 {
 	mRoot_directory = pPath;
+}
+
+void background_music::pause_music()
+{
+	mStream->pause();
 }
 
 int background_music::script_music_open(const std::string & pName)

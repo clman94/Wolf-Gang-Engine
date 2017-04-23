@@ -66,25 +66,21 @@ void player_character::movement(controls& pControls, collision_system& pCollisio
 	if (pControls.is_triggered(controls::control::left))
 	{
 		move.x -= 1;
-		set_direction(direction::left);
 	}
 
 	if (pControls.is_triggered(controls::control::right))
 	{
 		move.x += 1;
-		set_direction(direction::right);
 	}
 
 	if (pControls.is_triggered(controls::control::up))
 	{
 		move.y -= 1;
-		set_direction(direction::up);
 	}
 
 	if (pControls.is_triggered(controls::control::down))
 	{
 		move.y += 1;
-		set_direction(direction::down);
 	}
 
 	// TODO: Improve the logic behind this
@@ -92,6 +88,8 @@ void player_character::movement(controls& pControls, collision_system& pCollisio
 	// Check collision if requested to move
 	if (move != engine::fvector(0, 0))
 	{
+		set_move_direction(move); // Make sure the player is in the direction he's moving
+
 		// Normalize so movement is consistant
 		move.normalize();
 		move *= get_speed()*pDelta;
