@@ -1,7 +1,4 @@
-#include <string>
-#include <vector>
 #include <istream>
-#include <cstdint>
 #include <fstream>
 #include <engine/filesystem.hpp>
 #include <engine/utility.hpp>
@@ -126,7 +123,7 @@ public:
 		for (const auto& i : mFiles)
 		{
 			if ((!i.is_directory && i.path == pPath)
-				|| (i.is_directory && pPath.has_directory(i.path)))
+				|| (i.is_directory && pPath.in_directory(i.path)))
 			{
 				has_entry = true;
 				break;
@@ -197,7 +194,7 @@ bool create_resource_pack(const std::string& pSrc_directory, const std::string& 
 
 	// Get list of files to add
 	std::vector<engine::fs::path> files_to_add;
-	for (auto i : engine::fs::recursive_directory_iterator(pSrc_directory))
+	for (auto& i : engine::fs::recursive_directory_iterator(pSrc_directory))
 	{
 		auto absolute = engine::fs::absolute(i.path());
 		if (!engine::fs::is_directory(absolute)
@@ -208,7 +205,7 @@ bool create_resource_pack(const std::string& pSrc_directory, const std::string& 
 	// Create header
 	pack_header header;
 	uint64_t current_position = 0;
-	for (auto i : files_to_add)
+	for (auto& i : files_to_add)
 	{
 		encoded_path path(i.string());
 		path.snip_path(root_dir);
@@ -232,7 +229,7 @@ bool create_resource_pack(const std::string& pSrc_directory, const std::string& 
 	stream.flush();
 
 	// Add file data
-	for (auto i : files_to_add)
+	for (auto& i : files_to_add)
 	{
 		std::ifstream file_stream(i.string().c_str(), std::fstream::binary | std::fstream::ate);
 		if (!file_stream)
@@ -253,7 +250,7 @@ bool encoded_path::parse(const std::string & pString)
 {
 	if (pString.empty())
 		return false;
-	mParent_directories.clear();
+	mHierarchy.clear();
 	auto start_segment = pString.begin();
 	auto end_segment = pString.begin();
 	for (; end_segment != pString.end(); end_segment++)
@@ -263,109 +260,145 @@ bool encoded_path::parse(const std::string & pString)
 		{
 			if (start_segment < end_segment - 1) // Segment is not empty
 			{
-				std::string segment(start_segment, end_segment);
-				if (segment != ".") // Not a redundant current directory thing
-					mParent_directories.push_back(segment);
-				else if (segment == ".." && !mParent_directories.empty()) // Go back if possible
-				{
-					if (mParent_directories.empty())
-						mParent_directories.pop_back();
-				}
+				mHierarchy.push_back(std::string(start_segment, end_segment));
 			}
 			start_segment = end_segment + 1;
 		}
 	}
 	if (start_segment < end_segment - 1) // Last segment is not empty
 	{
-		mParent_directories.push_back(std::string(start_segment, end_segment)); // Get last segment
+		mHierarchy.push_back(std::string(start_segment, end_segment)); // Get last segment
 	}
-	if (!mParent_directories.empty())
-	{
-		mFilename = mParent_directories.back();
-		mParent_directories.erase(mParent_directories.end() - 1);
-	}
+	simplify();
 	return true;
 }
+
 
 bool encoded_path::in_directory(const encoded_path & pPath) const
 {
-	if (mParent_directories.size() != pPath.mParent_directories.size() + 1)
+	if (pPath.mHierarchy.size() >= mHierarchy.size())
 		return false;
-	if (mParent_directories.back() != pPath.mFilename)
-		return false;
-
-	for (size_t i = 0; i < mParent_directories.size(); i++)
-	{
-		if (mParent_directories[i] != pPath.mParent_directories[i])
-			return false;
-	}
-
-	return true;
-}
-
-bool encoded_path::has_directory(const encoded_path & pPath) const
-{
-	if (pPath.mParent_directories.size() + 1 > mParent_directories.size())
+	if (mHierarchy[pPath.mHierarchy.size() - 1] != pPath.filename())
 		return false;
 
 	size_t i = 0;
-	for (; i < pPath.mParent_directories.size(); i++)
+	for (; i < pPath.mHierarchy.size(); i++)
 	{
-		if (mParent_directories[i] != pPath.mParent_directories[i])
+		if (mHierarchy[i] != pPath.mHierarchy[i])
 			return false;
 	}
-	if (mParent_directories[i] != pPath.mFilename)
-		return false;
 	return true;
 }
 
 bool encoded_path::snip_path(const encoded_path & pPath)
 {
-	if (!has_directory(pPath))
+	if (!in_directory(pPath))
 		return false;
-	mParent_directories.erase(mParent_directories.begin()
-		, mParent_directories.begin() + pPath.mParent_directories.size() + 1);
+	mHierarchy.erase(mHierarchy.begin()
+		, mHierarchy.begin() + pPath.mHierarchy.size() + 1);
 	return true;
 }
 
 std::string encoded_path::string() const
 {
+	if (mHierarchy.empty())
+		return{};
 	std::string retval;
-	for (auto i : mParent_directories)
+	for (auto i : mHierarchy)
 	{
 		retval += i + "/"; // Supported by windows and linux, however may still not be entirely portable.
 						   // TODO: Add preprocessor directives to check for type of system
 	}
-	retval += mFilename;
+	retval.pop_back(); // Remove the last divider
 	return retval;
 }
 
 bool encoded_path::is_same(const encoded_path & pPath) const
 {
-	if (pPath.mParent_directories.size() != mParent_directories.size())
+	if (pPath.mHierarchy.size() != mHierarchy.size())
 		return false;
-	if (pPath.mFilename != mFilename)
+	if (pPath.filename() != filename())
 		return false;
-	for (size_t i = 0; i < mParent_directories.size(); i++)
-		if (pPath.mParent_directories[i] != mParent_directories[i])
+	for (size_t i = 0; i < mHierarchy.size() - 1; i++) // -1 because we already checked for filename
+		if (pPath.mHierarchy[i] != mHierarchy[i])
 			return false;
 	return true;
 }
 
 void encoded_path::append(const encoded_path & pRight)
 {
-	mParent_directories.push_back(mFilename);
-	mFilename = pRight.mFilename;
-	mParent_directories.insert(mParent_directories.end(), pRight.mParent_directories.begin(), pRight.mParent_directories.end());
+	mHierarchy.insert(mHierarchy.end(), pRight.mHierarchy.begin(), pRight.mHierarchy.end());
+	simplify();
+}
+
+encoded_path encoded_path::parent() const
+{
+	encoded_path retval(*this);
+	retval.pop_filename();
+	return retval;
+}
+
+std::string encoded_path::filename() const
+{
+	if (mHierarchy.empty())
+		return{};
+	return mHierarchy.back();
 }
 
 bool encoded_path::pop_filename()
 {
-	if (mParent_directories.size() == 0)
+	if (mHierarchy.empty())
 		return false;
-	mFilename = mParent_directories.back();
-	mParent_directories.pop_back();
+	mHierarchy.pop_back();
 	return true;
+}
+
+encoded_path& encoded_path::operator=(const std::string& pString)
+{
+	parse(pString);
+	return *this;
+}
+
+bool encoded_path::operator==(const encoded_path& pRight) const
+{
+	return is_same(pRight);
+}
+
+encoded_path encoded_path::operator/(const encoded_path& pRight) const
+{
+	encoded_path retval(*this);
+	retval.append(pRight);
+	return retval;
+}
+
+encoded_path& encoded_path::operator/=(const encoded_path& pRight)
+{
+	append(pRight);
+	return *this;
+}
+
+
+void encoded_path::simplify()
+{
+	for (size_t i = 0; i < mHierarchy.size(); i++)
+	{
+		if (mHierarchy[i] == ".") // These are redundant
+		{
+			mHierarchy.erase(mHierarchy.begin() + i);
+			--i;
+		}
+		else if (mHierarchy[i] == "..")
+		{
+			if (mHierarchy.empty()
+				|| mHierarchy.back() == "..") // Keep stacking these things
+				mHierarchy.push_back("..");
+			else
+			{
+				mHierarchy.erase(mHierarchy.begin() + i);
+				--i;
+			}
+		}
+	}
 }
 
 void pack_header::add_file(file_info pFile)
@@ -396,6 +429,8 @@ bool pack_header::generate(std::ostream & pStream) const
 
 bool pack_header::parse(std::istream & pStream)
 {
+	mFiles.clear();
+
 	pStream.seekg(sizeof(uint64_t)); // Skip the first 8 bytes
 	uint64_t file_count = read_unsignedint_binary<uint64_t>(pStream);
 	if (file_count == 0)
@@ -430,6 +465,17 @@ util::optional<pack_header::file_info> pack_header::get_file(const encoded_path 
 	return{};
 }
 
+std::vector<encoded_path> pack_header::recursive_directory(const encoded_path & pPath) const
+{
+	std::vector<encoded_path> retval;
+	for (auto& i : mFiles)
+	{
+		if (i.path.in_directory(pPath))
+			retval.push_back(i.path);
+	}
+	return retval;
+}
+
 uint64_t pack_header::get_header_size() const
 {
 	return mHeader_size;
@@ -462,12 +508,21 @@ bool pack_stream::read(char * pData, uint64_t pCount)
 	return true;
 }
 
+bool pack_stream::read(std::vector<char>& pData, uint64_t pCount)
+{
+	if (pData.size() != pCount)
+		return false;
+	return read(&pData[0], pCount);
+}
+
 bool pack_stream::seek(uint64_t pPosition)
 {
-	if (!is_valid())
+	if (mStream.eof())
+		mStream.clear();
+	else if (!is_valid())
 		return false;
 
-	if (pPosition <= mFile.size)
+	if (pPosition >= mFile.size)
 		return false;
 	mStream.seekg(mFile.position + pPosition + mHeader_offset);
 	return true;
@@ -483,48 +538,34 @@ uint64_t pack_stream::tell()
 
 bool pack_stream::is_valid()
 {
-	return mStream.good() && tell() < mFile.position + mFile.size;
+	return mStream.good() 
+		&& (uint64_t)mStream.tellg() - mFile.position - mHeader_offset
+			< mFile.position + mFile.size;
 }
 
-bool pack_stream::open(const std::string & pPack, const std::string & pFile)
+
+bool pack_stream_factory::open(const encoded_path& pPath)
 {
-	std::ifstream stream(pPack, std::fstream::binary);
-	if (!stream)
-		return false;
-
-	pack_header header;
-	if (!header.parse(stream))
-		return false;
-
-	auto file = header.get_file(pFile);
-	if (!file)
-		return false;
-
-	mStream.open(file->path.string().c_str(), std::fstream::binary);
-	if (!mStream)
-		return false;
-	mStream.seekg(file->position);
-	mHeader_offset = header.get_header_size();
-	return true;
-}
-
-bool pack_stream_factory::open(const std::string & pPath)
-{
-	std::ifstream stream(pPath, std::fstream::binary);
+	std::ifstream stream(pPath.string().c_str(), std::fstream::binary);
 	if (!stream)
 		return false;
 	mPath = pPath;
 	return mHeader.parse(stream);
 }
 
-pack_stream pack_stream_factory::open_file(const std::string & pPath)
+pack_stream pack_stream_factory::open_file(const encoded_path & pPath)
 {
 	auto file = mHeader.get_file(pPath);
 	if (!file)
 		return{};
 	pack_stream stream;
-	stream.mStream.open(mPath.c_str(), std::fstream::binary);
+	stream.mStream.open(mPath.string().c_str(), std::fstream::binary);
 	stream.mStream.seekg(file->position);
 	stream.mHeader_offset = mHeader.get_header_size();
 	return stream;
+}
+
+std::vector<encoded_path> pack_stream_factory::recursive_directory(const encoded_path & pPath) const
+{
+	return mHeader.recursive_directory(pPath);
 }

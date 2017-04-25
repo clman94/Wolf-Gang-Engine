@@ -2,8 +2,12 @@
 #define ENGINE_RESOURCE_PACK_HPP
 
 #include <string>
+#include <vector>
+#include <cstdint>
+#include <fstream>
 
-
+// A path somewhat similar to boost path but with more features
+// related to manipulating the path.
 class encoded_path
 {
 public:
@@ -12,17 +16,8 @@ public:
 
 	bool parse(const std::string& pString);
 
-	encoded_path& operator=(const std::string& pString)
-	{
-		parse(pString);
-		return *this;
-	}
-
-	// Checks if the path is the same as the parent directory in this path
-	bool in_directory(const encoded_path& pPath) const;
-
 	// Check if first part of this path is the same
-	bool has_directory(const encoded_path& pPath) const;
+	bool in_directory(const encoded_path& pPath) const;
 
 	// Snip the first part of this path (if it can)
 	bool snip_path(const encoded_path& pPath);
@@ -33,36 +28,21 @@ public:
 
 	void append(const encoded_path& pRight);
 
-	encoded_path parent() const
-	{
-		encoded_path retval(*this);
-		retval.pop_filename();
-		return retval;
-	}
+	encoded_path parent() const;
 
-	bool operator==(const encoded_path& pRight) const
-	{
-		return is_same(pRight);
-	}
-
-	encoded_path operator/(const encoded_path& pRight) const
-	{
-		encoded_path retval(*this);
-		retval.append(pRight);
-		return retval;
-	}
-
-	encoded_path& operator/=(const encoded_path& pRight)
-	{
-		append(pRight);
-		return *this;
-	}
+	std::string filename() const;
 
 	bool pop_filename();
 
+	encoded_path& operator=(const std::string& pString);
+	bool operator==(const encoded_path& pRight) const;
+	encoded_path operator/(const encoded_path& pRight) const;
+	encoded_path& operator/=(const encoded_path& pRight);
+
 private:
-	std::string mFilename;
-	std::vector<std::string> mParent_directories;
+	void simplify();
+
+	std::vector<std::string> mHierarchy;
 };
 
 class pack_header
@@ -100,6 +80,7 @@ public:
 	bool parse(std::istream& pStream);
 
 	util::optional<file_info> get_file(const encoded_path& pPath) const;
+	std::vector<encoded_path> recursive_directory(const encoded_path& pPath) const;
 
 	uint64_t get_header_size() const;
 
@@ -112,18 +93,14 @@ class pack_stream
 {
 public:
 	std::vector<char> read(uint64_t pCount);
-
 	bool read(char* pData, uint64_t pCount);
+	bool read(std::vector<char>& pData, uint64_t pCount);
 	
 	bool seek(uint64_t pPosition);
 
 	uint64_t tell();
 
 	bool is_valid();
-
-	// Quickly open pack and extract the file position
-	// NOTE: Header needs to be read EVERYTIME you need to fetch a file. Use sparingly.
-	bool open(const std::string& pPack, const std::string& pFile);
 
 	friend class pack_stream_factory;
 
@@ -137,11 +114,11 @@ private:
 class pack_stream_factory
 {
 public:
-	bool open(const std::string& pPath);
-
-	pack_stream open_file(const std::string& pPath);
+	bool open(const encoded_path& pPath);
+	pack_stream open_file(const encoded_path& pPath);
+	std::vector<encoded_path> recursive_directory(const encoded_path& pPath) const;
 private:
-	std::string mPath;
+	encoded_path mPath;
 	pack_header mHeader;
 };
 
