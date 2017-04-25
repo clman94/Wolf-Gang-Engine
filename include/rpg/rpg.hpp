@@ -14,7 +14,11 @@
 
 #include <rpg/rpg_config.hpp>
 #include <rpg/tilemap_manipulator.hpp>
+
+#ifndef LOCKED_RELEASE_MODE
 #include <rpg/editor.hpp>
+#endif
+
 #include <rpg/scene_loader.hpp>
 #include <rpg/script_system.hpp>
 #include <rpg/collision_system.hpp>
@@ -39,7 +43,7 @@
 
 namespace rpg
 {
-
+#ifndef LOCKED_RELEASE_MODE
 class terminal_gui
 {
 public:
@@ -53,6 +57,7 @@ private:
 	//std::vector<std::string> mHistory;
 	tgui::EditBox::Ptr mEb_input;
 };
+#endif
 
 // Resource management of expression animations
 class expression_manager
@@ -357,7 +362,10 @@ public:
 	const std::string& get_name();
 
 	void load_script_interface(script_system& pScript);
+
+#ifndef LOCKED_RELEASE_MODE
 	void load_terminal_interface(engine::terminal_system& pTerminal);
+#endif
 
 	void set_resource_manager(engine::resource_manager& pResource_manager);
 
@@ -390,7 +398,9 @@ private:
 	colored_overlay       mColored_overlay;
 	pathfinding_system    mPathfinding_system;
 
+#ifndef LOCKED_RELEASE_MODE
 	std::shared_ptr<engine::terminal_command_group> mTerminal_cmd_group;
+#endif
 
 	std::string mCurrent_scene_name;
 	scene_loader mLoader;
@@ -506,12 +516,18 @@ private:
 	controls         mControls;
 	size_t           mSlot;
 
-	terminal_gui mTerminal_gui;
-	engine::terminal_system mTerminal_system;
-
 	engine::fs::path mData_directory;
 
+#ifndef LOCKED_RELEASE_MODE
 	editors::editor_manager mEditor_manager;
+	terminal_gui mTerminal_gui;
+	engine::terminal_system mTerminal_system;
+	void load_terminal_interface();
+
+	std::shared_ptr<engine::terminal_command_group> mGroup_flags;
+	std::shared_ptr<engine::terminal_command_group> mGroup_game;
+	std::shared_ptr<engine::terminal_command_group> mGroup_global1;
+#endif
 
 	scene_load_request mScene_load_request;
 
@@ -527,11 +543,6 @@ private:
 	void script_load_scene_to_position(const std::string& pName, engine::fvector pPosition);
 
 	void load_script_interface();
-	void load_terminal_interface();
-
-	std::shared_ptr<engine::terminal_command_group> mGroup_flags;
-	std::shared_ptr<engine::terminal_command_group> mGroup_game;
-	std::shared_ptr<engine::terminal_command_group> mGroup_global1;
 
 	float get_delta();
 };

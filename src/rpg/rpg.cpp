@@ -718,9 +718,6 @@ scene::scene()
 {
 	mTilemap_display.set_depth(defs::TILES_DEPTH);
 
-	// World space will be 32x32 pixels per unit
-	mWorld_node.set_unit(32);
-
 	mWorld_node.add_child(mTilemap_display);
 	mWorld_node.add_child(mPlayer);
 	mFocus_player = true;
@@ -944,6 +941,7 @@ void scene::load_script_interface(script_system& pScript)
 	mScript = &pScript;
 }
 
+#ifndef LOCKED_RELEASE_MODE
 void scene::load_terminal_interface(engine::terminal_system & pTerminal)
 {
 	mTerminal_cmd_group = std::make_shared<engine::terminal_command_group>();
@@ -987,6 +985,7 @@ void scene::load_terminal_interface(engine::terminal_system & pTerminal)
 
 	pTerminal.add_group(mTerminal_cmd_group);
 }
+#endif
 
 void scene::set_resource_manager(engine::resource_manager& pResource_manager)
 {
@@ -1417,13 +1416,15 @@ game::game()
 {
 	mIs_ready = false;
 	load_script_interface();
+	mSlot = 0;
+#ifndef LOCKED_RELEASE_MODE
 	load_terminal_interface();
 	mScene.load_terminal_interface(mTerminal_system);
-	mEditor_manager.load_terminal_interface(mTerminal_system);
 	mTerminal_gui.set_terminal_system(mTerminal_system);
+	mEditor_manager.load_terminal_interface(mTerminal_system);
 	mEditor_manager.set_resource_manager(mResource_manager);
 	mEditor_manager.set_world_node(mScene.get_world_node());
-	mSlot = 0;
+#endif
 }
 
 game::~game()
@@ -1537,6 +1538,7 @@ game::load_script_interface()
 	util::info("Script interface loaded");
 }
 
+#ifndef LOCKED_RELEASE_MODE
 void game::load_terminal_interface()
 {
 	mGroup_flags = std::make_shared<engine::terminal_command_group>();
@@ -1642,6 +1644,7 @@ void game::load_terminal_interface()
 	mTerminal_system.add_group(mGroup_game);
 	mTerminal_system.add_group(mGroup_global1);
 }
+#endif
 
 float game::get_delta()
 {
@@ -1707,9 +1710,13 @@ bool game::load_settings(engine::fs::path pData_dir)
 void
 game::tick()
 {
+#ifndef LOCKED_RELEASE_MODE
 	mTerminal_gui.update(*get_renderer());
+#endif
+
 	mControls.update(*get_renderer());
 
+#ifndef LOCKED_RELEASE_MODE
 	if (mControls.is_triggered(controls::control::reset_game))
 	{
 		mEditor_manager.close_editor();
@@ -1748,6 +1755,7 @@ game::tick()
 	// Dont go any further if editor is open
 	if (mEditor_manager.is_editor_open())
 		return;
+#endif
 
 	mScene.tick(mControls);
 
@@ -1789,8 +1797,10 @@ void
 game::refresh_renderer(engine::renderer & pR)
 {
 	mScene.set_renderer(pR);
+#ifndef LOCKED_RELEASE_MODE
 	mTerminal_gui.load_gui(pR);
 	pR.add_object(mEditor_manager);
+#endif
 	pR.set_icon("data/icon.png");
 }
 
@@ -2360,7 +2370,7 @@ bool game_settings_loader::load(const std::string & pPath)
 	auto ele_tile_size = ele_root->FirstChildElement("tile_size");
 	if (!ele_tile_size || !ele_tile_size->Attribute("pixels"))
 	{
-		util::error("Please specify the player texture");
+		util::error("Please specify the pixel size of the tiles");
 		return false;
 	}
 	pUnit_pixels = ele_tile_size->FloatAttribute("pixels");
@@ -2510,6 +2520,7 @@ void scenes_directory::set_script_system(script_system & pScript)
 	mScript = &pScript;
 }
 
+#ifndef LOCKED_RELEASE_MODE
 terminal_gui::terminal_gui()
 {
 	mEb_input = std::make_shared<tgui::EditBox>();
@@ -2572,3 +2583,4 @@ void terminal_gui::update(engine::renderer& pR)
 		}
 	}*/
 }
+#endif
