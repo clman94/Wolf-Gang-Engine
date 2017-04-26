@@ -43,14 +43,17 @@ int wolf_gang_engine::initualize(const std::string& pCustom_location = std::stri
 	util::info("Renderer loaded");
 
 	mGame.set_renderer(mRenderer);
-
+	
 #ifndef LOCKED_RELEASE_MODE
 	if (pCustom_location.empty())
 		mGame.load_settings("./data");
 	else
 		mGame.load_settings(pCustom_location);
 #else
-	mGame.load_settings("./data.pack");
+	if (!mGame.load_settings("./data.pack"))
+	{
+		util::error("Failed to load settings");
+	}
 #endif
 	float load_time = load_clock.get_elapse().s();
 	util::info("Load time : " + std::to_string(load_time) + " seconds");
@@ -90,7 +93,11 @@ int main(int argc, char* argv[])
 	try
 	{
 		wolf_gang_engine wge;
-		wge.initualize();
+
+		if (argc > 2)
+			wge.initualize(argv[1]);
+		else
+			wge.initualize();
 		wge.run();
 	}
 	catch (std::exception& e)

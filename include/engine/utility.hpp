@@ -99,7 +99,7 @@ public:
 	}
 
 	optional(const T& pValue) :
-		mData(pValue)
+		mData(pValue), mHas_value(true)
 	{
 	}
 

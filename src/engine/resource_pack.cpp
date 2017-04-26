@@ -182,7 +182,7 @@ bool engine::create_resource_pack(const std::string& pSrc_directory, const std::
 
 	packing_ignore ignore_list;
 
-	const std::string ignorelist_path = engine::fs::absolute("./data/pack_ignore.txt").string();
+	const std::string ignorelist_path = engine::fs::absolute((root_dir / "pack_ignore.txt").string()).string();
 	if (ignore_list.open(ignorelist_path))
 	{
 		util::info("Loaded ignore list '" + ignorelist_path + "'");
@@ -518,6 +518,17 @@ uint64_t pack_header::get_header_size() const
 	return mHeader_size;
 }
 
+pack_stream::pack_stream()
+{
+}
+
+pack_stream::pack_stream(const pack_stream & pCopy)
+{
+	mHeader_offset = pCopy.mHeader_offset;
+	mFile = pCopy.mFile;
+	mPack_path = pCopy.mPack_path;
+}
+
 void pack_stream::open()
 {
 	mStream.open(mPack_path.string().c_str(), std::fstream::binary);
@@ -553,10 +564,10 @@ int pack_stream::read(char * pData, uint64_t pCount)
 	if (remaining < pCount)
 	{
 		mStream.read(pData, remaining);
-		return remaining;
+		return (int)remaining;
 	}
 	mStream.read(pData, pCount);
-	return pCount;
+	return (int)pCount;
 }
 
 bool pack_stream::read(std::vector<char>& pData, uint64_t pCount)
@@ -564,7 +575,7 @@ bool pack_stream::read(std::vector<char>& pData, uint64_t pCount)
 	if (pData.size() != pCount
 		|| pCount == 0)
 		return false;
-	return read(&pData[0], pCount);
+	return read(&pData[0], pCount) > 0;
 }
 
 std::vector<char> pack_stream::read_all()
@@ -574,6 +585,7 @@ std::vector<char> pack_stream::read_all()
 	seek(0);
 
 	std::vector<char> retval;
+	retval.reserve(mFile.size);
 	while (is_valid())
 	{
 		if (tell() + chuck_size < mFile.size) // Full chunk
@@ -625,6 +637,14 @@ bool pack_stream::is_valid()
 uint64_t pack_stream::size() const
 {
 	return mFile.size;
+}
+
+pack_stream & pack_stream::operator=(const pack_stream & pRight)
+{
+	mHeader_offset = pRight.mHeader_offset;
+	mFile = pRight.mFile;
+	mPack_path = pRight.mPack_path;
+	return *this;
 }
 
 

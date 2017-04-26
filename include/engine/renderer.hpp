@@ -92,6 +92,7 @@ public:
 	bool is_focused();
 
 	int set_icon(const std::string& pPath);
+	int set_icon(const std::vector<char>& pData);
 
 	void set_window_title(const std::string& pTitle);
 	void set_visible(bool pVisible);

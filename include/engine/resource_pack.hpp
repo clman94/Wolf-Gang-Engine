@@ -102,6 +102,9 @@ private:
 class pack_stream
 {
 public:
+	pack_stream();
+	pack_stream(const pack_stream& pCopy);
+
 	void open();
 	void close();
 
@@ -117,6 +120,8 @@ public:
 	bool is_valid();
 
 	uint64_t size() const;
+
+	pack_stream& operator=(const pack_stream& pRight);
 
 	friend class pack_stream_factory;
 

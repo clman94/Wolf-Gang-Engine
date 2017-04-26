@@ -1013,7 +1013,7 @@ void scene::set_resource_manager(engine::resource_manager& pResource_manager)
 
 bool scene::load_settings(const game_settings_loader& pSettings)
 {
-	util::info("Loading XML settings...");
+	util::info("Loading scene system...");
 
 	mWorld_node.set_unit(pSettings.get_unit_pixels());
 
@@ -1028,7 +1028,7 @@ bool scene::load_settings(const game_settings_loader& pSettings)
 
 	mBackground_music.set_root_directory(pSettings.get_music_path());
 
-	util::info("Settings loaded");
+	util::info("Scene loaded");
 
 	return true;
 }
@@ -1279,7 +1279,7 @@ static int add_section_from_pack(const engine::encoded_path& pPath, engine::pack
 {
 	auto data = pPack.read_all(pPath);
 	if (data.empty())
-		return false;
+		return -1;
 	return pBuilder.AddSectionFromMemory(pPath.string().c_str(), &data[0], data.size());
 }
 
@@ -1326,6 +1326,8 @@ bool scene_script_context::build_script(const std::string & pPath)
 
 	clean();
 
+	mBuilder.SetIncludeCallback(nullptr, nullptr);
+
 	mBuilder.StartNewModule(&mScript->get_engine(), pPath.c_str());
 	mBuilder.AddSectionFromMemory("scene_commands", defs::INTERNAL_SCRIPTS_INCLUDE.c_str());
 	mBuilder.AddSectionFromFile(pPath.c_str());
@@ -1352,11 +1354,11 @@ bool scene_script_context::build_script(const std::string & pPath, engine::pack_
 
 	mBuilder.StartNewModule(&mScript->get_engine(), pPath.c_str());
 
-	if (!add_section_from_pack(defs::INTERNAL_SCRIPTS_PATH.string(), pPack, mBuilder))
+	if (add_section_from_pack(defs::INTERNAL_SCRIPTS_PATH.string(), pPack, mBuilder) < 0)
 		return false;
 	bool succ = add_section_from_pack(pPath, pPack, mBuilder) >= 0;
 
-	if (!succ || mBuilder.BuildModule())
+	if (!succ || mBuilder.BuildModule() < 0)
 	{
 		util::error("Failed to load scene script");
 		return false;
@@ -1604,6 +1606,17 @@ game::load_script_interface()
 	util::info("Script interface loaded");
 }
 
+void game::load_icon()
+{
+	get_renderer()->set_icon("data/icon.png");
+}
+
+void game::load_icon_pack()
+{
+	auto data = mPack.read_all("icon.png");
+	get_renderer()->set_icon(data);
+}
+
 #ifndef LOCKED_RELEASE_MODE
 void game::load_terminal_interface()
 {
@@ -1726,6 +1739,7 @@ bool game::load_settings(engine::fs::path pData_dir)
 	game_settings_loader settings;
 	if (!engine::fs::is_directory(pData_dir)) // This is a package
 	{
+		util::info("Loading settings from pack...");
 		if (!mPack.open(pData_dir.string()))
 		{
 			util::error("Could not load pack");
@@ -1739,16 +1753,23 @@ bool game::load_settings(engine::fs::path pData_dir)
 
 		mResource_manager.set_resource_pack(&mPack);
 		mScene.set_resource_pack(&mPack);
+
+		load_icon_pack();
 	}
 	else // Data folder
 	{
+		util::info("Loading settings from data folder...");
 		std::string settings_path = (pData_dir / "game.xml").string();
 		if (!settings.load(settings_path, pData_dir.string() + "/"))
 			return (mIs_ready = false, false);
 
 		mResource_manager.set_resource_pack(nullptr);
 		mScene.set_resource_pack(nullptr);
+
+		load_icon();
 	}
+
+	util::info("Settings loaded");
 
 	util::info("Loading Resources...");
 
@@ -1776,6 +1797,7 @@ bool game::load_settings(engine::fs::path pData_dir)
 	}
 
 	util::info("Resources loaded");
+
 
 	mScene.set_resource_manager(mResource_manager);
 	if (!mScene.load_settings(settings))
@@ -1887,7 +1909,6 @@ game::refresh_renderer(engine::renderer & pR)
 	mTerminal_gui.load_gui(pR);
 	pR.add_object(mEditor_manager);
 #endif
-	pR.set_icon("data/icon.png");
 }
 
 // ##########

@@ -283,6 +283,15 @@ int renderer::set_icon(const std::string & pPath)
 	return 0;
 }
 
+int renderer::set_icon(const std::vector<char>& pData)
+{
+	sf::Image image;
+	if (!image.loadFromMemory(&pData[0], pData.size()))
+		return 1;
+	mWindow.setIcon(image.getSize().x, image.getSize().y, image.getPixelsPtr());
+	return 0;
+}
+
 void renderer::set_window_title(const std::string & pTitle)
 {
 	mWindow.setTitle(pTitle);

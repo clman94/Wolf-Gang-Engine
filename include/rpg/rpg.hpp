@@ -556,6 +556,9 @@ private:
 
 	void load_script_interface();
 
+	void load_icon();
+	void load_icon_pack();
+
 	float get_delta();
 };
 
