@@ -9,6 +9,7 @@
 #include <engine/utility.hpp>
 #include <engine/filesystem.hpp>
 #include <rpg/collision_box.hpp>
+#include <engine/resource_pack.hpp>
  
 #include <string>
 #include <vector>
@@ -25,7 +26,8 @@ class scene_loader
 public:
 	scene_loader();
 
-	bool load(const std::string& pName);
+	bool load(const engine::encoded_path& pDir, const std::string& pName);
+	bool load(const engine::encoded_path& pDir, const std::string& pName, engine::pack_stream_factory& pPack);
 	bool save();
 
 	void clean();
@@ -43,13 +45,15 @@ public:
 
 private:
 
+	bool load_settings();
+
 	// Make xml file well formed
 	void fix();
 	tinyxml2::XMLDocument      mXml_Document;
 	std::string                mScene_name;
-	engine::fs::path           mScript_path;
-	engine::fs::path           mTilemap_texture;
-	engine::fs::path           mScene_path;
+	engine::encoded_path       mScript_path;
+	engine::encoded_path       mTilemap_texture;
+	engine::encoded_path       mScene_path;
 	engine::frect              mBoundary;
 	bool                       mHas_boundary;
 	util::optional_pointer<tinyxml2::XMLElement> mEle_collisionboxes;

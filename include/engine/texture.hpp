@@ -37,6 +37,7 @@ class texture_atlas
 {
 public:
 	bool load(const std::string& pPath);
+	bool load_memory(const char* pData, size_t pSize);
 	void clean();
 
 	util::optional_pointer<const atlas_entry> get_entry(const std::string& pName) const;
@@ -44,6 +45,7 @@ public:
 	std::vector<std::string> compile_list() const;
 
 protected:
+	bool load_settings(tinyxml2::XMLDocument& pDoc);
 	std::unordered_map<std::string, atlas_entry> mAtlas;
 };
 

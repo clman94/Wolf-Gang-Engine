@@ -91,9 +91,6 @@ public:
 	{ return type::text; }
 
 	engine::text_node mText;
-
-protected:
-	int draw_text(engine::renderer & pR);
 };
 
 class dialog_text_entity :
@@ -237,9 +234,13 @@ public:
 	void load_script_interface(script_system& pScript);
 	void clean();
 	void set_root_directory(const std::string& pPath);
+	void set_resource_pack(engine::pack_stream_factory* pPack);
 	void pause_music();
 
 private:
+
+	engine::pack_stream_factory* mPack;
+
 	std::unique_ptr<engine::sound_stream> mStream;
 	std::unique_ptr<engine::sound_stream> mOverlap_stream;
 
@@ -247,8 +248,8 @@ private:
 	engine::fs::path mPath;
 	engine::fs::path mOverlay_path;
 
-	int script_music_open(const std::string& pName);
-	int script_music_swap(const std::string& pName);
+	bool script_music_open(const std::string& pName);
+	bool script_music_swap(const std::string& pName);
 	int script_music_start_transition_play(const std::string& pName);
 	void script_music_stop_transition_play();
 	void script_music_set_second_volume(float pVolume);
@@ -309,23 +310,28 @@ private:
 class game_settings_loader
 {
 public:
-	bool load(const std::string& pPath);
+	bool load(const std::string& pPath, const std::string& pPrefix_path = std::string());
+	bool load_memory(const char* pData, size_t pSize, const std::string& pPrefix_path = std::string());
 
 	const std::string& get_start_scene() const;
 	const std::string& get_textures_path() const;
 	const std::string& get_sounds_path() const;
 	const std::string& get_music_path() const;
 	const std::string& get_fonts_path() const;
+	const std::string& get_scenes_path() const;
 	const std::string& get_player_texture() const;
 	float get_unit_pixels() const;
 
 private:
+	bool get_settings(tinyxml2::XMLDocument& pDoc, const std::string& pPrefix_path);
+
 	std::string mStart_scene;
 	std::string mTextures_path;
 	std::string mSounds_path;
 	std::string mMusic_path;
 	std::string mPlayer_texture;
 	std::string mFonts_path;
+	std::string mScenes_path;
 	float pUnit_pixels;
 
 	std::string load_setting_path(tinyxml2::XMLElement* pRoot, const std::string& pName, const std::string& pDefault);
@@ -349,11 +355,13 @@ public:
 	void clean(bool pFull = false);
 
 	// Load scene xml file which loads the scene script.
-	// pPath is not a reference so cleanup doesn't cause issues.
+	// The strings are not references so cleanup doesn't cause issues.
 	bool load_scene(std::string pName);
 	bool load_scene(std::string pName, std::string pDoor);
 
+#ifndef LOCKED_RELEASE_MODE
 	bool create_scene(const std::string& pName);
+#endif
 
 	// Reload the currently loaded scene.
 	bool reload_scene();
@@ -378,6 +386,8 @@ public:
 
 	void focus_player(bool pFocus);
 
+	void set_resource_pack(engine::pack_stream_factory* pPack);
+
 private:
 	std::vector<script_function> mEnd_functions;
 
@@ -385,6 +395,7 @@ private:
 
 	panning_node mWorld_node;
 
+	engine::pack_stream_factory* mPack;
 	engine::resource_manager* mResource_manager;
 	script_system*            mScript;
 
@@ -511,6 +522,7 @@ private:
 
 	scene            mScene;
 	engine::resource_manager mResource_manager;
+	engine::pack_stream_factory mPack;
 	flag_container   mFlags;
 	script_system    mScript;
 	controls         mControls;

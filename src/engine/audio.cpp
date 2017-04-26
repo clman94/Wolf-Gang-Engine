@@ -11,7 +11,13 @@ bool sound_buffer::load()
 	if (!is_loaded())
 	{
 		mSFML_buffer.reset(new sf::SoundBuffer());
-		set_loaded(mSFML_buffer->loadFromFile(mSound_source));
+		if (mPack)
+		{
+			auto data = mPack->read_all(mSound_source);
+			set_loaded(mSFML_buffer->loadFromMemory(&data[0], data.size()));
+		}
+		else
+			set_loaded(mSFML_buffer->loadFromFile(mSound_source));
 	}
 	return is_loaded();
 }
@@ -28,10 +34,21 @@ sound_stream::sound_stream()
 	valid = false;
 }
 
-int sound_stream::open(const std::string & path)
+bool sound_stream::open(const std::string & path)
 {
-	valid = mSFML_music.openFromFile(path);
-	return !valid;
+	if (sfml_stream.stream.is_valid())
+		sfml_stream.stream.close();
+	return mSFML_music.openFromFile(path);
+}
+
+bool sound_stream::open(const std::string & path, pack_stream_factory & mPack)
+{
+	sfml_stream.stream = mPack.create_stream(path);
+	sfml_stream.stream.open();
+	if (!sfml_stream.stream.is_valid())
+		return false;
+	mSFML_music.openFromStream(sfml_stream);
+	return true;
 }
 
 void sound_stream::play()
@@ -119,4 +136,32 @@ void sound_spawner::stop_all()
 		i.stop();
 	}
 	mSounds.clear();
+}
+
+inline sf::Int64 sound_stream::sfml_stream_::read(void * pData, sf::Int64 pSize)
+{
+	if (!stream.is_valid())
+		return -1;
+	return stream.read((char*)pData, pSize);
+}
+
+inline sf::Int64 sound_stream::sfml_stream_::seek(sf::Int64 pPosition)
+{
+	if (!stream.is_valid())
+		return -1;
+	return stream.seek(pPosition) ? pPosition : -1;
+}
+
+inline sf::Int64 sound_stream::sfml_stream_::tell()
+{
+	if (!stream.is_valid())
+		return -1;
+	return stream.tell();
+}
+
+inline sf::Int64 sound_stream::sfml_stream_::getSize()
+{
+	if (!stream.is_valid())
+		return -1;
+	return stream.size();
 }

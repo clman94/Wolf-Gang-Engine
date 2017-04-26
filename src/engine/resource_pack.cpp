@@ -4,19 +4,20 @@
 #include <engine/utility.hpp>
 #include <engine/resource_pack.hpp>
 
+using namespace engine;
 
 // Read an unsigned integer value (of any size) from a stream.
 // Format is little endian (for convenience)
 template<typename T>
 inline T read_unsignedint_binary(std::istream& pStream)
 {
-	char bytes[sizeof(T)];
-	if (!pStream.read(bytes, sizeof(T)))
+	uint8_t bytes[sizeof(T)];// char gives negative values and causes issues when converting to unsigned.
+	if (!pStream.read((char*)&bytes, sizeof(T))) // And passing this unsigned char array as a char* works well.
 		return 0;
 
 	T val = 0;
 	for (size_t i = 0; i < sizeof(T); i++)
-		val += (T)bytes[i] << (8 * i);
+		val += static_cast<T>(bytes[i]) << (8 * i);
 	return val;
 }
 
@@ -175,7 +176,7 @@ inline bool append_stream(std::ostream& pDest, std::istream& pSrc)
 	return true;
 }
 
-bool create_resource_pack(const std::string& pSrc_directory, const std::string& pDest)
+bool engine::create_resource_pack(const std::string& pSrc_directory, const std::string& pDest)
 {
 	const encoded_path root_dir(engine::fs::absolute(pSrc_directory).string());
 
@@ -241,6 +242,11 @@ bool create_resource_pack(const std::string& pSrc_directory, const std::string& 
 	return true;
 }
 
+encoded_path::encoded_path(const char * pString)
+{
+	parse(pString);
+}
+
 encoded_path::encoded_path(const std::string & pString)
 {
 	parse(pString);
@@ -295,7 +301,7 @@ bool encoded_path::snip_path(const encoded_path & pPath)
 	if (!in_directory(pPath))
 		return false;
 	mHierarchy.erase(mHierarchy.begin()
-		, mHierarchy.begin() + pPath.mHierarchy.size() + 1);
+		, mHierarchy.begin() + pPath.mHierarchy.size());
 	return true;
 }
 
@@ -311,6 +317,36 @@ std::string encoded_path::string() const
 	}
 	retval.pop_back(); // Remove the last divider
 	return retval;
+}
+
+std::string encoded_path::stem() const
+{
+	const std::string name = filename();
+	auto end = name.begin();
+	for (; end != name.end(); end++)
+		if (*end == '.')
+			return std::string(name.begin(), end);
+	return{};
+}
+
+std::string encoded_path::extension() const
+{
+	const std::string name = filename();
+	auto end = name.rbegin();
+	for (; end != name.rend(); end++)
+		if (*end == '.')
+			return std::string(end.base() - 1, (name.rbegin()).base()); // include '.'
+	return{};
+}
+
+bool encoded_path::empty() const
+{
+	return mHierarchy.empty();
+}
+
+void encoded_path::clear()
+{
+	mHierarchy.clear();
 }
 
 bool encoded_path::is_same(const encoded_path & pPath) const
@@ -382,20 +418,20 @@ void encoded_path::simplify()
 {
 	for (size_t i = 0; i < mHierarchy.size(); i++)
 	{
-		if (mHierarchy[i] == ".") // These are redundant
+		if (!mHierarchy.empty())
 		{
-			mHierarchy.erase(mHierarchy.begin() + i);
-			--i;
-		}
-		else if (mHierarchy[i] == "..")
-		{
-			if (mHierarchy.empty()
-				|| mHierarchy.back() == "..") // Keep stacking these things
-				mHierarchy.push_back("..");
-			else
+			if (mHierarchy[i] == ".") // These are redundant
 			{
 				mHierarchy.erase(mHierarchy.begin() + i);
 				--i;
+			}
+			else if (mHierarchy[i] == "..")
+			{
+				if (i != 0 && mHierarchy[i - 1] != "..") // Keep these things stacked
+				{
+					mHierarchy.erase(mHierarchy.begin() + i - 1, mHierarchy.begin() + i + 1);
+					i -= 2;
+				}
 			}
 		}
 	}
@@ -422,7 +458,7 @@ bool pack_header::generate(std::ostream & pStream) const
 	}
 	auto end = pStream.tellp();
 	pStream.seekp(start);
-	write_unsignedint_binary<uint64_t>(pStream, end - start - 1);
+	write_unsignedint_binary<uint64_t>(pStream, end - start - 1); // Fill in placeholder
 	pStream.seekp(end);
 	return true;
 }
@@ -450,6 +486,7 @@ bool pack_header::parse(std::istream & pStream)
 
 		file.position = read_unsignedint_binary<uint64_t>(pStream);
 		file.size = read_unsignedint_binary<uint64_t>(pStream);
+		mFiles.push_back(file);
 	}
 	mHeader_size = pStream.tellg();
 	return true;
@@ -481,39 +518,81 @@ uint64_t pack_header::get_header_size() const
 	return mHeader_size;
 }
 
+void pack_stream::open()
+{
+	mStream.open(mPack_path.string().c_str(), std::fstream::binary);
+	mStream.seekg(mFile.position + mHeader_offset);
+}
+
+void pack_stream::close()
+{
+	mStream.close();
+}
+
 std::vector<char> pack_stream::read(uint64_t pCount)
 {
 	if (!is_valid())
 		return{};
 
-	// Check bounds
-	if ((uint64_t)mStream.tellg() + pCount - mHeader_offset
-		>= mFile.position + mFile.size)
+	if (pCount == 0)
 		return{};
+
 	std::vector<char> retval;
 	retval.resize(static_cast<size_t>(pCount));
-	mStream.read(retval.data(), static_cast<size_t>(pCount));
+	mStream.read(&retval[0], static_cast<size_t>(pCount));
 	return retval;
 }
 
-bool pack_stream::read(char * pData, uint64_t pCount)
+int pack_stream::read(char * pData, uint64_t pCount)
 {
-	if (!is_valid())
-		return false;
+	if (!is_valid() && pCount == 0)
+		return -1;
 
 	// Check bounds
-	if (tell() + pCount >= mFile.size)
-		return false;
+	uint64_t remaining = mFile.size - tell();
+	if (remaining < pCount)
+	{
+		mStream.read(pData, remaining);
+		return remaining;
+	}
 	mStream.read(pData, pCount);
-	return true;
+	return pCount;
 }
 
 bool pack_stream::read(std::vector<char>& pData, uint64_t pCount)
 {
-	if (pData.size() != pCount)
+	if (pData.size() != pCount
+		|| pCount == 0)
 		return false;
 	return read(&pData[0], pCount);
 }
+
+std::vector<char> pack_stream::read_all()
+{
+	const uint64_t chuck_size = 1024;
+
+	seek(0);
+
+	std::vector<char> retval;
+	while (is_valid())
+	{
+		if (tell() + chuck_size < mFile.size) // Full chunk
+		{
+			const std::vector<char> data = read(chuck_size);
+			if (data.empty())
+				return{};
+			retval.insert(retval.end(), data.begin(), data.end());
+		}
+		else // Remainder
+		{
+			const std::vector<char> data = read(mFile.size - tell());
+			retval.insert(retval.end(), data.begin(), data.end());
+			return retval;
+		}
+	}
+	return retval;
+}
+
 
 bool pack_stream::seek(uint64_t pPosition)
 {
@@ -543,6 +622,11 @@ bool pack_stream::is_valid()
 			< mFile.position + mFile.size;
 }
 
+uint64_t pack_stream::size() const
+{
+	return mFile.size;
+}
+
 
 bool pack_stream_factory::open(const encoded_path& pPath)
 {
@@ -553,16 +637,23 @@ bool pack_stream_factory::open(const encoded_path& pPath)
 	return mHeader.parse(stream);
 }
 
-pack_stream pack_stream_factory::open_file(const encoded_path & pPath)
+pack_stream pack_stream_factory::create_stream(const encoded_path & pPath) const
 {
 	auto file = mHeader.get_file(pPath);
 	if (!file)
 		return{};
 	pack_stream stream;
-	stream.mStream.open(mPath.string().c_str(), std::fstream::binary);
-	stream.mStream.seekg(file->position);
+	stream.mFile = *file;
 	stream.mHeader_offset = mHeader.get_header_size();
+	stream.mPack_path = mPath;
 	return stream;
+}
+
+std::vector<char> engine::pack_stream_factory::read_all(const encoded_path & pPath) const
+{
+	auto stream = create_stream(pPath);
+	stream.open();
+	return stream.read_all();
 }
 
 std::vector<encoded_path> pack_stream_factory::recursive_directory(const encoded_path & pPath) const

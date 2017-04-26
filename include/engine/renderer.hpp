@@ -413,6 +413,8 @@ private:
 	std::string mFont_source;
 	std::string mPreferences_source;
 
+	std::vector<char> mFont_data; // Stores data loaded from a pack
+
 	std::unique_ptr<sf::Font> mSFML_font;
 	int mCharacter_size;
 	float mScale;

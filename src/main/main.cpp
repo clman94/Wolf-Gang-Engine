@@ -13,7 +13,7 @@ class wolf_gang_engine
 public:
 	wolf_gang_engine();
 
-	int initualize();
+	int initualize(const std::string& pCustom_location);
 	int run();
 
 private:
@@ -33,7 +33,7 @@ wolf_gang_engine::wolf_gang_engine()
 	mRunning = true;
 }
 
-int wolf_gang_engine::initualize()
+int wolf_gang_engine::initualize(const std::string& pCustom_location = std::string())
 {
 	engine::clock load_clock;
 
@@ -43,8 +43,15 @@ int wolf_gang_engine::initualize()
 	util::info("Renderer loaded");
 
 	mGame.set_renderer(mRenderer);
-	mGame.load_settings("./data");
-	
+
+#ifndef LOCKED_RELEASE_MODE
+	if (pCustom_location.empty())
+		mGame.load_settings("./data");
+	else
+		mGame.load_settings(pCustom_location);
+#else
+	mGame.load_settings("./data.pack");
+#endif
 	float load_time = load_clock.get_elapse().s();
 	util::info("Load time : " + std::to_string(load_time) + " seconds");
 	return 0;

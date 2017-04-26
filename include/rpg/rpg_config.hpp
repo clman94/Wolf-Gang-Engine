@@ -15,16 +15,16 @@ const engine::fvector SCREEN_SIZE            = { DISPLAY_SIZE.x * 2, DISPLAY_SIZ
 const engine::time_t  DEFAULT_DIALOG_SPEED   = 30;
 
 const engine::fs::path DEFAULT_DATA_PATH      = "./data";
-const engine::fs::path DEFAULT_MUSIC_PATH     = DEFAULT_DATA_PATH / "music";
-const engine::fs::path DEFAULT_SOUND_PATH     = DEFAULT_DATA_PATH / "sounds";
-const engine::fs::path DEFAULT_SAVES_PATH     = DEFAULT_DATA_PATH / "saves";
-const engine::fs::path DEFAULT_TEXTURES_PATH  = DEFAULT_DATA_PATH / "textures";
-const engine::fs::path DEFAULT_SCENES_PATH    = DEFAULT_DATA_PATH / "scenes";
-const engine::fs::path DEFAULT_INTERNALS_PATH = DEFAULT_DATA_PATH / "internal";
-const engine::fs::path DEFAULT_FONTS_PATH     = DEFAULT_DATA_PATH / "fonts";
+const engine::fs::path DEFAULT_MUSIC_PATH     = "music";
+const engine::fs::path DEFAULT_SOUND_PATH     = "sounds";
+const engine::fs::path DEFAULT_SAVES_PATH     = "saves";
+const engine::fs::path DEFAULT_TEXTURES_PATH  = "textures";
+const engine::fs::path DEFAULT_SCENES_PATH    = "scenes";
+const engine::fs::path DEFAULT_INTERNALS_PATH = "internal";
+const engine::fs::path DEFAULT_FONTS_PATH     = "fonts";
 
 const engine::fs::path INTERNAL_SCRIPTS_PATH = DEFAULT_INTERNALS_PATH / "scene.as";
-const std::string INTERNAL_SCRIPTS_INCLUDE   = "#include \"" + INTERNAL_SCRIPTS_PATH.string() + "\"";
+const std::string INTERNAL_SCRIPTS_INCLUDE   = "#include \"" + (defs::DEFAULT_DATA_PATH / INTERNAL_SCRIPTS_PATH).string() + "\"";
 
 const float TILES_DEPTH            = 103;
 const float TILE_DEPTH_RANGE_MIN   = 1;

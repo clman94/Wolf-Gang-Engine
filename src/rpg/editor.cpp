@@ -347,7 +347,8 @@ bool editor::open_scene(std::string pPath)
 	mTilemap_manipulator.clean();
 	mTilemap_display.clean();
 
-	if (!mLoader.load(pPath))
+	auto path = engine::encoded_path(pPath);
+	if (!mLoader.load(path.parent().string(), path.filename()))
 	{
 		util::error("Unable to open scene '" + pPath + "'");
 		return false;

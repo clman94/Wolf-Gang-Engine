@@ -7,6 +7,8 @@
 #include <SFML/Audio.hpp>
 #include <list>
 #include <memory>
+#include <engine/resource_pack.hpp>
+
 // Wrapper class for sfml sound
 
 namespace engine
@@ -81,12 +83,11 @@ public:
 
 class sound_stream
 {
-	sf::Music mSFML_music;
-	bool valid;
 public:
 	sound_stream();
 
-	int open(const std::string& path);
+	bool open(const std::string& path);
+	bool open(const std::string& path, pack_stream_factory& mPack);
 	void play();
 	void stop();
 	void pause();
@@ -101,6 +102,21 @@ public:
 	float get_duration();
 
 	bool is_valid();
+
+private:
+
+	struct sfml_stream_ : public sf::InputStream
+	{
+		engine::pack_stream stream;
+		virtual sf::Int64 read(void* pData, sf::Int64 pSize);
+		virtual sf::Int64 seek(sf::Int64 pPosition);
+		virtual sf::Int64 tell();
+		virtual sf::Int64 getSize();
+	} sfml_stream;
+
+	sf::Music mSFML_music;
+	bool valid;
+
 };
 
 

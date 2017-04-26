@@ -5,6 +5,9 @@
 #include <vector>
 #include <cstdint>
 #include <fstream>
+#include <engine/utility.hpp>
+
+namespace engine {
 
 // A path somewhat similar to boost path but with more features
 // related to manipulating the path.
@@ -12,6 +15,7 @@ class encoded_path
 {
 public:
 	encoded_path() {}
+	encoded_path(const char* pString);
 	encoded_path(const std::string& pString);
 
 	bool parse(const std::string& pString);
@@ -23,6 +27,12 @@ public:
 	bool snip_path(const encoded_path& pPath);
 
 	std::string string() const;
+	std::string stem() const;
+	std::string extension() const;
+
+	bool empty() const;
+
+	void clear();
 
 	bool is_same(const encoded_path& pPath) const;
 
@@ -92,21 +102,28 @@ private:
 class pack_stream
 {
 public:
+	void open();
+	void close();
+
 	std::vector<char> read(uint64_t pCount);
-	bool read(char* pData, uint64_t pCount);
+	int read(char* pData, uint64_t pCount);
 	bool read(std::vector<char>& pData, uint64_t pCount);
-	
+	std::vector<char> read_all();
+
 	bool seek(uint64_t pPosition);
 
 	uint64_t tell();
 
 	bool is_valid();
 
+	uint64_t size() const;
+
 	friend class pack_stream_factory;
 
 private:
 	uint64_t mHeader_offset;
 	pack_header::file_info mFile;
+	encoded_path mPack_path;
 	std::ifstream mStream;
 };
 
@@ -115,7 +132,8 @@ class pack_stream_factory
 {
 public:
 	bool open(const encoded_path& pPath);
-	pack_stream open_file(const encoded_path& pPath);
+	pack_stream create_stream(const encoded_path& pPath) const;
+	std::vector<char> read_all(const encoded_path& pPath) const;
 	std::vector<encoded_path> recursive_directory(const encoded_path& pPath) const;
 private:
 	encoded_path mPath;
@@ -124,4 +142,5 @@ private:
 
 bool create_resource_pack(const std::string& pSrc_directory, const std::string& pDest);
 
+}
 #endif // ENGINE_RESOURCE_PACK_HPP

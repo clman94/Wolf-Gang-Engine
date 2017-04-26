@@ -21,10 +21,18 @@ bool font::load()
 	if (!is_loaded())
 	{
 		mSFML_font.reset(new sf::Font);
-		if (!mSFML_font->loadFromFile(mFont_source))
+		if (mPack)
 		{
-			util::error("Failed to load font");
-			return false;
+			mFont_data = mPack->read_all(mFont_source);
+			mSFML_font->loadFromMemory(&mFont_data[0], mFont_data.size());
+		}
+		else
+		{
+			if (!mSFML_font->loadFromFile(mFont_source))
+			{
+				util::error("Failed to load font");
+				return false;
+			}
 		}
 		if (!load_preferences())
 		{
@@ -47,8 +55,16 @@ bool font::load_preferences()
 {
 	using namespace tinyxml2;
 	XMLDocument doc;
-	if (doc.LoadFile(mPreferences_source.c_str()))
-		return false;
+	if (mPack)
+	{
+		const auto data = mPack->read_all(mPreferences_source);
+		doc.Parse(&data[0], data.size());
+	}
+	else
+	{
+		if (doc.LoadFile(mPreferences_source.c_str()))
+			return false;
+	}
 
 	auto ele_root = doc.FirstChildElement("font_preferences");
 	if (!ele_root)

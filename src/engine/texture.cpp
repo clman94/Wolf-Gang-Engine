@@ -99,20 +99,19 @@ bool texture_atlas::load(const std::string & pPath)
 	XMLDocument doc;
 	if (doc.LoadFile(pPath.c_str()))
 		return false;
+	return load_settings(doc);
+}
 
-	auto ele_atlas = doc.FirstChildElement("atlas");
-	if (!ele_atlas)
+bool texture_atlas::load_memory(const char * pData, size_t pSize)
+{
+	clean();
+
+	using namespace tinyxml2;
+
+	XMLDocument doc;
+	if (doc.Parse(pData, pSize))
 		return false;
-
-	auto ele_entry = ele_atlas->FirstChildElement();
-	while (ele_entry)
-	{
-		// TODO: Check for colliding names
-		mAtlas[ele_entry->Name()].load(ele_entry);
-
-		ele_entry = ele_entry->NextSiblingElement();
-	}
-	return false;
+	return load_settings(doc);
 }
 
 void texture_atlas::clean()
@@ -136,6 +135,23 @@ std::vector<std::string> texture_atlas::compile_list() const
 	return std::move(list);
 }
 
+bool texture_atlas::load_settings(tinyxml2::XMLDocument& pDoc)
+{
+	auto ele_atlas = pDoc.FirstChildElement("atlas");
+	if (!ele_atlas)
+		return false;
+
+	auto ele_entry = ele_atlas->FirstChildElement();
+	while (ele_entry)
+	{
+		// TODO: Check for colliding names
+		mAtlas[ele_entry->Name()].load(ele_entry);
+
+		ele_entry = ele_entry->NextSiblingElement();
+	}
+	return true;
+}
+
 void texture::set_texture_source(const std::string& pFilepath)
 {
 	mTexture_source = pFilepath;
@@ -151,8 +167,22 @@ bool texture::load()
 	if (!is_loaded())
 	{
 		mSFML_texture.reset(new sf::Texture());
-		set_loaded(mSFML_texture->loadFromFile(mTexture_source));
-		mAtlas.load(mAtlas_source);
+		if (mPack)
+		{
+			{ // Texture
+				auto data = mPack->read_all(mTexture_source);
+				set_loaded(mSFML_texture->loadFromMemory(&data[0], data.size()));
+			}
+			{ // Atlas
+				auto data = mPack->read_all(mAtlas_source);
+				mAtlas.load_memory(&data[0], data.size());
+			}
+		}
+		else
+		{
+			set_loaded(mSFML_texture->loadFromFile(mTexture_source));
+			mAtlas.load(mAtlas_source);
+		}
 	}
 	return is_loaded();
 }
