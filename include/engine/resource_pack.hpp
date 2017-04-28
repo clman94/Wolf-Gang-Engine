@@ -109,7 +109,7 @@ public:
 	void close();
 
 	std::vector<char> read(uint64_t pCount);
-	int read(char* pData, uint64_t pCount);
+	int64_t read(char* pData, uint64_t pCount);
 	bool read(std::vector<char>& pData, uint64_t pCount);
 	std::vector<char> read_all();
 

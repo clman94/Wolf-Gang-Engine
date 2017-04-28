@@ -43,6 +43,7 @@ bool sound_stream::open(const std::string & path)
 
 bool sound_stream::open(const std::string & path, pack_stream_factory & mPack)
 {
+	sfml_stream.stream.close();
 	sfml_stream.stream = mPack.create_stream(path);
 	sfml_stream.stream.open();
 	if (!sfml_stream.stream.is_valid())

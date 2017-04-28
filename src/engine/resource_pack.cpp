@@ -554,7 +554,7 @@ std::vector<char> pack_stream::read(uint64_t pCount)
 	return retval;
 }
 
-int pack_stream::read(char * pData, uint64_t pCount)
+int64_t pack_stream::read(char * pData, uint64_t pCount)
 {
 	if (!is_valid() && pCount == 0)
 		return -1;
@@ -564,10 +564,10 @@ int pack_stream::read(char * pData, uint64_t pCount)
 	if (remaining < pCount)
 	{
 		mStream.read(pData, remaining);
-		return (int)remaining;
+		return (int64_t)remaining;
 	}
 	mStream.read(pData, pCount);
-	return (int)pCount;
+	return (int64_t)pCount;
 }
 
 bool pack_stream::read(std::vector<char>& pData, uint64_t pCount)
