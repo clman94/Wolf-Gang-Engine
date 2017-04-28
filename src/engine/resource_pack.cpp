@@ -531,13 +531,15 @@ pack_stream::pack_stream(const pack_stream & pCopy)
 
 void pack_stream::open()
 {
+	close();
 	mStream.open(mPack_path.string().c_str(), std::fstream::binary);
 	mStream.seekg(mFile.position + mHeader_offset);
 }
 
 void pack_stream::close()
 {
-	mStream.close();
+	if (mStream.is_open())
+		mStream.close();
 }
 
 std::vector<char> pack_stream::read(uint64_t pCount)
@@ -585,7 +587,7 @@ std::vector<char> pack_stream::read_all()
 	seek(0);
 
 	std::vector<char> retval;
-	retval.reserve(mFile.size);
+	retval.reserve(static_cast<size_t>(mFile.size));
 	while (is_valid())
 	{
 		if (tell() + chuck_size < mFile.size) // Full chunk
@@ -641,6 +643,7 @@ uint64_t pack_stream::size() const
 
 pack_stream & pack_stream::operator=(const pack_stream & pRight)
 {
+	close();
 	mHeader_offset = pRight.mHeader_offset;
 	mFile = pRight.mFile;
 	mPack_path = pRight.mPack_path;
