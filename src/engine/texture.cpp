@@ -78,7 +78,7 @@ bool atlas_entry::save(tinyxml2::XMLElement * pEle)
 {
 	util::shortcuts::save_rect_float_att(pEle, mAnimation->get_frame_at(0));
 	if (mAnimation->get_frame_count() > 1)
-		pEle->SetAttribute("frames", mAnimation->get_frame_count());
+		pEle->SetAttribute("frames", static_cast<unsigned int>(mAnimation->get_frame_count()));
 	if (mAnimation->get_interval() > 0)
 		pEle->SetAttribute("interval", mAnimation->get_interval());
 	switch (mAnimation->get_loop())
@@ -94,7 +94,7 @@ bool atlas_entry::save(tinyxml2::XMLElement * pEle)
 	}
 
 	if (mAnimation->get_default_frame() != 0)
-		pEle->SetAttribute("default", mAnimation->get_default_frame());
+		pEle->SetAttribute("default", static_cast<unsigned int>(mAnimation->get_default_frame()));
 
 	// TODO: Save sequenced interval
 	return true;
