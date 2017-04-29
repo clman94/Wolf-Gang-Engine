@@ -90,7 +90,7 @@ void renderer::set_target_size(fvector pSize)
 	refresh_view();
 }
 
-fvector renderer::get_target_size()
+fvector renderer::get_target_size() const
 {
 	return mTarget_size;
 }
@@ -145,6 +145,13 @@ int renderer::draw(render_object& pObject)
 tgui::Gui & renderer::get_tgui()
 {
 	return mTgui;
+}
+
+bool renderer::is_mouse_within_target() const
+{
+	const auto pos = get_mouse_position();
+	const auto target = get_target_size();
+	return pos.x >= 0  && pos.y >= 0 && pos.x < target.x && pos.y < target.y;
 }
 
 void renderer::refresh_view()
@@ -253,7 +260,7 @@ renderer::close()
 }
 
 fvector
-renderer::get_mouse_position()
+renderer::get_mouse_position() const
 {
 	auto pos = sf::Mouse::getPosition(mWindow);
 	auto wpos = mWindow.mapPixelToCoords(pos);
@@ -261,7 +268,7 @@ renderer::get_mouse_position()
 }
 
 fvector
-renderer::get_mouse_position(fvector pRelative)
+renderer::get_mouse_position(fvector pRelative) const
 {
 	return get_mouse_position() - pRelative;
 }
@@ -358,7 +365,7 @@ renderer::is_key_down(key_type pKey_type, bool pIgnore_gui)
 bool
 renderer::is_mouse_pressed(mouse_button pButton_type, bool pIgnore_gui)
 {
-	if (!mWindow.hasFocus() || (mIs_mouse_busy && !pIgnore_gui))
+	if (!mWindow.hasFocus() || (mIs_mouse_busy && !pIgnore_gui) || !is_mouse_within_target())
 		return false;
 	bool is_pressed = sf::Mouse::isButtonPressed((sf::Mouse::Button)pButton_type);
 	if (mPressed_buttons[pButton_type] == -1 && is_pressed)
@@ -370,7 +377,7 @@ renderer::is_mouse_pressed(mouse_button pButton_type, bool pIgnore_gui)
 bool
 renderer::is_mouse_down(mouse_button pButton_type, bool pIgnore_gui)
 {
-	if (!mWindow.hasFocus() || (mIs_mouse_busy && !pIgnore_gui))
+	if (!mWindow.hasFocus() || (mIs_mouse_busy && !pIgnore_gui) || !is_mouse_within_target())
 		return false;
 	return sf::Mouse::isButtonPressed((sf::Mouse::Button)pButton_type);
 }

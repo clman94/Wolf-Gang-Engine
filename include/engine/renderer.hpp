@@ -81,13 +81,13 @@ public:
 	int remove_object(render_object& pObject);
 
 	void set_target_size(fvector pSize);
-	fvector get_target_size();
+	fvector get_target_size() const;
 
 	// Resort all objects
 	void request_resort();
 
-	fvector get_mouse_position();
-	fvector get_mouse_position(fvector pRelative);
+	fvector get_mouse_position() const;
+	fvector get_mouse_position(fvector pRelative) const;
 
 	bool is_focused();
 
@@ -116,6 +116,8 @@ public:
 	tgui::Gui& get_tgui();
 
 private:
+
+	bool is_mouse_within_target() const;
 
 	fvector mTarget_size;
 

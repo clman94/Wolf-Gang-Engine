@@ -248,6 +248,12 @@ bool operator<(const vector<T1>& L, const vector<T2>& R)
 }
 
 template<typename T1, typename T2>
+bool operator>(const vector<T1>& L, const vector<T2>& R)
+{
+	return (L.y > R.y) || ((L.y == R.y) && (L.x > R.x));
+}
+
+template<typename T1, typename T2>
 bool operator!=(const vector<T1>& L, const vector<T2>& R)
 {
 	return (L.x != R.x) || (L.y != R.y);
