@@ -106,35 +106,42 @@ class editor :
 {
 public:
 	editor();
-	bool open_scene(std::string pPath);
+	virtual bool open_editor() = 0;
 	void set_editor_gui(editor_gui& pEditor_gui);
 	void set_resource_manager(engine::resource_manager& pResource_manager);
 
 	virtual int save() = 0;
 
 protected:
-	virtual bool editor_open() { return true; };
 
-	engine::rectangle_node mBlackout;
-
-	rpg::tilemap_manipulator mTilemap_manipulator;
-	rpg::tilemap_display     mTilemap_display;
-
-	rpg::scene_loader mLoader;
+	engine::rectangle_node mBlackout; // Each editor has control over where and how this is drawn
 
 	editor_gui* mEditor_gui;
 	engine::resource_manager* mResource_manager;
 
-	editor_boundary_visualization mBoundary_visualization;
-
 	virtual void setup_editor(editor_gui& pEditor_gui){}
 };
 
-class tilemap_editor :
+class scene_editor :
 	public editor
 {
 public:
+	scene_editor();
+	bool open_scene(std::string pPath); // Should be called before open_editor()
+
+protected:
+	rpg::scene_loader mLoader;
+	editor_boundary_visualization mBoundary_visualization;
+	rpg::tilemap_manipulator mTilemap_manipulator;
+	rpg::tilemap_display     mTilemap_display;
+};
+
+class tilemap_editor :
+	public scene_editor
+{
+public:
 	tilemap_editor();
+	virtual bool open_editor();
 	int draw(engine::renderer& pR);
 	void load_terminal_interface(engine::terminal_system& pTerminal);
 
@@ -142,9 +149,6 @@ public:
 
 	void clean();
 
-protected:
-	virtual bool editor_open();
-	
 private:
 
 	std::shared_ptr<engine::terminal_command_group> mTilemap_group;
@@ -207,18 +211,17 @@ private:
 };
 
 class collisionbox_editor :
-	public editor
+	public scene_editor
 {
 public:
 	collisionbox_editor();
+
+	virtual bool open_editor();
 
 	int draw(engine::renderer& pR);
 	void load_terminal_interface(engine::terminal_system& pTerminal);
 
 	int save();
-
-protected:
-	virtual bool editor_open();
 
 private:
 	std::shared_ptr<engine::terminal_command_group> mCollision_editor_group;
@@ -270,6 +273,17 @@ private:
 	bool tile_selection(engine::fvector pCursor, bool pCycle = true);
 	void update_labels();
 	void update_door_settings_labels();
+};
+
+class atlas_editor :
+	public editor
+{
+public:
+	virtual bool open_editor();
+
+private:
+
+	engine::sprite_node mPreview;
 };
 
 class editor_manager :

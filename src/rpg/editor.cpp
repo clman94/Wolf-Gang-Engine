@@ -332,45 +332,11 @@ int editor_gui::draw(engine::renderer& pR)
 	return 0;
 }
 
+
 editor::editor()
 {
-	mBoundary_visualization.set_parent(*this);
-
-	mTilemap_display.set_parent(*this);
-
 	mBlackout.set_color({ 0, 0, 0, 255 });
 	mBlackout.set_size({ 1000, 1000 });
-}
-
-bool editor::open_scene(std::string pPath)
-{
-	mTilemap_manipulator.clean();
-	mTilemap_display.clean();
-
-	auto path = engine::encoded_path(pPath);
-	if (!mLoader.load(path.parent().string(), path.filename()))
-	{
-		util::error("Unable to open scene '" + pPath + "'");
-		return false;
-	}
-
-	auto texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, mLoader.get_tilemap_texture());
-	if (!texture)
-	{
-		util::warning("Invalid tilemap texture in scene");
-	}
-	else
-	{
-		mTilemap_display.set_texture(texture);
-		mTilemap_display.set_color({ 100, 100, 255, 150 });
-
-		mTilemap_manipulator.load_tilemap_xml(mLoader.get_tilemap());
-		mTilemap_manipulator.update_display(mTilemap_display);
-	}
-
-	mBoundary_visualization.set_boundary(mLoader.get_boundary());
-
-	return editor_open();
 }
 
 void editor::set_editor_gui(editor_gui & pEditor_gui)
@@ -385,6 +351,47 @@ void editor::set_resource_manager(engine::resource_manager& pResource_manager)
 	mResource_manager = &pResource_manager;
 }
 
+// ##########
+// scene_editor
+// ##########
+
+scene_editor::scene_editor()
+{
+	mBoundary_visualization.set_parent(*this);
+	mTilemap_display.set_parent(*this);
+}
+
+bool scene_editor::open_scene(std::string pPath)
+{
+	mTilemap_manipulator.clean();
+	mTilemap_display.clean();
+
+	auto path = engine::encoded_path(pPath);
+	if (!mLoader.load(path.parent(), path.filename()))
+	{
+		util::error("Unable to open scene '" + pPath + "'");
+		return false;
+	}
+
+	auto texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, mLoader.get_tilemap_texture());
+	if (!texture)
+	{
+		util::warning("Invalid tilemap texture in scene");
+		util::info("If you have yet to specify a tilemap texture, you can ignore the last warning");
+	}
+	else
+	{
+		mTilemap_display.set_texture(texture);
+		mTilemap_display.set_color({ 100, 100, 255, 150 });
+
+		mTilemap_manipulator.load_tilemap_xml(mLoader.get_tilemap());
+		mTilemap_manipulator.update_display(mTilemap_display);
+	}
+
+	mBoundary_visualization.set_boundary(mLoader.get_boundary());
+
+	return true;
+}
 
 // ##########
 // tilemap_editor
@@ -406,7 +413,7 @@ tilemap_editor::tilemap_editor()
 	mState = state::none;
 }
 
-bool tilemap_editor::editor_open()
+bool tilemap_editor::open_editor()
 {
 	clean();
 
@@ -989,7 +996,7 @@ collisionbox_editor::collisionbox_editor()
 	mState = state::normal;
 }
 
-bool collisionbox_editor::editor_open()
+bool collisionbox_editor::open_editor()
 {
 	mCommand_manager.clean();
 	mSelection_preview.set_size({ get_unit(), get_unit() });
@@ -1431,6 +1438,7 @@ void editor_manager::open_tilemap_editor(std::string pScene_path)
 	mTilemap_editor.set_editor_gui(mEditor_gui);
 	if (mTilemap_editor.open_scene(pScene_path))
 		mCurrent_editor = &mTilemap_editor;
+	mTilemap_editor.open_editor();
 	util::info("Editor loaded");
 }
 
@@ -1440,6 +1448,7 @@ void editor_manager::open_collisionbox_editor(std::string pScene_path)
 	mCollisionbox_editor.set_editor_gui(mEditor_gui);
 	if (mCollisionbox_editor.open_scene(pScene_path))
 		mCurrent_editor = &mCollisionbox_editor;
+	mCollisionbox_editor.open_editor();
 	util::info("Editor opened");
 }
 
@@ -1514,3 +1523,7 @@ int editor_boundary_visualization::draw(engine::renderer & pR)
 	return 0;
 }
 
+bool atlas_editor::open_editor()
+{
+	return false;
+}

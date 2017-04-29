@@ -73,6 +73,8 @@ public:
 		std::ifstream stream(pPath.string().c_str());
 		if (!stream)
 			return false;
+
+		// Check if its a blacklist or a whitelist
 		std::string list_type;
 		std::getline(stream, list_type);
 		if (list_type == "whitelist")
@@ -85,6 +87,7 @@ public:
 			return false;
 		}
 
+		// Iterate through each line and create an entry for each
 		const encoded_path parent_folder(pPath.parent());
 		for (std::string line; std::getline(stream, line);)
 		{
@@ -123,8 +126,8 @@ public:
 		bool has_entry = false;
 		for (const auto& i : mFiles)
 		{
-			if ((!i.is_directory && i.path == pPath)
-				|| (i.is_directory && pPath.in_directory(i.path)))
+			if ((!i.is_directory && i.path == pPath) // Path has to be exact when a file
+				|| (i.is_directory && pPath.in_directory(i.path))) // File has to be within the directory
 			{
 				has_entry = true;
 				break;
@@ -153,11 +156,12 @@ private:
 
 inline bool append_stream(std::ostream& pDest, std::istream& pSrc)
 {
+	const int max_read = 1024;
+
 	auto end = pSrc.tellg();
 	pSrc.seekg(0);
 	while (pSrc.good() && pDest)
 	{
-		const int max_read = 1024;
 		char data[max_read];
 		if (end - pSrc.tellg() >= max_read) // A 1024 byte chunk
 		{
@@ -235,7 +239,7 @@ bool engine::create_resource_pack(const std::string& pSrc_directory, const std::
 		std::ifstream file_stream(i.string().c_str(), std::fstream::binary | std::fstream::ate);
 		if (!file_stream)
 			continue;
-		util::info("Packing file '" + i.string() + "'");
+		util::info("Packing file '" + i.string() + "'...");
 		append_stream(stream, file_stream);
 	}
 
@@ -287,8 +291,8 @@ bool encoded_path::in_directory(const encoded_path & pPath) const
 	if (mHierarchy[pPath.mHierarchy.size() - 1] != pPath.filename())
 		return false;
 
-	size_t i = 0;
-	for (; i < pPath.mHierarchy.size(); i++)
+	
+	for (size_t i = 0; i < pPath.mHierarchy.size(); i++)
 	{
 		if (mHierarchy[i] != pPath.mHierarchy[i])
 			return false;
@@ -335,7 +339,7 @@ std::string encoded_path::extension() const
 	auto end = name.rbegin();
 	for (; end != name.rend(); end++)
 		if (*end == '.')
-			return std::string(end.base() - 1, (name.rbegin()).base()); // include '.'
+			return std::string(end.base() - 1, (name.rbegin()).base()); // Include the '.'
 	return{};
 }
 
@@ -418,20 +422,17 @@ void encoded_path::simplify()
 {
 	for (size_t i = 0; i < mHierarchy.size(); i++)
 	{
-		if (!mHierarchy.empty())
+		if (mHierarchy[i] == ".") // These are redundant
 		{
-			if (mHierarchy[i] == ".") // These are redundant
+			mHierarchy.erase(mHierarchy.begin() + i);
+			--i;
+		}
+		else if (mHierarchy[i] == "..")
+		{
+			if (i != 0 && mHierarchy[i - 1] != "..") // Keep these things stacked
 			{
-				mHierarchy.erase(mHierarchy.begin() + i);
-				--i;
-			}
-			else if (mHierarchy[i] == "..")
-			{
-				if (i != 0 && mHierarchy[i - 1] != "..") // Keep these things stacked
-				{
-					mHierarchy.erase(mHierarchy.begin() + i - 1, mHierarchy.begin() + i + 1);
-					i -= 2;
-				}
+				mHierarchy.erase(mHierarchy.begin() + i - 1, mHierarchy.begin() + i + 1);
+				i -= 2;
 			}
 		}
 	}
