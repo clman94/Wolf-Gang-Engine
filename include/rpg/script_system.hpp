@@ -8,10 +8,10 @@
 
 
 #include <angelscript.h> // AS_USE_NAMESPACE will need to be defined
-#include <angelscript/add_on/scriptbuilder/scriptbuilder.h>
-#include <angelscript/add_on/scriptarray/scriptarray.h>
-#include <angelscript/add_on/scripthandle/scripthandle.h>
-#include <angelscript/add_on/scriptdictionary/scriptdictionary.h>
+#include <add_on/scriptbuilder/scriptbuilder.h>
+#include <add_on/scriptarray/scriptarray.h>
+#include <add_on/scripthandle/scripthandle.h>
+#include <add_on/scriptdictionary/scriptdictionary.h>
 
 #include <memory>
 #include <list>
