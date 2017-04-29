@@ -4,7 +4,7 @@ using namespace editors;
 
 #include <vector>
 #include <memory>
-
+#include <engine/parsers.hpp>
 
 inline engine::fvector read_args_vector(const engine::terminal_arglist& pArgs, float pDefx = 0, float pDefy = 0, size_t pIndex = 0)
 {
@@ -246,6 +246,13 @@ tgui::Label::Ptr editor_gui::add_label(const std::string & pText, tgui::Containe
 	return nlb;
 }
 
+tgui::Label::Ptr editors::editor_gui::add_small_label(const std::string & text, tgui::Container::Ptr pContainer)
+{
+	auto label = add_label(text, pContainer);
+	label->setTextSize(10);
+	return label;
+}
+
 tgui::TextBox::Ptr editor_gui::add_textbox(tgui::Container::Ptr pContainer)
 {
 	auto ntb = std::make_shared<tgui::TextBox>();
@@ -265,6 +272,7 @@ tgui::ComboBox::Ptr editors::editor_gui::add_combobox(tgui::Container::Ptr pCont
 		pContainer->add(ncb);
 	else
 		mEditor_layout->add(ncb);
+	ncb->setItemsToDisplay(10);
 	return ncb;
 }
 
@@ -332,44 +340,11 @@ int editor_gui::draw(engine::renderer& pR)
 	return 0;
 }
 
+
 editor::editor()
 {
-	mBoundary_visualization.set_parent(*this);
-
-	mTilemap_display.set_parent(*this);
-
 	mBlackout.set_color({ 0, 0, 0, 255 });
 	mBlackout.set_size({ 1000, 1000 });
-}
-
-bool editor::open_scene(std::string pPath)
-{
-	mTilemap_manipulator.clean();
-	mTilemap_display.clean();
-
-	if (!mLoader.load(pPath))
-	{
-		util::error("Unable to open scene '" + pPath + "'");
-		return false;
-	}
-
-	auto texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, mLoader.get_tilemap_texture());
-	if (!texture)
-	{
-		util::warning("Invalid tilemap texture in scene");
-	}
-	else
-	{
-		mTilemap_display.set_texture(texture);
-		mTilemap_display.set_color({ 100, 100, 255, 150 });
-
-		mTilemap_manipulator.load_tilemap_xml(mLoader.get_tilemap());
-		mTilemap_manipulator.update_display(mTilemap_display);
-	}
-
-	mBoundary_visualization.set_boundary(mLoader.get_boundary());
-
-	return editor_open();
 }
 
 void editor::set_editor_gui(editor_gui & pEditor_gui)
@@ -384,6 +359,47 @@ void editor::set_resource_manager(engine::resource_manager& pResource_manager)
 	mResource_manager = &pResource_manager;
 }
 
+// ##########
+// scene_editor
+// ##########
+
+scene_editor::scene_editor()
+{
+	mBoundary_visualization.set_parent(*this);
+	mTilemap_display.set_parent(*this);
+}
+
+bool scene_editor::open_scene(std::string pPath)
+{
+	mTilemap_manipulator.clean();
+	mTilemap_display.clean();
+
+	auto path = engine::encoded_path(pPath);
+	if (!mLoader.load(path.parent(), path.filename()))
+	{
+		util::error("Unable to open scene '" + pPath + "'");
+		return false;
+	}
+
+	auto texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, mLoader.get_tilemap_texture());
+	if (!texture)
+	{
+		util::warning("Invalid tilemap texture in scene");
+		util::info("If you have yet to specify a tilemap texture, you can ignore the last warning");
+	}
+	else
+	{
+		mTilemap_display.set_texture(texture);
+		mTilemap_display.set_color({ 100, 100, 255, 150 });
+
+		mTilemap_manipulator.load_tilemap_xml(mLoader.get_tilemap());
+		mTilemap_manipulator.update_display(mTilemap_display);
+	}
+
+	mBoundary_visualization.set_boundary(mLoader.get_boundary());
+
+	return true;
+}
 
 // ##########
 // tilemap_editor
@@ -405,7 +421,7 @@ tilemap_editor::tilemap_editor()
 	mState = state::none;
 }
 
-bool tilemap_editor::editor_open()
+bool tilemap_editor::open_editor()
 {
 	clean();
 
@@ -988,7 +1004,7 @@ collisionbox_editor::collisionbox_editor()
 	mState = state::normal;
 }
 
-bool collisionbox_editor::editor_open()
+bool collisionbox_editor::open_editor()
 {
 	mCommand_manager.clean();
 	mSelection_preview.set_size({ get_unit(), get_unit() });
@@ -1055,6 +1071,7 @@ int collisionbox_editor::draw(engine::renderer& pR)
 		if (!pR.is_mouse_down(engine::renderer::mouse_button::mouse_left))
 		{
 			mState = state::normal;
+			update_labels();
 			break;
 		}
 
@@ -1224,6 +1241,7 @@ void collisionbox_editor::setup_editor(editor_gui & pEditor_gui)
 		if (item == -1)
 		{
 			util::warning("No item selected");
+			return;
 		}
 
 		// Set current tile
@@ -1235,42 +1253,43 @@ void collisionbox_editor::setup_editor(editor_gui & pEditor_gui)
 	mLb_tilesize  = pEditor_gui.add_label("n/a, n/a");
 
 	// Apply button
-	auto bt_apply = pEditor_gui.add_button("Apply");
-	bt_apply->connect("pressed", [&]() { apply_wall_settings(); });
 
 	// Wall group textbox
-	auto lb_wall_group = pEditor_gui.add_label("Wall Group: ");
-	lb_wall_group->setTextSize(10);
+	pEditor_gui.add_small_label("Wall Group: ");
 	mTb_wallgroup = pEditor_gui.add_textbox();
+
+	// Wall size textbox
+	pEditor_gui.add_small_label("Wall Size: ");
+	mTb_size = pEditor_gui.add_textbox();
+
+	auto bt_apply = pEditor_gui.add_button("Apply");
+	bt_apply->connect("pressed", [&]() { apply_wall_settings(); });
 
 	// Door related textboxes
 	{
 		mLo_door = pEditor_gui.add_sub_container();
 
 		// Door name
-		auto lb_door_name = pEditor_gui.add_label("Door name:", mLo_door);
-		lb_door_name->setTextSize(10);
+		pEditor_gui.add_small_label("Door name:", mLo_door);
 		mTb_door_name = pEditor_gui.add_textbox(mLo_door);
 
 		// Door scene
-		auto lb_door_scene = pEditor_gui.add_label("Door scene:", mLo_door);
-		lb_door_scene->setTextSize(10);
+		pEditor_gui.add_small_label("Door scene:", mLo_door);
 		mTb_door_scene = pEditor_gui.add_textbox(mLo_door);
 
 		// Door destination
-		auto lb_door_destination = pEditor_gui.add_label("Door destination:", mLo_door);
-		lb_door_destination->setTextSize(10);
+		pEditor_gui.add_small_label("Door destination:", mLo_door);
 		mTb_door_destination = pEditor_gui.add_textbox(mLo_door);
 
 		// Door player offset
-		auto lb_door_offset = pEditor_gui.add_label("Door player offset:", mLo_door);
-		lb_door_offset->setTextSize(10);
+		pEditor_gui.add_small_label("Door player offset:", mLo_door);
 		mTb_door_offsetx = pEditor_gui.add_textbox(mLo_door);
 		mTb_door_offsety = pEditor_gui.add_textbox(mLo_door);
 
 		// This container defaults invisible
 		mLo_door->hide();
 	}
+
 }
 
 void collisionbox_editor::apply_wall_settings()
@@ -1295,6 +1314,17 @@ void collisionbox_editor::apply_wall_settings()
 		mSelection->set_wall_group(nullptr);
 	else
 		mSelection->set_wall_group(mContainer.create_group(mTb_wallgroup->getText()));
+
+	// Apply size
+	engine::frect new_size;
+	try {
+		new_size = parsers::parse_attribute_rect<float>(mTb_size->getText());
+		mSelection->set_region(new_size);
+	}
+	catch (...)
+	{
+		util::error("Failed to parse rect size");
+	}
 
 	// Apply door settings
 	if (mSelection->get_type() == rpg::collision_box::type::door)
@@ -1367,6 +1397,8 @@ void collisionbox_editor::update_labels()
 	mCurrent_type = mSelection->get_type();
 	mCb_type->setSelectedItemByIndex(static_cast<size_t>(mCurrent_type));
 
+	mTb_size->setText(parsers::generate_attribute_rect(mSelection->get_region()));
+
 	update_door_settings_labels();
 }
 
@@ -1387,6 +1419,443 @@ void collisionbox_editor::update_door_settings_labels()
 	mTb_door_offsetx->setText(std::to_string(door->get_offset().x));
 	mTb_door_offsety->setText(std::to_string(door->get_offset().y));
 }
+
+// ##########
+// atlas_editor
+// ##########
+
+atlas_editor::atlas_editor()
+{
+	mTexture.reset(new engine::texture);
+
+	mFull_animation.set_color({ 100, 100, 255, 100 });
+	mFull_animation.set_parent(mBackground);
+
+	mSelected_firstframe.set_color({ 0, 0, 0, 0 });
+	mSelected_firstframe.set_outline_color({ 255, 255, 0, 255 });
+	mSelected_firstframe.set_outline_thinkness(1);
+	mSelected_firstframe.set_parent(mBackground);
+	
+	mPreview_bg.set_anchor(engine::anchor::bottom);
+	mPreview_bg.set_color({ 0, 0, 0, 200 });
+	mPreview_bg.set_outline_color({ 255, 255, 255, 200 });
+	mPreview_bg.set_outline_thinkness(1);
+	mPreview_bg.set_parent(mBackground);
+
+	mPreview.set_anchor(engine::anchor::bottom);
+	mPreview.set_parent(mPreview_bg);
+}
+
+bool atlas_editor::open_editor()
+{
+	mPreview.set_visible(false);
+	get_textures("./data/textures");
+	if (!mTexture_list.empty())
+	{
+		mCb_texture_select->setSelectedItemByIndex(0);
+		setup_for_texture(mTexture_list[0]);
+	}
+	return true;
+}
+
+int atlas_editor::draw(engine::renderer & pR)
+{
+	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left))
+		atlas_selection(pR.get_mouse_position(mBackground.get_position()));
+	
+	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_right))
+		mDrag_offset = mBackground.get_position() - pR.get_mouse_position();
+	else if (pR.is_mouse_down(engine::renderer::mouse_button::mouse_right))
+		mBackground.set_position(pR.get_mouse_position() + mDrag_offset);
+
+	mBlackout.draw(pR);
+	mBackground.draw(pR);
+
+	for (auto& i : mAnimations)
+	{
+		auto full_region = i->animation->full_region();
+		if (i == mSelection)
+			mFull_animation.set_color({ 255, 255, 100, 50 });
+		else
+			mFull_animation.set_color({ 100, 100, 255, 100 });
+		mFull_animation.set_position(full_region.get_offset());
+		mFull_animation.set_size(full_region.get_size());
+		mFull_animation.draw(pR);
+
+
+		if (i == mSelection)
+		{
+			auto rect = i->animation->get_frame_at(i->animation->get_default_frame());
+			mSelected_firstframe.set_position(rect.get_offset());
+			mSelected_firstframe.set_size(rect.get_size());
+			mSelected_firstframe.draw(pR);
+		}
+	}
+
+	// Animation Preview
+	if (mSelection && mSelection->animation->get_frame_count() > 1) // Only display if there is an animation
+	{
+		mPreview_bg.draw(pR);
+		mPreview.draw(pR);
+	}
+
+	return 0;
+}
+
+int atlas_editor::save()
+{
+	if (mTexture_list.empty())
+		return 0;
+	const std::string xml_path = mLoaded_texture.string() + ".xml";
+	util::info("Saving atlas...");
+	
+	engine::texture_atlas atlas;
+	for (auto& i : mAnimations)
+	{
+		atlas.add_entry(i->name, i->animation);
+	}
+	atlas.save(xml_path);
+	util::info("Atlas save");
+	return 0;
+}
+
+void atlas_editor::get_textures(const std::string & pPath)
+{
+	for (auto& i : engine::fs::recursive_directory_iterator(pPath))
+	{
+		engine::encoded_path path = i.path().string();
+		if (path.extension() == ".png")
+		{
+			mTexture_list.push_back(path.parent() / path.stem());
+
+			if (engine::fs::exists(i.path().parent_path() / (i.path().stem().string() + ".xml")))
+				mCb_texture_select->addItem(mTexture_list.back().filename());
+			else
+				mCb_texture_select->addItem("*" + mTexture_list.back().filename());
+		}
+	}
+}
+
+void atlas_editor::setup_for_texture(const engine::encoded_path& pPath)
+{
+	mLoaded_texture = pPath;
+
+	const std::string texture_path = pPath.string() + ".png";
+	mTexture->unload();
+	mTexture->set_texture_source(texture_path);
+	mTexture->load();
+	mPreview.set_texture(mTexture);
+	mBackground.set_texture(mTexture);
+	mBackground.set_texture_rect({ engine::fvector(0, 0), mTexture->get_size() });
+
+	const std::string xml_path = pPath.string() + ".xml";
+	if (!engine::fs::exists(xml_path))
+	{
+		//atlas.save(pPath.string() + ".xml");
+		util::info("Generated new atlas");
+		clear_gui();
+		return;
+	}
+
+	mSelection = nullptr;
+	mAnimations.clear();
+	engine::texture_atlas atlas;
+	atlas.load(pPath.string() + ".xml");
+	if (!atlas.get_raw_atlas().empty())
+	{
+		for (auto& i : atlas.get_raw_atlas())
+		{
+			std::shared_ptr<editor_atlas_entry> entry(new editor_atlas_entry);
+			entry->name = i.first;
+			entry->animation = i.second.get_animation();
+			mAnimations.push_back(entry);
+		}
+		mCb_entry_select->setSelectedItemByIndex(0);
+		mSelection = mAnimations[0];
+		update_settings();
+		update_preview();
+	}
+	update_entry_list();
+}
+
+bool atlas_editor::is_animation_exist(const std::string & pName)
+{
+	for (auto& i : mAnimations)
+	{
+		if (pName == i->name)
+			return true;
+	}
+	return false;
+}
+
+void atlas_editor::new_entry()
+{
+	mSelection.reset(new editor_atlas_entry);
+	mSelection->name = "_Name_here_";
+	mSelection->animation.reset(new engine::animation);
+	mAnimations.push_back(mSelection);
+	update_entry_list();
+	update_settings();
+	update_preview();
+}
+
+void atlas_editor::remove_selected()
+{
+	for (size_t i = 0; i < mAnimations.size(); i++)
+		if (mAnimations[i] == mSelection)
+			mAnimations.erase(mAnimations.begin() + i);
+	if (mAnimations.empty())
+		mSelection = nullptr;
+	else
+		mSelection = mAnimations.back();
+	update_entry_list();
+	update_settings();
+	update_preview();
+}
+
+void atlas_editor::atlas_selection(engine::fvector pPosition)
+{
+	std::vector<std::shared_ptr<editor_atlas_entry>> hits;
+	for (auto& i : mAnimations)
+		if (i->animation->full_region().is_intersect(pPosition))
+			hits.push_back(i);
+
+	if (hits.empty())
+		return;
+
+	// Similar cycling as the collisionbox editor
+	for (size_t i = 1; i < hits.size(); i++)
+	{
+		if (hits[i] == mSelection)
+		{
+			mSelection = hits[i - 1];
+			update_settings();
+			update_preview();
+			return;
+		}
+	}
+	mSelection = hits.back();
+	update_settings();
+	update_preview();
+}
+
+void atlas_editor::setup_editor(editor_gui & pEditor_gui)
+{
+	mCb_texture_select = pEditor_gui.add_combobox();
+	mCb_texture_select->connect("ItemSelected",
+		[&]() {
+		const int item = mCb_texture_select->getSelectedItemIndex();
+		if (item == -1)
+		{
+			util::warning("No item selected");
+			return;
+		}
+		save();
+		setup_for_texture(mTexture_list[item]);
+	});
+
+	pEditor_gui.add_small_label("Entry: ");
+	mCb_entry_select = pEditor_gui.add_combobox();
+	mCb_entry_select->connect("ItemSelected",
+		[&]() {
+		const int item = mCb_entry_select->getSelectedItemIndex();
+		if (item == -1)
+		{
+			util::warning("No item selected");
+			return;
+		}
+		mSelection = mAnimations[item];
+		update_settings();
+		update_preview();
+	});
+
+	auto bt_new = pEditor_gui.add_button("New");
+	bt_new->connect("pressed",
+		[&]() {
+		new_entry();
+	});
+
+	pEditor_gui.add_small_label("Name: ");
+	mTb_name = pEditor_gui.add_textbox();
+
+	pEditor_gui.add_small_label("Frames: ");
+	mTb_frames = pEditor_gui.add_textbox();
+
+	pEditor_gui.add_small_label("Interval: ");
+	mTb_interval = pEditor_gui.add_textbox();
+
+	pEditor_gui.add_small_label("Default Frame: ");
+	mTb_default_frame = pEditor_gui.add_textbox();
+
+	pEditor_gui.add_small_label("Loop: ");
+	mCb_loop = pEditor_gui.add_combobox();
+	mCb_loop->addItem("No Loop");
+	mCb_loop->addItem("Loop");
+	mCb_loop->addItem("Pingpong Loop");
+	mCb_loop->setSelectedItemByIndex(0);
+
+	pEditor_gui.add_small_label("Size: ");
+	mTb_size = pEditor_gui.add_textbox();
+
+	auto bt_apply = pEditor_gui.add_button("Apply");
+	bt_apply->connect("pressed", [&]() { apply_atlas_settings(); });
+
+	auto bt_delete = pEditor_gui.add_button("Delete Entry");
+	bt_delete->connect("pressed",
+		[&]() {
+		remove_selected();
+	});
+
+	auto bt_reload = pEditor_gui.add_button("Reload Image");
+	bt_reload->connect("pressed",
+		[&](){
+		mTexture->unload();
+		mTexture->load();
+	});
+
+
+	pEditor_gui.add_small_label("Background: ");
+	mCb_bg_color = pEditor_gui.add_combobox();
+	mCb_bg_color->addItem("Black");
+	mCb_bg_color->addItem("White");
+	mCb_bg_color->setSelectedItemByIndex(0);
+	mCb_bg_color->connect("ItemSelected",
+		[&]() {
+		const int item = mCb_bg_color->getSelectedItemIndex();
+		if (item == -1)
+		{
+			util::warning("No item selected");
+			return;
+		}
+		if (item == 0)
+		{
+			mBlackout.set_color({ 0, 0, 0, 255 });
+			mPreview_bg.set_color({ 0, 0, 0, 150 });
+			mPreview_bg.set_outline_color({ 255, 255, 255, 200 });
+		}
+		else if (item == 1)
+		{
+			mBlackout.set_color({ 255, 255, 255, 255 });
+			mPreview_bg.set_color({ 255, 255, 255, 150 });
+			mPreview_bg.set_outline_color({ 0, 0, 0, 200 });
+		}
+	});
+}
+
+void atlas_editor::apply_atlas_settings()
+{
+	if (!mSelection)
+	{
+		util::error("Nothing selected");
+		return;
+	}
+
+	// Rename
+	if (mTb_name->getText() != mSelection->name
+		&& util::shortcuts::validate_potential_xml_name(mTb_name->getText()))
+	{
+		if (!is_animation_exist(mTb_name->getText()))
+		{
+			mSelection->name = mTb_name->getText();
+			update_entry_list();
+		}
+		else
+			util::error("Animation with name '" + mTb_name->getText() + "' already exists");
+	}
+
+	// Set loop
+	mSelection->animation->set_loop(
+		static_cast<engine::animation::loop_type>
+		(mCb_loop->getSelectedItemIndex()));
+
+	// Frame count
+	try {
+		mSelection->animation->set_frame_count(util::to_numeral<int>(mTb_frames->getText()));
+	}
+	catch (...)
+	{
+		util::error("Failed to parse frame count");
+	}
+
+	// Default Frame
+	try {
+		mSelection->animation->set_default_frame(util::to_numeral<int>(mTb_default_frame->getText()));
+	}
+	catch (...)
+	{
+		util::error("Failed to parse Default frame");
+	}
+
+	// Interval
+	try{
+		mSelection->animation->add_interval(0, util::to_numeral<float>(mTb_interval->getText()));
+	}
+	catch (...)
+	{
+		util::error("Failed to parse interval");
+	}
+
+	// Size and position
+	try {
+		engine::frect new_size = parsers::parse_attribute_rect<float>(mTb_size->getText());
+		mSelection->animation->set_frame_rect(new_size);
+	}
+	catch (...)
+	{
+		util::error("Failed to parse rect size");
+	}
+}
+
+
+void editors::atlas_editor::update_entry_list()
+{
+	mCb_entry_select->removeAllItems();
+	for (auto& i : mAnimations)
+	{
+		mCb_entry_select->addItem(i->name);
+	}
+	if (mSelection)
+		mCb_entry_select->setSelectedItem(mSelection->name);
+}
+
+void atlas_editor::update_settings()
+{
+	if (!mSelection)
+		return;
+	mCb_entry_select->setSelectedItem(mSelection->name);
+	mTb_name->setText(mSelection->name);
+	mTb_frames->setText(std::to_string(mSelection->animation->get_frame_count()));
+	mTb_default_frame->setText(std::to_string(mSelection->animation->get_default_frame()));
+	mTb_interval->setText(std::to_string(mSelection->animation->get_interval()));
+	mCb_loop->setSelectedItemByIndex(static_cast<size_t>(mSelection->animation->get_loop()));
+	mTb_size->setText(parsers::generate_attribute_rect(mSelection->animation->get_frame_at(0)));
+}
+
+void atlas_editor::update_preview()
+{
+	if (!mSelection)
+		return;
+
+	auto position = mSelection->animation->get_frame_at(0).get_offset();
+	position.x += mSelection->animation->full_region().w / 2;
+	mPreview_bg.set_position(position);
+
+	mPreview.set_animation(mSelection->animation);
+	mPreview.restart();
+	mPreview.start();
+
+	mPreview_bg.set_size(mPreview.get_size());
+
+}
+
+void atlas_editor::clear_gui()
+{
+	mCb_entry_select->removeAllItems();
+	mTb_frames->setText("0");
+	mTb_interval->setText("0");
+	mTb_size->setText("");
+}
+
 
 // ##########
 // scroll_control_node
@@ -1430,6 +1899,7 @@ void editor_manager::open_tilemap_editor(std::string pScene_path)
 	mTilemap_editor.set_editor_gui(mEditor_gui);
 	if (mTilemap_editor.open_scene(pScene_path))
 		mCurrent_editor = &mTilemap_editor;
+	mTilemap_editor.open_editor();
 	util::info("Editor loaded");
 }
 
@@ -1439,6 +1909,16 @@ void editor_manager::open_collisionbox_editor(std::string pScene_path)
 	mCollisionbox_editor.set_editor_gui(mEditor_gui);
 	if (mCollisionbox_editor.open_scene(pScene_path))
 		mCurrent_editor = &mCollisionbox_editor;
+	mCollisionbox_editor.open_editor();
+	util::info("Editor opened");
+}
+
+void editors::editor_manager::open_atlas_editor()
+{
+	util::info("Opening texture/atlas editor...");
+	mAtlas_editor.set_editor_gui(mEditor_gui);
+	mCurrent_editor = &mAtlas_editor;
+	mAtlas_editor.open_editor();
 	util::info("Editor opened");
 }
 
@@ -1512,4 +1992,5 @@ int editor_boundary_visualization::draw(engine::renderer & pR)
 	mLines.draw(pR);
 	return 0;
 }
+
 

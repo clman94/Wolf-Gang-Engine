@@ -27,9 +27,9 @@ bool tilemap_display::set_tile(engine::fvector pPosition, const std::string & pA
 
 	// A very slight margin to leviate lines
 	rect.set_offset(rect.get_offset()
-		+ engine::fvector(0.00001f, 0.00001f));
+		+ engine::fvector(0.00005f, 0.00005f));
 	rect.set_size(rect.get_size()
-		- engine::fvector(0.00002f, 0.00002f));
+		- engine::fvector(0.00010f, 0.00010f));
 
 	ntile.mRef = mLayers[pLayer].vertices.add_quad(pPosition*get_unit()
 		, rect

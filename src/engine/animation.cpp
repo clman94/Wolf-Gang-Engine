@@ -93,6 +93,14 @@ animation::get_default_frame() const
 	return mDefault_frame;
 }
 
+frect engine::animation::full_region() const
+{
+	frect retval;
+	retval = mFrame_rect;
+	retval.w *= mFrame_count;
+	return retval;
+}
+
 frame_t
 animation::calculate_frame(frame_t pCount) const
 {

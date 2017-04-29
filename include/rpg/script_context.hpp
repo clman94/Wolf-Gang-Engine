@@ -10,6 +10,7 @@
 
 #include <rpg/script_system.hpp>
 #include <rpg/collision_box.hpp>
+#include <engine/resource_pack.hpp>
 
 #include <memory>
 
@@ -37,6 +38,7 @@ public:
 
 	void set_script_system(script_system& pScript);
 	bool build_script(const std::string& pPath);
+	bool build_script(const std::string& pPath, engine::pack_stream_factory& pPack);
 	bool is_valid() const;
 	void clean();
 	void start_all_with_tag(const std::string& pTag);

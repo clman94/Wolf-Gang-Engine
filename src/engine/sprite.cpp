@@ -50,6 +50,7 @@ sprite_node::sprite_node()
 {
 	mScale = { 1, 1 };
 	mRotation = 0;
+	mAnchor = anchor::topleft;
 }
 
 void
@@ -78,10 +79,12 @@ void sprite_node::set_shader(std::shared_ptr<shader> pShader)
 void
 sprite_node::set_texture_rect(const engine::frect& pRect)
 {
-	mVertices[0].texCoords = pRect.get_offset();
-	mVertices[1].texCoords = pRect.get_offset() + fvector(pRect.w, 0);
-	mVertices[2].texCoords = pRect.get_offset() + pRect.get_size();
-	mVertices[3].texCoords = pRect.get_offset() + fvector(0, pRect.h);
+	const engine::fvector offset(0.00005f, 0.00005f);
+
+	mVertices[0].texCoords = pRect.get_offset() + offset;
+	mVertices[1].texCoords = pRect.get_offset() + fvector(pRect.w, 0) + offset*engine::fvector(-1, 1);
+	mVertices[2].texCoords = pRect.get_offset() + pRect.get_size() - offset;
+	mVertices[3].texCoords = pRect.get_offset() + fvector(0, pRect.h) + offset*engine::fvector(1, -1);
 
 	mVertices[0].position = { 0, 0 };
 	mVertices[1].position = { pRect.w, 0 };

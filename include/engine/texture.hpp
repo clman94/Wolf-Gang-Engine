@@ -11,7 +11,7 @@
 
 #include "../../tinyxml2/tinyxml2.h"
 
-#include <unordered_map>
+#include <map>
 #include <vector>
 #include <string>
 #include <assert.h>
@@ -23,13 +23,15 @@ class atlas_entry
 {
 public:
 	atlas_entry();
+	atlas_entry(std::shared_ptr<engine::animation> pAnimation);
 	frect get_root_rect() const;
 	bool is_animation() const;
-	std::shared_ptr<const animation> get_animation() const;
+	std::shared_ptr<animation> get_animation() const;
 
 	bool load(tinyxml2::XMLElement* pEle);
+	bool save(tinyxml2::XMLElement* pEle);
+
 private:
-	bool mIs_animation;
 	std::shared_ptr<animation> mAnimation;
 };
 
@@ -37,14 +39,24 @@ class texture_atlas
 {
 public:
 	bool load(const std::string& pPath);
+	bool save(const std::string& pPath);
+	bool load_memory(const char* pData, size_t pSize);
 	void clean();
 
 	util::optional_pointer<const atlas_entry> get_entry(const std::string& pName) const;
+	util::optional_pointer<const std::pair<const std::string, atlas_entry>> get_entry(const fvector& pVec) const;
+
+	bool add_entry(const std::string& pName, const atlas_entry& pEntry);
+	bool rename_entry(const std::string& pOriginal, const std::string& pRename);
+	bool remove_entry(const std::string& pName);
 
 	std::vector<std::string> compile_list() const;
 
-protected:
-	std::unordered_map<std::string, atlas_entry> mAtlas;
+	const std::map<std::string, atlas_entry>& get_raw_atlas() const;
+
+private:
+	bool load_settings(tinyxml2::XMLDocument& pDoc);
+	std::map<std::string, atlas_entry> mAtlas;
 };
 
 class texture :
@@ -60,14 +72,13 @@ public:
 
 	std::vector<std::string> compile_list() const;
 
+	fvector get_size() const;
+
 #ifdef ENGINE_INTERNAL
 	sf::Texture& sfml_get_texture()
 	{
-
 		load(); // Ensure load
-
 		return *mSFML_texture;
-
 	}
 #endif
 

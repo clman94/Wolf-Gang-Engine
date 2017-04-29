@@ -64,6 +64,28 @@ bool texture_directory::load(engine::resource_manager& pResource_manager)
 	return true;
 }
 
+bool texture_directory::load_pack(engine::resource_manager & pResource_manager, engine::pack_stream_factory & pPack)
+{
+	auto file_list = pPack.recursive_directory(mPath);
+	for (auto i : file_list)
+	{
+		if (i.extension() == ".png")
+		{
+			const std::string texture_name = i.stem();
+
+			std::shared_ptr<engine::texture> texture(new engine::texture());
+			texture->set_texture_source(i.string());
+
+			// Get atlas path (if it exists)
+			auto atlas_path = i.parent() / (texture_name + ".xml");
+			texture->set_atlas_source(atlas_path.string());
+
+			pResource_manager.add_resource(engine::resource_type::texture, texture_name, texture);
+		}
+	}
+	return true;
+}
+
 void texture_directory::set_path(const std::string & pPath)
 {
 	mPath = pPath;
@@ -109,6 +131,27 @@ bool font_directory::load(engine::resource_manager& pResource_manager)
 	return true;
 }
 
+bool font_directory::load_pack(engine::resource_manager & pResource_manager, engine::pack_stream_factory & pPack)
+{
+	auto file_list = pPack.recursive_directory(mPath);
+	for (auto i : file_list)
+	{
+		if (i.extension() == ".ttf")
+		{
+			const std::string font_name = i.stem();
+
+			std::shared_ptr<engine::font> font(new engine::font());
+			font->set_font_source(i.string());
+
+			auto preferences_path = i.parent() / (font_name + ".xml");
+			font->set_preferences_source(preferences_path.string());
+
+			pResource_manager.add_resource(engine::resource_type::font, font_name, font);
+		}
+	}
+	return true;
+}
+
 void font_directory::set_path(const std::string & pPath)
 {
 	mPath = pPath;
@@ -119,6 +162,15 @@ rpg::soundfx_directory::soundfx_directory()
 	mPath = defs::DEFAULT_SOUND_PATH.string();
 }
 
+
+
+// File with these extensions will be used
+static const std::set<std::string> supported_sound_extensions =
+{
+	".ogg",
+	".flac",
+};
+
 bool soundfx_directory::load(engine::resource_manager& pResource_manager)
 {
 	if (!engine::fs::exists(mPath))
@@ -127,17 +179,10 @@ bool soundfx_directory::load(engine::resource_manager& pResource_manager)
 		return false;
 	}
 
-	// File with these extensions will be used
-	const std::set<std::string> extensions =
-	{
-		".ogg",
-		".flac",
-	};
-
 	for (auto& i : engine::fs::recursive_directory_iterator(mPath))
 	{
 		auto& sound_path = i.path();
-		if (extensions.find(sound_path.extension().string()) != extensions.end())
+		if (supported_sound_extensions.find(sound_path.extension().string()) != supported_sound_extensions.end())
 		{
 			if (engine::fs::file_size(sound_path) >= 1049000)
 			{
@@ -147,6 +192,21 @@ bool soundfx_directory::load(engine::resource_manager& pResource_manager)
 			std::shared_ptr<engine::sound_buffer> buffer(new engine::sound_buffer());
 			buffer->set_sound_source(sound_path.string());
 			pResource_manager.add_resource(engine::resource_type::sound, sound_path.stem().string(), buffer);
+		}
+	}
+	return true;
+}
+
+bool soundfx_directory::load_pack(engine::resource_manager & pResource_manager, engine::pack_stream_factory & pPack)
+{
+	auto file_list = pPack.recursive_directory(mPath);
+	for (auto i : file_list)
+	{
+		if (supported_sound_extensions.find(i.extension()) != supported_sound_extensions.end())
+		{
+			std::shared_ptr<engine::sound_buffer> buffer(new engine::sound_buffer());
+			buffer->set_sound_source(i.string());
+			pResource_manager.add_resource(engine::resource_type::sound, i.stem(), buffer);
 		}
 	}
 	return true;

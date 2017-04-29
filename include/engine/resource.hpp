@@ -5,6 +5,7 @@
 #include <map>
 #include <memory>
 #include <vector>
+#include <engine/resource_pack.hpp>
 
 namespace engine
 {
@@ -15,13 +16,16 @@ class resource
 {
 public:
 	resource();
-	~resource() {};
+	virtual ~resource();
 	virtual bool load() = 0;
 	virtual bool unload() = 0;
 	bool is_loaded();
 
+	void set_resource_pack(pack_stream_factory* pPack);
+
 protected:
 	void set_loaded(bool pIs_loaded);
+	pack_stream_factory* mPack;
 
 private:
 	bool mIs_loaded;
@@ -31,6 +35,7 @@ class resource_directory
 {
 public:
 	virtual bool load(resource_manager& pResource_manager) = 0;
+	virtual bool load_pack(resource_manager& pResource_manager, pack_stream_factory& pPack) = 0;
 };
 
 template<typename T1, typename T2>
@@ -50,6 +55,8 @@ enum class resource_type
 class resource_manager
 {
 public:
+	resource_manager();
+
 	void add_resource(resource_type pType, const std::string& pName, std::shared_ptr<resource> pResource);
 	bool has_resource(resource_type pType, const std::string& pName);
 
@@ -68,7 +75,11 @@ public:
 	void unload_all();
 	void unload_unused();
 
+	void set_resource_pack(pack_stream_factory* pPack);
+
 private:
+	pack_stream_factory* mPack;
+
 	std::shared_ptr<resource> get_resource_precast(resource_type pType, const std::string& pName);
 
 	typedef std::map<std::string, std::shared_ptr<resource>> resources_t;

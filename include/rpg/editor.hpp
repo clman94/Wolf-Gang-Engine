@@ -63,6 +63,7 @@ public:
 	void clear();
 
 	tgui::Label::Ptr add_label(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
+	tgui::Label::Ptr add_small_label(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
 	tgui::TextBox::Ptr add_textbox(tgui::Container::Ptr pContainer = nullptr);
 	tgui::ComboBox::Ptr add_combobox(tgui::Container::Ptr pContainer = nullptr);
 	tgui::Button::Ptr add_button(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
@@ -106,35 +107,42 @@ class editor :
 {
 public:
 	editor();
-	bool open_scene(std::string pPath);
+	virtual bool open_editor() = 0;
 	void set_editor_gui(editor_gui& pEditor_gui);
 	void set_resource_manager(engine::resource_manager& pResource_manager);
 
 	virtual int save() = 0;
 
 protected:
-	virtual bool editor_open() { return true; };
 
-	engine::rectangle_node mBlackout;
-
-	rpg::tilemap_manipulator mTilemap_manipulator;
-	rpg::tilemap_display     mTilemap_display;
-
-	rpg::scene_loader mLoader;
+	engine::rectangle_node mBlackout; // Each editor has control over where and how this is drawn
 
 	editor_gui* mEditor_gui;
 	engine::resource_manager* mResource_manager;
 
-	editor_boundary_visualization mBoundary_visualization;
-
 	virtual void setup_editor(editor_gui& pEditor_gui){}
 };
 
-class tilemap_editor :
+class scene_editor :
 	public editor
 {
 public:
+	scene_editor();
+	bool open_scene(std::string pPath); // Should be called before open_editor()
+
+protected:
+	rpg::scene_loader mLoader;
+	editor_boundary_visualization mBoundary_visualization;
+	rpg::tilemap_manipulator mTilemap_manipulator;
+	rpg::tilemap_display     mTilemap_display;
+};
+
+class tilemap_editor :
+	public scene_editor
+{
+public:
 	tilemap_editor();
+	virtual bool open_editor();
 	int draw(engine::renderer& pR);
 	void load_terminal_interface(engine::terminal_system& pTerminal);
 
@@ -142,9 +150,6 @@ public:
 
 	void clean();
 
-protected:
-	virtual bool editor_open();
-	
 private:
 
 	std::shared_ptr<engine::terminal_command_group> mTilemap_group;
@@ -207,18 +212,17 @@ private:
 };
 
 class collisionbox_editor :
-	public editor
+	public scene_editor
 {
 public:
 	collisionbox_editor();
+
+	virtual bool open_editor();
 
 	int draw(engine::renderer& pR);
 	void load_terminal_interface(engine::terminal_system& pTerminal);
 
 	int save();
-
-protected:
-	virtual bool editor_open();
 
 private:
 	std::shared_ptr<engine::terminal_command_group> mCollision_editor_group;
@@ -248,6 +252,7 @@ private:
 	tgui::ComboBox::Ptr mCb_type;
 	tgui::Label::Ptr    mLb_tilesize;
 	tgui::TextBox::Ptr  mTb_wallgroup;
+	tgui::TextBox::Ptr  mTb_size;
 
 	std::shared_ptr<tgui_list_layout> mLo_door;
 	tgui::TextBox::Ptr mTb_door_name;
@@ -272,6 +277,67 @@ private:
 	void update_door_settings_labels();
 };
 
+class atlas_editor :
+	public editor
+{
+public:
+	atlas_editor();
+
+	virtual bool open_editor();
+
+	int draw(engine::renderer& pR);
+
+	int save();
+
+private:
+	void get_textures(const std::string& pPath);
+	void setup_for_texture(const engine::encoded_path& pPath);
+
+	engine::encoded_path mLoaded_texture;
+	std::vector<engine::encoded_path> mTexture_list;
+	std::shared_ptr<engine::texture> mTexture;
+
+	struct editor_atlas_entry
+	{
+		std::string name;
+		std::shared_ptr<engine::animation> animation;
+	};
+	std::vector<std::shared_ptr<editor_atlas_entry>> mAnimations;
+	std::shared_ptr<editor_atlas_entry> mSelection;
+	bool is_animation_exist(const std::string& pName);
+	void new_entry();
+	void remove_selected();
+
+	engine::fvector mDrag_offset;
+
+	engine::sprite_node mBackground;
+	engine::rectangle_node mPreview_bg;
+	engine::animation_node mPreview;
+	engine::rectangle_node mFull_animation;
+	engine::rectangle_node mSelected_firstframe;
+
+	tgui::ComboBox::Ptr mCb_texture_select;
+	tgui::ComboBox::Ptr mCb_entry_select;
+	tgui::TextBox::Ptr  mTb_name;
+	tgui::TextBox::Ptr  mTb_frames;
+	tgui::TextBox::Ptr  mTb_default_frame;
+	tgui::TextBox::Ptr  mTb_interval;
+	tgui::ComboBox::Ptr mCb_loop;
+	tgui::TextBox::Ptr  mTb_size;
+	tgui::ComboBox::Ptr mCb_bg_color;
+
+	void atlas_selection(engine::fvector pPosition);
+
+	void setup_editor(editor_gui& pEditor_gui);
+
+	void apply_atlas_settings();
+
+	void update_entry_list();
+	void update_settings();
+	void update_preview();
+	void clear_gui();
+};
+
 class editor_manager :
 	public engine::render_object
 {
@@ -281,6 +347,7 @@ public:
 	bool is_editor_open();
 	void open_tilemap_editor(std::string pScene_path);
 	void open_collisionbox_editor(std::string pScene_path);
+	void open_atlas_editor();
 	void close_editor();
 
 	void set_world_node(node& pNode);
@@ -300,6 +367,7 @@ private:
 
 	tilemap_editor      mTilemap_editor;
 	collisionbox_editor mCollisionbox_editor;
+	atlas_editor        mAtlas_editor;
 };
 
 

@@ -23,6 +23,7 @@ public:
 		reset_game,
 		editor_1,
 		editor_2,
+		editor_3,
 	};
 	controls();
 	void trigger(control pControl);
@@ -32,7 +33,7 @@ public:
 	void update(engine::renderer& pR);
 
 private:
-	std::array<bool, 15> mControls;
+	std::array<bool, 16> mControls;
 };
 
 }

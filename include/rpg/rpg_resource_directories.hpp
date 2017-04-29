@@ -12,7 +12,8 @@ class texture_directory :
 public:
 	texture_directory();
 
-	bool load(engine::resource_manager& pResource_manager);
+	virtual bool load(engine::resource_manager& pResource_manager);
+	virtual bool load_pack(engine::resource_manager& pResource_manager, engine::pack_stream_factory& pPack);
 
 	void set_path(const std::string& pPath);
 private:
@@ -25,7 +26,8 @@ class font_directory :
 public:
 	font_directory();
 
-	bool load(engine::resource_manager& pResource_manager);
+	virtual bool load(engine::resource_manager& pResource_manager);
+	virtual bool load_pack(engine::resource_manager& pResource_manager, engine::pack_stream_factory& pPack);
 
 	void set_path(const std::string& pPath);
 private:
@@ -38,7 +40,8 @@ class soundfx_directory :
 public:
 	soundfx_directory();
 
-	bool load(engine::resource_manager& pResource_manager);
+	virtual bool load(engine::resource_manager& pResource_manager);
+	virtual bool load_pack(engine::resource_manager& pResource_manager, engine::pack_stream_factory& pPack);
 
 	void set_path(const std::string& pPath);
 private:

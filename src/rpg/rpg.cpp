@@ -718,9 +718,6 @@ scene::scene()
 {
 	mTilemap_display.set_depth(defs::TILES_DEPTH);
 
-	// World space will be 32x32 pixels per unit
-	mWorld_node.set_unit(32);
-
 	mWorld_node.add_child(mTilemap_display);
 	mWorld_node.add_child(mPlayer);
 	mFocus_player = true;
@@ -728,6 +725,8 @@ scene::scene()
 	mPathfinding_system.set_collision_system(mCollision_system);
 
 	mEntity_manager.set_root_node(mWorld_node);
+
+	mPack = nullptr;
 }
 
 scene::~scene()
@@ -787,10 +786,21 @@ bool scene::load_scene(std::string pName)
 
 	util::info("Loading scene '" + pName + "'");
 
-	if (!mLoader.load(pName))
+	if (mPack)
 	{
-		util::error("Unable to open scene '" + pName + "'");
-		return false;
+		if (!mLoader.load(defs::DEFAULT_SCENES_PATH.string(), pName, *mPack))
+		{
+			util::error("Unable to open scene '" + pName + "'");
+			return false;
+		}
+	}
+	else
+	{
+		if (!mLoader.load((defs::DEFAULT_DATA_PATH / defs::DEFAULT_SCENES_PATH).string(), pName))
+		{
+			util::error("Unable to open scene '" + pName + "'");
+			return false;
+		}
 	}
 
 	auto collision_boxes = mLoader.get_collisionboxes();
@@ -806,7 +816,10 @@ bool scene::load_scene(std::string pName)
 	if (!context.is_valid())
 	{
 		context.set_script_system(*mScript);
-		context.build_script(mLoader.get_script_path());
+		if (mPack)
+			context.build_script(mLoader.get_script_path(), *mPack);
+		else
+			context.build_script(mLoader.get_script_path());
 	}
 	else
 		util::info("Script is already compiled");
@@ -861,6 +874,7 @@ bool scene::load_scene(std::string pName, std::string pDoor)
 	return true;
 }
 
+#ifndef LOCKED_RELEASE_MODE
 bool scene::create_scene(const std::string & pName)
 {
 	const auto xml_path = defs::DEFAULT_SCENES_PATH / (pName + ".xml");
@@ -887,6 +901,7 @@ bool scene::create_scene(const std::string & pName)
 
 	return true;
 }
+#endif
 
 bool scene::reload_scene()
 {
@@ -944,6 +959,7 @@ void scene::load_script_interface(script_system& pScript)
 	mScript = &pScript;
 }
 
+#ifndef LOCKED_RELEASE_MODE
 void scene::load_terminal_interface(engine::terminal_system & pTerminal)
 {
 	mTerminal_cmd_group = std::make_shared<engine::terminal_command_group>();
@@ -987,6 +1003,7 @@ void scene::load_terminal_interface(engine::terminal_system & pTerminal)
 
 	pTerminal.add_group(mTerminal_cmd_group);
 }
+#endif
 
 void scene::set_resource_manager(engine::resource_manager& pResource_manager)
 {
@@ -996,7 +1013,7 @@ void scene::set_resource_manager(engine::resource_manager& pResource_manager)
 
 bool scene::load_settings(const game_settings_loader& pSettings)
 {
-	util::info("Loading XML settings...");
+	util::info("Loading scene system...");
 
 	mWorld_node.set_unit(pSettings.get_unit_pixels());
 
@@ -1011,7 +1028,7 @@ bool scene::load_settings(const game_settings_loader& pSettings)
 
 	mBackground_music.set_root_directory(pSettings.get_music_path());
 
-	util::info("Settings loaded");
+	util::info("Scene loaded");
 
 	return true;
 }
@@ -1032,6 +1049,12 @@ void scene::tick(controls &pControls)
 void scene::focus_player(bool pFocus)
 {
 	mFocus_player = pFocus;
+}
+
+void scene::set_resource_pack(engine::pack_stream_factory* pPack)
+{
+	mPack = pPack;
+	mBackground_music.set_resource_pack(pPack);
 }
 
 void scene::script_set_focus(engine::fvector pPosition)
@@ -1245,12 +1268,29 @@ void controls::update(engine::renderer & pR)
 			trigger(control::editor_1);
 		if (pR.is_key_pressed(key_type::Num2))
 			trigger(control::editor_2);
+		if (pR.is_key_pressed(key_type::Num3))
+			trigger(control::editor_3);
 	}
 }
 
 // #########
 // script_context
 // #########
+
+static int add_section_from_pack(const engine::encoded_path& pPath, engine::pack_stream_factory& pPack,  CScriptBuilder& pBuilder)
+{
+	auto data = pPack.read_all(pPath);
+	if (data.empty())
+		return -1;
+	return pBuilder.AddSectionFromMemory(pPath.string().c_str(), &data[0], data.size());
+}
+
+static int pack_include_callback(const char *include, const char *from, CScriptBuilder *pBuilder, void *pUser)
+{
+	engine::pack_stream_factory* pack = reinterpret_cast<engine::pack_stream_factory*>(pUser);
+	auto path = engine::encoded_path(from).parent() / engine::encoded_path(include);
+	return add_section_from_pack(path, *pack, *pBuilder);
+}
 
 scene_script_context::scene_script_context() :
 	mScene_module(nullptr)
@@ -1288,6 +1328,8 @@ bool scene_script_context::build_script(const std::string & pPath)
 
 	clean();
 
+	mBuilder.SetIncludeCallback(nullptr, nullptr);
+
 	mBuilder.StartNewModule(&mScript->get_engine(), pPath.c_str());
 	mBuilder.AddSectionFromMemory("scene_commands", defs::INTERNAL_SCRIPTS_INCLUDE.c_str());
 	mBuilder.AddSectionFromFile(pPath.c_str());
@@ -1302,6 +1344,33 @@ bool scene_script_context::build_script(const std::string & pPath)
 
 	util::info("Script compiled");
 	return true;
+}
+
+bool scene_script_context::build_script(const std::string & pPath, engine::pack_stream_factory & pPack)
+{
+	util::info("Compiling script '" + pPath + "'...");
+
+	clean();
+
+	mBuilder.SetIncludeCallback(pack_include_callback, &pPack);
+
+	mBuilder.StartNewModule(&mScript->get_engine(), pPath.c_str());
+
+	if (add_section_from_pack(defs::INTERNAL_SCRIPTS_PATH.string(), pPack, mBuilder) < 0)
+		return false;
+	bool succ = add_section_from_pack(pPath, pPack, mBuilder) >= 0;
+
+	if (!succ || mBuilder.BuildModule() < 0)
+	{
+		util::error("Failed to load scene script");
+		return false;
+	}
+	mScene_module = mBuilder.GetModule();
+
+	parse_wall_group_functions();
+
+	util::info("Script compiled");
+	return false;
 }
 
 std::string scene_script_context::get_metadata_type(const std::string & pMetadata)
@@ -1417,13 +1486,15 @@ game::game()
 {
 	mIs_ready = false;
 	load_script_interface();
+	mSlot = 0;
+#ifndef LOCKED_RELEASE_MODE
 	load_terminal_interface();
 	mScene.load_terminal_interface(mTerminal_system);
-	mEditor_manager.load_terminal_interface(mTerminal_system);
 	mTerminal_gui.set_terminal_system(mTerminal_system);
+	mEditor_manager.load_terminal_interface(mTerminal_system);
 	mEditor_manager.set_resource_manager(mResource_manager);
 	mEditor_manager.set_world_node(mScene.get_world_node());
-	mSlot = 0;
+#endif
 }
 
 game::~game()
@@ -1537,6 +1608,18 @@ game::load_script_interface()
 	util::info("Script interface loaded");
 }
 
+void game::load_icon()
+{
+	get_renderer()->set_icon("data/icon.png");
+}
+
+void game::load_icon_pack()
+{
+	auto data = mPack.read_all("icon.png");
+	get_renderer()->set_icon(data);
+}
+
+#ifndef LOCKED_RELEASE_MODE
 void game::load_terminal_interface()
 {
 	mGroup_flags = std::make_shared<engine::terminal_command_group>();
@@ -1588,8 +1671,8 @@ void game::load_terminal_interface()
 	mGroup_game->add_command("load",
 		[&](const engine::terminal_arglist& pArgs)->bool
 	{
-		util::error("Incomplete implementation");
-		return false;
+		//util::error("Incomplete implementation");
+		//return false;
 
 
 
@@ -1633,7 +1716,7 @@ void game::load_terminal_interface()
 		}
 
 		util::info("Packing data folder to '" + destination + "'");
-		bool suc = create_resource_pack("data", destination);
+		bool suc = engine::create_resource_pack("data", destination);
 		util::info("Packing completed");
 		return suc;
 	}, "[Destination] - Pack data folder to a pack file for releasing your game");
@@ -1642,6 +1725,7 @@ void game::load_terminal_interface()
 	mTerminal_system.add_group(mGroup_game);
 	mTerminal_system.add_group(mGroup_global1);
 }
+#endif
 
 float game::get_delta()
 {
@@ -1654,15 +1738,40 @@ bool game::load_settings(engine::fs::path pData_dir)
 	
 	mData_directory = pData_dir;
 
-	std::string settings_path = (pData_dir / "game.xml").string();
-
 	game_settings_loader settings;
-
-	if (!settings.load(settings_path))
+	if (!engine::fs::is_directory(pData_dir)) // This is a package
 	{
-		util::error("Could not load game settings file at '" + settings_path + "'");
-		return (mIs_ready = false, false);
+		util::info("Loading settings from pack...");
+		if (!mPack.open(pData_dir.string()))
+		{
+			util::error("Could not load pack");
+			return (mIs_ready = false, false);
+		}
+
+		const auto settings_data = mPack.read_all("game.xml");
+		
+		if (!settings.load_memory(&settings_data[0], settings_data.size()))
+			return (mIs_ready = false, false);
+
+		mResource_manager.set_resource_pack(&mPack);
+		mScene.set_resource_pack(&mPack);
+
+		load_icon_pack();
 	}
+	else // Data folder
+	{
+		util::info("Loading settings from data folder...");
+		std::string settings_path = (pData_dir / "game.xml").string();
+		if (!settings.load(settings_path, pData_dir.string() + "/"))
+			return (mIs_ready = false, false);
+
+		mResource_manager.set_resource_pack(nullptr);
+		mScene.set_resource_pack(nullptr);
+
+		load_icon();
+	}
+
+	util::info("Settings loaded");
 
 	util::info("Loading Resources...");
 
@@ -1691,6 +1800,7 @@ bool game::load_settings(engine::fs::path pData_dir)
 
 	util::info("Resources loaded");
 
+
 	mScene.set_resource_manager(mResource_manager);
 	if (!mScene.load_settings(settings))
 		return (mIs_ready = false, false);
@@ -1707,12 +1817,17 @@ bool game::load_settings(engine::fs::path pData_dir)
 void
 game::tick()
 {
+#ifndef LOCKED_RELEASE_MODE
 	mTerminal_gui.update(*get_renderer());
+#endif
+
 	mControls.update(*get_renderer());
 
+#ifndef LOCKED_RELEASE_MODE
 	if (mControls.is_triggered(controls::control::reset_game))
 	{
 		mEditor_manager.close_editor();
+		mScene.clean(true);
 		restart_game();
 	}
 
@@ -1725,6 +1840,8 @@ game::tick()
 		mEditor_manager.close_editor();
 		util::info("Reloading scene...");
 
+		mScene.clean(true);
+
 		mResource_manager.reload_directories();
 
 		mScene.reload_scene();
@@ -1735,19 +1852,27 @@ game::tick()
 	if (mControls.is_triggered(controls::control::editor_1))
 	{
 		mEditor_manager.close_editor();
-		mEditor_manager.open_tilemap_editor(mScene.get_path());
+		mEditor_manager.open_tilemap_editor((mData_directory / defs::DEFAULT_SCENES_PATH / mScene.get_path()).string());
 		mScene.clean(true);
 	}
 
 	if (mControls.is_triggered(controls::control::editor_2))
 	{
 		mEditor_manager.close_editor();
-		mEditor_manager.open_collisionbox_editor(mScene.get_path());
+		mEditor_manager.open_collisionbox_editor((mData_directory / defs::DEFAULT_SCENES_PATH / mScene.get_path()).string());
 		mScene.clean(true);
 	}
+	if (mControls.is_triggered(controls::control::editor_3))
+	{
+		mEditor_manager.close_editor();
+		mEditor_manager.open_atlas_editor();
+		mScene.clean(true);
+	}
+
 	// Dont go any further if editor is open
 	if (mEditor_manager.is_editor_open())
 		return;
+#endif
 
 	mScene.tick(mControls);
 
@@ -1789,9 +1914,10 @@ void
 game::refresh_renderer(engine::renderer & pR)
 {
 	mScene.set_renderer(pR);
+#ifndef LOCKED_RELEASE_MODE
 	mTerminal_gui.load_gui(pR);
 	pR.add_object(mEditor_manager);
-	pR.set_icon("data/icon.png");
+#endif
 }
 
 // ##########
@@ -1879,10 +2005,10 @@ void background_music::load_script_interface(script_system & pScript)
 	pScript.add_function("float _music_get_volume()", asMETHOD(engine::sound_stream, get_volume), mStream.get());
 	pScript.add_function("void _music_set_volume(float)", asMETHOD(engine::sound_stream, set_volume), mStream.get());
 	pScript.add_function("void _music_set_loop(bool)", asMETHOD(engine::sound_stream, set_loop), mStream.get());
-	pScript.add_function("int _music_open(const string &in)", asMETHOD(background_music, script_music_open), this);
+	pScript.add_function("bool _music_open(const string &in)", asMETHOD(background_music, script_music_open), this);
 	pScript.add_function("bool _music_is_playing()", asMETHOD(engine::sound_stream, is_playing), mStream.get());
 	pScript.add_function("float _music_get_duration()", asMETHOD(engine::sound_stream, get_duration), mStream.get());
-	pScript.add_function("int _music_swap(const string &in)", asMETHOD(background_music, script_music_swap), this);
+	pScript.add_function("bool _music_swap(const string &in)", asMETHOD(background_music, script_music_swap), this);
 	pScript.add_function("int _music_start_transition_play(const string &in)", asMETHOD(background_music, script_music_start_transition_play), this);
 	pScript.add_function("void _music_stop_transition_play()", asMETHOD(background_music, script_music_stop_transition_play), this);
 	pScript.add_function("void _music_set_second_volume(float)", asMETHOD(background_music, script_music_set_second_volume), this);
@@ -1902,37 +2028,45 @@ void background_music::set_root_directory(const std::string & pPath)
 	mRoot_directory = pPath;
 }
 
+void background_music::set_resource_pack(engine::pack_stream_factory * pPack)
+{
+	mPack = pPack;
+}
+
 void background_music::pause_music()
 {
 	mStream->pause();
 }
 
-int background_music::script_music_open(const std::string & pName)
+bool background_music::script_music_open(const std::string & pName)
 {
 	const engine::fs::path file(mRoot_directory / (pName + ".ogg"));
 	if (mPath != file)
 	{
 		mPath = file;
-		return mStream->open(file.string());
+		if (mPack)
+			return mStream->open(file.string(), *mPack);
+		else
+			return mStream->open(file.string());
 	}
-	return 0;
+	return true;
 }
 
-int background_music::script_music_swap(const std::string & pName)
+bool background_music::script_music_swap(const std::string & pName)
 {
 	const engine::fs::path file(mRoot_directory / (pName + ".ogg"));
 	if (mPath == file)
-		return 0;
+		return true;
 
 	if (!mStream->is_playing())
-	{
-		script_music_open(pName);
-		return 0;
-	}
+		return script_music_open(pName);
 
 	// Open a second stream and set its position similar to
 	// the first one.
-	mOverlap_stream->open(file.string());
+	if (mPack)
+		mOverlap_stream->open(file.string(), *mPack);
+	else
+		mOverlap_stream->open(file.string());
 	mOverlap_stream->set_loop(true);
 	mOverlap_stream->set_volume(mStream->get_volume());
 	mOverlap_stream->play();
@@ -1944,7 +2078,7 @@ int background_music::script_music_swap(const std::string & pName)
 	mStream.swap(mOverlap_stream);
 
 	mPath = file;
-	return 0;
+	return true;
 }
 
 int background_music::script_music_start_transition_play(const std::string & pName)
@@ -1953,7 +2087,10 @@ int background_music::script_music_start_transition_play(const std::string & pNa
 	if (mPath == file)
 		return 0;
 
-	mOverlap_stream->open(file.string());
+	if (mPack)
+		mOverlap_stream->open(file.string(), *mPack);
+	else
+		mOverlap_stream->open(file.string());
 	mOverlap_stream->set_loop(true);
 	mOverlap_stream->set_volume(0);
 	mOverlap_stream->play();
@@ -2241,7 +2378,7 @@ int dialog_text_entity::draw(engine::renderer & pR)
 	if (mRevealing)
 		do_reveal();
 
-	return draw_text(pR);
+	return text_entity::draw(pR);
 }
 
 bool dialog_text_entity::is_revealing()
@@ -2312,11 +2449,6 @@ text_entity::text_entity()
 
 int text_entity::draw(engine::renderer & pR)
 {
-	return draw_text(pR);
-}
-
-int text_entity::draw_text(engine::renderer & pR)
-{
 	update_depth();
 	mText.set_unit(get_unit());
 	mText.set_position(get_absolute_position() - engine::fvector(0, get_z()));
@@ -2324,53 +2456,30 @@ int text_entity::draw_text(engine::renderer & pR)
 	return 0;
 }
 
-bool game_settings_loader::load(const std::string & pPath)
+bool game_settings_loader::load(const std::string & pPath, const std::string& pPrefix_path)
 {
 	using namespace tinyxml2;
 	XMLDocument doc;
+
 	if (doc.LoadFile(pPath.c_str()))
 	{
 		util::error("Could not load game file at '" + pPath + "'");
 		return false;
 	}
-	auto ele_root = doc.RootElement();
+	return get_settings(doc, pPrefix_path);
+}
 
-	if (!ele_root)
+bool game_settings_loader::load_memory(const char * pData, size_t pSize, const std::string& pPrefix_path)
+{
+	using namespace tinyxml2;
+	XMLDocument doc;
+
+	if (doc.Parse(pData, pSize))
 	{
-		util::error("Root element missing in settings");
+		util::error("Could not load game file");
 		return false;
 	}
-
-	auto ele_scene = ele_root->FirstChildElement("scene");
-	if (!ele_scene || !ele_scene->Attribute("name"))
-	{
-		util::error("Please specify the scene to start with");
-		return false;
-	}
-	mStart_scene = util::safe_string(ele_scene->Attribute("name"));
-
-	auto ele_player = ele_root->FirstChildElement("player");
-	if (!ele_player || !ele_player->Attribute("texture"))
-	{
-		util::error("Please specify the player texture");
-		return false;
-	}
-	mPlayer_texture = util::safe_string(ele_player->Attribute("texture"));
-
-	auto ele_tile_size = ele_root->FirstChildElement("tile_size");
-	if (!ele_tile_size || !ele_tile_size->Attribute("pixels"))
-	{
-		util::error("Please specify the player texture");
-		return false;
-	}
-	pUnit_pixels = ele_tile_size->FloatAttribute("pixels");
-
-	mTextures_path = load_setting_path(ele_root, "textures", defs::DEFAULT_TEXTURES_PATH.string());
-	mSounds_path   = load_setting_path(ele_root, "sounds"  , defs::DEFAULT_SOUND_PATH.string());
-	mMusic_path    = load_setting_path(ele_root, "music"   , defs::DEFAULT_MUSIC_PATH.string());
-	mFonts_path    = load_setting_path(ele_root, "fonts"   , defs::DEFAULT_FONTS_PATH.string());
-
-	return true;
+	return get_settings(doc, pPrefix_path);
 }
 
 const std::string & game_settings_loader::get_start_scene() const
@@ -2398,6 +2507,11 @@ const std::string & rpg::game_settings_loader::get_fonts_path() const
 	return mFonts_path;
 }
 
+const std::string & game_settings_loader::get_scenes_path() const
+{
+	return mScenes_path;
+}
+
 const std::string & game_settings_loader::get_player_texture() const
 {
 	return mPlayer_texture;
@@ -2406,6 +2520,49 @@ const std::string & game_settings_loader::get_player_texture() const
 float game_settings_loader::get_unit_pixels() const
 {
 	return pUnit_pixels;
+}
+
+bool game_settings_loader::get_settings(tinyxml2::XMLDocument & pDoc, const std::string& pPrefix_path)
+{
+	auto ele_root = pDoc.RootElement();
+
+	if (!ele_root)
+	{
+		util::error("Root element missing in settings");
+		return false;
+	}
+
+	auto ele_scene = ele_root->FirstChildElement("scene");
+	if (!ele_scene || !ele_scene->Attribute("name"))
+	{
+		util::error("Please specify the scene to start with");
+		return false;
+	}
+	mStart_scene = util::safe_string(ele_scene->Attribute("name"));
+
+	auto ele_player = ele_root->FirstChildElement("player");
+	if (!ele_player || !ele_player->Attribute("texture"))
+	{
+		util::error("Please specify the player texture");
+		return false;
+	}
+	mPlayer_texture = util::safe_string(ele_player->Attribute("texture"));
+
+	auto ele_tile_size = ele_root->FirstChildElement("tile_size");
+	if (!ele_tile_size || !ele_tile_size->Attribute("pixels"))
+	{
+		util::error("Please specify the pixel size of the tiles");
+		return false;
+	}
+	pUnit_pixels = ele_tile_size->FloatAttribute("pixels");
+
+	mTextures_path = load_setting_path(ele_root, "textures", pPrefix_path + defs::DEFAULT_TEXTURES_PATH.string());
+	mSounds_path = load_setting_path(ele_root, "sounds", pPrefix_path + defs::DEFAULT_SOUND_PATH.string());
+	mMusic_path = load_setting_path(ele_root, "music", pPrefix_path + defs::DEFAULT_MUSIC_PATH.string());
+	mFonts_path = load_setting_path(ele_root, "fonts", pPrefix_path + defs::DEFAULT_FONTS_PATH.string());
+	mScenes_path = load_setting_path(ele_root, "scenes", pPrefix_path + defs::DEFAULT_SCENES_PATH.string());
+	
+	return true;
 }
 
 std::string game_settings_loader::load_setting_path(tinyxml2::XMLElement* pRoot, const std::string & pName, const std::string& pDefault)
@@ -2510,6 +2667,7 @@ void scenes_directory::set_script_system(script_system & pScript)
 	mScript = &pScript;
 }
 
+#ifndef LOCKED_RELEASE_MODE
 terminal_gui::terminal_gui()
 {
 	mEb_input = std::make_shared<tgui::EditBox>();
@@ -2572,3 +2730,4 @@ void terminal_gui::update(engine::renderer& pR)
 		}
 	}*/
 }
+#endif

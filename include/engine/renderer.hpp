@@ -81,17 +81,18 @@ public:
 	int remove_object(render_object& pObject);
 
 	void set_target_size(fvector pSize);
-	fvector get_target_size();
+	fvector get_target_size() const;
 
 	// Resort all objects
 	void request_resort();
 
-	fvector get_mouse_position();
-	fvector get_mouse_position(fvector pRelative);
+	fvector get_mouse_position() const;
+	fvector get_mouse_position(fvector pRelative) const;
 
 	bool is_focused();
 
 	int set_icon(const std::string& pPath);
+	int set_icon(const std::vector<char>& pData);
 
 	void set_window_title(const std::string& pTitle);
 	void set_visible(bool pVisible);
@@ -115,6 +116,8 @@ public:
 	tgui::Gui& get_tgui();
 
 private:
+
+	bool is_mouse_within_target() const;
 
 	fvector mTarget_size;
 
@@ -187,6 +190,7 @@ public:
 	int is_rendered();
 
 	void set_renderer(renderer& pR);
+	renderer* get_renderer();
 	void detach_renderer();
 
 	friend class renderer;
@@ -351,6 +355,10 @@ class rectangle_node :
 	public render_object
 {
 public:
+	rectangle_node();
+
+	void set_anchor(anchor pAnchor);
+
 	void set_color(const color& c);
 	color get_color();
 	void set_size(fvector s);
@@ -363,6 +371,7 @@ public:
 	virtual int draw(renderer &pR);
 
 private:
+	anchor mAnchor;
 	std::shared_ptr<shader>  mShader;
 	sf::RectangleShape shape;
 };
@@ -412,6 +421,8 @@ private:
 
 	std::string mFont_source;
 	std::string mPreferences_source;
+
+	std::vector<char> mFont_data; // Stores data loaded from a pack
 
 	std::unique_ptr<sf::Font> mSFML_font;
 	int mCharacter_size;

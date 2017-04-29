@@ -9,6 +9,12 @@ using namespace engine;
 resource::resource()
 {
 	mIs_loaded = false;
+	mPack = nullptr;
+}
+
+resource::~resource()
+{
+
 }
 
 bool resource::is_loaded()
@@ -16,17 +22,28 @@ bool resource::is_loaded()
 	return mIs_loaded;
 }
 
+void resource::set_resource_pack(pack_stream_factory * pPack)
+{
+	mPack = pPack;
+}
+
 void resource::set_loaded(bool pIs_loaded)
 {
 	mIs_loaded = pIs_loaded;
 }
 
+resource_manager::resource_manager()
+{
+	mPack = nullptr;
+}
+
 void resource_manager::add_resource(resource_type pType, const std::string& pName, std::shared_ptr<resource> pResource)
 {
 	mResources[pType][pName] = pResource;
+	pResource->set_resource_pack(mPack);
 }
 
-bool engine::resource_manager::has_resource(resource_type pType, const std::string & pName)
+bool resource_manager::has_resource(resource_type pType, const std::string & pName)
 {
 	auto find_type = mResources.find(pType);
 	if (find_type == mResources.end())
@@ -72,6 +89,18 @@ void resource_manager::unload_unused()
 				j.second->unload();
 }
 
+void resource_manager::set_resource_pack(pack_stream_factory * pPack)
+{
+	mPack = pPack;
+	for (auto i : mResources)
+	{
+		for (auto j : i.second)
+		{
+			j.second->set_resource_pack(pPack);
+		}
+	}
+}
+
 void resource_manager::add_directory(std::shared_ptr<resource_directory> pDirectory)
 {
 	mResource_directories.push_back(pDirectory);
@@ -81,9 +110,14 @@ bool resource_manager::reload_directories()
 {
 	mResources.clear();
 	for (auto i : mResource_directories)
-		if (!i->load(*this))
+		if (mPack) {
+			if (!i->load_pack(*this, *mPack))
+				return false;
+		}
+		else
 		{
-			return false;
+			if (!i->load(*this))
+				return false;
 		}
 	return true;
 }

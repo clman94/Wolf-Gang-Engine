@@ -25,12 +25,12 @@ scene_loader::scene_loader()
 	mEle_map = nullptr;
 }
 
-bool scene_loader::load(const std::string & pName)
+bool scene_loader::load(const engine::encoded_path& pDir, const std::string & pName)
 {
 	clean();
-
-	mScene_path = defs::DEFAULT_SCENES_PATH / (pName + ".xml");
-	mScript_path = defs::DEFAULT_SCENES_PATH / (pName + ".as");
+	
+	mScene_path = pDir / (pName + ".xml");
+	mScript_path = pDir / (pName + ".as");
 	mScene_name = pName;
 
 	if (mXml_Document.LoadFile(mScene_path.string().c_str()))
@@ -39,6 +39,50 @@ bool scene_loader::load(const std::string & pName)
 		return false;
 	}
 
+	return load_settings();
+}
+
+bool scene_loader::load(const engine::encoded_path& pDir, const std::string & pName, engine::pack_stream_factory& pPack)
+{
+	clean();
+
+	mScene_path = pDir / (pName + ".xml");
+	mScript_path = pDir / (pName + ".as");
+	mScene_name = pName;
+
+	auto data = pPack.read_all(mScene_path.string());
+	if (data.empty())
+		return false;
+
+	if (mXml_Document.Parse(&data[0], data.size()))
+	{
+		util::error("Unable to open scene XML file.");
+		return false;
+	}
+
+	return load_settings();
+}
+
+bool scene_loader::save()
+{
+	return !mXml_Document.SaveFile(mScene_path.string().c_str());
+}
+
+void scene_loader::clean()
+{
+	mXml_Document.Clear();
+	mScript_path.clear();
+	mScene_name.clear();
+	mTilemap_texture.clear();
+	mScene_path.clear();
+	mBoundary = engine::frect();
+	mHas_boundary = false;
+	mEle_collisionboxes = nullptr;
+	mEle_map = nullptr;
+}
+
+bool scene_loader::load_settings()
+{
 	fix();
 
 	auto ele_root = mXml_Document.FirstChildElement("scene");
@@ -75,26 +119,7 @@ bool scene_loader::load(const std::string & pName)
 			util::warning("Tilemap texture is not defined");
 
 	}
-
 	return true;
-}
-
-bool scene_loader::save()
-{
-	return !mXml_Document.SaveFile(mScene_path.string().c_str());
-}
-
-void scene_loader::clean()
-{
-	mXml_Document.Clear();
-	mScript_path.clear();
-	mScene_name.clear();
-	mTilemap_texture.clear();
-	mScene_path.clear();
-	mBoundary = engine::frect();
-	mHas_boundary = false;
-	mEle_collisionboxes = nullptr;
-	mEle_map = nullptr;
 }
 
 void scene_loader::fix()

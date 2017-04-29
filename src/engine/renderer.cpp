@@ -19,6 +19,11 @@ void render_object::set_renderer(renderer& pR)
 	pR.add_object(*this);
 }
 
+renderer* engine::render_object::get_renderer()
+{
+	return mRenderer;
+}
+
 void render_object::detach_renderer()
 {
 	if (mRenderer)
@@ -90,7 +95,7 @@ void renderer::set_target_size(fvector pSize)
 	refresh_view();
 }
 
-fvector renderer::get_target_size()
+fvector renderer::get_target_size() const
 {
 	return mTarget_size;
 }
@@ -145,6 +150,13 @@ int renderer::draw(render_object& pObject)
 tgui::Gui & renderer::get_tgui()
 {
 	return mTgui;
+}
+
+bool renderer::is_mouse_within_target() const
+{
+	const auto pos = get_mouse_position();
+	const auto target = get_target_size();
+	return pos.x >= 0  && pos.y >= 0 && pos.x < target.x && pos.y < target.y;
 }
 
 void renderer::refresh_view()
@@ -253,7 +265,7 @@ renderer::close()
 }
 
 fvector
-renderer::get_mouse_position()
+renderer::get_mouse_position() const
 {
 	auto pos = sf::Mouse::getPosition(mWindow);
 	auto wpos = mWindow.mapPixelToCoords(pos);
@@ -261,7 +273,7 @@ renderer::get_mouse_position()
 }
 
 fvector
-renderer::get_mouse_position(fvector pRelative)
+renderer::get_mouse_position(fvector pRelative) const
 {
 	return get_mouse_position() - pRelative;
 }
@@ -278,6 +290,15 @@ int renderer::set_icon(const std::string & pPath)
 {
 	sf::Image image;
 	if (!image.loadFromFile(pPath))
+		return 1;
+	mWindow.setIcon(image.getSize().x, image.getSize().y, image.getPixelsPtr());
+	return 0;
+}
+
+int renderer::set_icon(const std::vector<char>& pData)
+{
+	sf::Image image;
+	if (!image.loadFromMemory(&pData[0], pData.size()))
 		return 1;
 	mWindow.setIcon(image.getSize().x, image.getSize().y, image.getPixelsPtr());
 	return 0;
@@ -349,7 +370,7 @@ renderer::is_key_down(key_type pKey_type, bool pIgnore_gui)
 bool
 renderer::is_mouse_pressed(mouse_button pButton_type, bool pIgnore_gui)
 {
-	if (!mWindow.hasFocus() || (mIs_mouse_busy && !pIgnore_gui))
+	if (!mWindow.hasFocus() || (mIs_mouse_busy && !pIgnore_gui) || !is_mouse_within_target())
 		return false;
 	bool is_pressed = sf::Mouse::isButtonPressed((sf::Mouse::Button)pButton_type);
 	if (mPressed_buttons[pButton_type] == -1 && is_pressed)
@@ -361,7 +382,7 @@ renderer::is_mouse_pressed(mouse_button pButton_type, bool pIgnore_gui)
 bool
 renderer::is_mouse_down(mouse_button pButton_type, bool pIgnore_gui)
 {
-	if (!mWindow.hasFocus() || (mIs_mouse_busy && !pIgnore_gui))
+	if (!mWindow.hasFocus() || (mIs_mouse_busy && !pIgnore_gui) || !is_mouse_within_target())
 		return false;
 	return sf::Mouse::isButtonPressed((sf::Mouse::Button)pButton_type);
 }
@@ -502,6 +523,16 @@ renderer * render_proxy::get_renderer()
 	return mR;
 }
 
+rectangle_node::rectangle_node()
+{
+	mAnchor = anchor::topleft;
+}
+
+void rectangle_node::set_anchor(anchor pAnchor)
+{
+	mAnchor = pAnchor;
+}
+
 void rectangle_node::set_color(const color & c)
 {
 	shape.setFillColor(sf::Color(c.r, c.g, c.b, c.a));
@@ -535,7 +566,7 @@ void rectangle_node::set_outline_thinkness(float pThickness)
 
 int rectangle_node::draw(renderer & pR)
 {
-	auto pos = get_exact_position();
+	auto pos = get_exact_position() + engine::anchor_offset(get_size(), mAnchor);
 	shape.setPosition({ pos.x, pos.y });
 	if (mShader)
 		pR.get_sfml_render().draw(shape, mShader->get_sfml_shader());
