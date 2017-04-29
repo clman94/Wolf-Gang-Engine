@@ -1,3 +1,6 @@
+#ifndef ENGINE_PARSERS_HPP
+#define ENGINE_PARSERS_HPP
+
 #include <vector>
 #include <type_traits>
 #include <cassert>
@@ -150,6 +153,39 @@ engine::rect<T> parse_attribute_rect(const std::string& str)
 	return r;
 }
 
+static std::string auto_adjust_precision(const std::string& pStr)
+{
+	if (pStr.empty())
+		return{};
+	for (auto i = pStr.rbegin(); i != pStr.rend(); i++)
+	{
+		if (*i == '.')
+		{
+			return std::string(pStr.begin(), i.base() - 1);
+		}
+		if (*i != '0')
+		{
+			return std::string(pStr.begin(), i.base());
+		}
+	}
+	return{};
+}
+
+template<typename T>
+static std::string generate_attribute_rect(const engine::rect<T>& pRect)
+{
+	std::string retval;
+	retval = "x=";
+	retval += auto_adjust_precision(std::to_string(pRect.x));
+	retval += " y=";
+	retval += auto_adjust_precision(std::to_string(pRect.y));
+	retval += " w=";
+	retval += auto_adjust_precision(std::to_string(pRect.w));
+	retval += " h=";
+	retval += auto_adjust_precision(std::to_string(pRect.h));
+	return retval;
+}
+
 template<typename T>
 static engine::vector<T> parse_vector(const std::string& str)
 {
@@ -175,3 +211,5 @@ static engine::vector<T> parse_vector(const std::string& str)
 }
 
 }
+
+#endif // !ENGINE_PARSERS_HPP

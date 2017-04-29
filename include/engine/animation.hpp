@@ -36,14 +36,15 @@ public:
 	void set_frame_count(frame_t pCount);
 	frame_t get_frame_count() const;
 
-	void set_frame_rect(engine::frect pRect) ;
-	engine::frect get_frame_at(frame_t pAt) const;
+	void set_frame_rect(frect pRect) ;
+	frect get_frame_at(frame_t pAt) const;
 
 	fvector get_size() const;
 
 	void set_default_frame(frame_t pFrame);
 	frame_t  get_default_frame() const;
 
+	frect full_region() const;
 
 private:
 	struct sequence_frame
@@ -52,7 +53,7 @@ private:
 		frame_t from;
 	};
 	std::vector<sequence_frame> mSequence;
-	engine::frect               mFrame_rect;
+	frect               mFrame_rect;
 	frame_t                     mDefault_frame;
 	frame_t                     mFrame_count;
 	loop_type                   mLoop;

@@ -50,6 +50,7 @@ sprite_node::sprite_node()
 {
 	mScale = { 1, 1 };
 	mRotation = 0;
+	mAnchor = anchor::topleft;
 }
 
 void

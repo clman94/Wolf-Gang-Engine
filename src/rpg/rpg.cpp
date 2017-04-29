@@ -1268,6 +1268,8 @@ void controls::update(engine::renderer & pR)
 			trigger(control::editor_1);
 		if (pR.is_key_pressed(key_type::Num2))
 			trigger(control::editor_2);
+		if (pR.is_key_pressed(key_type::Num3))
+			trigger(control::editor_3);
 	}
 }
 
@@ -1860,6 +1862,13 @@ game::tick()
 		mEditor_manager.open_collisionbox_editor((mData_directory / defs::DEFAULT_SCENES_PATH / mScene.get_path()).string());
 		mScene.clean(true);
 	}
+	if (mControls.is_triggered(controls::control::editor_3))
+	{
+		mEditor_manager.close_editor();
+		mEditor_manager.open_atlas_editor();
+		mScene.clean(true);
+	}
+
 	// Dont go any further if editor is open
 	if (mEditor_manager.is_editor_open())
 		return;

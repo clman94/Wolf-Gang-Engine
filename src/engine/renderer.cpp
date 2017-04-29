@@ -19,6 +19,11 @@ void render_object::set_renderer(renderer& pR)
 	pR.add_object(*this);
 }
 
+renderer* engine::render_object::get_renderer()
+{
+	return mRenderer;
+}
+
 void render_object::detach_renderer()
 {
 	if (mRenderer)
@@ -518,6 +523,16 @@ renderer * render_proxy::get_renderer()
 	return mR;
 }
 
+rectangle_node::rectangle_node()
+{
+	mAnchor = anchor::topleft;
+}
+
+void rectangle_node::set_anchor(anchor pAnchor)
+{
+	mAnchor = pAnchor;
+}
+
 void rectangle_node::set_color(const color & c)
 {
 	shape.setFillColor(sf::Color(c.r, c.g, c.b, c.a));
@@ -551,7 +566,7 @@ void rectangle_node::set_outline_thinkness(float pThickness)
 
 int rectangle_node::draw(renderer & pR)
 {
-	auto pos = get_exact_position();
+	auto pos = get_exact_position() + engine::anchor_offset(get_size(), mAnchor);
 	shape.setPosition({ pos.x, pos.y });
 	if (mShader)
 		pR.get_sfml_render().draw(shape, mShader->get_sfml_shader());

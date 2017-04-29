@@ -63,7 +63,6 @@ private:
 class expression_manager
 {
 public:
-
 	struct expression
 	{
 		std::shared_ptr<engine::texture> texture;

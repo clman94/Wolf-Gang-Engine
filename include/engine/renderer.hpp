@@ -190,6 +190,7 @@ public:
 	int is_rendered();
 
 	void set_renderer(renderer& pR);
+	renderer* get_renderer();
 	void detach_renderer();
 
 	friend class renderer;
@@ -354,6 +355,10 @@ class rectangle_node :
 	public render_object
 {
 public:
+	rectangle_node();
+
+	void set_anchor(anchor pAnchor);
+
 	void set_color(const color& c);
 	color get_color();
 	void set_size(fvector s);
@@ -366,6 +371,7 @@ public:
 	virtual int draw(renderer &pR);
 
 private:
+	anchor mAnchor;
 	std::shared_ptr<shader>  mShader;
 	sf::RectangleShape shape;
 };
