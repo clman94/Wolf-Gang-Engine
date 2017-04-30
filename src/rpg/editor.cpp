@@ -1596,6 +1596,7 @@ void atlas_editor::new_entry()
 	mSelection.reset(new editor_atlas_entry);
 	mSelection->name = "_Name_here_";
 	mSelection->animation.reset(new engine::animation);
+	mSelection->animation->set_frame_count(1);
 	mAnimations.push_back(mSelection);
 	update_entry_list();
 	update_settings();
