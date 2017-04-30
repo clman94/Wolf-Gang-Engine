@@ -293,6 +293,7 @@ private:
 	void get_textures(const std::string& pPath);
 	void setup_for_texture(const engine::encoded_path& pPath);
 
+	bool mAtlas_changed;
 	engine::encoded_path mLoaded_texture;
 	std::vector<engine::encoded_path> mTexture_list;
 	std::shared_ptr<engine::texture> mTexture;
@@ -331,6 +332,9 @@ private:
 	void setup_editor(editor_gui& pEditor_gui);
 
 	void apply_atlas_settings();
+
+	void black_background();
+	void white_background();
 
 	void update_entry_list();
 	void update_settings();

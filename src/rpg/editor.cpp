@@ -1448,6 +1448,7 @@ atlas_editor::atlas_editor()
 
 bool atlas_editor::open_editor()
 {
+	black_background();
 	mPreview.set_visible(false);
 	get_textures("./data/textures");
 	if (!mTexture_list.empty())
@@ -1504,10 +1505,10 @@ int atlas_editor::draw(engine::renderer & pR)
 
 int atlas_editor::save()
 {
-	if (mTexture_list.empty())
+	if (mTexture_list.empty() || !mAtlas_changed)
 		return 0;
 	const std::string xml_path = mLoaded_texture.string() + ".xml";
-	util::info("Saving atlas...");
+	util::info("Saving atlas '" + xml_path + "'...");
 	
 	engine::texture_atlas atlas;
 	for (auto& i : mAnimations)
@@ -1515,6 +1516,7 @@ int atlas_editor::save()
 		atlas.add_entry(i->name, i->animation);
 	}
 	atlas.save(xml_path);
+	mAtlas_changed = false;
 	util::info("Atlas save");
 	return 0;
 }
@@ -1538,6 +1540,7 @@ void atlas_editor::get_textures(const std::string & pPath)
 
 void atlas_editor::setup_for_texture(const engine::encoded_path& pPath)
 {
+	mAtlas_changed = false;
 	mLoaded_texture = pPath;
 
 	const std::string texture_path = pPath.string() + ".png";
@@ -1597,6 +1600,7 @@ void atlas_editor::new_entry()
 	update_entry_list();
 	update_settings();
 	update_preview();
+	mAtlas_changed = true;
 }
 
 void atlas_editor::remove_selected()
@@ -1611,6 +1615,7 @@ void atlas_editor::remove_selected()
 	update_entry_list();
 	update_settings();
 	update_preview();
+	mAtlas_changed = true;
 }
 
 void atlas_editor::atlas_selection(engine::fvector pPosition)
@@ -1729,15 +1734,11 @@ void atlas_editor::setup_editor(editor_gui & pEditor_gui)
 		}
 		if (item == 0)
 		{
-			mBlackout.set_color({ 0, 0, 0, 255 });
-			mPreview_bg.set_color({ 0, 0, 0, 150 });
-			mPreview_bg.set_outline_color({ 255, 255, 255, 200 });
+			black_background();
 		}
 		else if (item == 1)
 		{
-			mBlackout.set_color({ 255, 255, 255, 255 });
-			mPreview_bg.set_color({ 255, 255, 255, 150 });
-			mPreview_bg.set_outline_color({ 0, 0, 0, 200 });
+			white_background();
 		}
 	});
 }
@@ -1804,6 +1805,22 @@ void atlas_editor::apply_atlas_settings()
 	{
 		util::error("Failed to parse rect size");
 	}
+
+	mAtlas_changed = true;
+}
+
+void atlas_editor::black_background()
+{
+	mBlackout.set_color({ 0, 0, 0, 255 });
+	mPreview_bg.set_color({ 0, 0, 0, 150 });
+	mPreview_bg.set_outline_color({ 255, 255, 255, 200 });
+}
+
+void atlas_editor::white_background()
+{
+	mBlackout.set_color({ 255, 255, 255, 255 });
+	mPreview_bg.set_color({ 255, 255, 255, 150 });
+	mPreview_bg.set_outline_color({ 0, 0, 0, 200 });
 }
 
 
