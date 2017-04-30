@@ -35,12 +35,17 @@ public:
 	void set_z(float pZ);
 	float get_z() const;
 
+	void set_parallax(float pAmount);
+
 protected:
 	/// Updates the depth of the entity to its Y position.
 	/// Should be called if draw() is overridden by a subclass.
 	void update_depth();
 
+	engine::fvector calculate_draw_position() const;
+
 private:
+	float mParallax;
 	bool mDynamic_depth;
 	float mZ;
 };

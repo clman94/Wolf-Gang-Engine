@@ -186,6 +186,7 @@ private:
 	void             script_set_z(entity_reference& e, float pZ);
 	float            script_get_z(entity_reference& e);
 	bool             script_is_character(entity_reference& e);
+	void             script_set_parallax(entity_reference& e, float pParallax);
 
 	// Text-based
 	entity_reference script_add_text();

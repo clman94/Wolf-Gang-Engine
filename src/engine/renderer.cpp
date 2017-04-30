@@ -19,7 +19,7 @@ void render_object::set_renderer(renderer& pR)
 	pR.add_object(*this);
 }
 
-renderer* engine::render_object::get_renderer()
+renderer* engine::render_object::get_renderer() const
 {
 	return mRenderer;
 }

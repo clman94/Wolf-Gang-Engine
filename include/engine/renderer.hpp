@@ -190,7 +190,7 @@ public:
 	int is_rendered();
 
 	void set_renderer(renderer& pR);
-	renderer* get_renderer();
+	renderer* get_renderer() const;
 	void detach_renderer();
 
 	friend class renderer;
