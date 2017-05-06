@@ -884,8 +884,8 @@ bool scene::load_scene(std::string pName, std::string pDoor)
 #ifndef LOCKED_RELEASE_MODE
 bool scene::create_scene(const std::string & pName)
 {
-	const auto xml_path = defs::DEFAULT_SCENES_PATH / (pName + ".xml");
-	const auto script_path = defs::DEFAULT_SCENES_PATH / (pName + ".as");
+	const auto xml_path = defs::DEFAULT_DATA_PATH / defs::DEFAULT_SCENES_PATH / (pName + ".xml");
+	const auto script_path = defs::DEFAULT_DATA_PATH / defs::DEFAULT_SCENES_PATH / (pName + ".as");
 
 	if (engine::fs::exists(xml_path) || engine::fs::exists(script_path))
 	{

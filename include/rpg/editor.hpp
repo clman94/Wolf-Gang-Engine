@@ -306,7 +306,7 @@ private:
 	};
 	std::vector<std::shared_ptr<editor_atlas_entry>> mAnimations;
 	std::shared_ptr<editor_atlas_entry> mSelection;
-	bool is_animation_exist(const std::string& pName);
+	std::shared_ptr<editor_atlas_entry> find_animation(const std::string& pName);
 	void new_entry();
 	void remove_selected();
 

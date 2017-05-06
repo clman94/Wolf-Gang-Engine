@@ -1525,7 +1525,8 @@ int atlas_editor::save()
 	engine::texture_atlas atlas;
 	for (auto& i : mAnimations)
 	{
-		atlas.add_entry(i->name, i->animation);
+		if (i->name != "_Name_here_")
+			atlas.add_entry(i->name, i->animation);
 	}
 	atlas.save(xml_path);
 	mAtlas_changed = false;
@@ -1593,22 +1594,31 @@ void atlas_editor::setup_for_texture(const engine::encoded_path& pPath)
 	update_entry_list();
 }
 
-bool atlas_editor::is_animation_exist(const std::string & pName)
+std::shared_ptr<atlas_editor::editor_atlas_entry> atlas_editor::find_animation(const std::string & pName)
 {
 	for (auto& i : mAnimations)
 	{
 		if (pName == i->name)
-			return true;
+			return i;
 	}
-	return false;
+	return{};
 }
 
 void atlas_editor::new_entry()
 {
+	if (auto find = find_animation("_Name_here_"))
+	{
+		util::warning("A new, unnamed, entry has already been created");
+		mSelection = find;
+		update_settings();
+		update_preview();
+		return;
+	}
 	mSelection.reset(new editor_atlas_entry);
 	mSelection->name = "_Name_here_";
 	mSelection->animation.reset(new engine::animation);
 	mSelection->animation->set_frame_count(1);
+	mSelection->animation->set_loop(engine::animation::loop_type::none);
 	mAnimations.push_back(mSelection);
 	update_entry_list();
 	update_settings();
@@ -1770,7 +1780,7 @@ void atlas_editor::apply_atlas_settings()
 	if (mTb_name->getText() != mSelection->name
 		&& util::shortcuts::validate_potential_xml_name(mTb_name->getText()))
 	{
-		if (!is_animation_exist(mTb_name->getText()))
+		if (!find_animation(mTb_name->getText()))
 		{
 			mSelection->name = mTb_name->getText();
 			update_entry_list();
