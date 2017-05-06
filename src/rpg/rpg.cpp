@@ -697,7 +697,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("float get_speed(entity&in)",                               asMETHOD(entity_manager, script_get_animation_speed), this);
 	pScript.reset_namespace();
 
-	pScript.add_function("void set_scale(entity&in, vec)",                           asMETHOD(entity_manager, script_set_scale), this);
+	pScript.add_function("void set_scale(entity&in, const vec &in)",                           asMETHOD(entity_manager, script_set_scale), this);
 	pScript.add_function("float get_scale(entity&in)",                               asMETHOD(entity_manager, script_get_scale), this);
 
 	pScript.add_function("void add_child(entity&in, entity&in)",                     asMETHOD(entity_manager, script_add_child), this);

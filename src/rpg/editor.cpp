@@ -1729,6 +1729,8 @@ void atlas_editor::setup_editor(editor_gui & pEditor_gui)
 		[&](){
 		mTexture->unload();
 		mTexture->load();
+		mBackground.set_texture(mTexture);
+		mBackground.set_texture_rect(engine::frect(engine::fvector(0, 0), mTexture->get_size()));
 	});
 
 
