@@ -78,7 +78,7 @@ void sound_stream::set_loop(bool loop)
 
 void sound_stream::set_volume(float volume)
 {
-	mSFML_music.setVolume(volume);
+	mSFML_music.setVolume(util::clamp(volume, 0.f, 100.f));
 }
 
 float sound_stream::get_volume()

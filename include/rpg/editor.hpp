@@ -66,6 +66,7 @@ public:
 	tgui::Label::Ptr add_small_label(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
 	tgui::TextBox::Ptr add_textbox(tgui::Container::Ptr pContainer = nullptr);
 	tgui::ComboBox::Ptr add_combobox(tgui::Container::Ptr pContainer = nullptr);
+	tgui::CheckBox::Ptr add_checkbox(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
 	tgui::Button::Ptr add_button(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
 	std::shared_ptr<tgui_list_layout> add_sub_container(tgui::Container::Ptr pContainer = nullptr);
 
@@ -89,7 +90,6 @@ public:
 	void movement(engine::renderer& pR);
 };
 
-// TODO: Replace with just a simple rectangle_node (with a transparent fill)
 class editor_boundary_visualization :
 	public engine::render_object
 {
@@ -182,6 +182,7 @@ private:
 	tgui::Label::Ptr mLb_layer;
 	tgui::Label::Ptr mLb_rotation;
 	tgui::TextBox::Ptr mTb_texture;
+	tgui::CheckBox::Ptr mCb_half_grid;
 
 	void setup_editor(editor_gui& pEditor_gui);
 
@@ -293,6 +294,7 @@ private:
 	void get_textures(const std::string& pPath);
 	void setup_for_texture(const engine::encoded_path& pPath);
 
+	bool mAtlas_changed;
 	engine::encoded_path mLoaded_texture;
 	std::vector<engine::encoded_path> mTexture_list;
 	std::shared_ptr<engine::texture> mTexture;
@@ -304,7 +306,7 @@ private:
 	};
 	std::vector<std::shared_ptr<editor_atlas_entry>> mAnimations;
 	std::shared_ptr<editor_atlas_entry> mSelection;
-	bool is_animation_exist(const std::string& pName);
+	std::shared_ptr<editor_atlas_entry> find_animation(const std::string& pName);
 	void new_entry();
 	void remove_selected();
 
@@ -331,6 +333,9 @@ private:
 	void setup_editor(editor_gui& pEditor_gui);
 
 	void apply_atlas_settings();
+
+	void black_background();
+	void white_background();
 
 	void update_entry_list();
 	void update_settings();

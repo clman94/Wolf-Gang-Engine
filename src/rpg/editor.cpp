@@ -276,6 +276,18 @@ tgui::ComboBox::Ptr editors::editor_gui::add_combobox(tgui::Container::Ptr pCont
 	return ncb;
 }
 
+tgui::CheckBox::Ptr editors::editor_gui::add_checkbox(const std::string& text, tgui::Container::Ptr pContainer)
+{
+	auto ncb = std::make_shared<tgui::CheckBox>();
+	ncb->setText(text);
+	ncb->uncheck();
+	if (pContainer)
+		pContainer->add(ncb);
+	else
+		mEditor_layout->add(ncb);
+	return ncb;
+}
+
 tgui::Button::Ptr editors::editor_gui::add_button(const std::string& text, tgui::Container::Ptr pContainer)
 {
 	auto nbt = std::make_shared<tgui::Button>();
@@ -459,14 +471,12 @@ int tilemap_editor::draw(engine::renderer & pR)
 
 	const engine::fvector mouse_position = pR.get_mouse_position(mTilemap_display.get_exact_position());
 
-	const float half_tile_side = get_unit() / 2;
-	const bool is_half_tile = (mPreview.get_size() == engine::fvector(half_tile_side, half_tile_side));
 
 	const engine::fvector tile_position_exact = mouse_position / get_unit();
 	const engine::fvector tile_position
-		= (is_half_tile
-			? engine::fvector(tile_position_exact * 2).floor() / 2
-			: engine::fvector(tile_position_exact).floor());
+		= mCb_half_grid->isChecked()
+		? engine::fvector(tile_position_exact * 2).floor() / 2
+		: engine::fvector(tile_position_exact).floor();
 
 	if (mState == state::none)
 	{
@@ -688,6 +698,8 @@ void tilemap_editor::setup_editor(editor_gui & pEditor_gui)
 
 	auto bt_apply_texture = pEditor_gui.add_button("Apply Texture");
 	bt_apply_texture->connect("pressed", [&]() { apply_texture(); });
+
+	mCb_half_grid = pEditor_gui.add_checkbox("Half Grid");
 }
 
 void tilemap_editor::copy_tile_type_at(engine::fvector pAt)
@@ -1448,6 +1460,7 @@ atlas_editor::atlas_editor()
 
 bool atlas_editor::open_editor()
 {
+	black_background();
 	mPreview.set_visible(false);
 	get_textures("./data/textures");
 	if (!mTexture_list.empty())
@@ -1504,17 +1517,19 @@ int atlas_editor::draw(engine::renderer & pR)
 
 int atlas_editor::save()
 {
-	if (mTexture_list.empty())
+	if (mTexture_list.empty() || !mAtlas_changed)
 		return 0;
 	const std::string xml_path = mLoaded_texture.string() + ".xml";
-	util::info("Saving atlas...");
+	util::info("Saving atlas '" + xml_path + "'...");
 	
 	engine::texture_atlas atlas;
 	for (auto& i : mAnimations)
 	{
-		atlas.add_entry(i->name, i->animation);
+		if (i->name != "_Name_here_")
+			atlas.add_entry(i->name, i->animation);
 	}
 	atlas.save(xml_path);
+	mAtlas_changed = false;
 	util::info("Atlas save");
 	return 0;
 }
@@ -1538,6 +1553,7 @@ void atlas_editor::get_textures(const std::string & pPath)
 
 void atlas_editor::setup_for_texture(const engine::encoded_path& pPath)
 {
+	mAtlas_changed = false;
 	mLoaded_texture = pPath;
 
 	const std::string texture_path = pPath.string() + ".png";
@@ -1578,25 +1594,36 @@ void atlas_editor::setup_for_texture(const engine::encoded_path& pPath)
 	update_entry_list();
 }
 
-bool atlas_editor::is_animation_exist(const std::string & pName)
+std::shared_ptr<atlas_editor::editor_atlas_entry> atlas_editor::find_animation(const std::string & pName)
 {
 	for (auto& i : mAnimations)
 	{
 		if (pName == i->name)
-			return true;
+			return i;
 	}
-	return false;
+	return{};
 }
 
 void atlas_editor::new_entry()
 {
+	if (auto find = find_animation("_Name_here_"))
+	{
+		util::warning("A new, unnamed, entry has already been created");
+		mSelection = find;
+		update_settings();
+		update_preview();
+		return;
+	}
 	mSelection.reset(new editor_atlas_entry);
 	mSelection->name = "_Name_here_";
 	mSelection->animation.reset(new engine::animation);
+	mSelection->animation->set_frame_count(1);
+	mSelection->animation->set_loop(engine::animation::loop_type::none);
 	mAnimations.push_back(mSelection);
 	update_entry_list();
 	update_settings();
 	update_preview();
+	mAtlas_changed = true;
 }
 
 void atlas_editor::remove_selected()
@@ -1611,6 +1638,7 @@ void atlas_editor::remove_selected()
 	update_entry_list();
 	update_settings();
 	update_preview();
+	mAtlas_changed = true;
 }
 
 void atlas_editor::atlas_selection(engine::fvector pPosition)
@@ -1711,6 +1739,8 @@ void atlas_editor::setup_editor(editor_gui & pEditor_gui)
 		[&](){
 		mTexture->unload();
 		mTexture->load();
+		mBackground.set_texture(mTexture);
+		mBackground.set_texture_rect(engine::frect(engine::fvector(0, 0), mTexture->get_size()));
 	});
 
 
@@ -1729,15 +1759,11 @@ void atlas_editor::setup_editor(editor_gui & pEditor_gui)
 		}
 		if (item == 0)
 		{
-			mBlackout.set_color({ 0, 0, 0, 255 });
-			mPreview_bg.set_color({ 0, 0, 0, 150 });
-			mPreview_bg.set_outline_color({ 255, 255, 255, 200 });
+			black_background();
 		}
 		else if (item == 1)
 		{
-			mBlackout.set_color({ 255, 255, 255, 255 });
-			mPreview_bg.set_color({ 255, 255, 255, 150 });
-			mPreview_bg.set_outline_color({ 0, 0, 0, 200 });
+			white_background();
 		}
 	});
 }
@@ -1754,7 +1780,7 @@ void atlas_editor::apply_atlas_settings()
 	if (mTb_name->getText() != mSelection->name
 		&& util::shortcuts::validate_potential_xml_name(mTb_name->getText()))
 	{
-		if (!is_animation_exist(mTb_name->getText()))
+		if (!find_animation(mTb_name->getText()))
 		{
 			mSelection->name = mTb_name->getText();
 			update_entry_list();
@@ -1804,6 +1830,22 @@ void atlas_editor::apply_atlas_settings()
 	{
 		util::error("Failed to parse rect size");
 	}
+
+	mAtlas_changed = true;
+}
+
+void atlas_editor::black_background()
+{
+	mBlackout.set_color({ 0, 0, 0, 255 });
+	mPreview_bg.set_color({ 0, 0, 0, 150 });
+	mPreview_bg.set_outline_color({ 255, 255, 255, 200 });
+}
+
+void atlas_editor::white_background()
+{
+	mBlackout.set_color({ 255, 255, 255, 255 });
+	mPreview_bg.set_color({ 255, 255, 255, 150 });
+	mPreview_bg.set_outline_color({ 0, 0, 0, 200 });
 }
 
 

@@ -527,6 +527,12 @@ bool entity_manager::script_is_character(entity_reference& e)
 	return dynamic_cast<character_entity*>(e.get()) != nullptr;
 }
 
+void entity_manager::script_set_parallax(entity_reference & e, float pParallax)
+{
+	if (!check_entity(e)) return;
+	e->set_parallax(pParallax);
+}
+
 void entity_manager::script_set_scale(entity_reference & e, const engine::fvector & pScale)
 {
 	if (!check_entity(e)) return;
@@ -680,6 +686,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void set_font(entity&in, const string &in)",               asMETHOD(entity_manager, script_set_font), this);
 	pScript.add_function("void set_z(entity&in, float)",                             asMETHOD(entity_manager, script_set_z), this);
 	pScript.add_function("float get_z(entity&in)",                                   asMETHOD(entity_manager, script_get_z), this);
+	pScript.add_function("void set_parallax(entity&in, float)",                      asMETHOD(entity_manager, script_set_parallax), this);
 
 	pScript.set_namespace("animation");
 	pScript.add_function("void start(entity&in)",                                    asMETHOD(entity_manager, script_start_animation), this);
@@ -690,7 +697,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("float get_speed(entity&in)",                               asMETHOD(entity_manager, script_get_animation_speed), this);
 	pScript.reset_namespace();
 
-	pScript.add_function("void set_scale(entity&in, vec)",                           asMETHOD(entity_manager, script_set_scale), this);
+	pScript.add_function("void set_scale(entity&in, const vec &in)",                           asMETHOD(entity_manager, script_set_scale), this);
 	pScript.add_function("float get_scale(entity&in)",                               asMETHOD(entity_manager, script_get_scale), this);
 
 	pScript.add_function("void add_child(entity&in, entity&in)",                     asMETHOD(entity_manager, script_add_child), this);
@@ -877,8 +884,8 @@ bool scene::load_scene(std::string pName, std::string pDoor)
 #ifndef LOCKED_RELEASE_MODE
 bool scene::create_scene(const std::string & pName)
 {
-	const auto xml_path = defs::DEFAULT_SCENES_PATH / (pName + ".xml");
-	const auto script_path = defs::DEFAULT_SCENES_PATH / (pName + ".as");
+	const auto xml_path = defs::DEFAULT_DATA_PATH / defs::DEFAULT_SCENES_PATH / (pName + ".xml");
+	const auto script_path = defs::DEFAULT_DATA_PATH / defs::DEFAULT_SCENES_PATH / (pName + ".as");
 
 	if (engine::fs::exists(xml_path) || engine::fs::exists(script_path))
 	{
@@ -2451,7 +2458,7 @@ int text_entity::draw(engine::renderer & pR)
 {
 	update_depth();
 	mText.set_unit(get_unit());
-	mText.set_position(get_absolute_position() - engine::fvector(0, get_z()));
+	mText.set_position(calculate_draw_position());
 	mText.draw(pR);
 	return 0;
 }
