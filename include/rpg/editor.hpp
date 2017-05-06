@@ -66,6 +66,7 @@ public:
 	tgui::Label::Ptr add_small_label(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
 	tgui::TextBox::Ptr add_textbox(tgui::Container::Ptr pContainer = nullptr);
 	tgui::ComboBox::Ptr add_combobox(tgui::Container::Ptr pContainer = nullptr);
+	tgui::CheckBox::Ptr add_checkbox(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
 	tgui::Button::Ptr add_button(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
 	std::shared_ptr<tgui_list_layout> add_sub_container(tgui::Container::Ptr pContainer = nullptr);
 
@@ -181,6 +182,7 @@ private:
 	tgui::Label::Ptr mLb_layer;
 	tgui::Label::Ptr mLb_rotation;
 	tgui::TextBox::Ptr mTb_texture;
+	tgui::CheckBox::Ptr mCb_half_grid;
 
 	void setup_editor(editor_gui& pEditor_gui);
 

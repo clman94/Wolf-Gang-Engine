@@ -276,6 +276,18 @@ tgui::ComboBox::Ptr editors::editor_gui::add_combobox(tgui::Container::Ptr pCont
 	return ncb;
 }
 
+tgui::CheckBox::Ptr editors::editor_gui::add_checkbox(const std::string& text, tgui::Container::Ptr pContainer)
+{
+	auto ncb = std::make_shared<tgui::CheckBox>();
+	ncb->setText(text);
+	ncb->uncheck();
+	if (pContainer)
+		pContainer->add(ncb);
+	else
+		mEditor_layout->add(ncb);
+	return ncb;
+}
+
 tgui::Button::Ptr editors::editor_gui::add_button(const std::string& text, tgui::Container::Ptr pContainer)
 {
 	auto nbt = std::make_shared<tgui::Button>();
@@ -459,14 +471,12 @@ int tilemap_editor::draw(engine::renderer & pR)
 
 	const engine::fvector mouse_position = pR.get_mouse_position(mTilemap_display.get_exact_position());
 
-	const float half_tile_side = get_unit() / 2;
-	const bool is_half_tile = (mPreview.get_size() == engine::fvector(half_tile_side, half_tile_side));
 
 	const engine::fvector tile_position_exact = mouse_position / get_unit();
 	const engine::fvector tile_position
-		= (is_half_tile
-			? engine::fvector(tile_position_exact * 2).floor() / 2
-			: engine::fvector(tile_position_exact).floor());
+		= mCb_half_grid->isChecked()
+		? engine::fvector(tile_position_exact * 2).floor() / 2
+		: engine::fvector(tile_position_exact).floor();
 
 	if (mState == state::none)
 	{
@@ -688,6 +698,8 @@ void tilemap_editor::setup_editor(editor_gui & pEditor_gui)
 
 	auto bt_apply_texture = pEditor_gui.add_button("Apply Texture");
 	bt_apply_texture->connect("pressed", [&]() { apply_texture(); });
+
+	mCb_half_grid = pEditor_gui.add_checkbox("Half Grid");
 }
 
 void tilemap_editor::copy_tile_type_at(engine::fvector pAt)
