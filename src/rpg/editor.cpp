@@ -223,6 +223,11 @@ editor_gui::editor_gui()
 	mLb_mouse->setTextSize(14);
 	mLayout->add(mLb_mouse);
 
+	mLb_scene = tgui::Label::copy(mLb_fps);
+	mLb_scene->setText("n/a");
+	mLb_scene->setTextSize(16);
+	mLayout->add(mLb_scene);
+
 	mEditor_layout = std::make_shared<tgui_list_layout>();
 	mEditor_layout->setSize(mLayout->getSize().x, 1000);
 	mEditor_layout->setBackgroundColor({ 0, 0, 0, 0 });
@@ -311,6 +316,10 @@ std::shared_ptr<tgui_list_layout> editors::editor_gui::add_sub_container(tgui::C
 	return slo;
 }
 
+void editor_gui::get_scene(std::string pScene_name)
+{
+    mScene_name = pScene_name;
+}
 
 void editor_gui::refresh_renderer(engine::renderer & pR)
 {
@@ -346,6 +355,8 @@ int editor_gui::draw(engine::renderer& pR)
 		mLb_mouse->setText(position);
 
 		mLb_fps->setText("FPS: " + std::to_string(pR.get_fps()));
+
+		mLb_scene->setText(mScene_name);
 
 		mUpdate_timer = 0;
 	}
@@ -676,7 +687,7 @@ void tilemap_editor::setup_editor(editor_gui & pEditor_gui)
 {
 	mCb_tile = pEditor_gui.add_combobox();
 	mCb_tile->setItemsToDisplay(5);
-	mCb_tile->connect("ItemSelected", 
+	mCb_tile->connect("ItemSelected",
 		[&]() {
 			const int item = mCb_tile->getSelectedItemIndex();
 			if (item == -1)
@@ -1158,7 +1169,7 @@ void collisionbox_editor::load_terminal_interface(engine::terminal_system & pTer
 			util::error("Invalid selection");
 			return false;
 		}
-		
+
 		if (pArgs.size() < 1)
 		{
 			util::error("Not enough arguments");
@@ -1231,7 +1242,7 @@ int collisionbox_editor::save()
 	util::info("Saving collision boxes");
 
 	mContainer.generate_xml(mLoader.get_document(), mLoader.get_collisionboxes());
-	
+
 	mLoader.save();
 
 	util::info("Saved " + std::to_string(mContainer.get_count()) +" collision box(es)");
@@ -1421,7 +1432,7 @@ void collisionbox_editor::update_door_settings_labels()
 		mLo_door->hide();
 		return;
 	}
-	
+
 	mLo_door->show();
 
 	auto door = std::dynamic_pointer_cast<rpg::door>(mSelection);
@@ -1447,7 +1458,7 @@ atlas_editor::atlas_editor()
 	mSelected_firstframe.set_outline_color({ 255, 255, 0, 255 });
 	mSelected_firstframe.set_outline_thinkness(1);
 	mSelected_firstframe.set_parent(mBackground);
-	
+
 	mPreview_bg.set_anchor(engine::anchor::bottom);
 	mPreview_bg.set_color({ 0, 0, 0, 200 });
 	mPreview_bg.set_outline_color({ 255, 255, 255, 200 });
@@ -1475,7 +1486,7 @@ int atlas_editor::draw(engine::renderer & pR)
 {
 	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left))
 		atlas_selection(pR.get_mouse_position(mBackground.get_position()));
-	
+
 	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_right))
 		mDrag_offset = mBackground.get_position() - pR.get_mouse_position();
 	else if (pR.is_mouse_down(engine::renderer::mouse_button::mouse_right))
@@ -1521,7 +1532,7 @@ int atlas_editor::save()
 		return 0;
 	const std::string xml_path = mLoaded_texture.string() + ".xml";
 	util::info("Saving atlas '" + xml_path + "'...");
-	
+
 	engine::texture_atlas atlas;
 	for (auto& i : mAnimations)
 	{
@@ -2003,6 +2014,11 @@ int editor_manager::draw(engine::renderer& pR)
 	}else
 		mRoot_node.set_position({ 0, 0 });
 	return 0;
+}
+
+void editor_manager::give_scene(std::string pScene_name)
+{
+    mEditor_gui.get_scene(pScene_name);
 }
 
 void editor_manager::refresh_renderer(engine::renderer & pR)
