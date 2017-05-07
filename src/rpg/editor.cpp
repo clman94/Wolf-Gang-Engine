@@ -316,7 +316,7 @@ std::shared_ptr<tgui_list_layout> editors::editor_gui::add_sub_container(tgui::C
 	return slo;
 }
 
-void editor_gui::get_scene(std::string pScene_name)
+void editor_gui::get_scene(std::string& pScene_name)
 {
     mScene_name = pScene_name;
 }

@@ -70,7 +70,7 @@ public:
 	tgui::Button::Ptr add_button(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
 	std::shared_ptr<tgui_list_layout> add_sub_container(tgui::Container::Ptr pContainer = nullptr);
 
-	void get_scene(std::string pScene_name);
+	void get_scene(std::string& pScene_name);
 
 	int draw(engine::renderer& pR);
 
