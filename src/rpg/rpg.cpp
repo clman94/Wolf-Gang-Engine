@@ -1168,6 +1168,19 @@ void scene::update_collision_interaction(controls & pControls)
 			if (mEnd_functions.empty()) // No end functions to call
 			{
 				load_scene(hit_door->get_scene(), hit_door->get_destination());
+				engine::fvector offset (mPlayer.get_position() - hit_door->get_destination());
+				if (abs(offset.x) > abs(offset.y))
+				{
+					if (offset.x > 0)
+						mPlayer.set_direction(character_entity::direction::right);
+					else
+						mPlayer.set_direction(character_entity::direction::left);
+				} else {
+					if (offset.y > 0)
+						mPlayer.set_direction(character_entity::direction::down);
+					else
+						mPlayer.set_direction(character_entity::direction::up);
+				}
 			}
 			else if (!mEnd_functions[0].is_running())
 			{
