@@ -876,8 +876,8 @@ bool scene::load_scene(std::string pName, std::string pDoor)
 		util::warning("Enable to find door '" + pDoor + "'");
 		return false;
 	}
+	mPlayer.set_direction_not_relative(mPlayer.get_position() - *position);
 	mPlayer.set_position(*position);
-
 	return true;
 }
 
@@ -1167,7 +1167,10 @@ void scene::update_collision_interaction(controls & pControls)
 			const auto hit_door = std::dynamic_pointer_cast<door>(hit);
 			if (mEnd_functions.empty()) // No end functions to call
 			{
-				load_scene(hit_door->get_scene(), hit_door->get_destination());
+				load_scene(hit_door->get_scene());
+
+				mPlayer.set_position(hit_door->calculate_player_position());
+				mPlayer.set_direction_not_relative(hit_door->get_offset());
 			}
 			else if (!mEnd_functions[0].is_running())
 			{

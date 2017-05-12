@@ -424,6 +424,11 @@ engine::fvector door::get_offset() const
 	return mOffset;
 }
 
+engine::fvector door::calculate_player_position() const
+{
+	return mRegion.get_offset() + (mRegion.get_size()*0.5f) + mOffset;
+}
+
 void door::generate_xml_attibutes(tinyxml2::XMLElement * pEle) const
 {
 	generate_basic_attributes(pEle);
