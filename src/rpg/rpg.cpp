@@ -1862,6 +1862,9 @@ game::tick()
 	mControls.update(*get_renderer());
 
 #ifndef LOCKED_RELEASE_MODE
+
+	mEditor_manager.set_scene_name(mScene.get_name());
+
 	if (mControls.is_triggered(controls::control::reset_game))
 	{
 		mEditor_manager.close_editor();
