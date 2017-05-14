@@ -1572,14 +1572,15 @@ void game::open_game()
 	util::info("Opening game...");
 	mFlags.clean();
 	file.load_flags(mFlags);
-	file.load_player(mScene.get_player());
 	if (mScript.is_executing())
 	{
 		mScene_load_request.request_load(file.get_scene_path());
+		mScene_load_request.set_player_position(file.get_player_position());
 	}
 	else
 	{
 		mScene.load_scene(file.get_scene_path());
+		mScene.get_player().set_position(file.get_player_position());
 	}
 
 	util::info("Loaded " + std::to_string(mFlags.get_count()) + " flag(s)");
@@ -2179,15 +2180,13 @@ void save_system::load_flags(flag_container& pFlags)
 	}
 }
 
-void save_system::load_player(player_character& pPlayer)
+engine::fvector save_system::get_player_position()
 {
-	assert(mEle_root != nullptr);
 	auto ele_player = mEle_root->FirstChildElement("player");
-	engine::fvector position;
-	position.x = ele_player->FloatAttribute("x");
-	position.y = ele_player->FloatAttribute("y");
-	pPlayer.set_position(position);
+	return{ ele_player->FloatAttribute("x")
+		, ele_player->FloatAttribute("y") };
 }
+
 std::string save_system::get_scene_path()
 {
 	assert(mEle_root != nullptr);

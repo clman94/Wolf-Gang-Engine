@@ -456,7 +456,7 @@ public:
 
 	bool open_save(const std::string& pPath);
 	void load_flags(flag_container& pFlags);
-	void load_player(player_character& pPlayer);
+	engine::fvector get_player_position();
 	std::string get_scene_path();
 	std::string get_scene_name();
 
