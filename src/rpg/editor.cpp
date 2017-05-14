@@ -1536,6 +1536,7 @@ int atlas_editor::save()
 
 void atlas_editor::get_textures(const std::string & pPath)
 {
+	mTexture_list.clear();
 	for (auto& i : engine::fs::recursive_directory_iterator(pPath))
 	{
 		engine::encoded_path path = i.path().string();
@@ -1564,17 +1565,18 @@ void atlas_editor::setup_for_texture(const engine::encoded_path& pPath)
 	mBackground.set_texture(mTexture);
 	mBackground.set_texture_rect({ engine::fvector(0, 0), mTexture->get_size() });
 
+	mSelection = nullptr;
+	mAnimations.clear();
+
 	const std::string xml_path = pPath.string() + ".xml";
 	if (!engine::fs::exists(xml_path))
 	{
-		//atlas.save(pPath.string() + ".xml");
-		util::info("Generated new atlas");
+		util::info("Starting a new atlas");
 		clear_gui();
+		new_entry();
 		return;
 	}
 
-	mSelection = nullptr;
-	mAnimations.clear();
 	engine::texture_atlas atlas;
 	atlas.load(pPath.string() + ".xml");
 	if (!atlas.get_raw_atlas().empty())

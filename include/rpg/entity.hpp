@@ -23,7 +23,7 @@ public:
 		text
 	};
 
-	virtual type get_type()
+	virtual type get_type() const
 	{
 		return type::other;
 	}

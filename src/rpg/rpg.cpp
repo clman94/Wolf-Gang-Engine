@@ -653,6 +653,32 @@ bool entity_manager::script_has_displayed_new_character(entity_reference & e)
 	return te->has_revealed_character();
 }
 
+void entity_manager::script_dialog_set_wordwrap(entity_reference & e, unsigned int pLength)
+{
+	if (!check_entity(e)) return;
+	auto te = dynamic_cast<dialog_text_entity*>(e.get());
+	if (!te)
+	{
+		util::warning("Entity is not a dialog_text_entity");
+		return;
+	}
+
+	te->set_wordwrap(pLength);
+}
+
+void entity_manager::script_dialog_set_max_lines(entity_reference & e, unsigned int pLines)
+{
+	if (!check_entity(e)) return;
+	auto te = dynamic_cast<dialog_text_entity*>(e.get());
+	if (!te)
+	{
+		util::warning("Entity is not a dialog_text_entity");
+		return;
+	}
+
+	te->set_max_lines(pLines);
+}
+
 void entity_manager::load_script_interface(script_system& pScript)
 {
 	mScript_system = &pScript;
@@ -711,6 +737,8 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void _skip_reveal(entity&in)",                             asMETHOD(entity_manager, script_skip_reveal), this);
 	pScript.add_function("void _set_interval(entity&in, float)",                     asMETHOD(entity_manager, script_set_interval), this);
 	pScript.add_function("bool _has_displayed_new_character(entity&in)",             asMETHOD(entity_manager, script_has_displayed_new_character), this);
+	pScript.add_function("void _dialog_set_wordwrap(entity&in, uint)",               asMETHOD(entity_manager, script_dialog_set_wordwrap), this);
+	pScript.add_function("void _dialog_set_max_lines(entity&in, uint)",              asMETHOD(entity_manager, script_dialog_set_max_lines), this);
 
 	pScript.add_function("void make_gui(entity&in, float)",                          asMETHOD(entity_manager, script_make_gui), this);
 }
@@ -1545,7 +1573,6 @@ void game::open_game()
 	mFlags.clean();
 	file.load_flags(mFlags);
 	file.load_player(mScene.get_player());
-	mScript.abort_all();
 	if (mScript.is_executing())
 	{
 		mScene_load_request.request_load(file.get_scene_path());
@@ -2373,6 +2400,8 @@ bool pathfinding_system::script_find_path_partial(AS::CScriptArray& pScript_path
 dialog_text_entity::dialog_text_entity()
 {
 	set_interval(defs::DEFAULT_DIALOG_SPEED);
+	mMax_lines = 0;
+	mWord_wrap = 0;
 }
 
 void dialog_text_entity::clear()
@@ -2414,12 +2443,16 @@ void dialog_text_entity::reveal(const std::string & pText, bool pAppend)
 		mText.set_text("");
 		mCount = 0;
 	}
+	adjust_text();
 }
 
 void dialog_text_entity::skip_reveal()
 {
 	if (mRevealing)
+	{
+		mCount -= parsers::limit_lines(mFull_text, mMax_lines);
 		mCount = mFull_text.length();
+	}
 }
 
 void dialog_text_entity::set_interval(float pMilliseconds)
@@ -2432,6 +2465,23 @@ bool dialog_text_entity::has_revealed_character()
 	return mNew_character;
 }
 
+void dialog_text_entity::set_wordwrap(size_t pLength)
+{
+	mWord_wrap = pLength;
+	adjust_text();
+}
+
+void dialog_text_entity::set_max_lines(size_t pLines)
+{
+	mMax_lines = pLines;
+	adjust_text();
+}
+
+void dialog_text_entity::adjust_text()
+{
+	parsers::word_wrap(mFull_text, mWord_wrap);
+}
+
 void dialog_text_entity::do_reveal()
 {
 	size_t iterations = mTimer.get_count();
@@ -2441,6 +2491,18 @@ void dialog_text_entity::do_reveal()
 		mCount = util::clamp<size_t>(mCount, 0, mFull_text.size());
 
 		std::string display(mFull_text.begin(), mFull_text.begin() + mCount);
+
+		// Remove lines when there are too many
+		if (mMax_lines > 0)
+		{
+			size_t displayed_lines = parsers::line_count(display);
+			if (displayed_lines > mMax_lines)
+			{
+				mCount -= parsers::remove_first_line(mFull_text);
+				display = std::string(mFull_text.begin(), mFull_text.begin() + mCount);
+			}
+		}
+
 		mText.set_text(display);
 
 		if (mCount == mFull_text.size())
