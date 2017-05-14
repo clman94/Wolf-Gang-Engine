@@ -14,6 +14,72 @@
 namespace parsers
 {
 
+static void word_wrap(std::string& pStr, size_t pLength)
+{
+	if (pStr.empty() && pLength == 0)
+		return;
+	size_t last_line = 0;
+	size_t last_space = 0;
+	for (size_t i = 0; i < pStr.size(); i++)
+	{
+		if (pStr[i] == '\n')
+			last_line = i;
+
+		if (pStr[i] == ' ')
+			last_space = i;
+
+		if (last_space != 0 && i - last_line > pLength)
+		{
+			pStr[last_space] = '\n';
+			last_line = last_space;
+		}
+	}
+}
+
+static size_t line_count(const std::string & pStr)
+{
+	if (pStr.empty())
+		return 0;
+
+	// Check line count
+	size_t line_count = 1;
+	for (size_t i = 0; i < pStr.size(); i++)
+	{
+		if (pStr[i] == '\n')
+			++line_count;
+	}
+	return line_count;
+}
+
+static size_t remove_first_line(std::string& pStr)
+{
+	for (size_t i = 0; i < pStr.size(); i++)
+	{
+		if (pStr[i] == '\n')
+		{
+			pStr = std::string(pStr.begin() + i + 1, pStr.end());
+			return i;
+		}
+	}
+	return 0;
+}
+
+static size_t limit_lines(std::string& pStr, size_t pLines)
+{
+	size_t current_line_count = line_count(pStr);
+	if (current_line_count > pLines)
+	{
+		size_t amount_removed = 0;
+		for (size_t i = 0; i < current_line_count - pLines; i++)
+		{
+			amount_removed += remove_first_line(pStr);
+		}
+		return amount_removed;
+	}
+	return 0;
+}
+
+
 static bool is_whitespace(char c)
 {
 	switch (c)

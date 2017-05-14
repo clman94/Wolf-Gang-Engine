@@ -14,7 +14,7 @@ public:
 	sprite_entity();
 	int draw(engine::renderer &pR);
 
-	virtual type get_type()
+	virtual type get_type() const
 	{ return type::sprite; }
 
 	engine::animation_node mSprite;

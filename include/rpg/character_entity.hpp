@@ -41,6 +41,8 @@ public:
 	void set_cycle(cycle type);
 
 	void set_direction(direction pDirection);
+	void set_direction(engine::fvector pVector);
+	void set_direction_not_relative(engine::fvector pVector);
 	direction get_direction();
 
 	void set_idle(bool pIs_idle);

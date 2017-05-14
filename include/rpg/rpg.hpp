@@ -86,7 +86,7 @@ public:
 
 	int draw(engine::renderer & pR);
 
-	virtual type get_entity_type()
+	virtual type get_type() const
 	{ return type::text; }
 
 	engine::text_node mText;
@@ -112,7 +112,14 @@ public:
 	// new letter in this frame
 	bool has_revealed_character();
 
+	void set_wordwrap(size_t pLength);
+	void set_max_lines(size_t pLines);
+
 private:
+	void adjust_text();
+
+	size_t mWord_wrap;
+	size_t mMax_lines;
 	bool        mNew_character;
 	bool        mRevealing;
 	size_t      mCount;
@@ -224,6 +231,8 @@ private:
 	void             script_skip_reveal(entity_reference& e);
 	void             script_set_interval(entity_reference& e, float pMilli);
 	bool             script_has_displayed_new_character(entity_reference& e);
+	void             script_dialog_set_wordwrap(entity_reference& e, unsigned int pLength);
+	void             script_dialog_set_max_lines(entity_reference& e, unsigned int pLines);
 
 };
 
@@ -447,7 +456,7 @@ public:
 
 	bool open_save(const std::string& pPath);
 	void load_flags(flag_container& pFlags);
-	void load_player(player_character& pPlayer);
+	engine::fvector get_player_position();
 	std::string get_scene_path();
 	std::string get_scene_name();
 

@@ -58,6 +58,29 @@ void character_entity::set_direction(direction pDirection)
 		set_cycle(static_cast<cycle>(static_cast<int>(cycle::idle_left) + offset));
 }
 
+void character_entity::set_direction(engine::fvector pVector)
+{
+	set_direction_not_relative(pVector - get_position());
+}
+
+void character_entity::set_direction_not_relative(engine::fvector pVector)
+{
+	if (std::abs(pVector.x) > std::abs(pVector.y))
+	{
+		if (pVector.x > 0)
+			set_direction(direction::right);
+		else
+			set_direction(direction::left);
+	}
+	else
+	{
+		if (pVector.y > 0)
+			set_direction(direction::down);
+		else
+			set_direction(direction::up);
+	}
+}
+
 character_entity::direction character_entity::get_direction()
 {
 	return mDirection;

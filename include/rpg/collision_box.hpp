@@ -103,6 +103,9 @@ public:
 	void set_offset(engine::fvector pOffset);
 	engine::fvector get_offset() const;
 
+
+	engine::fvector calculate_player_position() const;
+
 	virtual type get_type()
 	{
 		return type::door;

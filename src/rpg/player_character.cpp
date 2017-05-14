@@ -2,24 +2,6 @@
 
 using namespace rpg;
 
-void player_character::set_move_direction(engine::fvector pVec)
-{
-	if (std::abs(pVec.x) > std::abs(pVec.y))
-	{
-		if (pVec.x > 0)
-			set_direction(direction::right);
-		else
-			set_direction(direction::left);
-	}
-	else
-	{
-		if (pVec.y > 0)
-			set_direction(direction::down);
-		else
-			set_direction(direction::up);
-	}
-}
-
 void player_character::clean()
 {
 	mSprite.set_color({ 255, 255, 255, 255 });
@@ -88,7 +70,7 @@ void player_character::movement(controls& pControls, collision_system& pCollisio
 	// Check collision if requested to move
 	if (move != engine::fvector(0, 0))
 	{
-		set_move_direction(move); // Make sure the player is in the direction he's moving
+		set_direction_not_relative(move); // Make sure the player is in the direction he's moving
 
 		// Normalize so movement is consistant
 		move.normalize();
@@ -111,7 +93,7 @@ void player_character::movement(controls& pControls, collision_system& pCollisio
 	// Move if possible
 	if (move != engine::fvector(0, 0))
 	{
-		set_move_direction(move); // Make sure the player is in the direction he's moving
+		set_direction_not_relative(move); // Make sure the player is in the direction he's moving
 		set_position(get_position() + move);
 		mIs_walking = true;
 		mSprite.tick();
