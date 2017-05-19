@@ -189,7 +189,7 @@ public:
 	
 	int is_rendered();
 
-	void set_renderer(renderer& pR);
+	void set_renderer(renderer& pR, bool pManual_render = false);
 	renderer* get_renderer() const;
 	void detach_renderer();
 
@@ -203,6 +203,7 @@ private:
 	size_t mIndex;
 	bool mVisible;
 	depth_t mDepth;
+	bool mManual_render;
 };
 
 class render_proxy
@@ -270,9 +271,12 @@ public:
 	friend class vertex_reference;
 
 private:
+	virtual void refresh_renderer(renderer& pR);
+
 	std::vector<sf::Vertex> mVertices;
 	std::shared_ptr<shader>  mShader;
 	std::shared_ptr<texture> mTexture;
+	sf::RenderTexture mRender;
 };
 
 enum struct anchor

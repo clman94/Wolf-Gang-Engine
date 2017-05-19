@@ -14,9 +14,17 @@ render_object::is_rendered()
 	return mIndex >= 0;
 }
 
-void render_object::set_renderer(renderer& pR)
+void render_object::set_renderer(renderer& pR, bool pManual_render)
 {
-	pR.add_object(*this);
+	mManual_render = pManual_render;
+	if (pManual_render)
+	{
+		mRenderer = &pR;
+		refresh_renderer(pR);
+		mVisible = true;
+	}
+	else
+		pR.add_object(*this);
 }
 
 renderer* engine::render_object::get_renderer() const
@@ -28,7 +36,8 @@ void render_object::detach_renderer()
 {
 	if (mRenderer)
 	{
-		mRenderer->remove_object(*this);
+		if (!mManual_render)
+			mRenderer->remove_object(*this);
 		mRenderer = nullptr;
 	}
 }
@@ -47,6 +56,7 @@ render_object::is_visible()
 
 render_object::render_object()
 {
+	mManual_render = false;
 	mIndex = -1;
 	set_visible(true);
 	mDepth = 0;
@@ -108,7 +118,8 @@ void renderer::request_resort()
 int
 renderer::initualize(ivector pSize, int pFps)
 {
-	mWindow.create(sf::VideoMode(pSize.x, pSize.y), "Wolf-Gang Engine", sf::Style::Titlebar | sf::Style::Close | sf::Style::Resize);
+	mWindow.create(sf::VideoMode(pSize.x, pSize.y), "A Friendly Venture", sf::Style::Titlebar | sf::Style::Close | sf::Style::Resize);
+
 	if (pFps > 0)
 		mWindow.setFramerateLimit(pFps);
 

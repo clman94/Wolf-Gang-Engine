@@ -38,7 +38,11 @@ int wolf_gang_engine::initualize(const std::string& pCustom_location = std::stri
 	engine::clock load_clock;
 
 	util::info("Loading renderer...");
+#ifndef LOCKED_RELEASE_MODE
 	mRenderer.initualize(rpg::defs::SCREEN_SIZE);
+#else
+	mRenderer.initualize(rpg::defs::SCREEN_SIZE, 60);
+#endif
 	mRenderer.set_target_size({ 320, 256 });
 	util::info("Renderer loaded");
 

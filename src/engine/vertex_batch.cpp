@@ -110,13 +110,22 @@ vertex_batch::draw(renderer &pR)
 	if (!mTexture || !mVertices.size())
 		return 1;
 
+	const sf::Vector2f position = get_exact_position();
+	const sf::Vector2f position_nondec = get_exact_position().floor();
+
 	sf::RenderStates rs;
-	rs.transform.translate(get_exact_position());
+	rs.transform.translate(position_nondec + sf::Vector2f(1, 1));
 	rs.texture = &mTexture->sfml_get_texture();
 	if (mShader)
 		rs.shader = mShader->get_sfml_shader();
 
-	pR.get_sfml_render().draw(&mVertices[0], mVertices.size(), sf::Quads, rs);
+	mRender.clear({ 0, 0, 0, 0 });
+	mRender.draw(&mVertices[0], mVertices.size(), sf::Quads, rs);
+	mRender.display();
+	sf::Sprite final_render(mRender.getTexture());
+	final_render.setPosition((position - position_nondec)
+		- sf::Vector2f(1, 1));
+	pR.get_sfml_render().draw(final_render);
 	return 0;
 }
 
@@ -126,4 +135,10 @@ void vertex_batch::set_color(color pColor)
 	{
 		i.color = pColor;
 	}
+}
+
+void vertex_batch::refresh_renderer(renderer& pR)
+{
+	const auto target = pR.get_target_size();
+	mRender.create(static_cast<unsigned int>(target.x) + 2, static_cast<unsigned int>(target.y) + 2);
 }
