@@ -1976,15 +1976,15 @@ script_function::~script_function()
 bool
 script_function::is_running()
 {
-	if (!func_ctx)
+	if (!mFunc_ctx || !mFunc_ctx->context)
 		return false;
-	if (func_ctx->GetState() == AS::asEXECUTION_FINISHED)
+	if (mFunc_ctx->context->GetState() == AS::asEXECUTION_FINISHED)
 		return false;
 	return true;
 }
 
 void
-script_function::set_function(AS::asIScriptFunction * pFunction)
+script_function::set_function(AS::asIScriptFunction* pFunction)
 {
 	mFunction = pFunction;
 }
@@ -1998,8 +1998,9 @@ script_function::set_script_system(script_system& pScript_system)
 void
 script_function::set_arg(unsigned int index, void* ptr)
 {
+	assert(mFunc_ctx != nullptr && mFunc_ctx->context != nullptr);
 	if(index < mFunction->GetParamCount())
-		func_ctx->SetArgObject(index, ptr);
+		mFunc_ctx->context->SetArgObject(index, ptr);
 }
 
 bool
@@ -2008,7 +2009,7 @@ script_function::call()
 	if (!is_running())
 	{
 		return_context();
-		func_ctx = mScript_system->create_thread(mFunction, true);
+		mFunc_ctx = mScript_system->create_thread(mFunction, true);
 		return true;
 	}
 	return false;
@@ -2016,11 +2017,11 @@ script_function::call()
 
 void script_function::return_context()
 {
-	if (func_ctx)
+	if (mFunc_ctx && mFunc_ctx->context)
 	{
-		func_ctx->Abort();
-		mScript_system->return_context(func_ctx);
-		func_ctx = nullptr;
+		mFunc_ctx->context->Abort();
+		mScript_system->return_context(mFunc_ctx->context);
+		mFunc_ctx->context = nullptr;
 	}
 }
 

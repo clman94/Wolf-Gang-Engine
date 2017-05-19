@@ -16,7 +16,7 @@ public:
 	script_function();
 	~script_function();
 	bool is_running();
-	void set_function(AS::asIScriptFunction * pFunction);
+	void set_function(AS::asIScriptFunction* pFunction);
 	void set_script_system(script_system& pScript_system);
 	void set_arg(unsigned int index, void* ptr);
 	bool call();
@@ -24,7 +24,7 @@ public:
 private:
 	util::optional_pointer<AS::asIScriptFunction> mFunction;
 	util::optional_pointer<script_system>         mScript_system;
-	util::optional_pointer<AS::asIScriptContext>  func_ctx;
+	std::shared_ptr<script_system::thread>        mFunc_ctx;
 	void return_context();
 };
 

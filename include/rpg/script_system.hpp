@@ -25,6 +25,13 @@ namespace rpg
 class script_system
 {
 public:
+
+	struct thread
+	{
+		AS::asIScriptContext* context;
+		bool keep_context;
+	};
+
 	script_system();
 	~script_system();
 
@@ -44,7 +51,7 @@ public:
 
 	AS::asIScriptEngine& get_engine();
 
-	AS::asIScriptContext* create_thread(AS::asIScriptFunction *pFunc, bool keep_context = false);
+	std::shared_ptr<thread> create_thread(AS::asIScriptFunction *pFunc, bool keep_context = false);
 
 	bool is_executing();
 
@@ -74,14 +81,8 @@ public:
 
 private:
 
-	struct thread
-	{
-		AS::asIScriptContext* context;
-		bool keep_context;
-	};
-
-	thread* mCurrect_thread_context;
-	std::vector<std::unique_ptr<thread>> mThread_contexts;
+	std::shared_ptr<thread> mCurrect_thread_context;
+	std::vector<std::shared_ptr<thread>> mThread_contexts;
 
 	util::optional_pointer<AS::asIScriptEngine> mEngine;
 
