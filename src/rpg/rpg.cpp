@@ -385,7 +385,7 @@ float entity_manager::script_get_rotation(entity_reference & e)
 void entity_manager::script_set_color(entity_reference& e, int r, int g, int b, int a)
 {
 	if (!check_entity(e)) return;
-	
+
 	if (e->get_type() == entity::type::sprite)
 	{
 		auto se = dynamic_cast<sprite_entity*>(e.get());
@@ -465,7 +465,7 @@ void entity_manager::script_set_font(entity_reference & e, const std::string & p
 		util::warning("Could not load font '" + pName + "'");
 		return;
 	}
-	
+
 	te->mText.set_font(font);
 }
 
@@ -611,7 +611,7 @@ bool entity_manager::script_is_revealing(entity_reference & e)
 		util::warning("Entity is not a dialog_text_entity");
 		return false;
 	}
-	
+
 	return te->is_revealing();
 }
 
@@ -730,7 +730,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("void set_parent(entity&in, entity&in)",                    asMETHOD(entity_manager, script_set_parent), this);
 	pScript.add_function("void detach_children(entity&in)",                          asMETHOD(entity_manager, script_detach_children), this);
 	pScript.add_function("void detach_parent(entity&in)",                            asMETHOD(entity_manager, script_detach_parent), this);
-	
+
 	pScript.add_function("entity _add_dialog_text()",                                asMETHOD(entity_manager, script_add_dialog_text), this);
 	pScript.add_function("void _reveal(entity&in,const string&in, bool)",            asMETHOD(entity_manager, script_reveal), this);
 	pScript.add_function("bool _is_revealing(entity&in)",                            asMETHOD(entity_manager, script_is_revealing), this);
@@ -1780,7 +1780,7 @@ float game::get_delta()
 bool game::load_settings(engine::fs::path pData_dir)
 {
 	using namespace tinyxml2;
-	
+
 	mData_directory = pData_dir;
 
 	game_settings_loader settings;
@@ -1794,7 +1794,7 @@ bool game::load_settings(engine::fs::path pData_dir)
 		}
 
 		const auto settings_data = mPack.read_all("game.xml");
-		
+
 		if (!settings.load_memory(&settings_data[0], settings_data.size()))
 			return (mIs_ready = false, false);
 
@@ -1915,6 +1915,8 @@ bool game::tick()
 		mEditor_manager.open_atlas_editor();
 		mScene.clean(true);
 	}
+
+	mEditor_manager.give_scene(mScene.get_name());
 
 	// Dont go any further if editor is open
 	if (mEditor_manager.is_editor_open())
@@ -2643,7 +2645,7 @@ bool game_settings_loader::get_settings(tinyxml2::XMLDocument & pDoc, const std:
 	mMusic_path = load_setting_path(ele_root, "music", pPrefix_path + defs::DEFAULT_MUSIC_PATH.string());
 	mFonts_path = load_setting_path(ele_root, "fonts", pPrefix_path + defs::DEFAULT_FONTS_PATH.string());
 	mScenes_path = load_setting_path(ele_root, "scenes", pPrefix_path + defs::DEFAULT_SCENES_PATH.string());
-	
+
 	return true;
 }
 

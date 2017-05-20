@@ -72,14 +72,17 @@ public:
 	tgui::Button::Ptr add_button(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
 	std::shared_ptr<tgui_list_layout> add_sub_container(tgui::Container::Ptr pContainer = nullptr);
 
+	void get_scene(std::string& pScene_name);
+
 	int draw(engine::renderer& pR);
 
 private:
 
 	float mUpdate_timer;
-	tgui::Label::Ptr mLb_scene;
+	std::string mScene_name;
 	tgui::Label::Ptr mLb_mouse;
 	tgui::Label::Ptr mLb_fps;
+	tgui::Label::Ptr mLb_scene;
 	std::shared_ptr<tgui_list_layout> mLayout;
 	std::shared_ptr<tgui_list_layout> mEditor_layout;
 
@@ -366,6 +369,8 @@ public:
 	void set_scene_name(const std::string& pName);
 
 	int draw(engine::renderer& pR);
+
+	void give_scene(std::string pScene_name);
 
 private:
 	void refresh_renderer(engine::renderer& pR);

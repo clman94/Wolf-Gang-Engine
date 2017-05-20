@@ -1,8 +1,8 @@
 
 #include <rpg/script_system.hpp>
 
-#include <angelscript/add_on/scriptstdstring/scriptstdstring.h>
-#include <angelscript/add_on/scriptmath/scriptmath.h>
+#include <add_on/scriptstdstring/scriptstdstring.h>
+#include <add_on/scriptmath/scriptmath.h>
 
 #include <engine/parsers.hpp>
 
