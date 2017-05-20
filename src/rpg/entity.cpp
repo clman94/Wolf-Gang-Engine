@@ -29,7 +29,10 @@ float entity::get_z() const
 
 void entity::set_parallax(float pParallax)
 {
-	mParallax = pParallax;
+	if (mParallax < 0)
+		mParallax = 1 / pParallax;
+	else
+		mParallax = pParallax;
 }
 
 void entity::update_depth()

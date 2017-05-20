@@ -129,12 +129,6 @@ private:
 	void do_reveal();
 };
 
-class rectangle_entity :
-	public entity
-{
-	
-};
-
 class entity_manager :
 	public engine::render_proxy
 {
