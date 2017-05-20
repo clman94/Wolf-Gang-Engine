@@ -517,7 +517,7 @@ public:
 	// Load the xml game settings
 	bool load_settings(engine::fs::path pData_dir);
 
-	void tick();
+	bool tick();
 
 	bool restart_game();
 
@@ -528,6 +528,8 @@ private:
 
 	// Everything is good and settings are loaded
 	bool mIs_ready;
+
+	bool mExit;
 
 	scene            mScene;
 	engine::resource_manager mResource_manager;
@@ -558,6 +560,8 @@ private:
 	bool is_slot_used(size_t pSlot);
 	void set_slot(size_t pSlot);
 	size_t get_slot();
+
+	void abort_game();
 
 	void script_load_scene(const std::string& pName);
 	void script_load_scene_to_door(const std::string& pName, const std::string& pDoor);

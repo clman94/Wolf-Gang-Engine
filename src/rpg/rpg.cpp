@@ -1522,6 +1522,7 @@ void scene_script_context::parse_wall_group_functions()
 
 game::game()
 {
+	mExit = false;
 	mIs_ready = false;
 	load_script_interface();
 	mSlot = 0;
@@ -1604,6 +1605,11 @@ size_t game::get_slot()
 	return mSlot;
 }
 
+void game::abort_game()
+{
+	mExit = true;
+}
+
 void game::script_load_scene(const std::string & pName)
 {
 	util::info("Requesting scene load '" + pName + "'");
@@ -1634,6 +1640,7 @@ game::load_script_interface()
 
 	mScript.add_function("void save_game()", asMETHOD(game, save_game), this);
 	mScript.add_function("void open_game()", asMETHOD(game, open_game), this);
+	mScript.add_function("void abort_game()", asMETHOD(game, abort_game), this);
 	mScript.add_function("uint get_slot()", asMETHOD(game, get_slot), this);
 	mScript.add_function("void set_slot(uint)", asMETHOD(game, set_slot), this);
 	mScript.add_function("bool is_slot_used(uint)", asMETHOD(game, is_slot_used), this);
@@ -1852,8 +1859,7 @@ bool game::load_settings(engine::fs::path pData_dir)
 	return true;
 }
 
-void
-game::tick()
+bool game::tick()
 {
 #ifndef LOCKED_RELEASE_MODE
 	mTerminal_gui.update(*get_renderer());
@@ -1874,7 +1880,7 @@ game::tick()
 
 	// Do not go beyond this point if not ready
 	if (!mIs_ready)
-		return;
+		return false;
 
 	if (mControls.is_triggered(controls::control::reset))
 	{
@@ -1912,7 +1918,7 @@ game::tick()
 
 	// Dont go any further if editor is open
 	if (mEditor_manager.is_editor_open())
-		return;
+		return mExit;
 #endif
 
 	mScene.tick(mControls);
@@ -1939,6 +1945,7 @@ game::tick()
 		}
 		mScene_load_request.complete();
 	}
+	return mExit;
 }
 
 bool game::restart_game()
