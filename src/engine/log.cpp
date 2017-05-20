@@ -3,11 +3,17 @@
 
 void util::log_print(log_level pType, const std::string& pMessage)
 {
-//#ifndef LOCKED_RELEASE_MODE
+	//#ifndef LOCKED_RELEASE_MODE
 	static std::ofstream mLog_file;
 
 	if (!mLog_file.is_open()) // Open the log file when needed
+	{
+#ifndef LOCKED_RELEASE_MODE
 		mLog_file.open("./data/log.txt");
+#else
+		mLog_file.open("./log.txt");
+#endif // !LOCKED_RELEASE_MODE
+	}
 
 	std::string type;
 	switch (pType)
@@ -27,8 +33,10 @@ void util::log_print(log_level pType, const std::string& pMessage)
 		mLog_file << message; // Save to file
 		mLog_file.flush();
 	}
-
+#ifndef LOCKED_RELEASE_MODE
 	std::cout << message; // Print to console  
+#endif // !LOCKED_RELEASE_MODE
+
 //#endif // !LOCKED_RELEASE_MODE
 
 }

@@ -210,12 +210,18 @@ editor_gui::editor_gui()
 	mLayout = std::make_shared<tgui_list_layout>();
 	mLayout->setBackgroundColor({ 0, 0, 0,  90});
 	mLayout->setSize(200, 1000);
+
 	mLayout->hide();
 
-	mLb_fps = std::make_shared<tgui::Label>();
-	mLb_fps->setMaximumTextWidth(0);
-	mLb_fps->setTextColor({ 200, 200, 200, 255 });
+	mLb_scene = std::make_shared<tgui::Label>();
+	mLb_scene->setMaximumTextWidth(0);
+	mLb_scene->setTextColor({ 200, 200, 200, 255 });
+	mLb_scene->setText("N/A");
+	mLayout->add(mLb_scene);
+
+	mLb_fps = tgui::Label::copy(mLb_scene);
 	mLb_fps->setText("FPS: N/A");
+	mLb_fps->setTextSize(20);
 	mLayout->add(mLb_fps);
 
 	mLb_mouse = tgui::Label::copy(mLb_fps);
@@ -232,6 +238,12 @@ editor_gui::editor_gui()
 	mEditor_layout->setSize(mLayout->getSize().x, 1000);
 	mEditor_layout->setBackgroundColor({ 0, 0, 0, 0 });
 	mLayout->add(mEditor_layout);
+}
+
+void editor_gui::set_scene_name(const std::string & pName)
+{
+	if (mLb_scene->getText() != pName)
+		mLb_scene->setText(pName);
 }
 
 void editor_gui::clear()
@@ -2005,6 +2017,11 @@ void editor_manager::load_terminal_interface(engine::terminal_system & pTerminal
 {
 	mTilemap_editor.load_terminal_interface(pTerminal);
 	mCollisionbox_editor.load_terminal_interface(pTerminal);
+}
+
+void editor_manager::set_scene_name(const std::string & pName)
+{
+	mEditor_gui.set_scene_name(pName);
 }
 
 int editor_manager::draw(engine::renderer& pR)

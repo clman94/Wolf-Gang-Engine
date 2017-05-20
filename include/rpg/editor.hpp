@@ -60,6 +60,8 @@ class editor_gui :
 public:
 	editor_gui();
 
+	void set_scene_name(const std::string& pName);
+
 	void clear();
 
 	tgui::Label::Ptr add_label(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
@@ -363,6 +365,8 @@ public:
 
 	void set_resource_manager(engine::resource_manager& pResource_manager);
 	void load_terminal_interface(engine::terminal_system& pTerminal);
+
+	void set_scene_name(const std::string& pName);
 
 	int draw(engine::renderer& pR);
 

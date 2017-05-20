@@ -1522,6 +1522,7 @@ void scene_script_context::parse_wall_group_functions()
 
 game::game()
 {
+	mExit = false;
 	mIs_ready = false;
 	load_script_interface();
 	mSlot = 0;
@@ -1604,6 +1605,11 @@ size_t game::get_slot()
 	return mSlot;
 }
 
+void game::abort_game()
+{
+	mExit = true;
+}
+
 void game::script_load_scene(const std::string & pName)
 {
 	util::info("Requesting scene load '" + pName + "'");
@@ -1634,6 +1640,7 @@ game::load_script_interface()
 
 	mScript.add_function("void save_game()", asMETHOD(game, save_game), this);
 	mScript.add_function("void open_game()", asMETHOD(game, open_game), this);
+	mScript.add_function("void abort_game()", asMETHOD(game, abort_game), this);
 	mScript.add_function("uint get_slot()", asMETHOD(game, get_slot), this);
 	mScript.add_function("void set_slot(uint)", asMETHOD(game, set_slot), this);
 	mScript.add_function("bool is_slot_used(uint)", asMETHOD(game, is_slot_used), this);
@@ -1852,8 +1859,7 @@ bool game::load_settings(engine::fs::path pData_dir)
 	return true;
 }
 
-void
-game::tick()
+bool game::tick()
 {
 #ifndef LOCKED_RELEASE_MODE
 	mTerminal_gui.update(*get_renderer());
@@ -1862,6 +1868,9 @@ game::tick()
 	mControls.update(*get_renderer());
 
 #ifndef LOCKED_RELEASE_MODE
+
+	mEditor_manager.set_scene_name(mScene.get_name());
+
 	if (mControls.is_triggered(controls::control::reset_game))
 	{
 		mEditor_manager.close_editor();
@@ -1871,7 +1880,7 @@ game::tick()
 
 	// Do not go beyond this point if not ready
 	if (!mIs_ready)
-		return;
+		return false;
 
 	if (mControls.is_triggered(controls::control::reset))
 	{
@@ -1911,7 +1920,7 @@ game::tick()
 
 	// Dont go any further if editor is open
 	if (mEditor_manager.is_editor_open())
-		return;
+		return mExit;
 #endif
 
 	mScene.tick(mControls);
@@ -1938,6 +1947,7 @@ game::tick()
 		}
 		mScene_load_request.complete();
 	}
+	return mExit;
 }
 
 bool game::restart_game()
@@ -1975,15 +1985,15 @@ script_function::~script_function()
 bool
 script_function::is_running()
 {
-	if (!func_ctx)
+	if (!mFunc_ctx || !mFunc_ctx->context)
 		return false;
-	if (func_ctx->GetState() == AS::asEXECUTION_FINISHED)
+	if (mFunc_ctx->context->GetState() == AS::asEXECUTION_FINISHED)
 		return false;
 	return true;
 }
 
 void
-script_function::set_function(AS::asIScriptFunction * pFunction)
+script_function::set_function(AS::asIScriptFunction* pFunction)
 {
 	mFunction = pFunction;
 }
@@ -1997,8 +2007,9 @@ script_function::set_script_system(script_system& pScript_system)
 void
 script_function::set_arg(unsigned int index, void* ptr)
 {
+	assert(mFunc_ctx != nullptr && mFunc_ctx->context != nullptr);
 	if(index < mFunction->GetParamCount())
-		func_ctx->SetArgObject(index, ptr);
+		mFunc_ctx->context->SetArgObject(index, ptr);
 }
 
 bool
@@ -2007,7 +2018,7 @@ script_function::call()
 	if (!is_running())
 	{
 		return_context();
-		func_ctx = mScript_system->create_thread(mFunction, true);
+		mFunc_ctx = mScript_system->create_thread(mFunction, true);
 		return true;
 	}
 	return false;
@@ -2015,11 +2026,11 @@ script_function::call()
 
 void script_function::return_context()
 {
-	if (func_ctx)
+	if (mFunc_ctx && mFunc_ctx->context)
 	{
-		func_ctx->Abort();
-		mScript_system->return_context(func_ctx);
-		func_ctx = nullptr;
+		mFunc_ctx->context->Abort();
+		mScript_system->return_context(mFunc_ctx->context);
+		mFunc_ctx->context = nullptr;
 	}
 }
 

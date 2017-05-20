@@ -23,16 +23,9 @@ bool tilemap_display::set_tile(engine::fvector pPosition, const std::string & pA
 	auto animation = entry->get_animation();
 
 	auto &ntile = mLayers[pLayer].tiles[pPosition];
-	auto rect = animation->get_frame_at(0);
-
-	// A very slight margin to leviate lines
-	rect.set_offset(rect.get_offset()
-		+ engine::fvector(0.00005f, 0.00005f));
-	rect.set_size(rect.get_size()
-		- engine::fvector(0.00010f, 0.00010f));
 
 	ntile.mRef = mLayers[pLayer].vertices.add_quad(pPosition*get_unit()
-		, rect
+		, animation->get_frame_at(0)
 		, pRotation);
 	ntile.set_animation(animation);
 	if (animation->get_frame_count() > 1)
@@ -54,6 +47,8 @@ int tilemap_display::draw(engine::renderer& pR)
 			add_child(vb);
 		
 		vb.set_texture(mTexture);
+		if (vb.get_renderer() == nullptr)
+			vb.set_renderer(pR, true);
 
 		// This solves the problem with the lines between the tiles (mostly; still has a few lines)
 		//const engine::fvector floating_point_error(11.f / 1024, 11.f / 1024);

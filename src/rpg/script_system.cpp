@@ -44,7 +44,7 @@ void script_system::script_create_thread(AS::asIScriptFunction * func, AS::CScri
 	}
 
 	// Create a new context for the co-routine
-	asIScriptContext *ctx = create_thread(func);
+	asIScriptContext *ctx = create_thread(func)->context;
 
 	// Pass the argument to the context
 	ctx->SetArgObject(0, arg);
@@ -266,8 +266,6 @@ script_system::script_system()
 	RegisterScriptDictionary(mEngine);
 	RegisterScriptHandle(mEngine);
 
-	mCurrect_thread_context = nullptr;
-
 	register_vector_type();
 	register_timer_type();
 
@@ -304,6 +302,7 @@ void script_system::abort_all()
 	{
 		i->context->Abort();
 		mEngine->ReturnContext(i->context);
+		i->context = nullptr;
 	}
 	mThread_contexts.clear();
 	mEngine->GarbageCollect(asGC_FULL_CYCLE | asGC_DESTROY_GARBAGE);
@@ -318,14 +317,17 @@ int script_system::tick()
 {
 	for (size_t i = 0; i < mThread_contexts.size(); i++)
 	{
-		mCurrect_thread_context = mThread_contexts[i].get();
+		mCurrect_thread_context = mThread_contexts[i];
 
 		int r = mCurrect_thread_context->context->Execute();
 
 		if (r != AS::asEXECUTION_SUSPENDED)
 		{
 			if (!mCurrect_thread_context->keep_context)
+			{
 				mEngine->ReturnContext(mCurrect_thread_context->context);
+				mCurrect_thread_context->context = nullptr;
+			}
 			mThread_contexts.erase(mThread_contexts.begin() + i);
 			--i;
 		}
@@ -363,7 +365,7 @@ AS::asIScriptEngine& script_system::get_engine()
 	return *mEngine;
 }
 
-AS::asIScriptContext* script_system::create_thread(AS::asIScriptFunction * pFunc, bool pKeep_context)
+std::shared_ptr<script_system::thread> script_system::create_thread(AS::asIScriptFunction * pFunc, bool pKeep_context)
 {
 	asIScriptContext* context = mEngine->RequestContext();
 	if (!context)
@@ -377,12 +379,12 @@ AS::asIScriptContext* script_system::create_thread(AS::asIScriptFunction * pFunc
 	}
 
 	// Create a new one if necessary
-	std::unique_ptr<thread> new_thread(new thread);
+	std::shared_ptr<thread> new_thread(new thread);
 	new_thread->context = context;
 	new_thread->keep_context = pKeep_context;
-	mThread_contexts.push_back(std::move(new_thread));
+	mThread_contexts.push_back(new_thread);
 
-	return context;
+	return new_thread;
 }
 
 bool script_system::is_executing()
