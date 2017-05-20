@@ -29,7 +29,10 @@ float entity::get_z() const
 
 void entity::set_parallax(float pParallax)
 {
-	mParallax = pParallax;
+	if (mParallax < 0)
+		mParallax = 1 / pParallax;
+	else
+		mParallax = pParallax;
 }
 
 void entity::update_depth()
@@ -38,7 +41,7 @@ void entity::update_depth()
 	{
 		float ndepth = 
 			util::clamp((defs::TILE_DEPTH_RANGE_MAX*0.5f) 
-				- (get_position().y / 1000.f)
+				- (get_absolute_position().y / 1000.f)
 				, defs::TILE_DEPTH_RANGE_MIN
 				, defs::TILE_DEPTH_RANGE_MAX);
 		if (ndepth != get_depth())
