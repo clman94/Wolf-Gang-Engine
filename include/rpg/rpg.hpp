@@ -546,6 +546,7 @@ private:
 	std::shared_ptr<engine::terminal_command_group> mGroup_flags;
 	std::shared_ptr<engine::terminal_command_group> mGroup_game;
 	std::shared_ptr<engine::terminal_command_group> mGroup_global1;
+	std::shared_ptr<engine::terminal_command_group> mGroup_slot;
 #endif
 
 	scene_load_request mScene_load_request;

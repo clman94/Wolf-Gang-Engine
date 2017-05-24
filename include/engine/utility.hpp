@@ -351,11 +351,17 @@ T to_numeral(const std::string& str, std::string::const_iterator& iter)
 }
 
 template<typename T>
-inline T clamp(T v, T min, T max)
+inline const T& clamp(const T& v, const T& min, const T& max)
 {
 	if (v < min) return min;
 	if (v > max) return max;
 	return v;
+}
+
+template<typename T>
+inline const T& min(const T& v, const T& min)
+{
+	return v < min ? min : v;
 }
 
 

@@ -110,7 +110,10 @@ std::string terminal_system::generate_help() const
 	for (auto& i : pGroups)
 	{
 		std::shared_ptr<terminal_command_group> group(i);
-		retval += group->generate_help();
+		if (group->is_enabled())
+			retval += group->generate_help();
+		else
+			retval += "[N/A] " + group->generate_help();
 	}
 	return retval;
 }

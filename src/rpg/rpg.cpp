@@ -1718,11 +1718,6 @@ void game::load_terminal_interface()
 	mGroup_game->add_command("load",
 		[&](const engine::terminal_arglist& pArgs)->bool
 	{
-		//util::error("Incomplete implementation");
-		//return false;
-
-
-
 		if (pArgs.empty())
 		{
 			util::error("Not enough arguments");
@@ -1768,9 +1763,62 @@ void game::load_terminal_interface()
 		return suc;
 	}, "[Destination] - Pack data folder to a pack file for releasing your game");
 
+	mGroup_slot = std::make_shared<engine::terminal_command_group>();
+	mGroup_slot->set_root_command("slot");
+	mGroup_slot->add_command("save",
+		[&](const engine::terminal_arglist& pArgs)->bool
+	{
+		if (pArgs.empty())
+		{
+			util::error("Not enough arguments");
+			return false;
+		}
+
+		size_t slot = 0;
+		try {
+			slot = static_cast<size_t>(util::min(util::to_numeral<int>(pArgs[0].get_raw()), 0));
+		}
+		catch (...)
+		{
+			util::error("Failed to parse interval");
+			return false;
+		}
+
+		set_slot(slot);
+		save_game();
+
+		return true;
+	}, "<Slot #> - Save game to a slot");
+
+	mGroup_slot->add_command("open",
+		[&](const engine::terminal_arglist& pArgs)->bool
+	{
+		if (pArgs.empty())
+		{
+			util::error("Not enough arguments");
+			return false;
+		}
+
+		size_t slot = 0;
+		try {
+			slot = static_cast<size_t>(util::min(util::to_numeral<int>(pArgs[0].get_raw()), 0));
+		}
+		catch (...)
+		{
+			util::error("Failed to parse interval");
+			return false;
+		}
+
+		set_slot(slot);
+		open_game();
+
+		return true;
+	}, "<Slot #> - Open game from slot");
+
 	mTerminal_system.add_group(mGroup_flags);
 	mTerminal_system.add_group(mGroup_game);
 	mTerminal_system.add_group(mGroup_global1);
+	mTerminal_system.add_group(mGroup_slot);
 }
 #endif
 
