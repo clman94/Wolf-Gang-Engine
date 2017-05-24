@@ -53,8 +53,8 @@ public:
 	void update(engine::renderer& pR);
 
 private:
-	//size_t mCurrent_history_entry;
-	//std::vector<std::string> mHistory;
+	size_t mCurrent_history_entry;
+	std::vector<std::string> mHistory;
 	tgui::EditBox::Ptr mEb_input;
 };
 #endif
@@ -323,10 +323,11 @@ public:
 	const std::string& get_fonts_path() const;
 	const std::string& get_scenes_path() const;
 	const std::string& get_player_texture() const;
+	engine::fvector    get_screen_size() const;
 	float get_unit_pixels() const;
 
 private:
-	bool get_settings(tinyxml2::XMLDocument& pDoc, const std::string& pPrefix_path);
+	bool parse_settings(tinyxml2::XMLDocument& pDoc, const std::string& pPrefix_path);
 
 	std::string mStart_scene;
 	std::string mTextures_path;
@@ -335,6 +336,7 @@ private:
 	std::string mPlayer_texture;
 	std::string mFonts_path;
 	std::string mScenes_path;
+	engine::fvector mScreen_size;
 	float pUnit_pixels;
 
 	std::string load_setting_path(tinyxml2::XMLElement* pRoot, const std::string& pName, const std::string& pDefault);

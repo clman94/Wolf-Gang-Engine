@@ -1052,6 +1052,8 @@ bool scene::load_settings(const game_settings_loader& pSettings)
 
 	mWorld_node.set_unit(pSettings.get_unit_pixels());
 
+	mWorld_node.set_viewport(pSettings.get_screen_size());
+
 	auto texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, pSettings.get_player_texture());
 	if (!texture)
 	{
@@ -1818,6 +1820,8 @@ bool game::load_settings(engine::fs::path pData_dir)
 
 	util::info("Settings loaded");
 
+	get_renderer()->set_target_size(settings.get_screen_size());
+
 	util::info("Loading Resources...");
 
 	mResource_manager.clear_directories();
@@ -2332,7 +2336,7 @@ void colored_overlay::clean()
 void colored_overlay::refresh_renderer(engine::renderer& pR)
 {
 	pR.add_object(mOverlay);
-	mOverlay.set_size(pR.get_target_size());
+	mOverlay.set_size({1000, 1000});
 }
 
 void colored_overlay::script_set_overlay_color(int r, int g, int b)
@@ -2548,7 +2552,7 @@ bool game_settings_loader::load(const std::string & pPath, const std::string& pP
 		util::error("Could not load game file at '" + pPath + "'");
 		return false;
 	}
-	return get_settings(doc, pPrefix_path);
+	return parse_settings(doc, pPrefix_path);
 }
 
 bool game_settings_loader::load_memory(const char * pData, size_t pSize, const std::string& pPrefix_path)
@@ -2561,7 +2565,7 @@ bool game_settings_loader::load_memory(const char * pData, size_t pSize, const s
 		util::error("Could not load game file");
 		return false;
 	}
-	return get_settings(doc, pPrefix_path);
+	return parse_settings(doc, pPrefix_path);
 }
 
 const std::string & game_settings_loader::get_start_scene() const
@@ -2599,12 +2603,17 @@ const std::string & game_settings_loader::get_player_texture() const
 	return mPlayer_texture;
 }
 
+engine::fvector game_settings_loader::get_screen_size() const
+{
+	return mScreen_size;
+}
+
 float game_settings_loader::get_unit_pixels() const
 {
 	return pUnit_pixels;
 }
 
-bool game_settings_loader::get_settings(tinyxml2::XMLDocument & pDoc, const std::string& pPrefix_path)
+bool game_settings_loader::parse_settings(tinyxml2::XMLDocument & pDoc, const std::string& pPrefix_path)
 {
 	auto ele_root = pDoc.RootElement();
 
@@ -2637,6 +2646,14 @@ bool game_settings_loader::get_settings(tinyxml2::XMLDocument & pDoc, const std:
 		return false;
 	}
 	pUnit_pixels = ele_tile_size->FloatAttribute("pixels");
+
+	auto ele_screen_size = ele_root->FirstChildElement("screen_size");
+	if (!ele_screen_size)
+	{
+		util::error("Please specify the screen size");
+		return false;
+	}
+	mScreen_size = util::shortcuts::load_vector_float_att(ele_screen_size);
 
 	mTextures_path = load_setting_path(ele_root, "textures", pPrefix_path + defs::DEFAULT_TEXTURES_PATH.string());
 	mSounds_path = load_setting_path(ele_root, "sounds", pPrefix_path + defs::DEFAULT_SOUND_PATH.string());
@@ -2766,8 +2783,9 @@ void terminal_gui::set_terminal_system(engine::terminal_system & pTerminal_syste
 			util::error("Command failed '" + std::string(pText) + "'");
 		}
 		mEb_input->setText("");
-		//mHistory.push_back(std::string(pText));
-		//mCurrent_history_entry = mHistory.size();
+		if (mHistory.empty() || mHistory.back() != pText)
+			mHistory.push_back(std::string(pText));
+		mCurrent_history_entry = mHistory.size();
 	});
 }
 
@@ -2791,8 +2809,7 @@ void terminal_gui::update(engine::renderer& pR)
 		}
 	}
 
-	// History is still a little buggy will fix later
-	/*if (mEb_input->isFocused())
+	if (mEb_input->isFocused())
 	{
 		if (pR.is_key_pressed(engine::renderer::key_type::Up, true)
 			&& mCurrent_history_entry >= 1)
@@ -2810,6 +2827,6 @@ void terminal_gui::update(engine::renderer& pR)
 			else
 				mEb_input->setText(mHistory[mCurrent_history_entry]);
 		}
-	}*/
+	}
 }
 #endif

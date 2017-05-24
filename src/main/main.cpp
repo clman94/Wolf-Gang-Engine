@@ -43,7 +43,7 @@ int wolf_gang_engine::initualize(const std::string& pCustom_location = std::stri
 #else
 	mRenderer.initualize(rpg::defs::SCREEN_SIZE, 60);
 #endif
-	mRenderer.set_target_size({ 320, 256 });
+	mRenderer.set_target_size(rpg::defs::DISPLAY_SIZE);
 	util::info("Renderer loaded");
 
 	mGame.set_renderer(mRenderer);

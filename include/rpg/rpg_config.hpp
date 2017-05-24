@@ -10,7 +10,7 @@
 namespace rpg{
 namespace defs{
 
-const engine::fvector DISPLAY_SIZE           = { 320, 256 };
+const engine::fvector DISPLAY_SIZE = engine::fvector(32, 32)*engine::fvector(10, 8); // 10x8 of 32x32 pixel tiles
 const engine::fvector SCREEN_SIZE            = { DISPLAY_SIZE.x * 2, DISPLAY_SIZE.y * 2 };
 const engine::time_t  DEFAULT_DIALOG_SPEED   = 30;
 
