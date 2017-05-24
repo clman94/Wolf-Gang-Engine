@@ -83,7 +83,7 @@ void script_system::load_script_interface()
 	add_function("int rand()", asFUNCTION(std::rand));
 
 	mEngine->RegisterFuncdef("void coroutine(dictionary@)");
-	mEngine->RegisterFuncdef("void _coroutine()");
+	mEngine->RegisterFuncdef("void coroutine_noargs()");
 	add_function("void create_thread(coroutine @+)", asMETHOD(script_system, script_create_thread_noargs), this);
 	add_function("void create_thread(coroutine @+, dictionary @+)", asMETHOD(script_system, script_create_thread), this);
 

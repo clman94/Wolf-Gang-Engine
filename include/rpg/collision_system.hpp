@@ -31,10 +31,23 @@ public:
 
 private:
 
+
+	util::optional_pointer<script_system> mScript;
+
 	collision_box_container mContainer;
 
+	void register_collision_type(script_system& pScript);
+
+	void script_create_wall_group(const std::string& pName);
 	void script_set_wall_group_enabled(const std::string& pName, bool pEnabled);
 	bool script_get_wall_group_enabled(const std::string& pName);
+	void script_bind_group_function(const std::string& pName, AS::asIScriptFunction* func);
+
+	std::shared_ptr<collision_box> script_create_box(collision_box::type pType);
+	void script_set_box_group(std::shared_ptr<collision_box>& pBox, const std::string& pName);
+	void script_set_box_position(std::shared_ptr<collision_box>& pBox, const engine::fvector& pPosition);
+	void script_set_box_size(std::shared_ptr<collision_box>& pBox, const engine::fvector& pSize);
+
 };
 
 }

@@ -530,6 +530,11 @@ pack_stream::pack_stream(const pack_stream & pCopy)
 	mPack_path = pCopy.mPack_path;
 }
 
+pack_stream::~pack_stream()
+{
+	close();
+}
+
 void pack_stream::open()
 {
 	close();
