@@ -104,6 +104,7 @@ class pack_stream
 public:
 	pack_stream();
 	pack_stream(const pack_stream& pCopy);
+	~pack_stream();
 
 	void open();
 	void close();

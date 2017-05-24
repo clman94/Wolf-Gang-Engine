@@ -35,8 +35,8 @@ public:
 	util::optional_pointer<node> detach_parent();
 	node_arr                     detach_children();
 
-	util::optional_pointer<node> get_parent();
-	node_arr                     get_children();
+	util::optional_pointer<node> get_parent() const;
+	node_arr                     get_children() const;
 
 	int      set_parent(node& obj);
 	int      add_child(node& obj);

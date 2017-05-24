@@ -3,6 +3,18 @@
 
 using namespace engine;
 
+inline bool check_node_loop(const node& pNode)
+{
+	auto curr_node = pNode.get_parent();
+	while (curr_node)
+	{
+		if (curr_node == &pNode)
+			return true;
+		curr_node = curr_node->get_parent();
+	}
+	return false;
+}
+
 node::node()
 {
 	mParent = nullptr;
@@ -79,13 +91,13 @@ node::detach_children()
 }
 
 util::optional_pointer<node>
-node::get_parent()
+node::get_parent() const
 {
 	return mParent;
 }
 
 node_arr
-node::get_children()
+node::get_children() const
 {
 	return mChildren;
 }
@@ -93,13 +105,13 @@ node::get_children()
 int
 node::set_parent(node& obj)
 {
-	assert(&obj != this);
 	return obj.add_child(*this);
 }
 
 int
 node::add_child(node& obj)
 {
+	if (check_node_loop(obj)) return 1;
 	if (obj.mParent) obj.detach_parent();
 	obj.mChild_index = mChildren.size();
 	obj.mParent = this;
