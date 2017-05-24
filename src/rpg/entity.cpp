@@ -29,7 +29,7 @@ float entity::get_z() const
 
 void entity::set_parallax(float pParallax)
 {
-	if (mParallax < 0)
+	if (pParallax < 0)
 		mParallax = 1 / pParallax;
 	else
 		mParallax = pParallax;
