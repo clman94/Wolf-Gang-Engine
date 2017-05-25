@@ -1030,6 +1030,7 @@ collisionbox_editor::collisionbox_editor()
 
 bool collisionbox_editor::open_editor()
 {
+	mCollision_editor_group->set_enabled(true);
 	mCommand_manager.clean();
 	mSelection_preview.set_size({ get_unit(), get_unit() });
 	return mContainer.load_xml(mLoader.get_collisionboxes());

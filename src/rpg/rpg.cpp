@@ -1761,7 +1761,7 @@ void game::load_terminal_interface()
 		bool suc = engine::create_resource_pack("data", destination);
 		util::info("Packing completed");
 		return suc;
-	}, "[Destination] - Pack data folder to a pack file for releasing your game");
+	}, "[Destination] [-o] - Pack data folder to a pack file for releasing your game");
 
 	mGroup_slot = std::make_shared<engine::terminal_command_group>();
 	mGroup_slot->set_root_command("slot");
