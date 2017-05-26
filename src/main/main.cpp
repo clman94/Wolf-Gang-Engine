@@ -22,7 +22,7 @@ private:
 	engine::renderer mRenderer;
 
 	rpg::game        mGame;
-	rpg::controls    mControls;
+	engine::controls mControls;
 
 	bool mRunning;
 };

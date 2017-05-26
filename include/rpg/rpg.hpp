@@ -11,6 +11,7 @@
 #include <engine/filesystem.hpp>
 #include <engine/audio.hpp>
 #include <engine/terminal.hpp>
+#include <engine/controls.hpp>
 
 #include <rpg/rpg_config.hpp>
 #include <rpg/tilemap_manipulator.hpp>
@@ -24,7 +25,6 @@
 #include <rpg/collision_system.hpp>
 #include <rpg/flag_container.hpp>
 #include <rpg/panning_node.hpp>
-#include <rpg/controls.hpp>
 #include <rpg/entity.hpp>
 #include <rpg/sprite_entity.hpp>
 #include <rpg/character_entity.hpp>
@@ -325,9 +325,13 @@ public:
 	const std::string& get_player_texture() const;
 	engine::fvector    get_screen_size() const;
 	float get_unit_pixels() const;
+	const engine::controls& get_key_bindings() const;
 
 private:
 	bool parse_settings(tinyxml2::XMLDocument& pDoc, const std::string& pPrefix_path);
+	bool parse_key_bindings(tinyxml2::XMLElement* pEle);
+	bool parse_binding_attributes(tinyxml2::XMLElement* pEle, const std::string& pName
+		, const std::string& pPrefix, bool pAlternative);
 
 	std::string mStart_scene;
 	std::string mTextures_path;
@@ -337,6 +341,7 @@ private:
 	std::string mFonts_path;
 	std::string mScenes_path;
 	engine::fvector mScreen_size;
+	engine::controls mKey_bindings;
 	float pUnit_pixels;
 
 	std::string load_setting_path(tinyxml2::XMLElement* pRoot, const std::string& pName, const std::string& pDefault);
@@ -387,7 +392,7 @@ public:
 
 	player_character& get_player();
 
-	void tick(controls &pControls);
+	void tick(engine::controls &pControls);
 
 	void focus_player(bool pFocus);
 
@@ -440,7 +445,7 @@ private:
 
 	void refresh_renderer(engine::renderer& _r);
 	void update_focus();
-	void update_collision_interaction(controls &pControls);
+	void update_collision_interaction(engine::controls &pControls);
 };
 
 // A basic save system.
@@ -532,7 +537,7 @@ private:
 	engine::pack_stream_factory mPack;
 	flag_container   mFlags;
 	script_system    mScript;
-	controls         mControls;
+	engine::controls mControls;
 	size_t           mSlot;
 
 	engine::fs::path mData_directory;

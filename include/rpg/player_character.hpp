@@ -2,7 +2,7 @@
 #define RPG_PLAYER_CHARACTER
 
 #include <rpg/character_entity.hpp>
-#include <rpg/controls.hpp>
+#include <engine/controls.hpp>
 #include <rpg/collision_system.hpp>
 
 namespace rpg {
@@ -19,7 +19,7 @@ public:
 	bool is_locked();
 
 	// Do movement with collision detection
-	void movement(controls &pControls, collision_system& pCollision_system, float pDelta);
+	void movement(engine::controls &pControls, collision_system& pCollision_system, float pDelta);
 
 	// Get point in front of player
 	engine::fvector get_activation_point(float pDistance = 0.6f);

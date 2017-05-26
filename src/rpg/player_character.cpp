@@ -31,7 +31,7 @@ bool player_character::is_locked()
 	return mLocked;
 }
 
-void player_character::movement(controls& pControls, collision_system& pCollision_system, float pDelta)
+void player_character::movement(engine::controls& pControls, collision_system& pCollision_system, float pDelta)
 {
 	if (mLocked)
 	{
@@ -45,22 +45,22 @@ void player_character::movement(controls& pControls, collision_system& pCollisio
 
 	engine::fvector move(0, 0);
 
-	if (pControls.is_triggered(controls::control::left))
+	if (pControls.is_triggered("left"))
 	{
 		move.x -= 1;
 	}
 
-	if (pControls.is_triggered(controls::control::right))
+	if (pControls.is_triggered("right"))
 	{
 		move.x += 1;
 	}
 
-	if (pControls.is_triggered(controls::control::up))
+	if (pControls.is_triggered("up"))
 	{
 		move.y -= 1;
 	}
 
-	if (pControls.is_triggered(controls::control::down))
+	if (pControls.is_triggered("down"))
 	{
 		move.y += 1;
 	}

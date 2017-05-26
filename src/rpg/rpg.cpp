@@ -1075,7 +1075,7 @@ player_character& scene::get_player()
 	return mPlayer;
 }
 
-void scene::tick(controls &pControls)
+void scene::tick(engine::controls &pControls)
 {
 	assert(get_renderer() != nullptr);
 	mPlayer.movement(pControls, mCollision_system, get_renderer()->get_delta());
@@ -1176,7 +1176,7 @@ void scene::update_focus()
 		mWorld_node.set_focus(mPlayer.get_position(mWorld_node));
 }
 
-void scene::update_collision_interaction(controls & pControls)
+void scene::update_collision_interaction(engine::controls & pControls)
 {
 	collision_box_container& container = mCollision_system.get_container();
 
@@ -1218,7 +1218,7 @@ void scene::update_collision_interaction(controls & pControls)
 	}
 
 	// Check collision with buttons on when "activate" is triggered
-	if (pControls.is_triggered(controls::control::activate))
+	if (pControls.is_triggered("activate"))
 	{
 		auto buttons = container.collision(collision_box::type::button, mPlayer.get_activation_point());
 		for (auto& i : buttons)
@@ -1227,91 +1227,7 @@ void scene::update_collision_interaction(controls & pControls)
 }
 
 
-// #########
-// controls
-// #########
 
-controls::controls()
-{
-	reset();
-}
-
-void
-controls::trigger(control pControl)
-{
-	mControls[static_cast<size_t>(pControl)] = true;
-}
-
-bool
-controls::is_triggered(control pControl)
-{
-	return mControls[static_cast<size_t>(pControl)];
-}
-
-void
-controls::reset()
-{
-	mControls.fill(false);
-}
-
-void controls::update(engine::renderer & pR)
-{
-	using key_type = engine::renderer::key_type;
-	using control = rpg::controls::control;
-
-	reset();
-
-	if (pR.is_key_pressed(key_type::Z) ||
-		pR.is_key_pressed(key_type::Return))
-		trigger(control::activate);
-
-	if (pR.is_key_down(key_type::Left))
-		trigger(control::left);
-
-	if (pR.is_key_down(key_type::Right))
-		trigger(control::right);
-
-	if (pR.is_key_down(key_type::Up))
-		trigger(control::up);
-
-	if (pR.is_key_down(key_type::Down))
-		trigger(control::down);
-
-	if (pR.is_key_pressed(key_type::Up))
-		trigger(control::select_up);
-
-	if (pR.is_key_pressed(key_type::Down))
-		trigger(control::select_down);
-
-	if (pR.is_key_pressed(key_type::Left))
-		trigger(control::select_previous);
-
-	if (pR.is_key_pressed(key_type::Right))
-		trigger(control::select_next);
-
-	if (pR.is_key_pressed(key_type::X) ||
-		pR.is_key_pressed(key_type::RShift))
-		trigger(control::back);
-
-	if (pR.is_key_pressed(key_type::M))
-		trigger(control::menu);
-
-	if (pR.is_key_down(key_type::LControl))
-	{
-		if (pR.is_key_down(key_type::LShift)
-			&& pR.is_key_pressed(key_type::R))
-			trigger(control::reset_game);
-		else if (pR.is_key_pressed(key_type::R))
-			trigger(control::reset);
-
-		if (pR.is_key_pressed(key_type::Num1))
-			trigger(control::editor_1);
-		if (pR.is_key_pressed(key_type::Num2))
-			trigger(control::editor_2);
-		if (pR.is_key_pressed(key_type::Num3))
-			trigger(control::editor_3);
-	}
-}
 
 // #########
 // script_context
@@ -1638,7 +1554,7 @@ game::load_script_interface()
 	util::info("Loading script interface...");
 	mScript.add_function("float get_delta()", asMETHOD(game, get_delta), this);
 
-	mScript.add_function("bool _is_triggered(int)", asMETHOD(controls, is_triggered), &mControls);
+	mScript.add_function("bool is_triggered(const string&in)", asMETHOD(engine::controls, is_triggered), &mControls);
 
 	mScript.add_function("void save_game()", asMETHOD(game, save_game), this);
 	mScript.add_function("void open_game()", asMETHOD(game, open_game), this);
@@ -1870,6 +1786,8 @@ bool game::load_settings(engine::fs::path pData_dir)
 
 	get_renderer()->set_target_size(settings.get_screen_size());
 
+	mControls = settings.get_key_bindings();
+
 	util::info("Loading Resources...");
 
 	mResource_manager.clear_directories();
@@ -1923,7 +1841,7 @@ bool game::tick()
 
 	mEditor_manager.set_scene_name(mScene.get_name());
 
-	if (mControls.is_triggered(controls::control::reset_game))
+	if (mControls.is_triggered("_reset_game"))
 	{
 		mEditor_manager.close_editor();
 		mScene.clean(true);
@@ -1934,7 +1852,7 @@ bool game::tick()
 	if (!mIs_ready)
 		return false;
 
-	if (mControls.is_triggered(controls::control::reset))
+	if (mControls.is_triggered("_reset_scene"))
 	{
 		mEditor_manager.close_editor();
 		util::info("Reloading scene...");
@@ -1948,20 +1866,20 @@ bool game::tick()
 	}
 
 
-	if (mControls.is_triggered(controls::control::editor_1))
+	if (mControls.is_triggered("_tilemap_editor"))
 	{
 		mEditor_manager.close_editor();
 		mEditor_manager.open_tilemap_editor((mData_directory / defs::DEFAULT_SCENES_PATH / mScene.get_path()).string());
 		mScene.clean(true);
 	}
 
-	if (mControls.is_triggered(controls::control::editor_2))
+	if (mControls.is_triggered("_collisionbox_editor"))
 	{
 		mEditor_manager.close_editor();
 		mEditor_manager.open_collisionbox_editor((mData_directory / defs::DEFAULT_SCENES_PATH / mScene.get_path()).string());
 		mScene.clean(true);
 	}
-	if (mControls.is_triggered(controls::control::editor_3))
+	if (mControls.is_triggered("_atlas_editor"))
 	{
 		mEditor_manager.close_editor();
 		mEditor_manager.open_atlas_editor();
@@ -2661,6 +2579,11 @@ float game_settings_loader::get_unit_pixels() const
 	return pUnit_pixels;
 }
 
+const engine::controls& game_settings_loader::get_key_bindings() const
+{
+	return mKey_bindings;
+}
+
 bool game_settings_loader::parse_settings(tinyxml2::XMLDocument & pDoc, const std::string& pPrefix_path)
 {
 	auto ele_root = pDoc.RootElement();
@@ -2709,6 +2632,46 @@ bool game_settings_loader::parse_settings(tinyxml2::XMLDocument & pDoc, const st
 	mFonts_path = load_setting_path(ele_root, "fonts", pPrefix_path + defs::DEFAULT_FONTS_PATH.string());
 	mScenes_path = load_setting_path(ele_root, "scenes", pPrefix_path + defs::DEFAULT_SCENES_PATH.string());
 	
+	auto ele_controls = ele_root->FirstChildElement("controls");
+	if (!ele_controls)
+	{
+		util::info("No controls specified");
+		return false;
+	}
+	else
+		parse_key_bindings(ele_controls);
+
+	return true;
+}
+
+bool game_settings_loader::parse_key_bindings(tinyxml2::XMLElement * pEle)
+{
+	mKey_bindings.clean();
+
+	auto current_entry = pEle->FirstChildElement();
+	while (current_entry)
+	{
+		const std::string name = util::safe_string(current_entry->Name());
+		parse_binding_attributes(current_entry, name, "key", false);
+		parse_binding_attributes(current_entry, name, "alt", true);
+		mKey_bindings.set_press_only(name, current_entry->BoolAttribute("press"));
+		current_entry = current_entry->NextSiblingElement();
+	}
+	return true;
+}
+
+bool game_settings_loader::parse_binding_attributes(tinyxml2::XMLElement * pEle, const std::string& pName, const std::string& pPrefix, bool pAlternative)
+{
+	size_t i = 0;
+	while (auto key = pEle->Attribute((pPrefix + std::to_string(i)).c_str()))
+	{
+		if (!mKey_bindings.bind_key(pName, key, pAlternative))
+		{
+			util::warning("Failed to bind key '" + std::string(key) + "' with '" + pName + "'");
+			break;
+		}
+		++i;
+	}
 	return true;
 }
 
