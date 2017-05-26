@@ -1841,7 +1841,14 @@ bool game::tick()
 
 	mEditor_manager.set_scene_name(mScene.get_name());
 
-	if (mControls.is_triggered("_reset_game"))
+	engine::renderer& renderer = *get_renderer();
+
+	const bool lshift = renderer.is_key_down(engine::renderer::key_type::LShift);
+	const bool lctrl = renderer.is_key_down(engine::renderer::key_type::LControl);
+
+	if (lctrl
+		&& lshift
+		&& renderer.is_key_pressed(engine::renderer::key_type::R))
 	{
 		mEditor_manager.close_editor();
 		mScene.clean(true);
@@ -1852,7 +1859,9 @@ bool game::tick()
 	if (!mIs_ready)
 		return false;
 
-	if (mControls.is_triggered("_reset_scene"))
+	if (lctrl
+		&& !lshift
+		&& renderer.is_key_pressed(engine::renderer::key_type::R))
 	{
 		mEditor_manager.close_editor();
 		util::info("Reloading scene...");
@@ -1866,20 +1875,23 @@ bool game::tick()
 	}
 
 
-	if (mControls.is_triggered("_tilemap_editor"))
+	if (lctrl
+		&& renderer.is_key_pressed(engine::renderer::key_type::Num1))
 	{
 		mEditor_manager.close_editor();
 		mEditor_manager.open_tilemap_editor((mData_directory / defs::DEFAULT_SCENES_PATH / mScene.get_path()).string());
 		mScene.clean(true);
 	}
 
-	if (mControls.is_triggered("_collisionbox_editor"))
+	if (lctrl
+		&& renderer.is_key_pressed(engine::renderer::key_type::Num2))
 	{
 		mEditor_manager.close_editor();
 		mEditor_manager.open_collisionbox_editor((mData_directory / defs::DEFAULT_SCENES_PATH / mScene.get_path()).string());
 		mScene.clean(true);
 	}
-	if (mControls.is_triggered("_atlas_editor"))
+	if (lctrl
+		&& renderer.is_key_pressed(engine::renderer::key_type::Num3))
 	{
 		mEditor_manager.close_editor();
 		mEditor_manager.open_atlas_editor();
