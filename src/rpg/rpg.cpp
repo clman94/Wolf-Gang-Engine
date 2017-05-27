@@ -1943,7 +1943,6 @@ void
 game::refresh_renderer(engine::renderer & pR)
 {
 	mScene.set_renderer(pR);
-	mRich_text_test.set_renderer(pR);
 #ifndef LOCKED_RELEASE_MODE
 	mTerminal_gui.load_gui(pR);
 	pR.add_object(mEditor_manager);
