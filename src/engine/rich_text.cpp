@@ -215,9 +215,9 @@ void rich_text_node::update_effects()
 		if (block.mFormat & text_format::format::wave)
 		{
 			const float wave_amount = 0.1f;
-			const float wideness = 0.5f;
+			const float wideness_scale = 0.5f;
 			const float speed = 3.f;
-			offset += fvector::as_y((std::cos(std::fmodf(mTimer*speed + i.mOriginal_position.x*wideness, 3.14*2)))
+			offset += fvector::as_y((std::cos(std::fmodf(mTimer*speed + i.mOriginal_position.x*wideness_scale, 3.14f*2)))
 				*i.mVertices.get_size().y*wave_amount);
 		}
 		if (block.mFormat & text_format::format::shake)

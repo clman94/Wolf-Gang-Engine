@@ -254,7 +254,9 @@ private:
 	color mColor;
 	engine::frect mTexture_rect;
 
-	void update();
+	void update_position();
+	void update_texture();
+	void update_color();
 
 	vertex_batch* mBatch;
 	size_t mIndex;
