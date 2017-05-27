@@ -246,6 +246,7 @@ public:
 
 	void set_color(const color& pColor);
 
+
 	friend class vertex_batch;
 private:
 	int mRotation;
@@ -278,6 +279,9 @@ public:
 	vertex_reference add_quad(fvector pPosition, frect pTexture_rect, int pRotation = 0);
 	int draw(renderer &pR);
 
+	void set_scale(fvector pScale);
+	fvector get_scale() const;
+
 	void use_render_texture(bool pEnable);
 
 #ifdef ENGINE_INTERNAL
@@ -294,6 +298,7 @@ public:
 
 private:
 	bool mUse_render_texture;
+	fvector mScale;
 
 	virtual void refresh_renderer(renderer& pR);
 
@@ -455,7 +460,7 @@ private:
 
 	std::unique_ptr<sf::Font> mSFML_font;
 	int mCharacter_size;
-	float mScale;
+	fvector mOffset;
 	friend class text_node;
 	friend class formatted_text_node;
 };
@@ -539,18 +544,31 @@ public:
 	*/
 	bool parse_text(const std::string& pText);
 
+	bool append(const std::string& pText);
+	void append(const text_format& pFormat);
+
 	size_t get_block_count() const;
 	const block& get_block(size_t pIndex) const;
+
+	text_format& operator+=(const text_format& pFormat);
 
 	//void set_default_color();
 
 	std::vector<block>::const_iterator begin() const;
 	std::vector<block>::const_iterator end() const;
 
+	text_format substr(size_t pOffset, size_t pCount = 0) const;
+
+	bool word_wrap(size_t pLength);
+
+	void remove_first_line();
+	void limit_lines(size_t pLines);
+	size_t line_count() const;
+	size_t length() const;
 
 private:
+	bool start_parse(const std::string & pText);
 
-	std::string mUnformatted_text;
 	std::vector<block> mBlocks;
 	color mDefault_color;
 };
@@ -564,9 +582,12 @@ public:
 	void set_font(std::shared_ptr<font> pFont, bool pApply_preferences = false);
 	
 	void set_text(const text_format& pText);
-	const std::string& get_text() const;
+	const text_format& get_text() const;
 
-	void append_text(const text_format& pText);
+	void set_color(const color& pColor);
+	void set_anchor(anchor pAnchor);
+
+	void set_character_size(size_t pSize);
 
 	virtual int draw(renderer &pR);
 
@@ -576,6 +597,8 @@ private:
 
 	std::shared_ptr<font> mFont;
 	text_format mFormat;
+
+	anchor mAnchor;
 
 	fvector mSize;
 

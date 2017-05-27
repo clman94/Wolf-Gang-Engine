@@ -108,6 +108,7 @@ sf::Vertex * vertex_reference::get_reference()
 vertex_batch::vertex_batch()
 {
 	mUse_render_texture = false;
+	mScale = fvector(1, 1);
 }
 
 void
@@ -135,10 +136,19 @@ vertex_batch::add_quad(fvector pPosition, frect pTexture_rect, int pRotation)
 int
 vertex_batch::draw(renderer &pR)
 {
-	if (!mTexture || mVertices.empty())
+	if (!mTexture)
 		return 1;
-
 	return draw(pR, mTexture->sfml_get_texture());
+}
+
+void vertex_batch::set_scale(fvector pScale)
+{
+	mScale = pScale;
+}
+
+fvector vertex_batch::get_scale() const
+{
+	return mScale;
 }
 
 void vertex_batch::use_render_texture(bool pEnable)
@@ -148,9 +158,13 @@ void vertex_batch::use_render_texture(bool pEnable)
 
 int vertex_batch::draw(renderer & pR, const sf::Texture & pTexture)
 {
+	if (mVertices.empty())
+		return 1;
+
 	const sf::Vector2f position = get_exact_position();
 
 	sf::RenderStates rs;
+	rs.transform.scale(mScale);
 	rs.texture = &pTexture;
 	if (mShader)
 		rs.shader = mShader->get_sfml_shader();

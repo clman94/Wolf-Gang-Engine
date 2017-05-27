@@ -8,15 +8,18 @@ using namespace engine;
 
 text_format::text_format()
 {
+	mDefault_color = color(255, 255, 255, 255);
 }
 
 text_format::text_format(const char * pText)
 {
+	mDefault_color = color(255, 255, 255, 255);
 	parse_text(pText);
 }
 
 text_format::text_format(const std::string & pText)
 {
+	mDefault_color = color(255, 255, 255, 255);
 	parse_text(pText);
 }
 
@@ -106,6 +109,16 @@ inline bool parse_xml_format(tinyxml2::XMLNode* pNode, std::vector<text_format::
 				color ncolor = parse_xml_color(ele);
 				parse_xml_format(pNode->FirstChild(), pFormat_stack, ncolor, pBlocks);
 			}
+			else if (name == "br")
+			{
+				text_format::block nblock;
+				nblock.mFormat = 0;
+				for (auto& i : pFormat_stack)
+					nblock.mFormat |= static_cast<uint32_t>(i);
+				nblock.mText = "\n";
+				pBlocks.push_back(nblock);
+
+			}
 			else if (name == "wave")
 			{
 				pFormat_stack.push_back(text_format::format::wave);
@@ -132,25 +145,18 @@ inline bool parse_xml_format(tinyxml2::XMLNode* pNode, std::vector<text_format::
 
 bool text_format::parse_text(const std::string & pText)
 {
-	using namespace tinyxml2;
-
-	mUnformatted_text = pText;
 	mBlocks.clear();
+	return start_parse(pText);
+}
 
-	// When parse fails, this object stays in a semi valid state
-	XMLDocument doc;
-	if (doc.Parse(pText.c_str(), pText.size()) != XML_SUCCESS)
-	{
-		block nblock;
-		nblock.mText = pText;
-		nblock.mFormat = text_format::format::none;
-		nblock.mColor = mDefault_color;
-		mBlocks.push_back(nblock);
-		return false;
-	}
+bool text_format::append(const std::string & pText)
+{
+	return start_parse(pText);
+}
 
-	std::vector<format> format_stack;
-	return parse_xml_format(doc.FirstChild(), format_stack, mDefault_color, mBlocks);
+void text_format::append(const text_format & pFormat)
+{
+	mBlocks.insert(mBlocks.end(), pFormat.mBlocks.begin(), pFormat.mBlocks.end());
 }
 
 size_t text_format::get_block_count() const
@@ -163,6 +169,12 @@ const text_format::block & text_format::get_block(size_t pIndex) const
 	return mBlocks[pIndex];
 }
 
+text_format & text_format::operator+=(const text_format & pFormat)
+{
+	append(pFormat);
+	return *this;
+}
+
 std::vector<text_format::block>::const_iterator text_format::begin() const
 {
 	return mBlocks.begin();
@@ -173,22 +185,205 @@ std::vector<text_format::block>::const_iterator text_format::end() const
 	return mBlocks.end();
 }
 
+text_format text_format::substr(size_t pOffset, size_t pCount) const
+{
+	if (pOffset == 0 && pCount >= length())
+		return *this;
+
+	if (pCount == 0)
+		return{};
+
+	text_format retformat;
+
+	size_t characters_passed = 0;
+	for (size_t i = 0; i < mBlocks.size(); i++)
+	{
+		// Has reached the Start, now keep added blocks
+		if (characters_passed + (mBlocks[i].mText.size() - 1) >= pOffset)
+		{
+			retformat.mBlocks.push_back(mBlocks[i]);
+
+			// Cut the extra characters at the front
+			if (characters_passed < pOffset)
+			{
+				const std::string cut_text
+					= retformat.mBlocks.back().mText.substr(pOffset - characters_passed);
+				retformat.mBlocks.back().mText = cut_text;
+			}
+		}
+
+		// Has reached the end
+		if (characters_passed + (mBlocks[i].mText.size() - 1) >= pOffset + pCount)
+		{
+			// Cut the extra characters at the back
+			const std::string cut_text
+				= retformat.mBlocks.back().mText.substr(0, pOffset + pCount - characters_passed);
+			retformat.mBlocks.back().mText = cut_text;
+
+			// Everything is done!
+			return retformat;
+		}
+		characters_passed += mBlocks[i].mText.size();
+	}
+	return retformat;
+}
+
+bool text_format::word_wrap(size_t pLength)
+{
+	if (pLength == 0)
+		return false;
+
+	size_t characters_passed = 0;
+	size_t last_line = 0;
+	size_t last_space = 0;
+	size_t last_space_index = 0;
+	block* last_space_block = nullptr;
+
+	for (auto& i : mBlocks)
+	{
+		for (size_t j = 0; j < i.mText.size(); j++)
+		{
+			if (i.mText[j] == '\n')
+			{
+				last_line = characters_passed;
+			}
+
+			if (i.mText[j] == ' ')
+			{
+				last_space = characters_passed;
+				last_space_index = j;
+				last_space_block = &i;
+			}
+
+			if (characters_passed - last_line > pLength
+				&& last_space_block != nullptr)
+			{
+				last_space_block->mText[last_space_index] = '\n';
+				last_space_block = nullptr;
+				last_line = last_space;
+			}
+
+			++characters_passed;
+		}
+	}
+
+	return true;
+}
+
+void text_format::remove_first_line()
+{
+	size_t offset = 0;
+	for (auto& i : mBlocks)
+	{
+		for (auto j : i.mText)
+		{
+			if (j == '\n')
+			{
+				*this = substr(offset + 1, INT32_MAX);
+				return;
+			}
+			++offset;
+		}
+	}
+	mBlocks.clear();
+}
+
+void text_format::limit_lines(size_t pLines)
+{
+	size_t lines = line_count();
+	if (lines <= pLines)
+		return;
+	for (size_t i = 0; i < lines - pLines; i++)
+		remove_first_line();
+}
+
+size_t text_format::line_count() const
+{
+	if (mBlocks.empty())
+		return 0;
+	size_t lines = 1;
+	for (auto& i : mBlocks)
+	{
+		for (auto j : i.mText)
+			if (j == '\n')
+				++lines;
+	}
+	return lines;
+}
+
+size_t text_format::length() const
+{
+	size_t total = 0;
+	for (auto& i : mBlocks)
+	{
+		total += i.mText.length();
+	}
+	return total;
+}
+
+bool text_format::start_parse(const std::string & pText)
+{
+	// When parse fails, this object is still in a valid state
+	tinyxml2::XMLDocument doc;
+	const std::string text_rooted = "<__root>" + pText + "</__root>"; // Add a root node so it parses correctly
+	if (doc.Parse(text_rooted.c_str(), text_rooted.size()) != tinyxml2::XML_SUCCESS)
+	{
+		// Create default block with unformmatted text
+		block nblock;
+		nblock.mText = pText;
+		nblock.mFormat = text_format::format::none;
+		nblock.mColor = mDefault_color;
+		mBlocks.push_back(nblock);
+		return false;
+	}
+
+	std::vector<format> format_stack;
+	auto root_node = doc.FirstChild();
+	return parse_xml_format(root_node->FirstChild(), format_stack, mDefault_color, mBlocks);
+}
+
 formatted_text_node::formatted_text_node()
 {
+	mAnchor = anchor::topleft;
 	mTimer = 0;
-	mCharacter_size = 15;
+	mCharacter_size = 30;
 }
 
 void formatted_text_node::set_font(std::shared_ptr<font> pFont, bool pApply_preferences)
 {
 	mFont = pFont;
 	mFont->load();
+	mCharacter_size = mFont->mCharacter_size;
+	update();
 }
 
 void formatted_text_node::set_text(const text_format & pText)
 {
 	mFormat = pText;
 	update();
+}
+
+const text_format& formatted_text_node::get_text() const
+{
+	return mFormat;
+}
+
+void formatted_text_node::set_color(const color & pColor)
+{
+	for (auto& i : mBlock_handles)
+	{
+		i.mVertices.set_color(pColor);
+	}
+}
+
+void formatted_text_node::set_anchor(anchor pAnchor)
+{
+	mAnchor = pAnchor;
+}
+
+void formatted_text_node::set_character_size(size_t pSize)
+{
+	mCharacter_size = pSize;
 }
 
 int formatted_text_node::draw(renderer & pR)
@@ -198,8 +393,10 @@ int formatted_text_node::draw(renderer & pR)
 	mTimer += pR.get_delta();
 	update_effects();
 
+	mVertex_batch.set_position(get_exact_position() + anchor_offset(mSize, mAnchor));
+
 	// Screw all common sense!
-	auto texture = const_cast<sf::Texture*>(&mFont->mSFML_font->getTexture(mCharacter_size));
+	sf::Texture* texture = const_cast<sf::Texture*>(&mFont->mSFML_font->getTexture(mCharacter_size*4));
 	texture->setSmooth(false);
 	return mVertex_batch.draw(pR, *texture);
 }
@@ -231,25 +428,30 @@ void formatted_text_node::update_effects()
 
 void formatted_text_node::update()
 {
+	const float scale_quality = 4;
+	const size_t scaled_character_size = mCharacter_size*scale_quality;
+
 	mBlock_handles.clear();
 	mVertex_batch.clean();
 	mSize = fvector(0, 0);
 
 	auto font = mFont->mSFML_font.get();
 	
-	const float vspace = font->getLineSpacing(mCharacter_size);
-	const float hspace = font->getGlyph(' ', mCharacter_size, true).advance;
+	const float vspace = font->getLineSpacing(scaled_character_size) / scale_quality;
+	const float hspace = font->getGlyph(' ', scaled_character_size, true).advance / scale_quality;
 
-	char prev_character = ' ';
+	char prev_character = 0;
 
-	fvector position(0, static_cast<float>(mCharacter_size));
+	fvector position = fvector(0, static_cast<float>(mCharacter_size)) + mFont->mOffset;
 	for (size_t i = 0; i < mFormat.get_block_count(); i++)
 	{
 
 		const auto& block = mFormat.get_block(i);
 		for (auto j : block.mText)
 		{
-			const auto& glyph = font->getGlyph(j, mCharacter_size, block.mFormat & text_format::format::bold);
+			//position.x += font->getKerning(prev_character, j, scaled_character_size) / scale_quality;
+			prev_character = j;
+
 
 			// Check for whitespace and advance positions
 			switch (j)
@@ -266,14 +468,17 @@ void formatted_text_node::update()
 				continue;
 			}
 
+			const auto& glyph = font->getGlyph(j, scaled_character_size, block.mFormat & text_format::format::bold);
+
 			// Create handle for connecting the blocks 
 			// to the verticies. These are then iterated through
 			// and effects are applied.
 			const frect glyph_rect(frect::cast<int>(glyph.textureRect));
-			const fvector bounds_offset(glyph.bounds.left, glyph.bounds.top);
+			const fvector bounds_offset = fvector(glyph.bounds.left, glyph.bounds.top) / scale_quality;
 			block_handle handle;
 			handle.mBlock_index = i;
 			handle.mVertices = mVertex_batch.add_quad(position + bounds_offset, glyph_rect);
+			handle.mVertices.set_size(fvector(glyph_rect.w, glyph_rect.h) / scale_quality);
 			handle.mVertices.set_color(block.mColor);
 			handle.mVertices.set_hskew(block.mFormat & text_format::format::italics ? 0.5f : 0);
 			handle.mOriginal_position = position + bounds_offset;
@@ -281,9 +486,9 @@ void formatted_text_node::update()
 
 			// Update size
 			if (position.x + glyph_rect.x > mSize.x)
-				mSize.x = position.x + glyph_rect.w;
+				mSize.x = position.x + glyph_rect.w/scale_quality;
 			if (position.y + glyph_rect.y > mSize.y)
-				mSize.y = position.y + glyph_rect.h;
+				mSize.y = position.y + glyph_rect.h/scale_quality;
 
 			position.x += hspace;
 

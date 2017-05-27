@@ -89,7 +89,7 @@ public:
 	virtual type get_type() const
 	{ return type::text; }
 
-	engine::text_node mText;
+	engine::formatted_text_node mText;
 };
 
 class dialog_text_entity :
@@ -123,7 +123,7 @@ private:
 	bool        mNew_character;
 	bool        mRevealing;
 	size_t      mCount;
-	std::string mFull_text;
+	engine::text_format mFull_text;
 	engine::counter_clock mTimer;
 
 	void do_reveal();
@@ -526,8 +526,6 @@ protected:
 	void refresh_renderer(engine::renderer& r);
 
 private:
-
-	engine::formatted_text_node mRich_text_test;
 
 	// Everything is good and settings are loaded
 	bool mIs_ready;

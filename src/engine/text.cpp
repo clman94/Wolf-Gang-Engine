@@ -70,10 +70,8 @@ bool font::load_preferences()
 	if (!ele_root)
 		return false;
 
-	if (auto att_scale = ele_root->FloatAttribute("scale"))
-		mScale = att_scale;
-	else
-		mScale = 1;
+	mOffset.x = ele_root->FloatAttribute("x");
+	mOffset.y = ele_root->FloatAttribute("y");
 
 	if (auto att_size = ele_root->IntAttribute("size"))
 		mCharacter_size = att_size;
@@ -94,7 +92,6 @@ text_node::set_font(std::shared_ptr<font> pFont, bool pApply_preferences)
 	mFont = pFont;
 	pFont->load();
 	mSfml_text.setFont(*pFont->mSFML_font);
-	mSfml_text.setScale({ pFont->mScale, pFont->mScale });
 	mSfml_text.setCharacterSize(pFont->mCharacter_size);
 	update_offset();
 }

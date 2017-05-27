@@ -1815,11 +1815,6 @@ bool game::load_settings(engine::fs::path pData_dir)
 
 	util::info("Resources loaded");
 
-	auto font = mResource_manager.get_resource<engine::font>(engine::resource_type::font, "default");
-	mRich_text_test.set_font(font);
-	mRich_text_test.set_text("<c r=\"255\" g=\"255\" b=\"255\"><wave>pie is <shake><i><b>great</b></i></shake></wave>\n and <c r=\"0\" g=\"255\" b=\"255\"><wave>hellow <i>blord</i></wave></c></c>");
-	mRich_text_test.set_depth(-1000);
-
 	mScene.set_resource_manager(mResource_manager);
 	if (!mScene.load_settings(settings))
 		return (mIs_ready = false, false);
@@ -2447,7 +2442,6 @@ void dialog_text_entity::skip_reveal()
 {
 	if (mRevealing)
 	{
-		mCount -= parsers::limit_lines(mFull_text, mMax_lines);
 		mCount = mFull_text.length();
 	}
 }
@@ -2476,7 +2470,7 @@ void dialog_text_entity::set_max_lines(size_t pLines)
 
 void dialog_text_entity::adjust_text()
 {
-	parsers::word_wrap(mFull_text, mWord_wrap);
+	mFull_text.word_wrap(mWord_wrap);
 }
 
 void dialog_text_entity::do_reveal()
@@ -2485,24 +2479,19 @@ void dialog_text_entity::do_reveal()
 	if (iterations > 0)
 	{
 		mCount += iterations;
-		mCount = util::clamp<size_t>(mCount, 0, mFull_text.size());
+		mCount = util::clamp<size_t>(mCount, 0, mFull_text.length());
 
-		std::string display(mFull_text.begin(), mFull_text.begin() + mCount);
+		engine::text_format cut_text = mFull_text.substr(0, mCount);
 
 		// Remove lines when there are too many
 		if (mMax_lines > 0)
 		{
-			size_t displayed_lines = parsers::line_count(display);
-			if (displayed_lines > mMax_lines)
-			{
-				mCount -= parsers::remove_first_line(mFull_text);
-				display = std::string(mFull_text.begin(), mFull_text.begin() + mCount);
-			}
+			cut_text.limit_lines(mMax_lines);
 		}
 
-		mText.set_text(display);
+		mText.set_text(cut_text);
 
-		if (mCount == mFull_text.size())
+		if (mCount == mFull_text.length())
 			mRevealing = false;
 
 		mNew_character = true;
