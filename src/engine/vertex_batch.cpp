@@ -6,44 +6,33 @@
 
 using namespace engine;
 
-vertex_reference::vertex_reference(const vertex_reference & A)
-{
-	mRotation = A.mRotation;
-	mTexture_rect = A.mTexture_rect;
-	mBatch = A.mBatch;
-	mIndex = A.mIndex;
-}
 
 void vertex_reference::set_position(fvector pPosition)
 {
-	auto ref = get_reference();
-	sf::Vector2f offset = pPosition - fvector(ref[0].position);
-	ref[0].position += offset;
-	ref[1].position += offset;
-	ref[2].position += offset;
-	ref[3].position += offset;
+	mRect.set_offset(pPosition);
+	update();
 }
 
 fvector vertex_reference::get_position()
 {
-	auto ref = get_reference();
-	return ref[0].position;
+	return mRect.get_offset();
 }
 
 void vertex_reference::set_texture_rect(frect pRect)
 {
 	mTexture_rect = pRect;
-	update_rect();
-	reset_size(pRect.get_size());
+	set_size(pRect.get_size());
 }
 
-void vertex_reference::reset_size(fvector pSize)
+void vertex_reference::set_size(fvector pSize)
 {
-	auto ref = get_reference();
-	fvector offset = ref[0].position;
-	ref[1].position = offset + fvector(pSize.x, 0);
-	ref[2].position = offset + pSize;
-	ref[3].position = offset + fvector(0, pSize.y);
+	mRect.set_size(pSize);
+	update();
+}
+
+fvector vertex_reference::get_size() const
+{
+	return mRect.get_size();
 }
 
 void vertex_reference::hide()
@@ -57,7 +46,7 @@ void vertex_reference::hide()
 void vertex_reference::set_rotation(int pRotation)
 {
 	mRotation = std::abs(pRotation) % 4;
-	update_rect();
+	update();
 }
 
 int vertex_reference::get_rotation() const
@@ -65,22 +54,48 @@ int vertex_reference::get_rotation() const
 	return mRotation;
 }
 
-void vertex_reference::update_rect()
+void vertex_reference::set_hskew(float pPercent)
+{
+	mHskew = pPercent;
+}
+
+void vertex_reference::set_color(const color & pColor)
+{
+	mColor = pColor;
+	update();
+}
+
+void vertex_reference::update()
 {
 	if (!mBatch)
 		return;
 
 	auto ref = get_reference();
+	const fvector hskew_offset(mRect.get_size().x*mHskew*0.5f, 0);
+
+	ref[0].position = mRect.get_offset()                                     + hskew_offset;
+	ref[1].position = mRect.get_offset() + fvector::x_only(mRect.get_size()) + hskew_offset;
+	ref[2].position = mRect.get_offset() + mRect.get_size()                  - hskew_offset;
+	ref[3].position = mRect.get_offset() + fvector::y_only(mRect.get_size()) - hskew_offset;
+
 	ref[(mRotation)     % 4].texCoords = mTexture_rect.get_offset();
 	ref[(mRotation + 1) % 4].texCoords = mTexture_rect.get_offset() + fvector(mTexture_rect.w, 0);
 	ref[(mRotation + 2) % 4].texCoords = mTexture_rect.get_offset() + mTexture_rect.get_size();
 	ref[(mRotation + 3) % 4].texCoords = mTexture_rect.get_offset() + fvector(0, mTexture_rect.h);
+
+	for (size_t i = 0; i < 4; i++)
+		ref[i].color = mColor;
 }
 
 sf::Vertex * vertex_reference::get_reference()
 {
 	assert(mBatch != nullptr);
 	return &mBatch->mVertices[mIndex];
+}
+
+vertex_batch::vertex_batch()
+{
+	mUse_render_texture = false;
 }
 
 void
@@ -101,32 +116,57 @@ vertex_batch::add_quad(fvector pPosition, frect pTexture_rect, int pRotation)
 	ref.set_rotation(pRotation);
 	ref.set_texture_rect(pTexture_rect);
 	ref.set_position(pPosition);
+	ref.set_color({ 255, 255, 255, 255 });
 	return ref;
 }
 
 int
 vertex_batch::draw(renderer &pR)
 {
-	if (!mTexture || !mVertices.size())
+	if (!mTexture || mVertices.empty())
 		return 1;
 
+	return draw(pR, mTexture->sfml_get_texture());
+}
+
+void vertex_batch::use_render_texture(bool pEnable)
+{
+	mUse_render_texture = pEnable;
+}
+
+int vertex_batch::draw(renderer & pR, const sf::Texture & pTexture)
+{
 	const sf::Vector2f position = get_exact_position();
 	const sf::Vector2f position_nondec = get_exact_position().floor();
 
 	sf::RenderStates rs;
 	rs.transform.translate(position_nondec + sf::Vector2f(1, 1));
-	rs.texture = &mTexture->sfml_get_texture();
+	rs.texture = &pTexture;
 	if (mShader)
 		rs.shader = mShader->get_sfml_shader();
 
-	mRender.clear({ 0, 0, 0, 0 });
-	mRender.draw(&mVertices[0], mVertices.size(), sf::Quads, rs);
-	mRender.display();
-	sf::Sprite final_render(mRender.getTexture());
-	final_render.setPosition((position - position_nondec)
-		- sf::Vector2f(1, 1));
-	pR.get_sfml_render().draw(final_render);
+	if (mUse_render_texture)
+	{
+		if (get_renderer() != &pR)
+			set_renderer(pR, true);
+		mRender.clear({ 0, 0, 0, 0 });
+		mRender.draw(&mVertices[0], mVertices.size(), sf::Quads, rs);
+		mRender.display();
+		sf::Sprite final_render(mRender.getTexture());
+		final_render.setPosition((position - position_nondec)
+			- sf::Vector2f(1, 1));
+		pR.get_sfml_render().draw(final_render);
+	}
+	else
+	{
+		pR.get_sfml_render().draw(&mVertices[0], mVertices.size(), sf::Quads, rs);
+	}
 	return 0;
+}
+
+void vertex_batch::clean()
+{
+	mVertices.clear();
 }
 
 void vertex_batch::set_color(color pColor)
@@ -139,6 +179,9 @@ void vertex_batch::set_color(color pColor)
 
 void vertex_batch::refresh_renderer(renderer& pR)
 {
-	const auto target = pR.get_target_size();
-	mRender.create(static_cast<unsigned int>(target.x) + 2, static_cast<unsigned int>(target.y) + 2);
+	if (mUse_render_texture)
+	{
+		const auto target = pR.get_target_size();
+		mRender.create(static_cast<unsigned int>(target.x) + 2, static_cast<unsigned int>(target.y) + 2);
+	}
 }

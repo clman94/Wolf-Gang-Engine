@@ -47,8 +47,7 @@ int tilemap_display::draw(engine::renderer& pR)
 			add_child(vb);
 		
 		vb.set_texture(mTexture);
-		if (vb.get_renderer() == nullptr)
-			vb.set_renderer(pR, true);
+		vb.use_render_texture(true);
 
 		// This solves the problem with the lines between the tiles (mostly; still has a few lines)
 		//const engine::fvector floating_point_error(11.f / 1024, 11.f / 1024);

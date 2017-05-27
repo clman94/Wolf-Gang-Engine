@@ -227,26 +227,34 @@ class vertex_reference
 public:
 	vertex_reference()
 		: mBatch(nullptr),
-		mRotation(0)
+		mRotation(0),
+		mHskew(0)
 	{}
-
-	vertex_reference(const vertex_reference& A);
 
 	void set_position(fvector pPosition);
 	fvector get_position();
+	void set_size(fvector pSize);
+	fvector get_size() const;
+
 	void set_texture_rect(frect pRect);
-	void reset_size(fvector pSize);
 	void hide();
 
 	void set_rotation(int pRotation);
 	int get_rotation() const;
 
+	void set_hskew(float pPercent);
+
+	void set_color(const color& pColor);
+
 	friend class vertex_batch;
 private:
 	int mRotation;
+	float mHskew;
+	frect mRect;
+	color mColor;
 	engine::frect mTexture_rect;
 
-	void update_rect();
+	void update();
 
 	vertex_batch* mBatch;
 	size_t mIndex;
@@ -262,15 +270,29 @@ class vertex_batch :
 	public render_object
 {
 public:
+	vertex_batch();
+
 	void set_texture(std::shared_ptr<texture> pTexture);
 	vertex_reference add_quad(fvector pPosition, frect pTexture_rect, int pRotation = 0);
 	int draw(renderer &pR);
+
+	void use_render_texture(bool pEnable);
+
+#ifdef ENGINE_INTERNAL
+
+	int draw(renderer &pR, const sf::Texture& pTexture);
+
+#endif
+
+	void clean();
 
 	void set_color(color pColor);
 
 	friend class vertex_reference;
 
 private:
+	bool mUse_render_texture;
+
 	virtual void refresh_renderer(renderer& pR);
 
 	std::vector<sf::Vertex> mVertices;
@@ -278,6 +300,7 @@ private:
 	std::shared_ptr<texture> mTexture;
 	sf::RenderTexture mRender;
 };
+
 
 enum struct anchor
 {
@@ -432,6 +455,7 @@ private:
 	int mCharacter_size;
 	float mScale;
 	friend class text_node;
+	friend class rich_text_node;
 };
 
 class text_node :
@@ -468,6 +492,103 @@ private:
 	void update_offset();
 };
 
+class text_format
+{
+public:
+	enum format : uint32_t
+	{
+		none      = 0,
+		bold      = 1 << 0,
+		italics   = 1 << 1,
+		wave      = 1 << 2,
+		shake     = 1 << 3,
+		rainbow   = 1 << 4,
+	};
+
+	struct block
+	{
+		std::string mText;
+		std::string mMeta;
+		color       mColor;
+		uint32_t      mFormat;
+	};
+
+	text_format();
+	text_format(const char* pText);
+	text_format(const std::string& pText);
+
+	/*
+	Basic Format
+
+	Bold
+	<b></b>
+
+	Italics
+	<i></i>
+
+	Color
+	<c hex="RRGGBBAA"></c>
+	<c r="255" g="255" b="255" a="255"></c>
+
+	Special Effects
+	<wave></wave>
+	<shake></shake>
+	<rainbow></rainbow>
+	*/
+	bool parse_text(const std::string& pText);
+
+	size_t get_block_count() const;
+	const block& get_block(size_t pIndex) const;
+
+	//void set_default_color();
+
+	std::vector<block>::const_iterator begin() const;
+	std::vector<block>::const_iterator end() const;
+
+
+private:
+
+	std::string mUnformatted_text;
+	std::vector<block> mBlocks;
+	color mDefault_color;
+};
+
+class rich_text_node :
+	public render_object
+{
+public:
+	rich_text_node();
+
+	void set_font(std::shared_ptr<font> pFont, bool pApply_preferences = false);
+	
+	void set_text(const text_format& pText);
+	const std::string& get_text() const;
+
+	void append_text(const text_format& pText);
+
+	virtual int draw(renderer &pR);
+
+private:
+	// Used for timing th effects
+	float mTimer;
+
+	std::shared_ptr<font> mFont;
+	text_format mFormat;
+
+	fvector mSize;
+
+	struct block_handle
+	{
+		fvector mOriginal_position;
+		vertex_reference mVertices;
+		size_t mBlock_index;
+	};
+	size_t mCharacter_size;
+	std::vector<block_handle> mBlock_handles;
+	vertex_batch mVertex_batch;
+	void update_effects();
+	void update();
+};
 
 class animation_node :
 	public sprite_node

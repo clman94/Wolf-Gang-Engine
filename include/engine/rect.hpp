@@ -9,6 +9,18 @@ template<typename T>
 struct rect
 {
 	T x, y, w, h;
+
+	template<typename T1>
+	static rect cast(rect<T1> pRect)
+	{
+		return
+		{
+			static_cast<T>(pRect.x),
+			static_cast<T>(pRect.y),
+			static_cast<T>(pRect.w),
+			static_cast<T>(pRect.h)
+		};
+	}
 	
 	rect(T pX = 0, T pY = 0, T pW = 0, T pH = 0)
 		: x(pX), y(pY), w(pW), h(pH) {}

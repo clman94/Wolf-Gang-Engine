@@ -24,6 +24,24 @@ struct vector
 {
 	T x, y;
 
+	static vector as_x(float pVal)
+	{
+		return{ pVal, 0 };
+	}
+	static vector as_y(float pVal)
+	{
+		return{ 0, pVal };
+	}
+
+	static vector x_only(const vector& pVec)
+	{
+		return{ pVec.x, 0 };
+	}
+	static vector y_only(const vector& pVec)
+	{
+		return{ 0, pVec.y };
+	}
+
 	vector(T _x = 0, T _y = 0)
 		: x(_x), y(_y)
 	{}

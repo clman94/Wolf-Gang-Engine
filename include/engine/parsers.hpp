@@ -16,7 +16,7 @@ namespace parsers
 
 static void word_wrap(std::string& pStr, size_t pLength)
 {
-	if (pStr.empty() && pLength == 0)
+	if (pStr.empty() || pLength == 0)
 		return;
 	size_t last_line = 0;
 	size_t last_space = 0;
@@ -41,7 +41,6 @@ static size_t line_count(const std::string & pStr)
 	if (pStr.empty())
 		return 0;
 
-	// Check line count
 	size_t line_count = 1;
 	for (size_t i = 0; i < pStr.size(); i++)
 	{
@@ -55,7 +54,8 @@ static size_t remove_first_line(std::string& pStr)
 {
 	for (size_t i = 0; i < pStr.size(); i++)
 	{
-		if (pStr[i] == '\n')
+		if (pStr[i] == '\n'
+			|| i == pStr.size() - 1)
 		{
 			pStr = std::string(pStr.begin() + i + 1, pStr.end());
 			return i;
