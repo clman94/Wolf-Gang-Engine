@@ -1817,7 +1817,7 @@ bool game::load_settings(engine::fs::path pData_dir)
 
 	auto font = mResource_manager.get_resource<engine::font>(engine::resource_type::font, "default");
 	mRich_text_test.set_font(font);
-	mRich_text_test.set_text("<c r=\"255\" g=\"255\" b=\"255\"><wave>pie is <i><b>great</b></i></wave>\n and <c r=\"0\" g=\"255\" b=\"255\"><wave>hellow <i>blord</i></wave></c></c>");
+	mRich_text_test.set_text("<c r=\"255\" g=\"255\" b=\"255\"><wave>pie is <shake><i><b>great</b></i></shake></wave>\n and <c r=\"0\" g=\"255\" b=\"255\"><wave>hellow <i>blord</i></wave></c></c>");
 	mRich_text_test.set_depth(-1000);
 
 	mScene.set_resource_manager(mResource_manager);

@@ -209,16 +209,23 @@ void rich_text_node::update_effects()
 	for (auto& i : mBlock_handles)
 	{
 		const auto& block = mFormat.get_block(i.mBlock_index);
+
+		fvector offset(0, 0);
+
 		if (block.mFormat & text_format::format::wave)
 		{
 			const float wave_amount = 0.1f;
 			const float wideness = 0.5f;
 			const float speed = 3.f;
-			const fvector offset = fvector::as_y((std::cos(std::fmodf(mTimer*speed + i.mOriginal_position.x*wideness, 3.14*2)))
+			offset += fvector::as_y((std::cos(std::fmodf(mTimer*speed + i.mOriginal_position.x*wideness, 3.14*2)))
 				*i.mVertices.get_size().y*wave_amount);
-
-			i.mVertices.set_position(i.mOriginal_position + offset);
 		}
+		if (block.mFormat & text_format::format::shake)
+		{
+			offset += fvector((float)(rand() % 100) / 100 - 0.5f, (float)(rand() % 100) / 100 - 0.5f);
+		}
+		if (offset != fvector(0, 0))
+			i.mVertices.set_position(i.mOriginal_position + offset);
 	}
 }
 
