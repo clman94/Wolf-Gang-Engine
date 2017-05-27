@@ -173,25 +173,25 @@ std::vector<text_format::block>::const_iterator text_format::end() const
 	return mBlocks.end();
 }
 
-rich_text_node::rich_text_node()
+formatted_text_node::formatted_text_node()
 {
 	mTimer = 0;
 	mCharacter_size = 15;
 }
 
-void rich_text_node::set_font(std::shared_ptr<font> pFont, bool pApply_preferences)
+void formatted_text_node::set_font(std::shared_ptr<font> pFont, bool pApply_preferences)
 {
 	mFont = pFont;
 	mFont->load();
 }
 
-void rich_text_node::set_text(const text_format & pText)
+void formatted_text_node::set_text(const text_format & pText)
 {
 	mFormat = pText;
 	update();
 }
 
-int rich_text_node::draw(renderer & pR)
+int formatted_text_node::draw(renderer & pR)
 {
 	if (!mFont)
 		return 1;
@@ -204,7 +204,7 @@ int rich_text_node::draw(renderer & pR)
 	return mVertex_batch.draw(pR, *texture);
 }
 
-void rich_text_node::update_effects()
+void formatted_text_node::update_effects()
 {
 	for (auto& i : mBlock_handles)
 	{
@@ -217,7 +217,7 @@ void rich_text_node::update_effects()
 			const float wave_amount = 0.1f;
 			const float wideness_scale = 0.5f;
 			const float speed = 3.f;
-			offset += fvector::as_y((std::cos(std::fmodf(mTimer*speed + i.mOriginal_position.x*wideness_scale, 3.14f*2)))
+			offset += fvector::as_y((std::sin(std::fmodf(mTimer*speed + i.mOriginal_position.x*wideness_scale, 3.14f*2)))
 				*i.mVertices.get_size().y*wave_amount);
 		}
 		if (block.mFormat & text_format::format::shake)
@@ -229,7 +229,7 @@ void rich_text_node::update_effects()
 	}
 }
 
-void rich_text_node::update()
+void formatted_text_node::update()
 {
 	mBlock_handles.clear();
 	mVertex_batch.clean();

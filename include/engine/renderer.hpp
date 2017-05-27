@@ -457,7 +457,7 @@ private:
 	int mCharacter_size;
 	float mScale;
 	friend class text_node;
-	friend class rich_text_node;
+	friend class formatted_text_node;
 };
 
 class text_node :
@@ -555,11 +555,11 @@ private:
 	color mDefault_color;
 };
 
-class rich_text_node :
+class formatted_text_node :
 	public render_object
 {
 public:
-	rich_text_node();
+	formatted_text_node();
 
 	void set_font(std::shared_ptr<font> pFont, bool pApply_preferences = false);
 	
@@ -571,7 +571,7 @@ public:
 	virtual int draw(renderer &pR);
 
 private:
-	// Used for timing th effects
+	// Used for timing the effects
 	float mTimer;
 
 	std::shared_ptr<font> mFont;

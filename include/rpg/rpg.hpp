@@ -527,7 +527,7 @@ protected:
 
 private:
 
-	engine::rich_text_node mRich_text_test;
+	engine::formatted_text_node mRich_text_test;
 
 	// Everything is good and settings are loaded
 	bool mIs_ready;
