@@ -479,8 +479,8 @@ void formatted_text_node::update()
 			handle.mBlock_index = i;
 			handle.mVertices = mVertex_batch.add_quad(position + bounds_offset, glyph_rect);
 			handle.mVertices.set_size(fvector(glyph_rect.w, glyph_rect.h) / scale_quality);
-			handle.mVertices.set_color(block.mColor);
-			handle.mVertices.set_hskew(block.mFormat & text_format::format::italics ? 0.5f : 0);
+			handle.mVertices.set_color(block.mColor);// Color
+			handle.mVertices.set_hskew(block.mFormat & text_format::format::italics ? 0.5f : 0); // Italics
 			handle.mOriginal_position = position + bounds_offset;
 			mBlock_handles.push_back(handle);
 
