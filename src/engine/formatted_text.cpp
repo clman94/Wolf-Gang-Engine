@@ -414,7 +414,7 @@ void formatted_text_node::update_effects()
 			const float wave_amount = 0.1f;
 			const float wideness_scale = 0.5f;
 			const float speed = 3.f;
-			offset += fvector::as_y((std::sin(std::fmodf(mTimer*speed + i.mOriginal_position.x*wideness_scale, 3.14f*2)))
+			offset += fvector::as_y((std::sin(std::fmod(mTimer*speed + i.mOriginal_position.x*wideness_scale, 3.14f*2)))
 				*i.mVertices.get_size().y*wave_amount);
 		}
 		if (block.mFormat & text_format::format::shake)
