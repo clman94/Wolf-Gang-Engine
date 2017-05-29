@@ -455,21 +455,86 @@ class save_system
 public:
 	save_system();
 
+	void clean();
+
 	bool open_save(const std::string& pPath);
 	void load_flags(flag_container& pFlags);
 	engine::fvector get_player_position();
 	std::string get_scene_path();
 	std::string get_scene_name();
 
+	util::optional<int> get_int_value(const engine::encoded_path& pPath) const;
+	util::optional<float> get_float_value(const engine::encoded_path& pPath) const;
+	util::optional<std::string> get_string_value(const engine::encoded_path& pPath) const;
+	std::vector<std::string> get_directory_entries(const engine::encoded_path& pDirectory) const;
+
+	void set_value(const engine::encoded_path& pPath, int pValue);
+	void set_value(const engine::encoded_path& pPath, float pValue);
+	void set_value(const engine::encoded_path& pPath, const std::string& pValue);
+	bool remove_value(const engine::encoded_path& pPath);
+
 	void new_save();
 	void save(const std::string& pPath);
 	void save_flags(flag_container& pFlags);
 	void save_scene(scene& pScene);
-	void save_player(player_character& pPlayer);
 
 private:
+	void value_factory(tinyxml2::XMLElement * pEle);
+	void load_values();
+	void save_values();
+
+	struct value
+	{
+		engine::encoded_path mPath;
+		virtual void save(tinyxml2::XMLElement * pEle) const = 0;
+		virtual void load(tinyxml2::XMLElement * pEle) = 0;
+	};
+
+	struct int_value : public value
+	{
+		int mValue;
+		virtual void save(tinyxml2::XMLElement * pEle) const;
+		virtual void load(tinyxml2::XMLElement * pEle);
+	};
+
+	struct float_value : public value
+	{
+		float mValue;
+		virtual void save(tinyxml2::XMLElement * pEle) const;
+		virtual void load(tinyxml2::XMLElement * pEle);
+	};
+
+	struct string_value : public value
+	{
+		std::string mValue;
+		virtual void save(tinyxml2::XMLElement * pEle) const;
+		virtual void load(tinyxml2::XMLElement * pEle);
+	};
+
+	std::vector<std::unique_ptr<value>> mValues;
+	value* find_value(const engine::encoded_path& pPath) const;
+
+	template<typename T>
+	T* ensure_existence(const engine::encoded_path& pPath)
+	{
+		value* val = find_value(pPath);
+		if (!val)
+		{
+			auto new_value = new T;
+			new_value->mPath = pPath;
+			mValues.push_back(std::move(std::unique_ptr<value>(static_cast<value*>(new_value))));
+			return new_value;
+		}
+		else
+		{
+			auto cast = dynamic_cast<T*>(val);
+			return cast;
+		}
+	}
+
 	tinyxml2::XMLDocument mDocument;
 	tinyxml2::XMLElement *mEle_root;
+	void save_player(player_character& pPlayer);
 };
 
 class scene_load_request
@@ -539,6 +604,7 @@ private:
 	script_system    mScript;
 	engine::controls mControls;
 	size_t           mSlot;
+	save_system      mSave_system;
 
 	engine::fs::path mData_directory;
 
@@ -568,6 +634,15 @@ private:
 	void script_load_scene(const std::string& pName);
 	void script_load_scene_to_door(const std::string& pName, const std::string& pDoor);
 	void script_load_scene_to_position(const std::string& pName, engine::fvector pPosition);
+
+	int script_get_int_value(const std::string& pPath) const;
+	float script_get_float_value(const std::string& pPath) const;
+	std::string script_get_string_value(const std::string& pPath) const;
+	void script_set_int_value(const std::string& pPath, int pValue);
+	void script_set_float_value(const std::string& pPath, float pValue);
+	void script_set_string_value(const std::string& pPath, const std::string& pValue);
+	AS::CScriptArray* script_get_director_entries(const std::string& pPath);
+	bool script_remove_value(const std::string& pPath);
 
 	void load_script_interface();
 

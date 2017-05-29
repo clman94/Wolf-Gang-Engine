@@ -256,7 +256,7 @@ encoded_path::encoded_path(const std::string & pString)
 	parse(pString);
 }
 
-bool encoded_path::parse(const std::string & pString)
+bool encoded_path::parse(const std::string & pString, const std::set<char>& pDelimitors)
 {
 	if (pString.empty())
 		return false;
@@ -265,8 +265,7 @@ bool encoded_path::parse(const std::string & pString)
 	auto end_segment = pString.begin();
 	for (; end_segment != pString.end(); end_segment++)
 	{
-		if (*end_segment == '\\' ||
-			*end_segment == '/')
+		if (pDelimitors.find(*end_segment) != pDelimitors.end())
 		{
 			if (start_segment < end_segment - 1) // Segment is not empty
 			{
@@ -309,14 +308,38 @@ bool encoded_path::snip_path(const encoded_path & pPath)
 	return true;
 }
 
+encoded_path encoded_path::subpath(size_t pOffset, size_t pCount) const
+{
+	if (pOffset >= mHierarchy.size())
+		return{};
+
+	encoded_path new_path;
+
+	if (pOffset + pCount >= mHierarchy.size() || pCount == 0)
+	{
+		new_path.mHierarchy = std::vector<std::string>(mHierarchy.begin() + pOffset, mHierarchy.end());
+		return new_path;
+	}
+
+	new_path.mHierarchy 
+		= std::vector<std::string>(mHierarchy.begin() + pOffset
+			, mHierarchy.begin() + pOffset + pCount);
+	return new_path;
+}
+
 std::string encoded_path::string() const
+{
+	return string('/');
+}
+
+std::string encoded_path::string(char pSeperator) const
 {
 	if (mHierarchy.empty())
 		return{};
 	std::string retval;
 	for (auto i : mHierarchy)
 	{
-		retval += i + "/"; // Supported by windows and linux, however may still not be entirely portable.
+		retval += i + pSeperator; // Supported by windows and linux, however may still not be entirely portable.
 						   // TODO: Add preprocessor directives to check for type of system
 	}
 	retval.pop_back(); // Remove the last divider
@@ -391,6 +414,18 @@ bool encoded_path::pop_filename()
 		return false;
 	mHierarchy.pop_back();
 	return true;
+}
+
+const std::string& encoded_path::get_section(size_t pAt) const
+{
+	if (pAt >= mHierarchy.size())
+		return{};
+	return mHierarchy[pAt];
+}
+
+size_t encoded_path::get_sub_length() const
+{
+	return mHierarchy.size();
 }
 
 encoded_path& encoded_path::operator=(const std::string& pString)

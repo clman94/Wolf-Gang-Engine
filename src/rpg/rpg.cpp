@@ -1468,38 +1468,34 @@ engine::fs::path game::get_slot_path(size_t pSlot)
 void game::save_game()
 {
 	const std::string path = get_slot_path(mSlot).string();
-	save_system file;
-
 	util::info("Saving game...");
-	file.new_save();
-	file.save_flags(mFlags);
-	file.save_scene(mScene);
-	file.save_player(mScene.get_player());
-	file.save(path);
+	mSave_system.new_save();
+	mSave_system.save_flags(mFlags);
+	mSave_system.save_scene(mScene);
+	mSave_system.save(path);
 	util::info("Game saved to '" + path + "'");
 }
 
 void game::open_game()
 {
 	const std::string path = get_slot_path(mSlot).string();
-	save_system file;
-	if (!file.open_save(path))
+	if (!mSave_system.open_save(path))
 	{
 		util::error("Invalid slot '" + std::to_string(mSlot) + "'");
 		return;
 	}
 	util::info("Opening game...");
 	mFlags.clean();
-	file.load_flags(mFlags);
+	mSave_system.load_flags(mFlags);
 	if (mScript.is_executing())
 	{
-		mScene_load_request.request_load(file.get_scene_path());
-		mScene_load_request.set_player_position(file.get_player_position());
+		mScene_load_request.request_load(mSave_system.get_scene_path());
+		mScene_load_request.set_player_position(mSave_system.get_player_position());
 	}
 	else
 	{
-		mScene.load_scene(file.get_scene_path());
-		mScene.get_player().set_position(file.get_player_position());
+		mScene.load_scene(mSave_system.get_scene_path());
+		mScene.get_player().set_position(mSave_system.get_player_position());
 	}
 
 	util::info("Loaded " + std::to_string(mFlags.get_count()) + " flag(s)");
@@ -1548,6 +1544,75 @@ void game::script_load_scene_to_position(const std::string & pName, engine::fvec
 	mScene_load_request.set_player_position(pPosition);
 }
 
+int game::script_get_int_value(const std::string & pPath) const
+{
+	auto val = mSave_system.get_int_value(pPath);
+	if (!val)
+	{
+		util::warning("Value '" + pPath + "' does not exist");
+		return 0;
+	}
+	return *val;
+}
+
+float game::script_get_float_value(const std::string & pPath) const
+{
+	auto val = mSave_system.get_float_value(pPath);
+	if (!val)
+	{
+		util::warning("Value '" + pPath + "' does not exist");
+		return 0;
+	}
+	return *val;
+}
+
+std::string game::script_get_string_value(const std::string & pPath) const
+{
+	auto val = mSave_system.get_string_value(pPath);
+	if (!val)
+	{
+		util::warning("Value '" + pPath + "' does not exist");
+		return{};
+	}
+	return *val;
+}
+
+void game::script_set_int_value(const std::string & pPath, int pValue)
+{
+	mSave_system.set_value(pPath, pValue);
+}
+
+void game::script_set_float_value(const std::string & pPath, float pValue)
+{
+	mSave_system.set_value(pPath, pValue);
+}
+
+void game::script_set_string_value(const std::string & pPath, const std::string & pValue)
+{
+	mSave_system.set_value(pPath, pValue);
+}
+
+AS::CScriptArray* game::script_get_director_entries(const std::string & pPath)
+{
+	const auto entries = mSave_system.get_directory_entries(pPath);
+
+	auto& engine = mScript.get_engine();
+
+	asITypeInfo* type = engine.GetTypeInfoByDecl("array<string>");
+	CScriptArray* arr = CScriptArray::Create(type, entries.size());
+	for (size_t i = 0; i < entries.size(); i++)
+	{
+		arr->SetValue(i, (void*)&entries[i]);
+	}
+
+	return arr;
+}
+
+bool game::script_remove_value(const std::string & pPath)
+{
+	return mSave_system.remove_value(pPath);
+}
+
 void
 game::load_script_interface()
 {
@@ -1565,6 +1630,17 @@ game::load_script_interface()
 	mScript.add_function("void load_scene(const string &in)", asMETHOD(game, script_load_scene), this);
 	mScript.add_function("void load_scene(const string &in, const string &in)", asMETHOD(game, script_load_scene_to_door), this);
 	mScript.add_function("void load_scene(const string &in, vec)", asMETHOD(game, script_load_scene_to_position), this);
+
+	mScript.set_namespace("values");
+	mScript.add_function("int get_int(const string &in)", asMETHOD(game, script_get_int_value), this);
+	mScript.add_function("float get_float(const string &in)", asMETHOD(game, script_get_float_value), this);
+	mScript.add_function("string get_string(const string &in)", asMETHOD(game, script_get_string_value), this);
+	mScript.add_function("void set(const string &in, int)", asMETHOD(game, script_set_int_value), this);
+	mScript.add_function("void set(const string &in, float)", asMETHOD(game, script_set_float_value), this);
+	mScript.add_function("void set(const string &in, const string&in)", asMETHOD(game, script_set_string_value), this);
+	mScript.add_function("array<string>@ get_entries(const string &in)", asMETHOD(game, script_get_director_entries), this);
+	mScript.add_function("bool remove(const string &in)", asMETHOD(game, script_remove_value), this);
+	mScript.reset_namespace();
 
 	mFlags.load_script_interface(mScript);
 	mScene.load_script_interface(mScript);
@@ -2145,19 +2221,29 @@ void background_music::script_music_set_second_volume(float pVolume)
 // save_system
 // ##########
 
+const char* int_value_type_name = "int";
+const char* float_value_type_name = "float";
+const char* string_value_type_name = "string";
+const char value_path_delimitor = ':';
+
 save_system::save_system()
 {
 	mEle_root = nullptr;
 }
 
-bool save_system::open_save(const std::string& pPath)
+void save_system::clean()
 {
 	mDocument.Clear();
+	mValues.clear();
+}
+
+bool save_system::open_save(const std::string& pPath)
+{
+	clean();
 	if (mDocument.LoadFile(pPath.c_str()))
-	{
 		return false;
-	}
 	mEle_root = mDocument.RootElement();
+	load_values();
 	return true;
 }
 
@@ -2174,6 +2260,7 @@ void save_system::load_flags(flag_container& pFlags)
 
 engine::fvector save_system::get_player_position()
 {
+	assert(mEle_root != nullptr);
 	auto ele_player = mEle_root->FirstChildElement("player");
 	return{ ele_player->FloatAttribute("x")
 		, ele_player->FloatAttribute("y") };
@@ -2193,6 +2280,33 @@ std::string save_system::get_scene_name()
 	return util::safe_string(ele_scene->Attribute("name"));
 }
 
+util::optional<int> save_system::get_int_value(const engine::encoded_path & pPath) const
+{
+	value* val = find_value(pPath);
+	auto cast = dynamic_cast<int_value*>(val);
+	if (!cast)
+		return{};
+	return cast->mValue;
+}
+
+util::optional<float> save_system::get_float_value(const engine::encoded_path & pPath) const
+{
+	value* val = find_value(pPath);
+	auto cast = dynamic_cast<float_value*>(val);
+	if (!cast)
+		return{};
+	return cast->mValue;
+}
+
+util::optional<std::string> save_system::get_string_value(const engine::encoded_path & pPath) const
+{
+	value* val = find_value(pPath);
+	auto cast = dynamic_cast<string_value*>(val);
+	if (!cast)
+		return{};
+	return cast->mValue;
+}
+
 void save_system::new_save()
 {
 	// Create saves folder if it doesn't exist
@@ -2207,6 +2321,7 @@ void save_system::new_save()
 void save_system::save(const std::string& pPath)
 {
 	assert(mEle_root != nullptr);
+	save_values();
 	mDocument.SaveFile(pPath.c_str());
 }
 
@@ -2228,6 +2343,7 @@ void save_system::save_scene(scene& pScene)
 	mEle_root->InsertFirstChild(ele_scene);
 	ele_scene->SetAttribute("name", pScene.get_name().c_str());
 	ele_scene->SetAttribute("path", pScene.get_path().c_str());
+	save_player(pScene.get_player());
 }
 
 void save_system::save_player(player_character& pPlayer)
@@ -2238,6 +2354,155 @@ void save_system::save_player(player_character& pPlayer)
 	ele_scene->SetAttribute("x", pPlayer.get_position().x);
 	ele_scene->SetAttribute("y", pPlayer.get_position().y);
 }
+
+void save_system::value_factory(tinyxml2::XMLElement * pEle)
+{
+	std::unique_ptr<value> new_value;
+
+	// Create
+	const std::string type = pEle->Attribute("type");
+	if (type == int_value_type_name)
+		new_value.reset(new int_value);
+	else if (type == float_value_type_name)
+		new_value.reset(new float_value);
+	else if (type == string_value_type_name)
+		new_value.reset(new string_value);
+
+	// Set path and load stuff
+	new_value->mPath.parse(pEle->Name(), { value_path_delimitor });
+	new_value->load(pEle);
+
+	mValues.push_back(std::move(new_value));
+}
+
+void save_system::load_values()
+{
+	assert(mEle_root != nullptr);
+	auto ele_values = mEle_root->FirstChildElement("values");
+	auto ele_val = ele_values->FirstChildElement();
+	while (ele_val)
+	{
+		value_factory(ele_val);
+		ele_val = ele_val->NextSiblingElement();
+	}
+}
+
+void save_system::save_values()
+{
+	assert(mEle_root != nullptr);
+	auto ele_values = mDocument.NewElement("values");
+	mEle_root->InsertFirstChild(ele_values);
+	for (auto& i : mValues)
+	{
+		if (i->mPath.empty())
+		{
+			util::warning("There is a value with no path");
+			continue;
+		}
+		auto ele_new_value = mDocument.NewElement(i->mPath.string(value_path_delimitor).c_str());
+		ele_values->InsertEndChild(ele_new_value);
+		i->save(ele_new_value);
+	}
+}
+
+std::vector<std::string> save_system::get_directory_entries(const engine::encoded_path & pDirectory) const
+{
+	std::vector<std::string> ret;
+	for (auto& i : mValues)
+	{
+		if (i->mPath.in_directory(pDirectory))
+		{
+			const std::string entry_path = i->mPath.get_section(pDirectory.get_sub_length());
+
+			// Check if this value already exists
+			bool already_has_entry = false;
+			for (auto& j : ret)
+				if (j == entry_path)
+				{
+					already_has_entry = true;
+					break;
+				}
+			if (already_has_entry)
+				continue;
+
+			ret.push_back(entry_path);
+		}
+	}
+	return ret;
+}
+
+void save_system::set_value(const engine::encoded_path & pPath, int pValue)
+{
+	auto val = ensure_existence<int_value>(pPath);
+	val->mValue = pValue;
+}
+
+void save_system::set_value(const engine::encoded_path & pPath, float pValue)
+{
+	auto val = ensure_existence<float_value>(pPath);
+	val->mValue = pValue;
+}
+
+void save_system::set_value(const engine::encoded_path & pPath, const std::string & pValue)
+{
+	auto val = ensure_existence<string_value>(pPath);
+	val->mValue = pValue;
+}
+
+bool save_system::remove_value(const engine::encoded_path & pPath)
+{
+	for (size_t i = 0; i < mValues.size(); i++)
+	{
+		if (mValues[i]->mPath == pPath)
+		{
+			mValues.erase(mValues.begin() + i);
+			return true;
+		}
+	}
+	return false;
+}
+
+save_system::value* save_system::find_value(const engine::encoded_path& pPath) const
+{
+	for (auto& i : mValues)
+		if (i->mPath == pPath)
+			return i.get();
+	return nullptr;
+}
+
+void save_system::int_value::save(tinyxml2::XMLElement * pEle) const
+{
+	pEle->SetAttribute("type", int_value_type_name);
+	pEle->SetAttribute("value", mValue);
+}
+
+void save_system::int_value::load(tinyxml2::XMLElement * pEle)
+{
+	mValue = pEle->IntAttribute("value");
+}
+
+void save_system::float_value::save(tinyxml2::XMLElement * pEle) const
+{
+	pEle->SetAttribute("type", float_value_type_name);
+	pEle->SetAttribute("value", mValue);
+}
+
+void save_system::float_value::load(tinyxml2::XMLElement * pEle)
+{
+	mValue = pEle->FloatAttribute("value");
+}
+
+void save_system::string_value::save(tinyxml2::XMLElement * pEle) const
+{
+	pEle->SetAttribute("type", string_value_type_name);
+	pEle->SetAttribute("value", mValue.c_str());
+}
+
+void save_system::string_value::load(tinyxml2::XMLElement * pEle)
+{
+	mValue = util::safe_string(pEle->Attribute("value"));
+}
+
 
 // ##########
 // expression_manager

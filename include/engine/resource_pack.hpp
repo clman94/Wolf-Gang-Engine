@@ -5,6 +5,7 @@
 #include <vector>
 #include <cstdint>
 #include <fstream>
+#include <set>
 #include <engine/utility.hpp>
 
 namespace engine {
@@ -18,7 +19,7 @@ public:
 	encoded_path(const char* pString);
 	encoded_path(const std::string& pString);
 
-	bool parse(const std::string& pString);
+	bool parse(const std::string& pString, const std::set<char>& pDelimitors = {'\\', '/'});
 
 	// Check if first part of this path is the same
 	bool in_directory(const encoded_path& pPath) const;
@@ -26,7 +27,10 @@ public:
 	// Snip the first part of this path (if it can)
 	bool snip_path(const encoded_path& pPath);
 
+	encoded_path subpath(size_t pOffset, size_t pCount = 0) const;
+
 	std::string string() const;
+	std::string string(char pSeperator) const;
 	std::string stem() const;
 	std::string extension() const;
 
@@ -41,8 +45,10 @@ public:
 	encoded_path parent() const;
 
 	std::string filename() const;
-
 	bool pop_filename();
+
+	const std::string& get_section(size_t pAt) const;
+	size_t get_sub_length() const;
 
 	encoded_path& operator=(const std::string& pString);
 	bool operator==(const encoded_path& pRight) const;

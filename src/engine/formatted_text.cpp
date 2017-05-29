@@ -429,7 +429,7 @@ void formatted_text_node::update_effects()
 void formatted_text_node::update()
 {
 	const float scale_quality = 4;
-	const size_t scaled_character_size = mCharacter_size*scale_quality;
+	const size_t scaled_character_size = static_cast<size_t>(mCharacter_size*scale_quality);
 
 	mBlock_handles.clear();
 	mVertex_batch.clean();
