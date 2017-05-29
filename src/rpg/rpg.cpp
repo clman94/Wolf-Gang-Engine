@@ -1577,19 +1577,19 @@ std::string game::script_get_string_value(const std::string & pPath) const
 	return *val;
 }
 
-void game::script_set_int_value(const std::string & pPath, int pValue)
+bool game::script_set_int_value(const std::string & pPath, int pValue)
 {
-	mSave_system.set_value(pPath, pValue);
+	return mSave_system.set_value(pPath, pValue);
 }
 
-void game::script_set_float_value(const std::string & pPath, float pValue)
+bool game::script_set_float_value(const std::string & pPath, float pValue)
 {
-	mSave_system.set_value(pPath, pValue);
+	return mSave_system.set_value(pPath, pValue);
 }
 
-void game::script_set_string_value(const std::string & pPath, const std::string & pValue)
+bool game::script_set_string_value(const std::string & pPath, const std::string & pValue)
 {
-	mSave_system.set_value(pPath, pValue);
+	return mSave_system.set_value(pPath, pValue);
 }
 
 AS::CScriptArray* game::script_get_director_entries(const std::string & pPath)
@@ -1611,6 +1611,11 @@ AS::CScriptArray* game::script_get_director_entries(const std::string & pPath)
 bool game::script_remove_value(const std::string & pPath)
 {
 	return mSave_system.remove_value(pPath);
+}
+
+bool game::script_has_value(const std::string & pPath)
+{
+	return mSave_system.has_value(pPath);
 }
 
 void
@@ -1635,11 +1640,12 @@ game::load_script_interface()
 	mScript.add_function("int get_int(const string &in)", asMETHOD(game, script_get_int_value), this);
 	mScript.add_function("float get_float(const string &in)", asMETHOD(game, script_get_float_value), this);
 	mScript.add_function("string get_string(const string &in)", asMETHOD(game, script_get_string_value), this);
-	mScript.add_function("void set(const string &in, int)", asMETHOD(game, script_set_int_value), this);
-	mScript.add_function("void set(const string &in, float)", asMETHOD(game, script_set_float_value), this);
-	mScript.add_function("void set(const string &in, const string&in)", asMETHOD(game, script_set_string_value), this);
+	mScript.add_function("bool set(const string &in, int)", asMETHOD(game, script_set_int_value), this);
+	mScript.add_function("bool set(const string &in, float)", asMETHOD(game, script_set_float_value), this);
+	mScript.add_function("bool set(const string &in, const string&in)", asMETHOD(game, script_set_string_value), this);
 	mScript.add_function("array<string>@ get_entries(const string &in)", asMETHOD(game, script_get_director_entries), this);
 	mScript.add_function("bool remove(const string &in)", asMETHOD(game, script_remove_value), this);
+	mScript.add_function("bool exists(const string &in)", asMETHOD(game, script_has_value), this);
 	mScript.reset_namespace();
 
 	mFlags.load_script_interface(mScript);
@@ -2224,7 +2230,6 @@ void background_music::script_music_set_second_volume(float pVolume)
 const char* int_value_type_name = "int";
 const char* float_value_type_name = "float";
 const char* string_value_type_name = "string";
-const char value_path_delimitor = ':';
 
 save_system::save_system()
 {
@@ -2368,9 +2373,12 @@ void save_system::value_factory(tinyxml2::XMLElement * pEle)
 	else if (type == string_value_type_name)
 		new_value.reset(new string_value);
 
+	auto ele_path = pEle->FirstChildElement("path");
+	auto ele_value = pEle->FirstChildElement("value");
+
 	// Set path and load stuff
-	new_value->mPath.parse(pEle->Name(), { value_path_delimitor });
-	new_value->load(pEle);
+	new_value->mPath.parse(ele_path->GetText());
+	new_value->load(pEle, ele_value);
 
 	mValues.push_back(std::move(new_value));
 }
@@ -2401,9 +2409,20 @@ void save_system::save_values()
 			util::warning("There is a value with no path");
 			continue;
 		}
-		auto ele_new_value = mDocument.NewElement(i->mPath.string(value_path_delimitor).c_str());
-		ele_values->InsertEndChild(ele_new_value);
-		i->save(ele_new_value);
+		// Create the entry
+		auto ele_entry = mDocument.NewElement("entry");
+		ele_values->InsertEndChild(ele_entry);
+
+		// Add the name
+		auto ele_path = mDocument.NewElement("path");
+		ele_path->SetText(i->mPath.string().c_str());
+		ele_entry->InsertFirstChild(ele_path);
+
+		// Add the value data
+		auto ele_value = mDocument.NewElement("value");
+		ele_entry->InsertEndChild(ele_value);
+
+		i->save(ele_entry, ele_value);
 	}
 }
 
@@ -2433,22 +2452,31 @@ std::vector<std::string> save_system::get_directory_entries(const engine::encode
 	return ret;
 }
 
-void save_system::set_value(const engine::encoded_path & pPath, int pValue)
+bool save_system::set_value(const engine::encoded_path & pPath, int pValue)
 {
 	auto val = ensure_existence<int_value>(pPath);
+	if (!val)
+		return false;
 	val->mValue = pValue;
+	return true;
 }
 
-void save_system::set_value(const engine::encoded_path & pPath, float pValue)
+bool save_system::set_value(const engine::encoded_path & pPath, float pValue)
 {
 	auto val = ensure_existence<float_value>(pPath);
+	if (!val)
+		return false;
 	val->mValue = pValue;
+	return true;
 }
 
-void save_system::set_value(const engine::encoded_path & pPath, const std::string & pValue)
+bool save_system::set_value(const engine::encoded_path & pPath, const std::string & pValue)
 {
 	auto val = ensure_existence<string_value>(pPath);
+	if (!val)
+		return false;
 	val->mValue = pValue;
+	return true;
 }
 
 bool save_system::remove_value(const engine::encoded_path & pPath)
@@ -2464,6 +2492,11 @@ bool save_system::remove_value(const engine::encoded_path & pPath)
 	return false;
 }
 
+bool save_system::has_value(const engine::encoded_path & pPath) const
+{
+	return find_value(pPath) != nullptr;
+}
+
 save_system::value* save_system::find_value(const engine::encoded_path& pPath) const
 {
 	for (auto& i : mValues)
@@ -2472,37 +2505,37 @@ save_system::value* save_system::find_value(const engine::encoded_path& pPath) c
 	return nullptr;
 }
 
-void save_system::int_value::save(tinyxml2::XMLElement * pEle) const
+void save_system::int_value::save(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value) const
 {
 	pEle->SetAttribute("type", int_value_type_name);
-	pEle->SetAttribute("value", mValue);
+	pEle_value->SetText(mValue);
 }
 
-void save_system::int_value::load(tinyxml2::XMLElement * pEle)
+void save_system::int_value::load(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value)
 {
-	mValue = pEle->IntAttribute("value");
+	mValue = pEle_value->IntText();
 }
 
-void save_system::float_value::save(tinyxml2::XMLElement * pEle) const
+void save_system::float_value::save(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value) const
 {
 	pEle->SetAttribute("type", float_value_type_name);
-	pEle->SetAttribute("value", mValue);
+	pEle_value->SetText(mValue);
 }
 
-void save_system::float_value::load(tinyxml2::XMLElement * pEle)
+void save_system::float_value::load(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value)
 {
-	mValue = pEle->FloatAttribute("value");
+	mValue = pEle_value->FloatText();
 }
 
-void save_system::string_value::save(tinyxml2::XMLElement * pEle) const
+void save_system::string_value::save(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value) const
 {
 	pEle->SetAttribute("type", string_value_type_name);
-	pEle->SetAttribute("value", mValue.c_str());
+	pEle_value->SetText(mValue.c_str());
 }
 
-void save_system::string_value::load(tinyxml2::XMLElement * pEle)
+void save_system::string_value::load(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value)
 {
-	mValue = util::safe_string(pEle->Attribute("value"));
+	mValue = util::safe_string(pEle_value->GetText());
 }
 
 

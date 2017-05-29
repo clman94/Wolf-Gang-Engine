@@ -468,10 +468,12 @@ public:
 	util::optional<std::string> get_string_value(const engine::encoded_path& pPath) const;
 	std::vector<std::string> get_directory_entries(const engine::encoded_path& pDirectory) const;
 
-	void set_value(const engine::encoded_path& pPath, int pValue);
-	void set_value(const engine::encoded_path& pPath, float pValue);
-	void set_value(const engine::encoded_path& pPath, const std::string& pValue);
+	bool set_value(const engine::encoded_path& pPath, int pValue);
+	bool set_value(const engine::encoded_path& pPath, float pValue);
+	bool set_value(const engine::encoded_path& pPath, const std::string& pValue);
 	bool remove_value(const engine::encoded_path& pPath);
+
+	bool has_value(const engine::encoded_path& pPath) const;
 
 	void new_save();
 	void save(const std::string& pPath);
@@ -486,29 +488,29 @@ private:
 	struct value
 	{
 		engine::encoded_path mPath;
-		virtual void save(tinyxml2::XMLElement * pEle) const = 0;
-		virtual void load(tinyxml2::XMLElement * pEle) = 0;
+		virtual void save(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value) const = 0;
+		virtual void load(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value) = 0;
 	};
 
 	struct int_value : public value
 	{
 		int mValue;
-		virtual void save(tinyxml2::XMLElement * pEle) const;
-		virtual void load(tinyxml2::XMLElement * pEle);
+		virtual void save(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value) const;
+		virtual void load(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value);
 	};
 
 	struct float_value : public value
 	{
 		float mValue;
-		virtual void save(tinyxml2::XMLElement * pEle) const;
-		virtual void load(tinyxml2::XMLElement * pEle);
+		virtual void save(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value) const;
+		virtual void load(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value);
 	};
 
 	struct string_value : public value
 	{
 		std::string mValue;
-		virtual void save(tinyxml2::XMLElement * pEle) const;
-		virtual void load(tinyxml2::XMLElement * pEle);
+		virtual void save(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value) const;
+		virtual void load(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value);
 	};
 
 	std::vector<std::unique_ptr<value>> mValues;
@@ -518,6 +520,8 @@ private:
 	T* ensure_existence(const engine::encoded_path& pPath)
 	{
 		value* val = find_value(pPath);
+
+		// Create a new one
 		if (!val)
 		{
 			auto new_value = new T;
@@ -525,11 +529,10 @@ private:
 			mValues.push_back(std::move(std::unique_ptr<value>(static_cast<value*>(new_value))));
 			return new_value;
 		}
-		else
-		{
-			auto cast = dynamic_cast<T*>(val);
-			return cast;
-		}
+
+		// Just cast and go
+		auto cast = dynamic_cast<T*>(val);
+		return cast;
 	}
 
 	tinyxml2::XMLDocument mDocument;
@@ -638,11 +641,12 @@ private:
 	int script_get_int_value(const std::string& pPath) const;
 	float script_get_float_value(const std::string& pPath) const;
 	std::string script_get_string_value(const std::string& pPath) const;
-	void script_set_int_value(const std::string& pPath, int pValue);
-	void script_set_float_value(const std::string& pPath, float pValue);
-	void script_set_string_value(const std::string& pPath, const std::string& pValue);
+	bool script_set_int_value(const std::string& pPath, int pValue);
+	bool script_set_float_value(const std::string& pPath, float pValue);
+	bool script_set_string_value(const std::string& pPath, const std::string& pValue);
 	AS::CScriptArray* script_get_director_entries(const std::string& pPath);
 	bool script_remove_value(const std::string& pPath);
+	bool script_has_value(const std::string& pPath);
 
 	void load_script_interface();
 
