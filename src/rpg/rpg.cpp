@@ -2015,6 +2015,8 @@ bool game::restart_game()
 {
 	util::info("Reloading entire game...");
 
+	mSave_system.clean();
+
 	bool succ = load_settings(mData_directory);
 
 	util::info("Game reloaded");
