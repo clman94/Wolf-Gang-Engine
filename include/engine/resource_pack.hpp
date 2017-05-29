@@ -47,7 +47,7 @@ public:
 	std::string filename() const;
 	bool pop_filename();
 
-	const std::string& get_section(size_t pAt) const;
+	std::string get_section(size_t pAt) const;
 	size_t get_sub_length() const;
 
 	encoded_path& operator=(const std::string& pString);

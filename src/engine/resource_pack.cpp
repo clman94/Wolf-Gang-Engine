@@ -416,7 +416,7 @@ bool encoded_path::pop_filename()
 	return true;
 }
 
-const std::string& encoded_path::get_section(size_t pAt) const
+std::string encoded_path::get_section(size_t pAt) const
 {
 	if (pAt >= mHierarchy.size())
 		return{};
