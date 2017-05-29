@@ -2379,6 +2379,8 @@ void save_system::load_values()
 {
 	assert(mEle_root != nullptr);
 	auto ele_values = mEle_root->FirstChildElement("values");
+	if (!ele_values)
+		return;
 	auto ele_val = ele_values->FirstChildElement();
 	while (ele_val)
 	{
