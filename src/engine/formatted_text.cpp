@@ -440,8 +440,6 @@ void formatted_text_node::update()
 	const float vspace = font->getLineSpacing(scaled_character_size) / scale_quality;
 	const float hspace = font->getGlyph(' ', scaled_character_size, true).advance / scale_quality;
 
-	char prev_character = 0;
-
 	fvector position = fvector(0, static_cast<float>(mCharacter_size)) + mFont->mOffset;
 	for (size_t i = 0; i < mFormat.get_block_count(); i++)
 	{
@@ -449,8 +447,6 @@ void formatted_text_node::update()
 		const auto& block = mFormat.get_block(i);
 		for (auto j : block.mText)
 		{
-			//position.x += font->getKerning(prev_character, j, scaled_character_size) / scale_quality;
-			prev_character = j;
 
 
 			// Check for whitespace and advance positions
@@ -480,7 +476,7 @@ void formatted_text_node::update()
 			handle.mVertices = mVertex_batch.add_quad(position + bounds_offset, glyph_rect);
 			handle.mVertices.set_size(fvector(glyph_rect.w, glyph_rect.h) / scale_quality);
 			handle.mVertices.set_color(block.mColor);// Color
-			handle.mVertices.set_hskew(block.mFormat & text_format::format::italics ? 0.5f : 0); // Italics
+			handle.mVertices.set_hskew((block.mFormat & text_format::format::italics) ? 0.5f : 0); // Italics
 			handle.mOriginal_position = position + bounds_offset;
 			mBlock_handles.push_back(handle);
 
@@ -491,8 +487,6 @@ void formatted_text_node::update()
 				mSize.y = position.y + glyph_rect.h/scale_quality;
 
 			position.x += hspace;
-
-			prev_character = j;
 		}
 
 	}

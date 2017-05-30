@@ -28,7 +28,7 @@ inline bool write_unsignedint_binary(std::ostream& pStream, const T pVal)
 {
 	uint8_t bytes[sizeof(T)];
 	for (size_t i = 0; i < sizeof(T); i++)
-		bytes[i] = static_cast<uint8_t>((pVal & (0xFF << (8 * i))) >> (8 * i));
+		bytes[i] = static_cast<uint8_t>(static_cast<T>(pVal & (0xFF << (8 * i))) >> (8 * i));
 	pStream.write((char*)&bytes, sizeof(T));
 	return pStream.good();
 }
@@ -64,6 +64,7 @@ public:
 
 	packing_ignore()
 	{
+		mIs_whitelist = false;
 		mIs_valid = false;
 	}
 
@@ -473,6 +474,11 @@ void encoded_path::simplify()
 	}
 }
 
+pack_header::pack_header()
+{
+	mHeader_size = 0;
+}
+
 void pack_header::add_file(file_info pFile)
 {
 	mFiles.push_back(pFile);
@@ -556,6 +562,7 @@ uint64_t pack_header::get_header_size() const
 
 pack_stream::pack_stream()
 {
+	mHeader_offset = 0;
 }
 
 pack_stream::pack_stream(const pack_stream & pCopy)

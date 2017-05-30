@@ -82,6 +82,8 @@ public:
 	...
 	*/
 
+	pack_header();
+
 	struct file_info
 	{
 		encoded_path path;
