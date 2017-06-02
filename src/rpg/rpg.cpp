@@ -2380,7 +2380,7 @@ void save_system::value_factory(tinyxml2::XMLElement * pEle)
 
 	// Set path and load stuff
 	new_value->mPath.parse(ele_path->GetText());
-	new_value->load(pEle, ele_value);
+	new_value->load(ele_value);
 
 	mValues.push_back(std::move(new_value));
 }
@@ -2513,7 +2513,7 @@ void save_system::int_value::save(tinyxml2::XMLElement * pEle, tinyxml2::XMLElem
 	pEle_value->SetText(mValue);
 }
 
-void save_system::int_value::load(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value)
+void save_system::int_value::load(tinyxml2::XMLElement * pEle_value)
 {
 	mValue = pEle_value->IntText();
 }
@@ -2524,7 +2524,7 @@ void save_system::float_value::save(tinyxml2::XMLElement * pEle, tinyxml2::XMLEl
 	pEle_value->SetText(mValue);
 }
 
-void save_system::float_value::load(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value)
+void save_system::float_value::load(tinyxml2::XMLElement * pEle_value)
 {
 	mValue = pEle_value->FloatText();
 }
@@ -2535,7 +2535,7 @@ void save_system::string_value::save(tinyxml2::XMLElement * pEle, tinyxml2::XMLE
 	pEle_value->SetText(mValue.c_str());
 }
 
-void save_system::string_value::load(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value)
+void save_system::string_value::load(tinyxml2::XMLElement * pEle_value)
 {
 	mValue = util::safe_string(pEle_value->GetText());
 }

@@ -489,28 +489,28 @@ private:
 	{
 		engine::encoded_path mPath;
 		virtual void save(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value) const = 0;
-		virtual void load(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value) = 0;
+		virtual void load(tinyxml2::XMLElement * pEle_value) = 0;
 	};
 
 	struct int_value : public value
 	{
 		int mValue;
 		virtual void save(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value) const;
-		virtual void load(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value);
+		virtual void load(tinyxml2::XMLElement * pEle_value);
 	};
 
 	struct float_value : public value
 	{
 		float mValue;
 		virtual void save(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value) const;
-		virtual void load(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value);
+		virtual void load(tinyxml2::XMLElement * pEle_value);
 	};
 
 	struct string_value : public value
 	{
 		std::string mValue;
 		virtual void save(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value) const;
-		virtual void load(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value);
+		virtual void load(tinyxml2::XMLElement * pEle_value);
 	};
 
 	std::vector<std::unique_ptr<value>> mValues;
