@@ -102,6 +102,7 @@ renderer::~renderer()
 void renderer::set_target_size(fvector pSize)
 {
 	mTarget_size = pSize;
+	mWindow.setSize(engine::vector<unsigned int>(pSize*2));
 	refresh_view();
 }
 
@@ -206,7 +207,6 @@ void renderer::refresh_view()
 
 	view.setViewport(viewport);
 	mWindow.setView(view);
-	return;
 }
 
 void renderer::refresh_gui_view()

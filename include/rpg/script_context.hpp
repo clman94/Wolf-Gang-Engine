@@ -26,7 +26,7 @@ public:
 	struct wall_group_function
 	{
 		std::string group;
-		script_function* function;
+		std::shared_ptr<script_function> function;
 	};
 
 	scene_script_context();
@@ -43,7 +43,7 @@ public:
 	void clean();
 	void start_all_with_tag(const std::string& pTag);
 
-	std::vector<script_function> get_all_with_tag(const std::string& pTag);
+	std::vector<std::shared_ptr<script_function>> get_all_with_tag(const std::string& pTag);
 
 	void clean_globals();
 
@@ -63,7 +63,7 @@ private:
 
 	std::vector<wall_group_function> mWall_group_functions;
 
-	std::map<std::string, std::unique_ptr<script_function>> mTrigger_functions;
+	std::map<std::string, std::shared_ptr<script_function>> mTrigger_functions;
 
 	static std::string get_metadata_type(const std::string &pMetadata);
 

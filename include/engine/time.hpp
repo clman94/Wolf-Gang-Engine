@@ -140,7 +140,7 @@ class frame_clock
 {
 	clock mFps_clock;
 	clock mDelta_clock;
-	unsigned int mFrames;
+	size_t mFrames;
 	float mFps;
 	float mInterval;
 	float mDelta;

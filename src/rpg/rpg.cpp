@@ -991,6 +991,8 @@ void scene::load_script_interface(script_system& pScript)
 
 	pScript.add_function("vec get_display_size()",          asMETHOD(scene, script_get_display_size), this);
 
+	pScript.add_function("const string& get_scene_name()",  asMETHOD(scene, get_name), this);
+
 	mScript = &pScript;
 }
 
@@ -1202,15 +1204,15 @@ void scene::update_collision_interaction(engine::controls & pControls)
 				mPlayer.set_position(hit_door->calculate_player_position());
 				mPlayer.set_direction_not_relative(hit_door->get_offset());
 			}
-			else if (!mEnd_functions[0].is_running())
+			else if (!mEnd_functions[0]->is_running())
 			{
 				mScript->abort_all();
 				for (auto& i : mEnd_functions)
 				{
-					if (i.call())
+					if (i->call())
 					{
-						i.set_arg(0, (void*)&hit_door->get_scene());
-						i.set_arg(1, (void*)&hit_door->get_destination());
+						i->set_arg(0, (void*)&hit_door->get_scene());
+						i->set_arg(1, (void*)&hit_door->get_destination());
 					}
 				}
 			}
@@ -1363,13 +1365,13 @@ void scene_script_context::start_all_with_tag(const std::string & pTag)
 
 	for (auto& i : funcs)
 	{
-		i.call();
+		i->call();
 	}
 }
 
-std::vector<script_function> scene_script_context::get_all_with_tag(const std::string & pTag)
+std::vector<std::shared_ptr<script_function>> scene_script_context::get_all_with_tag(const std::string & pTag)
 {
-	std::vector<script_function> ret;
+	std::vector<std::shared_ptr<script_function>> ret;
 	size_t func_count = mScene_module->GetFunctionCount();
 	for (size_t i = 0; i < func_count; i++)
 	{
@@ -1377,9 +1379,9 @@ std::vector<script_function> scene_script_context::get_all_with_tag(const std::s
 		std::string metadata = parsers::remove_trailing_whitespace(mBuilder.GetMetadataStringForFunc(func));
 		if (metadata == pTag)
 		{
-			script_function sfunc;
-			sfunc.set_function(func);
-			sfunc.set_script_system(*mScript);
+			std::shared_ptr<script_function> sfunc(new script_function);
+			sfunc->set_function(func);
+			sfunc->set_script_system(*mScript);
 			ret.push_back(sfunc);
 		}
 	}
@@ -1414,12 +1416,12 @@ void scene_script_context::parse_wall_group_functions()
 				util::warning("Group name is not specified");
 			}
 
-			std::unique_ptr<script_function> function(new script_function);
+			std::shared_ptr<script_function> function(new script_function);
 			function->set_script_system(*mScript);
 			function->set_function(as_function);
 
 			wall_group_function wgf;
-			wgf.function = function.get();
+			wgf.function = function;
 
 			mTrigger_functions[as_function->GetDeclaration(true, true)].swap(function);
 

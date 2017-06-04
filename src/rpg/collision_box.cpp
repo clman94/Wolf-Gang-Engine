@@ -12,9 +12,9 @@ wall_group::wall_group()
 	mIs_enabled = true;
 }
 
-void wall_group::add_function(script_function & pFunction)
+void wall_group::add_function(std::shared_ptr<script_function> pFunction)
 {
-	mFunctions.push_back(&pFunction);
+	mFunctions.push_back(pFunction);
 }
 
 void wall_group::call_function()

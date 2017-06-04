@@ -18,7 +18,7 @@ class wall_group
 public:
 	wall_group();
 
-	void add_function(script_function& pFunction);
+	void add_function(std::shared_ptr<script_function> pFunction);
 	void call_function();
 
 	void set_name(const std::string& pName);
@@ -30,7 +30,7 @@ public:
 private:
 	std::string mName;
 	bool mIs_enabled;
-	std::vector<script_function*> mFunctions;
+	std::vector<std::shared_ptr<script_function>> mFunctions;
 };
 
 class collision_box

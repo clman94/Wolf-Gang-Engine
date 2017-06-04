@@ -62,29 +62,35 @@ bool controls::is_triggered(const std::string& pName)
 	const auto find = mBindings.find(pName);
 	if (find == mBindings.end())
 		return false; // Not found
-	return find->second.is_pressed;
+	return find->second.mIs_pressed;
 }
 
 void controls::update(engine::renderer & pR)
 {
 	for (auto& i : mBindings)
 	{
+		if (!i.second.mIs_enabled)
+		{
+			i.second.mIs_pressed = false;
+			continue;
+		}
+
 		for (const auto& j : i.second.keys) // Check all alternatives
 		{
 			if (j.empty())
 				continue;
 
-			i.second.is_pressed = true;
+			i.second.mIs_pressed = true;
 			for (const auto& k : j)
 			{
-				bool is_pressed = i.second.press_only ? pR.is_key_pressed(k) : pR.is_key_down(k);
+				bool is_pressed = i.second.mPress_only ? pR.is_key_pressed(k) : pR.is_key_down(k);
 				if (!is_pressed)
 				{
-					i.second.is_pressed = false;
+					i.second.mIs_pressed = false;
 					break;
 				}
 			}
-			if (i.second.is_pressed)
+			if (i.second.mIs_pressed)
 				break;
 		}
 	}
@@ -95,7 +101,7 @@ bool controls::set_press_only(const std::string & pName, bool pIs_press_only)
 	const auto find = mBindings.find(pName);
 	if (find == mBindings.end())
 		return false; // Not found
-	find->second.press_only = pIs_press_only;
+	find->second.mPress_only = pIs_press_only;
 	return true;
 }
 
@@ -121,8 +127,26 @@ void controls::clean()
 	mBindings.clear();
 }
 
+bool controls::is_enabled(const std::string& pName) const
+{
+	auto find = mBindings.find(pName);
+	if (find == mBindings.end())
+		return false;
+	return find->second.mIs_enabled;
+}
+
+bool controls::set_enabled(const std::string & pName, bool pIs_enabled)
+{
+	auto find = mBindings.find(pName);
+	if (find == mBindings.end())
+		return false;
+	find->second.mIs_enabled = pIs_enabled;
+	return true;
+}
+
 controls::binding::binding()
 {
-	is_pressed = false;
-	press_only = false;
+	mIs_enabled = true;
+	mIs_pressed = false;
+	mPress_only = false;
 }

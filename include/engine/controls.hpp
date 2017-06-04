@@ -20,14 +20,18 @@ public:
 	bool bind_key(const std::string& pName, const std::string& pKey_name, bool pAlternative = false);
 	void clean();
 
+	bool is_enabled(const std::string& pName) const;
+	bool set_enabled(const std::string& pName, bool pIs_enabled);
+
 private:
 
 	typedef std::vector<renderer::key_type> bound_keys;
 	struct binding
 	{
 		binding();
-		bool is_pressed;
-		bool press_only;
+		bool mIs_enabled;
+		bool mIs_pressed;
+		bool mPress_only;
 		bound_keys keys[2]; // 2 different bindings allowed currently
 	};
 	std::map<std::string, binding> mBindings;

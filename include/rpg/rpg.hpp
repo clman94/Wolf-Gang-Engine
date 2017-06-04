@@ -399,7 +399,7 @@ public:
 	void set_resource_pack(engine::pack_stream_factory* pPack);
 
 private:
-	std::vector<script_function> mEnd_functions;
+	std::vector<std::shared_ptr<script_function>> mEnd_functions;
 
 	std::map<std::string, scene_script_context> pScript_contexts;
 

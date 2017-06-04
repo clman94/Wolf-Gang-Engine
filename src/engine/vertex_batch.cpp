@@ -47,7 +47,8 @@ void vertex_reference::hide()
 void vertex_reference::set_rotation(int pRotation)
 {
 	mRotation = std::abs(pRotation) % 4;
-	update_color();
+	update_position();
+	update_texture();
 }
 
 int vertex_reference::get_rotation() const
@@ -70,13 +71,37 @@ void vertex_reference::update_position()
 {
 	if (!mBatch)
 		return;
-	auto ref = get_reference();
-	const fvector hskew_offset(mRect.get_size().x*mHskew*0.5f, 0);
 
-	ref[0].position = mRect.get_offset()                                     + hskew_offset;
-	ref[1].position = mRect.get_offset() + fvector::x_only(mRect.get_size()) + hskew_offset;
-	ref[2].position = mRect.get_offset() + mRect.get_size()                  - hskew_offset;
-	ref[3].position = mRect.get_offset() + fvector::y_only(mRect.get_size()) - hskew_offset;
+	fvector positions[4];
+
+	// Offset
+	for (size_t i = 0; i < 4; i++)
+		positions[i] = mRect.get_offset();
+
+	// Size and rotation
+	if (mRotation % 2 == 0) // 0 or 180 degrees
+	{
+		positions[1] += fvector::x_only(mRect.get_size());
+		positions[2] += mRect.get_size();
+		positions[3] += fvector::y_only(mRect.get_size());
+	}
+	else // 90 or -90 degrees
+	{
+		positions[1] += fvector(mRect.get_size().y, 0);
+		positions[2] += fvector(mRect.get_size().y, mRect.get_size().x);
+		positions[3] += fvector(0, mRect.get_size().x);
+	}
+	
+	// Skew
+	const fvector hskew_offset(mRect.get_size().x*mHskew*0.5f, 0);
+	positions[0] += hskew_offset;
+	positions[1] += hskew_offset;
+	positions[2] -= hskew_offset;
+	positions[3] -= hskew_offset;
+
+	auto ref = get_reference();
+	for (size_t i = 0; i < 4; i++)
+		ref[i].position = sf::Vector2f(positions[i]);
 }
 
 void vertex_reference::update_texture()
@@ -126,8 +151,8 @@ vertex_batch::add_quad(fvector pPosition, frect pTexture_rect, int pRotation)
 	vertex_reference ref;
 	ref.mBatch = this;
 	ref.mIndex = mVertices.size() - 4;
-	ref.set_rotation(pRotation);
 	ref.set_texture_rect(pTexture_rect);
+	ref.set_rotation(pRotation);
 	ref.set_position(pPosition);
 	ref.set_color({ 255, 255, 255, 255 });
 	return ref;

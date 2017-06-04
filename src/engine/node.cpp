@@ -3,13 +3,15 @@
 
 using namespace engine;
 
-inline bool check_node_loop(const node& pNode)
+inline bool check_node_loop(const node& pFind, const node& pStart)
 {
-	auto curr_node = pNode.get_parent();
+	auto curr_node = &pStart;
 	while (curr_node)
 	{
-		if (curr_node == &pNode)
+		if (curr_node == &pFind)
 			return true;
+		if (!curr_node->get_parent())
+			return false;
 		curr_node = curr_node->get_parent();
 	}
 	return false;
@@ -52,22 +54,21 @@ fvector node::get_position(const node& pRelative) const
 }
 
 void
-node::set_absolute_position(fvector pos)
+node::set_absolute_position(const fvector& pPosition)
 {
 	if (mParent)
-		mPosition = pos - mParent->get_absolute_position();
+		mPosition = pPosition - mParent->get_absolute_position();
 	else
-		mPosition = pos;
+		mPosition = pPosition;
 }
 
 void
-node::set_position(fvector pos)
+node::set_position(const fvector& pPosition)
 {
-	mPosition = pos;
+	mPosition = pPosition;
 }
 
-util::optional_pointer<node>
-node::detach_parent()
+util::optional_pointer<node> node::detach_parent()
 {
 	if (!mParent) return{};
 	node* temp = mParent->mChildren[mChild_index];
@@ -79,8 +80,7 @@ node::detach_parent()
 	return temp;
 }
 
-node_arr
-node::detach_children()
+node_arr node::detach_children()
 {
 	if (!mChildren.size()) return node_arr();
 	node_arr temp = mChildren;
@@ -90,8 +90,7 @@ node::detach_children()
 	return temp;
 }
 
-util::optional_pointer<node>
-node::get_parent() const
+util::optional_pointer<node> node::get_parent() const
 {
 	return mParent;
 }
@@ -102,22 +101,20 @@ node::get_children() const
 	return mChildren;
 }
 
-int
-node::set_parent(node& obj)
+bool node::set_parent(node& obj)
 {
 	return obj.add_child(*this);
 }
 
-int
-node::add_child(node& obj)
+bool node::add_child(node& obj)
 {
-	if (&obj == this || check_node_loop(obj)) return 1;
+	if (&obj == this || check_node_loop(*this, obj)) return false;
 	if (obj.mParent) obj.detach_parent();
 	obj.mChild_index = mChildren.size();
 	obj.mParent = this;
 	obj.set_unit(mUnit);
 	mChildren.push_back(&obj);
-	return 0;
+	return true;
 }
 
 void node::set_unit(float pUnit)

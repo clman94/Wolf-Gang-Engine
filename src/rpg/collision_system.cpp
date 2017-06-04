@@ -39,7 +39,7 @@ void collision_system::setup_script_defined_triggers(const scene_script_context 
 			util::warning("Group '" + i.group + "' does not exist");
 			continue;
 		}
-		group->add_function(*i.function);
+		group->add_function(i.function);
 	}
 }
 
@@ -56,7 +56,7 @@ void collision_system::load_script_interface(script_system & pScript)
 
 	pScript.add_function("void _set_wall_group_enabled(const string&in, bool)", AS::asMETHOD(collision_system, script_set_wall_group_enabled), this);
 	pScript.add_function("bool _get_wall_group_enabled(const string&in)", AS::asMETHOD(collision_system, script_get_wall_group_enabled), this);
-	pScript.add_function("void _bind_box_function(coroutine_noargs@+)", AS::asMETHOD(collision_system, script_bind_group_function), this);
+	pScript.add_function("void _bind_box_function(coroutine@+, dictionary @+)", AS::asMETHOD(collision_system, script_bind_group_function), this);
 
 }
 
@@ -128,10 +128,10 @@ void collision_system::script_bind_group_function(const std::string & pName, AS:
 		return;
 	}
 
-	/*script_function func;
-	func.set_function(pFunc);
-	func.set_script_system(*mScript);
-	group->add_function(func);*/
+	std::shared_ptr<script_function> func(new script_function);
+	func->set_function(pFunc);
+	func->set_script_system(*mScript);
+	group->add_function(func);
 }
 
 std::shared_ptr<collision_box> collision_system::script_create_box(collision_box::type pType)

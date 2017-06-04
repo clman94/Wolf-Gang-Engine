@@ -25,10 +25,10 @@ public:
 	// Absolute position scaled by unit scale
 	fvector  get_exact_position() const;
 
-	void     set_absolute_position(fvector pos);
+	void     set_absolute_position(const fvector& pPosition);
 	fvector  get_absolute_position() const;
 
-	void     set_position(fvector pos);
+	void     set_position(const fvector& pPosition);
 	fvector  get_position() const;
 	fvector  get_position(const node& pRelative) const;
 
@@ -38,8 +38,8 @@ public:
 	util::optional_pointer<node> get_parent() const;
 	node_arr                     get_children() const;
 
-	int      set_parent(node& obj);
-	int      add_child(node& obj);
+	bool set_parent(node& obj);
+	bool add_child(node& obj);
 
 	void set_unit(float pUnit);
 	float get_unit() const;
