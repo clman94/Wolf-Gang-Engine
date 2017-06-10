@@ -211,6 +211,11 @@ engine::fvector entity_manager::script_get_size(entity_reference & e)
 		auto se = dynamic_cast<sprite_entity*>(e.get());
 		return se->mSprite.get_size();
 	}
+	else if (e->get_type() == entity::type::text)
+	{
+		auto se = dynamic_cast<text_entity*>(e.get());
+		return se->mText.get_size();
+	}
 	else
 		util::warning("Unsupported entity type");
 	return{};

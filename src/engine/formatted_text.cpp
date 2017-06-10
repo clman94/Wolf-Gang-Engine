@@ -381,6 +381,11 @@ void formatted_text_node::set_anchor(anchor pAnchor)
 	mAnchor = pAnchor;
 }
 
+fvector formatted_text_node::get_size() const
+{
+	return mSize;
+}
+
 void formatted_text_node::set_character_size(size_t pSize)
 {
 	mCharacter_size = pSize;
@@ -481,13 +486,16 @@ void formatted_text_node::update()
 			mBlock_handles.push_back(handle);
 
 			// Update size
-			if (position.x + glyph_rect.x > mSize.x)
-				mSize.x = position.x + glyph_rect.w/scale_quality;
-			if (position.y + glyph_rect.y > mSize.y)
-				mSize.y = position.y + glyph_rect.h/scale_quality;
+
+			if (position.x + bounds_offset.x > mSize.x)
+				mSize.x = position.x + bounds_offset.x;
+			if (position.y + bounds_offset.y > mSize.y)
+				mSize.y = position.y + bounds_offset.y;
 
 			position.x += hspace;
 		}
 
 	}
 }
+
+

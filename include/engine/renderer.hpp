@@ -587,6 +587,8 @@ public:
 	void set_color(const color& pColor);
 	void set_anchor(anchor pAnchor);
 
+	fvector get_size() const;
+
 	void set_character_size(size_t pSize);
 
 	virtual int draw(renderer &pR);
