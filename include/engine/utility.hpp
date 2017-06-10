@@ -90,7 +90,7 @@ template<typename T>
 class optional
 {
 public:
-	optional(){}
+	optional() : mHas_value(false) {}
 
 	optional(const optional& pOptional)
 	{
