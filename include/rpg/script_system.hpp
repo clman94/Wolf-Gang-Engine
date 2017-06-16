@@ -80,6 +80,7 @@ public:
 	}
 
 private:
+	engine::timer mTimeout_timer;
 
 	std::shared_ptr<thread> mCurrect_thread_context;
 	std::vector<std::shared_ptr<thread>> mThread_contexts;
@@ -103,6 +104,8 @@ private:
 	AS::CScriptHandle script_get_shared(const std::string& pName);
 
 	void load_script_interface();
+
+	void timeout_callback(AS::asIScriptContext *ctx);
 };
 
 

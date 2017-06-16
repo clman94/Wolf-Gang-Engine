@@ -96,6 +96,18 @@ void script_system::load_script_interface()
 	add_function("ref@ get_shared(const string&in)", asMETHOD(script_system, script_get_shared), this);
 }
 
+void script_system::timeout_callback(AS::asIScriptContext *ctx)
+{
+	if (mTimeout_timer.is_reached())
+	{
+		util::error("Script running too long. (Infinite loop?)");
+		ctx->Abort();
+		util::info("In script '" + std::string(ctx->GetFunction()->GetModuleName()) + "' :");
+		util::info("  Script aborted at line " + std::to_string(ctx->GetLineNumber())
+			+ " in function '" + std::string(ctx->GetFunction()->GetDeclaration(true, true)) + "'");
+	}
+}
+
 void
 script_system::script_debug_print(std::string &pMessage)
 {
@@ -108,8 +120,8 @@ script_system::script_debug_print(std::string &pMessage)
 	assert(mCurrect_thread_context->context != nullptr);
 	assert(mCurrect_thread_context->context->GetFunction() != nullptr);
 
-	std::string name = mCurrect_thread_context->context->GetFunction()->GetName();
-	util::log_print(name, get_current_line(), 0, util::log_level::debug, pMessage);
+	std::string details = std::string(mCurrect_thread_context->context->GetFunction()->GetModuleName());
+	util::log_print(details, get_current_line(), 0, util::log_level::debug, pMessage);
 }
 
 void script_system::script_error_print(std::string & pMessage)
@@ -123,8 +135,8 @@ void script_system::script_error_print(std::string & pMessage)
 	assert(mCurrect_thread_context->context != nullptr);
 	assert(mCurrect_thread_context->context->GetFunction() != nullptr);
 
-	std::string name = mCurrect_thread_context->context->GetFunction()->GetName();
-	util::log_print(name, get_current_line(), 0, util::log_level::error, pMessage);
+	std::string details = std::string(mCurrect_thread_context->context->GetFunction()->GetModuleName());
+	util::log_print(details, get_current_line(), 0, util::log_level::error, pMessage);
 }
 
 void
@@ -315,9 +327,18 @@ void script_system::return_context(AS::asIScriptContext * pContext)
 
 int script_system::tick()
 {
+
 	for (size_t i = 0; i < mThread_contexts.size(); i++)
 	{
 		mCurrect_thread_context = mThread_contexts[i];
+		
+		// Timeout feature disabled in release mode to remove overhead
+#ifndef LOCKED_RELEASE_MODE
+
+		// 5 second timeout for scripts
+		mTimeout_timer.start(5);
+		mCurrect_thread_context->context->SetLineCallback(AS::asMETHOD(script_system, timeout_callback), this, asCALL_THISCALL);
+#endif
 
 		int r = mCurrect_thread_context->context->Execute();
 
