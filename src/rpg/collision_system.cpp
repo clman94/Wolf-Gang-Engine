@@ -2,7 +2,7 @@
 
 using namespace rpg;
 
-util::optional<engine::fvector> collision_system::get_door_entry(std::string pName)
+std::shared_ptr<const door> collision_system::get_door_entry(std::string pName)
 {
 	for (auto& i : mContainer.get_boxes())
 	{
@@ -12,7 +12,7 @@ util::optional<engine::fvector> collision_system::get_door_entry(std::string pNa
 			if (find->get_name() != pName)
 				continue;
 
-			return find->calculate_player_position();
+			return find;
 		}
 	}
 	return{};

@@ -3,6 +3,24 @@
 
 using namespace rpg;
 
+character_entity::direction character_entity::vector_direction(engine::fvector pVector)
+{
+	if (std::abs(pVector.x) > std::abs(pVector.y))
+	{
+		if (pVector.x > 0)
+			return direction::right;
+		else
+			return direction::left;
+	}
+	else
+	{
+		if (pVector.y > 0)
+			return direction::down;
+		else
+			return direction::up;
+	}
+}
+
 character_entity::character_entity()
 {
 	mCyclegroup = "default";
@@ -60,25 +78,7 @@ void character_entity::set_direction(direction pDirection)
 
 void character_entity::set_direction(engine::fvector pVector)
 {
-	set_direction_not_relative(pVector - get_position());
-}
-
-void character_entity::set_direction_not_relative(engine::fvector pVector)
-{
-	if (std::abs(pVector.x) > std::abs(pVector.y))
-	{
-		if (pVector.x > 0)
-			set_direction(direction::right);
-		else
-			set_direction(direction::left);
-	}
-	else
-	{
-		if (pVector.y > 0)
-			set_direction(direction::down);
-		else
-			set_direction(direction::up);
-	}
+	set_direction(vector_direction(pVector - get_position()));
 }
 
 character_entity::direction character_entity::get_direction()

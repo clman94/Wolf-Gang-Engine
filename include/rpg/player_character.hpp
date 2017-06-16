@@ -26,6 +26,8 @@ public:
 	engine::frect   get_collision_box() const;
 
 private:
+	void walking_direction(engine::fvector pMove);
+
 	bool mLocked;
 	bool mIs_walking;
 };

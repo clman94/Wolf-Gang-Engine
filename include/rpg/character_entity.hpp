@@ -35,6 +35,8 @@ public:
 		down,
 	};
 
+	static direction vector_direction(engine::fvector pVector);
+
 	character_entity();
 	void set_cycle_group(const std::string& name);
 	void set_cycle(const std::string& name);
@@ -42,7 +44,6 @@ public:
 
 	void set_direction(direction pDirection);
 	void set_direction(engine::fvector pVector);
-	void set_direction_not_relative(engine::fvector pVector);
 	direction get_direction();
 
 	void set_idle(bool pIs_idle);

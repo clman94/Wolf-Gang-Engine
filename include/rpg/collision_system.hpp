@@ -19,7 +19,7 @@ namespace rpg {
 class collision_system
 {
 public:
-	util::optional<engine::fvector> get_door_entry(std::string pName);
+	std::shared_ptr<const door> get_door_entry(std::string pName);
 
 	void clean();
 
@@ -30,8 +30,6 @@ public:
 	collision_box_container& get_container();
 
 private:
-
-
 	util::optional_pointer<script_system> mScript;
 
 	collision_box_container mContainer;
