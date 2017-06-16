@@ -1027,13 +1027,13 @@ void scene::load_terminal_interface(engine::terminal_system & pTerminal)
 		return load_scene(pArgs[0]);
 	}, "<Scene Name> - Load a scene by name");
 
-	mTerminal_cmd_group->add_command("new",
+	mTerminal_cmd_group->add_command("create",
 		[&](const engine::terminal_arglist& pArgs)->bool
 	{
 		if (pArgs.size() <= 0)
 		{
 			util::error("Not enough arguments");
-			util::info("scene new <scene_name>");
+			util::info("scene create <scene_name>");
 			return false;
 		}
 
