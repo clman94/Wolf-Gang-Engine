@@ -14,6 +14,33 @@
 using namespace rpg;
 using namespace AS;
 
+/*
+template<typename Tret, typename...Tparams>
+class script_bound_functiontemplate
+{
+public:
+	typedef std::function<void*(void*, void**)> implicit_function;
+
+protected:
+	void angelscript_call(asIScriptGeneric *gen)
+	{
+		std::vector<void*> paramlist;
+		if (gen->GetObject())
+			paramlist.push_back(gen->GetObject());
+		for (size_t i = 0; i < gen->GetArgCount(); i++)
+		{
+			paramlist.push_back(gen->GetAddressOfArg(i));
+		}
+		Tret* ret = nullptr;
+		if (gen->GetAddressOfReturnLocation())
+			ret = new(gen->GetAddressOfReturnLocation()) Tret();
+		mFunction(ret, &paramlist[0]);
+	}
+
+private:
+	implicit_function mFunction;
+};*/
+
 // #########
 // script_system
 // #########
