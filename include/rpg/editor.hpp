@@ -9,11 +9,14 @@
 #include <rpg/scene_loader.hpp>
 #include <rpg/collision_box.hpp>
 
+#include <rpg/scene.hpp>
+
 #include <vector>
 #include <string>
 #include <list>
 
 #include "../../src/xmlshortcuts.hpp"
+
 
 class command
 {
@@ -60,7 +63,7 @@ class editor_gui :
 public:
 	editor_gui();
 
-	void set_scene_name(const std::string& pName);
+	void set_scene(rpg::scene* pScene);
 
 	void clear();
 
@@ -75,13 +78,16 @@ public:
 	int draw(engine::renderer& pR);
 
 private:
+	rpg::scene* mScene;
 
 	float mUpdate_timer;
-	tgui::Label::Ptr mLb_scene;
+	tgui::ComboBox::Ptr mCb_scene;
 	tgui::Label::Ptr mLb_mouse;
 	tgui::Label::Ptr mLb_fps;
 	std::shared_ptr<tgui_list_layout> mLayout;
 	std::shared_ptr<tgui_list_layout> mEditor_layout;
+	
+	void update_scene();
 
 	void refresh_renderer(engine::renderer& pR);
 };
@@ -261,7 +267,7 @@ private:
 	std::shared_ptr<tgui_list_layout> mLo_door;
 	tgui::TextBox::Ptr mTb_door_name;
 	tgui::TextBox::Ptr mTb_door_destination;
-	tgui::TextBox::Ptr mTb_door_scene;
+	tgui::ComboBox::Ptr mTb_door_scene;
 	tgui::TextBox::Ptr mTb_door_offsetx;
 	tgui::TextBox::Ptr mTb_door_offsety;
 
@@ -363,7 +369,7 @@ public:
 	void set_resource_manager(engine::resource_manager& pResource_manager);
 	void load_terminal_interface(engine::terminal_system& pTerminal);
 
-	void set_scene_name(const std::string& pName);
+	void set_scene(rpg::scene* pScene);
 
 	int draw(engine::renderer& pR);
 

@@ -5,17 +5,21 @@
 
 using namespace rpg;
 
-std::vector<std::string> rpg::get_scene_list()
+std::vector<engine::encoded_path> rpg::get_scene_list()
 {
-	std::vector<std::string> ret;
+	std::vector<engine::encoded_path> ret;
 
-	for (auto& i : engine::fs::recursive_directory_iterator(defs::DEFAULT_SCENES_PATH))
+	const engine::encoded_path dir = (defs::DEFAULT_DATA_PATH / defs::DEFAULT_SCENES_PATH).string();
+	for (auto& i : engine::fs::recursive_directory_iterator(defs::DEFAULT_DATA_PATH / defs::DEFAULT_SCENES_PATH))
 	{
-		auto& path = i.path();
+		engine::encoded_path path = i.path().string();
 		if (path.extension() == ".xml")
-			ret.push_back(path.stem().string());
+		{
+			path.snip_path(dir);
+			path.remove_extension();
+			ret.push_back(path);
+		}
 	}
-
 	return ret;
 }
 

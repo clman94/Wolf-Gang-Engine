@@ -47,6 +47,8 @@ public:
 	std::string filename() const;
 	bool pop_filename();
 
+	bool remove_extension();
+
 	std::string get_section(size_t pAt) const;
 	size_t get_sub_length() const;
 

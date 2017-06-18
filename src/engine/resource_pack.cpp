@@ -360,6 +360,8 @@ std::string encoded_path::stem() const
 std::string encoded_path::extension() const
 {
 	const std::string name = filename();
+	if (name.empty())
+		return{};
 	auto end = name.rbegin();
 	for (; end != name.rend(); end++)
 		if (*end == '.')
@@ -415,6 +417,21 @@ bool encoded_path::pop_filename()
 		return false;
 	mHierarchy.pop_back();
 	return true;
+}
+
+bool encoded_path::remove_extension()
+{
+	if (mHierarchy.empty())
+		return false;
+	for (auto i = mHierarchy.back().begin(); i != mHierarchy.back().end(); i++)
+	{
+		if (*i == '.')
+		{
+			mHierarchy.back() = std::string(mHierarchy.back().begin(), i);
+			return true;
+		}
+	}
+	return false;
 }
 
 std::string encoded_path::get_section(size_t pAt) const
