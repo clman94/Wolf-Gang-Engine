@@ -171,7 +171,7 @@ bool animation_node::tick()
 	if (mInterval <= 0) return false;
 
 	const float time = mClock.get_elapse().ms();
-	const float scaled_interval = mInterval*mSpeed;
+	const float scaled_interval = mInterval/mSpeed;
 
 	if (time >= scaled_interval)
 	{
