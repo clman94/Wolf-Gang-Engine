@@ -53,9 +53,12 @@ public:
 	size_t get_sub_length() const;
 
 	encoded_path& operator=(const std::string& pString);
-	bool operator==(const encoded_path& pRight) const;
 	encoded_path operator/(const encoded_path& pRight) const;
 	encoded_path& operator/=(const encoded_path& pRight);
+
+	int compare(const encoded_path& pCmp) const;
+	bool operator<(const encoded_path& pRight) const;
+	bool operator==(const encoded_path& pRight) const;
 
 private:
 	void simplify();

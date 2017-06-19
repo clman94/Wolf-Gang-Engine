@@ -2,6 +2,7 @@
 #include <rpg/rpg_config.hpp>
 
 #include <engine/utility.hpp>
+#include <algorithm>
 
 using namespace rpg;
 
@@ -20,6 +21,8 @@ std::vector<engine::encoded_path> rpg::get_scene_list()
 			ret.push_back(path);
 		}
 	}
+
+	std::sort(ret.begin(), ret.end());
 	return ret;
 }
 

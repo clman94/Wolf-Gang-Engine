@@ -470,6 +470,30 @@ encoded_path& encoded_path::operator/=(const encoded_path& pRight)
 	return *this;
 }
 
+int encoded_path::compare(const encoded_path & pCmp) const
+{
+	if (mHierarchy.size() == pCmp.mHierarchy.size())
+	{
+		for (size_t i = 0; i < mHierarchy.size(); i++)
+		{
+			const int cmp = mHierarchy[i].compare(pCmp.mHierarchy[i]);
+			if (cmp != 0)
+				return cmp;
+		}
+	}
+	else
+	{
+		return static_cast<int>(static_cast<long long>(mHierarchy.size())
+			- static_cast<long long>(pCmp.mHierarchy.size()));
+	}
+	return 0;
+}
+
+bool encoded_path::operator<(const encoded_path & pRight) const
+{
+	return compare(pRight) < 0;
+}
+
 
 void encoded_path::simplify()
 {
