@@ -408,6 +408,11 @@ bool game::script_has_value(const std::string & pPath)
 	return mSave_system.has_value(pPath);
 }
 
+float game::script_get_tile_size()
+{
+	return mScene.get_world_node().get_unit();
+}
+
 void
 game::load_script_interface()
 {
@@ -437,6 +442,8 @@ game::load_script_interface()
 	mScript.add_function("bool remove(const string &in)", AS::asMETHOD(game, script_remove_value), this);
 	mScript.add_function("bool exists(const string &in)", AS::asMETHOD(game, script_has_value), this);
 	mScript.reset_namespace();
+
+	mScript.add_function("float get_tile_size()", AS::asMETHOD(game, script_get_tile_size), this);
 
 	mFlags.load_script_interface(mScript);
 	mScene.load_script_interface(mScript);

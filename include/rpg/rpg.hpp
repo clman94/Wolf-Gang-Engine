@@ -211,8 +211,6 @@ public:
 
 	bool restart_game();
 
-
-
 protected:
 	void refresh_renderer(engine::renderer& r);
 
@@ -270,6 +268,8 @@ private:
 	AS::CScriptArray* script_get_director_entries(const std::string& pPath);
 	bool script_remove_value(const std::string& pPath);
 	bool script_has_value(const std::string& pPath);
+
+	float script_get_tile_size() const;
 
 	void load_script_interface();
 
