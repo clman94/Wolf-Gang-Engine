@@ -6,6 +6,7 @@
 
 #include "../tinyxml2/tinyxml2.h"
 #include <engine/parsers.hpp>
+#include <engine/log.hpp>
 
 #include <cassert>
 
@@ -44,7 +45,7 @@ static bool validate_potential_xml_name(const std::string& pText)
 	{
 		if (parsers::is_whitespace(i))
 		{
-			util::error("Cannot have whitespace in name");
+			logger::error("Cannot have whitespace in name");
 			return false;
 		}
 		// TODO: Check docs for what is not allowed in xml tag names

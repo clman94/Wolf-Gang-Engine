@@ -1,6 +1,7 @@
 #include <rpg/rpg.hpp>
 
 #include <engine/parsers.hpp>
+#include <engine/log.hpp>
 
 #include "../xmlshortcuts.hpp"
 
@@ -61,7 +62,7 @@ void scene_script_context::set_script_system(script_system & pScript)
 
 bool scene_script_context::build_script(const std::string & pPath)
 {
-	util::info("Compiling script '" + pPath + "'...");
+	logger::info("Compiling script '" + pPath + "'...");
 
 	clean();
 
@@ -72,20 +73,20 @@ bool scene_script_context::build_script(const std::string & pPath)
 	mBuilder.AddSectionFromFile(pPath.c_str());
 	if (mBuilder.BuildModule())
 	{
-		util::error("Failed to load scene script");
+		logger::error("Failed to load scene script");
 		return false;
 	}
 	mScene_module = mBuilder.GetModule();
 
 	parse_wall_group_functions();
 
-	util::info("Script compiled");
+	logger::info("Script compiled");
 	return true;
 }
 
 bool scene_script_context::build_script(const std::string & pPath, engine::pack_stream_factory & pPack)
 {
-	util::info("Compiling script '" + pPath + "'...");
+	logger::info("Compiling script '" + pPath + "'...");
 
 	clean();
 
@@ -99,14 +100,14 @@ bool scene_script_context::build_script(const std::string & pPath, engine::pack_
 
 	if (!succ || mBuilder.BuildModule() < 0)
 	{
-		util::error("Failed to load scene script");
+		logger::error("Failed to load scene script");
 		return false;
 	}
 	mScene_module = mBuilder.GetModule();
 
 	parse_wall_group_functions();
 
-	util::info("Script compiled");
+	logger::info("Script compiled");
 	return false;
 }
 
@@ -142,8 +143,13 @@ void scene_script_context::start_all_with_tag(const std::string & pTag)
 {
 	auto funcs = get_all_with_tag(pTag);
 
+	logger::info("Calling all functions with tag '" + pTag + "'...");
+	logger::sub_routine _srtn;
+
 	for (auto& i : funcs)
 	{
+		logger::info("Calling '" + std::string(i->get_function()->GetDeclaration())
+			+ "' in '" + i->get_function()->GetModuleName() + "'");
 		i->call();
 	}
 }
@@ -180,7 +186,7 @@ const std::vector<scene_script_context::wall_group_function>& scene_script_conte
 
 void scene_script_context::parse_wall_group_functions()
 {
-	util::info("Binding functions to wall groups...");
+	logger::info("Binding functions to wall groups...");
 	size_t func_count = mScene_module->GetFunctionCount();
 	for (size_t i = 0; i < func_count; i++)
 	{
@@ -192,7 +198,8 @@ void scene_script_context::parse_wall_group_functions()
 		{
 			if (metadata == type) // There is no specified group name
 			{
-				util::warning("Group name is not specified");
+				logger::warning("Group name is not specified in function '" + std::string(as_function->GetDeclaration()) + "'");
+				continue;
 			}
 
 			std::shared_ptr<script_function> function(new script_function);
@@ -204,7 +211,6 @@ void scene_script_context::parse_wall_group_functions()
 
 			mTrigger_functions[as_function->GetDeclaration(true, true)].swap(function);
 
-
 			const std::string group(metadata.begin() + type.length() + 1, metadata.end());
 			wgf.group = group;
 
@@ -212,7 +218,7 @@ void scene_script_context::parse_wall_group_functions()
 		}
 	}
 
-	util::info(std::to_string(mWall_group_functions.size()) + " function(s) bound");
+	logger::info(std::to_string(mWall_group_functions.size()) + " function(s) bound");
 }
 
 // #########
@@ -221,7 +227,6 @@ void scene_script_context::parse_wall_group_functions()
 
 game::game()
 {
-	mEditor_manager.set_scene(&mScene);
 	mExit = false;
 	mIs_ready = false;
 	load_script_interface();
@@ -233,12 +238,13 @@ game::game()
 	mEditor_manager.load_terminal_interface(mTerminal_system);
 	mEditor_manager.set_resource_manager(mResource_manager);
 	mEditor_manager.set_world_node(mScene.get_world_node());
+	mEditor_manager.set_scene(&mScene);
 #endif
 }
 
 game::~game()
 {
-	util::info("Destroying game");
+	logger::info("Destroying game");
 	mScene.clean();
 }
 
@@ -250,12 +256,14 @@ engine::fs::path game::get_slot_path(size_t pSlot)
 void game::save_game()
 {
 	const std::string path = get_slot_path(mSlot).string();
-	util::info("Saving game...");
+	logger::info("Saving game...");
+	logger::sub_routine _srtn;
 	mSave_system.new_save();
+
 	mSave_system.save_flags(mFlags);
 	mSave_system.save_scene(mScene);
 	mSave_system.save(path);
-	util::info("Game saved to '" + path + "'");
+	logger::info("Game saved to '" + path + "'");
 }
 
 void game::open_game()
@@ -263,10 +271,10 @@ void game::open_game()
 	const std::string path = get_slot_path(mSlot).string();
 	if (!mSave_system.open_save(path))
 	{
-		util::error("Invalid slot '" + std::to_string(mSlot) + "'");
+		logger::error("Invalid slot '" + std::to_string(mSlot) + "'");
 		return;
 	}
-	util::info("Opening game...");
+	logger::info("Opening game...");
 	mFlags.clean();
 	mSave_system.load_flags(mFlags);
 	if (mScript.is_executing())
@@ -280,8 +288,8 @@ void game::open_game()
 		mScene.get_player().set_position(mSave_system.get_player_position());
 	}
 
-	util::info("Loaded " + std::to_string(mFlags.get_count()) + " flag(s)");
-	util::info("Game opened from '" + path + "'");
+	logger::info("Loaded " + std::to_string(mFlags.get_count()) + " flag(s)");
+	logger::info("Game opened from '" + path + "'");
 }
 
 bool game::is_slot_used(size_t pSlot)
@@ -308,20 +316,20 @@ void game::abort_game()
 
 void game::script_load_scene(const std::string & pName)
 {
-	util::info("Requesting scene load '" + pName + "'");
+	logger::info("Requesting scene load '" + pName + "'");
 	mScene_load_request.request_load(pName);
 }
 
 void game::script_load_scene_to_door(const std::string & pName, const std::string & pDoor)
 {
-	util::info("Requesting scene load '" + pName + "'");
+	logger::info("Requesting scene load '" + pName + "'");
 	mScene_load_request.request_load(pName);
 	mScene_load_request.set_player_position(pDoor);
 }
 
 void game::script_load_scene_to_position(const std::string & pName, engine::fvector pPosition)
 {
-	util::info("Requesting scene load '" + pName + "'");
+	logger::info("Requesting scene load '" + pName + "'");
 	mScene_load_request.request_load(pName);
 	mScene_load_request.set_player_position(pPosition);
 }
@@ -331,7 +339,7 @@ int game::script_get_int_value(const std::string & pPath) const
 	auto val = mSave_system.get_int_value(pPath);
 	if (!val)
 	{
-		util::warning("Value '" + pPath + "' does not exist");
+		logger::warning("Value '" + pPath + "' does not exist");
 		return 0;
 	}
 	return *val;
@@ -342,7 +350,7 @@ float game::script_get_float_value(const std::string & pPath) const
 	auto val = mSave_system.get_float_value(pPath);
 	if (!val)
 	{
-		util::warning("Value '" + pPath + "' does not exist");
+		logger::warning("Value '" + pPath + "' does not exist");
 		return 0;
 	}
 	return *val;
@@ -353,7 +361,7 @@ std::string game::script_get_string_value(const std::string & pPath) const
 	auto val = mSave_system.get_string_value(pPath);
 	if (!val)
 	{
-		util::warning("Value '" + pPath + "' does not exist");
+		logger::warning("Value '" + pPath + "' does not exist");
 		return{};
 	}
 	return *val;
@@ -403,7 +411,7 @@ bool game::script_has_value(const std::string & pPath)
 void
 game::load_script_interface()
 {
-	util::info("Loading script interface...");
+	logger::info("Loading script interface...");
 	mScript.add_function("float get_delta()", AS::asMETHOD(game, get_delta), this);
 
 	mScript.add_function("bool is_triggered(const string&in)", AS::asMETHOD(engine::controls, is_triggered), &mControls);
@@ -432,7 +440,7 @@ game::load_script_interface()
 
 	mFlags.load_script_interface(mScript);
 	mScene.load_script_interface(mScript);
-	util::info("Script interface loaded");
+	logger::info("Script interface loaded");
 }
 
 void game::load_icon()
@@ -456,12 +464,12 @@ void game::load_terminal_interface()
 	{
 		if (pArgs.empty())
 		{
-			util::error("Not enough arguments");
-			util::warning("flags set <Flag>");
+			logger::error("Not enough arguments");
+			logger::warning("flags set <Flag>");
 			return false;
 		}
 		mFlags.set_flag(pArgs[0]);
-		util::info("Flag '" + pArgs[0].get_raw() + "' has been set");
+		logger::info("Flag '" + pArgs[0].get_raw() + "' has been set");
 		return true;
 	}, "<Flag> - Create flag");
 
@@ -470,12 +478,12 @@ void game::load_terminal_interface()
 	{
 		if (pArgs.empty())
 		{
-			util::error("Not enough arguments");
-			util::warning("flags unset <Flag>");
+			logger::error("Not enough arguments");
+			logger::warning("flags unset <Flag>");
 			return false;
 		}
 		mFlags.unset_flag(pArgs[0]);
-		util::info("Flag '" + pArgs[0].get_raw() + "' has been unset");
+		logger::info("Flag '" + pArgs[0].get_raw() + "' has been unset");
 		return true;
 	}, "<Flag> - Remove flag");
 
@@ -483,7 +491,7 @@ void game::load_terminal_interface()
 		[&](const engine::terminal_arglist& pArgs)->bool
 	{
 		mFlags.clean();
-		util::info("All flags cleared");
+		logger::info("All flags cleared");
 		return true;
 	}, "- Remove all flags");
 
@@ -500,12 +508,12 @@ void game::load_terminal_interface()
 	{
 		if (pArgs.empty())
 		{
-			util::error("Not enough arguments");
+			logger::error("Not enough arguments");
 			return false;
 		}
 		if (!engine::fs::exists(pArgs[0].get_raw()))
 		{
-			util::error("Path '" + pArgs[0].get_raw() + "' does not exist");
+			logger::error("Path '" + pArgs[0].get_raw() + "' does not exist");
 			return false;
 		}
 		mData_directory = pArgs[0].get_raw();
@@ -533,13 +541,13 @@ void game::load_terminal_interface()
 
 		if (engine::fs::exists(destination) && !overwrite)
 		{
-			util::error("Pack file '" + destination + "' already exists. Please specify '-o' option to overwrite.");
+			logger::error("Pack file '" + destination + "' already exists. Please specify '-o' option to overwrite.");
 			return false;
 		}
 
-		util::info("Packing data folder to '" + destination + "'");
+		logger::info("Packing data folder to '" + destination + "'");
 		bool suc = engine::create_resource_pack("data", destination);
-		util::info("Packing completed");
+		logger::info("Packing completed");
 		return suc;
 	}, "[Destination] [-o] - Pack data folder to a pack file for releasing your game");
 
@@ -550,7 +558,7 @@ void game::load_terminal_interface()
 	{
 		if (pArgs.empty())
 		{
-			util::error("Not enough arguments");
+			logger::error("Not enough arguments");
 			return false;
 		}
 
@@ -560,7 +568,7 @@ void game::load_terminal_interface()
 		}
 		catch (...)
 		{
-			util::error("Failed to parse interval");
+			logger::error("Failed to parse interval");
 			return false;
 		}
 
@@ -575,7 +583,7 @@ void game::load_terminal_interface()
 	{
 		if (pArgs.empty())
 		{
-			util::error("Not enough arguments");
+			logger::error("Not enough arguments");
 			return false;
 		}
 
@@ -585,7 +593,7 @@ void game::load_terminal_interface()
 		}
 		catch (...)
 		{
-			util::error("Failed to parse interval");
+			logger::error("Failed to parse interval");
 			return false;
 		}
 
@@ -616,10 +624,10 @@ bool game::load_settings(engine::fs::path pData_dir)
 	game_settings_loader settings;
 	if (!engine::fs::is_directory(pData_dir)) // This is a package
 	{
-		util::info("Loading settings from pack...");
+		logger::info("Loading settings from pack...");
 		if (!mPack.open(pData_dir.string()))
 		{
-			util::error("Could not load pack");
+			logger::error("Could not load pack");
 			return (mIs_ready = false, false);
 		}
 
@@ -635,7 +643,7 @@ bool game::load_settings(engine::fs::path pData_dir)
 	}
 	else // Data folder
 	{
-		util::info("Loading settings from data folder...");
+		logger::info("Loading settings from data folder...");
 		std::string settings_path = (pData_dir / "game.xml").string();
 		if (!settings.load(settings_path, pData_dir.string() + "/"))
 			return (mIs_ready = false, false);
@@ -646,13 +654,13 @@ bool game::load_settings(engine::fs::path pData_dir)
 		load_icon();
 	}
 
-	util::info("Settings loaded");
+	logger::info("Settings loaded");
 
 	get_renderer()->set_target_size(settings.get_screen_size());
 
 	mControls = settings.get_key_bindings();
 
-	util::info("Loading Resources...");
+	logger::info("Loading Resources...");
 
 	mResource_manager.clear_directories();
 
@@ -673,11 +681,11 @@ bool game::load_settings(engine::fs::path pData_dir)
 
 	if (!mResource_manager.reload_directories()) // Load the resources from the directories
 	{
-		util::error("Resources failed to load");
+		logger::error("Resources failed to load");
 		return (mIs_ready = false, false);
 	}
 
-	util::info("Resources loaded");
+	logger::info("Resources loaded");
 
 	mScene.set_resource_manager(mResource_manager);
 	if (!mScene.load_settings(settings))
@@ -726,14 +734,14 @@ bool game::tick()
 		&& renderer.is_key_pressed(engine::renderer::key_type::R))
 	{
 		mEditor_manager.close_editor();
-		util::info("Reloading scene...");
+		logger::info("Reloading scene...");
 
 		mScene.clean(true);
 
 		mResource_manager.reload_directories();
 
 		mScene.reload_scene();
-		util::info("Scene reloaded");
+		logger::info("Scene reloaded");
 	}
 
 
@@ -794,13 +802,13 @@ bool game::tick()
 
 bool game::restart_game()
 {
-	util::info("Reloading entire game...");
+	logger::info("Reloading entire game...");
 
 	mSave_system.clean();
 
 	bool succ = load_settings(mData_directory);
 
-	util::info("Game reloaded");
+	logger::info("Game reloaded");
 	return succ;
 }
 
@@ -840,6 +848,11 @@ void
 script_function::set_function(AS::asIScriptFunction* pFunction)
 {
 	mFunction = pFunction;
+}
+
+util::optional_pointer<AS::asIScriptFunction> rpg::script_function::get_function() const
+{
+	return mFunction;
 }
 
 void
@@ -1044,6 +1057,7 @@ void save_system::load_flags(flag_container& pFlags)
 		pFlags.set_flag(util::safe_string(ele_flag->Attribute("name")));
 		ele_flag = ele_flag->NextSiblingElement("flag");
 	}
+	logger::info("Loaded " + std::to_string(pFlags.get_count()) + " flags");
 }
 
 engine::fvector save_system::get_player_position()
@@ -1122,6 +1136,7 @@ void save_system::save_flags(flag_container& pFlags)
 		ele_flag->SetAttribute("name", i.c_str());
 		mEle_root->InsertEndChild(ele_flag);
 	}
+	logger::info("Saved " + std::to_string(pFlags.get_count()) + " flags");
 }
 
 void save_system::save_scene(scene& pScene)
@@ -1131,6 +1146,9 @@ void save_system::save_scene(scene& pScene)
 	mEle_root->InsertFirstChild(ele_scene);
 	ele_scene->SetAttribute("name", pScene.get_name().c_str());
 	ele_scene->SetAttribute("path", pScene.get_path().c_str());
+
+	logger::info("Saved scene '" + pScene.get_path() + "'");
+
 	save_player(pScene.get_player());
 }
 
@@ -1141,6 +1159,8 @@ void save_system::save_player(player_character& pPlayer)
 	mEle_root->InsertFirstChild(ele_scene);
 	ele_scene->SetAttribute("x", pPlayer.get_position().x);
 	ele_scene->SetAttribute("y", pPlayer.get_position().y);
+
+	logger::info("Saved player position at " + pPlayer.get_position().to_string());
 }
 
 void save_system::value_factory(tinyxml2::XMLElement * pEle)
@@ -1178,6 +1198,8 @@ void save_system::load_values()
 		value_factory(ele_val);
 		ele_val = ele_val->NextSiblingElement();
 	}
+
+	logger::info("Loaded " + std::to_string(mValues.size()) + " values");
 }
 
 void save_system::save_values()
@@ -1189,7 +1211,7 @@ void save_system::save_values()
 	{
 		if (i->mPath.empty())
 		{
-			util::warning("There is a value with no path");
+			logger::warning("There is a value with no path");
 			continue;
 		}
 		// Create the entry
@@ -1207,6 +1229,8 @@ void save_system::save_values()
 
 		i->save(ele_entry, ele_value);
 	}
+
+	logger::info("Saved " + std::to_string(mValues.size()) + " values");
 }
 
 std::vector<std::string> save_system::get_directory_entries(const engine::encoded_path & pDirectory) const
@@ -1552,7 +1576,7 @@ bool game_settings_loader::load(const std::string & pPath, const std::string& pP
 
 	if (doc.LoadFile(pPath.c_str()))
 	{
-		util::error("Could not load game file at '" + pPath + "'");
+		logger::error("Could not load game file at '" + pPath + "'");
 		return false;
 	}
 	return parse_settings(doc, pPrefix_path);
@@ -1565,7 +1589,7 @@ bool game_settings_loader::load_memory(const char * pData, size_t pSize, const s
 
 	if (doc.Parse(pData, pSize))
 	{
-		util::error("Could not load game file");
+		logger::error("Could not load game file");
 		return false;
 	}
 	return parse_settings(doc, pPrefix_path);
@@ -1627,14 +1651,14 @@ bool game_settings_loader::parse_settings(tinyxml2::XMLDocument & pDoc, const st
 
 	if (!ele_root)
 	{
-		util::error("Root element missing in settings");
+		logger::error("Root element missing in settings");
 		return false;
 	}
 
 	auto ele_scene = ele_root->FirstChildElement("scene");
 	if (!ele_scene || !ele_scene->Attribute("name"))
 	{
-		util::error("Please specify the scene to start with");
+		logger::error("Please specify the scene to start with");
 		return false;
 	}
 	mStart_scene = util::safe_string(ele_scene->Attribute("name"));
@@ -1642,7 +1666,7 @@ bool game_settings_loader::parse_settings(tinyxml2::XMLDocument & pDoc, const st
 	auto ele_player = ele_root->FirstChildElement("player");
 	if (!ele_player || !ele_player->Attribute("texture"))
 	{
-		util::error("Please specify the player texture");
+		logger::error("Please specify the player texture");
 		return false;
 	}
 	mPlayer_texture = util::safe_string(ele_player->Attribute("texture"));
@@ -1650,7 +1674,7 @@ bool game_settings_loader::parse_settings(tinyxml2::XMLDocument & pDoc, const st
 	auto ele_tile_size = ele_root->FirstChildElement("tile_size");
 	if (!ele_tile_size || !ele_tile_size->Attribute("pixels"))
 	{
-		util::error("Please specify the pixel size of the tiles");
+		logger::error("Please specify the pixel size of the tiles");
 		return false;
 	}
 	pUnit_pixels = ele_tile_size->FloatAttribute("pixels");
@@ -1658,7 +1682,7 @@ bool game_settings_loader::parse_settings(tinyxml2::XMLDocument & pDoc, const st
 	auto ele_screen_size = ele_root->FirstChildElement("screen_size");
 	if (!ele_screen_size)
 	{
-		util::error("Please specify the screen size");
+		logger::error("Please specify the screen size");
 		return false;
 	}
 	mScreen_size = util::shortcuts::load_vector_float_att(ele_screen_size);
@@ -1672,7 +1696,7 @@ bool game_settings_loader::parse_settings(tinyxml2::XMLDocument & pDoc, const st
 	auto ele_controls = ele_root->FirstChildElement("controls");
 	if (!ele_controls)
 	{
-		util::info("No controls specified");
+		logger::info("No controls specified");
 		return false;
 	}
 	else
@@ -1704,7 +1728,7 @@ bool game_settings_loader::parse_binding_attributes(tinyxml2::XMLElement * pEle,
 	{
 		if (!mKey_bindings.bind_key(pName, key, pAlternative))
 		{
-			util::warning("Failed to bind key '" + std::string(key) + "' with '" + pName + "'");
+			logger::warning("Failed to bind key '" + std::string(key) + "' with '" + pName + "'");
 			break;
 		}
 		++i;
@@ -1786,7 +1810,7 @@ bool scenes_directory::load(engine::resource_manager & pResource_manager)
 {
 	if (!engine::fs::exists(mPath))
 	{
-		util::error("Scenes directory does not exist");
+		logger::error("Scenes directory does not exist");
 		return false;
 	}
 
@@ -1803,6 +1827,28 @@ bool scenes_directory::load(engine::resource_manager & pResource_manager)
 	}
 	return true;
 }
+
+/* a doodle:
+some arbitrary string comparison
+
+double rate_string_comparison(const std::string& pStr1, const std::string& pStr2)
+{
+double final_rating = 0;
+
+if (pStr1.length() != pStr2.length())
+final_rating = std::abs(static_cast<double>(pStr1.length()) - static_cast<double>(pStr2.length()));
+
+if (pStr1.length() <= (pStr2.length() / 2))
+{
+for (auto i = pStr2.begin(); i != pStr2.end() - pStr1.length(); i++)
+{
+if (std::string(i, i + pStr1.length()) == pStr1)
+final_rating /= 2;
+}
+}
+
+return final_rating;
+}*/
 
 void scenes_directory::set_path(const std::string & pFilepath)
 {
@@ -1823,12 +1869,17 @@ terminal_gui::terminal_gui()
 
 void terminal_gui::set_terminal_system(engine::terminal_system & pTerminal_system)
 {
+	mEb_input->connect("TextChanged",
+		[&]()
+	{
+		
+	});
 	mEb_input->connect("ReturnKeyPressed",
 		[&](sf::String pText)
 	{
 		if (!pTerminal_system.execute(pText))
 		{
-			util::error("Command failed '" + std::string(pText) + "'");
+			logger::error("Command failed '" + std::string(pText) + "'");
 		}
 		mEb_input->setText("");
 		if (mHistory.empty() || mHistory.back() != pText)

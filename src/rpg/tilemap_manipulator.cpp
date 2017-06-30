@@ -1,5 +1,6 @@
 #include <rpg/tilemap_manipulator.hpp>
 #include <rpg/rpg_config.hpp>
+#include <engine/log.hpp>
 
 using namespace rpg;
 
@@ -165,7 +166,7 @@ int tilemap_manipulator::load_tilemap_xml(std::string pPath)
 	XMLDocument doc;
 	if (doc.LoadFile(pPath.c_str()))
 	{
-		util::error("Error loading tilemap file");
+		logger::error("Error loading tilemap file");
 		return 1;
 	}
 	auto root = doc.RootElement();

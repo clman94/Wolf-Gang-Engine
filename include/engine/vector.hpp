@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <type_traits>
+#include <string>
 
 namespace
 {
@@ -22,13 +23,15 @@ namespace engine
 template<typename T>
 struct vector
 {
+	typedef T type;
+
 	T x, y;
 
-	static vector as_x(float pVal)
+	static vector as_x(T pVal)
 	{
 		return{ pVal, 0 };
 	}
-	static vector as_y(float pVal)
+	static vector as_y(T pVal)
 	{
 		return{ 0, pVal };
 	}
@@ -42,15 +45,21 @@ struct vector
 		return{ 0, pVec.y };
 	}
 
+	template<typename Tto>
+	static vector<Tto> cast(const vector& pOriginal)
+	{
+		return{ static_cast<Tto>(pOriginal.x), static_cast<Tto>(pOriginal.y) };
+	}
+
 	vector(T _x = 0, T _y = 0)
 		: x(_x), y(_y)
 	{}
 
 	template<typename T1>
-	vector(const vector<T1>& v)
+	vector(const vector<T1>& pVector)
 	{
-		x = static_cast<T>(v.x);
-		y = static_cast<T>(v.y);
+		x = static_cast<T>(pVector.x);
+		y = static_cast<T>(pVector.y);
 	}
 
 	T distance() const
@@ -58,8 +67,7 @@ struct vector
 		return std::sqrt(std::pow(x, 2) + std::pow(y, 2));
 	}
 
-	template<typename T1>
-	T distance(const vector<T1>& A) const
+	T distance(const vector& A) const
 	{
 		return std::sqrt(std::pow(A.x - x, 2) + std::pow(A.y - y, 2));
 	}
@@ -69,8 +77,7 @@ struct vector
 		return std::abs(x) + std::abs(y);
 	}
 
-	template<typename T1>
-	T manhattan(const vector<T1>& A) const
+	T manhattan(const vector& A) const
 	{
 		return std::abs(A.x - x) + std::abs(A.y - y);
 	}
@@ -93,36 +100,31 @@ struct vector
 		return *this;
 	}
 
-	template<typename T1>
-	vector operator + (const vector<T1>& A) const
+	vector operator + (const vector& A) const
 	{
-		return{ x + (T)A.x, y + (T)A.y};
+		return{ x + A.x, y + A.y};
 	}
 
-	template<typename T1>
-	vector operator - (const vector<T1>& A) const
+	vector operator - (const vector& A) const
 	{
-		return{ x - (T)A.x, y - (T)A.y};
+		return{ x - A.x, y - A.y};
 	}
 
-	template<typename T1>
-	vector operator * (const vector<T1>& A) const
+	vector operator * (const vector& A) const
 	{
-		return{ x * (T)A.x, y * (T)A.y};
+		return{ x * A.x, y * A.y};
 	}
 
 	// No division, high chance of dividing by zero.
 
-	template<typename T1>
-	vector operator * (T1 A) const
+	vector operator * (T A) const
 	{
-		return{ x * (T)A, y * (T)A};
+		return{ x * A, y * A};
 	}
 
-	template<typename T1>
-	vector operator / (T1 A) const
+	vector operator / (T A) const
 	{
-		return{ x / (T)A, y / (T)A };
+		return{ x / A, y / A };
 	}
 
 	vector operator - () const
@@ -144,44 +146,39 @@ struct vector
 		return *this;
 	}
 
-	template<typename T1>
-	vector& operator = (const vector<T1>& A)
+	vector& operator = (const vector& A)
 	{
-		x = (T)A.x;
-		y = (T)A.y;
+		x = A.x;
+		y = A.y;
 		return *this;
 	}
 
 
-	template<typename T1>
-	vector& operator += (const vector<T1>& A)
+	vector& operator += (const vector& A)
 	{
-		x += (T)A.x;
-		y += (T)A.y;
+		x += A.x;
+		y += A.y;
 		return *this;
 	}
 
-	template<typename T1>
-	vector& operator -= (const vector<T1>& A)
+	vector& operator -= (const vector& A)
 	{
-		x -= (T)A.x;
-		y -= (T)A.y;
+		x -= A.x;
+		y -= A.y;
 		return *this;
 	}
 
-	template<typename T1>
-	vector& operator *= (const vector<T1>& A)
+	vector& operator *= (const vector& A)
 	{
-		x *= (T)A.x;
-		y *= (T)A.y;
+		x *= A.x;
+		y *= A.y;
 		return *this;
 	}
 
-	template<typename T1>
-	vector& operator /= (const vector<T1>& A)
+	vector& operator /= (const vector& A)
 	{
-		x /= (T)A.x;
-		y /= (T)A.y;
+		x /= A.x;
+		y /= A.y;
 		return *this;
 	}
 
@@ -229,6 +226,11 @@ struct vector
 
 		T a = std::atan2(y - A.y, x - A.x) * static_cast<T>(180 / 3.14159265); // Compiler complains without these casts
 		return std::fmod(a + 360, static_cast<T>(360));
+	}
+
+	std::string to_string() const
+	{
+		return "(" + std::to_string(x) + ", " + std::to_string(y) + ")";
 	}
 
 #ifdef SFML_VERTEX_HPP

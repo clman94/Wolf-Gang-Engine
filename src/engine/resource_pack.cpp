@@ -1,8 +1,8 @@
 #include <istream>
 #include <fstream>
 #include <engine/filesystem.hpp>
-#include <engine/utility.hpp>
 #include <engine/resource_pack.hpp>
+#include <engine/log.hpp>
 
 using namespace engine;
 
@@ -84,7 +84,7 @@ public:
 			mIs_whitelist = false;
 		else
 		{
-			util::error("Please specify 'blacklist' or 'whitelist'");
+			logger::error("Please specify 'blacklist' or 'whitelist'");
 			return false;
 		}
 
@@ -96,7 +96,7 @@ public:
 			const std::string path_string = path.string();
 			if (!engine::fs::exists(path_string))
 			{
-				util::warning("File does not exist '" + path_string + "'");
+				logger::warning("File does not exist '" + path_string + "'");
 				continue;
 			}
 
@@ -190,12 +190,12 @@ bool engine::create_resource_pack(const std::string& pSrc_directory, const std::
 	const std::string ignorelist_path = engine::fs::absolute((root_dir / "pack_ignore.txt").string()).string();
 	if (ignore_list.open(ignorelist_path))
 	{
-		util::info("Loaded ignore list '" + ignorelist_path + "'");
+		logger::info("Loaded ignore list '" + ignorelist_path + "'");
 	}
 	else
 	{
-		util::warning("Couldn't load ignore list '" + ignorelist_path + "'");
-		util::info("If you didn't specify a list, you can ignore the previous warning.");
+		logger::warning("Couldn't load ignore list '" + ignorelist_path + "'");
+		logger::info("If you didn't specify a list, you can ignore the previous warning.");
 	}
 
 	// Get list of files to add
@@ -240,7 +240,7 @@ bool engine::create_resource_pack(const std::string& pSrc_directory, const std::
 		std::ifstream file_stream(i.string().c_str(), std::fstream::binary | std::fstream::ate);
 		if (!file_stream)
 			continue;
-		util::info("Packing file '" + i.string() + "'...");
+		logger::info("Packing file '" + i.string() + "'...");
 		append_stream(stream, file_stream);
 	}
 
@@ -481,12 +481,8 @@ int encoded_path::compare(const encoded_path & pCmp) const
 				return cmp;
 		}
 	}
-	else
-	{
-		return static_cast<int>(static_cast<long long>(mHierarchy.size())
-			- static_cast<long long>(pCmp.mHierarchy.size()));
-	}
-	return 0;
+	return static_cast<int>(static_cast<long long>(mHierarchy.size())
+		- static_cast<long long>(pCmp.mHierarchy.size()));
 }
 
 bool encoded_path::operator<(const encoded_path & pRight) const
@@ -528,10 +524,15 @@ void pack_header::add_file(file_info pFile)
 bool pack_header::generate(std::ostream & pStream) const
 {
 	auto start = pStream.tellp();
-	write_unsignedint_binary<uint64_t>(pStream, 0); // Placeholder
+	write_unsignedint_binary<uint64_t>(pStream, 0); // Placeholder for header size
+
+	// File count
 	write_unsignedint_binary<uint64_t>(pStream, mFiles.size());
+
+	// File list
 	for (auto& i : mFiles)
 	{
+		// Write path string
 		std::string path = i.path.string();
 		write_unsignedint_binary<uint16_t>(pStream, static_cast<uint16_t>(path.size()));
 		pStream.write(path.c_str(), path.size());
@@ -550,28 +551,32 @@ bool pack_header::parse(std::istream & pStream)
 {
 	mFiles.clear();
 
-	pStream.seekg(sizeof(uint64_t)); // Skip the first 8 bytes
+	// Header size
+	mHeader_size = read_unsignedint_binary<uint64_t>(pStream);
+
+	// File count
 	uint64_t file_count = read_unsignedint_binary<uint64_t>(pStream);
 	if (file_count == 0)
 		return false;
 
+	// File list
 	for (uint64_t i = 0; i < file_count; i++)
 	{
 		file_info file;
 
-		// Get path
+		// Read path string
 		uint16_t path_size = read_unsignedint_binary<uint16_t>(pStream);
 		std::string path;
 		path.resize(path_size);
 		if (!pStream.read(&path[0], path_size))
 			return false;
-		file.path = path;
 
+		file.path = path;
 		file.position = read_unsignedint_binary<uint64_t>(pStream);
 		file.size = read_unsignedint_binary<uint64_t>(pStream);
+
 		mFiles.push_back(file);
 	}
-	mHeader_size = pStream.tellg();
 	return true;
 }
 

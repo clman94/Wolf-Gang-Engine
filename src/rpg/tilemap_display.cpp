@@ -1,4 +1,5 @@
 #include <rpg/tilemap_display.hpp>
+#include <engine/log.hpp>
 
 using namespace rpg;
 
@@ -67,8 +68,8 @@ void tilemap_display::update_animations()
 	}
 	catch (const std::exception& e)
 	{
-		util::error("Exception '" + std::string(e.what()) + "'");
-		util::error("Failed to animate tiles");
+		logger::error("Exception '" + std::string(e.what()) + "'");
+		logger::error("Failed to animate tiles");
 		mAnimated_tiles.clear();
 	}
 }

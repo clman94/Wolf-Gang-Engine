@@ -13,20 +13,17 @@ animation::animation()
 	mLoop = loop_type::linear;
 }
 
-void
-animation::set_loop(loop_type pLoop)
+void animation::set_loop(loop_type pLoop)
 {
 	mLoop = pLoop;
 }
 
-animation::loop_type
-animation::get_loop() const
+animation::loop_type animation::get_loop() const
 {
 	return mLoop;
 }
 
-void
-animation::add_interval(frame_t pFrom, float pInterval)
+void animation::add_interval(frame_t pFrom, float pInterval)
 {
 	if (get_interval(pFrom) != pInterval)
 		mSequence.push_back({ pInterval, pFrom });
@@ -47,14 +44,12 @@ float animation::get_interval(frame_t pAt) const
 	return retval;
 }
 
-void
-animation::set_frame_count(frame_t pCount)
+void animation::set_frame_count(frame_t pCount)
 {
 	mFrame_count = pCount;
 }
 
-frame_t
-animation::get_frame_count() const
+frame_t animation::get_frame_count() const
 {
 	return mFrame_count;
 }
@@ -64,8 +59,7 @@ void animation::set_frame_rect(engine::frect pRect)
 	mFrame_rect = pRect;
 }
 
-engine::frect
-animation::get_frame_at(frame_t pAt) const
+engine::frect animation::get_frame_at(frame_t pAt) const
 {
 	if (mFrame_count == 0)
 		return mFrame_rect;
@@ -75,20 +69,17 @@ animation::get_frame_at(frame_t pAt) const
 	return ret;
 }
 
-fvector
-animation::get_size() const
+fvector animation::get_size() const
 {
 	return mFrame_rect.get_size();
 }
 
-void
-animation::set_default_frame(frame_t pFrame)
+void animation::set_default_frame(frame_t pFrame)
 {
 	mDefault_frame = pFrame;
 }
 
-frame_t
-animation::get_default_frame() const
+frame_t animation::get_default_frame() const
 {
 	return mDefault_frame;
 }
@@ -101,8 +92,7 @@ frect engine::animation::full_region() const
 	return retval;
 }
 
-frame_t
-animation::calculate_frame(frame_t pCount) const
+frame_t animation::calculate_frame(frame_t pCount) const
 {
 	if (mFrame_count == 0)
 		return 0;
@@ -128,8 +118,7 @@ animation_node::animation_node()
 	mSpeed = 1.f;
 }
 
-void
-animation_node::set_frame(frame_t pFrame)
+void animation_node::set_frame(frame_t pFrame)
 {
 	mFrame = pFrame;
 	mClock.restart();
@@ -170,7 +159,7 @@ bool animation_node::tick()
 	if (!mAnimation) return false;
 	if (mInterval <= 0) return false;
 
-	const float time = mClock.get_elapse().ms();
+	const float time = mClock.get_elapse().milliseconds();
 	const float scaled_interval = mInterval/mSpeed;
 
 	if (time >= scaled_interval)
@@ -191,14 +180,12 @@ bool animation_node::tick()
 	return false;
 }
 
-bool
-animation_node::is_playing() const
+bool animation_node::is_playing() const
 {
 	return mPlaying;
 }
 
-void
-animation_node::start()
+void animation_node::start()
 {
 	// Restart animation if reached end
 	if (mAnimation)
@@ -211,22 +198,19 @@ animation_node::start()
 	mPlaying = true;
 }
 
-void
-animation_node::pause()
+void animation_node::pause()
 {
 	mClock.pause();
 	mPlaying = false;
 }
 
-void
-animation_node::stop()
+void animation_node::stop()
 {
 	mPlaying = false;
 	restart();
 }
 
-void
-animation_node::restart()
+void animation_node::restart()
 {
 	if (mAnimation)
 	{
@@ -235,8 +219,7 @@ animation_node::restart()
 	}
 }
 
-int
-animation_node::draw(renderer &pR)
+int animation_node::draw(renderer &pR)
 {
 	if (!mAnimation) return 1;
 	if (mPlaying)

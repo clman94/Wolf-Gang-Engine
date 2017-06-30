@@ -3,6 +3,7 @@
 
 #include <engine/renderer.hpp>
 #include <engine/time.hpp>
+#include <engine/log.hpp>
 
 #include <rpg/rpg.hpp>
 
@@ -20,6 +21,7 @@ private:
 	void update_events();
 
 	engine::renderer mRenderer;
+	engine::display_window mWindow;
 
 	rpg::game        mGame;
 	engine::controls mControls;
@@ -37,14 +39,17 @@ int wolf_gang_engine::initualize(const std::string& pCustom_location = std::stri
 {
 	engine::clock load_clock;
 
-	util::info("Loading renderer...");
+	logger::info("Loading renderer...");
+	logger::start_sub_routine();
+
 #ifndef LOCKED_RELEASE_MODE
-	mRenderer.initualize(rpg::defs::SCREEN_SIZE);
+	mWindow.initualize("A Friendly Venture", rpg::defs::SCREEN_SIZE);
 #else
-	mRenderer.initualize(rpg::defs::SCREEN_SIZE, 60);
+	mWindow.initualize("A Friendly Venture", rpg::defs::SCREEN_SIZE);
 #endif
 	mRenderer.set_target_size(rpg::defs::DISPLAY_SIZE);
-	util::info("Renderer loaded");
+	mRenderer.set_window(mWindow);
+	logger::info("Renderer loaded");
 
 	mGame.set_renderer(mRenderer);
 	
@@ -56,11 +61,14 @@ int wolf_gang_engine::initualize(const std::string& pCustom_location = std::stri
 #else
 	if (!mGame.load_settings("./data.pack"))
 	{
-		util::error("Failed to load settings");
+		logger::error("Failed to load settings");
 	}
 #endif
-	float load_time = load_clock.get_elapse().s();
-	util::info("Load time : " + std::to_string(load_time) + " seconds");
+	float load_time = load_clock.get_elapse().seconds();
+
+	logger::end_sub_routine();
+
+	logger::info("Load time : " + std::to_string(load_time) + " seconds");
 	return 0;
 }
 
@@ -80,14 +88,14 @@ void wolf_gang_engine::update_events()
 {
 	if (mRenderer.update_events())
 	{
-		util::info("Closing with window event");
+		logger::info("Closing with window event");
 		mRunning = false;
 		return;
 	}
 
 	if (mRenderer.is_key_down(engine::renderer::key_type::Escape))
 	{
-		util::info("Closing with 'Escape'");
+		logger::info("Closing with 'Escape'");
 		mRunning = false;
 	}
 }
@@ -108,7 +116,7 @@ int main(int argc, char* argv[])
 	}
 	catch (std::exception& e)
 	{
-		util::error("A main exception occurred: " + std::string(e.what()) + "\n");
+		logger::error("A main exception occurred: " + std::string(e.what()) + "\n");
 		std::getchar();
 	}
 	

@@ -82,7 +82,7 @@ private:
 	{
 		if (mEntities.size() >= 1024)
 		{
-			util::error("Reached upper limit of characters.");
+			logger::error("Reached upper limit of characters.");
 			return nullptr;
 		}
 		auto new_entity = new T();
@@ -161,6 +161,7 @@ private:
 	void             script_dialog_set_wordwrap(entity_reference& e, unsigned int pLength);
 	void             script_dialog_set_max_lines(entity_reference& e, unsigned int pLines);
 
+	friend class scene_visualizer;
 };
 
 }

@@ -1,6 +1,7 @@
 #define ENGINE_INTERNAL
 
 #include <engine/renderer.hpp>
+#include <engine/log.hpp>
 
 using namespace engine;
 
@@ -30,13 +31,13 @@ bool font::load()
 		{
 			if (!mSFML_font->loadFromFile(mFont_source))
 			{
-				util::error("Failed to load font");
+				logger::error("Failed to load font");
 				return false;
 			}
 		}
 		if (!load_preferences())
 		{
-			util::error("Failed to load font preferences");
+			logger::error("Failed to load font preferences");
 			return false;
 		}
 		set_loaded(true);
@@ -99,6 +100,8 @@ text_node::set_font(std::shared_ptr<font> pFont, bool pApply_preferences)
 void 
 text_node::set_text(const std::string& pText)
 {
+	if (pText == mString)
+		return; // Still same
 	mSfml_text.setString(pText);
 	mString = pText;
 	update_offset();

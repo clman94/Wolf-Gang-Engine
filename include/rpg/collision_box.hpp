@@ -155,6 +155,10 @@ public:
 
 	size_t get_count() const;
 
+	std::vector<std::shared_ptr<collision_box>>::iterator begin();
+	std::vector<std::shared_ptr<collision_box>>::iterator end();
+
+
 private:
 	std::vector<std::shared_ptr<wall_group>> mWall_groups;
 	std::vector<std::shared_ptr<collision_box>> mBoxes;

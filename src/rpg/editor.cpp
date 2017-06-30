@@ -4,7 +4,9 @@ using namespace editors;
 
 #include <vector>
 #include <memory>
+
 #include <engine/parsers.hpp>
+#include <engine/log.hpp>
 
 void populate_combox_with_scene_names(tgui::ComboBox::Ptr pCB)
 {
@@ -204,13 +206,14 @@ void tgui_list_layout::updateWidgetPositions()
 	Widget::Ptr last;
 	for (auto i : widgets)
 	{
+		if (!i->isVisible())
+			continue;
 		if (last)
 		{
 			auto pos = last->getPosition();
 			pos.y += last->getFullSize().y;
 			i->setPosition(pos);
 		}
-
 		last = i;
 	}
 }
@@ -220,8 +223,11 @@ editor_gui::editor_gui()
 	mLayout = std::make_shared<tgui_list_layout>();
 	mLayout->setBackgroundColor({ 0, 0, 0,  90});
 	mLayout->setSize(200, "&.height");
-
 	mLayout->hide();
+
+	/*mTabs = std::make_shared<tgui::Tab>();
+	mTabs->add("Visualizations", true);
+	mTabs->add("Editor", false);*/
 
 	mLb_fps = std::make_shared<tgui::Label>();
 	mLb_fps->setMaximumTextWidth(0);
@@ -235,8 +241,35 @@ editor_gui::editor_gui()
 	mLb_mouse->setTextSize(14);
 	mLayout->add(mLb_mouse);
 
+	{
+		add_small_label("Visualizations:", mLayout);
+		mVisualizations_layout = std::make_shared<tgui_list_layout>();
+		mVisualizations_layout->setSize("&.width", 100);
+		mLayout->add(mVisualizations_layout);
+
+		// Collision visualization checkbox
+		auto chb_collision = std::make_shared<tgui::CheckBox>();
+		chb_collision->getRenderer()->setTextColor({ 255, 255, 255, 255 });
+		chb_collision->setText("Collision");
+		chb_collision->connect("Checked", [&]()
+		{ mScene->get_visualizer().visualize_collision(true); });
+		chb_collision->connect("Unchecked", [&]()
+		{ mScene->get_visualizer().visualize_collision(false); });
+		mVisualizations_layout->add(chb_collision);
+
+		// Entities visualization checkbox
+		auto chb_entities = std::make_shared<tgui::CheckBox>();
+		chb_entities->getRenderer()->setTextColor({ 255, 255, 255, 255 });
+		chb_entities->setText("Entities");
+		chb_entities->connect("Checked", [&]()
+		{ mScene->get_visualizer().visualize_entities(true); });
+		chb_entities->connect("Unchecked", [&]()
+		{ mScene->get_visualizer().visualize_entities(false); });
+		mVisualizations_layout->add(chb_entities);
+	}
+
 	mEditor_layout = std::make_shared<tgui_list_layout>();
-	mEditor_layout->setSize(mLayout->getSize().x, 1000);
+	mEditor_layout->setSize("&.width", "&.height - y");
 	mEditor_layout->setBackgroundColor({ 0, 0, 0, 0 });
 	mLayout->add(mEditor_layout);
 
@@ -329,7 +362,7 @@ tgui::Button::Ptr editor_gui::add_button(const std::string& text, tgui::Containe
 std::shared_ptr<tgui_list_layout> editor_gui::add_sub_container(tgui::Container::Ptr pContainer)
 {
 	auto slo = std::make_shared<tgui_list_layout>();
-	slo->setBackgroundColor({ 0, 0, 0,  0 });
+	slo->setBackgroundColor({ 0, 0, 0, 0 });
 	slo->setSize(200, 500);
 	if (pContainer)
 		pContainer->add(slo);
@@ -349,6 +382,7 @@ void editor_gui::update_scene()
 	}
 }
 
+
 void editor_gui::refresh_renderer(engine::renderer & pR)
 {
 	pR.get_tgui().add(mLayout);
@@ -366,12 +400,22 @@ int editor_gui::draw(engine::renderer& pR)
 		{
 			mLayout->hide();
 			mCb_scene->hide();
+			pR.set_subwindow_enabled(false);
 		}
 		else
 		{
 			mLayout->show();
 			mCb_scene->show();
+			pR.set_subwindow_enabled(true);
 		}
+	}
+
+	// Keep the sub window for the renderer updated
+	if (mLayout->isVisible())
+	{
+		const engine::fvector position(mLayout->getFullSize().x, mCb_scene->getFullSize().y);
+		const engine::fvector size = pR.get_window()->get_size() - position;
+		pR.set_subwindow({ position, size});
 	}
 
 	// Lock the scene selector to not mess things up
@@ -441,15 +485,15 @@ bool scene_editor::open_scene(std::string pPath)
 	auto path = engine::encoded_path(pPath);
 	if (!mLoader.load(path.parent(), path.filename()))
 	{
-		util::error("Unable to open scene '" + pPath + "'");
+		logger::error("Unable to open scene '" + pPath + "'");
 		return false;
 	}
 
 	auto texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, mLoader.get_tilemap_texture());
 	if (!texture)
 	{
-		util::warning("Invalid tilemap texture in scene");
-		util::info("If you have yet to specify a tilemap texture, you can ignore the last warning");
+		logger::warning("Invalid tilemap texture in scene");
+		logger::info("If you have yet to specify a tilemap texture, you can ignore the last warning");
 	}
 	else
 	{
@@ -676,7 +720,7 @@ void tilemap_editor::load_terminal_interface(engine::terminal_system & pTerminal
 	{
 		if (pArgs.size() < 2)
 		{
-			util::error("Not enough arguments");
+			logger::error("Not enough arguments");
 			return false;
 		}
 
@@ -686,7 +730,7 @@ void tilemap_editor::load_terminal_interface(engine::terminal_system & pTerminal
 		}
 		catch (...)
 		{
-			util::error("Invalid offset input");
+			logger::error("Invalid offset input");
 			return false;
 		}
 
@@ -704,7 +748,7 @@ void tilemap_editor::load_terminal_interface(engine::terminal_system & pTerminal
 				}
 				catch (...)
 				{
-					util::error("Invalid layer input");
+					logger::error("Invalid layer input");
 					return false;
 				}
 
@@ -733,7 +777,7 @@ void tilemap_editor::setup_editor(editor_gui & pEditor_gui)
 			const int item = mCb_tile->getSelectedItemIndex();
 			if (item == -1)
 			{
-				util::warning("No item selected");
+				logger::warning("No item selected");
 			}
 			mCurrent_tile = static_cast<size_t>(item);
 			update_labels();
@@ -916,11 +960,11 @@ void tilemap_editor::apply_texture()
 {
 	const std::string tilemap_texture_name = mTb_texture->getText();
 
-	util::info("Applying tilemap Texture '" + tilemap_texture_name + "'...");
+	logger::info("Applying tilemap Texture '" + tilemap_texture_name + "'...");
 	auto new_texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, tilemap_texture_name);
 	if (!new_texture)
 	{
-		util::error("Failed to load texture '" + tilemap_texture_name + "'");
+		logger::error("Failed to load texture '" + tilemap_texture_name + "'");
 		return;
 	}
 
@@ -941,7 +985,7 @@ void tilemap_editor::apply_texture()
 
 	mCurrent_texture_name = tilemap_texture_name;
 
-	util::info("Tilemap texture applied");
+	logger::info("Tilemap texture applied");
 }
 
 int tilemap_editor::save()
@@ -949,7 +993,7 @@ int tilemap_editor::save()
 	auto& doc = mLoader.get_document();
 	auto ele_map = mLoader.get_tilemap();
 
-	util::info("Saving tilemap...");
+	logger::info("Saving tilemap...");
 
 	// Update tilemap texture name
 	auto ele_texture = ele_map->FirstChildElement("texture");
@@ -966,7 +1010,7 @@ int tilemap_editor::save()
 	mTilemap_manipulator.generate(doc, ele_map);
 	doc.SaveFile(mLoader.get_scene_path().c_str());
 
-	util::info("Tilemap saved");
+	logger::info("Tilemap saved");
 
 	return 0;
 }
@@ -1209,13 +1253,13 @@ void collisionbox_editor::load_terminal_interface(engine::terminal_system & pTer
 	{
 		if (!mSelection)
 		{
-			util::error("Invalid selection");
+			logger::error("Invalid selection");
 			return false;
 		}
 		
 		if (pArgs.size() < 1)
 		{
-			util::error("Not enough arguments");
+			logger::error("Not enough arguments");
 			return false;
 		}
 
@@ -1226,7 +1270,7 @@ void collisionbox_editor::load_terminal_interface(engine::terminal_system & pTer
 
 		if (pArgs.size() < 2)
 		{
-			util::error("Not enough arguments");
+			logger::error("Not enough arguments");
 			return false;
 		}
 
@@ -1236,7 +1280,7 @@ void collisionbox_editor::load_terminal_interface(engine::terminal_system & pTer
 		}
 		catch (...)
 		{
-			util::error("Invalid offset input");
+			logger::error("Invalid offset input");
 			return false;
 		}
 		engine::frect changed = mSelection->get_region();
@@ -1251,13 +1295,13 @@ void collisionbox_editor::load_terminal_interface(engine::terminal_system & pTer
 	{
 		if (!mSelection)
 		{
-			util::error("Invalid selection");
+			logger::error("Invalid selection");
 			return false;
 		}
 
 		if (pArgs.size() < 2)
 		{
-			util::error("Not enough arguments");
+			logger::error("Not enough arguments");
 			return false;
 		}
 
@@ -1267,7 +1311,7 @@ void collisionbox_editor::load_terminal_interface(engine::terminal_system & pTer
 		}
 		catch (...)
 		{
-			util::error("Invalid offset input");
+			logger::error("Invalid offset input");
 			return false;
 		}
 
@@ -1282,13 +1326,13 @@ void collisionbox_editor::load_terminal_interface(engine::terminal_system & pTer
 
 int collisionbox_editor::save()
 {
-	util::info("Saving collision boxes");
+	logger::info("Saving collision boxes");
 
 	mContainer.generate_xml(mLoader.get_document(), mLoader.get_collisionboxes());
 	
 	mLoader.save();
 
-	util::info("Saved " + std::to_string(mContainer.get_count()) +" collision box(es)");
+	logger::info("Saved " + std::to_string(mContainer.get_count()) +" collision box(es)");
 
 	return 0;
 }
@@ -1306,7 +1350,7 @@ void collisionbox_editor::setup_editor(editor_gui & pEditor_gui)
 		const int item = mCb_type->getSelectedItemIndex();
 		if (item == -1)
 		{
-			util::warning("No item selected");
+			logger::warning("No item selected");
 			return;
 		}
 
@@ -1390,7 +1434,7 @@ void collisionbox_editor::apply_wall_settings()
 	}
 	catch (...)
 	{
-		util::error("Failed to parse rect size");
+		logger::error("Failed to parse rect size");
 	}
 
 	// Apply door settings
@@ -1575,7 +1619,7 @@ int atlas_editor::save()
 	if (mTexture_list.empty() || !mAtlas_changed)
 		return 0;
 	const std::string xml_path = mLoaded_texture.string() + ".xml";
-	util::info("Saving atlas '" + xml_path + "'...");
+	logger::info("Saving atlas '" + xml_path + "'...");
 	
 	engine::texture_atlas atlas;
 	for (auto& i : mAnimations)
@@ -1585,7 +1629,7 @@ int atlas_editor::save()
 	}
 	atlas.save(xml_path);
 	mAtlas_changed = false;
-	util::info("Atlas save");
+	logger::info("Atlas save");
 	return 0;
 }
 
@@ -1626,7 +1670,7 @@ void atlas_editor::setup_for_texture(const engine::encoded_path& pPath)
 	const std::string xml_path = pPath.string() + ".xml";
 	if (!engine::fs::exists(xml_path))
 	{
-		util::info("Starting a new atlas");
+		logger::info("Starting a new atlas");
 		clear_gui();
 		new_entry();
 		return;
@@ -1665,7 +1709,7 @@ void atlas_editor::new_entry()
 {
 	if (auto find = find_animation("_Name_here_"))
 	{
-		util::warning("A new, unnamed, entry has already been created");
+		logger::warning("A new, unnamed, entry has already been created");
 		mSelection = find;
 		update_settings();
 		update_preview();
@@ -1732,7 +1776,7 @@ void atlas_editor::setup_editor(editor_gui & pEditor_gui)
 		const int item = mCb_texture_select->getSelectedItemIndex();
 		if (item == -1)
 		{
-			util::warning("No item selected");
+			logger::warning("No item selected");
 			return;
 		}
 		save();
@@ -1746,7 +1790,7 @@ void atlas_editor::setup_editor(editor_gui & pEditor_gui)
 		const int item = mCb_entry_select->getSelectedItemIndex();
 		if (item == -1)
 		{
-			util::warning("No item selected");
+			logger::warning("No item selected");
 			return;
 		}
 		mSelection = mAnimations[item];
@@ -1811,7 +1855,7 @@ void atlas_editor::setup_editor(editor_gui & pEditor_gui)
 		const int item = mCb_bg_color->getSelectedItemIndex();
 		if (item == -1)
 		{
-			util::warning("No item selected");
+			logger::warning("No item selected");
 			return;
 		}
 		if (item == 0)
@@ -1829,7 +1873,7 @@ void atlas_editor::apply_atlas_settings()
 {
 	if (!mSelection)
 	{
-		util::error("Nothing selected");
+		logger::error("Nothing selected");
 		return;
 	}
 
@@ -1843,7 +1887,7 @@ void atlas_editor::apply_atlas_settings()
 			update_entry_list();
 		}
 		else
-			util::error("Animation with name '" + mTb_name->getText() + "' already exists");
+			logger::error("Animation with name '" + mTb_name->getText() + "' already exists");
 	}
 
 	// Set loop
@@ -1857,7 +1901,7 @@ void atlas_editor::apply_atlas_settings()
 	}
 	catch (...)
 	{
-		util::error("Failed to parse frame count");
+		logger::error("Failed to parse frame count");
 	}
 
 	// Default Frame
@@ -1866,7 +1910,7 @@ void atlas_editor::apply_atlas_settings()
 	}
 	catch (...)
 	{
-		util::error("Failed to parse Default frame");
+		logger::error("Failed to parse Default frame");
 	}
 
 	// Interval
@@ -1875,7 +1919,7 @@ void atlas_editor::apply_atlas_settings()
 	}
 	catch (...)
 	{
-		util::error("Failed to parse interval");
+		logger::error("Failed to parse interval");
 	}
 
 	// Size and position
@@ -1885,7 +1929,7 @@ void atlas_editor::apply_atlas_settings()
 	}
 	catch (...)
 	{
-		util::error("Failed to parse rect size");
+		logger::error("Failed to parse rect size");
 	}
 
 	mAtlas_changed = true;
@@ -1994,31 +2038,31 @@ bool editors::editor_manager::is_editor_open()
 
 void editor_manager::open_tilemap_editor(std::string pScene_path)
 {
-	util::info("Opening tilemap editor...");
+	logger::info("Opening tilemap editor...");
 	mTilemap_editor.set_editor_gui(mEditor_gui);
 	if (mTilemap_editor.open_scene(pScene_path))
 		mCurrent_editor = &mTilemap_editor;
 	mTilemap_editor.open_editor();
-	util::info("Editor loaded");
+	logger::info("Editor loaded");
 }
 
 void editor_manager::open_collisionbox_editor(std::string pScene_path)
 {
-	util::info("Opening collisionbox editor...");
+	logger::info("Opening collisionbox editor...");
 	mCollisionbox_editor.set_editor_gui(mEditor_gui);
 	if (mCollisionbox_editor.open_scene(pScene_path))
 		mCurrent_editor = &mCollisionbox_editor;
 	mCollisionbox_editor.open_editor();
-	util::info("Editor opened");
+	logger::info("Editor opened");
 }
 
 void editors::editor_manager::open_atlas_editor()
 {
-	util::info("Opening texture/atlas editor...");
+	logger::info("Opening texture/atlas editor...");
 	mAtlas_editor.set_editor_gui(mEditor_gui);
 	mCurrent_editor = &mAtlas_editor;
 	mAtlas_editor.open_editor();
-	util::info("Editor opened");
+	logger::info("Editor opened");
 }
 
 void editor_manager::close_editor()
@@ -2026,11 +2070,11 @@ void editor_manager::close_editor()
 	if (!mCurrent_editor)
 		return;
 
-	util::info("Closing Editor...");
+	logger::info("Closing Editor...");
 	mCurrent_editor->save();
 	mCurrent_editor = nullptr;
 	mEditor_gui.clear();
-	util::info("Editor closed");
+	logger::info("Editor closed");
 }
 
 void editor_manager::set_world_node(node& pNode)

@@ -83,6 +83,32 @@ private:
 	void script_music_set_second_volume(float pVolume);
 };
 
+class scene;
+
+class scene_visualizer :
+	public engine::render_object
+{
+public:
+	scene_visualizer();
+	void set_scene(scene& pScene);
+	void visualize_entities(bool pVisualize);
+	void visualize_collision(bool pVisualize);
+
+	int draw(engine::renderer& pR);
+private:
+	void visualize_entities(engine::renderer& pR);
+	void visualize_collision(engine::renderer& pR);
+
+	bool mVisualize_collision;
+	bool mVisualize_entities;
+
+	engine::rectangle_node mEntity_center_visualize;
+	engine::rectangle_node mEntity_visualize;
+	engine::rectangle_node mBox_visualize;
+
+	util::optional_pointer<scene> mScene;
+};
+
 class scene :
 	public engine::render_proxy
 {
@@ -95,7 +121,7 @@ public:
 
 	collision_system& get_collision_system();
 
-	// Cleanups the scene for a new scene.
+	// Cleans up the scene for a new scene.
 	// Does not stop background music by default 
 	// so it can be continued in the next scene.
 	void clean(bool pFull = false);
@@ -134,6 +160,8 @@ public:
 
 	void set_resource_pack(engine::pack_stream_factory* pPack);
 
+	scene_visualizer& get_visualizer();
+
 private:
 	std::vector<std::shared_ptr<script_function>> mEnd_functions;
 
@@ -157,6 +185,7 @@ private:
 
 #ifndef LOCKED_RELEASE_MODE
 	std::shared_ptr<engine::terminal_command_group> mTerminal_cmd_group;
+	scene_visualizer mVisualizer;
 #endif
 
 	std::string mCurrent_scene_name;
@@ -182,7 +211,10 @@ private:
 	void refresh_renderer(engine::renderer& _r);
 	void update_focus();
 	void update_collision_interaction(engine::controls &pControls);
+
+	friend class scene_visualizer;
 };
+
 
 }
 

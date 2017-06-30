@@ -373,23 +373,6 @@ inline T pingpong_index(T v, T end)
 	return ((v / end) % 2) ? end - (v%end) : (v%end);
 }
 
-enum class log_level
-{
-	error,
-	info,
-	warning,
-	debug
-};
-
-void log_print(log_level pType, const std::string& pMessage);
-
-void log_print(const std::string& pFile, int pLine, int pCol, log_level pType, const std::string& pMessage);
-
-void error(const std::string& pMessage);
-
-void warning(const std::string& pMessage);
-
-void info(const std::string& pMessage);
 
 }
 

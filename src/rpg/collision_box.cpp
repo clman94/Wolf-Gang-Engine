@@ -1,4 +1,5 @@
 #include <rpg/collision_box.hpp>
+#include <engine/log.hpp>
 
 using namespace rpg;
 
@@ -245,7 +246,7 @@ bool collision_box_container::load_xml(tinyxml2::XMLElement * pEle)
 		}
 		else
 		{
-			util::warning("Unknown collision box type '" + type + "'");
+			logger::warning("Unknown collision box type '" + type + "'");
 			ele_box = ele_box->NextSiblingElement();
 			continue;
 		}
@@ -322,6 +323,16 @@ const std::vector<std::shared_ptr<collision_box>>& collision_box_container::get_
 size_t collision_box_container::get_count() const
 {
 	return mBoxes.size();
+}
+
+std::vector<std::shared_ptr<collision_box>>::iterator collision_box_container::begin()
+{
+	return mBoxes.begin();
+}
+
+std::vector<std::shared_ptr<collision_box>>::iterator collision_box_container::end()
+{
+	return mBoxes.end();
 }
 
 

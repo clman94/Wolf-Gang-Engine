@@ -50,13 +50,6 @@ private:
 	void updateWidgetPositions();
 };
 
-class scene_settings_gui
-{
-public:
-private:
-
-};
-
 class editor_gui :
 	public engine::render_object
 {
@@ -84,8 +77,10 @@ private:
 	tgui::ComboBox::Ptr mCb_scene;
 	tgui::Label::Ptr mLb_mouse;
 	tgui::Label::Ptr mLb_fps;
+	//tgui::Tab::Ptr mTabs;
 	std::shared_ptr<tgui_list_layout> mLayout;
 	std::shared_ptr<tgui_list_layout> mEditor_layout;
+	std::shared_ptr<tgui_list_layout> mVisualizations_layout;
 	
 	void update_scene();
 

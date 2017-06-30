@@ -31,11 +31,11 @@ struct color
 {
 	color_t r, g, b, a;
 	color(
-		color_t _r = 0,
-		color_t _g = 0,
-		color_t _b = 0,
-		color_t _a = 255)
-		: r(_r), g(_g), b(_b), a(_a)
+		color_t pR = 0,
+		color_t pG = 0,
+		color_t pB = 0,
+		color_t pA = 255)
+		: r(pR), g(pG), b(pB), a(pA)
 	{}
 #ifdef SFML_COLOR_HPP
 	operator sf::Color() const
@@ -47,6 +47,28 @@ struct color
 };
 
 class render_object;
+
+class display_window
+{
+public:
+	~display_window();
+	void initualize(const std::string& pTitle, ivector pSize);
+	void set_size(ivector pSize);
+	ivector get_size() const;
+
+	void fullscreen_mode();
+	void windowed_mode();
+	void toggle_mode();
+	bool is_fullscreen() const;
+
+private:
+	sf::RenderWindow mWindow;
+	bool mIs_fullscreen;
+	ivector mSize;
+	std::string mTitle;
+
+	friend class renderer;
+};
 
 class renderer :
 	public util::nocopy
@@ -71,12 +93,9 @@ public:
 
 	int update_events();
 
-	int initualize(ivector pSize, int pFps = 0);
 	int draw();
 	int draw(render_object& pObject);
-
-
-	int close();
+	
 	int add_object(render_object& pObject);
 	int remove_object(render_object& pObject);
 
@@ -94,23 +113,24 @@ public:
 	int set_icon(const std::string& pPath);
 	int set_icon(const std::vector<char>& pData);
 
-	void set_window_title(const std::string& pTitle);
 	void set_visible(bool pVisible);
 	void set_background_color(color pColor);
 
 	float get_fps() const;
-
 	float get_delta() const;
 
+	void set_window(display_window& pWindow);
+	display_window* get_window() const;
+
+	void set_subwindow_enabled(bool pEnabled);
+	void set_subwindow(frect pRect);
+
 #ifdef ENGINE_INTERNAL
-
-	/*sf::RenderWindow& get_sfml_window()
-	{ return mWindow; }*/
-
 	sf::RenderTarget& get_sfml_render()
-	{ return mWindow; }
-
-
+	{
+		assert(mWindow);
+		return mWindow->mWindow;
+	}
 #endif
 
 	tgui::Gui& get_tgui();
@@ -128,7 +148,11 @@ private:
 	bool mIs_mouse_busy;
 	bool mIs_keyboard_busy;
 
-	sf::RenderWindow mWindow;
+	bool mSubwindow_enabled;
+	frect mSubwindow;
+
+	display_window* mWindow;
+
 	std::vector<render_object*> mObjects;
 	bool mRequest_resort;
 	frame_clock mFrame_clock;
@@ -186,7 +210,8 @@ public:
 	void set_visible(bool pVisible);
 	
 	virtual int draw(renderer &pR) { return 0; }
-	
+	virtual frect get_render_rect() const { return{}; }
+
 	int is_rendered();
 
 	void set_renderer(renderer& pR, bool pManual_render = false);
@@ -396,13 +421,15 @@ public:
 	void set_color(const color& c);
 	color get_color();
 	void set_size(fvector s);
-	fvector get_size();
+	fvector get_size() const;
 
 	void set_outline_color(color pColor);
 
 	void set_outline_thinkness(float pThickness);
 
 	virtual int draw(renderer &pR);
+
+	virtual frect get_render_rect() const;
 
 private:
 	anchor mAnchor;
@@ -430,6 +457,7 @@ public:
 
 	void set_shader(std::shared_ptr<shader> pShader);
 
+	virtual frect get_render_rect() const;
 
 private:
 	std::shared_ptr<texture> mTexture;
@@ -485,6 +513,7 @@ public:
 	virtual int draw(renderer &pR);
 
 	void set_shader(std::shared_ptr<shader> pShader);
+
 
 private:
 	std::shared_ptr<font> mFont;
@@ -590,6 +619,8 @@ public:
 	fvector get_size() const;
 
 	void set_character_size(size_t pSize);
+
+	virtual frect get_render_rect() const;
 
 	virtual int draw(renderer &pR);
 

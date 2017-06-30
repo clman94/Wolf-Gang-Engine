@@ -17,6 +17,7 @@ public:
 	~script_function();
 	bool is_running();
 	void set_function(AS::asIScriptFunction* pFunction);
+	util::optional_pointer<AS::asIScriptFunction> get_function() const;
 	void set_script_system(script_system& pScript_system);
 	void set_arg(unsigned int index, void* ptr);
 	bool call();

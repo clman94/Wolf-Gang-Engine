@@ -1,49 +1,57 @@
-#include <engine/utility.hpp>
 #include <engine/filesystem.hpp>
+#include <engine/log.hpp>
+#include <fstream>
+#include <iostream>
+#include <cassert>
 
-void util::log_print(log_level pType, const std::string& pMessage)
+namespace logger {
+
+static std::ofstream mLog_file;
+static size_t mSub_routine_level;
+
+void initialize(const std::string & pOutput)
 {
-	//#ifndef LOCKED_RELEASE_MODE
-	static std::ofstream mLog_file;
+	if (mLog_file)
+		mLog_file.close();
 
-	if (!mLog_file.is_open()) // Open the log file when needed
-	{
-#ifndef LOCKED_RELEASE_MODE
-		mLog_file.open("./data/log.txt");
-#else
-		mLog_file.open("./log.txt");
-#endif // !LOCKED_RELEASE_MODE
-	}
+	mLog_file.open(pOutput.c_str());
+	if (!mLog_file)
+		std::cout << "Error : Failed to open log output file";
 
+	mSub_routine_level = 0;
+}
+
+void print(level pType, const std::string& pMessage)
+{
 	std::string type;
 	switch (pType)
 	{
-	case log_level::error:   type = "ERROR";   break;
-	case log_level::info:    type = "INFO";    break;
-	case log_level::warning: type = "WARNING"; break;
-	case log_level::debug:   type = "DEBUG";   break;
+	case level::error:   type = "ERROR  ";   break;
+	case level::info:    type = "INFO   ";    break;
+	case level::warning: type = "WARNING"; break;
+	case level::debug:   type = "DEBUG  ";   break;
 	}
-	std::string message = type;
-	message += " : ";
-	message += pMessage;
-	message += "\n";
 
-	if (mLog_file.is_open())
+	std::string message = type + " : ";
+	for (size_t i = 0; i < mSub_routine_level; i++)
+		message += "| ";
+	message += pMessage + "\n";
+
+	if (mLog_file)
 	{
 		mLog_file << message; // Save to file
 		mLog_file.flush();
 	}
+
+	// Printing to the console is disabled to
+	// to remove the overhead and the redundancy.
 #ifndef LOCKED_RELEASE_MODE
 	std::cout << message; // Print to console  
-#endif // !LOCKED_RELEASE_MODE
-
-//#endif // !LOCKED_RELEASE_MODE
-
+#endif
 }
 
-void util::log_print(const std::string& pFile, int pLine, int pCol, log_level pType, const std::string& pMessage)
+void print(const std::string& pFile, int pLine, int pCol, level pType, const std::string& pMessage)
 {
-//#ifndef LOCKED_RELEASE_MODE
 	std::string message = pFile;
 	message += " ( ";
 	message += std::to_string(pLine);
@@ -52,21 +60,49 @@ void util::log_print(const std::string& pFile, int pLine, int pCol, log_level pT
 	message += " ) : ";
 	message += pMessage;
 
-	log_print(pType, message);
-//#endif // !LOCKED_RELEASE_MODE
+	print(pType, message);
 }
 
-void util::error(const std::string& pMessage)
+void error(const std::string& pMessage)
 {
-	log_print(log_level::error, pMessage);
+	print(level::error, pMessage);
 }
 
-void util::warning(const std::string& pMessage)
+void warning(const std::string& pMessage)
 {
-	log_print(log_level::warning, pMessage);
+	print(level::warning, pMessage);
 }
 
-void util::info(const std::string& pMessage)
+void info(const std::string& pMessage)
 {
-	log_print(log_level::info, pMessage);
+	print(level::info, pMessage);
+}
+
+void start_sub_routine()
+{
+	++mSub_routine_level;
+}
+
+void end_sub_routine()
+{
+	assert(mSub_routine_level > 0);
+	--mSub_routine_level;
+}
+
+
+sub_routine::sub_routine()
+{
+	start_sub_routine();
+}
+
+sub_routine::~sub_routine()
+{
+	end_sub_routine();
+}
+
+void sub_routine::end()
+{
+	end_sub_routine();
+}
+
 }

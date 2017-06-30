@@ -391,6 +391,12 @@ void formatted_text_node::set_character_size(size_t pSize)
 	mCharacter_size = pSize;
 }
 
+frect formatted_text_node::get_render_rect() const
+{
+	return{ get_exact_position() + engine::anchor_offset(get_size(), mAnchor), get_size() };
+}
+
+
 int formatted_text_node::draw(renderer & pR)
 {
 	if (!mFont)
@@ -487,10 +493,12 @@ void formatted_text_node::update()
 
 			// Update size
 
-			if (position.x + bounds_offset.x > mSize.x)
-				mSize.x = position.x + bounds_offset.x;
-			if (position.y + bounds_offset.y > mSize.y)
-				mSize.y = position.y + bounds_offset.y;
+			fvector vert_size = handle.mVertices.get_size() + handle.mVertices.get_position();
+
+			if (vert_size.x > mSize.x)
+				mSize.x = vert_size.x;
+			if (vert_size.y > mSize.y)
+				mSize.y = vert_size.y;
 
 			position.x += hspace;
 		}

@@ -1,6 +1,7 @@
 #define ENGINE_INTERNAL
 
 #include <engine/renderer.hpp>
+#include <engine/log.hpp>
 
 using namespace engine;
 
@@ -88,21 +89,23 @@ render_object::get_depth()
 
 renderer::renderer()
 {
+	mWindow = nullptr;
 	mRequest_resort = false;
-	mTgui.setWindow(mWindow);
+	mTarget_size = ivector(800, 600); // Some arbitrary default
+
+	mSubwindow_enabled = false;
+	mSubwindow = frect(0, 0, 1, 1);
 }
 
 renderer::~renderer()
 {
 	for (auto i : mObjects)
 		i->mIndex = -1;
-	close();
 }
 
 void renderer::set_target_size(fvector pSize)
 {
 	mTarget_size = pSize;
-	mWindow.setSize(engine::vector<unsigned int>(pSize*2));
 	refresh_view();
 }
 
@@ -116,46 +119,35 @@ void renderer::request_resort()
 	mRequest_resort = true;
 }
 
-int
-renderer::initualize(ivector pSize, int pFps)
+int renderer::draw_objects()
 {
-	mWindow.create(sf::VideoMode(pSize.x, pSize.y), "A Friendly Venture", sf::Style::Titlebar | sf::Style::Close | sf::Style::Resize);
-
-	if (pFps > 0)
-		mWindow.setFramerateLimit(pFps);
-
-	refresh_gui_view();
-	return 0;
-}
-
-
-int
-renderer::draw_objects()
-{
+	assert(mWindow);
 	for (auto i : mObjects)
 		if (i->is_visible())
-			i->draw(*this);
+		i->draw(*this);
 	return 0;
 }
 
 int renderer::draw()
 {
-	mFrame_clock.update();
+	assert(mWindow);
+	mFrame_clock.tick();
 	if (mRequest_resort)
 	{
 		sort_objects();
 		refresh_objects();
 		mRequest_resort = false;
 	}
-	mWindow.clear(mBackground_color);
+	mWindow->mWindow.clear(mBackground_color);
 	draw_objects();
 	mTgui.draw();
-	mWindow.display();
+	mWindow->mWindow.display();
 	return 0;
 }
 
 int renderer::draw(render_object& pObject)
 {
+	assert(mWindow);
 	return pObject.draw(*this);
 }
 
@@ -173,16 +165,14 @@ bool renderer::is_mouse_within_target() const
 
 void renderer::refresh_view()
 {
-	const fvector window_size(
-		static_cast<float>(mWindow.getSize().x)
-		, static_cast<float>(mWindow.getSize().y));
-
+	if (!mWindow)
+		return;
+	const fvector window_size(mSubwindow_enabled ? mSubwindow.get_size() : vector<unsigned int>(mWindow->mWindow.getSize()));
 	const fvector view_ratio = fvector(mTarget_size).normalize();
 	const fvector window_ratio = fvector(window_size).normalize();
 
 	sf::View view(sf::FloatRect(0, 0, mTarget_size.x, mTarget_size.y));
-	sf::FloatRect viewport;
-
+	sf::FloatRect viewport(0, 0, 0, 0);
 
 	// Resize view according to the ratio
 	if (view_ratio.x > window_ratio.x)
@@ -205,13 +195,24 @@ void renderer::refresh_view()
 	viewport.left = 0.5f - (viewport.width  / 2);
 	viewport.top  = 0.5f - (viewport.height / 2);
 
+	if (mSubwindow_enabled)
+	{
+		viewport.left = (mSubwindow.get_offset().x + viewport.left*mSubwindow.get_size().x)
+			/ mWindow->mWindow.getSize().x;
+		viewport.top = (mSubwindow.get_offset().y + viewport.top*mSubwindow.get_size().y)
+			/ mWindow->mWindow.getSize().y;
+		viewport.width *= mSubwindow.get_size().x / mWindow->mWindow.getSize().x;
+		viewport.height *= mSubwindow.get_size().y / mWindow->mWindow.getSize().y;
+	}
+
 	view.setViewport(viewport);
-	mWindow.setView(view);
+	mWindow->mWindow.setView(view);
 }
 
 void renderer::refresh_gui_view()
 {
-	mTgui.setView(sf::View(sf::FloatRect(0, 0, static_cast<float>(mWindow.getSize().x), static_cast<float>(mWindow.getSize().y))));
+	assert(mWindow);
+	mTgui.setView(sf::View(sf::FloatRect(0, 0, static_cast<float>(mWindow->mWindow.getSize().x), static_cast<float>(mWindow->mWindow.getSize().y))));
 }
 
 
@@ -268,18 +269,12 @@ renderer::remove_object(render_object& pObject)
 	return 0;
 }
 
-int 
-renderer::close()
-{
-	mWindow.close();
-	return 0;
-}
 
 fvector
 renderer::get_mouse_position() const
 {
-	auto pos = sf::Mouse::getPosition(mWindow);
-	auto wpos = mWindow.mapPixelToCoords(pos);
+	auto pos = sf::Mouse::getPosition(mWindow->mWindow);
+	auto wpos = mWindow->mWindow.mapPixelToCoords(pos);
 	return wpos;
 }
 
@@ -292,7 +287,7 @@ renderer::get_mouse_position(fvector pRelative) const
 bool
 renderer::is_focused()
 {
-	return mWindow.hasFocus();
+	return mWindow->mWindow.hasFocus();
 }
 
 
@@ -302,7 +297,7 @@ int renderer::set_icon(const std::string & pPath)
 	sf::Image image;
 	if (!image.loadFromFile(pPath))
 		return 1;
-	mWindow.setIcon(image.getSize().x, image.getSize().y, image.getPixelsPtr());
+	mWindow->mWindow.setIcon(image.getSize().x, image.getSize().y, image.getPixelsPtr());
 	return 0;
 }
 
@@ -311,19 +306,15 @@ int renderer::set_icon(const std::vector<char>& pData)
 	sf::Image image;
 	if (!image.loadFromMemory(&pData[0], pData.size()))
 		return 1;
-	mWindow.setIcon(image.getSize().x, image.getSize().y, image.getPixelsPtr());
+	mWindow->mWindow.setIcon(image.getSize().x, image.getSize().y, image.getPixelsPtr());
 	return 0;
 }
 
-void renderer::set_window_title(const std::string & pTitle)
-{
-	mWindow.setTitle(pTitle);
-}
 
 void
 renderer::set_visible(bool pVisible)
 {
-	mWindow.setVisible(pVisible);
+	mWindow->mWindow.setVisible(pVisible);
 }
 
 void
@@ -340,6 +331,29 @@ float renderer::get_fps() const
 float renderer::get_delta() const
 {
 	return mFrame_clock.get_delta();
+}
+
+void renderer::set_window(display_window & pWindow)
+{
+	mWindow = &pWindow;
+	mTgui.setWindow(pWindow.mWindow);
+}
+
+display_window * engine::renderer::get_window() const
+{
+	return mWindow;
+}
+
+void renderer::set_subwindow_enabled(bool pEnabled)
+{
+	mSubwindow_enabled = pEnabled;
+	refresh_view();
+}
+
+void renderer::set_subwindow(frect pRect)
+{
+	mSubwindow = pRect;
+	refresh_view();
 }
 
 void
@@ -361,7 +375,7 @@ renderer::refresh_pressed()
 bool
 renderer::is_key_pressed(key_type pKey_type, bool pIgnore_gui)
 {
-	if (!mWindow.hasFocus() || (mIs_keyboard_busy && !pIgnore_gui))
+	if (!mWindow->mWindow.hasFocus() || (mIs_keyboard_busy && !pIgnore_gui))
 		return false;
 	bool is_pressed = sf::Keyboard::isKeyPressed(pKey_type);
 	if (mPressed_keys[pKey_type] == -1 && is_pressed)
@@ -373,7 +387,7 @@ renderer::is_key_pressed(key_type pKey_type, bool pIgnore_gui)
 bool
 renderer::is_key_down(key_type pKey_type, bool pIgnore_gui)
 {
-	if (!mWindow.hasFocus() || (mIs_keyboard_busy && !pIgnore_gui))
+	if (!mWindow->mWindow.hasFocus() || (mIs_keyboard_busy && !pIgnore_gui))
 		return false;
 	return sf::Keyboard::isKeyPressed(pKey_type);
 }
@@ -381,7 +395,7 @@ renderer::is_key_down(key_type pKey_type, bool pIgnore_gui)
 bool
 renderer::is_mouse_pressed(mouse_button pButton_type, bool pIgnore_gui)
 {
-	if (!mWindow.hasFocus() || (mIs_mouse_busy && !pIgnore_gui) || !is_mouse_within_target())
+	if (!mWindow->mWindow.hasFocus() || (mIs_mouse_busy && !pIgnore_gui) || !is_mouse_within_target())
 		return false;
 	bool is_pressed = sf::Mouse::isButtonPressed((sf::Mouse::Button)pButton_type);
 	if (mPressed_buttons[pButton_type] == -1 && is_pressed)
@@ -393,7 +407,7 @@ renderer::is_mouse_pressed(mouse_button pButton_type, bool pIgnore_gui)
 bool
 renderer::is_mouse_down(mouse_button pButton_type, bool pIgnore_gui)
 {
-	if (!mWindow.hasFocus() || (mIs_mouse_busy && !pIgnore_gui) || !is_mouse_within_target())
+	if (!mWindow->mWindow.hasFocus() || (mIs_mouse_busy && !pIgnore_gui) || !is_mouse_within_target())
 		return false;
 	return sf::Mouse::isButtonPressed((sf::Mouse::Button)pButton_type);
 }
@@ -403,16 +417,18 @@ renderer::update_events()
 {
 	refresh_pressed();
 
-	if (!mWindow.isOpen())
+	if (!mWindow->mWindow.isOpen())
 		return 1;
 
-	while (mWindow.pollEvent(mEvent))
+	while (mWindow->mWindow.pollEvent(mEvent))
 	{
 		if (mEvent.type == sf::Event::Closed)
 			return 1;
 
 		if (mEvent.type == sf::Event::Resized)
 		{
+			mWindow->mSize = vector<unsigned int>(mWindow->mWindow.getSize()); // Update member
+
 			refresh_view();
 
 			// Adjust view of gui so it won't stretch
@@ -472,7 +488,7 @@ bool shader::load()
 	{
 		if (!sf::Shader::isAvailable())
 		{
-			util::warning("Shaders are not supported on this platform");
+			logger::warning("Shaders are not supported on this platform");
 			return false;
 		}
 
@@ -560,7 +576,7 @@ void rectangle_node::set_size(fvector s)
 	shape.setSize({ s.x, s.y });
 }
 
-fvector rectangle_node::get_size()
+fvector rectangle_node::get_size() const
 {
 	return{ shape.getSize().x, shape.getSize().y };
 }
@@ -579,9 +595,68 @@ int rectangle_node::draw(renderer & pR)
 {
 	auto pos = get_exact_position() + engine::anchor_offset(get_size(), mAnchor);
 	shape.setPosition({ pos.x, pos.y });
+
 	if (mShader)
 		pR.get_sfml_render().draw(shape, mShader->get_sfml_shader());
 	else
 		pR.get_sfml_render().draw(shape);
 	return 0;
+}
+
+frect rectangle_node::get_render_rect() const
+{
+	return{ get_exact_position() + engine::anchor_offset(get_size(), mAnchor), get_size() };
+}
+
+display_window::~display_window()
+{
+	mWindow.close();
+}
+
+void display_window::initualize(const std::string& pTitle, ivector pSize)
+{
+	mTitle = pTitle;
+	mSize = pSize;
+	mIs_fullscreen = true;
+	windowed_mode();
+}
+
+void display_window::set_size(ivector pSize)
+{
+	mSize = pSize;
+	if (!mIs_fullscreen)
+		mWindow.setSize({ static_cast<unsigned int>(pSize.x), static_cast<unsigned int>(pSize.y) });
+}
+
+ivector display_window::get_size() const
+{
+	return mSize;
+}
+
+void display_window::windowed_mode()
+{
+	if (!mIs_fullscreen)
+		return;
+	mWindow.create(sf::VideoMode(mSize.x, mSize.y), mTitle, sf::Style::Titlebar | sf::Style::Close | sf::Style::Resize);
+}
+
+void display_window::toggle_mode()
+{
+	if (mIs_fullscreen)
+		windowed_mode();
+	else
+		fullscreen_mode();
+}
+
+bool display_window::is_fullscreen() const
+{
+	return mIs_fullscreen;
+}
+
+void display_window::fullscreen_mode()
+{
+	if (mIs_fullscreen)
+		return;
+	mWindow.create(sf::VideoMode::getDesktopMode(), mTitle, sf::Style::None);
+	mIs_fullscreen = true;
 }

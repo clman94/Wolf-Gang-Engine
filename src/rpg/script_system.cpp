@@ -5,6 +5,7 @@
 #include <angelscript/add_on/scriptmath/scriptmath.h>
 
 #include <engine/parsers.hpp>
+#include <engine/log.hpp>
 
 #include "../xmlshortcuts.hpp"
 
@@ -19,26 +20,26 @@ template<typename Tret, typename...Tparams>
 class script_bound_functiontemplate
 {
 public:
-	typedef std::function<void*(void*, void**)> implicit_function;
+typedef std::function<void*(void*, void**)> implicit_function;
 
 protected:
-	void angelscript_call(asIScriptGeneric *gen)
-	{
-		std::vector<void*> paramlist;
-		if (gen->GetObject())
-			paramlist.push_back(gen->GetObject());
-		for (size_t i = 0; i < gen->GetArgCount(); i++)
-		{
-			paramlist.push_back(gen->GetAddressOfArg(i));
-		}
-		Tret* ret = nullptr;
-		if (gen->GetAddressOfReturnLocation())
-			ret = new(gen->GetAddressOfReturnLocation()) Tret();
-		mFunction(ret, &paramlist[0]);
-	}
+void angelscript_call(asIScriptGeneric *gen)
+{
+std::vector<void*> paramlist;
+if (gen->GetObject())
+paramlist.push_back(gen->GetObject());
+for (size_t i = 0; i < gen->GetArgCount(); i++)
+{
+paramlist.push_back(gen->GetAddressOfArg(i));
+}
+Tret* ret = nullptr;
+if (gen->GetAddressOfReturnLocation())
+ret = new(gen->GetAddressOfReturnLocation()) Tret();
+mFunction(ret, &paramlist[0]);
+}
 
 private:
-	implicit_function mFunction;
+implicit_function mFunction;
 };*/
 
 // #########
@@ -47,13 +48,13 @@ private:
 
 void script_system::message_callback(const asSMessageInfo * msg)
 {
-	util::log_level type = util::log_level::error;
+	logger::level type = logger::level::error;
 	if (msg->type == asEMsgType::asMSGTYPE_INFORMATION)
-		type = util::log_level::info;
+		type = logger::level::info;
 	else if (msg->type == asEMsgType::asMSGTYPE_WARNING)
-		type = util::log_level::warning;
+		type = logger::level::warning;
 
-	util::log_print(msg->section, msg->row, msg->col, type, msg->message);
+	logger::print(msg->section, msg->row, msg->col, type, msg->message);
 }
 
 void script_system::script_abort()
@@ -66,7 +67,7 @@ void script_system::script_create_thread(AS::asIScriptFunction * func, AS::CScri
 {
 	if (!func)
 	{
-		util::error("Invalid function");
+		logger::error("Invalid function");
 		return;
 	}
 
@@ -81,7 +82,7 @@ void script_system::script_create_thread_noargs(AS::asIScriptFunction * func)
 {
 	if (func == 0)
 	{
-		util::error("Invalid function");
+		logger::error("Invalid function");
 		return;
 	}
 
@@ -127,10 +128,10 @@ void script_system::timeout_callback(AS::asIScriptContext *ctx)
 {
 	if (mTimeout_timer.is_reached())
 	{
-		util::error("Script running too long. (Infinite loop?)");
+		logger::error("Script running too long. (Infinite loop?)");
 		ctx->Abort();
-		util::info("In script '" + std::string(ctx->GetFunction()->GetModuleName()) + "' :");
-		util::info("  Script aborted at line " + std::to_string(ctx->GetLineNumber())
+		logger::info("In script '" + std::string(ctx->GetFunction()->GetModuleName()) + "' :");
+		logger::info("  Script aborted at line " + std::to_string(ctx->GetLineNumber())
 			+ " in function '" + std::string(ctx->GetFunction()->GetDeclaration(true, true)) + "'");
 	}
 }
@@ -140,7 +141,7 @@ script_system::script_debug_print(std::string &pMessage)
 {
 	if (!is_executing())
 	{
-		util::log_print("Unknown", 0, 0, util::log_level::debug, pMessage);
+		logger::print("Unknown", 0, 0, logger::level::debug, pMessage);
 		return;
 	}
 
@@ -148,14 +149,14 @@ script_system::script_debug_print(std::string &pMessage)
 	assert(mCurrect_thread_context->context->GetFunction() != nullptr);
 
 	std::string details = std::string(mCurrect_thread_context->context->GetFunction()->GetModuleName());
-	util::log_print(details, get_current_line(), 0, util::log_level::debug, pMessage);
+	logger::print(details, get_current_line(), 0, logger::level::debug, pMessage);
 }
 
 void script_system::script_error_print(std::string & pMessage)
 {
 	if (!is_executing())
 	{
-		util::log_print("Unknown", 0, 0, util::log_level::error, pMessage);
+		logger::print("Unknown", 0, 0, logger::level::error, pMessage);
 		return;
 	}
 
@@ -163,7 +164,7 @@ void script_system::script_error_print(std::string & pMessage)
 	assert(mCurrect_thread_context->context->GetFunction() != nullptr);
 
 	std::string details = std::string(mCurrect_thread_context->context->GetFunction()->GetModuleName());
-	util::log_print(details, get_current_line(), 0, util::log_level::error, pMessage);
+	logger::print(details, get_current_line(), 0, logger::level::error, pMessage);
 }
 
 void
@@ -190,13 +191,13 @@ script_system::register_vector_type()
 		, asMETHODPR(engine::fvector, operator=, (const engine::fvector&), engine::fvector&)
 		, asCALL_THISCALL);
 	mEngine->RegisterObjectMethod("vec", "vec& opAddAssign(const vec &in)"
-		, asMETHODPR(engine::fvector, operator+=<float>, (const engine::fvector&), engine::fvector&)
+		, asMETHODPR(engine::fvector, operator+=, (const engine::fvector&), engine::fvector&)
 		, asCALL_THISCALL);
 	mEngine->RegisterObjectMethod("vec", "vec& opSubAssign(const vec &in)"
-		, asMETHODPR(engine::fvector, operator-=<float>, (const engine::fvector&), engine::fvector&)
+		, asMETHODPR(engine::fvector, operator-=, (const engine::fvector&), engine::fvector&)
 		, asCALL_THISCALL);
 	mEngine->RegisterObjectMethod("vec", "vec& opMulAssign(const vec &in)"
-		, asMETHODPR(engine::fvector, operator*=<float>, (const engine::fvector&), engine::fvector&)
+		, asMETHODPR(engine::fvector, operator*=, (const engine::fvector&), engine::fvector&)
 		, asCALL_THISCALL);
 	mEngine->RegisterObjectMethod("vec", "vec& opMulAssign(float)"
 		, asMETHODPR(engine::fvector, operator*=, (float), engine::fvector&)
@@ -207,19 +208,19 @@ script_system::register_vector_type()
 
 	// Arithmic
 	mEngine->RegisterObjectMethod("vec", "vec opAdd(const vec &in) const"
-		, asMETHODPR(engine::fvector, operator+<float>, (const engine::fvector&) const, engine::fvector)
+		, asMETHODPR(engine::fvector, operator+, (const engine::fvector&) const, engine::fvector)
 		, asCALL_THISCALL);
 	mEngine->RegisterObjectMethod("vec", "vec opSub(const vec &in) const"
-		, asMETHODPR(engine::fvector, operator-<float>, (const engine::fvector&) const, engine::fvector)
+		, asMETHODPR(engine::fvector, operator-, (const engine::fvector&) const, engine::fvector)
 		, asCALL_THISCALL);
 	mEngine->RegisterObjectMethod("vec", "vec opMul(const vec &in) const"
-		, asMETHODPR(engine::fvector, operator*<float>, (const engine::fvector&) const, engine::fvector)
+		, asMETHODPR(engine::fvector, operator*, (const engine::fvector&) const, engine::fvector)
 		, asCALL_THISCALL);
 	mEngine->RegisterObjectMethod("vec", "vec opMul(float) const"
-		, asMETHODPR(engine::fvector, operator*<float>, (float) const, engine::fvector)
+		, asMETHODPR(engine::fvector, operator*, (float) const, engine::fvector)
 		, asCALL_THISCALL);
 	mEngine->RegisterObjectMethod("vec", "vec opDiv(float) const"
-		, asMETHODPR(engine::fvector, operator/<float>, (float) const, engine::fvector)
+		, asMETHODPR(engine::fvector, operator/, (float) const, engine::fvector)
 		, asCALL_THISCALL);
 	mEngine->RegisterObjectMethod("vec", "vec opNeg() const"
 		, asMETHODPR(engine::fvector, operator-, () const, engine::fvector)
@@ -282,7 +283,7 @@ void script_system::register_timer_type()
 		, asCALL_CDECL_OBJLAST);
 
 	mEngine->RegisterObjectMethod("timer", "void start(float)"
-		, asMETHOD(engine::timer, start)
+		, asMETHODPR(engine::timer, start,(float), void)
 		, asCALL_THISCALL);
 	mEngine->RegisterObjectMethod("timer", "bool is_reached() const"
 		, asMETHOD(engine::timer, is_reached)

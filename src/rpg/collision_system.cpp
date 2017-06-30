@@ -1,4 +1,5 @@
 #include <rpg/collision_system.hpp>
+#include <engine/log.hpp>
 
 using namespace rpg;
 
@@ -36,7 +37,7 @@ void collision_system::setup_script_defined_triggers(const scene_script_context 
 		auto group = mContainer.get_group(i.group);
 		if (!group)
 		{
-			util::warning("Group '" + i.group + "' does not exist");
+			logger::warning("Group '" + i.group + "' does not exist");
 			continue;
 		}
 		group->add_function(i.function);
@@ -97,7 +98,7 @@ void collision_system::script_set_wall_group_enabled(const std::string& pName, b
 	auto group = mContainer.get_group(pName);
 	if (!group)
 	{
-		util::warning("Unable to find wall group '" + pName + "'");
+		logger::warning("Unable to find wall group '" + pName + "'");
 		return;
 	}
 
@@ -109,7 +110,7 @@ bool collision_system::script_get_wall_group_enabled(const std::string & pName)
 	auto group = mContainer.get_group(pName);
 	if (!group)
 	{
-		util::warning("Unable to find wall group '" + pName + "'");
+		logger::warning("Unable to find wall group '" + pName + "'");
 		return false;
 	}
 
@@ -118,13 +119,13 @@ bool collision_system::script_get_wall_group_enabled(const std::string & pName)
 
 void collision_system::script_bind_group_function(const std::string & pName, AS::asIScriptFunction * pFunc)
 {
-	util::error("Implementation Incomplete");
+	logger::error("Implementation Incomplete");
 	return;
 
 	auto group = mContainer.get_group(pName);
 	if (!group)
 	{
-		util::warning("Unable to find wall group '" + pName + "'");
+		logger::warning("Unable to find wall group '" + pName + "'");
 		return;
 	}
 
@@ -144,7 +145,7 @@ void collision_system::script_set_box_group(std::shared_ptr<collision_box>& pBox
 	auto group = mContainer.get_group(pName);
 	if (!group)
 	{
-		util::warning("Unable to find wall group '" + pName + "'");
+		logger::warning("Unable to find wall group '" + pName + "'");
 		return;
 	}
 	pBox->set_wall_group(group);
@@ -154,7 +155,7 @@ void collision_system::script_set_box_position(std::shared_ptr<collision_box>& p
 {
 	if (!pBox)
 	{
-		util::error("Invalid box reference");
+		logger::error("Invalid box reference");
 		return;
 	}
 	auto region = pBox->get_region();
@@ -166,7 +167,7 @@ void collision_system::script_set_box_size(std::shared_ptr<collision_box>& pBox,
 {
 	if (!pBox)
 	{
-		util::error("Invalid box reference");
+		logger::error("Invalid box reference");
 		return;
 	}
 	auto region = pBox->get_region();

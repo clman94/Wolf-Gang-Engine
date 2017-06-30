@@ -76,16 +76,16 @@ public:
 	[uint64_t] Size of header (in bytes)
 	[uint64_t] File count
 	file
-	[uint16_t] Path size
-	NOTE:  Definitly a loss of data but I've personally never
-	found a filepath that is more than 65536 characters
-	anywhere near useful.
+	[uint16_t] Path size (Is a filepath that is 65536 characters useful?)
 	[char] Character of path
 	...
 	[uint64_t] Position
 	[uint64_t] Size
 	...
 	*/
+
+	static_assert(sizeof(uint16_t) == 2, "uint16_t is not 2 bytes");
+	static_assert(sizeof(uint64_t) == 8, "uint64_t is not 8 bytes");
 
 	pack_header();
 

@@ -56,12 +56,6 @@ private:
 };
 #endif
 
-
-
-
-
-
-
 class scenes_directory :
 	public engine::resource_directory
 {
@@ -74,8 +68,6 @@ private:
 	std::string mPath;
 	script_system* mScript;
 };
-
-
 
 // A basic save system.
 // Saves player position, flags, and current scene path.
@@ -218,6 +210,8 @@ public:
 	bool tick();
 
 	bool restart_game();
+
+
 
 protected:
 	void refresh_renderer(engine::renderer& r);

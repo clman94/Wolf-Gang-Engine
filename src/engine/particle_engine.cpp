@@ -46,13 +46,13 @@ particle_emitter::particle_emitter()
 void
 particle_emitter::tick()
 {
-	if (mRate > 0 && mSpawn_clock.get_elapse().s() >= mRate)
+	if (mRate > 0 && mSpawn_clock.get_elapse().seconds() >= mRate)
 	{
 		spawn();
 		mSpawn_clock.restart();
 	}
 
-	time_t time = mFrame_clock.get_elapse().s();
+	float time = mFrame_clock.get_elapse().seconds();
 	for (auto &i : mParticles)
 	{
 		if (!i.valid)

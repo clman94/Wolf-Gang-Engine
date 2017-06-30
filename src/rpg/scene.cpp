@@ -1,5 +1,6 @@
 #include <rpg/scene.hpp>
 #include <rpg/rpg_config.hpp>
+#include <engine/log.hpp>
 
 using namespace rpg;
 
@@ -24,7 +25,7 @@ scene::scene()
 
 scene::~scene()
 {
-	util::info("Destroying scene");
+	logger::info("Destroying scene");
 }
 
 panning_node& scene::get_world_node()
@@ -77,13 +78,14 @@ bool scene::load_scene(std::string pName)
 
 	mCurrent_scene_name = pName;
 
-	util::info("Loading scene '" + pName + "'");
+	logger::info("Loading scene '" + pName + "'");
+	logger::sub_routine _srtn_loading_scene;
 
 	if (mPack)
 	{
 		if (!mLoader.load(defs::DEFAULT_SCENES_PATH.string(), pName, *mPack))
 		{
-			util::error("Unable to open scene '" + pName + "'");
+			logger::error("Unable to open scene '" + pName + "'");
 			return false;
 		}
 	}
@@ -91,7 +93,7 @@ bool scene::load_scene(std::string pName)
 	{
 		if (!mLoader.load((defs::DEFAULT_DATA_PATH / defs::DEFAULT_SCENES_PATH).string(), pName))
 		{
-			util::error("Unable to open scene '" + pName + "'");
+			logger::error("Unable to open scene '" + pName + "'");
 			return false;
 		}
 	}
@@ -115,7 +117,7 @@ bool scene::load_scene(std::string pName)
 			context.build_script(mLoader.get_script_path());
 	}
 	else
-		util::info("Script is already compiled");
+		logger::info("Script is already compiled");
 
 	// Setup context if still valid
 	if (context.is_valid())
@@ -126,27 +128,42 @@ bool scene::load_scene(std::string pName)
 		mEnd_functions = context.get_all_with_tag("door");
 	}
 
-	auto tilemap_texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, mLoader.get_tilemap_texture());
-	if (!tilemap_texture)
-	{
-		util::error("Invalid tilemap texture");
-		return false;
-	}
-	mTilemap_display.set_texture(tilemap_texture);
 
-	mTilemap_manipulator.load_tilemap_xml(mLoader.get_tilemap());
-	mTilemap_manipulator.update_display(mTilemap_display);
+
+	if (mLoader.get_tilemap_texture().empty())
+	{
+		logger::info("No tilemap texture");
+	}
+	else
+	{
+		logger::info("Loading Tilemap...");
+		logger::sub_routine _srtn_loading_tilemap;
+
+		auto tilemap_texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, mLoader.get_tilemap_texture());
+		if (!tilemap_texture)
+		{
+			logger::error("Invalid tilemap texture");
+			return false;
+		}
+		mTilemap_display.set_texture(tilemap_texture);
+
+		mTilemap_manipulator.load_tilemap_xml(mLoader.get_tilemap());
+		mTilemap_manipulator.update_display(mTilemap_display);
+	}
 
 	// Pre-execute so the scene script can setup things before the render.
 	mScript->tick();
 
 	update_focus();
 
-	util::info("Cleaning up resources...");
+	logger::info("Cleaning up resources...");
+	logger::start_sub_routine();
+
 	// Ensure resources are ready and unused stuff is put away
 	mResource_manager->ensure_load();
 	mResource_manager->unload_unused();
-	util::info("Resources ready");
+
+	logger::end_sub_routine();
 
 	return true;
 }
@@ -159,7 +176,7 @@ bool scene::load_scene(std::string pName, std::string pDoor)
 	auto door = mCollision_system.get_door_entry(pDoor);
 	if (!door)
 	{
-		util::warning("Enable to find door '" + pDoor + "'");
+		logger::warning("Enable to find door '" + pDoor + "'");
 		return false;
 	}
 	mPlayer.set_direction(character_entity::vector_direction(door->get_offset()));
@@ -175,7 +192,7 @@ bool scene::create_scene(const std::string & pName)
 
 	if (engine::fs::exists(xml_path) || engine::fs::exists(script_path))
 	{
-		util::error("Scene '" + pName + "' already exists");
+		logger::error("Scene '" + pName + "' already exists");
 		return false;
 	}
 
@@ -200,7 +217,7 @@ bool scene::reload_scene()
 {
 	if (mCurrent_scene_name.empty())
 	{
-		util::error("No scene to reload");
+		logger::error("No scene to reload");
 		return 1;
 	}
 
@@ -272,8 +289,8 @@ void scene::load_terminal_interface(engine::terminal_system & pTerminal)
 	{
 		if (pArgs.size() <= 0)
 		{
-			util::error("Not enough arguments");
-			util::info("scene load <scene_name>");
+			logger::error("Not enough arguments");
+			logger::info("scene load <scene_name>");
 			return false;
 		}
 
@@ -285,8 +302,8 @@ void scene::load_terminal_interface(engine::terminal_system & pTerminal)
 	{
 		if (pArgs.size() <= 0)
 		{
-			util::error("Not enough arguments");
-			util::info("scene create <scene_name>");
+			logger::error("Not enough arguments");
+			logger::info("scene create <scene_name>");
 			return false;
 		}
 
@@ -308,7 +325,7 @@ void scene::set_resource_manager(engine::resource_manager& pResource_manager)
 
 bool scene::load_settings(const game_settings_loader& pSettings)
 {
-	util::info("Loading scene system...");
+	logger::info("Loading scene system...");
 
 	mWorld_node.set_unit(pSettings.get_unit_pixels());
 
@@ -317,7 +334,7 @@ bool scene::load_settings(const game_settings_loader& pSettings)
 	auto texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, pSettings.get_player_texture());
 	if (!texture)
 	{
-		util::error("Could not load texture '" + pSettings.get_player_texture() + "' for player character");
+		logger::error("Could not load texture '" + pSettings.get_player_texture() + "' for player character");
 		return false;
 	}
 	mPlayer.mSprite.set_texture(texture);
@@ -325,7 +342,7 @@ bool scene::load_settings(const game_settings_loader& pSettings)
 
 	mBackground_music.set_root_directory(pSettings.get_music_path());
 
-	util::info("Scene loaded");
+	logger::info("Scene loaded");
 
 	return true;
 }
@@ -352,6 +369,11 @@ void scene::set_resource_pack(engine::pack_stream_factory* pPack)
 {
 	mPack = pPack;
 	mBackground_music.set_resource_pack(pPack);
+}
+
+scene_visualizer & scene::get_visualizer()
+{
+	return mVisualizer;
 }
 
 void scene::script_set_focus(engine::fvector pPosition)
@@ -390,7 +412,7 @@ void scene::script_spawn_sound(const std::string & pName, float pVolume, float p
 	auto sound = mResource_manager->get_resource<engine::sound_buffer>(engine::resource_type::sound, pName);
 	if (!sound)
 	{
-		util::error("Could not spawn sound '" + pName + "'");
+		logger::error("Could not spawn sound '" + pName + "'");
 		return;
 	}
 
@@ -428,6 +450,12 @@ void scene::refresh_renderer(engine::renderer& pR)
 	pR.add_object(mPlayer);
 	mColored_overlay.set_renderer(pR);
 	mEntity_manager.set_renderer(pR);
+
+#ifndef LOCKED_RELEASE_MODE
+	mVisualizer.set_depth(-100);
+	mVisualizer.set_scene(*this);
+	mVisualizer.set_renderer(pR);
+#endif
 }
 
 void scene::update_focus()
@@ -483,3 +511,77 @@ void scene::update_collision_interaction(engine::controls & pControls)
 	}
 }
 
+scene_visualizer::scene_visualizer()
+{
+	mEntity_center_visualize.set_color(engine::color(255, 255, 0, 200));
+	mEntity_center_visualize.set_size(engine::fvector(2, 2));
+
+	mEntity_visualize.set_outline_color(engine::color(0, 255, 0, 200));
+	mEntity_visualize.set_color(engine::color(0, 0, 0, 0));
+	mEntity_visualize.set_outline_thinkness(1);
+
+	mVisualize_entities = false;
+	mVisualize_collision = false;
+}
+
+void scene_visualizer::set_scene(scene & pScene)
+{
+	mScene = &pScene;
+}
+
+void scene_visualizer::visualize_entities(bool pVisualize)
+{
+	mVisualize_entities = pVisualize;
+}
+
+void scene_visualizer::visualize_collision(bool pVisualize)
+{
+	mVisualize_collision = pVisualize;
+}
+
+int scene_visualizer::draw(engine::renderer & pR)
+{
+	if (mVisualize_collision)
+		visualize_collision(pR);
+	if (mVisualize_entities)
+		visualize_entities(pR);
+	return 0;
+}
+
+void scene_visualizer::visualize_entities(engine::renderer & pR)
+{
+	for (const auto& i : mScene->mEntity_manager.mEntities)
+	{
+		if (i->get_type() == rpg::entity::type::sprite)
+		{
+			const auto e = dynamic_cast<sprite_entity*>(i.get());
+			const engine::frect rect(e->mSprite.get_render_rect());
+			mEntity_visualize.set_position(rect.get_offset());
+			mEntity_visualize.set_size(rect.get_size());
+		}
+		else if (i->get_type() == entity::type::text)
+		{
+			const auto e = dynamic_cast<text_entity*>(i.get());
+			const engine::frect rect(e->mText.get_render_rect());
+			mEntity_visualize.set_position(rect.get_offset());
+			mEntity_visualize.set_size(rect.get_size());
+		}
+
+		mEntity_visualize.draw(pR);
+
+		mEntity_center_visualize.set_absolute_position(i->get_exact_position());
+		mEntity_center_visualize.draw(pR);
+	}
+}
+
+void scene_visualizer::visualize_collision(engine::renderer & pR)
+{
+	mBox_visualize.set_unit(mScene->get_world_node().get_unit());
+	mBox_visualize.set_color(engine::color(0, 255, 255, 70));
+	for (const auto& i : mScene->get_collision_system().get_container())
+	{
+		mBox_visualize.set_position(i->get_region().get_offset() + mScene->get_world_node().get_absolute_position());
+		mBox_visualize.set_size(i->get_region().get_size()*mBox_visualize.get_unit());
+		mBox_visualize.draw(pR);
+	}
+}

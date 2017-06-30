@@ -1,7 +1,7 @@
 #include <rpg/scene_loader.hpp>
 #include <rpg/rpg_config.hpp>
 
-#include <engine/utility.hpp>
+#include <engine/log.hpp>
 #include <algorithm>
 
 using namespace rpg;
@@ -42,7 +42,7 @@ bool scene_loader::load(const engine::encoded_path& pDir, const std::string & pN
 
 	if (mXml_Document.LoadFile(mScene_path.string().c_str()))
 	{
-		util::error("Unable to open scene XML file.");
+		logger::error("Unable to open scene XML file.");
 		return false;
 	}
 
@@ -63,7 +63,7 @@ bool scene_loader::load(const engine::encoded_path& pDir, const std::string & pN
 
 	if (mXml_Document.Parse(&data[0], data.size()))
 	{
-		util::error("Unable to open scene XML file.");
+		logger::error("Unable to open scene XML file.");
 		return false;
 	}
 
@@ -95,7 +95,7 @@ bool scene_loader::load_settings()
 	auto ele_root = mXml_Document.FirstChildElement("scene");
 	if (!ele_root)
 	{
-		util::error("Unable to get root element 'scene'.");
+		logger::error("Unable to get root element 'scene'.");
 		return false;
 	}
 
@@ -123,7 +123,7 @@ bool scene_loader::load_settings()
 		if (auto ele_texture = mEle_map->FirstChildElement("texture"))
 			mTilemap_texture = util::safe_string(ele_texture->GetText());
 		else
-			util::warning("Tilemap texture is not defined");
+			logger::warning("Tilemap texture is not defined");
 
 	}
 	return true;
@@ -137,7 +137,7 @@ void scene_loader::fix()
 	auto ele_scene = mXml_Document.FirstChildElement("scene");
 	if (!ele_scene)
 	{
-		util::info("Fixing missing 'scene' element");
+		logger::info("Fixing missing 'scene' element");
 		ele_scene = mXml_Document.NewElement("scene");
 		mXml_Document.InsertFirstChild(ele_scene);
 	}
@@ -145,7 +145,7 @@ void scene_loader::fix()
 	auto ele_map = ele_scene->FirstChildElement("map");
 	if (!ele_map)
 	{
-		util::info("Fixing missing 'map' element");
+		logger::info("Fixing missing 'map' element");
 		ele_map = mXml_Document.NewElement("map");
 		ele_scene->InsertFirstChild(ele_map);
 	}
@@ -153,14 +153,14 @@ void scene_loader::fix()
 	auto ele_texture = ele_map->FirstChildElement("texture");
 	if (!ele_texture)
 	{
-		util::info("Fixing missing 'texture' element (The texture may need to be specified for tilemaps to work)");
+		logger::info("Fixing missing 'texture' element (The texture may need to be specified for tilemaps to work)");
 		ele_map->InsertFirstChild(mXml_Document.NewElement("texture"));
 	}
 
 	auto ele_collisionboxes = ele_scene->FirstChildElement("collisionboxes");
 	if (!ele_collisionboxes)
 	{
-		util::info("Fixing missing 'collisionboxes' element");
+		logger::info("Fixing missing 'collisionboxes' element");
 		ele_scene->InsertFirstChild(mXml_Document.NewElement("collisionboxes"));
 	}
 }

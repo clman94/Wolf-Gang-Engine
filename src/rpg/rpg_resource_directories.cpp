@@ -6,6 +6,7 @@
 #include <engine/texture.hpp>
 #include <rpg/rpg_resource_directories.hpp>
 #include <engine/renderer.hpp>
+#include <engine/log.hpp>
 
 #include <string>
 #include <vector>
@@ -25,7 +26,7 @@ bool texture_directory::load(engine::resource_manager& pResource_manager)
 {
 	if (!engine::fs::exists(mPath))
 	{
-		util::error("Textures directory does not exist");
+		logger::error("Textures directory does not exist");
 		return false;
 	}
 
@@ -38,7 +39,7 @@ bool texture_directory::load(engine::resource_manager& pResource_manager)
 			const std::string texture_name = texture_path.stem().string();
 			if (pResource_manager.has_resource(engine::resource_type::texture, texture_name)) // Check if unique
 			{
-				util::warning("Texture '" + texture_name + "' is not unique. Please give it a unique name.");
+				logger::warning("Texture '" + texture_name + "' is not unique. Please give it a unique name.");
 				continue;
 			}
 			std::shared_ptr<engine::texture> texture(new engine::texture());
@@ -53,7 +54,7 @@ bool texture_directory::load(engine::resource_manager& pResource_manager)
 			}
 			else
 			{
-				util::warning("Atlas of texture '" + texture_name + "' does not exist");
+				logger::warning("Atlas of texture '" + texture_name + "' does not exist");
 				continue; // Texture requires atlas
 			}
 
@@ -100,7 +101,7 @@ bool font_directory::load(engine::resource_manager& pResource_manager)
 {
 	if (!engine::fs::exists(mPath))
 	{
-		util::error("Textures directory does not exist");
+		logger::error("Textures directory does not exist");
 		return false;
 	}
 
@@ -113,7 +114,7 @@ bool font_directory::load(engine::resource_manager& pResource_manager)
 			const std::string font_name = font_path.stem().string();
 			if (pResource_manager.has_resource(engine::resource_type::font, font_name)) // Check if unique
 			{
-				util::warning("Font '" + font_name + "' is not unique. Please give it a unique name.");
+				logger::warning("Font '" + font_name + "' is not unique. Please give it a unique name.");
 				continue;
 			}
 			std::shared_ptr<engine::font> font(new engine::font());
@@ -175,7 +176,7 @@ bool soundfx_directory::load(engine::resource_manager& pResource_manager)
 {
 	if (!engine::fs::exists(mPath))
 	{
-		util::error("Sound directory does not exist");
+		logger::error("Sound directory does not exist");
 		return false;
 	}
 
@@ -186,7 +187,7 @@ bool soundfx_directory::load(engine::resource_manager& pResource_manager)
 		{
 			if (engine::fs::file_size(sound_path) >= 1049000)
 			{
-				util::warning("It is highly recommended to have sound effects less than 1 MB");
+				logger::warning("It is highly recommended to have sound effects less than 1 MB");
 			}
 
 			std::shared_ptr<engine::sound_buffer> buffer(new engine::sound_buffer());
