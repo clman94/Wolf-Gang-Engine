@@ -396,7 +396,6 @@ frect formatted_text_node::get_render_rect() const
 	return{ get_exact_position() + engine::anchor_offset(get_size(), mAnchor), get_size() };
 }
 
-
 int formatted_text_node::draw(renderer & pR)
 {
 	if (!mFont)

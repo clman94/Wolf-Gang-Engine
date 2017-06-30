@@ -103,6 +103,7 @@ void wolf_gang_engine::update_events()
 // Entry point of application
 int main(int argc, char* argv[])
 {
+	logger::initialize("./log.txt");
 	try
 	{
 		wolf_gang_engine wge;

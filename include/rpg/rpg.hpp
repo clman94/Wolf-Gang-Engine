@@ -269,7 +269,7 @@ private:
 	bool script_remove_value(const std::string& pPath);
 	bool script_has_value(const std::string& pPath);
 
-	float script_get_tile_size() const;
+	float script_get_tile_size();
 
 	void load_script_interface();
 

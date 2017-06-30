@@ -16,7 +16,9 @@ void initialize(const std::string & pOutput)
 
 	mLog_file.open(pOutput.c_str());
 	if (!mLog_file)
-		std::cout << "Error : Failed to open log output file";
+		std::cout << "Failed to open log output file\n";
+	else
+		std::cout << "Log file at '" + pOutput + "'\n";
 
 	mSub_routine_level = 0;
 }
