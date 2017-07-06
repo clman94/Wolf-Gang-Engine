@@ -453,12 +453,9 @@ void formatted_text_node::update()
 	fvector position = fvector(0, static_cast<float>(mCharacter_size)) + mFont->mOffset;
 	for (size_t i = 0; i < mFormat.get_block_count(); i++)
 	{
-
 		const auto& block = mFormat.get_block(i);
 		for (auto j : block.mText)
 		{
-
-
 			// Check for whitespace and advance positions
 			switch (j)
 			{

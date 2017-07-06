@@ -32,34 +32,34 @@ time_converter::time_converter(float pSeconds)
 
 clock::clock()
 {
-	play = true;
-	start_point = std::chrono::high_resolution_clock::now();
+	mPlay = true;
+	mStart_point = std::chrono::high_resolution_clock::now();
 }
 
 time_converter clock::get_elapse() const
 {
 	std::chrono::time_point<std::chrono::high_resolution_clock> end_point = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<float> elapsed_seconds = end_point - start_point;
+	std::chrono::duration<float> elapsed_seconds = end_point - mStart_point;
 	return elapsed_seconds.count();
 }
 
 void clock::start()
 {
-	if (!play)
-		start_point += std::chrono::high_resolution_clock::now() - pause_point;
-	play = true;
+	if (!mPlay)
+		mStart_point += std::chrono::high_resolution_clock::now() - mPause_point;
+	mPlay = true;
 }
 
 void clock::pause()
 {
-	play = false;
-	pause_point = std::chrono::high_resolution_clock::now();
+	mPlay = false;
+	mPause_point = std::chrono::high_resolution_clock::now();
 }
 
 time_converter clock::restart()
 {
 	const time_converter elapse_time(get_elapse());
-	start_point = std::chrono::high_resolution_clock::now();
+	mStart_point = std::chrono::high_resolution_clock::now();
 	return elapse_time;
 }
 

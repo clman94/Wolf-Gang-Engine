@@ -27,15 +27,16 @@ private:
 
 class clock
 {
-	bool play;
-	priv::highresclock start_point;
-	priv::highresclock pause_point;
 public:
 	clock();
 	time_converter get_elapse() const;
 	void start();
 	void pause();
 	time_converter restart();
+private:
+	bool mPlay;
+	priv::highresclock mStart_point;
+	priv::highresclock mPause_point;
 };
 
 class timer

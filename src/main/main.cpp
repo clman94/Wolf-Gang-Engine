@@ -7,8 +7,6 @@
 
 #include <rpg/rpg.hpp>
 
-
-
 class wolf_gang_engine
 {
 public:
@@ -28,7 +26,6 @@ private:
 
 	bool mRunning;
 };
-
 
 wolf_gang_engine::wolf_gang_engine()
 {
