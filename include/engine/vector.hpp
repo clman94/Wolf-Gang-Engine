@@ -45,10 +45,10 @@ struct vector
 		return{ 0, pVec.y };
 	}
 
-	template<typename Tto>
-	static vector<Tto> cast(const vector& pOriginal)
+	template<typename Tfrom>
+	static vector cast(const vector<Tfrom>& pOriginal)
 	{
-		return{ static_cast<Tto>(pOriginal.x), static_cast<Tto>(pOriginal.y) };
+		return{ static_cast<T>(pOriginal.x), static_cast<T>(pOriginal.y) };
 	}
 
 	vector(T _x = 0, T _y = 0)

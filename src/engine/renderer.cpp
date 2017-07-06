@@ -167,7 +167,7 @@ void renderer::refresh_view()
 {
 	if (!mWindow)
 		return;
-	const fvector window_size(mSubwindow_enabled ? mSubwindow.get_size() : vector<unsigned int>(mWindow->mWindow.getSize()));
+	const fvector window_size(mSubwindow_enabled ? mSubwindow.get_size() : fvector::cast(vector<unsigned int>(mWindow->mWindow.getSize())));
 	const fvector view_ratio = fvector(mTarget_size).normalize();
 	const fvector window_ratio = fvector(window_size).normalize();
 
