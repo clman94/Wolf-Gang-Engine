@@ -1,4 +1,5 @@
 #include <engine/time.hpp>
+#include <cmath>
 
 using namespace engine;
 
