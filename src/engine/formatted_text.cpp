@@ -35,8 +35,10 @@ inline size_t parse_hex(const std::string& pHex)
 		}
 		else if (c >= 'a' && c <= 'f')
 		{
-			val += (15 + (c - '0')) << (i * 4);
+			val += (10 + (c - 'a')) << (i * 4);
 		}
+		else
+			return 0;
 	}
 	return val;
 }
