@@ -60,6 +60,7 @@ int wolf_gang_engine::initualize(const std::string& pCustom_location = std::stri
 	mEditor_manager.set_world_node(mGame.get_scene().get_world_node());
 	mEditor_manager.set_scene(mGame.get_scene());
 	mEditor_manager.load_terminal_interface(mTerminal_system);
+	mEditor_manager.set_resource_manager(mGame.get_resource_manager());
 
 	mTerminal_gui.set_terminal_system(mTerminal_system);
 	mTerminal_gui.load_gui(mRenderer);

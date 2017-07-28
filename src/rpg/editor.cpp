@@ -475,6 +475,7 @@ scene_editor::scene_editor()
 {
 	mBoundary_visualization.set_parent(*this);
 	mTilemap_display.set_parent(*this);
+	mResource_manager = nullptr;
 }
 
 bool scene_editor::open_scene(std::string pPath)
@@ -489,6 +490,7 @@ bool scene_editor::open_scene(std::string pPath)
 		return false;
 	}
 
+	assert(mResource_manager != nullptr);
 	auto texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, mLoader.get_tilemap_texture());
 	if (!texture)
 	{
