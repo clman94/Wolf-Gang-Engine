@@ -4,6 +4,7 @@
 #include <engine/renderer.hpp>
 #include <engine/node.hpp>
 #include <engine/utility.hpp>
+#include <engine/AS_utility.hpp>
 
 namespace rpg {
 
@@ -53,4 +54,17 @@ private:
 typedef util::tracking_ptr<entity> entity_reference;
 
 }
+
+namespace util {
+template<>
+struct AS_type_to_string<rpg::entity_reference> :
+	AS_type_to_string_base
+{
+	AS_type_to_string()
+	{
+		mName = "entity";
+	}
+};
+}
+
 #endif // !RPG_ENTITY_HPP

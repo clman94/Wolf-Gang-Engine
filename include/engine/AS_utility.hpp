@@ -127,7 +127,7 @@ struct AS_type_to_string <T&> :
 	AS_type_to_string()
 	{
 		mSuffix = "&";
-		mEx_suffix = "inout";
+		mEx_suffix = "in";
 	}
 };
 
@@ -143,35 +143,8 @@ struct AS_type_to_string <const T&> :
 	}
 };
 
-
-
-
 namespace priv
 {
-
-template<typename T>
-inline void assign_vector_value(std::vector<T>& pVec, const std::size_t& pIndex, const T& pValue)
-{
-	pVec[pIndex] = pValue;
-}
-
-
-
-/*template<typename Tret, typename...Tparams, std::size_t ...I>
-std::string AS_create_function_declaration_args(Tret(*func)(Tparams...), indices<I...>)
-{
-	std::vector<std::string> vars(sizeof...(Tparams));
-	(assign_vector_value(vars, I, AS_type_to_string<Tparams>().string(true)), ...);
-
-	std::string ret;
-	for (size_t i = 0; i < vars.size(); i++)
-	{
-		ret += vars[i];
-		if (i != vars.size() - 1)
-			ret += ", ";
-	}
-	return ret;
-}*/
 
 template<typename T1>
 inline void AS_create_function_declaration_args2(std::string* pVars)
@@ -202,6 +175,16 @@ inline void AS_create_function_declaration_args2(std::string* pVars)
 	pVars[3] = AS_type_to_string<T4>().string(true);
 }
 
+template<typename T1, typename T2, typename T3, typename T4, typename T5>
+inline void AS_create_function_declaration_args2(std::string* pVars)
+{
+	pVars[0] = AS_type_to_string<T1>().string(true);
+	pVars[1] = AS_type_to_string<T2>().string(true);
+	pVars[2] = AS_type_to_string<T3>().string(true);
+	pVars[3] = AS_type_to_string<T4>().string(true);
+	pVars[4] = AS_type_to_string<T5>().string(true);
+}
+
 template<typename...Tparams>
 inline std::string AS_create_function_declaration_args()
 {
@@ -223,10 +206,6 @@ inline std::string AS_create_function_declaration_args()
 template<typename Tret, typename...Tparams>
 inline std::string AS_create_function_declaration(const std::string& pName, Tret(*)(Tparams...) = nullptr)
 {
-	/*const std::string def_args
-		= priv::AS_create_function_declaration_args(reinterpret_cast<Tret(*)(Tparams...)>(nullptr)
-			, typename priv::index_factory<sizeof...(Tparams)>::type());*/
-
 	const std::string def_args
 		= priv::AS_create_function_declaration_args<Tparams...>();
 

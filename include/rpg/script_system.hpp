@@ -5,6 +5,7 @@
 
 #include <engine/utility.hpp>
 #include <engine/time.hpp>
+#include <engine/vector.hpp>
 
 
 #include <angelscript.h> // AS_USE_NAMESPACE will need to be defined
@@ -19,6 +20,19 @@
 #include <engine/AS_utility.hpp>
 
 namespace AS = AngelScript;
+
+namespace util {
+template<>
+struct AS_type_to_string<engine::fvector> :
+	AS_type_to_string_base
+{
+	AS_type_to_string()
+	{
+		mName = "vec";
+	}
+};
+
+}
 
 namespace rpg
 {

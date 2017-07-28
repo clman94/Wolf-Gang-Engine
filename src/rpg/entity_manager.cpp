@@ -683,60 +683,60 @@ void entity_manager::load_script_interface(script_system& pScript)
 
 	register_entity_type(pScript);
 
-	pScript.add_function("entity add_entity(const string &in)",                      AS::asMETHOD(entity_manager, script_add_entity), this);
-	pScript.add_function("entity add_entity(const string &in, const string &in)",    AS::asMETHOD(entity_manager, script_add_entity_atlas), this);
-	pScript.add_function("entity add_text()",                                        AS::asMETHOD(entity_manager, script_add_text), this);
-	pScript.add_function("entity add_character(const string &in)",                   AS::asMETHOD(entity_manager, script_add_character), this);
+	pScript.add_function("add_entity",                        &entity_manager::script_add_entity, this);
+	pScript.add_function("add_entity",                        &entity_manager::script_add_entity_atlas, this);
+	pScript.add_function("add_text",                          &entity_manager::script_add_text, this);
+	pScript.add_function("add_character",                     &entity_manager::script_add_character, this);
 
-	pScript.add_function("void set_position(entity&in, const vec &in)",              AS::asMETHOD(entity_manager, script_set_position), this);
-	pScript.add_function("vec get_position(entity&in)",                              AS::asMETHOD(entity_manager, script_get_position), this);
-	pScript.add_function("vec get_size(entity&in)",                                  AS::asMETHOD(entity_manager, script_get_size), this);
-	pScript.add_function("void _set_direction(entity&in, int)",                      AS::asMETHOD(entity_manager, script_set_direction), this);
-	pScript.add_function("int _get_direction(entity&in)",                            AS::asMETHOD(entity_manager, script_get_direction), this);
-	pScript.add_function("void set_cycle(entity&in, const string &in)",              AS::asMETHOD(entity_manager, script_set_cycle), this);
-	pScript.add_function("void set_atlas(entity&in, const string &in)",              AS::asMETHOD(entity_manager, script_set_atlas), this);
-	pScript.add_function("bool is_character(entity&in)",                             AS::asMETHOD(entity_manager, script_is_character), this);
-	pScript.add_function("void remove_entity(entity&in)",                            AS::asMETHOD(entity_manager, script_remove_entity), this);
-	pScript.add_function("void _set_depth_direct(entity&in, float)",                 AS::asMETHOD(entity_manager, script_set_depth_direct), this);
-	pScript.add_function("void set_depth(entity&in, float)",                         AS::asMETHOD(entity_manager, script_set_depth), this);
-	pScript.add_function("void set_depth_fixed(entity&in, bool)",                    AS::asMETHOD(entity_manager, script_set_depth_fixed), this);
-	pScript.add_function("void _set_anchor(entity&in, int)",                         AS::asMETHOD(entity_manager, script_set_anchor), this);
-	pScript.add_function("void set_rotation(entity&in, float)",                      AS::asMETHOD(entity_manager, script_set_rotation), this);
-	pScript.add_function("float get_rotation(entity&in)",                            AS::asMETHOD(entity_manager, script_get_rotation), this);
-	pScript.add_function("void set_color(entity&in, int, int, int, int)",            AS::asMETHOD(entity_manager, script_set_color), this);
-	pScript.add_function("void set_visible(entity&in, bool)",                        AS::asMETHOD(entity_manager, script_set_visible), this);
-	pScript.add_function("void set_texture(entity&in, const string&in)",             AS::asMETHOD(entity_manager, script_set_texture), this);
-	pScript.add_function("void set_text(entity&in, const string &in)",               AS::asMETHOD(entity_manager, script_set_text), this);
-	pScript.add_function("void set_font(entity&in, const string &in)",               AS::asMETHOD(entity_manager, script_set_font), this);
-	pScript.add_function("void set_z(entity&in, float)",                             AS::asMETHOD(entity_manager, script_set_z), this);
-	pScript.add_function("float get_z(entity&in)",                                   AS::asMETHOD(entity_manager, script_get_z), this);
-	pScript.add_function("void set_parallax(entity&in, float)",                      AS::asMETHOD(entity_manager, script_set_parallax), this);
+	pScript.add_function("set_position",                      &entity_manager::script_set_position, this);
+	pScript.add_function("get_position",                      &entity_manager::script_get_position, this);
+	pScript.add_function("get_size",                          &entity_manager::script_get_size, this);
+	pScript.add_function("_set_direction",                    &entity_manager::script_set_direction, this);
+	pScript.add_function("_get_direction",                    &entity_manager::script_get_direction, this);
+	pScript.add_function("set_cycle",                         &entity_manager::script_set_cycle, this);
+	pScript.add_function("set_atlas",                         &entity_manager::script_set_atlas, this);
+	pScript.add_function("is_character",                      &entity_manager::script_is_character, this);
+	pScript.add_function("remove_entity",                     &entity_manager::script_remove_entity, this);
+	pScript.add_function("_set_depth_direct",                 &entity_manager::script_set_depth_direct, this);
+	pScript.add_function("set_depth",                         &entity_manager::script_set_depth, this);
+	pScript.add_function("set_depth_fixed",                   &entity_manager::script_set_depth_fixed, this);
+	pScript.add_function("_set_anchor",                       &entity_manager::script_set_anchor, this);
+	pScript.add_function("set_rotation",                      &entity_manager::script_set_rotation, this);
+	pScript.add_function("get_rotation",                      &entity_manager::script_get_rotation, this);
+	pScript.add_function("set_color",                         &entity_manager::script_set_color, this);
+	pScript.add_function("set_visible",                       &entity_manager::script_set_visible, this);
+	pScript.add_function("set_texture",                       &entity_manager::script_set_texture, this);
+	pScript.add_function("set_text",                          &entity_manager::script_set_text, this);
+	pScript.add_function("set_font",                          &entity_manager::script_set_font, this);
+	pScript.add_function("set_z",                             &entity_manager::script_set_z, this);
+	pScript.add_function("get_z",                             &entity_manager::script_get_z, this);
+	pScript.add_function("set_parallax",                      &entity_manager::script_set_parallax, this);
 
 	pScript.set_namespace("animation");
-	pScript.add_function("void start(entity&in)",                                    AS::asMETHOD(entity_manager, script_start_animation), this);
-	pScript.add_function("void stop(entity&in)",                                     AS::asMETHOD(entity_manager, script_stop_animation), this);
-	pScript.add_function("void pause(entity&in)",                                    AS::asMETHOD(entity_manager, script_pause_animation), this);
-	pScript.add_function("bool is_playing(entity&in)",                               AS::asMETHOD(entity_manager, script_is_animation_playing), this);
-	pScript.add_function("void set_speed(entity&in, float)",                         AS::asMETHOD(entity_manager, script_set_animation_speed), this);
-	pScript.add_function("float get_speed(entity&in)",                               AS::asMETHOD(entity_manager, script_get_animation_speed), this);
+	pScript.add_function("start",                             &entity_manager::script_start_animation, this);
+	pScript.add_function("stop",                              &entity_manager::script_stop_animation, this);
+	pScript.add_function("pause",                             &entity_manager::script_pause_animation, this);
+	pScript.add_function("is_playing",                        &entity_manager::script_is_animation_playing, this);
+	pScript.add_function("set_speed",                         &entity_manager::script_set_animation_speed, this);
+	pScript.add_function("get_speed",                         &entity_manager::script_get_animation_speed, this);
 	pScript.reset_namespace();
 
-	pScript.add_function("void set_scale(entity&in, const vec &in)",                 AS::asMETHOD(entity_manager, script_set_scale), this);
-	pScript.add_function("float get_scale(entity&in)",                               AS::asMETHOD(entity_manager, script_get_scale), this);
+	pScript.add_function("set_scale",                         &entity_manager::script_set_scale, this);
+	pScript.add_function("get_scale",                         &entity_manager::script_get_scale, this);
 
-	pScript.add_function("void add_child(entity&in, entity&in)",                     AS::asMETHOD(entity_manager, script_add_child), this);
-	pScript.add_function("void set_parent(entity&in, entity&in)",                    AS::asMETHOD(entity_manager, script_set_parent), this);
-	pScript.add_function("void detach_children(entity&in)",                          AS::asMETHOD(entity_manager, script_detach_children), this);
-	pScript.add_function("void detach_parent(entity&in)",                            AS::asMETHOD(entity_manager, script_detach_parent), this);
+	pScript.add_function("add_child",                         &entity_manager::script_add_child, this);
+	pScript.add_function("set_parent",                        &entity_manager::script_set_parent, this);
+	pScript.add_function("detach_children",                   &entity_manager::script_detach_children, this);
+	pScript.add_function("detach_parent",                     &entity_manager::script_detach_parent, this);
 	
-	pScript.add_function("entity _add_dialog_text()",                                AS::asMETHOD(entity_manager, script_add_dialog_text), this);
-	pScript.add_function("void _reveal(entity&in,const string&in, bool)",            AS::asMETHOD(entity_manager, script_reveal), this);
-	pScript.add_function("bool _is_revealing(entity&in)",                            AS::asMETHOD(entity_manager, script_is_revealing), this);
-	pScript.add_function("void _skip_reveal(entity&in)",                             AS::asMETHOD(entity_manager, script_skip_reveal), this);
-	pScript.add_function("void _set_interval(entity&in, float)",                     AS::asMETHOD(entity_manager, script_set_interval), this);
-	pScript.add_function("bool _has_displayed_new_character(entity&in)",             AS::asMETHOD(entity_manager, script_has_displayed_new_character), this);
-	pScript.add_function("void _dialog_set_wordwrap(entity&in, uint)",               AS::asMETHOD(entity_manager, script_dialog_set_wordwrap), this);
-	pScript.add_function("void _dialog_set_max_lines(entity&in, uint)",              AS::asMETHOD(entity_manager, script_dialog_set_max_lines), this);
+	pScript.add_function("_add_dialog_text",                  &entity_manager::script_add_dialog_text, this);
+	pScript.add_function("_reveal",                           &entity_manager::script_reveal, this);
+	pScript.add_function("_is_revealing",                     &entity_manager::script_is_revealing, this);
+	pScript.add_function("_skip_reveal",                      &entity_manager::script_skip_reveal, this);
+	pScript.add_function("_set_interval",                     &entity_manager::script_set_interval, this);
+	pScript.add_function("_has_displayed_new_character",      &entity_manager::script_has_displayed_new_character, this);
+	pScript.add_function("_dialog_set_wordwrap",              &entity_manager::script_dialog_set_wordwrap, this);
+	pScript.add_function("_dialog_set_max_lines",             &entity_manager::script_dialog_set_max_lines, this);
 
-	pScript.add_function("void make_gui(entity&in, float)",                          AS::asMETHOD(entity_manager, script_make_gui), this);
+	pScript.add_function("make_gui",                          &entity_manager::script_make_gui, this);
 }
