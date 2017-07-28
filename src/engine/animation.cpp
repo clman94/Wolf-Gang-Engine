@@ -116,6 +116,7 @@ animation_node::animation_node()
 	mPlaying = false;
 	mAnimation = nullptr;
 	mSpeed = 1.f;
+	mInterval = 1;
 }
 
 void animation_node::set_frame(frame_t pFrame)

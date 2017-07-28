@@ -30,7 +30,7 @@ bool texture_directory::load(engine::resource_manager& pResource_manager)
 		return false;
 	}
 
-	for (auto& i : engine::fs::recursive_directory_iterator(mPath))
+	for (const auto& i : engine::fs::recursive_directory_iterator(mPath))
 	{
 		auto& texture_path = i.path();
 
@@ -105,7 +105,7 @@ bool font_directory::load(engine::resource_manager& pResource_manager)
 		return false;
 	}
 
-	for (auto& i : engine::fs::recursive_directory_iterator(mPath))
+	for (const auto& i : engine::fs::recursive_directory_iterator(mPath))
 	{
 		auto& font_path = i.path();
 

@@ -2095,9 +2095,9 @@ void editor_manager::load_terminal_interface(engine::terminal_system & pTerminal
 	mCollisionbox_editor.load_terminal_interface(pTerminal);
 }
 
-void editor_manager::set_scene(rpg::scene * pScene)
+void editor_manager::set_scene(rpg::scene& pScene)
 {
-	mEditor_gui.set_scene(pScene);
+	mEditor_gui.set_scene(&pScene);
 }
 
 int editor_manager::draw(engine::renderer& pR)

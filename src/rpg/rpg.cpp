@@ -231,15 +231,6 @@ game::game()
 	mIs_ready = false;
 	load_script_interface();
 	mSlot = 0;
-#ifndef LOCKED_RELEASE_MODE
-	load_terminal_interface();
-	mScene.load_terminal_interface(mTerminal_system);
-	mTerminal_gui.set_terminal_system(mTerminal_system);
-	mEditor_manager.load_terminal_interface(mTerminal_system);
-	mEditor_manager.set_resource_manager(mResource_manager);
-	mEditor_manager.set_world_node(mScene.get_world_node());
-	mEditor_manager.set_scene(&mScene);
-#endif
 }
 
 game::~game()
@@ -452,7 +443,7 @@ game::load_script_interface()
 
 void game::load_icon()
 {
-	get_renderer()->set_icon("data/icon.png");
+	get_renderer()->set_icon((mData_directory / "icon.png").string());
 }
 
 void game::load_icon_pack()
@@ -462,7 +453,7 @@ void game::load_icon_pack()
 }
 
 #ifndef LOCKED_RELEASE_MODE
-void game::load_terminal_interface()
+void game::load_terminal_interface(engine::terminal_system& pTerminal)
 {
 	mGroup_flags = std::make_shared<engine::terminal_command_group>();
 	mGroup_flags->set_root_command("flags");
@@ -531,7 +522,7 @@ void game::load_terminal_interface()
 	mGroup_global1->add_command("help",
 		[&](const engine::terminal_arglist& pArgs)->bool
 	{
-		std::cout << mTerminal_system.generate_help();
+		std::cout << pTerminal.generate_help();
 		return true;
 	}, "- Display this help");
 
@@ -610,10 +601,22 @@ void game::load_terminal_interface()
 		return true;
 	}, "<Slot #> - Open game from slot");
 
-	mTerminal_system.add_group(mGroup_flags);
-	mTerminal_system.add_group(mGroup_game);
-	mTerminal_system.add_group(mGroup_global1);
-	mTerminal_system.add_group(mGroup_slot);
+	pTerminal.add_group(mGroup_flags);
+	pTerminal.add_group(mGroup_game);
+	pTerminal.add_group(mGroup_global1);
+	pTerminal.add_group(mGroup_slot);
+}
+scene & game::get_scene()
+{
+	return mScene;
+}
+engine::resource_manager & rpg::game::get_resource_manager()
+{
+	return mResource_manager;
+}
+const engine::fs::path & rpg::game::get_source_path() const
+{
+	return mData_directory;
 }
 #endif
 
@@ -622,7 +625,7 @@ float game::get_delta()
 	return get_renderer()->get_delta();
 }
 
-bool game::load_settings(engine::fs::path pData_dir)
+bool game::load(engine::fs::path pData_dir)
 {
 	using namespace tinyxml2;
 	
@@ -707,78 +710,26 @@ bool game::load_settings(engine::fs::path pData_dir)
 	return true;
 }
 
+bool game::stop()
+{
+	mScene.clean();
+	mFlags.clean();
+	return false;
+}
+
+void game::clear_scene()
+{
+	mScene.clean(true);
+}
+
 bool game::tick()
 {
-#ifndef LOCKED_RELEASE_MODE
-	mTerminal_gui.update(*get_renderer());
-#endif
+	if (!mIs_ready || !mScene.is_ready())
+		return false;
 
 	mControls.update(*get_renderer());
 
-#ifndef LOCKED_RELEASE_MODE
-
-
 	engine::renderer& renderer = *get_renderer();
-
-	const bool lshift = renderer.is_key_down(engine::renderer::key_type::LShift);
-	const bool lctrl = renderer.is_key_down(engine::renderer::key_type::LControl);
-
-	if (lctrl
-		&& lshift
-		&& renderer.is_key_pressed(engine::renderer::key_type::R))
-	{
-		mEditor_manager.close_editor();
-		mScene.clean(true);
-		restart_game();
-	}
-
-	// Do not go beyond this point if not ready
-	if (!mIs_ready)
-		return false;
-
-	if (lctrl
-		&& !lshift
-		&& renderer.is_key_pressed(engine::renderer::key_type::R))
-	{
-		mEditor_manager.close_editor();
-		logger::info("Reloading scene...");
-
-		mScene.clean(true);
-
-		mResource_manager.reload_directories();
-
-		mScene.reload_scene();
-		logger::info("Scene reloaded");
-	}
-
-
-	if (lctrl
-		&& renderer.is_key_pressed(engine::renderer::key_type::Num1))
-	{
-		mEditor_manager.close_editor();
-		mEditor_manager.open_tilemap_editor((mData_directory / defs::DEFAULT_SCENES_PATH / mScene.get_path()).string());
-		mScene.clean(true);
-	}
-
-	if (lctrl
-		&& renderer.is_key_pressed(engine::renderer::key_type::Num2))
-	{
-		mEditor_manager.close_editor();
-		mEditor_manager.open_collisionbox_editor((mData_directory / defs::DEFAULT_SCENES_PATH / mScene.get_path()).string());
-		mScene.clean(true);
-	}
-	if (lctrl
-		&& renderer.is_key_pressed(engine::renderer::key_type::Num3))
-	{
-		mEditor_manager.close_editor();
-		mEditor_manager.open_atlas_editor();
-		mScene.clean(true);
-	}
-
-	// Dont go any further if editor is open
-	if (mEditor_manager.is_editor_open())
-		return mExit;
-#endif
 
 	mScene.tick(mControls);
 
@@ -813,7 +764,7 @@ bool game::restart_game()
 
 	mSave_system.clean();
 
-	bool succ = load_settings(mData_directory);
+	bool succ = load(mData_directory);
 
 	logger::info("Game reloaded");
 	return succ;
@@ -823,10 +774,6 @@ void
 game::refresh_renderer(engine::renderer & pR)
 {
 	mScene.set_renderer(pR);
-#ifndef LOCKED_RELEASE_MODE
-	mTerminal_gui.load_gui(pR);
-	pR.add_object(mEditor_manager);
-#endif
 }
 
 // ##########
@@ -912,21 +859,21 @@ background_music::background_music()
 
 void background_music::load_script_interface(script_system & pScript)
 {
-	pScript.add_function("void _music_play()", AS::asMETHOD(engine::sound_stream, play), mStream.get());
-	pScript.add_function("void _music_stop()", AS::asMETHOD(engine::sound_stream, stop), mStream.get());
-	pScript.add_function("void _music_pause()", AS::asMETHOD(engine::sound_stream, pause), mStream.get());
-	pScript.add_function("float _music_get_position()", AS::asMETHOD(engine::sound_stream, get_position), mStream.get());
-	pScript.add_function("void _music_set_position(float)", AS::asMETHOD(engine::sound_stream, set_position), mStream.get());
-	pScript.add_function("float _music_get_volume()", AS::asMETHOD(engine::sound_stream, get_volume), mStream.get());
-	pScript.add_function("void _music_set_volume(float)", AS::asMETHOD(engine::sound_stream, set_volume), mStream.get());
-	pScript.add_function("void _music_set_loop(bool)", AS::asMETHOD(engine::sound_stream, set_loop), mStream.get());
-	pScript.add_function("bool _music_open(const string &in)", AS::asMETHOD(background_music, script_music_open), this);
-	pScript.add_function("bool _music_is_playing()", AS::asMETHOD(engine::sound_stream, is_playing), mStream.get());
-	pScript.add_function("float _music_get_duration()", AS::asMETHOD(engine::sound_stream, get_duration), mStream.get());
-	pScript.add_function("bool _music_swap(const string &in)", AS::asMETHOD(background_music, script_music_swap), this);
-	pScript.add_function("int _music_start_transition_play(const string &in)", AS::asMETHOD(background_music, script_music_start_transition_play), this);
-	pScript.add_function("void _music_stop_transition_play()", AS::asMETHOD(background_music, script_music_stop_transition_play), this);
-	pScript.add_function("void _music_set_second_volume(float)", AS::asMETHOD(background_music, script_music_set_second_volume), this);
+	pScript.add_function("_music_play", &engine::sound_stream::play, mStream.get());
+	pScript.add_function("_music_stop", &engine::sound_stream::stop, mStream.get());
+	pScript.add_function("_music_pause", &engine::sound_stream::pause, mStream.get());
+	pScript.add_function("_music_get_position", &engine::sound_stream::get_position, mStream.get());
+	pScript.add_function("_music_set_position", &engine::sound_stream::set_position, mStream.get());
+	pScript.add_function("_music_get_volume", &engine::sound_stream::get_volume, mStream.get());
+	pScript.add_function("_music_set_volume", &engine::sound_stream::set_volume, mStream.get());
+	pScript.add_function("_music_set_loop", &engine::sound_stream::set_loop, mStream.get());
+	pScript.add_function("_music_open", &background_music::script_music_open, this);
+	pScript.add_function("_music_is_playing", &engine::sound_stream::is_playing, mStream.get());
+	pScript.add_function("_music_get_duration", &engine::sound_stream::get_duration, mStream.get());
+	pScript.add_function("_music_swap", &background_music::script_music_swap, this);
+	pScript.add_function("_music_start_transition_play", &background_music::script_music_start_transition_play, this);
+	pScript.add_function("_music_stop_transition_play", &background_music::script_music_stop_transition_play, this);
+	pScript.add_function("_music_set_second_volume", &background_music::script_music_set_second_volume, this);
 }
 
 void background_music::clean()
@@ -1364,8 +1311,8 @@ colored_overlay::colored_overlay()
 
 void colored_overlay::load_script_interface(script_system & pScript)
 {
-	pScript.add_function("void set_overlay_color(int, int, int)", AS::asMETHOD(colored_overlay, script_set_overlay_color), this);
-	pScript.add_function("void set_overlay_opacity(int)", AS::asMETHOD(colored_overlay, script_set_overlay_opacity), this);
+	pScript.add_function("set_overlay_color", &colored_overlay::script_set_overlay_color, this);
+	pScript.add_function("set_overlay_opacity", &colored_overlay::script_set_overlay_opacity, this);
 }
 
 void colored_overlay::clean()

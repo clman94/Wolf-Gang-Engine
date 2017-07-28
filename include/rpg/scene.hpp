@@ -162,7 +162,11 @@ public:
 
 	scene_visualizer& get_visualizer();
 
+	bool is_ready() const;
+
 private:
+	bool mIs_ready;
+
 	std::vector<std::shared_ptr<script_function>> mEnd_functions;
 
 	std::map<std::string, scene_script_context> pScript_contexts;

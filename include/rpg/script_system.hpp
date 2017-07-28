@@ -16,6 +16,8 @@
 #include <memory>
 #include <list>
 
+#include <engine/AS_utility.hpp>
+
 namespace AS = AngelScript;
 
 namespace rpg
@@ -35,11 +37,29 @@ public:
 	script_system();
 	~script_system();
 
-	// Register a member function, will require the pointer to the instance
+	// TODO: With the template alt below
 	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr, void* pInstance);
 
-	// Register a non-member/static function
+	// TODO: With the template alt below
 	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr);
+
+	template<typename T>
+	void add_function(const std::string& pName, T* mFunction)
+	{
+		const std::string declaration = util::AS_create_function_declaration<T>(pName);
+		const int r = mEngine->RegisterGlobalFunction(declaration.c_str(), AS::asFUNCTION(mFunction)
+			, AS::asCALL_CDECL);
+		assert(r >= 0);
+	}
+
+	template<typename Tclass, typename Tret, typename...Tparams>
+	void add_function(const std::string& pName, Tret(Tclass::*mFunction)(Tparams...), void* pInstance)
+	{
+		const std::string declaration = util::AS_create_function_declaration<Tret, Tparams...>(pName);
+		const int r = mEngine->RegisterGlobalFunction(declaration.c_str(), AS::asSMethodPtr<sizeof(void (Tclass::*)())>::Convert(mFunction)
+			, AS::asCALL_THISCALL_ASGLOBAL, pInstance);
+		assert(r >= 0);
+	}
 
 	void abort_all();
 	void return_context(AS::asIScriptContext* pContext);

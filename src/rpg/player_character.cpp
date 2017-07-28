@@ -12,7 +12,7 @@ void player_character::clean()
 	set_cycle_group("default");
 	set_cycle("default");
 	set_dynamic_depth(true);
-	set_visible(true);
+	set_visible(false);
 	set_z(0);
 }
 

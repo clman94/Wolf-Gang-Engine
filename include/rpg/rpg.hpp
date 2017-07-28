@@ -40,7 +40,7 @@
 
 namespace rpg
 {
-#ifndef LOCKED_RELEASE_MODE
+
 class terminal_gui
 {
 public:
@@ -54,7 +54,8 @@ private:
 	std::vector<std::string> mHistory;
 	tgui::EditBox::Ptr mEb_input;
 };
-#endif
+
+
 
 class scenes_directory :
 	public engine::resource_directory
@@ -205,11 +206,20 @@ public:
 	~game();
 
 	// Load the xml game settings
-	bool load_settings(engine::fs::path pData_dir);
+	bool load(engine::fs::path pData_dir);
+	bool stop();
+	void clear_scene();
+
+	bool restart_game();
 
 	bool tick();
 
-	bool restart_game();
+	void load_terminal_interface(engine::terminal_system& pTerminal);
+
+	scene& get_scene();
+	engine::resource_manager& get_resource_manager();
+
+	const engine::fs::path& get_source_path() const;
 
 protected:
 	void refresh_renderer(engine::renderer& r);
@@ -233,10 +243,6 @@ private:
 	engine::fs::path mData_directory;
 
 #ifndef LOCKED_RELEASE_MODE
-	editors::editor_manager mEditor_manager;
-	terminal_gui mTerminal_gui;
-	engine::terminal_system mTerminal_system;
-	void load_terminal_interface();
 
 	std::shared_ptr<engine::terminal_command_group> mGroup_flags;
 	std::shared_ptr<engine::terminal_command_group> mGroup_game;

@@ -364,7 +364,7 @@ public:
 	void set_resource_manager(engine::resource_manager& pResource_manager);
 	void load_terminal_interface(engine::terminal_system& pTerminal);
 
-	void set_scene(rpg::scene* pScene);
+	void set_scene(rpg::scene& pScene);
 
 	int draw(engine::renderer& pR);
 

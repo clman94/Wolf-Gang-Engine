@@ -21,6 +21,9 @@ scene::scene()
 	mEntity_manager.set_root_node(mWorld_node);
 
 	mPack = nullptr;
+	mResource_manager = nullptr;
+
+	mIs_ready = false;
 }
 
 scene::~scene()
@@ -67,6 +70,8 @@ scene::clean(bool pFull)
 			i.second.clean();
 		pScript_contexts.clear();
 	}
+
+	mIs_ready = false;
 }
 
 bool scene::load_scene(std::string pName)
@@ -151,6 +156,8 @@ bool scene::load_scene(std::string pName)
 		mTilemap_manipulator.update_display(mTilemap_display);
 	}
 
+	mPlayer.set_visible(true);
+
 	// Pre-execute so the scene script can setup things before the render.
 	mScript->tick();
 
@@ -165,6 +172,7 @@ bool scene::load_scene(std::string pName)
 
 	logger::end_sub_routine();
 
+	mIs_ready = true;
 	return true;
 }
 
@@ -374,6 +382,11 @@ void scene::set_resource_pack(engine::pack_stream_factory* pPack)
 scene_visualizer & scene::get_visualizer()
 {
 	return mVisualizer;
+}
+
+bool scene::is_ready() const
+{
+	return mIs_ready;
 }
 
 void scene::script_set_focus(engine::fvector pPosition)
