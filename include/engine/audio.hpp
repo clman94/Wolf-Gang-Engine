@@ -13,6 +13,25 @@
 
 namespace engine
 {
+
+class sound_file
+{
+public:
+	bool requires_streaming() const;
+
+	void load();
+	void unload();
+
+	void set_file(const std::string& pPath);
+
+private:
+	std::string mSound_source;
+	sf::SoundBuffer mSFML_buffer;
+
+	bool mRequires_streaming;
+};
+
+
 class sound_buffer :
 	public resource
 {
@@ -29,47 +48,21 @@ private:
 
 class sound
 {
-	std::shared_ptr<sound_buffer> mSound_buffer;
-	sf::Sound s;
 public:
 	sound() {}
-	sound(std::shared_ptr<sound_buffer> buf)
-	{
-		set_buffer(buf);
-	}
-	void set_buffer(std::shared_ptr<sound_buffer> buf)
-	{
-		mSound_buffer = buf;
-		s.setBuffer(*buf->mSFML_buffer);
-	}
-	void play()
-	{
-		s.play();
-	}
-	void stop()
-	{
-		s.stop();
-	}
-	void pause()
-	{
-		s.pause();
-	}
-	void set_pitch(float pitch)
-	{
-		s.setPitch(pitch);
-	}
-	void set_loop(bool loop)
-	{
-		s.setLoop(loop);
-	}
-	void set_volume(float volume)
-	{
-		s.setVolume(volume);
-	}
-	bool is_playing()
-	{
-		return s.getStatus() == s.Playing;
-	}
+	sound(std::shared_ptr<sound_buffer> buf);
+	void set_buffer(std::shared_ptr<sound_buffer> buf);
+	void play();
+	void stop();
+	void pause();
+	void set_pitch(float pitch);
+	void set_loop(bool loop);
+	void set_volume(float volume);
+	bool is_playing();
+
+private:
+	std::shared_ptr<sound_buffer> mSound_buffer;
+	sf::Sound s;
 };
 
 /// A pool for sound objects
@@ -87,7 +80,7 @@ public:
 	sound_stream();
 
 	bool open(const std::string& path);
-	bool open(const std::string& path, pack_stream_factory& mPack);
+	bool open(const std::string& path, const pack_stream_factory& mPack);
 	void play();
 	void stop();
 	void pause();

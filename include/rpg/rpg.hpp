@@ -271,7 +271,7 @@ private:
 	bool script_set_int_value(const std::string& pPath, int pValue);
 	bool script_set_float_value(const std::string& pPath, float pValue);
 	bool script_set_string_value(const std::string& pPath, const std::string& pValue);
-	AS::CScriptArray* script_get_director_entries(const std::string& pPath);
+	AS_array<std::string>* script_get_director_entries(const std::string& pPath);
 	bool script_remove_value(const std::string& pPath);
 	bool script_has_value(const std::string& pPath);
 

@@ -108,17 +108,17 @@ AS::CScriptHandle script_system::script_get_shared(const std::string& pName)
 
 void script_system::load_script_interface()
 {
-	add_function("int rand()", asFUNCTION(std::rand));
+	add_function("rand", &std::rand);
 
 	mEngine->RegisterFuncdef("void coroutine(dictionary@)");
 	mEngine->RegisterFuncdef("void coroutine_noargs()");
 	add_function("void create_thread(coroutine @+)", asMETHOD(script_system, script_create_thread_noargs), this);
 	add_function("void create_thread(coroutine @+, dictionary @+)", asMETHOD(script_system, script_create_thread), this);
 
-	add_function("void dprint(const string &in)", asMETHOD(script_system, script_debug_print), this);
-	add_function("void eprint(const string &in)", asMETHOD(script_system, script_error_print), this);
-	add_function("void abort()", asMETHOD(script_system, script_abort), this);
-	add_function("bool yield()", asMETHOD(script_system, script_yield), this);
+	add_function("dprint", &script_system::script_debug_print, this);
+	add_function("eprint", &script_system::script_error_print, this);
+	add_function("abort", &script_system::script_abort, this);
+	add_function("yield", &script_system::script_yield, this);
 
 	add_function("void make_shared(ref@, const string&in)", asMETHOD(script_system, script_make_shared), this);
 	add_function("ref@ get_shared(const string&in)", asMETHOD(script_system, script_get_shared), this);
@@ -272,22 +272,9 @@ script_system::register_vector_type()
 void script_system::register_timer_type()
 {
 	set_namespace("util");
-	mEngine->RegisterObjectType("timer", sizeof(engine::timer), asOBJ_VALUE | asGetTypeTraits<engine::timer>());
-
-	// Constructors and deconstructors
-	mEngine->RegisterObjectBehaviour("timer", asBEHAVE_CONSTRUCT, "void f()"
-		, asFUNCTION(script_default_constructor<engine::timer>)
-		, asCALL_CDECL_OBJLAST);
-	mEngine->RegisterObjectBehaviour("timer", asBEHAVE_DESTRUCT, "void f()"
-		, asFUNCTION(script_default_deconstructor<engine::timer>)
-		, asCALL_CDECL_OBJLAST);
-
-	mEngine->RegisterObjectMethod("timer", "void start(float)"
-		, asMETHODPR(engine::timer, start,(float), void)
-		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("timer", "bool is_reached() const"
-		, asMETHOD(engine::timer, is_reached)
-		, asCALL_THISCALL);
+	create_object<engine::timer>("timer");
+	add_method<engine::timer, void, float>("timer", "start", &engine::timer::start);
+	add_method("timer", "is_reached", &engine::timer::is_reached);
 	reset_namespace();
 }
 

@@ -41,7 +41,7 @@ bool sound_stream::open(const std::string & path)
 	return mSFML_music.openFromFile(path);
 }
 
-bool sound_stream::open(const std::string & path, pack_stream_factory & mPack)
+bool sound_stream::open(const std::string & path, const pack_stream_factory& mPack)
 {
 	sfml_stream.stream = mPack.create_stream(path);
 	sfml_stream.stream.open();
@@ -164,4 +164,50 @@ inline sf::Int64 sound_stream::sfml_stream_::getSize()
 	if (!stream.is_valid())
 		return -1;
 	return stream.size();
+}
+
+sound::sound(std::shared_ptr<sound_buffer> buf)
+{
+	set_buffer(buf);
+}
+
+void sound::set_buffer(std::shared_ptr<sound_buffer> buf)
+{
+	mSound_buffer = buf;
+	s.setBuffer(*buf->mSFML_buffer);
+}
+
+void sound::play()
+{
+	s.play();
+}
+
+void sound::stop()
+{
+	s.stop();
+}
+
+void sound::pause()
+{
+	s.pause();
+}
+
+void sound::set_pitch(float pitch)
+{
+	s.setPitch(pitch);
+}
+
+void sound::set_loop(bool loop)
+{
+	s.setLoop(loop);
+}
+
+void sound::set_volume(float volume)
+{
+	s.setVolume(volume);
+}
+
+bool sound::is_playing()
+{
+	return s.getStatus() == s.Playing;
 }

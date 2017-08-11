@@ -252,29 +252,29 @@ void scene::load_script_interface(script_system& pScript)
 	mPathfinding_system.load_script_interface(pScript);
 	mCollision_system.load_script_interface(pScript);
 
-	pScript.add_function("void set_tile(const string &in, vec, int, int)", AS::asMETHOD(scene, script_set_tile), this);
-	pScript.add_function("void remove_tile(vec, int)", AS::asMETHOD(scene, script_remove_tile), this);
+	pScript.add_function("set_tile", &scene::script_set_tile, this);
+	pScript.add_function("remove_tile", &scene::script_remove_tile, this);
 
-	pScript.add_function("int _spawn_sound(const string&in, float, float)", AS::asMETHOD(scene, script_spawn_sound), this);
-	pScript.add_function("void _stop_all()", AS::asMETHOD(engine::sound_spawner, stop_all), &mSound_FX);
+	pScript.add_function("_spawn_sound", &scene::script_spawn_sound, this);
+	pScript.add_function("_stop_all", &engine::sound_spawner::stop_all, &mSound_FX);
 
-	pScript.add_function("entity get_player()", AS::asMETHOD(scene, script_get_player), this);
-	pScript.add_function("void _set_player_locked(bool)", AS::asMETHOD(player_character, set_locked), &mPlayer);
-	pScript.add_function("bool _get_player_locked()", AS::asMETHOD(player_character, is_locked), &mPlayer);
+	pScript.add_function("get_player", &scene::script_get_player, this);
+	pScript.add_function("_set_player_locked", &player_character::set_locked, &mPlayer);
+	pScript.add_function("_get_player_locked", &player_character::is_locked, &mPlayer);
 
-	pScript.add_function("void _set_focus(vec)", AS::asMETHOD(scene, script_set_focus), this);
-	pScript.add_function("vec _get_focus()", AS::asMETHOD(scene, script_get_focus), this);
-	pScript.add_function("void _focus_player(bool)", AS::asMETHOD(scene, focus_player), this);
+	pScript.add_function("_set_focus", &scene::script_set_focus, this);
+	pScript.add_function("_get_focus", &scene::script_get_focus, this);
+	pScript.add_function("_focus_player", &scene::focus_player, this);
 
-	pScript.add_function("vec get_boundary_position()", AS::asMETHOD(scene, script_get_boundary_position), this);
-	pScript.add_function("vec get_boundary_size()", AS::asMETHOD(scene, script_get_boundary_size), this);
-	pScript.add_function("void get_boundary_position(vec)", AS::asMETHOD(scene, script_set_boundary_position), this);
-	pScript.add_function("void get_boundary_size(vec)", AS::asMETHOD(scene, script_set_boundary_size), this);
-	pScript.add_function("void set_boundary_enable(bool)", AS::asMETHOD(panning_node, set_boundary_enable), this);
+	pScript.add_function("get_boundary_position", &scene::script_get_boundary_position, this);
+	pScript.add_function("get_boundary_size", &scene::script_get_boundary_size, this);
+	pScript.add_function("get_boundary_position", &scene::script_set_boundary_position, this);
+	pScript.add_function("get_boundary_size", &scene::script_set_boundary_size, this);
+	pScript.add_function("set_boundary_enable", &panning_node::set_boundary_enable, this);
 
-	pScript.add_function("vec get_display_size()", AS::asMETHOD(scene, script_get_display_size), this);
+	pScript.add_function("get_display_size", &scene::script_get_display_size, this);
 
-	pScript.add_function("const string& get_scene_name()", AS::asMETHOD(scene, get_name), this);
+	pScript.add_function("get_scene_name", &scene::get_name, this);
 
 	mScript = &pScript;
 }

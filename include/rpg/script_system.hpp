@@ -21,6 +21,9 @@
 
 namespace AS = AngelScript;
 
+template<typename T>
+struct AS_array : public AS::CScriptArray {};
+
 namespace util {
 template<>
 struct AS_type_to_string<engine::fvector> :
@@ -32,10 +35,21 @@ struct AS_type_to_string<engine::fvector> :
 	}
 };
 
+template<typename T>
+struct AS_type_to_string<AS_array<T>> :
+	AS_type_to_string_base
+{
+	AS_type_to_string()
+	{
+		mName = "array<" + AS_type_to_string<T>().string() + ">";
+	}
+};
 }
 
 namespace rpg
 {
+
+
 
 
 class script_system
@@ -51,21 +65,18 @@ public:
 	script_system();
 	~script_system();
 
-	// TODO: With the template alt below
-	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr, void* pInstance);
 
-	// TODO: With the template alt below
-	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr);
 
-	template<typename T>
-	void add_function(const std::string& pName, T* mFunction)
+	template<typename Tret, typename...Tparams>
+	void add_function(const std::string& pName, Tret (* mFunction)(Tparams...))
 	{
-		const std::string declaration = util::AS_create_function_declaration<T>(pName);
+		const std::string declaration = util::AS_create_function_declaration<Tret, Tparams...>(pName);
 		const int r = mEngine->RegisterGlobalFunction(declaration.c_str(), AS::asFUNCTION(mFunction)
 			, AS::asCALL_CDECL);
 		assert(r >= 0);
 	}
 
+	// Method global function binding
 	template<typename Tclass, typename Tret, typename...Tparams>
 	void add_function(const std::string& pName, Tret(Tclass::*mFunction)(Tparams...), void* pInstance)
 	{
@@ -73,6 +84,51 @@ public:
 		const int r = mEngine->RegisterGlobalFunction(declaration.c_str(), AS::asSMethodPtr<sizeof(void (Tclass::*)())>::Convert(mFunction)
 			, AS::asCALL_THISCALL_ASGLOBAL, pInstance);
 		assert(r >= 0);
+	}
+
+	// Const method global function binding
+	template<typename Tclass, typename Tret, typename...Tparams>
+	void add_function(const std::string& pName, Tret(Tclass::*mFunction)(Tparams...) const, void* pInstance)
+	{
+		const std::string declaration = util::AS_create_function_declaration<Tret, Tparams...>(pName);
+		const int r = mEngine->RegisterGlobalFunction(declaration.c_str(), AS::asSMethodPtr<sizeof(void (Tclass::*)())>::Convert(mFunction)
+			, AS::asCALL_THISCALL_ASGLOBAL, pInstance);
+		assert(r >= 0);
+	}
+
+	template<typename T>
+	void create_object(const std::string& pName)
+	{
+		mEngine->RegisterObjectType(pName.c_str()
+			, sizeof(T)
+			, AS::asOBJ_VALUE | AS::asGetTypeTraits<T>());
+		mEngine->RegisterObjectBehaviour(pName.c_str(), AS::asBEHAVE_CONSTRUCT, "void f()"
+			, AS::asFUNCTION(script_system::script_default_constructor<T>)
+			, AS::asCALL_CDECL_OBJLAST);
+		mEngine->RegisterObjectBehaviour(pName.c_str(), AS::asBEHAVE_DESTRUCT, "void f()"
+			, AS::asFUNCTION(script_system::script_default_deconstructor<T>)
+			, AS::asCALL_CDECL_OBJLAST);
+	}
+
+	template<typename Tclass, typename Tret, typename...Tparams>
+	void add_method(const std::string& pObject, const std::string& pName, Tret(Tclass::*mFunction)(Tparams...))
+	{
+		std::string declaration = util::AS_create_function_declaration<Tret, Tparams...>(pName);
+
+		mEngine->RegisterObjectMethod(pObject.c_str(), declaration.c_str()
+			, AS::asSMethodPtr<sizeof(void (Tclass::*)())>::Convert(mFunction)
+			, AS::asCALL_THISCALL);
+	}
+
+	// Const method object binding
+	template<typename Tclass, typename Tret, typename...Tparams>
+	void add_method(const std::string& pObject, const std::string& pName, Tret(Tclass::*mFunction)(Tparams...) const)
+	{
+		const std::string declaration = util::AS_create_function_declaration<Tret, Tparams...>(pName) + " const";
+
+		mEngine->RegisterObjectMethod(pObject.c_str(), declaration.c_str()
+			, AS::asSMethodPtr<sizeof(void (Tclass::*)())>::Convert(mFunction)
+			, AS::asCALL_THISCALL);
 	}
 
 	void abort_all();
@@ -114,6 +170,11 @@ public:
 	}
 
 private:
+
+	// These are kept for the "special" functions
+	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr, void* pInstance);
+	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr);
+
 	engine::timer mTimeout_timer;
 
 	std::shared_ptr<thread> mCurrect_thread_context;
@@ -142,7 +203,8 @@ private:
 	void timeout_callback(AS::asIScriptContext *ctx);
 };
 
-
-
 }
+
+
+
 #endif // !RPG_SCRIPT_SYSTEM_HPP

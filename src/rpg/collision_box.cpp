@@ -340,9 +340,11 @@ std::vector<std::shared_ptr<collision_box>>::iterator collision_box_container::e
 // collision_box
 // ##########
 
-collision_box::collision_box() {}
+collision_box::collision_box()
+	: mInverted(false){}
 
 collision_box::collision_box(engine::frect pRect)
+	: mInverted(false)
 {
 	mRegion = pRect;
 }
@@ -350,7 +352,7 @@ collision_box::collision_box(engine::frect pRect)
 bool collision_box::is_enabled() const
 {
 	if (!mWall_group.expired())
-		return std::shared_ptr<wall_group>(mWall_group)->is_enabled();
+		return std::shared_ptr<wall_group>(mWall_group)->is_enabled() == !mInverted;
 	return true;
 }
 
@@ -374,6 +376,16 @@ std::shared_ptr<wall_group> rpg::collision_box::get_wall_group()
 	if (mWall_group.expired())
 		return{};
 	return std::shared_ptr<wall_group>(mWall_group);
+}
+
+void collision_box::set_inverted(bool pIs_inverted)
+{
+	mInverted = pIs_inverted;
+}
+
+bool collision_box::is_inverted() const
+{
+	return mInverted;
 }
 
 void collision_box::generate_xml_attibutes(tinyxml2::XMLElement * pEle) const

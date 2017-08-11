@@ -19,9 +19,9 @@ bool flag_container::has_flag(const std::string& pName) const
 
 void flag_container::load_script_interface(script_system & pScript)
 {
-	pScript.add_function("bool has_flag(const string &in)", AS::asMETHOD(flag_container, has_flag), this);
-	pScript.add_function("bool set_flag(const string &in)", AS::asMETHOD(flag_container, set_flag), this);
-	pScript.add_function("bool unset_flag(const string &in)", AS::asMETHOD(flag_container, unset_flag), this);
+	pScript.add_function("has_flag", &flag_container::has_flag, this);
+	pScript.add_function("set_flag", &flag_container::set_flag, this);
+	pScript.add_function("unset_flag", &flag_container::unset_flag, this);
 }
 
 void flag_container::clean()

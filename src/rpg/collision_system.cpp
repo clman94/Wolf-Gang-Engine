@@ -49,15 +49,15 @@ void collision_system::load_script_interface(script_system & pScript)
 	mScript = &pScript;
 	register_collision_type(pScript);
 	pScript.set_namespace("collision");
-	pScript.add_function("box _create_box(int)", AS::asMETHOD(collision_system, script_create_box), this);
-	pScript.add_function("void set_position(box&in, const vec&in)", AS::asMETHOD(collision_system, script_set_box_position), this);
-	pScript.add_function("void set_size(box&in, const vec&in)", AS::asMETHOD(collision_system, script_set_box_size), this);
-	pScript.add_function("void set_group(box&in, const string&in)", AS::asMETHOD(collision_system, script_set_box_group), this);
+	pScript.add_function("_create_box", &collision_system::script_create_box, this);
+	pScript.add_function("set_position", &collision_system::script_set_box_position, this);
+	pScript.add_function("set_size", &collision_system::script_set_box_size, this);
+	pScript.add_function("set_group", &collision_system::script_set_box_group, this);
 	pScript.reset_namespace();
 
-	pScript.add_function("void _set_wall_group_enabled(const string&in, bool)", AS::asMETHOD(collision_system, script_set_wall_group_enabled), this);
-	pScript.add_function("bool _get_wall_group_enabled(const string&in)", AS::asMETHOD(collision_system, script_get_wall_group_enabled), this);
-	pScript.add_function("void _bind_box_function(coroutine@+, dictionary @+)", AS::asMETHOD(collision_system, script_bind_group_function), this);
+	pScript.add_function("_set_wall_group_enabled", &collision_system::script_set_wall_group_enabled, this);
+	pScript.add_function("_get_wall_group_enabled", &collision_system::script_get_wall_group_enabled, this);
+	//pScript.add_function("void _bind_box_function(coroutine@+, dictionary @+)", AS::asMETHOD(collision_system, script_bind_group_function), this);
 
 }
 
@@ -69,21 +69,9 @@ collision_box_container& collision_system::get_container()
 void collision_system::register_collision_type(script_system& pScript)
 {
 	pScript.set_namespace("collision");
-	auto& engine = pScript.get_engine();
-	engine.RegisterObjectType("box", sizeof(std::shared_ptr<collision_box>), AS::asOBJ_VALUE | AS::asGetTypeTraits<std::shared_ptr<collision_box>>());
-	
-	// Constructors and deconstructors
-	engine.RegisterObjectBehaviour("box", AS::asBEHAVE_CONSTRUCT, "void f()"
-		, AS::asFUNCTION(script_system::script_default_constructor<std::shared_ptr<collision_box>>)
-		, AS::asCALL_CDECL_OBJLAST);
-	engine.RegisterObjectBehaviour("box", AS::asBEHAVE_DESTRUCT, "void f()"
-		, AS::asFUNCTION(script_system::script_default_deconstructor<std::shared_ptr<collision_box>>)
-		, AS::asCALL_CDECL_OBJLAST);
 
-	// Assignments
-	engine.RegisterObjectMethod("box", "box& opAssign(const box &in)"
-		, AS::asMETHODPR(std::shared_ptr<collision_box>, operator=, (const std::shared_ptr<collision_box>&), std::shared_ptr<collision_box>&)
-		, AS::asCALL_THISCALL);
+	pScript.create_object<collision_box::ptr>("box");
+	pScript.add_method<collision_box::ptr, collision_box::ptr&, const collision_box::ptr&>("box", "opAssign", &collision_box::ptr::operator=);
 
 	pScript.reset_namespace();
 }

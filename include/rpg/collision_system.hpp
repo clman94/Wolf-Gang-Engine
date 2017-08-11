@@ -13,6 +13,30 @@
 #include <rpg/collision_box.hpp>
 #include <rpg/scene_loader.hpp>
 
+namespace util {
+template<>
+struct AS_type_to_string<std::shared_ptr<rpg::collision_box>> :
+	AS_type_to_string_base
+{
+	AS_type_to_string()
+	{
+		mName = "box";
+	}
+};
+
+template<>
+struct AS_type_to_string<rpg::collision_box::type> :
+	AS_type_to_string_base
+{
+	AS_type_to_string()
+	{
+		mName = "int";
+	}
+};
+
+
+}
+
 namespace rpg {
 
 // A simple static collision system for world interactivity

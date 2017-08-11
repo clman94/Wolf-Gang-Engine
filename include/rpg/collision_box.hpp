@@ -11,6 +11,10 @@
 #include <rpg/script_function.hpp>
 #include <rpg/flag_container.hpp>
 
+#include <engine/AS_utility.hpp>
+
+
+
 namespace rpg {
 
 class wall_group
@@ -44,6 +48,8 @@ public:
 		door
 	};
 
+	typedef std::shared_ptr<collision_box> ptr;
+
 	collision_box();
 	collision_box(engine::frect pRect);
 	bool is_enabled() const;
@@ -54,6 +60,9 @@ public:
 	void set_wall_group(std::shared_ptr<wall_group> pWall_group);
 	std::shared_ptr<wall_group> get_wall_group();
 
+	void set_inverted(bool pIs_inverted);
+	bool is_inverted() const;
+
 	virtual type get_type()
 	{
 		return type::wall;
@@ -63,6 +72,7 @@ public:
 
 protected:
 	engine::frect mRegion;
+	bool mInverted;
 	std::weak_ptr<wall_group> mWall_group;
 	void generate_basic_attributes(tinyxml2::XMLElement* pEle) const;
 };
@@ -165,6 +175,18 @@ private:
 };
 
 
+}
+
+namespace util {
+template<>
+struct AS_type_to_string<rpg::collision_box> :
+	AS_type_to_string_base
+{
+	AS_type_to_string()
+	{
+		mName = "box";
+	}
+};
 }
 
 #endif // !RPG_COLLISION_BOX_HPP

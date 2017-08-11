@@ -423,11 +423,12 @@ bool encoded_path::remove_extension()
 {
 	if (mHierarchy.empty())
 		return false;
-	for (auto i = mHierarchy.back().begin(); i != mHierarchy.back().end(); i++)
+	std::string& fn = mHierarchy.back();
+	for (auto i = fn.begin(); i != fn.end(); i++)
 	{
 		if (*i == '.')
 		{
-			mHierarchy.back() = std::string(mHierarchy.back().begin(), i);
+			fn = std::string(fn.begin(), i);
 			return true;
 		}
 	}
@@ -632,8 +633,7 @@ void pack_stream::open()
 
 void pack_stream::close()
 {
-	if (mStream.is_open())
-		mStream.close();
+	mStream.close();
 }
 
 std::vector<char> pack_stream::read(uint64_t pCount)

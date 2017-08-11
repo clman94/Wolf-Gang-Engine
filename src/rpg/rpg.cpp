@@ -373,7 +373,7 @@ bool game::script_set_string_value(const std::string & pPath, const std::string 
 	return mSave_system.set_value(pPath, pValue);
 }
 
-AS::CScriptArray* game::script_get_director_entries(const std::string & pPath)
+AS_array<std::string>* game::script_get_director_entries(const std::string & pPath)
 {
 	const auto entries = mSave_system.get_directory_entries(pPath);
 
@@ -386,7 +386,7 @@ AS::CScriptArray* game::script_get_director_entries(const std::string & pPath)
 		arr->SetValue(i, (void*)&entries[i]);
 	}
 
-	return arr;
+	return static_cast<AS_array<std::string>*>(arr);
 }
 
 bool game::script_remove_value(const std::string & pPath)
@@ -408,33 +408,33 @@ void
 game::load_script_interface()
 {
 	logger::info("Loading script interface...");
-	mScript.add_function("float get_delta()", AS::asMETHOD(game, get_delta), this);
+	mScript.add_function("get_delta", &game::get_delta, this);
 
-	mScript.add_function("bool is_triggered(const string&in)", AS::asMETHOD(engine::controls, is_triggered), &mControls);
+	mScript.add_function("is_triggered", &engine::controls::is_triggered, &mControls);
 
-	mScript.add_function("void save_game()", AS::asMETHOD(game, save_game), this);
-	mScript.add_function("void open_game()", AS::asMETHOD(game, open_game), this);
-	mScript.add_function("void abort_game()", AS::asMETHOD(game, abort_game), this);
-	mScript.add_function("uint get_slot()", AS::asMETHOD(game, get_slot), this);
-	mScript.add_function("void set_slot(uint)", AS::asMETHOD(game, set_slot), this);
-	mScript.add_function("bool is_slot_used(uint)", AS::asMETHOD(game, is_slot_used), this);
-	mScript.add_function("void load_scene(const string &in)", AS::asMETHOD(game, script_load_scene), this);
-	mScript.add_function("void load_scene(const string &in, const string &in)", AS::asMETHOD(game, script_load_scene_to_door), this);
-	mScript.add_function("void load_scene(const string &in, vec)", AS::asMETHOD(game, script_load_scene_to_position), this);
+	mScript.add_function("save_game", &game::save_game, this);
+	mScript.add_function("open_game", &game::open_game, this);
+	mScript.add_function("abort_game", &game::abort_game, this);
+	mScript.add_function("get_slot", &game::get_slot, this);
+	mScript.add_function("set_slot", &game::set_slot, this);
+	mScript.add_function("is_slot_used", &game::is_slot_used, this);
+	mScript.add_function("load_scene", &game::script_load_scene, this);
+	mScript.add_function("load_scene", &game::script_load_scene_to_door, this);
+	mScript.add_function("load_scene", &game::script_load_scene_to_position, this);
 
 	mScript.set_namespace("values");
-	mScript.add_function("int get_int(const string &in)", AS::asMETHOD(game, script_get_int_value), this);
-	mScript.add_function("float get_float(const string &in)", AS::asMETHOD(game, script_get_float_value), this);
-	mScript.add_function("string get_string(const string &in)", AS::asMETHOD(game, script_get_string_value), this);
-	mScript.add_function("bool set(const string &in, int)", AS::asMETHOD(game, script_set_int_value), this);
-	mScript.add_function("bool set(const string &in, float)", AS::asMETHOD(game, script_set_float_value), this);
-	mScript.add_function("bool set(const string &in, const string&in)", AS::asMETHOD(game, script_set_string_value), this);
-	mScript.add_function("array<string>@ get_entries(const string &in)", AS::asMETHOD(game, script_get_director_entries), this);
-	mScript.add_function("bool remove(const string &in)", AS::asMETHOD(game, script_remove_value), this);
-	mScript.add_function("bool exists(const string &in)", AS::asMETHOD(game, script_has_value), this);
+	mScript.add_function("get_int", &game::script_get_int_value, this);
+	mScript.add_function("get_float", &game::script_get_float_value, this);
+	mScript.add_function("get_string", &game::script_get_string_value, this);
+	mScript.add_function("set", &game::script_set_int_value, this);
+	mScript.add_function("set", &game::script_set_float_value, this);
+	mScript.add_function("set", &game::script_set_string_value, this);
+	mScript.add_function("get_entries", &game::script_get_director_entries, this);
+	mScript.add_function("remove", &game::script_remove_value, this);
+	mScript.add_function("exists", &game::script_has_value, this);
 	mScript.reset_namespace();
 
-	mScript.add_function("float get_tile_size()", AS::asMETHOD(game, script_get_tile_size), this);
+	mScript.add_function("get_tile_size", &game::script_get_tile_size, this);
 
 	mFlags.load_script_interface(mScript);
 	mScene.load_script_interface(mScript);
@@ -1363,12 +1363,12 @@ void pathfinding_system::set_collision_system(collision_system & pCollision_syst
 }
 
 void pathfinding_system::load_script_interface(script_system & pScript)
-{
-	pScript.add_function("bool find_path(array<vec>&inout, vec, vec)", AS::asMETHOD(pathfinding_system, script_find_path), this);
-	pScript.add_function("bool find_path_partial(array<vec>&inout, vec, vec, int)", AS::asMETHOD(pathfinding_system, script_find_path_partial), this);
+{	
+	pScript.add_function("find_path", &pathfinding_system::script_find_path, this);
+	pScript.add_function("find_path_partial", &pathfinding_system::script_find_path_partial, this);
 }
 
-bool pathfinding_system::script_find_path(AS::CScriptArray& pScript_path, engine::fvector pStart, engine::fvector pDestination)
+bool pathfinding_system::script_find_path(AS_array<engine::fvector>& pScript_path, engine::fvector pStart, engine::fvector pDestination)
 {
 	mPathfinder.set_path_limit(1000);
 
@@ -1382,7 +1382,7 @@ bool pathfinding_system::script_find_path(AS::CScriptArray& pScript_path, engine
 	return false;
 }
 
-bool pathfinding_system::script_find_path_partial(AS::CScriptArray& pScript_path, engine::fvector pStart, engine::fvector pDestination, int pCount)
+bool pathfinding_system::script_find_path_partial(AS_array<engine::fvector>& pScript_path, engine::fvector pStart, engine::fvector pDestination, int pCount)
 {
 	mPathfinder.set_path_limit(pCount);
 
