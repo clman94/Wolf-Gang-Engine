@@ -170,21 +170,9 @@ void script_system::script_error_print(std::string & pMessage)
 void
 script_system::register_vector_type()
 {
-	// Added asOBJ_APP_CLASS_ALLFLOATS so linux won't complain
-	mEngine->RegisterObjectType("vec", sizeof(engine::fvector), asOBJ_VALUE | asOBJ_APP_CLASS_ALLFLOATS | asGetTypeTraits<engine::fvector>());
-
-	// Constructors and deconstructors
-	mEngine->RegisterObjectBehaviour("vec", asBEHAVE_CONSTRUCT, "void f()"
-		, asFUNCTION(script_default_constructor<engine::fvector>)
-		, asCALL_CDECL_OBJLAST);
-	mEngine->RegisterObjectBehaviour("vec", asBEHAVE_CONSTRUCT, "void f(float, float)"
-		, asFUNCTIONPR(script_constructor<engine::fvector>, (float, float, void*), void)
-		, asCALL_CDECL_OBJLAST);
-	mEngine->RegisterObjectBehaviour("vec", asBEHAVE_CONSTRUCT, "void f(const vec&in)"
-		, asFUNCTIONPR(script_constructor<engine::fvector>, (const engine::fvector&, void*), void)
-		, asCALL_CDECL_OBJLAST);
-	mEngine->RegisterObjectBehaviour("vec", asBEHAVE_DESTRUCT, "void f()"
-		, asFUNCTION(script_default_deconstructor<engine::fvector>), asCALL_CDECL_OBJLAST);
+	create_object<engine::fvector>("vec", true);
+	add_constructor<engine::fvector, float, float>("vec");
+	add_constructor<engine::fvector, const engine::fvector&>("vec");
 
 	// Assignments
 	mEngine->RegisterObjectMethod("vec", "vec& opAssign(const vec &in)"
@@ -226,47 +214,22 @@ script_system::register_vector_type()
 		, asMETHODPR(engine::fvector, operator-, () const, engine::fvector)
 		, asCALL_THISCALL);
 
-	// Distance
-	mEngine->RegisterObjectMethod("vec", "float distance() const"
-		, asMETHODPR(engine::fvector, distance, () const, float)
-		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "float distance(const vec &in) const"
-		, asMETHODPR(engine::fvector, distance, (const engine::fvector&) const, float)
-		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "float manhattan() const"
-		, asMETHODPR(engine::fvector, manhattan, () const, float)
-		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "float manhattan(const vec &in) const"
-		, asMETHODPR(engine::fvector, manhattan, (const engine::fvector&) const, float)
-		, asCALL_THISCALL);
+	add_method<engine::fvector, float>                        ("vec", "distance" , &engine::fvector::distance);
+	add_method<engine::fvector, float, const engine::fvector&>("vec", "distance" , &engine::fvector::distance);
+	add_method<engine::fvector, float>                        ("vec", "manhattan", &engine::fvector::manhattan);
+	add_method<engine::fvector, float, const engine::fvector&>("vec", "manhattan", &engine::fvector::manhattan);
 
-	// Rotate
-	mEngine->RegisterObjectMethod("vec", "vec& rotate(float)"
-		, asMETHODPR(engine::fvector, rotate, (float), engine::fvector&)
-		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "vec& rotate(const vec &in, float)"
-		, asMETHODPR(engine::fvector, rotate, (const engine::fvector&, float), engine::fvector&)
-		, asCALL_THISCALL);
-
-	mEngine->RegisterObjectMethod("vec", "vec& normalize()"
-		, asMETHOD(engine::fvector, normalize)
-		, asCALL_THISCALL);
-
-	mEngine->RegisterObjectMethod("vec", "vec& floor()"
-		, asMETHOD(engine::fvector, floor)
-		, asCALL_THISCALL);
-
-	mEngine->RegisterObjectMethod("vec", "float angle() const"
-		, asMETHODPR(engine::fvector, angle, () const, float)
-		, asCALL_THISCALL);
-
-	mEngine->RegisterObjectMethod("vec", "float angle(const vec&in) const"
-		, asMETHODPR(engine::fvector, angle, (const engine::fvector&) const, float)
-		, asCALL_THISCALL);
+	add_method<engine::fvector, engine::fvector&, float> ("vec", "rotate", &engine::fvector::rotate);
+	add_method<engine::fvector, engine::fvector&, const engine::fvector&, float>
+		("vec", "rotate", &engine::fvector::rotate);
+	add_method("vec", "normalize", &engine::fvector::normalize);
+	add_method("vec", "floor"    , &engine::fvector::floor);
+	add_method<engine::fvector, float>                        ("vec", "angle", &engine::fvector::angle);
+	add_method<engine::fvector, float, const engine::fvector&>("vec", "angle", &engine::fvector::angle);
 
 	// Members
-	mEngine->RegisterObjectProperty("vec", "float x", asOFFSET(engine::fvector, x));
-	mEngine->RegisterObjectProperty("vec", "float y", asOFFSET(engine::fvector, y));
+	add_member("vec", "x", &engine::fvector::x);
+	add_member("vec", "y", &engine::fvector::y);
 }
 
 void script_system::register_timer_type()

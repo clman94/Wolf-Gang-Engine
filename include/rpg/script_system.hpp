@@ -49,9 +49,6 @@ struct AS_type_to_string<AS_array<T>> :
 namespace rpg
 {
 
-
-
-
 class script_system
 {
 public:
@@ -97,11 +94,11 @@ public:
 	}
 
 	template<typename T>
-	void create_object(const std::string& pName)
+	void create_object(const std::string& pName, bool pAll_floats = false)
 	{
 		mEngine->RegisterObjectType(pName.c_str()
 			, sizeof(T)
-			, AS::asOBJ_VALUE | AS::asGetTypeTraits<T>());
+			, AS::asOBJ_VALUE | AS::asGetTypeTraits<T>() | (pAll_floats ? AS::asOBJ_APP_CLASS_ALLFLOATS : 0));
 		mEngine->RegisterObjectBehaviour(pName.c_str(), AS::asBEHAVE_CONSTRUCT, "void f()"
 			, AS::asFUNCTION(script_system::script_default_constructor<T>)
 			, AS::asCALL_CDECL_OBJLAST);
@@ -131,6 +128,24 @@ public:
 			, AS::asCALL_THISCALL);
 	}
 
+	template<typename Tclass, typename Tmember>
+	void add_member(const std::string& pObject, const std::string& pName, Tmember Tclass:: *pMember)
+	{
+		const size_t member_offset = util::data_member_offset(pMember);
+		const std::string declaration = util::AS_type_to_string<Tmember>().string() + " " + pName;
+		mEngine->RegisterObjectProperty(pObject.c_str(), declaration.c_str(), member_offset);
+	}
+
+	template<typename Tclass, typename...Tparams>
+	void add_constructor(const std::string& pObject)
+	{
+		const std::string declaration = util::AS_create_function_declaration<void, Tparams...>("f");
+
+		mEngine->RegisterObjectBehaviour(pObject.c_str(), AS::asBEHAVE_CONSTRUCT, declaration.c_str()
+			, AS::asFunctionPtr(script_system::script_constructor<Tclass, Tparams...>)
+			, AS::asCALL_CDECL_OBJFIRST);
+	}
+
 	void abort_all();
 	void return_context(AS::asIScriptContext* pContext);
 	int tick();
@@ -145,22 +160,17 @@ public:
 
 	bool is_executing();
 
+private:
 	template<typename T>
 	static void script_default_constructor(void *pMemory)
 	{
 		new(pMemory) T();
 	}
 
-	template<typename T, typename Targ1>
-	static void script_constructor(Targ1 pArg1, void *pMemory)
+	template<typename T, typename...Targs>
+	static void script_constructor(void *pMemory, Targs...pArgs)
 	{
-		new(pMemory) T(pArg1);
-	}
-
-	template<typename T, typename Targ1, typename Targ2>
-	static void script_constructor(Targ1 pArg1, Targ2 pArg2, void *pMemory)
-	{
-		new(pMemory) T(pArg1, pArg2);
+		new(pMemory) T(std::forward<Targs>(pArgs)...);
 	}
 
 	template<typename T>
@@ -168,8 +178,6 @@ public:
 	{
 		((T*)pMemory)->~T();
 	}
-
-private:
 
 	// These are kept for the "special" functions
 	void add_function(const char* pDeclaration, const AS::asSFuncPtr & pPtr, void* pInstance);

@@ -31,19 +31,7 @@ void entity_manager::register_entity_type(script_system & pScript)
 {
 	auto& engine = pScript.get_engine();
 
-	engine.RegisterObjectType("entity", sizeof(entity_reference), AS::asOBJ_VALUE | AS::asGetTypeTraits<entity_reference>());
-
-	// Constructors and deconstructors
-	engine.RegisterObjectBehaviour("entity", AS::asBEHAVE_CONSTRUCT, "void f()"
-		, AS::asFUNCTION(script_system::script_default_constructor<entity_reference>)
-		, AS::asCALL_CDECL_OBJLAST);
-	engine.RegisterObjectBehaviour("entity", AS::asBEHAVE_CONSTRUCT, "void f(const entity&in)"
-		, AS::asFUNCTIONPR(script_system::script_constructor<entity_reference>
-			, (const entity_reference&, void*), void)
-		, AS::asCALL_CDECL_OBJLAST);
-	engine.RegisterObjectBehaviour("entity", AS::asBEHAVE_DESTRUCT, "void f()"
-		, AS::asFUNCTION(script_system::script_default_deconstructor<entity_reference>)
-		, AS::asCALL_CDECL_OBJLAST);
+	pScript.create_object<entity_reference>("entity");
 
 	// Assignments
 	engine.RegisterObjectMethod("entity", "entity& opAssign(const entity&in)"

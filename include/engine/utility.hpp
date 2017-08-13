@@ -14,6 +14,12 @@
 namespace util
 {
 
+template<typename Tclass, typename Tmember>
+inline size_t data_member_offset(Tmember Tclass::*pMember)
+{
+	return (size_t)(&(reinterpret_cast<Tclass*>(100000)->*pMember)) - 100000;
+}
+
 /// Similar to optional but optimized for a pointer
 template<typename T>
 class optional_pointer
