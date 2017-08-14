@@ -49,6 +49,24 @@ struct AS_type_to_string<AS_array<T>> :
 namespace rpg
 {
 
+namespace operator_method
+{
+const std::string assign = "opAssign";
+const std::string additive_assign = "opAddAssign";
+const std::string subtractive_assign = "opSubAssign";
+const std::string multiplicative_assign = "opMulAssign";
+const std::string dividing_assign = "opDivAssign";
+
+const std::string add = "opAdd";
+const std::string subtract = "opSub";
+const std::string multiply = "opMul";
+const std::string divide = "opDiv";
+
+const std::string negative = "opNeg";
+
+const std::string equals = "opEquals";
+}
+
 class script_system
 {
 public:
@@ -61,8 +79,6 @@ public:
 
 	script_system();
 	~script_system();
-
-
 
 	template<typename Tret, typename...Tparams>
 	void add_function(const std::string& pName, Tret (* mFunction)(Tparams...))
@@ -96,25 +112,31 @@ public:
 	template<typename T>
 	void create_object(const std::string& pName, bool pAll_floats = false)
 	{
-		mEngine->RegisterObjectType(pName.c_str()
+		const int r = mEngine->RegisterObjectType(pName.c_str()
 			, sizeof(T)
 			, AS::asOBJ_VALUE | AS::asGetTypeTraits<T>() | (pAll_floats ? AS::asOBJ_APP_CLASS_ALLFLOATS : 0));
-		mEngine->RegisterObjectBehaviour(pName.c_str(), AS::asBEHAVE_CONSTRUCT, "void f()"
+		assert(r >= 0);
+		
+		const int r1 = mEngine->RegisterObjectBehaviour(pName.c_str(), AS::asBEHAVE_CONSTRUCT, "void f()"
 			, AS::asFUNCTION(script_system::script_default_constructor<T>)
 			, AS::asCALL_CDECL_OBJLAST);
-		mEngine->RegisterObjectBehaviour(pName.c_str(), AS::asBEHAVE_DESTRUCT, "void f()"
+		assert(r1 >= 0);
+
+		const int r2 = mEngine->RegisterObjectBehaviour(pName.c_str(), AS::asBEHAVE_DESTRUCT, "void f()"
 			, AS::asFUNCTION(script_system::script_default_deconstructor<T>)
 			, AS::asCALL_CDECL_OBJLAST);
+		assert(r2 >= 0);
 	}
 
 	template<typename Tclass, typename Tret, typename...Tparams>
 	void add_method(const std::string& pObject, const std::string& pName, Tret(Tclass::*mFunction)(Tparams...))
 	{
-		std::string declaration = util::AS_create_function_declaration<Tret, Tparams...>(pName);
+		const std::string declaration = util::AS_create_function_declaration<Tret, Tparams...>(pName);
 
-		mEngine->RegisterObjectMethod(pObject.c_str(), declaration.c_str()
+		const int r = mEngine->RegisterObjectMethod(pObject.c_str(), declaration.c_str()
 			, AS::asSMethodPtr<sizeof(void (Tclass::*)())>::Convert(mFunction)
 			, AS::asCALL_THISCALL);
+		assert(r >= 0);
 	}
 
 	// Const method object binding
@@ -123,9 +145,10 @@ public:
 	{
 		const std::string declaration = util::AS_create_function_declaration<Tret, Tparams...>(pName) + " const";
 
-		mEngine->RegisterObjectMethod(pObject.c_str(), declaration.c_str()
+		const int r = mEngine->RegisterObjectMethod(pObject.c_str(), declaration.c_str()
 			, AS::asSMethodPtr<sizeof(void (Tclass::*)())>::Convert(mFunction)
 			, AS::asCALL_THISCALL);
+		assert(r >= 0);
 	}
 
 	template<typename Tclass, typename Tmember>
@@ -133,7 +156,8 @@ public:
 	{
 		const size_t member_offset = util::data_member_offset(pMember);
 		const std::string declaration = util::AS_type_to_string<Tmember>().string() + " " + pName;
-		mEngine->RegisterObjectProperty(pObject.c_str(), declaration.c_str(), member_offset);
+		const int r = mEngine->RegisterObjectProperty(pObject.c_str(), declaration.c_str(), member_offset);
+		assert(r >= 0);
 	}
 
 	template<typename Tclass, typename...Tparams>
@@ -141,9 +165,10 @@ public:
 	{
 		const std::string declaration = util::AS_create_function_declaration<void, Tparams...>("f");
 
-		mEngine->RegisterObjectBehaviour(pObject.c_str(), AS::asBEHAVE_CONSTRUCT, declaration.c_str()
+		const int r = mEngine->RegisterObjectBehaviour(pObject.c_str(), AS::asBEHAVE_CONSTRUCT, declaration.c_str()
 			, AS::asFunctionPtr(script_system::script_constructor<Tclass, Tparams...>)
 			, AS::asCALL_CDECL_OBJFIRST);
+		assert(r >= 0);
 	}
 
 	void abort_all();

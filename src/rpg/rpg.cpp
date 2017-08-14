@@ -1818,7 +1818,14 @@ void scenes_directory::set_script_system(script_system & pScript)
 terminal_gui::terminal_gui()
 {
 	mEb_input = std::make_shared<tgui::EditBox>();
+	mEb_input->setSize(400, 25);
 	mEb_input->hide();
+
+	mLb_log = std::make_shared<tgui::Label>();
+	mLb_log->setTextSize(10);
+	mLb_log->setTextColor({ 100, 255, 100, 255 });
+	mLb_log->getRenderer()->setBackgroundColor({ 0, 0, 0, 180 });
+	mLb_log->hide();
 }
 
 void terminal_gui::set_terminal_system(engine::terminal_system & pTerminal_system)
@@ -1839,6 +1846,8 @@ void terminal_gui::set_terminal_system(engine::terminal_system & pTerminal_syste
 		if (mHistory.empty() || mHistory.back() != pText)
 			mHistory.push_back(std::string(pText));
 		mCurrent_history_entry = mHistory.size();
+
+		refresh_log();
 	});
 }
 
@@ -1846,6 +1855,24 @@ void terminal_gui::load_gui(engine::renderer & pR)
 {
 	mEb_input->setPosition("&.width - width", "&.height - height");
 	pR.get_tgui().add(mEb_input);
+	mLb_log->setPosition(tgui::bindLeft(mEb_input), 0);
+	mLb_log->setSize(tgui::bindWidth(mEb_input), tgui::bindTop(mEb_input));
+	pR.get_tgui().add(mLb_log);
+}
+
+inline std::string snip_bottom_string(const std::string& pStr, size_t pLines)
+{
+	size_t lines = 0;
+	size_t i = 1;
+	for (; i < pStr.size(); i++)
+	{
+		if (pStr[pStr.size() - i] == '\n')
+			++lines;
+
+		if (lines == pLines)
+			break;
+	}
+	return std::string(pStr.end() - i, pStr.end());
 }
 
 void terminal_gui::update(engine::renderer& pR)
@@ -1854,12 +1881,17 @@ void terminal_gui::update(engine::renderer& pR)
 		&& pR.is_key_pressed(engine::renderer::key_type::T, true))
 	{
 		if (mEb_input->isVisible())
+		{
 			mEb_input->hide();
+			mLb_log->hide();
+		}
 		else
 		{
 			mEb_input->show();
+			mLb_log->show();
 			mEb_input->focus();
 		}
+		refresh_log();
 	}
 
 	if (mEb_input->isFocused())
@@ -1881,5 +1913,21 @@ void terminal_gui::update(engine::renderer& pR)
 				mEb_input->setText(mHistory[mCurrent_history_entry]);
 		}
 	}
+
+	if (mRefresh_timer.is_reached())
+		refresh_log();
+}
+void terminal_gui::refresh_log()
+{
+	if (!mLb_log->isVisible())
+		return;
+	mRefresh_timer.start(0.1f);
+
+	// Estimate
+	const size_t lines = (size_t)(mLb_log->getSize().y / ((float)mLb_log->getTextSize() + 10));
+	const std::string log = snip_bottom_string(logger::get_log(), lines);
+
+	if (log != mLb_log->getText())
+		mLb_log->setText(log);
 }
 #endif

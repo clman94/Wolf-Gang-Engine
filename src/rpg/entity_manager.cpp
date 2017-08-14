@@ -33,24 +33,11 @@ void entity_manager::register_entity_type(script_system & pScript)
 
 	pScript.create_object<entity_reference>("entity");
 
-	// Assignments
-	engine.RegisterObjectMethod("entity", "entity& opAssign(const entity&in)"
-		, AS::asMETHODPR(entity_reference, operator=, (const entity_reference&), entity_reference&)
-		, AS::asCALL_THISCALL);
+	pScript.add_method<entity_reference, entity_reference&, const entity_reference&>("entity", operator_method::assign, &entity_reference::operator=);
+	pScript.add_method<entity_reference, bool, const entity_reference&>             ("entity", operator_method::equals, &entity_reference::operator==);
 
-	engine.RegisterObjectMethod("entity", "bool opEquals(const entity&in) const"
-		, AS::asMETHODPR(entity_reference, operator==, (const entity_reference&) const, bool)
-		, AS::asCALL_THISCALL);
-
-
-	// is_enabled
-	engine.RegisterObjectMethod("entity", "bool is_valid() const"
-		, AS::asMETHOD(entity_reference, is_valid)
-		, AS::asCALL_THISCALL);
-
-	engine.RegisterObjectMethod("entity", "void release()"
-		, AS::asMETHOD(entity_reference, reset)
-		, AS::asCALL_THISCALL);
+	pScript.add_method("entity", "is_valid", &entity_reference::is_valid);
+	pScript.add_method("entity", "release", &entity_reference::reset);
 }
 
 bool entity_manager::check_entity(entity_reference & e)

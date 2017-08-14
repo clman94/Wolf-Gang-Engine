@@ -6,6 +6,7 @@
 
 namespace logger {
 
+static std::string mLog;
 static std::ofstream mLog_file;
 static size_t mSub_routine_level;
 
@@ -38,6 +39,8 @@ void print(level pType, const std::string& pMessage)
 	for (size_t i = 0; i < mSub_routine_level; i++)
 		message += "| ";
 	message += pMessage + "\n";
+
+	mLog += message;
 
 	if (mLog_file)
 	{
@@ -78,6 +81,11 @@ void warning(const std::string& pMessage)
 void info(const std::string& pMessage)
 {
 	print(level::info, pMessage);
+}
+
+const std::string & get_log()
+{
+	return mLog;
 }
 
 void start_sub_routine()

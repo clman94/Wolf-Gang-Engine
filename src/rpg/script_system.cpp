@@ -130,7 +130,7 @@ void script_system::timeout_callback(AS::asIScriptContext *ctx)
 	{
 		logger::error("Script running too long. (Infinite loop?)");
 		ctx->Abort();
-		logger::info("In script '" + std::string(ctx->GetFunction()->GetModuleName()) + "' :");
+		logger::info("In file '" + std::string(ctx->GetFunction()->GetModuleName()) + "' :");
 		logger::info("  Script aborted at line " + std::to_string(ctx->GetLineNumber())
 			+ " in function '" + std::string(ctx->GetFunction()->GetDeclaration(true, true)) + "'");
 	}
@@ -174,45 +174,19 @@ script_system::register_vector_type()
 	add_constructor<engine::fvector, float, float>("vec");
 	add_constructor<engine::fvector, const engine::fvector&>("vec");
 
-	// Assignments
-	mEngine->RegisterObjectMethod("vec", "vec& opAssign(const vec &in)"
-		, asMETHODPR(engine::fvector, operator=, (const engine::fvector&), engine::fvector&)
-		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "vec& opAddAssign(const vec &in)"
-		, asMETHODPR(engine::fvector, operator+=, (const engine::fvector&), engine::fvector&)
-		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "vec& opSubAssign(const vec &in)"
-		, asMETHODPR(engine::fvector, operator-=, (const engine::fvector&), engine::fvector&)
-		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "vec& opMulAssign(const vec &in)"
-		, asMETHODPR(engine::fvector, operator*=, (const engine::fvector&), engine::fvector&)
-		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "vec& opMulAssign(float)"
-		, asMETHODPR(engine::fvector, operator*=, (float), engine::fvector&)
-		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "vec& opDivAssign(float)"
-		, asMETHODPR(engine::fvector, operator/=, (float), engine::fvector&)
-		, asCALL_THISCALL);
+	add_method<engine::fvector, engine::fvector&, const engine::fvector&>("vec", operator_method::assign, &engine::fvector::operator=);
+	add_method<engine::fvector, engine::fvector&, const engine::fvector&>("vec", operator_method::additive_assign, &engine::fvector::operator+=);
+	add_method<engine::fvector, engine::fvector&, const engine::fvector&>("vec", operator_method::subtractive_assign, &engine::fvector::operator-=);
+	add_method<engine::fvector, engine::fvector&, const engine::fvector&>("vec", operator_method::multiplicative_assign, &engine::fvector::operator*=);
+	add_method<engine::fvector, engine::fvector&, float>                 ("vec", operator_method::multiplicative_assign, &engine::fvector::operator*=);
+	add_method<engine::fvector, engine::fvector&, float>                 ("vec", operator_method::dividing_assign, &engine::fvector::operator/=);
 
-	// Arithmic
-	mEngine->RegisterObjectMethod("vec", "vec opAdd(const vec &in) const"
-		, asMETHODPR(engine::fvector, operator+, (const engine::fvector&) const, engine::fvector)
-		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "vec opSub(const vec &in) const"
-		, asMETHODPR(engine::fvector, operator-, (const engine::fvector&) const, engine::fvector)
-		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "vec opMul(const vec &in) const"
-		, asMETHODPR(engine::fvector, operator*, (const engine::fvector&) const, engine::fvector)
-		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "vec opMul(float) const"
-		, asMETHODPR(engine::fvector, operator*, (float) const, engine::fvector)
-		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "vec opDiv(float) const"
-		, asMETHODPR(engine::fvector, operator/, (float) const, engine::fvector)
-		, asCALL_THISCALL);
-	mEngine->RegisterObjectMethod("vec", "vec opNeg() const"
-		, asMETHODPR(engine::fvector, operator-, () const, engine::fvector)
-		, asCALL_THISCALL);
+	add_method<engine::fvector, engine::fvector, const engine::fvector&>("vec", operator_method::add, &engine::fvector::operator+);
+	add_method<engine::fvector, engine::fvector, const engine::fvector&>("vec", operator_method::subtract, &engine::fvector::operator-);
+	add_method<engine::fvector, engine::fvector, const engine::fvector&>("vec", operator_method::multiply, &engine::fvector::operator*);
+	add_method<engine::fvector, engine::fvector, float>                 ("vec", operator_method::multiply, &engine::fvector::operator*);
+	add_method<engine::fvector, engine::fvector, float>                 ("vec", operator_method::divide, &engine::fvector::operator/);
+	add_method<engine::fvector, engine::fvector>                        ("vec", operator_method::negative, &engine::fvector::operator-);
 
 	add_method<engine::fvector, float>                        ("vec", "distance" , &engine::fvector::distance);
 	add_method<engine::fvector, float, const engine::fvector&>("vec", "distance" , &engine::fvector::distance);

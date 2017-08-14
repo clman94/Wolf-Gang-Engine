@@ -25,6 +25,8 @@ void warning(const std::string& pMessage);
 
 void info(const std::string& pMessage);
 
+const std::string& get_log();
+
 class sub_routine
 {
 public:

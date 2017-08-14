@@ -53,9 +53,11 @@ private:
 	size_t mCurrent_history_entry;
 	std::vector<std::string> mHistory;
 	tgui::EditBox::Ptr mEb_input;
+	tgui::Label::Ptr mLb_log;
+	engine::timer mRefresh_timer;
+
+	void refresh_log();
 };
-
-
 
 class scenes_directory :
 	public engine::resource_directory
