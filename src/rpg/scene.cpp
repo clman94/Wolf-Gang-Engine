@@ -184,7 +184,7 @@ bool scene::load_scene(std::string pName, std::string pDoor)
 	auto door = mCollision_system.get_door_entry(pDoor);
 	if (!door)
 	{
-		logger::warning("Enable to find door '" + pDoor + "'");
+		logger::warning("Unable to find door '" + pDoor + "'");
 		return false;
 	}
 	mPlayer.set_direction(character_entity::vector_direction(door->get_offset()));
@@ -282,6 +282,8 @@ void scene::load_script_interface(script_system& pScript)
 #ifndef LOCKED_RELEASE_MODE
 void scene::load_terminal_interface(engine::terminal_system & pTerminal)
 {
+	mVisualizer.load_terminal_interface(pTerminal);
+
 	mTerminal_cmd_group = std::make_shared<engine::terminal_command_group>();
 
 	mTerminal_cmd_group->set_root_command("scene");
@@ -322,6 +324,7 @@ void scene::load_terminal_interface(engine::terminal_system & pTerminal)
 	}, "<Scene Name> - Create a new scene");
 
 	pTerminal.add_group(mTerminal_cmd_group);
+
 }
 #endif
 
@@ -550,6 +553,32 @@ void scene_visualizer::visualize_entities(bool pVisualize)
 void scene_visualizer::visualize_collision(bool pVisualize)
 {
 	mVisualize_collision = pVisualize;
+}
+
+void scene_visualizer::load_terminal_interface(engine::terminal_system & pTerminal_system)
+{
+	mGroup = std::make_shared<engine::terminal_command_group>();
+	mGroup->set_root_command("visualize");
+
+	mGroup->add_command("collision", [&](const engine::terminal_arglist& pArgs)->bool
+	{
+		if (pArgs.size() >= 1 && pArgs[0].get_raw() == "off")
+			mVisualize_collision = false;
+		else
+			mVisualize_collision = true;
+		return true;
+	}, "[off] - Visualize collision");
+
+	mGroup->add_command("entities", [&](const engine::terminal_arglist& pArgs)->bool
+	{
+		if (pArgs.size() >= 1 && pArgs[0].get_raw() == "off")
+			mVisualize_entities = false;
+		else
+			mVisualize_entities = true;
+		return true;
+	}, "[off] - Visualize entities");
+
+	pTerminal_system.add_group(mGroup);
 }
 
 int scene_visualizer::draw(engine::renderer & pR)

@@ -59,6 +59,10 @@ public:
 	std::string generate_help() const;
 	std::string generate_help(std::string pCommand) const;
 
+	std::vector<std::string> autocomplete(const std::string& pStr) const;
+
+	std::vector<std::string> get_list() const;
+
 private:
 	std::string mRoot_command;
 	bool mIs_enabled;
@@ -80,6 +84,8 @@ public:
 	void add_group(std::shared_ptr<terminal_command_group> pGroup);
 
 	std::string generate_help() const;
+
+	std::vector<std::string> autocomplete(const std::string& pStr) const;
 
 private:
 	std::vector<std::weak_ptr<terminal_command_group>> pGroups;

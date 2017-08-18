@@ -70,7 +70,7 @@ void collision_system::register_collision_type(script_system& pScript)
 {
 	pScript.set_namespace("collision");
 
-	pScript.create_object<collision_box::ptr>("box");
+	pScript.add_object<collision_box::ptr>("box");
 	pScript.add_method<collision_box::ptr, collision_box::ptr&, const collision_box::ptr&>("box", "opAssign", &collision_box::ptr::operator=);
 
 	pScript.reset_namespace();

@@ -455,6 +455,8 @@ void game::load_icon_pack()
 #ifndef LOCKED_RELEASE_MODE
 void game::load_terminal_interface(engine::terminal_system& pTerminal)
 {
+	mScene.load_terminal_interface(pTerminal);
+
 	mGroup_flags = std::make_shared<engine::terminal_command_group>();
 	mGroup_flags->set_root_command("flags");
 	mGroup_flags->add_command("set",
@@ -1826,14 +1828,19 @@ terminal_gui::terminal_gui()
 	mLb_log->setTextColor({ 100, 255, 100, 255 });
 	mLb_log->getRenderer()->setBackgroundColor({ 0, 0, 0, 180 });
 	mLb_log->hide();
+
+	mLb_autocomplete = std::make_shared<tgui::ListBox>();
+	mLb_autocomplete->setTextSize(10);
+	mLb_autocomplete->hide();
 }
 
 void terminal_gui::set_terminal_system(engine::terminal_system & pTerminal_system)
 {
+	mTerminal_system = &pTerminal_system;
 	mEb_input->connect("TextChanged",
 		[&]()
 	{
-		
+		refresh_autocomplete();
 	});
 	mEb_input->connect("ReturnKeyPressed",
 		[&](sf::String pText)
@@ -1846,8 +1853,15 @@ void terminal_gui::set_terminal_system(engine::terminal_system & pTerminal_syste
 		if (mHistory.empty() || mHistory.back() != pText)
 			mHistory.push_back(std::string(pText));
 		mCurrent_history_entry = mHistory.size();
-
 		refresh_log();
+		mLb_autocomplete->hide();
+	});
+
+	mLb_autocomplete->connect("itemselected", [&](sf::String pItem)
+	{
+		mEb_input->setText(pItem);
+		mLb_autocomplete->hide();
+		mEb_input->focus();
 	});
 }
 
@@ -1855,9 +1869,14 @@ void terminal_gui::load_gui(engine::renderer & pR)
 {
 	mEb_input->setPosition("&.width - width", "&.height - height");
 	pR.get_tgui().add(mEb_input);
+
 	mLb_log->setPosition(tgui::bindLeft(mEb_input), 0);
 	mLb_log->setSize(tgui::bindWidth(mEb_input), tgui::bindTop(mEb_input));
 	pR.get_tgui().add(mLb_log);
+
+	mLb_autocomplete->setPosition(tgui::bindLeft(mEb_input), tgui::bindTop(mEb_input) - 200);
+	mLb_autocomplete->setSize(tgui::bindWidth(mEb_input), 200);
+	pR.get_tgui().add(mLb_autocomplete);
 }
 
 inline std::string snip_bottom_string(const std::string& pStr, size_t pLines)
@@ -1884,6 +1903,7 @@ void terminal_gui::update(engine::renderer& pR)
 		{
 			mEb_input->hide();
 			mLb_log->hide();
+			mLb_autocomplete->hide();
 		}
 		else
 		{
@@ -1917,6 +1937,22 @@ void terminal_gui::update(engine::renderer& pR)
 	if (mRefresh_timer.is_reached())
 		refresh_log();
 }
+
+void terminal_gui::refresh_autocomplete()
+{
+	mLb_autocomplete->removeAllItems();
+	auto hits = mTerminal_system->autocomplete(mEb_input->getText());
+	if (hits.empty())
+	{
+		mLb_autocomplete->hide();
+		return;
+	}
+	mLb_autocomplete->show();
+
+	for (auto& i : hits)
+		mLb_autocomplete->addItem(i);
+}
+
 void terminal_gui::refresh_log()
 {
 	if (!mLb_log->isVisible())

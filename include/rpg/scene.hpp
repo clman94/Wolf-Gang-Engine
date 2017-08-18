@@ -94,8 +94,12 @@ public:
 	void visualize_entities(bool pVisualize);
 	void visualize_collision(bool pVisualize);
 
+	void load_terminal_interface(engine::terminal_system& pTerminal_system);
+
 	int draw(engine::renderer& pR);
 private:
+	std::shared_ptr<engine::terminal_command_group> mGroup;
+
 	void visualize_entities(engine::renderer& pR);
 	void visualize_collision(engine::renderer& pR);
 

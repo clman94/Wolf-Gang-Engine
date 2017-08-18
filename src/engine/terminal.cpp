@@ -4,6 +4,7 @@
 #include <iostream>
 #include <memory>
 #include <functional>
+#include <algorithm>
 #include <map>
 
 #include <engine/terminal.hpp>
@@ -20,6 +21,20 @@ static bool is_whitespace(char c)
 	case '\n':
 		return true;
 	}
+	return false;
+}
+
+static bool compare_partial_string(const std::string& pStr1, const std::string& pStr2)
+{
+	// Exact
+	if (pStr1 == pStr2)
+		return true;
+
+	// Partial
+	else if (pStr1.size() > pStr2.size()
+		&& pStr1.substr(0, pStr2.size()) == pStr2)
+		return true;
+
 	return false;
 }
 
@@ -118,6 +133,55 @@ std::string terminal_system::generate_help() const
 	return retval;
 }
 
+std::vector<std::string> engine::terminal_system::autocomplete(const std::string & pStr) const
+{
+	std::vector<std::string> ret;
+
+	const std::vector<std::string> params = split_string(pStr);
+	if (params.empty())
+		return{};
+
+	for (auto& i : pGroups)
+	{
+		std::shared_ptr<terminal_command_group> group(i);
+
+		// Autocomplete global group
+		if (group->get_root_command().empty())
+		{
+			std::vector<std::string> group_hits = group->autocomplete(params[0]);
+			for (auto& j : group_hits)
+				ret.push_back(group->get_root_command() + " " + j);
+		}
+		else
+		{
+			// Autocomplete root command
+			if (params.size() == 1
+				&& compare_partial_string(group->get_root_command(), params[0]))
+				ret.push_back(group->get_root_command());
+
+			// Autocomplete subcommand 
+			if (params.size() == 2
+				&& group->get_root_command() == params[0])
+			{
+				std::vector<std::string> group_hits = group->autocomplete(params[1]);
+				for (auto& j : group_hits)
+					ret.push_back(group->get_root_command() + " " + j);
+			}
+
+			// List all sub commands
+			else if (group->get_root_command() == params[0]
+				&& pStr.back() == ' ')
+			{
+				for (auto& j : group->get_list())
+					ret.push_back(group->get_root_command() + " " + j);
+			}
+		}
+	}
+	std::sort(ret.begin(), ret.end());
+	return ret;
+}
+
+
 void terminal_command_group::add_command(const std::string & pCommand, terminal_function pFunction, const std::string& pHelp)
 {
 	// TODO: possibly check if pName has whitespace
@@ -132,7 +196,7 @@ void terminal_command_group::add_command(const std::string & pCommand, terminal_
 		}
 	}
 
-	// Ccreate new one
+	// Create new one
 	entry nentry;
 	nentry.command = pCommand;
 	nentry.function = pFunction;
@@ -227,6 +291,25 @@ std::string terminal_command_group::generate_help(std::string pCommand) const
 		}
 	}
 	return retval;
+}
+
+std::vector<std::string> terminal_command_group::autocomplete(const std::string & pStr) const
+{
+	std::vector<std::string> ret;
+	for (auto& i : mCommand_entries)
+	{
+		if (compare_partial_string(i.command, pStr))
+			ret.push_back(i.command);
+	}
+	return ret;
+}
+
+std::vector<std::string> engine::terminal_command_group::get_list() const
+{
+	std::vector<std::string> ret;
+	for (auto& i : mCommand_entries)
+		ret.push_back(i.command);
+	return ret;
 }
 
 terminal_argument::terminal_argument()

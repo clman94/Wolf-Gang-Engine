@@ -50,11 +50,15 @@ public:
 	void update(engine::renderer& pR);
 
 private:
+	engine::terminal_system* mTerminal_system;
 	size_t mCurrent_history_entry;
 	std::vector<std::string> mHistory;
 	tgui::EditBox::Ptr mEb_input;
 	tgui::Label::Ptr mLb_log;
 	engine::timer mRefresh_timer;
+	tgui::ListBox::Ptr mLb_autocomplete;
+
+	void refresh_autocomplete();
 
 	void refresh_log();
 };

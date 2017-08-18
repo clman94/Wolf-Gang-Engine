@@ -27,8 +27,9 @@
 namespace engine
 {
 
-struct color
+class color
 {
+public:
 	color_t r, g, b, a;
 	color(
 		color_t pR = 0,
@@ -36,7 +37,10 @@ struct color
 		color_t pB = 0,
 		color_t pA = 255)
 		: r(pR), g(pG), b(pB), a(pA)
-	{}
+	{
+		default_mask();
+	}
+
 #ifdef SFML_COLOR_HPP
 	operator sf::Color() const
 	{
@@ -44,6 +48,85 @@ struct color
 	}
 #endif // SFML_COLOR_HPP
 
+	color& operator+=(const color& pColor)
+	{
+		if (!mask[0]) r += pColor.r;
+		if (!mask[1]) g += pColor.g;
+		if (!mask[2]) b += pColor.b;
+		if (!mask[3]) a += pColor.a;
+		return *this;
+	}
+
+	color& operator-=(const color& pColor)
+	{
+		if (!mask[0]) r -= pColor.r;
+		if (!mask[1]) g -= pColor.g;
+		if (!mask[2]) b -= pColor.b;
+		if (!mask[3]) a -= pColor.a;
+		return *this;
+	}
+
+	color& operator*=(const color& pColor)
+	{
+		if (!mask[0]) r *= pColor.r;
+		if (!mask[1]) g *= pColor.g;
+		if (!mask[2]) b *= pColor.b;
+		if (!mask[3]) a *= pColor.a;
+		return *this;
+	}
+
+	color& operator/=(const color& pColor)
+	{
+		if (!mask[0]) r /= pColor.r;
+		if (!mask[1]) g /= pColor.g;
+		if (!mask[2]) b /= pColor.b;
+		if (!mask[3]) a /= pColor.a;
+		return *this;
+	}
+
+	color operator+(const color& pColor)
+	{
+		color ret(*this);
+		ret += pColor;
+		return ret;
+	}
+
+	color operator-(const color& pColor)
+	{
+		color ret(*this);
+		ret -= pColor;
+		return ret;
+	}
+
+	color operator*(const color& pColor)
+	{
+		color ret(*this);
+		ret *= pColor;
+		return ret;
+	}
+
+	color operator/(const color& pColor)
+	{
+		color ret(*this);
+		ret /= pColor;
+		return ret;
+	}
+
+	void set_mask(bool pR, bool pG, bool pB, bool pA)
+	{
+		mask[0] = pR;
+		mask[1] = pG;
+		mask[2] = pB;
+		mask[3] = pA;
+	}
+
+private:
+	bool mask[4];
+
+	void default_mask()
+	{
+		set_mask(false, false, false, true);
+	}
 };
 
 class render_object;

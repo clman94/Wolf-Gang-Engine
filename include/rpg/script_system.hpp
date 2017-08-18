@@ -110,7 +110,7 @@ public:
 	}
 
 	template<typename T>
-	void create_object(const std::string& pName, bool pAll_floats = false)
+	void add_object(const std::string& pName, bool pAll_floats = false)
 	{
 		const int r = mEngine->RegisterObjectType(pName.c_str()
 			, sizeof(T)

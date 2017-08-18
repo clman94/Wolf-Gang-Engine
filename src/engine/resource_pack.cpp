@@ -239,7 +239,10 @@ bool engine::create_resource_pack(const std::string& pSrc_directory, const std::
 	{
 		std::ifstream file_stream(i.string().c_str(), std::fstream::binary | std::fstream::ate);
 		if (!file_stream)
+		{
+			logger::error("Failed to packing file '" + i.string() + "'...");
 			continue;
+		}
 		logger::info("Packing file '" + i.string() + "'...");
 		append_stream(stream, file_stream);
 	}

@@ -170,7 +170,7 @@ void script_system::script_error_print(std::string & pMessage)
 void
 script_system::register_vector_type()
 {
-	create_object<engine::fvector>("vec", true);
+	add_object<engine::fvector>("vec", true);
 	add_constructor<engine::fvector, float, float>("vec");
 	add_constructor<engine::fvector, const engine::fvector&>("vec");
 
@@ -194,8 +194,7 @@ script_system::register_vector_type()
 	add_method<engine::fvector, float, const engine::fvector&>("vec", "manhattan", &engine::fvector::manhattan);
 
 	add_method<engine::fvector, engine::fvector&, float> ("vec", "rotate", &engine::fvector::rotate);
-	add_method<engine::fvector, engine::fvector&, const engine::fvector&, float>
-		("vec", "rotate", &engine::fvector::rotate);
+	add_method<engine::fvector, engine::fvector&, const engine::fvector&, float>("vec", "rotate", &engine::fvector::rotate);
 	add_method("vec", "normalize", &engine::fvector::normalize);
 	add_method("vec", "floor"    , &engine::fvector::floor);
 	add_method<engine::fvector, float>                        ("vec", "angle", &engine::fvector::angle);
@@ -209,7 +208,7 @@ script_system::register_vector_type()
 void script_system::register_timer_type()
 {
 	set_namespace("util");
-	create_object<engine::timer>("timer");
+	add_object<engine::timer>("timer");
 	add_method<engine::timer, void, float>("timer", "start", &engine::timer::start);
 	add_method("timer", "is_reached", &engine::timer::is_reached);
 	reset_namespace();

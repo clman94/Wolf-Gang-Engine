@@ -31,7 +31,7 @@ void entity_manager::register_entity_type(script_system & pScript)
 {
 	auto& engine = pScript.get_engine();
 
-	pScript.create_object<entity_reference>("entity");
+	pScript.add_object<entity_reference>("entity");
 
 	pScript.add_method<entity_reference, entity_reference&, const entity_reference&>("entity", operator_method::assign, &entity_reference::operator=);
 	pScript.add_method<entity_reference, bool, const entity_reference&>             ("entity", operator_method::equals, &entity_reference::operator==);
