@@ -153,6 +153,7 @@ private:
 	friend class renderer;
 };
 
+
 class renderer :
 	public util::nocopy
 {
@@ -629,7 +630,7 @@ public:
 		std::string mText;
 		std::string mMeta;
 		color       mColor;
-		uint32_t      mFormat;
+		uint32_t    mFormat;
 	};
 
 	text_format();
@@ -737,6 +738,7 @@ class animation_node :
 public:
 	animation_node();
 
+	size_t get_frame() const;
 	void set_frame(frame_t pFrame);
 	void set_animation(std::shared_ptr<const engine::animation>, bool pSwap = false);
 	bool set_animation(const std::string& pName, bool pSwap = false);

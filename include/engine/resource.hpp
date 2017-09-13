@@ -50,6 +50,7 @@ enum class resource_type
 	sound,
 	font,
 	script,
+	audio,
 };
 
 class resource_manager

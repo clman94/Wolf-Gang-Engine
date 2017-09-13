@@ -137,6 +137,7 @@ private:
 	void             script_set_animation_speed(entity_reference& e, float pSpeed);
 	float            script_get_animation_speed(entity_reference& e);
 	bool             script_is_animation_playing(entity_reference& e);
+	unsigned int     script_get_animation_frame(entity_reference& e);
 	void             script_set_atlas(entity_reference& e, const std::string& name);
 	void             script_set_rotation(entity_reference& e, float pRotation);
 	float            script_get_rotation(entity_reference& e);

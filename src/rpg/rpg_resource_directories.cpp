@@ -217,3 +217,49 @@ void soundfx_directory::set_path(const std::string& pPath)
 {
 	mPath = pPath;
 }
+
+audio_directory::audio_directory()
+{
+	mPath = "audio";
+}
+
+bool audio_directory::load(engine::resource_manager & pResource_manager)
+{
+	if (!engine::fs::exists(mPath))
+	{
+		logger::error("Audio directory does not exist");
+		return false;
+	}
+
+	for (auto& i : engine::fs::recursive_directory_iterator(mPath))
+	{
+		auto& sound_path = i.path();
+		if (supported_sound_extensions.find(sound_path.extension().string()) != supported_sound_extensions.end())
+		{
+			std::shared_ptr<engine::sound_file> buffer(new engine::sound_file());
+			buffer->set_filepath(sound_path.string());
+			pResource_manager.add_resource(engine::resource_type::audio, sound_path.stem().string(), buffer);
+		}
+	}
+	return true;
+}
+
+bool audio_directory::load_pack(engine::resource_manager & pResource_manager, engine::pack_stream_factory & pPack)
+{
+	auto file_list = pPack.recursive_directory(mPath);
+	for (auto i : file_list)
+	{
+		if (supported_sound_extensions.find(i.extension()) != supported_sound_extensions.end())
+		{
+			std::shared_ptr<engine::sound_file> buffer(new engine::sound_file());
+			buffer->set_filepath(i.string());
+			pResource_manager.add_resource(engine::resource_type::audio, i.stem(), buffer);
+		}
+	}
+	return true;
+}
+
+void audio_directory::set_path(const std::string & pPath)
+{
+	mPath = pPath;
+}

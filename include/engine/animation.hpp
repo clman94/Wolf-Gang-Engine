@@ -46,6 +46,8 @@ public:
 
 	frect full_region() const;
 
+	frame_t calculate_frame(frame_t pCount) const;
+
 private:
 	struct sequence_frame
 	{
@@ -53,11 +55,10 @@ private:
 		frame_t from;
 	};
 	std::vector<sequence_frame> mSequence;
-	frect               mFrame_rect;
+	frect                       mFrame_rect;
 	frame_t                     mDefault_frame;
 	frame_t                     mFrame_count;
 	loop_type                   mLoop;
-	frame_t calculate_frame(frame_t pCount) const;
 };
 
 

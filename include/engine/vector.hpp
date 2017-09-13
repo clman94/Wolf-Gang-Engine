@@ -182,6 +182,12 @@ struct vector
 		return *this;
 	}
 
+	template<typename T1>
+	bool operator==(const vector<T1>& R) const
+	{
+		return (x == R.x) && (y == R.y);
+	}
+
 	vector& floor()
 	{
 		if (!std::is_floating_point<T>::value)
@@ -279,11 +285,7 @@ bool operator!=(const vector<T1>& L, const vector<T2>& R)
 	return (L.x != R.x) || (L.y != R.y);
 }
 
-template<typename T1, typename T2>
-bool operator==(const vector<T1>& L, const vector<T2>& R)
-{
-	return (L.x == R.x) && (L.y == R.y);
-}
+
 
 
 typedef vector<int>    ivector;

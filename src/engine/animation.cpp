@@ -119,6 +119,13 @@ animation_node::animation_node()
 	mInterval = 1;
 }
 
+size_t engine::animation_node::get_frame() const
+{
+	if (mAnimation->get_frame_count() == 0)
+		return 0;
+	return mAnimation->calculate_frame(mFrame);
+}
+
 void animation_node::set_frame(frame_t pFrame)
 {
 	mFrame = pFrame;

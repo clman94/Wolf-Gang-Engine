@@ -691,6 +691,11 @@ bool game::load(engine::fs::path pData_dir)
 	font_dir->set_path(settings.get_fonts_path());
 	mResource_manager.add_directory(font_dir);
 
+	// Setup audio directory
+	std::shared_ptr<audio_directory> audio_dir(std::make_shared<audio_directory>());
+	audio_dir->set_path("data/audio");
+	mResource_manager.add_directory(audio_dir);
+
 	if (!mResource_manager.reload_directories()) // Load the resources from the directories
 	{
 		logger::error("Resources failed to load");

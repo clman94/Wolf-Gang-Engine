@@ -300,6 +300,18 @@ bool entity_manager::script_is_animation_playing(entity_reference & e)
 	return se->mSprite.is_playing();
 }
 
+unsigned int rpg::entity_manager::script_get_animation_frame(entity_reference & e)
+{
+	if (!check_entity(e)) return false;
+	auto se = dynamic_cast<sprite_entity*>(e.get());
+	if (!se)
+	{
+		logger::error("Entity is not sprite-based");
+		return false;
+	}
+	return se->mSprite.get_frame();
+}
+
 void entity_manager::script_set_atlas(entity_reference& e, const std::string & name)
 {
 	if (!check_entity(e)) return;
@@ -694,6 +706,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("is_playing",                        &entity_manager::script_is_animation_playing, this);
 	pScript.add_function("set_speed",                         &entity_manager::script_set_animation_speed, this);
 	pScript.add_function("get_speed",                         &entity_manager::script_get_animation_speed, this);
+	pScript.add_function("get_frame",                         &entity_manager::script_get_animation_frame, this);
 	pScript.reset_namespace();
 
 	pScript.add_function("set_scale",                         &entity_manager::script_set_scale, this);

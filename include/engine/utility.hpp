@@ -14,6 +14,7 @@
 namespace util
 {
 
+// Inspired from angelscript just without the nasty macros
 template<typename Tclass, typename Tmember>
 inline size_t data_member_offset(Tmember Tclass::*pMember)
 {
@@ -100,7 +101,8 @@ public:
 
 	optional(const optional& pOptional)
 	{
-		if (pOptional.has_value())
+		mHas_value = pOptional.has_value();
+		if (mHas_value)
 			mData = T(*pOptional);
 	}
 
@@ -270,7 +272,6 @@ private:
 };
 
 /// Floor a value to a specific alignment.
-/// Ex. 
 template<typename T>
 inline T floor_align(T pVal, T pAlign)
 {
@@ -299,7 +300,7 @@ inline std::string safe_string(const char* str)
 template<typename T>
 inline T to_numeral(const std::string& str, size_t *i = nullptr)
 {
-	static_assert(std::is_arithmetic<T>::value, "Requires arithmetic type");
+	static_assert("Unsupported type");
 	return 0;
 }
 

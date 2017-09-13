@@ -159,21 +159,23 @@ std::vector<std::string> engine::terminal_system::autocomplete(const std::string
 				&& compare_partial_string(group->get_root_command(), params[0]))
 				ret.push_back(group->get_root_command());
 
-			// Autocomplete subcommand 
-			if (params.size() == 2
-				&& group->get_root_command() == params[0])
+			// Group matches, check subcommand
+			if (group->get_root_command() == params[0])
 			{
-				std::vector<std::string> group_hits = group->autocomplete(params[1]);
-				for (auto& j : group_hits)
-					ret.push_back(group->get_root_command() + " " + j);
-			}
+				// Autocomplete subcommand 
+				if (params.size() == 2)
+				{
+					std::vector<std::string> group_hits = group->autocomplete(params[1]);
+					for (auto& j : group_hits)
+						ret.push_back(group->get_root_command() + " " + j);
+				}
 
-			// List all sub commands
-			else if (group->get_root_command() == params[0]
-				&& pStr.back() == ' ')
-			{
-				for (auto& j : group->get_list())
-					ret.push_back(group->get_root_command() + " " + j);
+				// List all sub commands
+				else if (pStr.back() == ' ')
+				{
+					for (auto& j : group->get_list())
+						ret.push_back(group->get_root_command() + " " + j);
+				}
 			}
 		}
 	}

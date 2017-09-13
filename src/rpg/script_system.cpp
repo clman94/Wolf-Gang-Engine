@@ -187,6 +187,7 @@ script_system::register_vector_type()
 	add_method<engine::fvector, engine::fvector, float>                 ("vec", operator_method::multiply, &engine::fvector::operator*);
 	add_method<engine::fvector, engine::fvector, float>                 ("vec", operator_method::divide, &engine::fvector::operator/);
 	add_method<engine::fvector, engine::fvector>                        ("vec", operator_method::negative, &engine::fvector::operator-);
+	add_method<engine::fvector>                                         ("vec", operator_method::equals, &engine::fvector::operator==<float>);
 
 	add_method<engine::fvector, float>                        ("vec", "distance" , &engine::fvector::distance);
 	add_method<engine::fvector, float, const engine::fvector&>("vec", "distance" , &engine::fvector::distance);
@@ -363,4 +364,5 @@ bool script_system::is_executing()
 {
 	return mCurrect_thread_context != nullptr;
 }
+
 

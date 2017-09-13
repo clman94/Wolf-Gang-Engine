@@ -435,9 +435,9 @@ int editor_gui::draw(engine::renderer& pR)
 		position += ", ";
 		position += std::to_string(static_cast<int>(mouse_position_exact.y));
 		position += ")\n(";
-		position += std::to_string(static_cast<int>(std::floor(mouse_position.x)));
+		position += std::to_string(mouse_position.x);
 		position += ", ";
-		position += std::to_string(static_cast<int>(std::floor(mouse_position.y)));
+		position += std::to_string(mouse_position.y);
 		position += ")";
 		mLb_mouse->setText(position);
 

@@ -157,10 +157,11 @@ private:
 
 inline bool append_stream(std::ostream& pDest, std::istream& pSrc)
 {
-	const int max_read = 1024;
+	const int max_read = 4096;
 
 	auto end = pSrc.tellg();
 	pSrc.seekg(0);
+
 	while (pSrc.good() && pDest)
 	{
 		char data[max_read];
@@ -240,13 +241,12 @@ bool engine::create_resource_pack(const std::string& pSrc_directory, const std::
 		std::ifstream file_stream(i.string().c_str(), std::fstream::binary | std::fstream::ate);
 		if (!file_stream)
 		{
-			logger::error("Failed to packing file '" + i.string() + "'...");
+			logger::error("Failed to pack file '" + i.string() + "'...");
 			continue;
 		}
 		logger::info("Packing file '" + i.string() + "'...");
 		append_stream(stream, file_stream);
 	}
-
 	return true;
 }
 
@@ -353,10 +353,9 @@ std::string encoded_path::string(char pSeperator) const
 std::string encoded_path::stem() const
 {
 	const std::string name = filename();
-	auto end = name.begin();
-	for (; end != name.end(); end++)
-		if (*end == '.')
-			return std::string(name.begin(), end);
+	for (auto i = name.begin(); i != name.end(); i++)
+		if (*i == '.')
+			return std::string(name.begin(), i);
 	return{};
 }
 
@@ -365,10 +364,9 @@ std::string encoded_path::extension() const
 	const std::string name = filename();
 	if (name.empty())
 		return{};
-	auto end = name.rbegin();
-	for (; end != name.rend(); end++)
-		if (*end == '.')
-			return std::string(end.base() - 1, (name.rbegin()).base()); // Include the '.'
+	for (auto i = name.rbegin(); i != name.rend(); i++)
+		if (*i == '.')
+			return std::string(i.base() - 1, (name.rbegin()).base()); // Include the '.'
 	return{};
 }
 
