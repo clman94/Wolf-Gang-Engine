@@ -47,7 +47,6 @@ inline std::shared_ptr<T1> cast_resource(std::shared_ptr<T2> pSrc)
 enum class resource_type
 {
 	texture,
-	sound,
 	font,
 	script,
 	audio,

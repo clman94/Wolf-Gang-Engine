@@ -92,9 +92,9 @@ void resource_manager::unload_unused()
 void resource_manager::set_resource_pack(pack_stream_factory * pPack)
 {
 	mPack = pPack;
-	for (auto i : mResources)
+	for (auto& i : mResources)
 	{
-		for (auto j : i.second)
+		for (auto&j : i.second)
 		{
 			j.second->set_resource_pack(pPack);
 		}
@@ -124,7 +124,7 @@ void resource_manager::add_directory(std::shared_ptr<resource_directory> pDirect
 bool resource_manager::reload_directories()
 {
 	mResources.clear();
-	for (auto i : mResource_directories)
+	for (auto& i : mResource_directories)
 		if (mPack) {
 			if (!i->load_pack(*this, *mPack))
 				return false;

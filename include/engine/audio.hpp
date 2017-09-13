@@ -79,10 +79,13 @@ private:
 
 class sound_spawner
 {
-	std::list<sound> mSounds;
 public:
 	void spawn(std::shared_ptr<sound_file> pBuffer, float pVolume = 1, float pPitch = 1);
 	void stop_all();
+
+private:
+	engine::sound * get_new_sound_object();
+	std::list<sound> mSounds;
 };
 
 

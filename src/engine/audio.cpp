@@ -3,32 +3,29 @@
 #include <engine/filesystem.hpp>
 using namespace engine;
 
-void sound_spawner::spawn(std::shared_ptr<sound_file> pBuffer, float pVolume, float pPitch)
+engine::sound * engine::sound_spawner::get_new_sound_object()
 {
 	for (auto &i : mSounds)
-	{
 		if (!i.is_playing())
-		{
-			i.set_sound_resource(pBuffer);
-			i.play();
-			return;
-		}
-	}
+			return &i;
+
 	mSounds.emplace_back();
-	auto& newsound = mSounds.back();
-	newsound.set_sound_resource(pBuffer);
-	newsound.set_volume(pVolume);
-	newsound.set_pitch(pPitch);
-	newsound.set_loop(false);
-	newsound.play();
+	return &mSounds.back();
 }
 
+void sound_spawner::spawn(std::shared_ptr<sound_file> pBuffer, float pVolume, float pPitch)
+{
+	engine::sound* sound_object = get_new_sound_object();
+
+	sound_object->set_sound_resource(pBuffer);
+	sound_object->set_volume(pVolume);
+	sound_object->set_pitch(pPitch);
+	sound_object->play();
+}
 void sound_spawner::stop_all()
 {
 	for (auto &i : mSounds)
-	{
 		i.stop();
-	}
 	mSounds.clear();
 }
 
