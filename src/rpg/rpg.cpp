@@ -681,11 +681,6 @@ bool game::load(engine::fs::path pData_dir)
 	texture_dir->set_path(settings.get_textures_path());
 	mResource_manager.add_directory(texture_dir);
 
-	// Setup sounds directory
-	std::shared_ptr<soundfx_directory> sound_dir(std::make_shared<soundfx_directory>());
-	sound_dir->set_path(settings.get_sounds_path());
-	mResource_manager.add_directory(sound_dir);
-
 	// Setup fonts directory
 	std::shared_ptr<font_directory> font_dir(std::make_shared<font_directory>());
 	font_dir->set_path(settings.get_fonts_path());
@@ -860,23 +855,23 @@ void script_function::return_context()
 background_music::background_music()
 {
 	mRoot_directory = defs::DEFAULT_MUSIC_PATH;
-	mStream.reset(new engine::sound_stream);
-	mOverlap_stream.reset(new engine::sound_stream);
+	mStream.reset(new engine::sound);
+	mOverlap_stream.reset(new engine::sound);
 }
 
 void background_music::load_script_interface(script_system & pScript)
 {
-	pScript.add_function("_music_play", &engine::sound_stream::play, mStream.get());
-	pScript.add_function("_music_stop", &engine::sound_stream::stop, mStream.get());
-	pScript.add_function("_music_pause", &engine::sound_stream::pause, mStream.get());
-	pScript.add_function("_music_get_position", &engine::sound_stream::get_position, mStream.get());
-	pScript.add_function("_music_set_position", &engine::sound_stream::set_position, mStream.get());
-	pScript.add_function("_music_get_volume", &engine::sound_stream::get_volume, mStream.get());
-	pScript.add_function("_music_set_volume", &engine::sound_stream::set_volume, mStream.get());
-	pScript.add_function("_music_set_loop", &engine::sound_stream::set_loop, mStream.get());
+	pScript.add_function("_music_play", &engine::sound::play, mStream.get());
+	pScript.add_function("_music_stop", &engine::sound::stop, mStream.get());
+	pScript.add_function("_music_pause", &engine::sound::pause, mStream.get());
+	pScript.add_function("_music_get_position", &engine::sound::get_playoffset, mStream.get());
+	pScript.add_function("_music_set_position", &engine::sound::set_playoffset, mStream.get());
+	pScript.add_function("_music_get_volume", &engine::sound::get_volume, mStream.get());
+	pScript.add_function("_music_set_volume", &engine::sound::set_volume, mStream.get());
+	pScript.add_function("_music_set_loop", &engine::sound::set_loop, mStream.get());
 	pScript.add_function("_music_open", &background_music::script_music_open, this);
-	pScript.add_function("_music_is_playing", &engine::sound_stream::is_playing, mStream.get());
-	pScript.add_function("_music_get_duration", &engine::sound_stream::get_duration, mStream.get());
+	pScript.add_function("_music_is_playing", &engine::sound::is_playing, mStream.get());
+	pScript.add_function("_music_get_duration", &engine::sound::get_duration, mStream.get());
 	pScript.add_function("_music_swap", &background_music::script_music_swap, this);
 	pScript.add_function("_music_start_transition_play", &background_music::script_music_start_transition_play, this);
 	pScript.add_function("_music_stop_transition_play", &background_music::script_music_stop_transition_play, this);
@@ -897,9 +892,9 @@ void background_music::set_root_directory(const std::string & pPath)
 	mRoot_directory = pPath;
 }
 
-void background_music::set_resource_pack(engine::pack_stream_factory * pPack)
+void background_music::set_resource_manager(engine::resource_manager & pResource_manager)
 {
-	mPack = pPack;
+	mResource_manager = &pResource_manager;
 }
 
 void background_music::pause_music()
@@ -909,22 +904,20 @@ void background_music::pause_music()
 
 bool background_music::script_music_open(const std::string & pName)
 {
-	const engine::fs::path file(mRoot_directory / (pName + ".ogg"));
-	if (mPath != file)
+	auto resource = mResource_manager->get_resource<engine::sound_file>(engine::resource_type::audio, pName);
+	if (!resource)
 	{
-		mPath = file;
-		if (mPack)
-			return mStream->open(file.string(), *mPack);
-		else
-			return mStream->open(file.string());
+		logger::error("Music '" + pName + "' failed to load");
+		return false;
 	}
+	mStream->set_sound_resource(resource);
+	mPath = pName;
 	return true;
 }
 
 bool background_music::script_music_swap(const std::string & pName)
 {
-	const engine::fs::path file(mRoot_directory / (pName + ".ogg"));
-	if (mPath == file)
+	if (mPath == pName)
 		return true;
 
 	if (!mStream->is_playing())
@@ -932,38 +925,37 @@ bool background_music::script_music_swap(const std::string & pName)
 
 	// Open a second stream and set its position similar to
 	// the first one.
-	if (mPack)
-		mOverlap_stream->open(file.string(), *mPack);
-	else
-		mOverlap_stream->open(file.string());
+	auto resource = mResource_manager->get_resource<engine::sound_file>(engine::resource_type::audio, pName);
+	if (!resource)
+		return false;
+	mOverlap_stream->set_sound_resource(resource);
 	mOverlap_stream->set_loop(true);
 	mOverlap_stream->set_volume(mStream->get_volume());
 	mOverlap_stream->play();
 	if (mOverlap_stream->get_duration() >= mStream->get_duration())
-		mOverlap_stream->set_position(mStream->get_position());
+		mOverlap_stream->set_playoffset(mStream->get_playoffset());
 
 	// Make the new stream the main stream
 	mStream->stop();
 	mStream.swap(mOverlap_stream);
 
-	mPath = file;
+	mPath = pName;
 	return true;
 }
 
 int background_music::script_music_start_transition_play(const std::string & pName)
 {
-	const engine::fs::path file(mRoot_directory / (pName + ".ogg"));
-	if (mPath == file)
+	if (mPath == pName)
 		return 0;
 
-	if (mPack)
-		mOverlap_stream->open(file.string(), *mPack);
-	else
-		mOverlap_stream->open(file.string());
+	auto resource = mResource_manager->get_resource<engine::sound_file>(engine::resource_type::audio, pName);
+	if (!resource)
+		return false;
+	mOverlap_stream->set_sound_resource(resource);
 	mOverlap_stream->set_loop(true);
 	mOverlap_stream->set_volume(0);
 	mOverlap_stream->play();
-	mOverlay_path = file;
+	mOverlay_path = pName;
 	return 0;
 }
 

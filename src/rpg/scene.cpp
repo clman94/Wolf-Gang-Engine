@@ -133,8 +133,6 @@ bool scene::load_scene(std::string pName)
 		mEnd_functions = context.get_all_with_tag("door");
 	}
 
-
-
 	if (mLoader.get_tilemap_texture().empty())
 	{
 		logger::info("No tilemap texture");
@@ -323,6 +321,13 @@ void scene::load_terminal_interface(engine::terminal_system & pTerminal)
 		return load_scene(pArgs[0]);
 	}, "<Scene Name> - Create a new scene");
 
+	mTerminal_cmd_group->add_command("resources",
+		[&](const engine::terminal_arglist& pArgs)->bool
+	{
+		logger::info(mResource_manager->get_resource_log());
+		return true;
+	}, "- Display resource info");
+
 	pTerminal.add_group(mTerminal_cmd_group);
 
 }
@@ -332,6 +337,7 @@ void scene::set_resource_manager(engine::resource_manager& pResource_manager)
 {
 	mResource_manager = &pResource_manager;
 	mEntity_manager.set_resource_manager(pResource_manager);
+	mBackground_music.set_resource_manager(pResource_manager);
 }
 
 bool scene::load_settings(const game_settings_loader& pSettings)
@@ -379,7 +385,6 @@ void scene::focus_player(bool pFocus)
 void scene::set_resource_pack(engine::pack_stream_factory* pPack)
 {
 	mPack = pPack;
-	mBackground_music.set_resource_pack(pPack);
 }
 
 scene_visualizer & scene::get_visualizer()
@@ -425,7 +430,7 @@ void scene::script_set_boundary_size(engine::fvector pSize)
 
 void scene::script_spawn_sound(const std::string & pName, float pVolume, float pPitch)
 {
-	auto sound = mResource_manager->get_resource<engine::sound_buffer>(engine::resource_type::sound, pName);
+	auto sound = mResource_manager->get_resource<engine::sound_file>(engine::resource_type::audio, pName);
 	if (!sound)
 	{
 		logger::error("Could not spawn sound '" + pName + "'");

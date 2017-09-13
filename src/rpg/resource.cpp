@@ -101,6 +101,21 @@ void resource_manager::set_resource_pack(pack_stream_factory * pPack)
 	}
 }
 
+std::string resource_manager::get_resource_log() const
+{
+	std::string val;
+
+	for (auto& i : mResources)
+	{
+		for (auto& j : i.second)
+		{
+			val += (j.second->is_loaded() ? "(loaded)   " : "(unloaded) ") + j.first + "\n";
+		}
+	}
+
+	return val;
+}
+
 void resource_manager::add_directory(std::shared_ptr<resource_directory> pDirectory)
 {
 	mResource_directories.push_back(pDirectory);

@@ -62,15 +62,15 @@ public:
 	void load_script_interface(script_system& pScript);
 	void clean();
 	void set_root_directory(const std::string& pPath);
-	void set_resource_pack(engine::pack_stream_factory* pPack);
+	void set_resource_manager(engine::resource_manager& pResource_manager);
 	void pause_music();
 
 private:
 
-	engine::pack_stream_factory* mPack;
+	engine::resource_manager* mResource_manager;
 
-	std::unique_ptr<engine::sound_stream> mStream;
-	std::unique_ptr<engine::sound_stream> mOverlap_stream;
+	std::unique_ptr<engine::sound> mStream;
+	std::unique_ptr<engine::sound> mOverlap_stream;
 
 	engine::fs::path mRoot_directory;
 	engine::fs::path mPath;

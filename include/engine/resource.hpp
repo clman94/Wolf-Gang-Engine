@@ -78,6 +78,8 @@ public:
 
 	void set_resource_pack(pack_stream_factory* pPack);
 
+	std::string get_resource_log() const;
+
 private:
 	pack_stream_factory* mPack;
 

@@ -34,20 +34,6 @@ private:
 	std::string mPath;
 };
 
-class soundfx_directory :
-	public engine::resource_directory
-{
-public:
-	soundfx_directory();
-
-	virtual bool load(engine::resource_manager& pResource_manager);
-	virtual bool load_pack(engine::resource_manager& pResource_manager, engine::pack_stream_factory& pPack);
-
-	void set_path(const std::string& pPath);
-private:
-	std::string mPath;
-};
-
 class audio_directory :
 	public engine::resource_directory
 {
