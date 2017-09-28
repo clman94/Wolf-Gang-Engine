@@ -15,8 +15,7 @@ const engine::fvector SCREEN_SIZE            = { DISPLAY_SIZE.x * 2, DISPLAY_SIZ
 const float           DEFAULT_DIALOG_SPEED   = 30;
 
 const engine::fs::path DEFAULT_DATA_PATH      = "./data";
-const engine::fs::path DEFAULT_MUSIC_PATH     = "music";
-const engine::fs::path DEFAULT_SOUND_PATH     = "sounds";
+const engine::fs::path DEFAULT_AUDIO_PATH     = "audio";
 const engine::fs::path DEFAULT_SAVES_PATH     = "saves";
 const engine::fs::path DEFAULT_TEXTURES_PATH  = "textures";
 const engine::fs::path DEFAULT_SCENES_PATH    = "scenes";

@@ -34,7 +34,7 @@ private:
 class resource_directory
 {
 public:
-	virtual bool load(resource_manager& pResource_manager) = 0;
+	virtual bool load(resource_manager& pResource_manager, const std::string& mData_filepath) = 0;
 	virtual bool load_pack(resource_manager& pResource_manager, pack_stream_factory& pPack) = 0;
 };
 
@@ -58,7 +58,7 @@ public:
 	resource_manager();
 
 	void add_resource(resource_type pType, const std::string& pName, std::shared_ptr<resource> pResource);
-	bool has_resource(resource_type pType, const std::string& pName);
+	bool has_resource(resource_type pType, const std::string& pName) const;
 
 	template<typename T = resource>
 	std::shared_ptr<T> get_resource(resource_type pType, const std::string& pName)
@@ -79,7 +79,11 @@ public:
 
 	std::string get_resource_log() const;
 
+	void set_data_folder(const std::string& pFilepath);
+
 private:
+	std::string mData_filepath;
+
 	pack_stream_factory* mPack;
 
 	std::shared_ptr<resource> get_resource_precast(resource_type pType, const std::string& pName);

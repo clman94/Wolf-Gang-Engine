@@ -43,7 +43,7 @@ void resource_manager::add_resource(resource_type pType, const std::string& pNam
 	pResource->set_resource_pack(mPack);
 }
 
-bool resource_manager::has_resource(resource_type pType, const std::string & pName)
+bool resource_manager::has_resource(resource_type pType, const std::string & pName) const
 {
 	auto find_type = mResources.find(pType);
 	if (find_type == mResources.end())
@@ -116,6 +116,11 @@ std::string resource_manager::get_resource_log() const
 	return val;
 }
 
+void engine::resource_manager::set_data_folder(const std::string & pFilepath)
+{
+	mData_filepath = pFilepath;
+}
+
 void resource_manager::add_directory(std::shared_ptr<resource_directory> pDirectory)
 {
 	mResource_directories.push_back(pDirectory);
@@ -131,7 +136,7 @@ bool resource_manager::reload_directories()
 		}
 		else
 		{
-			if (!i->load(*this))
+			if (!i->load(*this, mData_filepath))
 				return false;
 		}
 	return true;

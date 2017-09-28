@@ -348,16 +348,14 @@ bool scene::load_settings(const game_settings_loader& pSettings)
 
 	mWorld_node.set_viewport(pSettings.get_screen_size());
 
-	auto texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, pSettings.get_player_texture());
-	if (!texture)
+	auto player_texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, pSettings.get_player_texture());
+	if (!player_texture)
 	{
 		logger::error("Could not load texture '" + pSettings.get_player_texture() + "' for player character");
 		return false;
 	}
-	mPlayer.mSprite.set_texture(texture);
+	mPlayer.mSprite.set_texture(player_texture);
 	mPlayer.set_cycle(character_entity::cycle::def);
-
-	mBackground_music.set_root_directory(pSettings.get_music_path());
 
 	logger::info("Scene loaded");
 

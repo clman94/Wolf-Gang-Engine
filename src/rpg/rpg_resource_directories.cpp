@@ -17,20 +17,17 @@
 
 using namespace rpg;
 
-texture_directory::texture_directory()
+bool texture_directory::load(engine::resource_manager& pResource_manager, const std::string& mData_filepath)
 {
-	mPath = defs::DEFAULT_TEXTURES_PATH.string();
-}
+	const engine::fs::path folder_path = mData_filepath + "/" + defs::DEFAULT_TEXTURES_PATH.string();
 
-bool texture_directory::load(engine::resource_manager& pResource_manager)
-{
-	if (!engine::fs::exists(mPath))
+	if (!engine::fs::exists(folder_path))
 	{
 		logger::error("Textures directory does not exist");
 		return false;
 	}
 
-	for (const auto& i : engine::fs::recursive_directory_iterator(mPath))
+	for (const auto& i : engine::fs::recursive_directory_iterator(folder_path))
 	{
 		auto& texture_path = i.path();
 
@@ -67,7 +64,7 @@ bool texture_directory::load(engine::resource_manager& pResource_manager)
 
 bool texture_directory::load_pack(engine::resource_manager & pResource_manager, engine::pack_stream_factory & pPack)
 {
-	auto file_list = pPack.recursive_directory(mPath);
+	auto file_list = pPack.recursive_directory(defs::DEFAULT_TEXTURES_PATH.string());
 	for (auto i : file_list)
 	{
 		if (i.extension() == ".png")
@@ -87,25 +84,17 @@ bool texture_directory::load_pack(engine::resource_manager & pResource_manager, 
 	return true;
 }
 
-void texture_directory::set_path(const std::string & pPath)
+bool font_directory::load(engine::resource_manager& pResource_manager, const std::string& mData_filepath)
 {
-	mPath = pPath;
-}
+	const engine::fs::path folder_path = mData_filepath + "/" + defs::DEFAULT_FONTS_PATH.string();
 
-font_directory::font_directory()
-{
-	mPath = defs::DEFAULT_FONTS_PATH.string();
-}
-
-bool font_directory::load(engine::resource_manager& pResource_manager)
-{
-	if (!engine::fs::exists(mPath))
+	if (!engine::fs::exists(folder_path))
 	{
 		logger::error("Textures directory does not exist");
 		return false;
 	}
 
-	for (const auto& i : engine::fs::recursive_directory_iterator(mPath))
+	for (const auto& i : engine::fs::recursive_directory_iterator(folder_path))
 	{
 		auto& font_path = i.path();
 
@@ -134,7 +123,7 @@ bool font_directory::load(engine::resource_manager& pResource_manager)
 
 bool font_directory::load_pack(engine::resource_manager & pResource_manager, engine::pack_stream_factory & pPack)
 {
-	auto file_list = pPack.recursive_directory(mPath);
+	auto file_list = pPack.recursive_directory(defs::DEFAULT_FONTS_PATH.string());
 	for (auto i : file_list)
 	{
 		if (i.extension() == ".ttf")
@@ -152,12 +141,6 @@ bool font_directory::load_pack(engine::resource_manager & pResource_manager, eng
 	}
 	return true;
 }
-
-void font_directory::set_path(const std::string & pPath)
-{
-	mPath = pPath;
-}
-
 // File with these extensions will be used
 static const std::set<std::string> supported_sound_extensions =
 {
@@ -165,20 +148,18 @@ static const std::set<std::string> supported_sound_extensions =
 	".flac",
 };
 
-audio_directory::audio_directory()
-{
-	mPath = "audio";
-}
 
-bool audio_directory::load(engine::resource_manager & pResource_manager)
+bool audio_directory::load(engine::resource_manager & pResource_manager, const std::string& mData_filepath)
 {
-	if (!engine::fs::exists(mPath))
+	const engine::fs::path folder_path = mData_filepath + "/" + defs::DEFAULT_AUDIO_PATH.string();
+
+	if (!engine::fs::exists(folder_path))
 	{
 		logger::error("Audio directory does not exist");
 		return false;
 	}
 
-	for (auto& i : engine::fs::recursive_directory_iterator(mPath))
+	for (auto& i : engine::fs::recursive_directory_iterator(folder_path))
 	{
 		auto& sound_path = i.path();
 		if (supported_sound_extensions.find(sound_path.extension().string()) != supported_sound_extensions.end())
@@ -193,7 +174,7 @@ bool audio_directory::load(engine::resource_manager & pResource_manager)
 
 bool audio_directory::load_pack(engine::resource_manager & pResource_manager, engine::pack_stream_factory & pPack)
 {
-	auto file_list = pPack.recursive_directory(mPath);
+	auto file_list = pPack.recursive_directory(defs::DEFAULT_AUDIO_PATH.string());
 	for (auto i : file_list)
 	{
 		if (supported_sound_extensions.find(i.extension()) != supported_sound_extensions.end())
@@ -204,9 +185,4 @@ bool audio_directory::load_pack(engine::resource_manager & pResource_manager, en
 		}
 	}
 	return true;
-}
-
-void audio_directory::set_path(const std::string & pPath)
-{
-	mPath = pPath;
 }

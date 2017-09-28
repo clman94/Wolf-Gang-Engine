@@ -61,7 +61,6 @@ public:
 	background_music();
 	void load_script_interface(script_system& pScript);
 	void clean();
-	void set_root_directory(const std::string& pPath);
 	void set_resource_manager(engine::resource_manager& pResource_manager);
 	void pause_music();
 
@@ -72,7 +71,6 @@ private:
 	std::unique_ptr<engine::sound> mStream;
 	std::unique_ptr<engine::sound> mOverlap_stream;
 
-	engine::fs::path mRoot_directory;
 	engine::fs::path mPath;
 	engine::fs::path mOverlay_path;
 

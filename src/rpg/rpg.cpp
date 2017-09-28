@@ -231,6 +231,12 @@ game::game()
 	mIs_ready = false;
 	load_script_interface();
 	mSlot = 0;
+
+	mScene.set_resource_manager(mResource_manager);
+
+	mResource_manager.add_directory(std::make_shared<texture_directory>());
+	mResource_manager.add_directory(std::make_shared<font_directory>());
+	mResource_manager.add_directory(std::make_shared<audio_directory>());
 }
 
 game::~game()
@@ -660,6 +666,7 @@ bool game::load(engine::fs::path pData_dir)
 		if (!settings.load(settings_path, pData_dir.string() + "/"))
 			return (mIs_ready = false, false);
 
+		mResource_manager.set_data_folder(pData_dir.string());
 		mResource_manager.set_resource_pack(nullptr);
 		mScene.set_resource_pack(nullptr);
 
@@ -674,23 +681,6 @@ bool game::load(engine::fs::path pData_dir)
 
 	logger::info("Loading Resources...");
 
-	mResource_manager.clear_directories();
-
-	// Setup textures directory
-	std::shared_ptr<texture_directory> texture_dir(std::make_shared<texture_directory>());
-	texture_dir->set_path(settings.get_textures_path());
-	mResource_manager.add_directory(texture_dir);
-
-	// Setup fonts directory
-	std::shared_ptr<font_directory> font_dir(std::make_shared<font_directory>());
-	font_dir->set_path(settings.get_fonts_path());
-	mResource_manager.add_directory(font_dir);
-
-	// Setup audio directory
-	std::shared_ptr<audio_directory> audio_dir(std::make_shared<audio_directory>());
-	audio_dir->set_path("data/audio");
-	mResource_manager.add_directory(audio_dir);
-
 	if (!mResource_manager.reload_directories()) // Load the resources from the directories
 	{
 		logger::error("Resources failed to load");
@@ -699,7 +689,7 @@ bool game::load(engine::fs::path pData_dir)
 
 	logger::info("Resources loaded");
 
-	mScene.set_resource_manager(mResource_manager);
+	
 	if (!mScene.load_settings(settings))
 		return (mIs_ready = false, false);
 
@@ -854,7 +844,6 @@ void script_function::return_context()
 
 background_music::background_music()
 {
-	mRoot_directory = defs::DEFAULT_MUSIC_PATH;
 	mStream.reset(new engine::sound);
 	mOverlap_stream.reset(new engine::sound);
 }
@@ -885,11 +874,6 @@ void background_music::clean()
 	mOverlap_stream->stop();
 	mPath.clear();
 	mOverlay_path.clear();
-}
-
-void background_music::set_root_directory(const std::string & pPath)
-{
-	mRoot_directory = pPath;
 }
 
 void background_music::set_resource_manager(engine::resource_manager & pResource_manager)
@@ -1553,31 +1537,6 @@ const std::string & game_settings_loader::get_start_scene() const
 	return mStart_scene;
 }
 
-const std::string & game_settings_loader::get_textures_path() const
-{
-	return mTextures_path;
-}
-
-const std::string & game_settings_loader::get_sounds_path() const
-{
-	return mSounds_path;
-}
-
-const std::string & game_settings_loader::get_music_path() const
-{
-	return mMusic_path;
-}
-
-const std::string & rpg::game_settings_loader::get_fonts_path() const
-{
-	return mFonts_path;
-}
-
-const std::string & game_settings_loader::get_scenes_path() const
-{
-	return mScenes_path;
-}
-
 const std::string & game_settings_loader::get_player_texture() const
 {
 	return mPlayer_texture;
@@ -1639,12 +1598,6 @@ bool game_settings_loader::parse_settings(tinyxml2::XMLDocument & pDoc, const st
 		return false;
 	}
 	mScreen_size = util::shortcuts::load_vector_float_att(ele_screen_size);
-
-	mTextures_path = load_setting_path(ele_root, "textures", pPrefix_path + defs::DEFAULT_TEXTURES_PATH.string());
-	mSounds_path = load_setting_path(ele_root, "sounds", pPrefix_path + defs::DEFAULT_SOUND_PATH.string());
-	mMusic_path = load_setting_path(ele_root, "music", pPrefix_path + defs::DEFAULT_MUSIC_PATH.string());
-	mFonts_path = load_setting_path(ele_root, "fonts", pPrefix_path + defs::DEFAULT_FONTS_PATH.string());
-	mScenes_path = load_setting_path(ele_root, "scenes", pPrefix_path + defs::DEFAULT_SCENES_PATH.string());
 	
 	auto ele_controls = ele_root->FirstChildElement("controls");
 	if (!ele_controls)
@@ -1687,15 +1640,6 @@ bool game_settings_loader::parse_binding_attributes(tinyxml2::XMLElement * pEle,
 		++i;
 	}
 	return true;
-}
-
-std::string game_settings_loader::load_setting_path(tinyxml2::XMLElement* pRoot, const std::string & pName, const std::string& pDefault)
-{
-	auto ele = pRoot->FirstChildElement("textures");
-	if (ele &&
-		ele->Attribute("path"))
-		return util::safe_string(ele->Attribute("path"));
-	return pDefault;
 }
 
 scene_load_request::scene_load_request()
