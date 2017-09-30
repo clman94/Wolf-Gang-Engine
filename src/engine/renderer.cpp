@@ -344,6 +344,12 @@ display_window * engine::renderer::get_window() const
 	return mWindow;
 }
 
+void engine::renderer::refresh()
+{
+	refresh_view();
+	refresh_gui_view();
+}
+
 void renderer::set_subwindow_enabled(bool pEnabled)
 {
 	mSubwindow_enabled = pEnabled;
@@ -617,7 +623,7 @@ void display_window::initualize(const std::string& pTitle, ivector pSize)
 {
 	mTitle = pTitle;
 	mSize = pSize;
-	mIs_fullscreen = true;
+	mIs_fullscreen = false;
 	windowed_mode();
 }
 
@@ -635,9 +641,8 @@ ivector display_window::get_size() const
 
 void display_window::windowed_mode()
 {
-	if (!mIs_fullscreen)
-		return;
 	mWindow.create(sf::VideoMode(mSize.x, mSize.y), mTitle, sf::Style::Titlebar | sf::Style::Close | sf::Style::Resize);
+	mIs_fullscreen = false;
 }
 
 void display_window::toggle_mode()
@@ -655,8 +660,6 @@ bool display_window::is_fullscreen() const
 
 void display_window::fullscreen_mode()
 {
-	if (mIs_fullscreen)
-		return;
 	mWindow.create(sf::VideoMode::getDesktopMode(), mTitle, sf::Style::None);
 	mIs_fullscreen = true;
 }

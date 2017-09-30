@@ -53,9 +53,9 @@ private:
 
 	size_t mWord_wrap;
 	size_t mMax_lines;
-	bool        mNew_character;
-	bool        mRevealing;
-	size_t      mCount;
+	bool   mNew_character;
+	bool   mRevealing;
+	size_t mCount;
 	engine::text_format mFull_text;
 	engine::counter_clock mTimer;
 

@@ -689,7 +689,6 @@ bool game::load(engine::fs::path pData_dir)
 
 	logger::info("Resources loaded");
 
-	
 	if (!mScene.load_settings(settings))
 		return (mIs_ready = false, false);
 

@@ -423,6 +423,8 @@ void formatted_text_node::update_effects()
 
 		if (block.mFormat & text_format::format::wave)
 		{
+			// Mostly abritrary numbers.
+			// TODO: Add customization
 			const float wave_amount = 0.1f;
 			const float wideness_scale = 0.5f;
 			const float speed = 3.f;
@@ -491,7 +493,7 @@ void formatted_text_node::update()
 
 			// Update size
 
-			fvector vert_size = handle.mVertices.get_size() + handle.mVertices.get_position();
+			const fvector vert_size = handle.mVertices.get_size() + handle.mVertices.get_position();
 
 			if (vert_size.x > mSize.x)
 				mSize.x = vert_size.x;

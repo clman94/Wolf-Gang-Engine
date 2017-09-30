@@ -249,6 +249,5 @@ void animation_node::set_speed(float pSpeed)
 void animation_node::update_frame()
 {
 	if (!mAnimation) return;
-	frect rect = mAnimation->get_frame_at(mFrame);
-	set_texture_rect(rect);
+	set_texture_rect(mAnimation->get_frame_at(mFrame));
 }

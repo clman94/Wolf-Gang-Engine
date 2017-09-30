@@ -90,6 +90,12 @@ bool wolf_gang_engine::run()
 	{
 		update_events();
 
+		if (mRenderer.is_key_pressed(engine::renderer::key_type::F11))
+		{
+			mWindow.toggle_mode();
+			mRenderer.refresh();
+		}
+
 		mTerminal_gui.update(mRenderer);
 		update_editor();
 

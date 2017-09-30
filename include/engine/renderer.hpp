@@ -48,6 +48,11 @@ public:
 	}
 #endif // SFML_COLOR_HPP
 
+	float intensity() const
+	{
+		return (r + b + g) / 3.0f;
+	}
+
 	color& operator+=(const color& pColor)
 	{
 		if (!mask[0]) r += pColor.r;
@@ -84,28 +89,28 @@ public:
 		return *this;
 	}
 
-	color operator+(const color& pColor)
+	color operator+(const color& pColor) const
 	{
 		color ret(*this);
 		ret += pColor;
 		return ret;
 	}
 
-	color operator-(const color& pColor)
+	color operator-(const color& pColor) const
 	{
 		color ret(*this);
 		ret -= pColor;
 		return ret;
 	}
 
-	color operator*(const color& pColor)
+	color operator*(const color& pColor) const
 	{
 		color ret(*this);
 		ret *= pColor;
 		return ret;
 	}
 
-	color operator/(const color& pColor)
+	color operator/(const color& pColor) const
 	{
 		color ret(*this);
 		ret /= pColor;
@@ -128,6 +133,32 @@ private:
 		set_mask(false, false, false, true);
 	}
 };
+
+
+/*
+class HSL
+{
+public:
+	float h; // Hue        [0, 360]
+	float s; // Saturation [0, 1]
+	float l; // Lightness  [0, 1]
+	float a; // ALpha      [0, 1]
+
+	color rpga() const
+	{
+		color ret;
+		ret.a = a;
+		float C = (1 - std::abs(2 * l - 1))*s;
+		float H = h / 60;
+		float X = C*(1 - std::abs(std::fmod(H, 2) - 1));
+
+
+		return ret;
+	}
+
+private:
+
+};*/
 
 class render_object;
 
@@ -205,6 +236,8 @@ public:
 
 	void set_window(display_window& pWindow);
 	display_window* get_window() const;
+
+	void refresh();
 
 	void set_subwindow_enabled(bool pEnabled);
 	void set_subwindow(frect pRect);
