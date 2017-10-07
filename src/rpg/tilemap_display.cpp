@@ -123,7 +123,8 @@ void tilemap_display::displayed_tile::update_animation()
 	if (mTimer.is_reached())
 	{
 		++mFrame;
-		mTimer.start(mAnimation->get_interval(mFrame)*0.001f);
-		mRef.set_texture_rect(mAnimation->get_frame_at(mFrame));
+		const size_t rendered_frame = mFrame + mAnimation->get_default_frame();
+		mTimer.start(mAnimation->get_interval(rendered_frame)*0.001f);
+		mRef.set_texture_rect(mAnimation->get_frame_at(rendered_frame));
 	}
 }
