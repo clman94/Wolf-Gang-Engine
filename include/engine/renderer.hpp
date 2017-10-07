@@ -419,6 +419,8 @@ public:
 
 	void set_texture(std::shared_ptr<texture> pTexture);
 	vertex_reference add_quad(fvector pPosition, frect pTexture_rect, int pRotation = 0);
+	void reserve_quads(size_t pAmount);
+	
 	int draw(renderer &pR);
 
 	void set_scale(fvector pScale);

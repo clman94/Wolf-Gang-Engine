@@ -145,8 +145,7 @@ vertex_batch::set_texture(std::shared_ptr<texture> pTexture)
 vertex_reference
 vertex_batch::add_quad(fvector pPosition, frect pTexture_rect, int pRotation)
 {
-	for (size_t i = 0; i < 4; i++)
-		mVertices.emplace_back();
+	mVertices.resize(mVertices.size() + 4);
 
 	vertex_reference ref;
 	ref.mBatch = this;
@@ -156,6 +155,11 @@ vertex_batch::add_quad(fvector pPosition, frect pTexture_rect, int pRotation)
 	ref.set_position(pPosition);
 	ref.set_color({ 255, 255, 255, 255 });
 	return ref;
+}
+
+void vertex_batch::reserve_quads(size_t pAmount)
+{
+	mVertices.reserve(mVertices.size() + pAmount);
 }
 
 int

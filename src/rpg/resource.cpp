@@ -130,7 +130,8 @@ bool resource_manager::reload_directories()
 {
 	mResources.clear();
 	for (auto& i : mResource_directories)
-		if (mPack) {
+		if (mPack)
+		{
 			if (!i->load_pack(*this, *mPack))
 				return false;
 		}

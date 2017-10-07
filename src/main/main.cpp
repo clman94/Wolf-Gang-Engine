@@ -37,6 +37,14 @@ private:
 wolf_gang_engine::wolf_gang_engine()
 {
 	mRunning = true;
+
+	mEditor_manager.set_world_node(mGame.get_scene().get_world_node());
+	mEditor_manager.set_resource_manager(mGame.get_resource_manager());
+	mEditor_manager.set_scene(mGame.get_scene());
+
+	mGame.load_terminal_interface(mTerminal_system);
+	mTerminal_gui.set_terminal_system(mTerminal_system);
+	mEditor_manager.load_terminal_interface(mTerminal_system);
 }
 
 int wolf_gang_engine::initualize(const std::string& pCustom_location = std::string())
@@ -51,18 +59,8 @@ int wolf_gang_engine::initualize(const std::string& pCustom_location = std::stri
 	mRenderer.set_window(mWindow);
 	logger::info("Renderer loaded");
 
-	// Setup game
 	mGame.set_renderer(mRenderer);
-	mGame.load_terminal_interface(mTerminal_system);
-
-	// Setup editors
 	mEditor_manager.set_renderer(mRenderer);
-	mEditor_manager.set_world_node(mGame.get_scene().get_world_node());
-	mEditor_manager.set_scene(mGame.get_scene());
-	mEditor_manager.load_terminal_interface(mTerminal_system);
-	mEditor_manager.set_resource_manager(mGame.get_resource_manager());
-
-	mTerminal_gui.set_terminal_system(mTerminal_system);
 	mTerminal_gui.load_gui(mRenderer);
 
 #ifndef LOCKED_RELEASE_MODE
@@ -137,39 +135,36 @@ bool wolf_gang_engine::update_editor()
 	}
 
 	if (lctrl
-		&& !lshift
-		&& mRenderer.is_key_pressed(engine::renderer::key_type::R))
+		&& !lshift)
 	{
-		mEditor_manager.close_editor();
-		logger::info("Reloading scene...");
+		if (mRenderer.is_key_pressed(engine::renderer::key_type::R))
+		{
+			mEditor_manager.close_editor();
+			logger::info("Reloading scene...");
 
-		mGame.get_resource_manager().reload_directories();
-		mGame.get_scene().reload_scene();
-		logger::info("Scene reloaded");
-	}
+			mGame.get_resource_manager().reload_directories();
+			mGame.get_scene().reload_scene();
+			logger::info("Scene reloaded");
+		}	
+		if (mRenderer.is_key_pressed(engine::renderer::key_type::Num1))
+		{
+			mEditor_manager.close_editor();
+			mEditor_manager.open_tilemap_editor((mGame.get_source_path() / rpg::defs::DEFAULT_SCENES_PATH / mGame.get_scene().get_path()).string());
+			mGame.clear_scene();
+		}
 
-
-	if (lctrl
-		&& mRenderer.is_key_pressed(engine::renderer::key_type::Num1))
-	{
-		mEditor_manager.close_editor();
-		mEditor_manager.open_tilemap_editor((mGame.get_source_path() / rpg::defs::DEFAULT_SCENES_PATH / mGame.get_scene().get_path()).string());
-		mGame.clear_scene();
-	}
-
-	if (lctrl
-		&& mRenderer.is_key_pressed(engine::renderer::key_type::Num2))
-	{
-		mEditor_manager.close_editor();
-		mEditor_manager.open_collisionbox_editor((mGame.get_source_path() / rpg::defs::DEFAULT_SCENES_PATH / mGame.get_scene().get_path()).string());
-		mGame.clear_scene();
-	}
-	if (lctrl
-		&& mRenderer.is_key_pressed(engine::renderer::key_type::Num3))
-	{
-		mEditor_manager.close_editor();
-		mEditor_manager.open_atlas_editor();
-		mGame.clear_scene();
+		if (mRenderer.is_key_pressed(engine::renderer::key_type::Num2))
+		{
+			mEditor_manager.close_editor();
+			mEditor_manager.open_collisionbox_editor((mGame.get_source_path() / rpg::defs::DEFAULT_SCENES_PATH / mGame.get_scene().get_path()).string());
+			mGame.clear_scene();
+		}
+		if (mRenderer.is_key_pressed(engine::renderer::key_type::Num3))
+		{
+			mEditor_manager.close_editor();
+			mEditor_manager.open_atlas_editor();
+			mGame.clear_scene();
+		}
 	}
 	return false;
 }
