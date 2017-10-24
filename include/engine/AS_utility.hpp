@@ -106,7 +106,7 @@ struct AS_type_to_string <const T> :
 {
 	AS_type_to_string()
 	{
-		mPrefix = "const";
+		AS_type_to_string_base::mPrefix = "const";
 	}
 };
 
@@ -116,7 +116,7 @@ struct AS_type_to_string <T*> :
 {
 	AS_type_to_string()
 	{
-		mSuffix = "@";
+		AS_type_to_string_base::mSuffix = "@";
 	}
 };
 
@@ -126,8 +126,8 @@ struct AS_type_to_string <T&> :
 {
 	AS_type_to_string()
 	{
-		mSuffix = "&";
-		mEx_suffix = "in";
+		AS_type_to_string_base::mSuffix = "&";
+		AS_type_to_string_base::mEx_suffix = "in";
 	}
 };
 
@@ -137,9 +137,9 @@ struct AS_type_to_string <const T&> :
 {
 	AS_type_to_string()
 	{
-		mPrefix = "const";
-		mSuffix = "&";
-		mEx_suffix = "in";
+		AS_type_to_string_base::mPrefix = "const";
+		AS_type_to_string_base::mSuffix = "&";
+		AS_type_to_string_base::mEx_suffix = "in";
 	}
 };
 
@@ -203,6 +203,14 @@ inline std::string AS_create_function_declaration_args()
 }
 
 // A pretty janky angelscript function declaration generator
+template<typename Tret>
+inline std::string AS_create_function_declaration(const std::string& pName, Tret(*)() = nullptr)
+{
+	const std::string def_ret = AS_type_to_string<Tret>().string();
+	return def_ret + " " + pName + "()";
+}
+
+// A pretty janky angelscript function declaration generator
 template<typename Tret, typename...Tparams>
 inline std::string AS_create_function_declaration(const std::string& pName, Tret(*)(Tparams...) = nullptr)
 {
@@ -213,13 +221,6 @@ inline std::string AS_create_function_declaration(const std::string& pName, Tret
 	return def_ret + " " + pName + "(" + def_args + ")";
 }
 
-// A pretty janky angelscript function declaration generator
-template<typename Tret>
-inline std::string AS_create_function_declaration(const std::string& pName, Tret(*)() = nullptr)
-{
-	const std::string def_ret = AS_type_to_string<Tret>().string();
-	return def_ret + " " + pName + "()";
-}
 
 
 }

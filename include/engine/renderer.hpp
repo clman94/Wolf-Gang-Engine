@@ -139,7 +139,7 @@ private:
 class HSL
 {
 public:
-	float h; // Hue        [0, 360]
+	float h; // Hue        [0, 1]
 	float s; // Saturation [0, 1]
 	float l; // Lightness  [0, 1]
 	float a; // ALpha      [0, 1]
