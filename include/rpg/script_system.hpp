@@ -83,7 +83,7 @@ public:
 	template<typename Tret, typename...Tparams>
 	void add_function(const std::string& pName, Tret (* mFunction)(Tparams...))
 	{
-		const std::string declaration = util::AS_create_function_declaration<Tret, Tparams...>(pName);
+		const std::string declaration = util::AS_create_function_declaration(pName, mFunction);
 		const int r = mEngine->RegisterGlobalFunction(declaration.c_str(), AS::asFUNCTION(mFunction)
 			, AS::asCALL_CDECL);
 		assert(r >= 0);
@@ -93,7 +93,9 @@ public:
 	template<typename Tclass, typename Tret, typename...Tparams>
 	void add_function(const std::string& pName, Tret(Tclass::*mFunction)(Tparams...), void* pInstance)
 	{
-		const std::string declaration = util::AS_create_function_declaration<Tret, Tparams...>(pName);
+		Tret(*of_new_type)(Tparams...) = nullptr; // gcc complains about ambiguities when directly
+		                                                // specifing the types in util::AS_create_function_declaration
+		const std::string declaration = util::AS_create_function_declaration(pName, of_new_type);
 		const int r = mEngine->RegisterGlobalFunction(declaration.c_str(), AS::asSMethodPtr<sizeof(void (Tclass::*)())>::Convert(mFunction)
 			, AS::asCALL_THISCALL_ASGLOBAL, pInstance);
 		assert(r >= 0);
@@ -103,7 +105,8 @@ public:
 	template<typename Tclass, typename Tret, typename...Tparams>
 	void add_function(const std::string& pName, Tret(Tclass::*mFunction)(Tparams...) const, void* pInstance)
 	{
-		const std::string declaration = util::AS_create_function_declaration<Tret, Tparams...>(pName);
+		Tret(*of_new_type)(Tparams...) = nullptr;
+		const std::string declaration = util::AS_create_function_declaration(pName, of_new_type);
 		const int r = mEngine->RegisterGlobalFunction(declaration.c_str(), AS::asSMethodPtr<sizeof(void (Tclass::*)())>::Convert(mFunction)
 			, AS::asCALL_THISCALL_ASGLOBAL, pInstance);
 		assert(r >= 0);
@@ -131,7 +134,8 @@ public:
 	template<typename Tclass, typename Tret, typename...Tparams>
 	void add_method(const std::string& pObject, const std::string& pName, Tret(Tclass::*mFunction)(Tparams...))
 	{
-		const std::string declaration = util::AS_create_function_declaration<Tret, Tparams...>(pName);
+		Tret(*of_new_type)(Tparams...) = nullptr;
+		const std::string declaration = util::AS_create_function_declaration(pName, of_new_type);
 
 		const int r = mEngine->RegisterObjectMethod(pObject.c_str(), declaration.c_str()
 			, AS::asSMethodPtr<sizeof(void (Tclass::*)())>::Convert(mFunction)
@@ -143,7 +147,8 @@ public:
 	template<typename Tclass, typename Tret, typename...Tparams>
 	void add_method(const std::string& pObject, const std::string& pName, Tret(Tclass::*mFunction)(Tparams...) const)
 	{
-		const std::string declaration = util::AS_create_function_declaration<Tret, Tparams...>(pName) + " const";
+		Tret(*of_new_type)(Tparams...) = nullptr;
+		const std::string declaration = util::AS_create_function_declaration(pName, of_new_type) + " const";
 
 		const int r = mEngine->RegisterObjectMethod(pObject.c_str(), declaration.c_str()
 			, AS::asSMethodPtr<sizeof(void (Tclass::*)())>::Convert(mFunction)
@@ -163,7 +168,8 @@ public:
 	template<typename Tclass, typename...Tparams>
 	void add_constructor(const std::string& pObject)
 	{
-		const std::string declaration = util::AS_create_function_declaration<void, Tparams...>("f");
+		void(*of_new_type)(Tparams...) = nullptr;
+		const std::string declaration = util::AS_create_function_declaration("f", of_new_type);
 
 		const int r = mEngine->RegisterObjectBehaviour(pObject.c_str(), AS::asBEHAVE_CONSTRUCT, declaration.c_str()
 			, AS::asFunctionPtr(script_system::script_constructor<Tclass, Tparams...>)
