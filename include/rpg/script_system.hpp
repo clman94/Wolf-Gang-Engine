@@ -21,6 +21,7 @@
 
 namespace AS = AngelScript;
 
+// This allows us to seporate the arrays with diffent types
 template<typename T>
 struct AS_array : public AS::CScriptArray {};
 
@@ -94,7 +95,7 @@ public:
 	void add_function(const std::string& pName, Tret(Tclass::*mFunction)(Tparams...), void* pInstance)
 	{
 		Tret(*of_new_type)(Tparams...) = nullptr; // gcc complains about ambiguities when directly
-		                                                // specifing the types in util::AS_create_function_declaration
+		                                          // specifing the types in util::AS_create_function_declaration
 		const std::string declaration = util::AS_create_function_declaration(pName, of_new_type);
 		const int r = mEngine->RegisterGlobalFunction(declaration.c_str(), AS::asSMethodPtr<sizeof(void (Tclass::*)())>::Convert(mFunction)
 			, AS::asCALL_THISCALL_ASGLOBAL, pInstance);
@@ -219,7 +220,7 @@ private:
 	std::shared_ptr<thread> mCurrect_thread_context;
 	std::vector<std::shared_ptr<thread>> mThread_contexts;
 
-	util::optional_pointer<AS::asIScriptEngine> mEngine;
+	AS::asIScriptEngine* mEngine;
 
 	void register_vector_type();
 	void register_timer_type();

@@ -108,7 +108,7 @@ bool node::set_parent(node& obj)
 
 bool node::add_child(node& obj)
 {
-	if (&obj == this || check_node_loop(*this, obj)) return false;
+	if (&obj == this) return false;
 	if (obj.mParent) obj.detach_parent();
 	obj.mChild_index = mChildren.size();
 	obj.mParent = this;
