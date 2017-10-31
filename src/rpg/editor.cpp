@@ -4,6 +4,7 @@ using namespace editors;
 
 #include <vector>
 #include <memory>
+#include <cassert>
 
 #include <engine/parsers.hpp>
 #include <engine/log.hpp>
@@ -36,6 +37,7 @@ inline engine::fvector read_args_vector(const engine::terminal_arglist& pArgs, f
 
 bool command_manager::execute(std::shared_ptr<command> pCommand)
 {
+	assert(!mCurrent);
 	mRedo.clear();
 	mUndo.push_back(pCommand);
 	return pCommand->execute();
@@ -43,9 +45,23 @@ bool command_manager::execute(std::shared_ptr<command> pCommand)
 
 bool command_manager::add(std::shared_ptr<command> pCommand)
 {
+	assert(!mCurrent);
 	mRedo.clear();
 	mUndo.push_back(pCommand);
 	return true;
+}
+
+void command_manager::start(std::shared_ptr<command> pCommand)
+{
+	mCurrent = pCommand;
+}
+
+void command_manager::complete()
+{
+	assert(mCurrent);
+	mRedo.clear();
+	mUndo.push_back(mCurrent);
+	mCurrent.reset();
 }
 
 bool command_manager::undo()
@@ -221,7 +237,7 @@ void tgui_list_layout::updateWidgetPositions()
 editor_gui::editor_gui()
 {
 	mLayout = std::make_shared<tgui_list_layout>();
-	mLayout->setBackgroundColor({ 0, 0, 0,  90});
+	mLayout->setBackgroundColor({ 10, 10, 10,  255});
 	mLayout->setSize(200, "&.height");
 	mLayout->hide();
 
@@ -233,12 +249,12 @@ editor_gui::editor_gui()
 	mLb_fps->setMaximumTextWidth(0);
 	mLb_fps->setTextColor({ 255, 255, 255, 255 });
 	mLb_fps->setText("FPS: N/A");
-	mLb_fps->setTextSize(20);
+	mLb_fps->setTextSize(15);
 	mLayout->add(mLb_fps);
 
 	mLb_mouse = tgui::Label::copy(mLb_fps);
 	mLb_mouse->setText("(n/a, n/a)\n(n/a, n/a)");
-	mLb_mouse->setTextSize(14);
+	mLb_mouse->setTextSize(12);
 	mLayout->add(mLb_mouse);
 
 	{
@@ -293,6 +309,143 @@ void editor_gui::clear()
 {
 	mEditor_layout->removeAllWidgets();
 }
+
+inline void editor_gui::add_group(const std::string & pText)
+{
+	auto lb = std::make_shared<tgui::Label>();
+	lb->setMaximumTextWidth(0);
+	lb->setTextColor({ 200, 200, 200, 255 });
+	lb->setText(pText);
+	lb->setTextSize(15);
+	lb->setTextStyle(sf::Text::Bold);
+	mEditor_layout->add(lb);
+}
+
+tgui::HorizontalLayout::Ptr editor_gui::create_value_line(const std::string& pText)
+{
+	auto hl = std::make_shared<tgui::HorizontalLayout>();
+	hl->setBackgroundColor({ 0, 0, 0, 0 });
+	hl->setSize("&.width",25);
+	hl->addSpace(0.1f);
+	mEditor_layout->add(hl);
+
+	auto lb = std::make_shared<tgui::Label>();
+	lb->setMaximumTextWidth(0);
+	lb->setTextColor({ 200, 200, 200, 255 });
+	lb->setText(pText);
+	lb->setTextSize(12);
+	lb->setVerticalAlignment(tgui::Label::VerticalAlignment::Center);
+	hl->add(lb);
+
+	return hl;
+}
+
+tgui::EditBox::Ptr editor_gui::add_value_int(const std::string & pLabel, std::function<void(int)> pCallback, bool pNeg)
+{
+	assert(pCallback);
+	auto hl = create_value_line(pLabel);
+	auto tb = std::make_shared<tgui::EditBox>();
+	//tb->setInputValidator(std::string(pNeg ? "[-+]" : "") + "[0-9]*");
+	tb->connect("ReturnKeyPressed", [=](sf::String pVal)
+	{
+		try {
+			pCallback(std::stoi(std::string(pVal)));
+		}
+		catch (...)
+		{
+			logger::warning("Failed to get value of '" + pLabel + "'");
+		}
+	});
+	hl->add(tb);
+	return tb;
+}
+
+tgui::EditBox::Ptr editor_gui::add_value_int(const std::string & pLabel, int & pValue, bool pNeg)
+{
+	return add_value_int(pLabel, std::function<void(int)>([&](int pCallback_value) { pValue = pCallback_value; }), pNeg);
+}
+
+tgui::EditBox::Ptr editor_gui::add_value_string(const std::string & pLabel, std::function<void(std::string)> pCallback)
+{
+	auto hl = create_value_line(pLabel);
+	auto tb = std::make_shared<tgui::EditBox>();
+	tb->connect("ReturnKeyPressed", [=](sf::String pVal)
+	{
+		try {
+			if (pCallback)
+				pCallback(pVal);
+		}
+		catch (...)
+		{
+			logger::warning("Failed to get value of '" + pLabel + "'");
+		}
+	});
+	hl->add(tb);
+	return tb;
+}
+
+tgui::EditBox::Ptr editor_gui::add_value_string(const std::string & pLabel, std::string& pValue)
+{
+	return add_value_string(pLabel, [&](std::string pCallback_value) { pValue = pCallback_value; });
+}
+
+tgui::EditBox::Ptr editor_gui::add_value_float(const std::string & pLabel, std::function<void(float)> pCallback, bool pNeg)
+{
+	assert(pCallback);
+	auto hl = create_value_line(pLabel);
+	auto tb = std::make_shared<tgui::EditBox>();
+	//tb->setInputValidator(std::string(pNeg ? "[-+]" : "") + "[0-9]*\\.[0-9]*");
+	tb->connect("ReturnKeyPressed", [=](sf::String pVal)
+	{
+		try {
+			pCallback(std::stof(std::string(pVal)));
+		}
+		catch (...)
+		{
+			logger::warning("Failed to get value of '" + pLabel + "'");
+		}
+	});
+	hl->add(tb);
+	return tb;
+}
+
+tgui::EditBox::Ptr editor_gui::add_value_float(const std::string & pLabel, float & pValue, bool pNeg)
+{
+	return add_value_float(pLabel, std::function<void(float)>([&](float pCallback_value) { pValue = pCallback_value; }), pNeg);
+}
+
+tgui::ComboBox::Ptr editor_gui::add_value_enum(const std::string & pLabel, std::function<void(size_t)> pCallback, const std::vector<std::string>& pValues, size_t pDefault)
+{
+	assert(pCallback);
+	auto hl = create_value_line(pLabel);
+	auto cb = std::make_shared<tgui::ComboBox>();
+	for (const auto& i : pValues)
+	{
+		cb->addItem(i);
+	}
+	//tb->setInputValidator(std::string(pNeg ? "[-+]" : "") + "[0-9]*\\.[0-9]*");
+	cb->connect("ItemSelected ", [=](sf::String pVal)
+	{
+		try {
+			pCallback(cb->getSelectedItemIndex());
+		}
+		catch (...)
+		{
+			logger::warning("Failed to get value of '" + pLabel + "'");
+		}
+	});
+	cb->setSelectedItemByIndex(pDefault);
+	cb->setTextSize(12);
+	cb->setItemsToDisplay(10);
+	hl->add(cb);
+	return cb;
+}
+
+tgui::ComboBox::Ptr editor_gui::add_value_enum(const std::string & pLabel, size_t & pSelection, const std::vector<std::string>& pValues, size_t pDefault)
+{
+	return add_value_enum(pLabel, std::function<void(size_t)>([&](size_t pCallback_value) { pSelection = pCallback_value; }), pValues, pDefault);
+}
+
 
 tgui::Label::Ptr editor_gui::add_label(const std::string & pText, tgui::Container::Ptr pContainer)
 {
@@ -1094,22 +1247,56 @@ private:
 	command_add_wall pOpposing;
 };
 
+class command_transform_wall :
+	public command
+{
+public:
+	command_transform_wall(std::shared_ptr<rpg::collision_box> pBox)
+		: mBox(pBox), mOpposing(pBox->get_region())
+	{}
+
+	bool execute()
+	{
+		auto temp = mBox->get_region();
+		mBox->set_region(mOpposing);
+		mOpposing = temp;
+		return true;
+	}
+
+	bool undo()
+	{
+		return execute();
+	}
+
+	bool redo()
+	{
+		return execute();
+	}
+
+private:
+	std::shared_ptr<rpg::collision_box> mBox;
+	engine::frect mOpposing;
+
+};
+
 collisionbox_editor::collisionbox_editor()
 {
 	set_depth(-1000);
 
 	add_child(mTilemap_display);
+
 	mWall_display.set_color({ 100, 255, 100, 200 });
 	mWall_display.set_outline_color({ 255, 255, 255, 255 });
 	mWall_display.set_outline_thinkness(1);
 	add_child(mWall_display);
 
-	mSelection_preview.set_color({ 0, 0, 0, 0 });
-	mSelection_preview.set_outline_color({ 255, 255, 255, 100 });
-	mSelection_preview.set_outline_thinkness(1);
-	add_child(mSelection_preview);
+	mGrid.set_color({ 0, 0, 0, 0 });
+	mGrid.set_outline_color({ 100, 100, 100, 100 });
+	mGrid.set_outline_thinkness(0.5f);
+	add_child(mGrid);
 
 	mCurrent_type = rpg::collision_box::type::wall;
+	mGrid_snap = grid_snap::full;
 
 	mState = state::normal;
 }
@@ -1118,42 +1305,95 @@ bool collisionbox_editor::open_editor()
 {
 	mCollision_editor_group->set_enabled(true);
 	mCommand_manager.clean();
-	mSelection_preview.set_size({ get_unit(), get_unit() });
 
 	return mContainer.load_xml(mLoader.get_collisionboxes());
 }
 
 int collisionbox_editor::draw(engine::renderer& pR)
 {
+	const bool button_left = pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left);
+	const bool button_left_down = pR.is_mouse_down(engine::renderer::mouse_button::mouse_left);
+	const bool button_right = pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_right);
+	const bool button_shift  = pR.is_key_down(engine::renderer::key_type::LShift);
+	const bool button_ctrl   = pR.is_key_down(engine::renderer::key_type::LControl);
+
 	const engine::fvector mouse_position = pR.get_mouse_position(get_exact_position());
-	const engine::fvector exact_tile_position = mouse_position / get_unit();
-	const engine::fvector tile_position = engine::fvector(exact_tile_position).floor();
+	const engine::fvector exact_tile_position = (mouse_position * get_unit()).floor()/std::pow(get_unit(), 2);
+
+	engine::fvector tile_position;
+	engine::fvector selection_size;
+	if (mGrid_snap == grid_snap::none) // No grid
+	{
+		tile_position = exact_tile_position;
+		selection_size = engine::fvector(0, 0);
+	}
+	else
+	{
+		// Snap the tile position and adjust the selection size for the new grid
+		float scale = 1;
+		switch (mGrid_snap)
+		{
+		case grid_snap::pixel:   scale = 1 / get_unit(); break;
+		case grid_snap::quarter: scale = 0.25f;          break;
+		case grid_snap::half:    scale = 0.5f;           break;
+		case grid_snap::full:    scale = 1;              break;
+		}
+		tile_position = (exact_tile_position / scale).floor() * scale;
+		selection_size = engine::fvector(scale, scale);
+	}
 
 	switch (mState)
 	{
 	case state::normal:
 	{
 		// Select tile
-		if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left))
+		if (button_left)
 		{
-			if (!tile_selection(exact_tile_position)
-				|| pR.is_key_down(engine::renderer::key_type::LShift)) // Left shift allows use to place wall on another wall
+			if (button_ctrl && mSelection) // Resize
+			{
+				const engine::fvector pos = (exact_tile_position - mSelection->get_region().get_center())/**mSelection->get_region().get_size().normalize()*/;
+				if (std::abs(pos.x) > std::abs(pos.y))
+				{
+					if (pos.x > 0)
+						mResize_mask = engine::frect(0, 0, 1, 0); // Right
+					else
+						mResize_mask = engine::frect(1, 0, -1, 0); // Left
+				}
+				else
+				{
+					if (pos.y > 0)
+						mResize_mask = engine::frect(0, 0, 0, 1); // Bottom
+					else
+						mResize_mask = engine::frect(0, 1, 0, -1); // Top
+				}
+				mState = state::resize_mode;
+				mCommand_manager.add(std::make_shared<command_transform_wall>(mSelection));
+				mOriginal_rect = mSelection->get_region();
+				mDrag_from = tile_position;
+			}
+			else if (!tile_selection(exact_tile_position) // Create/Select
+				|| button_shift) // Left shift allows use to place wall on another wall
 			{
 				mSelection = mContainer.add_collision_box(mCurrent_type);
 
 				mCommand_manager.add(std::shared_ptr<command_add_wall>(new command_add_wall(mSelection, &mContainer)));
 
-				apply_wall_settings();
-				mSelection->set_region({ tile_position, { 1, 1 } });
+				mSelection->set_region({ tile_position, selection_size });
 
 				mState = state::size_mode;
 				mDrag_from = tile_position;
+			}
+			else // Move
+			{
+				mCommand_manager.add(std::make_shared<command_transform_wall>(mSelection));
+				mState = state::move_mode;
+				mDrag_from = tile_position - mSelection->get_region().get_offset();
 			}
 			update_labels();
 		}
 
 		// Remove tile
-		else if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_right))
+		else if (button_right)
 		{
 			// No cycling when removing tile.
 			if (tile_selection(exact_tile_position, false))
@@ -1180,7 +1420,7 @@ int collisionbox_editor::draw(engine::renderer& pR)
 	case state::size_mode:
 	{
 		// Size mode only last while user is holding down left-click
-		if (!pR.is_mouse_down(engine::renderer::mouse_button::mouse_left))
+		if (!button_left_down)
 		{
 			mState = state::normal;
 			update_labels();
@@ -1201,17 +1441,56 @@ int collisionbox_editor::draw(engine::renderer& pR)
 			rect.y = tile_position.y;
 			resize_to.y = mDrag_from.y;
 		}
-		rect.set_size(resize_to - rect.get_offset() + engine::fvector(1, 1));
+		rect.set_size(resize_to - rect.get_offset() + selection_size);
 
 		// Update wall
 		mSelection->set_region(rect);
 
 		break;
 	}
+	case state::move_mode:
+	{		
+		if (!button_left_down)
+		{
+			mState = state::normal;
+			update_labels();
+			break;
+		}
+
+		auto rect = mSelection->get_region();
+		rect.set_offset(tile_position - mDrag_from);
+		mSelection->set_region(rect);
+		break;
+	}
+	case state::resize_mode:
+	{
+		if (!button_left_down)
+		{
+			mState = state::normal;
+			update_labels();
+			break;
+		}
+		auto rect = mSelection->get_region();
+		rect.set_offset(mOriginal_rect.get_offset() + (tile_position - mDrag_from)*mResize_mask.get_offset());
+		rect.set_size(mOriginal_rect.get_size() + (tile_position - mDrag_from)*mResize_mask.get_size());
+
+		// Limit size
+		rect.w = std::max(rect.w, selection_size.x);
+		rect.h = std::max(rect.h, selection_size.y);
+
+		mSelection->set_region(rect);
+		break;
+	}
 	}
 
 	mBlackout.draw(pR);
 	mTilemap_display.draw(pR);
+
+	if (mGrid_snap != grid_snap::none)
+	{
+		// TODO: draw grid
+	}
+
 	for (auto& i : mContainer.get_boxes()) // TODO: Optimize
 	{
 		if (i == mSelection)
@@ -1230,9 +1509,6 @@ int collisionbox_editor::draw(engine::renderer& pR)
 		mWall_display.draw(pR);
 	}
 
-	mSelection_preview.set_position(tile_position);
-	mSelection_preview.draw(pR);
-
 	mBoundary_visualization.draw(pR);
 
 	return 0;
@@ -1249,80 +1525,6 @@ void collisionbox_editor::load_terminal_interface(engine::terminal_system & pTer
 		mSelection.reset();
 		return true;
 	}, "- Clear all collision boxes (Warning: Can't undo)");
-
-	mCollision_editor_group->add_command("offset",
-		[&](const engine::terminal_arglist& pArgs)->bool
-	{
-		if (!mSelection)
-		{
-			logger::error("Invalid selection");
-			return false;
-		}
-		
-		if (pArgs.size() < 1)
-		{
-			logger::error("Not enough arguments");
-			return false;
-		}
-
-		if (pArgs[0].get_raw() == "reset")
-		{
-
-		}
-
-		if (pArgs.size() < 2)
-		{
-			logger::error("Not enough arguments");
-			return false;
-		}
-
-		engine::fvector offset;
-		try {
-			offset = read_args_vector(pArgs, mSelection->get_region().x, mSelection->get_region().y);
-		}
-		catch (...)
-		{
-			logger::error("Invalid offset input");
-			return false;
-		}
-		engine::frect changed = mSelection->get_region();
-		changed.set_offset(changed.get_offset() + offset);
-		mSelection->set_region(changed);
-
-		return true;
-	}, "<X> <Y> or reset - Offset collisionbox (Warning: Can't undo)");
-
-	mCollision_editor_group->add_command("size",
-		[&](const engine::terminal_arglist& pArgs)->bool
-	{
-		if (!mSelection)
-		{
-			logger::error("Invalid selection");
-			return false;
-		}
-
-		if (pArgs.size() < 2)
-		{
-			logger::error("Not enough arguments");
-			return false;
-		}
-
-		engine::fvector size;
-		try {
-			size = read_args_vector(pArgs, mSelection->get_region().w, mSelection->get_region().h);
-		}
-		catch (...)
-		{
-			logger::error("Invalid offset input");
-			return false;
-		}
-
-		engine::frect changed = mSelection->get_region();
-		changed.set_size(size);
-		mSelection->set_region(changed);
-
-		return true;
-	}, "<X> <Y> - Set size of collisionbox (Warning: Can't undo)");
 	pTerminal.add_group(mCollision_editor_group);
 }
 
@@ -1341,114 +1543,103 @@ int collisionbox_editor::save()
 
 void collisionbox_editor::setup_editor(editor_gui & pEditor_gui)
 {
-	// Collision box combobox
-	mCb_type = pEditor_gui.add_combobox();
-	mCb_type->addItem("Wall");
-	mCb_type->addItem("Trigger");
-	mCb_type->addItem("Button");
-	mCb_type->addItem("Door");
-	mCb_type->connect("ItemSelected",
-		[&]() {
-		const int item = mCb_type->getSelectedItemIndex();
-		if (item == -1)
-		{
-			logger::warning("No item selected");
-			return;
-		}
-
-		// Set current tile
-		mCurrent_type = static_cast<rpg::collision_box::type>(item); // Lazy cast
-	});
-	mCb_type->setSelectedItemByIndex(0);
-
-	// Tile size label
-	mLb_tilesize  = pEditor_gui.add_label("n/a, n/a");
-
-	// Apply button
-
-	// Wall group textbox
-	pEditor_gui.add_small_label("Wall Group: ");
-	mTb_wallgroup = pEditor_gui.add_textbox();
-
-	// Wall size textbox
-	pEditor_gui.add_small_label("Wall Size: ");
-	mTb_size = pEditor_gui.add_textbox();
-
-	auto bt_apply = pEditor_gui.add_button("Apply");
-	bt_apply->connect("pressed", [&]() { apply_wall_settings(); });
-
-	// Door related textboxes
+	pEditor_gui.add_group("Editor");
+	pEditor_gui.add_value_enum("Grid Snapping", [&](size_t pI)
 	{
-		mLo_door = pEditor_gui.add_sub_container();
+		mGrid_snap = (grid_snap)pI;
+	}, { "None", "Pixel", "Quarter Tile", "Half Tile", "Full Tile" }, 4);
 
-		// Door name
-		pEditor_gui.add_small_label("Door name:", mLo_door);
-		mTb_door_name = pEditor_gui.add_textbox(mLo_door);
+	pEditor_gui.add_group("Box Properties");
 
-		// Door scene
-		pEditor_gui.add_small_label("Door scene:", mLo_door);
-		mTb_door_scene = pEditor_gui.add_combobox(mLo_door);
-		populate_combox_with_scene_names(mTb_door_scene);
-
-		// Door destination
-		pEditor_gui.add_small_label("Door destination:", mLo_door);
-		mTb_door_destination = pEditor_gui.add_textbox(mLo_door);
-
-		// Door player offset
-		pEditor_gui.add_small_label("Door player offset:", mLo_door);
-		mTb_door_offsetx = pEditor_gui.add_textbox(mLo_door);
-		mTb_door_offsety = pEditor_gui.add_textbox(mLo_door);
-
-		// This container defaults invisible
-		mLo_door->hide();
-	}
-
-}
-
-void collisionbox_editor::apply_wall_settings()
-{
-	if (!mSelection)
-		return;
-
-	if (mSelection->get_type() != (rpg::collision_box::type)mCb_type->getSelectedItemIndex())
-	{
+	mCb_type = pEditor_gui.add_value_enum("Type", [&](size_t pI) {
+		if (!mSelection) return;
+		mCurrent_type = static_cast<rpg::collision_box::type>(pI); // Lazy cast
 		auto temp = mSelection;
 		mContainer.remove_box(mSelection);
 		auto new_box = mContainer.add_collision_box((rpg::collision_box::type)mCb_type->getSelectedItemIndex());
 		new_box->set_region(temp->get_region());
 		new_box->set_wall_group(temp->get_wall_group());
 		mSelection = new_box;
-		update_door_settings_labels();
-	}
+	}, {"Wall", "Trigger", "Button", "Door"}, 0);
 
+	mCb_type->setSelectedItemByIndex(0);
 
-	// Apply wall group
-	if (mTb_wallgroup->getText().isEmpty())
-		mSelection->set_wall_group(nullptr);
-	else
-		mSelection->set_wall_group(mContainer.create_group(mTb_wallgroup->getText()));
-
-	// Apply size
-	engine::frect new_size;
-	try {
-		new_size = parsers::parse_attribute_rect<float>(mTb_size->getText());
-		mSelection->set_region(new_size);
-	}
-	catch (...)
+	mTb_wallgroup = pEditor_gui.add_value_string("Wall Group", [&](std::string)
 	{
-		logger::error("Failed to parse rect size");
-	}
+		if (!mSelection) return;
+		if (mTb_wallgroup->getText().isEmpty())
+			mSelection->set_wall_group(nullptr);
+		else
+			mSelection->set_wall_group(mContainer.create_group(mTb_wallgroup->getText()));
+	});
 
-	// Apply door settings
-	if (mSelection->get_type() == rpg::collision_box::type::door)
+	mTb_box_x = pEditor_gui.add_value_float("X", [&](float pVal)
 	{
-		auto door = std::dynamic_pointer_cast<rpg::door>(mSelection);
-		door->set_name       (mTb_door_name->getText());
-		door->set_scene      (mTb_door_scene->getSelectedItem());
-		door->set_destination(mTb_door_destination->getText());
-		door->set_offset     ({ util::to_numeral<float>(mTb_door_offsetx->getText())
-			                  , util::to_numeral<float>(mTb_door_offsety->getText()) });
-	}
+		if (!mSelection) return;
+		auto rect = mSelection->get_region();
+		rect.x = pVal;
+		mSelection->set_region(rect);
+	});
+	mTb_box_y = pEditor_gui.add_value_float("Y", [&](float pVal)
+	{
+		if (!mSelection) return;
+		auto rect = mSelection->get_region();
+		rect.y = pVal;
+		mSelection->set_region(rect);
+	});
+	mTb_box_width = pEditor_gui.add_value_float("Width", [&](float pVal)
+	{
+		if (!mSelection) return;
+		auto rect = mSelection->get_region();
+		rect.w = pVal;
+		mSelection->set_region(rect);
+	}, false);
+	mTb_box_height = pEditor_gui.add_value_float("Height", [&](float pVal)
+	{
+		if (!mSelection) return;
+		auto rect = mSelection->get_region();
+		rect.h = pVal;
+		mSelection->set_region(rect);
+	}, false);
+
+	pEditor_gui.add_group("Door Properties");
+
+	mTb_door_name = pEditor_gui.add_value_string("Name", [&](std::string pVal)
+	{
+		if (mSelection && mSelection->get_type() == rpg::collision_box::type::door)
+			std::dynamic_pointer_cast<rpg::door>(mSelection)->set_name(pVal);
+	});
+
+	mTb_door_scene = pEditor_gui.add_value_enum("Destination Scene", [&](size_t pVal)
+	{
+		if (mSelection && mSelection->get_type() == rpg::collision_box::type::door)
+			std::dynamic_pointer_cast<rpg::door>(mSelection)->set_scene(mTb_door_scene->getSelectedItem());
+	}, {});
+	populate_combox_with_scene_names(mTb_door_scene);
+
+	mTb_door_destination = pEditor_gui.add_value_string("Destination Door", [&](std::string pVal)
+	{
+		if (mSelection && mSelection->get_type() == rpg::collision_box::type::door)
+			std::dynamic_pointer_cast<rpg::door>(mSelection)->set_destination(pVal);
+	});
+
+	mTb_door_offsetx = pEditor_gui.add_value_float("Offset X", [&](float pVal)
+	{
+		if (mSelection && mSelection->get_type() != rpg::collision_box::type::door)
+		{
+			auto door = std::dynamic_pointer_cast<rpg::door>(mSelection);
+			door->set_offset({ pVal, door->get_offset().y });
+		}
+	});
+
+	mTb_door_offsety = pEditor_gui.add_value_float("Offset Y", [&](float pVal)
+	{
+		if (mSelection && mSelection->get_type() == rpg::collision_box::type::door)
+		{
+			auto door = std::dynamic_pointer_cast<rpg::door>(mSelection);
+			door->set_offset({ door->get_offset().x, pVal });
+		}
+	});
 }
 
 bool collisionbox_editor::tile_selection(engine::fvector pCursor, bool pCycle)
@@ -1487,18 +1678,10 @@ bool collisionbox_editor::tile_selection(engine::fvector pCursor, bool pCycle)
 
 void collisionbox_editor::update_labels()
 {
-	assert(mLb_tilesize != nullptr);
-
 	if (!mSelection)
 		return;
 
 	const auto rect = mSelection->get_region();
-
-	// Update size
-	std::string size_text = std::to_string(rect.get_size().x);
-	size_text += ", ";
-	size_text += std::to_string(rect.get_size().y);
-	mLb_tilesize->setText(size_text);
 
 	// Update current wall group tb
 	if (!mSelection->get_wall_group())
@@ -1510,27 +1693,20 @@ void collisionbox_editor::update_labels()
 	mCurrent_type = mSelection->get_type();
 	mCb_type->setSelectedItemByIndex(static_cast<size_t>(mCurrent_type));
 
-	mTb_size->setText(parsers::generate_attribute_rect(mSelection->get_region()));
+	mTb_box_x->setText(std::to_string(mSelection->get_region().x));
+	mTb_box_y->setText(std::to_string(mSelection->get_region().y));
+	mTb_box_width->setText(std::to_string(mSelection->get_region().w));
+	mTb_box_height->setText(std::to_string(mSelection->get_region().h));
 
-	update_door_settings_labels();
-}
-
-void collisionbox_editor::update_door_settings_labels()
-{
-	if (mSelection->get_type() != rpg::collision_box::type::door)
+	if (mSelection->get_type() == rpg::collision_box::type::door)
 	{
-		mLo_door->hide();
-		return;
+		auto door = std::dynamic_pointer_cast<rpg::door>(mSelection);
+		mTb_door_name->setText(door->get_name());
+		mTb_door_scene->setSelectedItem(door->get_scene());
+		mTb_door_destination->setText(door->get_destination());
+		mTb_door_offsetx->setText(std::to_string(door->get_offset().x));
+		mTb_door_offsety->setText(std::to_string(door->get_offset().y));
 	}
-	
-	mLo_door->show();
-
-	auto door = std::dynamic_pointer_cast<rpg::door>(mSelection);
-	mTb_door_name->setText(door->get_name());
-	mTb_door_scene->setSelectedItem(door->get_scene());
-	mTb_door_destination->setText(door->get_destination());
-	mTb_door_offsetx->setText(std::to_string(door->get_offset().x));
-	mTb_door_offsety->setText(std::to_string(door->get_offset().y));
 }
 
 // ##########

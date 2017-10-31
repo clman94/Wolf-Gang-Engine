@@ -85,6 +85,11 @@ struct rect
 		return get_offset() + get_size();
 	}
 
+	vector<T> get_center() const
+	{
+		return get_offset() + (get_size()*0.5f);
+	}
+
 	static bool is_intersect(const rect& a, const rect& b)
 	{
 		if    (a.x < b.x + b.w

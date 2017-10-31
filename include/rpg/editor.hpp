@@ -14,6 +14,7 @@
 #include <vector>
 #include <string>
 #include <list>
+#include <functional>
 
 #include "../../src/xmlshortcuts.hpp"
 
@@ -31,11 +32,21 @@ class command_manager
 public:
 	bool execute(std::shared_ptr<command> pCommand);
 	bool add(std::shared_ptr<command> pCommand);
+
+	void start(std::shared_ptr<command> pCommand);
+	template<typename T>
+	std::shared_ptr<T> current()
+	{
+		return std::dynamic_pointer_cast<T>(mCurrent);
+	}
+	void complete();
+
 	bool undo();
 	bool redo();
 	void clean();
 
 private:
+	std::shared_ptr<command> mCurrent;
 	std::vector<std::shared_ptr<command>> mUndo;
 	std::vector<std::shared_ptr<command>> mRedo;
 };
@@ -60,6 +71,22 @@ public:
 
 	void clear();
 
+	void add_group(const std::string& pText);
+
+	tgui::EditBox::Ptr add_value_int(const std::string& pLabel, std::function<void(int)> pCallback, bool pNeg = true);
+	tgui::EditBox::Ptr add_value_int(const std::string& pLabel, int& pValue, bool pNeg = true);
+
+	tgui::EditBox::Ptr add_value_string(const std::string& pLabel, std::function<void(std::string)> pCallback);
+	tgui::EditBox::Ptr add_value_string(const std::string& pLabel, std::string& pValue);
+
+	tgui::EditBox::Ptr add_value_float(const std::string& pLabel, std::function<void(float)> pCallback, bool pNeg = true);
+	tgui::EditBox::Ptr add_value_float(const std::string& pLabel, float& pValue, bool pNeg = true);
+
+	tgui::ComboBox::Ptr add_value_enum(const std::string& pLabel, std::function<void(size_t)> pCallback, const std::vector<std::string>& pValues, size_t pDefault = 0);
+	tgui::ComboBox::Ptr add_value_enum(const std::string& pLabel, size_t& pSelection, const std::vector<std::string>& pValues, size_t pDefault = 0);
+
+
+
 	tgui::Label::Ptr add_label(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
 	tgui::Label::Ptr add_small_label(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
 	tgui::TextBox::Ptr add_textbox(tgui::Container::Ptr pContainer = nullptr);
@@ -71,6 +98,8 @@ public:
 	int draw(engine::renderer& pR);
 
 private:
+	tgui::HorizontalLayout::Ptr create_value_line(const std::string& pText);
+
 	rpg::scene* mScene;
 
 	float mUpdate_timer;
@@ -234,52 +263,55 @@ private:
 
 	command_manager mCommand_manager;
 
-	// Siply extends the frect with a group name string
-	struct wall :
-		public engine::frect
-	{
-		wall() {};
-		wall(engine::frect r) : engine::frect(r) {};
-		std::string group;
-	};
-
 	std::shared_ptr<rpg::collision_box> mSelection;
 
 	enum class state
 	{
 		normal,
-		size_mode
+		size_mode,
+		move_mode,
+		resize_mode
 	};
 
 	state mState;
 	engine::fvector mDrag_from;
 
-	tgui::ComboBox::Ptr mCb_type;
-	tgui::Label::Ptr    mLb_tilesize;
-	tgui::TextBox::Ptr  mTb_wallgroup;
-	tgui::TextBox::Ptr  mTb_size;
+	enum class grid_snap
+	{
+		none,
+		pixel,
+		quarter,
+		half,
+		full
+	} mGrid_snap;
 
-	std::shared_ptr<tgui_list_layout> mLo_door;
-	tgui::TextBox::Ptr mTb_door_name;
-	tgui::TextBox::Ptr mTb_door_destination;
+	engine::frect mResize_mask;
+	engine::frect mOriginal_rect; // For resize_mode
+
+	tgui::ComboBox::Ptr mCb_type;
+	tgui::EditBox::Ptr  mTb_wallgroup;
+	tgui::EditBox::Ptr  mTb_box_x;
+	tgui::EditBox::Ptr  mTb_box_y;
+	tgui::EditBox::Ptr  mTb_box_width;
+	tgui::EditBox::Ptr  mTb_box_height;
+
+	tgui::EditBox::Ptr mTb_door_name;
+	tgui::EditBox::Ptr mTb_door_destination;
 	tgui::ComboBox::Ptr mTb_door_scene;
-	tgui::TextBox::Ptr mTb_door_offsetx;
-	tgui::TextBox::Ptr mTb_door_offsety;
+	tgui::EditBox::Ptr mTb_door_offsetx;
+	tgui::EditBox::Ptr mTb_door_offsety;
 
 	rpg::collision_box::type     mCurrent_type;
 	rpg::collision_box_container mContainer;
 
-	engine::rectangle_node mSelection_preview;
+	engine::rectangle_node mGrid;
 	engine::rectangle_node mWall_display;
 	engine::rectangle_node mResize_display;
 
 	void setup_editor(editor_gui& pEditor_gui);
 
-	void apply_wall_settings();
-
 	bool tile_selection(engine::fvector pCursor, bool pCycle = true);
 	void update_labels();
-	void update_door_settings_labels();
 };
 
 class atlas_editor :

@@ -206,6 +206,14 @@ struct vector
 		return *this;
 	}
 
+	vector& flip()
+	{
+		T temp = x;
+		x = y;
+		y = x;
+		return *this;
+	}
+
 	vector& normalize()
 	{
 		T d = distance();
@@ -265,7 +273,6 @@ struct vector
 	template<typename>
 	friend struct vector;
 };
-
 
 template<typename T1, typename T2>
 bool operator<(const vector<T1>& L, const vector<T2>& R)
