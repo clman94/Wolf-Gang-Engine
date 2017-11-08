@@ -1501,6 +1501,7 @@ int text_entity::draw(engine::renderer & pR)
 {
 	update_depth();
 	mText.set_unit(get_unit());
+	mText.set_position(calculate_offset());
 	mText.draw(pR);
 	return 0;
 }

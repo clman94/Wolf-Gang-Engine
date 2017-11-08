@@ -43,7 +43,7 @@ protected:
 	/// Should be called if draw() is overridden by a subclass.
 	void update_depth();
 
-	engine::fvector calculate_draw_position() const;
+	engine::fvector calculate_offset() const;
 
 private:
 	float mParallax;

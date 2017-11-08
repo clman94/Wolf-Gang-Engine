@@ -49,13 +49,13 @@ void entity::update_depth()
 	}
 }
 
-engine::fvector entity::calculate_draw_position() const
+engine::fvector entity::calculate_offset() const
 {
 	auto renderer = get_renderer();
 	if (!renderer)
 		return{};
-	const engine::fvector z_offset(0, get_z());
-	const engine::fvector abs_position = get_absolute_position() - z_offset;
+	const engine::fvector z_offset(0, -get_z());
+	const engine::fvector abs_position = get_absolute_position() + z_offset;
 	const engine::fvector parallax_offset = (abs_position - (renderer->get_target_size() / get_unit() / 2)) * mParallax;
-	return abs_position + parallax_offset;
+	return parallax_offset + z_offset;
 }

@@ -14,7 +14,7 @@ int sprite_entity::draw(engine::renderer &pR)
 {
 	update_depth();
 	mSprite.set_unit(get_unit());
-	mSprite.set_position({ 0, -get_z() });
+	mSprite.set_position(calculate_offset());
 	mSprite.draw(pR);
 	return 0;
 }

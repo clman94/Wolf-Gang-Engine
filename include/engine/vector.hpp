@@ -84,9 +84,10 @@ struct vector
 
 	vector& rotate(T pDegrees)
 	{
+		
 		const T r = degree_to_radian(pDegrees);
-		float x1 = x*std::cos(r) - y*std::sin(r);
-		float y1 = y*std::cos(r) + x*std::sin(r);
+		T x1 = x*std::cos(r) - y*std::sin(r);
+		T y1 = y*std::cos(r) + x*std::sin(r);
 		x = x1;
 		y = y1;
 		return *this;
