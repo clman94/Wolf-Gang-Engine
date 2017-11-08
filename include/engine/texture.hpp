@@ -15,24 +15,28 @@
 #include <vector>
 #include <string>
 #include <assert.h>
+#include <set>
 
 namespace engine
 {
 
-class atlas_entry
+class subtexture :
+	public animation
 {
 public:
-	atlas_entry();
-	atlas_entry(std::shared_ptr<engine::animation> pAnimation);
-	frect get_root_rect() const;
-	bool is_animation() const;
-	std::shared_ptr<animation> get_animation() const;
+	subtexture() {}
+	subtexture(const std::string& pName);
+
+	typedef std::shared_ptr<subtexture> ptr;
+	
+	void set_name(const std::string& pName);
+	const std::string& get_name() const;
 
 	bool load(tinyxml2::XMLElement* pEle);
 	bool save(tinyxml2::XMLElement* pEle);
 
 private:
-	std::shared_ptr<animation> mAnimation;
+	std::string mName;
 };
 
 class texture_atlas
@@ -41,22 +45,29 @@ public:
 	bool load(const std::string& pPath);
 	bool save(const std::string& pPath);
 	bool load_memory(const char* pData, size_t pSize);
-	void clean();
+	void clear();
 
-	util::optional_pointer<const atlas_entry> get_entry(const std::string& pName) const;
-	util::optional_pointer<const std::pair<const std::string, atlas_entry>> get_entry(const fvector& pVec) const;
+	std::shared_ptr<subtexture> get_entry(const std::string& pName) const;
+	std::shared_ptr<subtexture> get_entry(const fvector& pVec) const;
 
-	bool add_entry(const std::string& pName, const atlas_entry& pEntry);
+	bool add_entry(const subtexture& pEntry);
+	bool add_entry(subtexture::ptr& pEntry);
+
 	bool rename_entry(const std::string& pOriginal, const std::string& pRename);
+
 	bool remove_entry(const std::string& pName);
+	bool remove_entry(subtexture::ptr& pEntry);
 
 	std::vector<std::string> compile_list() const;
 
-	const std::map<std::string, atlas_entry>& get_raw_atlas() const;
+	const std::vector<subtexture::ptr>& get_raw_atlas() const;
+
+	bool is_empty() const;
 
 private:
 	bool load_settings(tinyxml2::XMLDocument& pDoc);
-	std::map<std::string, atlas_entry> mAtlas;
+
+	std::vector<subtexture::ptr> mAtlas;
 };
 
 class texture :
@@ -68,7 +79,10 @@ public:
 	bool load();
 	bool unload();
 
-	util::optional_pointer<const atlas_entry> get_entry(const std::string& pName) const;
+	//bool load(const std::string& pPath);
+	//bool load_memory(const char* pData, size_t pSize);
+
+	std::shared_ptr<subtexture> get_entry(const std::string& pName) const;
 
 	std::vector<std::string> compile_list() const;
 
@@ -88,8 +102,6 @@ private:
 	texture_atlas mAtlas;
 	std::unique_ptr<sf::Texture> mSFML_texture;
 };
-
-
 
 }
 

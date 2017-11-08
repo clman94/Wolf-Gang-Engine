@@ -9,49 +9,40 @@
 
 using namespace engine;
 
-atlas_entry::atlas_entry()
+subtexture::subtexture(const std::string & pName)
 {
-	mAnimation = std::make_shared<animation>();
+	mName = pName;
 }
 
-atlas_entry::atlas_entry(std::shared_ptr<animation> pAnimation)
+void subtexture::set_name(const std::string & pName)
 {
-	mAnimation = pAnimation;
+	mName = pName;
 }
 
-frect atlas_entry::get_root_rect() const
+const std::string & subtexture::get_name() const
 {
-	return mAnimation->get_frame_at(0);
+	return mName;
 }
 
-bool atlas_entry::is_animation() const
-{
-	return mAnimation->get_frame_count() > 1 && mAnimation->get_interval() > 0;
-}
-
-std::shared_ptr<engine::animation> atlas_entry::get_animation() const
-{
-	return mAnimation;
-}
-bool atlas_entry::load(tinyxml2::XMLElement * pEle)
+bool subtexture::load(tinyxml2::XMLElement * pEle)
 {
 	assert(pEle != nullptr);
 
 	// Set root frame
-	mAnimation->set_frame_rect(util::shortcuts::load_rect_float_att(pEle));
+	set_frame_rect(util::shortcuts::load_rect_float_att(pEle));
 
 	// Set frame count
 	int att_frames = pEle->IntAttribute("frames");
 	engine::frame_t frame_count = (att_frames <= 0 ? 1 : att_frames);// Default one frame
-	mAnimation->set_frame_count(frame_count);
+	set_frame_count(frame_count);
 
 	// Set starting interval
 	float att_interval = pEle->FloatAttribute("interval");
-	mAnimation->add_interval(0, att_interval);
+	add_interval(0, att_interval);
 
 	// Set default frame (default : 0)
 	int att_default = pEle->IntAttribute("default");
-	mAnimation->set_default_frame(att_default);
+	set_default_frame(att_default);
 
 	// Set loop type (default : none)
 	bool att_loop = pEle->BoolAttribute("loop");
@@ -60,13 +51,13 @@ bool atlas_entry::load(tinyxml2::XMLElement * pEle)
 	engine::animation::loop_type loop_type = engine::animation::loop_type::none;
 	if (att_loop)                loop_type = engine::animation::loop_type::linear;
 	if (att_pingpong)            loop_type = engine::animation::loop_type::pingpong;
-	mAnimation->set_loop(loop_type);
+	set_loop(loop_type);
 
 	// Setup sequence for changing of interval over time
 	auto ele_seq = pEle->FirstChildElement("seq");
 	while (ele_seq)
 	{
-		mAnimation->add_interval(
+		add_interval(
 			(engine::frame_t)ele_seq->IntAttribute("from"),
 			ele_seq->FloatAttribute("interval"));
 		ele_seq = ele_seq->NextSiblingElement();
@@ -74,14 +65,14 @@ bool atlas_entry::load(tinyxml2::XMLElement * pEle)
 	return true;
 }
 
-bool atlas_entry::save(tinyxml2::XMLElement * pEle)
+bool subtexture::save(tinyxml2::XMLElement * pEle)
 {
-	util::shortcuts::save_rect_float_att(pEle, mAnimation->get_frame_at(0));
-	if (mAnimation->get_frame_count() > 1)
-		pEle->SetAttribute("frames", static_cast<unsigned int>(mAnimation->get_frame_count()));
-	if (mAnimation->get_interval() > 0)
-		pEle->SetAttribute("interval", mAnimation->get_interval());
-	switch (mAnimation->get_loop())
+	util::shortcuts::save_rect_float_att(pEle, get_root_frame());
+	if (get_frame_count() > 1)
+		pEle->SetAttribute("frames", static_cast<unsigned int>(get_frame_count()));
+	if (get_interval() > 0)
+		pEle->SetAttribute("interval", get_interval());
+	switch (get_loop())
 	{
 	case engine::animation::loop_type::linear:
 		pEle->SetAttribute("loop", 1);
@@ -93,8 +84,8 @@ bool atlas_entry::save(tinyxml2::XMLElement * pEle)
 		break;
 	}
 
-	if (mAnimation->get_default_frame() != 0)
-		pEle->SetAttribute("default", static_cast<unsigned int>(mAnimation->get_default_frame()));
+	if (get_default_frame() != 0)
+		pEle->SetAttribute("default", static_cast<unsigned int>(get_default_frame()));
 
 	// TODO: Save sequenced interval
 	return true;
@@ -102,7 +93,7 @@ bool atlas_entry::save(tinyxml2::XMLElement * pEle)
 
 bool texture_atlas::load(const std::string & pPath)
 {
-	clean();
+	clear();
 
 	using namespace tinyxml2;
 
@@ -122,8 +113,8 @@ bool texture_atlas::save(const std::string & pPath)
 	
 	for (auto& i : mAtlas)
 	{
-		auto entry = doc.NewElement(i.first.c_str());
-		i.second.save(entry);
+		auto entry = doc.NewElement(i->get_name().c_str());
+		i->save(entry);
 		root->InsertEndChild(entry);
 	}
 	return doc.SaveFile(pPath.c_str()) == XML_SUCCESS;
@@ -131,7 +122,7 @@ bool texture_atlas::save(const std::string & pPath)
 
 bool texture_atlas::load_memory(const char * pData, size_t pSize)
 {
-	clean();
+	clear();
 
 	using namespace tinyxml2;
 
@@ -141,65 +132,97 @@ bool texture_atlas::load_memory(const char * pData, size_t pSize)
 	return load_settings(doc);
 }
 
-void texture_atlas::clean()
+void texture_atlas::clear()
 {
 	mAtlas.clear();
 }
 
-util::optional_pointer<const atlas_entry> texture_atlas::get_entry(const std::string & pName) const
+std::shared_ptr<subtexture> texture_atlas::get_entry(const std::string & pName) const
 {
-	auto find_entry = mAtlas.find(pName);
-	if (find_entry == mAtlas.end())
-		return{};
-	return &find_entry->second;
+	for (auto& i : mAtlas)
+		if (i->get_name() == pName)
+			return i;
+	return {};
 }
 
-util::optional_pointer<const std::pair<const std::string, atlas_entry>> texture_atlas::get_entry(const fvector & pVec) const
+std::shared_ptr<subtexture> texture_atlas::get_entry(const fvector & pVec) const
 {
 	for (auto& i : mAtlas)
 	{
-		if (i.second.get_root_rect().is_intersect(pVec))
-			return &i;
+		if (i->get_root_frame().is_intersect(pVec))
+			return i;
 	}
 	return{};
 }
 
-bool engine::texture_atlas::add_entry(const std::string & pName, const atlas_entry & pEntry)
+bool texture_atlas::add_entry(const subtexture & pEntry)
 {
-	if (mAtlas.find(pName) != mAtlas.end())
+	if (get_entry(pEntry.get_name()))
 		return false;
-	mAtlas[pName] = pEntry;
+	mAtlas.push_back(std::make_shared<subtexture>(pEntry));
+	return true;
+}
+
+bool engine::texture_atlas::add_entry(subtexture::ptr & pEntry)
+{
+	if (get_entry(pEntry->get_name()))
+		return false;
+	mAtlas.push_back(pEntry);
 	return true;
 }
 
 bool texture_atlas::rename_entry(const std::string & pOriginal, const std::string & pRename)
 {
-	if (mAtlas.find(pRename) != mAtlas.end())
+	if (pOriginal == pRename)
 		return false;
-	mAtlas[pRename] = mAtlas[pOriginal];
-	mAtlas.erase(pOriginal);
+
+	auto entry = get_entry(pOriginal);
+	if (!entry)
+		return false;
+
+	entry->set_name(pRename);
+
 	return true;
 }
 
 bool texture_atlas::remove_entry(const std::string & pName)
 {
-	if (mAtlas.find(pName) != mAtlas.end())
-		return false;
-	mAtlas.erase(pName);
-	return true;
+	for (size_t i = 0; i < mAtlas.size(); i++)
+		if (mAtlas[i]->get_name() == pName)
+		{
+			mAtlas.erase(mAtlas.begin() + i);
+			return true;
+		}
+	return false;
+}
+
+bool engine::texture_atlas::remove_entry(subtexture::ptr & pEntry)
+{
+	for (size_t i = 0; i < mAtlas.size(); i++)
+		if (mAtlas[i] == pEntry)
+		{
+			mAtlas.erase(mAtlas.begin() + i);
+			return true;
+		}
+	return false;
 }
 
 std::vector<std::string> texture_atlas::compile_list() const
 {
 	std::vector<std::string> list;
 	for (auto& i : mAtlas)
-		list.push_back(i.first);
+		list.push_back(i->get_name());
 	return std::move(list);
 }
 
-const std::map<std::string, atlas_entry>& engine::texture_atlas::get_raw_atlas() const
+const std::vector<subtexture::ptr>& texture_atlas::get_raw_atlas() const
 {
 	return mAtlas;
+}
+
+bool texture_atlas::is_empty() const
+{
+	return mAtlas.empty();
 }
 
 
@@ -213,7 +236,10 @@ bool texture_atlas::load_settings(tinyxml2::XMLDocument& pDoc)
 	while (ele_entry)
 	{
 		// TODO: Check for colliding names
-		mAtlas[ele_entry->Name()].load(ele_entry);
+		subtexture entry;
+		entry.load(ele_entry);
+		entry.set_name(ele_entry->Name());
+		add_entry(entry);
 
 		ele_entry = ele_entry->NextSiblingElement();
 	}
@@ -264,7 +290,7 @@ bool texture::unload()
 	return true;
 }
 
-util::optional_pointer<const atlas_entry> texture::get_entry(const std::string & pName) const
+std::shared_ptr<subtexture> texture::get_entry(const std::string & pName) const
 {
 	return mAtlas.get_entry(pName);
 }

@@ -120,7 +120,7 @@ engine::fvector player_character::get_activation_point(float pDistance)
 
 engine::frect player_character::get_collision_box() const
 {
-	const engine::fvector collision_size = engine::fvector(mSprite.get_size().x, mSprite.get_size().y / 2) / get_unit(); // get_size returns pixels; convert to tile grid
+	const engine::fvector collision_size = engine::fvector(mSprite.get_size().x, mSprite.get_size().y / 3) / get_unit(); // get_size returns pixels; convert to tile grid
 	const engine::fvector collision_offset
 		= get_position()
 		- engine::fvector(collision_size.x / 2, collision_size.y);

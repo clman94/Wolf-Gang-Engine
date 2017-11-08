@@ -70,6 +70,8 @@ public:
 
 	virtual void generate_xml_attibutes(tinyxml2::XMLElement* pEle) const;
 
+	virtual std::shared_ptr<collision_box> copy();
+
 protected:
 	engine::frect mRegion;
 	bool mInverted;
@@ -86,6 +88,8 @@ public:
 	{
 		return type::trigger;
 	}
+
+	virtual std::shared_ptr<collision_box> copy() override;
 };
 
 class button :
@@ -96,6 +100,8 @@ public:
 	{
 		return type::button;
 	}
+
+	virtual std::shared_ptr<collision_box> copy() override;
 };
 
 class door : public collision_box
@@ -122,6 +128,8 @@ public:
 	}
 
 	virtual void generate_xml_attibutes(tinyxml2::XMLElement* pEle) const;
+
+	virtual std::shared_ptr<collision_box> copy() override;
 
 private:
 	std::string mName;

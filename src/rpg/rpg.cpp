@@ -1494,13 +1494,13 @@ void dialog_text_entity::do_reveal()
 text_entity::text_entity()
 {
 	set_dynamic_depth(false);
+	mText.set_internal_parent(*this);
 }
 
 int text_entity::draw(engine::renderer & pR)
 {
 	update_depth();
 	mText.set_unit(get_unit());
-	mText.set_position(calculate_draw_position());
 	mText.draw(pR);
 	return 0;
 }

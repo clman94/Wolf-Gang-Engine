@@ -19,18 +19,27 @@ class node
 {
 public:
 	node();
-
 	virtual ~node();
 
 	// Absolute position scaled by unit scale
 	fvector  get_exact_position() const;
 
-	void     set_absolute_position(const fvector& pPosition);
-	fvector  get_absolute_position() const;
+	void set_absolute_position(const fvector& pPosition);
+	void set_position(const fvector& pPosition);
+	void set_rotation(float pRotation);
+	void set_scale(fvector pScale);
 
-	void     set_position(const fvector& pPosition);
-	fvector  get_position() const;
-	fvector  get_position(const node& pRelative) const;
+	fvector get_position() const;
+	fvector get_position(const node& pRelative) const;
+	float   get_rotation() const;
+	fvector get_scale() const;
+
+	fvector get_absolute_position() const;
+	float   get_absolute_rotation() const;
+	fvector get_absolute_scale() const;
+
+	// This node is will not be visible to the parent node
+	void set_internal_parent(node& pNode);
 
 	util::optional_pointer<node> detach_parent();
 	node_arr                     detach_children();
@@ -46,11 +55,14 @@ public:
 
 private:
 	util::optional_pointer<node> mParent;
+	bool mIs_internal;
 	node_arr mChildren;
 
 	size_t mChild_index;
 
 	fvector mPosition;
+	float mRotation;
+	fvector mScale;
 
 	float mUnit;
 };

@@ -73,7 +73,8 @@ public:
 	void load_script_interface(script_system& pScript);
 	void set_resource_manager(engine::resource_manager& pResource_manager);
 
-	void set_root_node(engine::node& pNode);
+	void set_world_node(engine::node& pNode);
+	void set_scene_node(engine::node& pNode);
 
 private:
 
@@ -87,12 +88,13 @@ private:
 		}
 		auto new_entity = new T();
 		mEntities.push_back(std::unique_ptr<entity>(dynamic_cast<entity*>(new_entity)));
-		mRoot_node->add_child(*new_entity);
+		mWorld_node->add_child(*new_entity);
 		get_renderer()->add_object(*new_entity);
 		return new_entity;
 	}
 
-	engine::node* mRoot_node;
+	engine::node* mWorld_node;
+	engine::node* mScene_node;
 
 	void register_entity_type(script_system& pScript);
 

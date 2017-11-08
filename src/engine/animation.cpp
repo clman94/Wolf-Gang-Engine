@@ -69,6 +69,11 @@ engine::frect animation::get_frame_at(frame_t pAt) const
 	return ret;
 }
 
+frect animation::get_root_frame() const
+{
+	return mFrame_rect;
+}
+
 fvector animation::get_size() const
 {
 	return mFrame_rect.get_size();
@@ -134,7 +139,7 @@ void animation_node::set_frame(frame_t pFrame)
 	update_frame();
 }
 
-void animation_node::set_animation(std::shared_ptr<const engine::animation> pAnimation, bool pSwap)
+void animation_node::set_animation(animation::ptr pAnimation, bool pSwap)
 {
 	mAnimation = pAnimation;
 	mInterval = pAnimation->get_interval();
@@ -157,8 +162,7 @@ bool animation_node::set_animation(const std::string& pName, bool pSwap)
 	auto entry = texture->get_entry(pName);
 	if (!entry)
 		return false;
-	auto animation = entry->get_animation();
-	set_animation(animation, pSwap);
+	set_animation(entry, pSwap);
 	return true;
 }
 

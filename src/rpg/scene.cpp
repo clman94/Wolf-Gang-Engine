@@ -12,18 +12,23 @@ scene::scene()
 {
 	mTilemap_display.set_depth(defs::TILES_DEPTH);
 
+	mWorld_node.set_parent(mScene_node);
+
 	mWorld_node.add_child(mTilemap_display);
 	mWorld_node.add_child(mPlayer);
 	mFocus_player = true;
 
 	mPathfinding_system.set_collision_system(mCollision_system);
 
-	mEntity_manager.set_root_node(mWorld_node);
+	mEntity_manager.set_world_node(mWorld_node);
+	mEntity_manager.set_scene_node(mScene_node);
 
 	mPack = nullptr;
 	mResource_manager = nullptr;
 
 	mIs_ready = false;
+
+	//mScene_node.set_scale({ 0.5f, 0.5f });
 }
 
 scene::~scene()
@@ -34,6 +39,11 @@ scene::~scene()
 panning_node& scene::get_world_node()
 {
 	return mWorld_node;
+}
+
+engine::node & scene::get_scene_node()
+{
+	return mScene_node;
 }
 
 collision_system&
@@ -344,7 +354,7 @@ bool scene::load_settings(const game_settings_loader& pSettings)
 {
 	logger::info("Loading scene system...");
 
-	mWorld_node.set_unit(pSettings.get_unit_pixels());
+	mScene_node.set_unit(pSettings.get_unit_pixels());
 
 	mWorld_node.set_viewport(pSettings.get_screen_size());
 

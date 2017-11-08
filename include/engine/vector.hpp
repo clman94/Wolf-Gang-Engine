@@ -208,9 +208,7 @@ struct vector
 
 	vector& flip()
 	{
-		T temp = x;
-		x = y;
-		y = x;
+		std::swap(x, y);
 		return *this;
 	}
 
@@ -298,6 +296,7 @@ bool operator!=(const vector<T1>& L, const vector<T2>& R)
 typedef vector<int>    ivector;
 typedef vector<float>  fvector;
 typedef vector<double> dvector;
+
 
 }
 

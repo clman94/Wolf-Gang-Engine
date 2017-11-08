@@ -17,6 +17,8 @@ class texture;
 class animation
 {
 public:
+	typedef std::shared_ptr<animation> ptr;
+
 	animation();
 
 	enum class loop_type
@@ -38,6 +40,8 @@ public:
 
 	void set_frame_rect(frect pRect) ;
 	frect get_frame_at(frame_t pAt) const;
+
+	frect get_root_frame() const;
 
 	fvector get_size() const;
 

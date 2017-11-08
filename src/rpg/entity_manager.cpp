@@ -22,9 +22,14 @@ void entity_manager::set_resource_manager(engine::resource_manager& pResource_ma
 	mResource_manager = &pResource_manager;
 }
 
-void entity_manager::set_root_node(engine::node & pNode)
+void entity_manager::set_world_node(engine::node & pNode)
 {
-	mRoot_node = &pNode;
+	mWorld_node = &pNode;
+}
+
+void entity_manager::set_scene_node(engine::node & pNode)
+{
+	mScene_node = &pNode;
 }
 
 void entity_manager::register_entity_type(script_system & pScript)
@@ -479,17 +484,20 @@ void entity_manager::script_detach_children(entity_reference& e)
 	auto children = e->get_children();
 	for (auto& i : children)
 	{
-		i->set_position(i->get_position(*mRoot_node));
-		i->set_parent(*mRoot_node);
+		i->set_position(i->get_position(*mWorld_node));
+		i->set_parent(*mWorld_node);
 	}
 }
 
 void entity_manager::script_detach_parent(entity_reference& e)
 {
 	if (!check_entity(e)) return;
-
-	e->set_position(e->get_position(*mRoot_node));
-	e->set_parent(*mRoot_node);
+	if (e->get_parent() != mWorld_node
+		&& e->get_parent() != mScene_node)
+	{
+		e->set_position(e->get_position(*mWorld_node));
+		e->set_parent(*mWorld_node);
+	}
 }
 
 void entity_manager::script_make_gui(entity_reference & e, float pOffset)
@@ -499,7 +507,7 @@ void entity_manager::script_make_gui(entity_reference & e, float pOffset)
 	// Gui elements essentually don't stick to anything in the world.
 	// So we just detach everything.
 
-	e->detach_parent();
+	e->set_parent(*mScene_node);
 
 
 	e->set_dynamic_depth(false);

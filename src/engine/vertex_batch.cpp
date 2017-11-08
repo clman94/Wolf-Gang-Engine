@@ -133,17 +133,14 @@ sf::Vertex * vertex_reference::get_reference()
 vertex_batch::vertex_batch()
 {
 	mUse_render_texture = false;
-	mScale = fvector(1, 1);
 }
 
-void
-vertex_batch::set_texture(std::shared_ptr<texture> pTexture)
+void vertex_batch::set_texture(std::shared_ptr<texture> pTexture)
 {
 	mTexture = pTexture;
 }
 
-vertex_reference
-vertex_batch::add_quad(fvector pPosition, frect pTexture_rect, int pRotation)
+vertex_reference vertex_batch::add_quad(fvector pPosition, frect pTexture_rect, int pRotation)
 {
 	mVertices.resize(mVertices.size() + 4);
 
@@ -162,22 +159,11 @@ void vertex_batch::reserve_quads(size_t pAmount)
 	mVertices.reserve(mVertices.size() + pAmount);
 }
 
-int
-vertex_batch::draw(renderer &pR)
+int vertex_batch::draw(renderer &pR)
 {
 	if (!mTexture)
 		return 1;
 	return draw(pR, mTexture->sfml_get_texture());
-}
-
-void vertex_batch::set_scale(fvector pScale)
-{
-	mScale = pScale;
-}
-
-fvector vertex_batch::get_scale() const
-{
-	return mScale;
 }
 
 void vertex_batch::use_render_texture(bool pEnable)
@@ -190,10 +176,9 @@ int vertex_batch::draw(renderer & pR, const sf::Texture & pTexture)
 	if (mVertices.empty())
 		return 1;
 
-	const sf::Vector2f position = get_exact_position();
-
 	sf::RenderStates rs;
-	rs.transform.scale(mScale);
+	rs.transform.rotate(get_absolute_rotation());
+	rs.transform.scale(get_absolute_scale());
 	rs.texture = &pTexture;
 	if (mShader)
 		rs.shader = mShader->get_sfml_shader();
@@ -209,13 +194,13 @@ int vertex_batch::draw(renderer & pR, const sf::Texture & pTexture)
 		mRender.draw(&mVertices[0], mVertices.size(), sf::Quads, rs);
 		mRender.display();
 		sf::Sprite final_render(mRender.getTexture());
-		final_render.setPosition((position - position_nondec)
+		final_render.setPosition((get_exact_position() - position_nondec)
 			- sf::Vector2f(1, 1));
 		pR.get_sfml_render().draw(final_render);
 	}
 	else
 	{
-		rs.transform.translate(position);
+		rs.transform.translate(get_exact_position());
 		pR.get_sfml_render().draw(&mVertices[0], mVertices.size(), sf::Quads, rs);
 	}
 	return 0;

@@ -601,6 +601,8 @@ int rectangle_node::draw(renderer & pR)
 {
 	auto pos = get_exact_position() + engine::anchor_offset(get_size(), mAnchor);
 	shape.setPosition({ pos.x, pos.y });
+	shape.setRotation(get_absolute_rotation());
+	shape.setScale(get_absolute_scale());
 
 	if (mShader)
 		pR.get_sfml_render().draw(shape, mShader->get_sfml_shader());

@@ -87,8 +87,7 @@ text_node::text_node()
 	mAnchor = anchor::topleft;
 }
 
-void
-text_node::set_font(std::shared_ptr<font> pFont, bool pApply_preferences)
+void text_node::set_font(std::shared_ptr<font> pFont, bool pApply_preferences)
 {
 	mFont = pFont;
 	pFont->load();
@@ -97,8 +96,7 @@ text_node::set_font(std::shared_ptr<font> pFont, bool pApply_preferences)
 	update_offset();
 }
 
-void 
-text_node::set_text(const std::string& pText)
+void  text_node::set_text(const std::string& pText)
 {
 	if (pText == mString)
 		return; // Still same
@@ -107,8 +105,7 @@ text_node::set_text(const std::string& pText)
 	update_offset();
 }
 
-void
-text_node::append_text(const std::string& pText)
+void text_node::append_text(const std::string& pText)
 {
 	set_text(get_text() + pText);
 }
@@ -118,18 +115,17 @@ const std::string& text_node::get_text() const
 	return mString;
 }
 
-int
-text_node::draw(renderer &pR)
+int text_node::draw(renderer &pR)
 {
 	if (!mFont)
 		return 1;
 
-	const auto position = get_exact_position();
-
 	// Remove annoying offset of text
 	const engine::frect lbounds = mSfml_text.getLocalBounds();
 	const engine::fvector loffset(0, lbounds.get_offset().y*mSfml_text.getScale().y);
-	mSfml_text.setPosition(position + mOffset - loffset);
+	mSfml_text.setPosition(get_exact_position() + mOffset - loffset);
+	mSfml_text.setRotation(get_absolute_rotation());
+	mSfml_text.setScale(get_absolute_scale());
 
 	/*engine::frect bounds = mSfml_text.getLocalBounds();
 	testrect.set_color({ 100, 100, 100, 255 });
@@ -156,28 +152,19 @@ void text_node::update_offset()
 	//mOffset -= bounds.get_offset() - get_exact_position();
 }
 
-void
-text_node::set_character_size(int pPixels)
+void text_node::set_character_size(int pPixels)
 {
 	mSfml_text.setCharacterSize(pPixels);
 	update_offset();
 }
 
-void
-text_node::set_anchor(engine::anchor pAnchor)
+void text_node::set_anchor(engine::anchor pAnchor)
 {
 	mAnchor = pAnchor;
 	update_offset();
 }
 
-void
-text_node::set_scale(float pScale)
-{
-	mSfml_text.setScale({ pScale, pScale });
-}
-
-void
-text_node::copy_format(const text_node& pText_node)
+void text_node::copy_format(const text_node& pText_node)
 {
 	auto nfont = pText_node.mSfml_text.getFont();
 	if (nfont) mSfml_text.setFont(*nfont);
@@ -190,8 +177,7 @@ text_node::copy_format(const text_node& pText_node)
 }
 
 
-void 
-text_node::set_color(const color& pColor)
+void text_node::set_color(const color& pColor)
 {
 	mSfml_text.setFillColor(pColor);
 }

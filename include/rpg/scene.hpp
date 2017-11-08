@@ -120,6 +120,7 @@ public:
 	~scene();
 
 	panning_node& get_world_node();
+	engine::node& get_scene_node();
 
 	collision_system& get_collision_system();
 
@@ -174,6 +175,7 @@ private:
 	std::map<std::string, scene_script_context> pScript_contexts;
 
 	panning_node mWorld_node;
+	engine::node mScene_node;
 
 	engine::pack_stream_factory* mPack;
 	engine::resource_manager* mResource_manager;

@@ -13,15 +13,13 @@ std::shared_ptr<engine::texture> tilemap_display::get_texture()
 	return mTexture;
 }
 
-bool tilemap_display::set_tile(engine::fvector pPosition, const std::string & pAtlas, int pLayer, int pRotation)
+bool tilemap_display::set_tile(engine::fvector pPosition, const std::string& pAtlas, int pLayer, int pRotation)
 {
 	assert(mTexture != nullptr);
 
-	auto entry = mTexture->get_entry(pAtlas);
-	if (!entry)
+	auto animation = mTexture->get_entry(pAtlas);
+	if (!animation)
 		return false;
-
-	auto animation = entry->get_animation();
 
 	auto &ntile = mLayers[pLayer].tiles[pPosition];
 

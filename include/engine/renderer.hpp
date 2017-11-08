@@ -423,9 +423,6 @@ public:
 	
 	int draw(renderer &pR);
 
-	void set_scale(fvector pScale);
-	fvector get_scale() const;
-
 	void use_render_texture(bool pEnable);
 
 #ifdef ENGINE_INTERNAL
@@ -442,7 +439,6 @@ public:
 
 private:
 	bool mUse_render_texture;
-	fvector mScale;
 
 	virtual void refresh_renderer(renderer& pR);
 
@@ -552,7 +548,7 @@ public:
 
 private:
 	anchor mAnchor;
-	std::shared_ptr<shader>  mShader;
+	std::shared_ptr<shader> mShader;
 	sf::RectangleShape shape;
 };
 
@@ -563,16 +559,13 @@ public:
 	sprite_node();
 	void set_anchor(anchor pAnchor);
 	virtual int draw(renderer &pR);
-	void    set_scale(fvector pScale);
-	fvector get_scale() const;
+
 	void set_texture(std::shared_ptr<texture> pTexture);
 	std::shared_ptr<texture> get_texture() const;
 
 	void set_texture_rect(const engine::frect& pRect);
 	void set_color(color pColor);
-	void set_rotation(float pRotation);
 	fvector get_size() const;
-	float get_rotation() const;
 
 	void set_shader(std::shared_ptr<shader> pShader);
 
@@ -582,9 +575,8 @@ private:
 	std::shared_ptr<texture> mTexture;
 	std::shared_ptr<shader>  mShader;
 	sf::Vertex mVertices[4];
+	frect mRect;
 	fvector mCenter;
-	fvector mScale;
-	float mRotation;
 	anchor mAnchor;
 };
 
@@ -627,12 +619,10 @@ public:
 	void set_character_size(int pPixels);
 	void set_anchor(anchor pAnchor);
 	void set_color(const color& pColor);
-	void set_scale(float pScale);
 	void copy_format(const text_node& pText_node);
 	virtual int draw(renderer &pR);
 
 	void set_shader(std::shared_ptr<shader> pShader);
-
 
 private:
 	std::shared_ptr<font> mFont;
@@ -775,7 +765,7 @@ public:
 
 	size_t get_frame() const;
 	void set_frame(frame_t pFrame);
-	void set_animation(std::shared_ptr<const engine::animation>, bool pSwap = false);
+	void set_animation(animation::ptr pAnimation, bool pSwap = false);
 	bool set_animation(const std::string& pName, bool pSwap = false);
 
 	bool tick(); // Returns true if the frame has changed.
@@ -794,7 +784,7 @@ public:
 private:
 	engine::clock  mClock;
 
-	std::shared_ptr<const engine::animation> mAnimation;
+	animation::ptr mAnimation;
 
 	frame_t mFrame;
 

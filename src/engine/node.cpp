@@ -19,8 +19,11 @@ inline bool check_node_loop(const node& pFind, const node& pStart)
 
 node::node()
 {
+	mIs_internal = false;
 	mParent = nullptr;
 	mUnit = 1;
+	mRotation = 0;
+	mScale = { 1, 1 };
 }
 
 node::~node()
@@ -35,15 +38,13 @@ fvector node::get_exact_position() const
 	return get_absolute_position()*mUnit;
 }
 
-fvector
-node::get_absolute_position() const
+fvector node::get_absolute_position() const
 {
 	if (!mParent) return mPosition;
-	return mPosition + mParent->get_absolute_position();
+	return fvector(mPosition).rotate(get_absolute_rotation())*get_absolute_scale() + mParent->get_absolute_position();
 }
 
-fvector
-node::get_position() const
+fvector node::get_position() const
 {
 	return mPosition;
 }
@@ -53,8 +54,46 @@ fvector node::get_position(const node& pRelative) const
 	return get_absolute_position() - pRelative.get_absolute_position();
 }
 
-void
-node::set_absolute_position(const fvector& pPosition)
+void node::set_rotation(float pRotation)
+{
+	mRotation = pRotation;
+}
+
+void node::set_scale(fvector pScale)
+{
+	mScale = pScale;
+}
+
+float node::get_rotation() const
+{
+	return mRotation;
+}
+
+fvector node::get_scale() const
+{
+	return mScale;
+}
+
+float node::get_absolute_rotation() const
+{
+	if (!mParent) return mRotation;
+	return mParent->get_absolute_rotation() + mRotation;
+}
+
+fvector node::get_absolute_scale() const
+{
+	if (!mParent) return mScale;
+	return mParent->get_absolute_scale()*mScale;
+}
+
+void node::set_internal_parent(node & pNode)
+{
+	detach_parent();
+	mParent = &pNode;
+	mIs_internal = true;
+}
+
+void node::set_absolute_position(const fvector& pPosition)
 {
 	if (mParent)
 		mPosition = pPosition - mParent->get_absolute_position();
@@ -62,8 +101,7 @@ node::set_absolute_position(const fvector& pPosition)
 		mPosition = pPosition;
 }
 
-void
-node::set_position(const fvector& pPosition)
+void node::set_position(const fvector& pPosition)
 {
 	mPosition = pPosition;
 }
@@ -71,6 +109,13 @@ node::set_position(const fvector& pPosition)
 util::optional_pointer<node> node::detach_parent()
 {
 	if (!mParent) return{};
+	if (mIs_internal)
+	{
+		node* temp = mParent;
+		mParent.reset();
+		mIs_internal = false;
+		return temp;
+	}
 	node* temp = mParent->mChildren[mChild_index];
 	mParent->mChildren.erase(mParent->mChildren.begin() + mChild_index);
 	for (size_t i = 0; i < mParent->mChildren.size(); i++)
