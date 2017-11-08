@@ -41,7 +41,8 @@ fvector node::get_exact_position() const
 fvector node::get_absolute_position() const
 {
 	if (!mParent) return mPosition;
-	return fvector(mPosition).rotate(get_absolute_rotation())*get_absolute_scale() + mParent->get_absolute_position();
+	fvector parent_position = mParent->get_absolute_position();
+	return (mPosition*get_absolute_scale()).rotate(get_absolute_rotation()) + parent_position;
 }
 
 fvector node::get_position() const

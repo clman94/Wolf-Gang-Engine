@@ -349,6 +349,7 @@ formatted_text_node::formatted_text_node()
 	mAnchor = anchor::topleft;
 	mTimer = 0;
 	mCharacter_size = 30;
+	mVertex_batch.set_internal_parent(*this);
 }
 
 void formatted_text_node::set_font(std::shared_ptr<font> pFont, bool pApply_preferences)
@@ -405,7 +406,8 @@ int formatted_text_node::draw(renderer & pR)
 	mTimer += pR.get_delta();
 	update_effects();
 
-	mVertex_batch.set_position(get_exact_position() + anchor_offset(mSize, mAnchor));
+	mVertex_batch.set_unit(get_unit());
+	mVertex_batch.set_position(anchor_offset(mSize, mAnchor));
 
 	// Screw all common sense!
 	sf::Texture* texture = const_cast<sf::Texture*>(&mFont->mSFML_font->getTexture(mCharacter_size*4));

@@ -176,17 +176,19 @@ int vertex_batch::draw(renderer & pR, const sf::Texture & pTexture)
 	if (mVertices.empty())
 		return 1;
 
+	const fvector position = get_exact_position();
+
 	sf::RenderStates rs;
-	rs.transform.rotate(get_absolute_rotation());
-	rs.transform.scale(get_absolute_scale());
 	rs.texture = &pTexture;
 	if (mShader)
 		rs.shader = mShader->get_sfml_shader();
 
 	if (mUse_render_texture)
 	{
-		const sf::Vector2f position_nondec = get_exact_position().floor();
+		const sf::Vector2f position_nondec = fvector(position).floor();
 		rs.transform.translate(position_nondec + sf::Vector2f(1, 1));
+		rs.transform.rotate(get_absolute_rotation());
+		rs.transform.scale(get_absolute_scale());
 
 		if (get_renderer() != &pR)
 			set_renderer(pR, true);
@@ -194,13 +196,15 @@ int vertex_batch::draw(renderer & pR, const sf::Texture & pTexture)
 		mRender.draw(&mVertices[0], mVertices.size(), sf::Quads, rs);
 		mRender.display();
 		sf::Sprite final_render(mRender.getTexture());
-		final_render.setPosition((get_exact_position() - position_nondec)
+		final_render.setPosition((position - position_nondec)
 			- sf::Vector2f(1, 1));
 		pR.get_sfml_render().draw(final_render);
 	}
 	else
 	{
-		rs.transform.translate(get_exact_position());
+		rs.transform.translate(position);
+		rs.transform.rotate(get_absolute_rotation());
+		rs.transform.scale(get_absolute_scale());
 		pR.get_sfml_render().draw(&mVertices[0], mVertices.size(), sf::Quads, rs);
 	}
 	return 0;
