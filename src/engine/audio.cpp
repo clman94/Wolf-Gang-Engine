@@ -139,8 +139,9 @@ float sound::get_loop() const
 
 void sound::set_volume(float pVolume)
 {
-	mSFML_stream_sound.setVolume(pVolume*100);
-	mSFML_streamless_sound.setVolume(pVolume*100);
+	float volume = util::clamp(pVolume, 0.f, 1.f)*100;
+	mSFML_stream_sound.setVolume(volume);
+	mSFML_streamless_sound.setVolume(volume);
 }
 
 float sound::get_volume() const

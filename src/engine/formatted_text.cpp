@@ -14,13 +14,13 @@ text_format::text_format()
 text_format::text_format(const char * pText)
 {
 	mDefault_color = color(255, 255, 255, 255);
-	parse_text(pText);
+	parse(pText);
 }
 
 text_format::text_format(const std::string & pText)
 {
 	mDefault_color = color(255, 255, 255, 255);
-	parse_text(pText);
+	parse(pText);
 }
 
 inline size_t parse_hex(const std::string& pHex)
@@ -119,7 +119,6 @@ inline bool parse_xml_format(tinyxml2::XMLNode* pNode, std::vector<text_format::
 					nblock.mFormat |= static_cast<uint32_t>(i);
 				nblock.mText = "\n";
 				pBlocks.push_back(nblock);
-
 			}
 			else if (name == "wave")
 			{
@@ -145,15 +144,15 @@ inline bool parse_xml_format(tinyxml2::XMLNode* pNode, std::vector<text_format::
 	return true;
 }
 
-bool text_format::parse_text(const std::string & pText)
+bool text_format::parse(const std::string & pText)
 {
 	mBlocks.clear();
-	return start_parse(pText);
+	return append_parse(pText);
 }
 
 bool text_format::append(const std::string & pText)
 {
-	return start_parse(pText);
+	return append_parse(pText);
 }
 
 void text_format::append(const text_format & pFormat)
@@ -169,6 +168,12 @@ size_t text_format::get_block_count() const
 const text_format::block & text_format::get_block(size_t pIndex) const
 {
 	return mBlocks[pIndex];
+}
+
+text_format & engine::text_format::operator+=(const std::string & pText)
+{
+	append(pText);
+	return *this;
 }
 
 text_format & text_format::operator+=(const text_format & pFormat)
@@ -323,7 +328,7 @@ size_t text_format::length() const
 	return total;
 }
 
-bool text_format::start_parse(const std::string & pText)
+bool text_format::append_parse(const std::string & pText)
 {
 	// When parse fails, this object is still in a valid state
 	tinyxml2::XMLDocument doc;
@@ -407,7 +412,7 @@ int formatted_text_node::draw(renderer & pR)
 	update_effects();
 
 	mVertex_batch.set_unit(get_unit());
-	mVertex_batch.set_position(anchor_offset(mSize, mAnchor));
+	mVertex_batch.set_position(anchor_offset(mSize, mAnchor)/get_unit());
 
 	// Screw all common sense!
 	sf::Texture* texture = const_cast<sf::Texture*>(&mFont->mSFML_font->getTexture(mCharacter_size*4));
@@ -497,10 +502,8 @@ void formatted_text_node::update()
 
 			const fvector vert_size = handle.mVertices.get_size() + handle.mVertices.get_position();
 
-			if (vert_size.x > mSize.x)
-				mSize.x = vert_size.x;
-			if (vert_size.y > mSize.y)
-				mSize.y = vert_size.y;
+			mSize.x = std::max(mSize.x, vert_size.x);
+			mSize.y = std::max(mSize.y, vert_size.y);
 
 			position.x += hspace;
 		}

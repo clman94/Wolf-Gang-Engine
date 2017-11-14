@@ -111,6 +111,11 @@ struct vector
 		return{ x - A.x, y - A.y};
 	}
 
+	vector operator - () const
+	{
+		return{ -x, -y };
+	}
+
 	vector operator * (const vector& A) const
 	{
 		return{ x * A.x, y * A.y};
@@ -127,12 +132,6 @@ struct vector
 	{
 		return{ x / A, y / A };
 	}
-
-	vector operator - () const
-	{
-		return{ -x, -y};
-	}
-
 	vector& operator *= (T A)
 	{
 		x *= A;

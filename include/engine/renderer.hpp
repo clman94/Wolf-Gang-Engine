@@ -492,7 +492,7 @@ static vector<T> center_offset(const vector<T>& pSize, anchor pType)
 template<typename T>
 static vector<T> anchor_offset(const vector<T> pSize, anchor pType)
 {
-	return center_offset(pSize, pType) * -1;
+	return -center_offset(pSize, pType);
 }
 
 /* Something to consider
@@ -680,7 +680,7 @@ public:
 	<shake></shake>
 	<rainbow></rainbow>
 	*/
-	bool parse_text(const std::string& pText);
+	bool parse(const std::string& pText);
 
 	bool append(const std::string& pText);
 	void append(const text_format& pFormat);
@@ -688,6 +688,7 @@ public:
 	size_t get_block_count() const;
 	const block& get_block(size_t pIndex) const;
 
+	text_format& operator+=(const std::string& pText);
 	text_format& operator+=(const text_format& pFormat);
 
 	//void set_default_color();
@@ -705,7 +706,7 @@ public:
 	size_t length() const;
 
 private:
-	bool start_parse(const std::string & pText);
+	bool append_parse(const std::string & pText);
 
 	std::vector<block> mBlocks;
 	color mDefault_color;

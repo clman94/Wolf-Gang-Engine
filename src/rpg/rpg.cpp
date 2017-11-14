@@ -871,6 +871,7 @@ void background_music::clean()
 	mStream->stop();
 	mStream->set_volume(100);
 	mOverlap_stream->stop();
+	mOverlap_stream->set_volume(100);
 	mPath.clear();
 	mOverlay_path.clear();
 }

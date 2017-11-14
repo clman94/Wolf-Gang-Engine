@@ -52,7 +52,7 @@ void sprite_node::set_shader(std::shared_ptr<shader> pShader)
 
 frect sprite_node::get_render_rect() const
 {
-	return{ get_exact_position() + engine::anchor_offset(get_size(), mAnchor), get_size() };
+	return{ get_exact_position() + engine::anchor_offset(get_size(), mAnchor) , get_size() };
 }
 
 void
