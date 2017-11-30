@@ -30,7 +30,12 @@ namespace engine
 class color
 {
 public:
-	color_t r, g, b, a;
+	union{ // Saw another engine do this, quite useful.
+		struct{
+			color_t r, g, b, a;
+		};
+		color_t components[4];
+	};
 	color(
 		color_t pR = 0,
 		color_t pG = 0,

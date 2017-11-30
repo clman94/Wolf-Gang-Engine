@@ -30,13 +30,9 @@ inline size_t parse_hex(const std::string& pHex)
 	{
 		const char c = std::tolower(pHex[pHex.size() - i - 1]);
 		if (c >= '0' && c <= '9')
-		{
 			val += (c - '0') << (i * 4);
-		}
 		else if (c >= 'a' && c <= 'f')
-		{
 			val += (10 + (c - 'a')) << (i * 4);
-		}
 		else
 			return 0;
 	}

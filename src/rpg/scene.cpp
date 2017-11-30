@@ -28,7 +28,9 @@ scene::scene()
 
 	mIs_ready = false;
 
-	//mScene_node.set_scale({ 0.5f, 0.5f });
+	//mScene_node.set_rotation(0);
+	//mScene_node.set_position({8, 8});
+	//mScene_node.set_scale({ 0.5, 0.5 });
 }
 
 scene::~scene()

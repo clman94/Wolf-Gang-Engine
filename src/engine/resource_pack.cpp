@@ -11,13 +11,16 @@ using namespace engine;
 template<typename T>
 inline T read_unsignedint_binary(std::istream& pStream)
 {
+	if constexpr(!std::is_unsigned<T>())
+		static_assert("T is not unsigned");
+
 	uint8_t bytes[sizeof(T)];// char gives negative values and causes issues when converting to unsigned.
 	if (!pStream.read((char*)&bytes, sizeof(T))) // And passing this unsigned char array as a char* works well.
 		return 0;
 
 	T val = 0;
 	for (size_t i = 0; i < sizeof(T); i++)
-		val += static_cast<T>(bytes[i]) << (8 * i);
+		val += static_cast<T>(bytes[i]) << (i * 8);
 	return val;
 }
 
@@ -26,6 +29,9 @@ inline T read_unsignedint_binary(std::istream& pStream)
 template<typename T>
 inline bool write_unsignedint_binary(std::ostream& pStream, const T pVal)
 {
+	if constexpr(!std::is_unsigned<T>())
+		static_assert("T is not unsigned");
+
 	uint8_t bytes[sizeof(T)];
 	for (size_t i = 0; i < sizeof(T); i++)
 		bytes[i] = static_cast<uint8_t>(static_cast<T>(pVal & (0xFF << (8 * i))) >> (8 * i));
@@ -525,9 +531,6 @@ void pack_header::add_file(file_info pFile)
 
 bool pack_header::generate(std::ostream & pStream) const
 {
-	auto start = pStream.tellp();
-	write_unsignedint_binary<uint64_t>(pStream, 0); // Placeholder for header size
-
 	// File count
 	write_unsignedint_binary<uint64_t>(pStream, mFiles.size());
 
@@ -542,19 +545,12 @@ bool pack_header::generate(std::ostream & pStream) const
 		write_unsignedint_binary<uint64_t>(pStream, i.position);
 		write_unsignedint_binary<uint64_t>(pStream, i.size);
 	}
-	auto end = pStream.tellp();
-	pStream.seekp(start);
-	write_unsignedint_binary<uint64_t>(pStream, end - start - 1); // Fill in placeholder
-	pStream.seekp(end);
 	return true;
 }
 
 bool pack_header::parse(std::istream & pStream)
 {
 	mFiles.clear();
-
-	// Header size
-	mHeader_size = read_unsignedint_binary<uint64_t>(pStream);
 
 	// File count
 	uint64_t file_count = read_unsignedint_binary<uint64_t>(pStream);
@@ -579,6 +575,8 @@ bool pack_header::parse(std::istream & pStream)
 
 		mFiles.push_back(file);
 	}
+
+	mHeader_size = pStream.tellg();
 	return true;
 }
 

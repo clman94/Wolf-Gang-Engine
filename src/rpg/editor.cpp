@@ -14,9 +14,7 @@ void populate_combox_with_scene_names(tgui::ComboBox::Ptr pCB)
 	pCB->removeAllItems();
 	const auto scenelist = rpg::get_scene_list();
 	for (auto i : scenelist)
-	{
 		pCB->addItem(i.string()); // Refresh the list of scenes
-	}
 }
 
 inline engine::fvector read_args_vector(const engine::terminal_arglist& pArgs, float pDefx = 0, float pDefy = 0, size_t pIndex = 0)

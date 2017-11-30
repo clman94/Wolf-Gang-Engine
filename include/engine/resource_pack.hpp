@@ -73,7 +73,6 @@ public:
 	/*
 	Structure of the header
 
-	[uint64_t] Size of header (in bytes)
 	[uint64_t] File count
 	file
 	[uint16_t] Path size (Is a filepath that is 65536 characters useful?)
@@ -125,6 +124,7 @@ public:
 	std::vector<char> read(uint64_t pCount);
 	int64_t read(char* pData, uint64_t pCount);
 	bool read(std::vector<char>& pData, uint64_t pCount);
+
 	std::vector<char> read_all();
 
 	bool seek(uint64_t pPosition);
