@@ -2108,7 +2108,7 @@ void atlas_editor::setup_editor(editor_gui & pEditor_gui)
 
 	pEditor_gui.add_horizontal_buttons(
 	{ 
-		{"Add", [&]() { new_entry(); } },
+		{"New", [&]() { new_entry(); } },
 		{"Delete", [&]() { remove_selected(); } }
 	});
 	
