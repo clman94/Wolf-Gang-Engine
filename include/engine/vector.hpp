@@ -132,6 +132,7 @@ struct vector
 	{
 		return{ x / A, y / A };
 	}
+
 	vector& operator *= (T A)
 	{
 		x *= A;

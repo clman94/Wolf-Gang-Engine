@@ -344,16 +344,19 @@ tgui::EditBox::Ptr editor_gui::add_value_int(const std::string & pLabel, std::fu
 	auto hl = create_value_line(pLabel);
 	auto tb = std::make_shared<tgui::EditBox>();
 	//tb->setInputValidator(std::string(pNeg ? "[-+]" : "") + "[0-9]*");
-	tb->connect("ReturnKeyPressed", [=](sf::String pVal)
+	auto apply = [=]()
 	{
 		try {
-			pCallback(std::stoi(std::string(pVal)));
+			pCallback(std::stoi(std::string(tb->getText())));
 		}
 		catch (...)
 		{
 			logger::warning("Failed to get value of '" + pLabel + "'");
 		}
-	});
+	};
+
+	tb->connect("ReturnKeyPressed", apply);
+	tb->connect("Unfocused", apply);
 	hl->add(tb);
 	return tb;
 }
@@ -367,17 +370,19 @@ tgui::EditBox::Ptr editor_gui::add_value_string(const std::string & pLabel, std:
 {
 	auto hl = create_value_line(pLabel);
 	auto tb = std::make_shared<tgui::EditBox>();
-	tb->connect("ReturnKeyPressed", [=](sf::String pVal)
+	auto apply = [=]()
 	{
 		try {
 			if (pCallback)
-				pCallback(pVal);
+				pCallback(tb->getText());
 		}
 		catch (...)
 		{
 			logger::warning("Failed to get value of '" + pLabel + "'");
 		}
-	});
+	};
+	tb->connect("ReturnKeyPressed", apply);
+	tb->connect("Unfocused", apply);
 	hl->add(tb);
 	return tb;
 }
@@ -393,16 +398,19 @@ tgui::EditBox::Ptr editor_gui::add_value_float(const std::string & pLabel, std::
 	auto hl = create_value_line(pLabel);
 	auto tb = std::make_shared<tgui::EditBox>();
 	//tb->setInputValidator(std::string(pNeg ? "[-+]" : "") + "[0-9]*\\.[0-9]*");
-	tb->connect("ReturnKeyPressed", [=](sf::String pVal)
+
+	auto apply = [=]()
 	{
 		try {
-			pCallback(std::stof(std::string(pVal)));
+			pCallback(std::stof(std::string(tb->getText())));
 		}
 		catch (...)
 		{
 			logger::warning("Failed to get value of '" + pLabel + "'");
 		}
-	});
+	};
+	tb->connect("ReturnKeyPressed", apply);
+	tb->connect("Unfocused", apply);
 	hl->add(tb);
 	return tb;
 }

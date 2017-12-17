@@ -236,7 +236,7 @@ bool scene::reload_scene()
 	if (mCurrent_scene_name.empty())
 	{
 		logger::error("No scene to reload");
-		return 1;
+		return false;
 	}
 
 	clean(true);

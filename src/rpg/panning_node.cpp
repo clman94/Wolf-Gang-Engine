@@ -31,7 +31,7 @@ panning_node::set_focus(engine::fvector pFocus)
 
 	if (!mBoundary_enabled)
 	{
-		set_position(-(pFocus - (viewport * 0.5f)));
+		set_position((viewport * 0.5f) - pFocus);
 		return;
 	}
 
