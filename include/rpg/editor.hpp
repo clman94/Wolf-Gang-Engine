@@ -55,11 +55,20 @@ private:
 namespace editors
 {
 
+const engine::color default_gui_bg_color(30, 30, 30, 255);
+
+
 class tgui_list_layout :
 	public tgui::BoxLayout
 {
 private:
 	void updateWidgetPositions();
+};
+
+class editor_config_gui :
+	public tgui_list_layout
+{
+
 };
 
 class editor_gui :
@@ -108,11 +117,15 @@ private:
 	tgui::ComboBox::Ptr mCb_scene;
 	tgui::Label::Ptr mLb_mouse;
 	tgui::Label::Ptr mLb_fps;
-	//tgui::Tab::Ptr mTabs;
-	std::shared_ptr<tgui_list_layout> mLayout;
+	tgui::Tab::Ptr mTabs;
+
+	std::shared_ptr<tgui::VerticalLayout> mGui_base;
+	std::shared_ptr<tgui_list_layout> mSidebar;
 	std::shared_ptr<tgui_list_layout> mEditor_layout;
 	std::shared_ptr<tgui_list_layout> mVisualizations_layout;
-	
+	tgui::Panel::Ptr mRender_container;
+	tgui::Label::Ptr mBottom_text;
+
 	void update_scene();
 
 	void refresh_renderer(engine::renderer& pR);
@@ -214,7 +227,7 @@ private:
 	tgui::ComboBox::Ptr mCb_tile;
 	tgui::Label::Ptr mLb_layer;
 	tgui::Label::Ptr mLb_rotation;
-	tgui::TextBox::Ptr mTb_texture;
+	tgui::EditBox::Ptr mTb_texture;
 	tgui::CheckBox::Ptr mCb_half_grid;
 
 	void setup_editor(editor_gui& pEditor_gui);

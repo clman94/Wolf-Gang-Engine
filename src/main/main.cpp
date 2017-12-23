@@ -8,10 +8,10 @@
 #include <rpg/rpg.hpp>
 
 
-class wolf_gang_engine
+class wolf_gang_engine_editor
 {
 public:
-	wolf_gang_engine();
+	wolf_gang_engine_editor();
 
 	int initualize(const std::string& pCustom_location);
 	bool run();
@@ -34,7 +34,7 @@ private:
 	bool mRunning;
 };
 
-wolf_gang_engine::wolf_gang_engine()
+wolf_gang_engine_editor::wolf_gang_engine_editor()
 {
 	mRunning = true;
 
@@ -47,21 +47,21 @@ wolf_gang_engine::wolf_gang_engine()
 	mEditor_manager.load_terminal_interface(mTerminal_system);
 }
 
-int wolf_gang_engine::initualize(const std::string& pCustom_location = std::string())
+int wolf_gang_engine_editor::initualize(const std::string& pCustom_location = std::string())
 {
 	engine::clock load_clock;
 
 	logger::info("Loading renderer...");
 	logger::start_sub_routine();
 
-	mWindow.initualize("", rpg::defs::SCREEN_SIZE);
+	mWindow.initualize("Game", rpg::defs::SCREEN_SIZE);
 	mRenderer.set_target_size(rpg::defs::DISPLAY_SIZE);
 	mRenderer.set_window(mWindow);
+	mGame.set_renderer(mRenderer);
+	mTerminal_gui.load_gui(mRenderer);
+	mEditor_manager.set_renderer(mRenderer);
 	logger::info("Renderer loaded");
 
-	mGame.set_renderer(mRenderer);
-	mEditor_manager.set_renderer(mRenderer);
-	mTerminal_gui.load_gui(mRenderer);
 
 #ifndef LOCKED_RELEASE_MODE
 	if (pCustom_location.empty())
@@ -82,7 +82,7 @@ int wolf_gang_engine::initualize(const std::string& pCustom_location = std::stri
 	return 0;
 }
 
-bool wolf_gang_engine::run()
+bool wolf_gang_engine_editor::run()
 {
 	while (mRunning)
 	{
@@ -105,7 +105,7 @@ bool wolf_gang_engine::run()
 	return false;
 }
 
-void wolf_gang_engine::update_events()
+void wolf_gang_engine_editor::update_events()
 {
 	if (mRenderer.update_events())
 	{
@@ -121,7 +121,7 @@ void wolf_gang_engine::update_events()
 	}
 }
 
-bool wolf_gang_engine::update_editor()
+bool wolf_gang_engine_editor::update_editor()
 {
 	const bool lshift = mRenderer.is_key_down(engine::renderer::key_type::LShift);
 	const bool lctrl = mRenderer.is_key_down(engine::renderer::key_type::LControl);
@@ -175,7 +175,7 @@ int main(int argc, char* argv[])
 	logger::initialize("./log.txt");
 	try
 	{
-		wolf_gang_engine wge;
+		wolf_gang_engine_editor wge;
 
 		if (argc > 2)
 			wge.initualize(argv[1]);

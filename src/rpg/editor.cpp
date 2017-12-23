@@ -234,32 +234,85 @@ void tgui_list_layout::updateWidgetPositions()
 
 editor_gui::editor_gui()
 {
-	mLayout = std::make_shared<tgui_list_layout>();
-	mLayout->setBackgroundColor({ 10, 10, 10,  255});
-	mLayout->setSize(200, "&.height");
-	mLayout->hide();
+	mGui_base = std::make_shared<tgui::VerticalLayout>();
+	mGui_base->setSize("&.width", "&.height");
+	mGui_base->hide();
 
-	/*mTabs = std::make_shared<tgui::Tab>();
-	mTabs->add("Visualizations", true);
-	mTabs->add("Editor", false);*/
+
+	// Top bar
+
+	auto topbar = std::make_shared<tgui::HorizontalLayout>();
+	topbar->setSize("&.width", 100);
+	topbar->setBackgroundColor(sf::Color(default_gui_bg_color));
+	mGui_base->add(topbar);
+	mGui_base->setFixedSize(topbar, 100);
+
+	auto game_control = std::make_shared<tgui::VerticalLayout>();
+	topbar->add(game_control);
+	topbar->setFixedSize(game_control, 100);
+
+	auto bt_scene_stop = std::make_shared<tgui::Button>();
+	bt_scene_stop->setText("Stop Game");
+	game_control->add(bt_scene_stop);
+
+	auto bt_scene_restart = std::make_shared<tgui::Button>();
+	bt_scene_restart->setText("Restart Scene");
+	game_control->add(bt_scene_restart);
+
+	topbar->addSpace();
+
+	mTabs = std::make_shared<tgui::Tab>();
+	mTabs->add("Game", true);
+	mTabs->add("Tilemap", false);
+	mTabs->add("Collision", false);
+	mTabs->add("Atlas", false);
+	topbar->add(mTabs);
+	topbar->setFixedSize(mTabs, 400);
+
+	topbar->addSpace();
+
+	mCb_scene = std::make_shared<tgui::ComboBox>();
+	//mCb_scene->setPosition(200, 0);
+	//mCb_scene->setSize("&.width - x", 25);
+	mCb_scene->setItemsToDisplay(10);
+	mCb_scene->connect("ItemSelected", [&](sf::String pItem)
+	{
+		mScene->load_scene(pItem);
+	});
+	mCb_scene->hide();
+	mGui_base->add(mCb_scene);
+	mGui_base->setFixedSize(mCb_scene, 25);
+
+	// Middle section
+	auto middle = std::make_shared<tgui::HorizontalLayout>();
+	mGui_base->add(middle);
+
+	// Side bar
+
+	mSidebar = std::make_shared<tgui_list_layout>();
+	mSidebar->setBackgroundColor(sf::Color(default_gui_bg_color));
+	mSidebar->getRenderer()->setBorders(2);
+	mSidebar->getRenderer()->setBorderColor({ 0, 0, 0, 255 });
+	middle->add(mSidebar);
+	middle->setFixedSize(mSidebar, 200);
 
 	mLb_fps = std::make_shared<tgui::Label>();
 	mLb_fps->setMaximumTextWidth(0);
 	mLb_fps->setTextColor({ 255, 255, 255, 255 });
 	mLb_fps->setText("FPS: N/A");
 	mLb_fps->setTextSize(15);
-	mLayout->add(mLb_fps);
+	mSidebar->add(mLb_fps);
 
 	mLb_mouse = tgui::Label::copy(mLb_fps);
 	mLb_mouse->setText("(n/a, n/a)\n(n/a, n/a)");
 	mLb_mouse->setTextSize(12);
-	mLayout->add(mLb_mouse);
+	mSidebar->add(mLb_mouse);
 
 	{
-		add_small_label("Visualizations:", mLayout);
+		add_small_label("Visualizations:", mSidebar);
 		mVisualizations_layout = std::make_shared<tgui_list_layout>();
 		mVisualizations_layout->setSize("&.width", 100);
-		mLayout->add(mVisualizations_layout);
+		mSidebar->add(mVisualizations_layout);
 
 		// Collision visualization checkbox
 		auto chb_collision = std::make_shared<tgui::CheckBox>();
@@ -285,17 +338,25 @@ editor_gui::editor_gui()
 	mEditor_layout = std::make_shared<tgui_list_layout>();
 	mEditor_layout->setSize("&.width", "&.height - y");
 	mEditor_layout->setBackgroundColor({ 0, 0, 0, 0 });
-	mLayout->add(mEditor_layout);
+	mSidebar->add(mEditor_layout);
 
-	mCb_scene = std::make_shared<tgui::ComboBox>();
-	mCb_scene->setPosition(200, 0);
-	mCb_scene->setSize("&.width - x", 25);
-	mCb_scene->setItemsToDisplay(10);
-	mCb_scene->connect("ItemSelected", [&](sf::String pItem)
-	{
-		mScene->load_scene(pItem);
-	});
-	mCb_scene->hide();
+	// Game window
+
+	mRender_container = std::make_shared<tgui::Panel>();
+	mRender_container->setBackgroundColor({ 0, 0, 0, 0 });
+	middle->add(mRender_container);
+
+	// Bottom bar
+
+	auto bottombar = std::make_shared<tgui::HorizontalLayout>();
+	bottombar->setBackgroundColor(sf::Color(default_gui_bg_color));
+	bottombar->getRenderer()->setBorders(2);
+	bottombar->getRenderer()->setBorderColor({ 0, 0, 0, 255 });
+	mGui_base->add(bottombar);
+	mGui_base->setFixedSize(bottombar, 25);
+
+	mBottom_text = std::make_shared<tgui::Label>();
+	bottombar->add(mBottom_text);
 }
 
 void editor_gui::set_scene(rpg::scene * pScene)
@@ -530,10 +591,7 @@ tgui::TextBox::Ptr editor_gui::add_textbox(tgui::Container::Ptr pContainer)
 {
 	auto ntb = std::make_shared<tgui::TextBox>();
 	ntb->setSize("&.width", "25");
-	if (pContainer)
-		pContainer->add(ntb);
-	else
-		mEditor_layout->add(ntb);
+	(pContainer ? pContainer : mEditor_layout)->add(ntb);
 	return ntb;
 }
 
@@ -541,10 +599,7 @@ tgui::ComboBox::Ptr editor_gui::add_combobox(tgui::Container::Ptr pContainer)
 {
 	auto ncb = std::make_shared<tgui::ComboBox>();
 	ncb->setSize("&.width", "25");
-	if (pContainer)
-		pContainer->add(ncb);
-	else
-		mEditor_layout->add(ncb);
+	(pContainer ? pContainer : mEditor_layout)->add(ncb);
 	ncb->setItemsToDisplay(10);
 	return ncb;
 }
@@ -554,10 +609,7 @@ tgui::CheckBox::Ptr editor_gui::add_checkbox(const std::string& text, tgui::Cont
 	auto ncb = std::make_shared<tgui::CheckBox>();
 	ncb->setText(text);
 	ncb->uncheck();
-	if (pContainer)
-		pContainer->add(ncb);
-	else
-		mEditor_layout->add(ncb);
+	(pContainer ? pContainer : mEditor_layout)->add(ncb);
 	return ncb;
 }
 
@@ -565,10 +617,7 @@ tgui::Button::Ptr editor_gui::add_button(const std::string& text, tgui::Containe
 {
 	auto nbt = std::make_shared<tgui::Button>();
 	nbt->setText(text);
-	if (pContainer)
-		pContainer->add(nbt);
-	else
-		mEditor_layout->add(nbt);
+	(pContainer ? pContainer : mEditor_layout)->add(nbt);
 	return nbt;
 }
 
@@ -577,10 +626,7 @@ std::shared_ptr<tgui_list_layout> editor_gui::add_sub_container(tgui::Container:
 	auto slo = std::make_shared<tgui_list_layout>();
 	slo->setBackgroundColor({ 0, 0, 0, 0 });
 	slo->setSize(200, 500);
-	if (pContainer)
-		pContainer->add(slo);
-	else
-		mEditor_layout->add(slo);
+	(pContainer ? pContainer : mEditor_layout)->add(slo);
 	return slo;
 }
 
@@ -598,8 +644,19 @@ void editor_gui::update_scene()
 
 void editor_gui::refresh_renderer(engine::renderer & pR)
 {
-	pR.get_tgui().add(mLayout);
-	pR.get_tgui().add(mCb_scene);
+	pR.get_tgui().add(mGui_base);
+
+	mRender_container->connect("Focused", [&]()
+	{
+		pR.set_transparent_gui_input(true);
+		mRender_container->getRenderer()->setBorders(3);
+		mRender_container->getRenderer()->setBorderColor({ 255, 255, 0, 100 });
+	});
+	mRender_container->connect("Unfocused", [&]()
+	{
+		pR.set_transparent_gui_input(false);
+		mRender_container->getRenderer()->setBorderColor({ 0, 0, 0, 0 });
+	});
 }
 
 int editor_gui::draw(engine::renderer& pR)
@@ -609,25 +666,27 @@ int editor_gui::draw(engine::renderer& pR)
 	if (pR.is_key_down(engine::renderer::key_type::LControl)
 	&&  pR.is_key_pressed(engine::renderer::key_type::E))
 	{
-		if (mLayout->isVisible())
+		if (mGui_base->isVisible())
 		{
-			mLayout->hide();
+			mGui_base->hide();
 			mCb_scene->hide();
 			pR.set_subwindow_enabled(false);
 		}
 		else
 		{
-			mLayout->show();
+			mGui_base->show();
 			mCb_scene->show();
 			pR.set_subwindow_enabled(true);
 		}
 	}
 
 	// Keep the sub window for the renderer updated
-	if (mLayout->isVisible())
+	if (mGui_base->isVisible())
 	{
-		const engine::fvector position(mLayout->getFullSize().x, mCb_scene->getFullSize().y);
-		const engine::fvector size = pR.get_window()->get_size() - position;
+		const engine::fvector position(mRender_container->getAbsolutePosition().x
+			, mRender_container->getAbsolutePosition().y);
+		const engine::fvector size = mRender_container->getFullSize();
+
 		pR.set_subwindow({ position, size});
 	}
 
@@ -984,47 +1043,36 @@ void tilemap_editor::load_terminal_interface(engine::terminal_system & pTerminal
 
 void tilemap_editor::setup_editor(editor_gui & pEditor_gui)
 {
-	mCb_tile = pEditor_gui.add_combobox();
-	mCb_tile->setItemsToDisplay(5);
-	mCb_tile->connect("ItemSelected", 
-		[&]() {
-			const int item = mCb_tile->getSelectedItemIndex();
-			if (item == -1)
-			{
-				logger::warning("No item selected");
-			}
-			mCurrent_tile = static_cast<size_t>(item);
-			update_labels();
-			update_preview();
-		});
+	mTb_texture = pEditor_gui.add_value_string("Texture", [&](std::string) { apply_texture(); });
+
+	mCb_tile = pEditor_gui.add_value_enum("Tile", [&](size_t pSelection) {
+		mCurrent_tile = pSelection;
+		update_labels();
+		update_preview();
+	}, {}, 0, true);
 
 	mLb_layer = pEditor_gui.add_label("Layer: 0");
 	mLb_rotation = pEditor_gui.add_label("Rotation: N/A");
-
-	auto lb_texture = pEditor_gui.add_label("Texture:");
-	lb_texture->setTextSize(14);
-
-	mTb_texture = pEditor_gui.add_textbox();
-
-	auto bt_apply_texture = pEditor_gui.add_button("Apply Texture");
-	bt_apply_texture->connect("pressed", [&]() { apply_texture(); });
-
 	mCb_half_grid = pEditor_gui.add_checkbox("Half Grid");
 }
 
 void tilemap_editor::copy_tile_type_at(engine::fvector pAt)
 {
 	const std::string atlas = mTilemap_manipulator.find_tile_name(pAt, mLayer);
-	if (!atlas.empty())
-		for (size_t i = 0; i < mTile_list.size(); i++) // Find tile in tile_list and set it as current tile
-			if (mTile_list[i] == atlas)
-			{
-				mCurrent_tile = i;
-				update_preview();
-				update_labels();
-				update_tile_combobox_selected();
-				break;
-			}
+	if (atlas.empty())
+		return;
+
+	for (size_t i = 0; i < mTile_list.size(); i++) // Find tile in tile_list and set it as current tile
+	{
+		if (mTile_list[i] == atlas)
+		{
+			mCurrent_tile = i;
+			update_preview();
+			update_labels();
+			update_tile_combobox_selected();
+			break;
+		}
+	}
 }
 
 void tilemap_editor::draw_tile_at(engine::fvector pAt)
@@ -2159,9 +2207,7 @@ void atlas_editor::update_entry_list()
 {
 	mCb_entry_select->removeAllItems();
 	for (auto& i : mAtlas.get_raw_atlas())
-	{
 		mCb_entry_select->addItem(i->get_name());
-	}
 	if (mSelection)
 		mCb_entry_select->setSelectedItem(mSelection->get_name());
 }

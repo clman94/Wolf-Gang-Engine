@@ -203,6 +203,7 @@ private:
 	engine::fvector mPosition;
 };
 
+
 // The main game
 class game :
 	public engine::render_proxy

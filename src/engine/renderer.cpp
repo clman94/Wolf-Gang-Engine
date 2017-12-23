@@ -43,14 +43,12 @@ void render_object::detach_renderer()
 	}
 }
 
-void
-render_object::set_visible(bool pVisible)
+void render_object::set_visible(bool pVisible)
 {
 	mVisible = pVisible;
 }
 
-bool
-render_object::is_visible()
+bool render_object::is_visible()
 {
 	return mVisible;
 }
@@ -69,16 +67,14 @@ render_object::~render_object()
 	detach_renderer();
 }
 
-void
-render_object::set_depth(depth_t pDepth)
+void render_object::set_depth(depth_t pDepth)
 {
 	mDepth = pDepth;
 	if (mRenderer)
 		mRenderer->request_resort();
 }
 
-float
-render_object::get_depth()
+float render_object::get_depth()
 {
 	return mDepth;
 }
@@ -89,6 +85,7 @@ render_object::get_depth()
 
 renderer::renderer()
 {
+	mTransparent_gui_input = false;
 	mWindow = nullptr;
 	mRequest_resort = false;
 	mTarget_size = ivector(800, 600); // Some arbitrary default
@@ -418,6 +415,11 @@ renderer::is_mouse_down(mouse_button pButton_type, bool pIgnore_gui)
 	return sf::Mouse::isButtonPressed((sf::Mouse::Button)pButton_type);
 }
 
+void engine::renderer::set_transparent_gui_input(bool pEnabled)
+{
+	mTransparent_gui_input = pEnabled;
+}
+
 int
 renderer::update_events()
 {
@@ -442,19 +444,17 @@ renderer::update_events()
 		}
 		
 		// Update tgui events
+		if (mTgui.handleEvent(mEvent) && !mTransparent_gui_input)
 		{
-			if (mTgui.handleEvent(mEvent))
-			{
-				mIs_mouse_busy = mEvent.type >= sf::Event::MouseWheelMoved
-					&& mEvent.type <= sf::Event::MouseLeft;
-				mIs_keyboard_busy = mEvent.type == sf::Event::KeyPressed
-					|| mEvent.type == sf::Event::KeyReleased;
-			}
-			else
-			{
-				mIs_mouse_busy = false;
-				mIs_keyboard_busy = false;
-			}
+			mIs_mouse_busy = mEvent.type >= sf::Event::MouseWheelMoved
+				&& mEvent.type <= sf::Event::MouseLeft;
+			mIs_keyboard_busy = mEvent.type == sf::Event::KeyPressed
+				|| mEvent.type == sf::Event::KeyReleased;
+		}
+		else
+		{
+			mIs_mouse_busy = false;
+			mIs_keyboard_busy = false;
 		}
 	}
 	return 0;

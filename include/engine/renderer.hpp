@@ -211,6 +211,8 @@ public:
 	bool is_mouse_pressed(mouse_button pButton_type, bool pIgnore_gui = false);
 	bool is_mouse_down(mouse_button pButton_type, bool pIgnore_gui = false);
 
+	void set_transparent_gui_input(bool pEnabled);
+
 	int update_events();
 
 	int draw();
@@ -269,6 +271,7 @@ private:
 	tgui::Gui mTgui;
 	bool mIs_mouse_busy;
 	bool mIs_keyboard_busy;
+	bool mTransparent_gui_input;
 
 	bool mSubwindow_enabled;
 	frect mSubwindow;
