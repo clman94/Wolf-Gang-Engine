@@ -180,15 +180,25 @@ public:
 	void toggle_mode();
 	bool is_fullscreen() const;
 
+	// Returns false when window is closed
+	bool poll_events();
+
+	void update();
+
+	void clear();
+
 private:
 	sf::RenderWindow mWindow;
 	bool mIs_fullscreen;
 	ivector mSize;
 	std::string mTitle;
 
+	// Storing the events allows multiple renderers per window.
+	// This feature is mostly meant for the editors.
+	std::vector<sf::Event> mEvents;
+
 	friend class renderer;
 };
-
 
 class renderer :
 	public util::nocopy
@@ -213,7 +223,8 @@ public:
 
 	void set_transparent_gui_input(bool pEnabled);
 
-	int update_events();
+	// Call the window's poll_event method first
+	void update_events();
 
 	int draw();
 	int draw(render_object& pObject);
@@ -282,7 +293,6 @@ private:
 	bool mRequest_resort;
 	frame_clock mFrame_clock;
 
-	sf::Event mEvent;
 	std::array<char, 256> mPressed_keys;
 	std::array<char, 16> mPressed_buttons;
 	void refresh_pressed();

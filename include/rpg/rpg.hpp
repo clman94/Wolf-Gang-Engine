@@ -16,10 +16,6 @@
 #include <rpg/rpg_config.hpp>
 #include <rpg/tilemap_manipulator.hpp>
 
-#ifndef LOCKED_RELEASE_MODE
-#include <rpg/editor.hpp>
-#endif
-
 #include <rpg/script_system.hpp>
 #include <rpg/collision_system.hpp>
 #include <rpg/flag_container.hpp>

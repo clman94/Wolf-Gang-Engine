@@ -234,142 +234,75 @@ void tgui_list_layout::updateWidgetPositions()
 
 editor_gui::editor_gui()
 {
-	mGui_base = std::make_shared<tgui::VerticalLayout>();
-	mGui_base->setSize("&.width", "&.height");
-	mGui_base->hide();
+	mWindow.initualize("Editor", rpg::defs::SCREEN_SIZE);
+	mRenderer.set_target_size(rpg::defs::DISPLAY_SIZE);
+	mRenderer.set_window(mWindow);
 
+	mGame_editor.set_renderer(mRenderer);
+	mGame_editor.set_visible(false);
 
-	// Top bar
+	mTilemap_editor.set_renderer(mRenderer);
+	mTilemap_editor.set_visible(false);
 
-	auto topbar = std::make_shared<tgui::HorizontalLayout>();
-	topbar->setSize("&.width", 100);
-	topbar->setBackgroundColor(sf::Color(default_gui_bg_color));
-	mGui_base->add(topbar);
-	mGui_base->setFixedSize(topbar, 100);
+	mCollisionbox_editor.set_renderer(mRenderer);
+	mCollisionbox_editor.set_visible(false);
 
-	auto game_control = std::make_shared<tgui::VerticalLayout>();
-	topbar->add(game_control);
-	topbar->setFixedSize(game_control, 100);
+	mAtlas_editor.set_renderer(mRenderer);
+	mAtlas_editor.set_visible(false);
 
-	auto bt_scene_stop = std::make_shared<tgui::Button>();
-	bt_scene_stop->setText("Stop Game");
-	game_control->add(bt_scene_stop);
+	setup_gui();
 
-	auto bt_scene_restart = std::make_shared<tgui::Button>();
-	bt_scene_restart->setText("Restart Scene");
-	game_control->add(bt_scene_restart);
+	mCurrent_editor = nullptr;
+	set_current_editor(mGame_editor);
 
-	topbar->addSpace();
+	mTilemap_editor.set_resource_manager(mGame_editor.get_game().get_resource_manager());
+	mCollisionbox_editor.set_resource_manager(mGame_editor.get_game().get_resource_manager());
+	mAtlas_editor.set_resource_manager(mGame_editor.get_game().get_resource_manager());
+}
 
-	mTabs = std::make_shared<tgui::Tab>();
-	mTabs->add("Game", true);
-	mTabs->add("Tilemap", false);
-	mTabs->add("Collision", false);
-	mTabs->add("Atlas", false);
-	topbar->add(mTabs);
-	topbar->setFixedSize(mTabs, 400);
+void editor_gui::initualize(const std::string & pCustom_location)
+{
+	mGame_editor.load_game(pCustom_location);
+}
 
-	topbar->addSpace();
-
-	mCb_scene = std::make_shared<tgui::ComboBox>();
-	//mCb_scene->setPosition(200, 0);
-	//mCb_scene->setSize("&.width - x", 25);
-	mCb_scene->setItemsToDisplay(10);
-	mCb_scene->connect("ItemSelected", [&](sf::String pItem)
+void editor_gui::run()
+{
+	bool running = true;
+	while (running)
 	{
-		mScene->load_scene(pItem);
-	});
-	mCb_scene->hide();
-	mGui_base->add(mCb_scene);
-	mGui_base->setFixedSize(mCb_scene, 25);
+		if (!mWindow.poll_events())
+		{
+			logger::info("Closing with window event");
+			return;
+		}
 
-	// Middle section
-	auto middle = std::make_shared<tgui::HorizontalLayout>();
-	mGui_base->add(middle);
+		mRenderer.update_events();
 
-	// Side bar
+		if (mRenderer.is_key_down(engine::renderer::key_type::Escape))
+		{
+			logger::info("Closing with 'Escape'");
+			return;
+		}
 
-	mSidebar = std::make_shared<tgui_list_layout>();
-	mSidebar->setBackgroundColor(sf::Color(default_gui_bg_color));
-	mSidebar->getRenderer()->setBorders(2);
-	mSidebar->getRenderer()->setBorderColor({ 0, 0, 0, 255 });
-	middle->add(mSidebar);
-	middle->setFixedSize(mSidebar, 200);
+		if (mRenderer.is_key_pressed(engine::renderer::key_type::F11))
+		{
+			mWindow.toggle_mode();
+			mRenderer.refresh();
+		}
 
-	mLb_fps = std::make_shared<tgui::Label>();
-	mLb_fps->setMaximumTextWidth(0);
-	mLb_fps->setTextColor({ 255, 255, 255, 255 });
-	mLb_fps->setText("FPS: N/A");
-	mLb_fps->setTextSize(15);
-	mSidebar->add(mLb_fps);
+		const engine::fvector position(mRender_container->getAbsolutePosition().x
+			, mRender_container->getAbsolutePosition().y);
+		const engine::fvector size = mRender_container->getFullSize();
+		mRenderer.set_subwindow({ position, size });
+		mGame_editor.set_subwindow({ position, size });
 
-	mLb_mouse = tgui::Label::copy(mLb_fps);
-	mLb_mouse->setText("(n/a, n/a)\n(n/a, n/a)");
-	mLb_mouse->setTextSize(12);
-	mSidebar->add(mLb_mouse);
-
-	{
-		add_small_label("Visualizations:", mSidebar);
-		mVisualizations_layout = std::make_shared<tgui_list_layout>();
-		mVisualizations_layout->setSize("&.width", 100);
-		mSidebar->add(mVisualizations_layout);
-
-		// Collision visualization checkbox
-		auto chb_collision = std::make_shared<tgui::CheckBox>();
-		chb_collision->getRenderer()->setTextColor({ 255, 255, 255, 255 });
-		chb_collision->setText("Collision");
-		chb_collision->connect("Checked", [&]()
-		{ mScene->get_visualizer().visualize_collision(true); });
-		chb_collision->connect("Unchecked", [&]()
-		{ mScene->get_visualizer().visualize_collision(false); });
-		mVisualizations_layout->add(chb_collision);
-
-		// Entities visualization checkbox
-		auto chb_entities = std::make_shared<tgui::CheckBox>();
-		chb_entities->getRenderer()->setTextColor({ 255, 255, 255, 255 });
-		chb_entities->setText("Entities");
-		chb_entities->connect("Checked", [&]()
-		{ mScene->get_visualizer().visualize_entities(true); });
-		chb_entities->connect("Unchecked", [&]()
-		{ mScene->get_visualizer().visualize_entities(false); });
-		mVisualizations_layout->add(chb_entities);
+		mWindow.clear();
+		mRenderer.draw();
+		mWindow.update();
 	}
-
-	mEditor_layout = std::make_shared<tgui_list_layout>();
-	mEditor_layout->setSize("&.width", "&.height - y");
-	mEditor_layout->setBackgroundColor({ 0, 0, 0, 0 });
-	mSidebar->add(mEditor_layout);
-
-	// Game window
-
-	mRender_container = std::make_shared<tgui::Panel>();
-	mRender_container->setBackgroundColor({ 0, 0, 0, 0 });
-	middle->add(mRender_container);
-
-	// Bottom bar
-
-	auto bottombar = std::make_shared<tgui::HorizontalLayout>();
-	bottombar->setBackgroundColor(sf::Color(default_gui_bg_color));
-	bottombar->getRenderer()->setBorders(2);
-	bottombar->getRenderer()->setBorderColor({ 0, 0, 0, 255 });
-	mGui_base->add(bottombar);
-	mGui_base->setFixedSize(bottombar, 25);
-
-	mBottom_text = std::make_shared<tgui::Label>();
-	bottombar->add(mBottom_text);
 }
 
-void editor_gui::set_scene(rpg::scene * pScene)
-{
-	mScene = pScene;
-}
-
-void editor_gui::clear()
-{
-	mEditor_layout->removeAllWidgets();
-}
-
-inline void editor_gui::add_group(const std::string & pText)
+inline void editor_sidebar::add_group(const std::string & pText)
 {
 	auto lb = std::make_shared<tgui::Label>();
 	lb->setMaximumTextWidth(0);
@@ -377,16 +310,32 @@ inline void editor_gui::add_group(const std::string & pText)
 	lb->setText(pText);
 	lb->setTextSize(15);
 	lb->setTextStyle(sf::Text::Bold);
-	mEditor_layout->add(lb);
+	add(lb);
 }
 
-tgui::HorizontalLayout::Ptr editor_gui::create_value_line(const std::string& pText)
+tgui::HorizontalLayout::Ptr editor_sidebar::create_value_line()
 {
 	auto hl = std::make_shared<tgui::HorizontalLayout>();
 	hl->setBackgroundColor({ 0, 0, 0, 0 });
-	hl->setSize("&.width",25);
+	hl->setSize("&.width", 25);
 	hl->addSpace(0.1f);
-	mEditor_layout->add(hl);
+
+	auto &hl_ref = *hl; // Prevent memory leak
+	hl->connect("MouseEntered", [&]()
+	{
+		hl_ref.setBackgroundColor({ 100, 100, 100, 255 });
+	});
+	hl->connect("MouseLeft", [&]()
+	{
+		hl_ref.setBackgroundColor({ 0, 0, 0, 0 });
+	});
+	add(hl);
+	return hl;
+}
+
+tgui::HorizontalLayout::Ptr editor_sidebar::create_value_line(const std::string& pText)
+{
+	auto hl = create_value_line();
 
 	auto lb = std::make_shared<tgui::Label>();
 	lb->setMaximumTextWidth(0);
@@ -399,7 +348,7 @@ tgui::HorizontalLayout::Ptr editor_gui::create_value_line(const std::string& pTe
 	return hl;
 }
 
-tgui::EditBox::Ptr editor_gui::add_value_int(const std::string & pLabel, std::function<void(int)> pCallback, bool pNeg)
+tgui::EditBox::Ptr editor_sidebar::add_value_int(const std::string & pLabel, std::function<void(int)> pCallback, bool pNeg)
 {
 	assert(pCallback);
 	auto hl = create_value_line(pLabel);
@@ -422,12 +371,12 @@ tgui::EditBox::Ptr editor_gui::add_value_int(const std::string & pLabel, std::fu
 	return tb;
 }
 
-tgui::EditBox::Ptr editor_gui::add_value_int(const std::string & pLabel, int & pValue, bool pNeg)
+tgui::EditBox::Ptr editor_sidebar::add_value_int(const std::string & pLabel, int & pValue, bool pNeg)
 {
 	return add_value_int(pLabel, std::function<void(int)>([&](int pCallback_value) { pValue = pCallback_value; }), pNeg);
 }
 
-tgui::EditBox::Ptr editor_gui::add_value_string(const std::string & pLabel, std::function<void(std::string)> pCallback)
+tgui::EditBox::Ptr editor_sidebar::add_value_string(const std::string & pLabel, std::function<void(std::string)> pCallback)
 {
 	auto hl = create_value_line(pLabel);
 	auto tb = std::make_shared<tgui::EditBox>();
@@ -448,12 +397,12 @@ tgui::EditBox::Ptr editor_gui::add_value_string(const std::string & pLabel, std:
 	return tb;
 }
 
-tgui::EditBox::Ptr editor_gui::add_value_string(const std::string & pLabel, std::string& pValue)
+tgui::EditBox::Ptr editor_sidebar::add_value_string(const std::string & pLabel, std::string& pValue)
 {
 	return add_value_string(pLabel, [&](std::string pCallback_value) { pValue = pCallback_value; });
 }
 
-tgui::EditBox::Ptr editor_gui::add_value_float(const std::string & pLabel, std::function<void(float)> pCallback, bool pNeg)
+tgui::EditBox::Ptr editor_sidebar::add_value_float(const std::string & pLabel, std::function<void(float)> pCallback, bool pNeg)
 {
 	assert(pCallback);
 	auto hl = create_value_line(pLabel);
@@ -476,12 +425,12 @@ tgui::EditBox::Ptr editor_gui::add_value_float(const std::string & pLabel, std::
 	return tb;
 }
 
-tgui::EditBox::Ptr editor_gui::add_value_float(const std::string & pLabel, float & pValue, bool pNeg)
+tgui::EditBox::Ptr editor_sidebar::add_value_float(const std::string & pLabel, float & pValue, bool pNeg)
 {
 	return add_value_float(pLabel, std::function<void(float)>([&](float pCallback_value) { pValue = pCallback_value; }), pNeg);
 }
 
-tgui::ComboBox::Ptr editor_gui::add_value_enum(const std::string & pLabel, std::function<void(size_t)> pCallback, const std::vector<std::string>& pValues, size_t pDefault, bool pBig_mode)
+tgui::ComboBox::Ptr editor_sidebar::add_value_enum(const std::string & pLabel, std::function<void(size_t)> pCallback, const std::vector<std::string>& pValues, size_t pDefault, bool pBig_mode)
 {
 	assert(pCallback);
 	auto hl = create_value_line(pLabel);
@@ -494,7 +443,8 @@ tgui::ComboBox::Ptr editor_gui::add_value_enum(const std::string & pLabel, std::
 	cb->connect("ItemSelected", [=](sf::String pVal)
 	{
 		try {
-			pCallback(cb->getSelectedItemIndex());
+			if (cb->getSelectedItemIndex() != -1)
+				pCallback(cb->getSelectedItemIndex());
 		}
 		catch (...)
 		{
@@ -539,204 +489,233 @@ tgui::ComboBox::Ptr editor_gui::add_value_enum(const std::string & pLabel, std::
 	return cb;
 }
 
-tgui::ComboBox::Ptr editor_gui::add_value_enum(const std::string & pLabel, size_t & pSelection, const std::vector<std::string>& pValues, size_t pDefault, bool pBig_mode)
+tgui::ComboBox::Ptr editor_sidebar::add_value_enum(const std::string & pLabel, size_t & pSelection, const std::vector<std::string>& pValues, size_t pDefault, bool pBig_mode)
 {
 	return add_value_enum(pLabel, std::function<void(size_t)>([&](size_t pCallback_value) { pSelection = pCallback_value; }), pValues, pDefault, pBig_mode);
 }
 
-void editor_gui::add_horizontal_buttons(const std::vector<std::tuple<std::string, std::function<void()>>> pName_callbacks)
+void editor_sidebar::add_horizontal_buttons(const std::vector<std::tuple<std::string, std::function<void()>>> pName_callbacks)
 {
-	auto hl = std::make_shared<tgui::HorizontalLayout>();
-	hl->setBackgroundColor({ 0, 0, 0, 0 });
-	hl->setSize("&.width", 25);
-	hl->addSpace(0.1f);
-	mEditor_layout->add(hl);
+	auto hl = create_value_line();
 	
 	for (auto& i : pName_callbacks)
 	{
 		auto bt = std::make_shared<tgui::Button>();
 		bt->setText(std::get<0>(i));
-		bt->setTextSize(12);
+		//bt->setTextSize(12);
 		bt->connect("Pressed", std::get<1>(i));
 		hl->add(bt);
 	}
 }
 
-void editors::editor_gui::add_button(const std::string & pLabel, std::function<void()> pCallback)
+void editor_sidebar::add_button(const std::string & pLabel, std::function<void()> pCallback)
 {
 	add_horizontal_buttons({ {pLabel, pCallback} });
 }
 
-
-tgui::Label::Ptr editor_gui::add_label(const std::string & pText, tgui::Container::Ptr pContainer)
+tgui::Label::Ptr editor_sidebar::add_label(const std::string & pText, tgui::Container::Ptr pContainer)
 {
-	auto nlb = tgui::Label::copy(mLb_fps);
+	auto nlb = std::make_shared<tgui::Label>();
+	nlb->setMaximumTextWidth(0);
+	nlb->setTextColor({ 255, 255, 255, 255 });
+	nlb->setTextSize(15);
 	nlb->setText(pText);
 	nlb->setTextStyle(sf::Text::Bold);
 	if (pContainer)
 		pContainer->add(nlb);
 	else
-		mEditor_layout->add(nlb);
+		add(nlb);
 	return nlb;
 }
 
-tgui::Label::Ptr editor_gui::add_small_label(const std::string & text, tgui::Container::Ptr pContainer)
+tgui::Label::Ptr editor_sidebar::add_small_label(const std::string & text, tgui::Container::Ptr pContainer)
 {
 	auto label = add_label(text, pContainer);
 	label->setTextSize(10);
 	return label;
 }
 
-tgui::TextBox::Ptr editor_gui::add_textbox(tgui::Container::Ptr pContainer)
+tgui::TextBox::Ptr editor_sidebar::add_textbox(tgui::Container::Ptr pContainer)
 {
 	auto ntb = std::make_shared<tgui::TextBox>();
 	ntb->setSize("&.width", "25");
-	(pContainer ? pContainer : mEditor_layout)->add(ntb);
+	(pContainer ? *pContainer : *this).add(ntb);
 	return ntb;
 }
 
-tgui::ComboBox::Ptr editor_gui::add_combobox(tgui::Container::Ptr pContainer)
+tgui::ComboBox::Ptr editor_sidebar::add_combobox(tgui::Container::Ptr pContainer)
 {
 	auto ncb = std::make_shared<tgui::ComboBox>();
 	ncb->setSize("&.width", "25");
-	(pContainer ? pContainer : mEditor_layout)->add(ncb);
+	(pContainer ? *pContainer : *this).add(ncb);
 	ncb->setItemsToDisplay(10);
 	return ncb;
 }
 
-tgui::CheckBox::Ptr editor_gui::add_checkbox(const std::string& text, tgui::Container::Ptr pContainer)
+tgui::CheckBox::Ptr editor_sidebar::add_checkbox(const std::string& pName)
 {
+	auto hl = create_value_line(pName);
 	auto ncb = std::make_shared<tgui::CheckBox>();
-	ncb->setText(text);
 	ncb->uncheck();
-	(pContainer ? pContainer : mEditor_layout)->add(ncb);
+	hl->add(ncb);
+	hl->setFixedSize(ncb, hl->getSize().y);
+	hl->addSpace(0.1f);
 	return ncb;
 }
 
-tgui::Button::Ptr editor_gui::add_button(const std::string& text, tgui::Container::Ptr pContainer)
+tgui::Button::Ptr editor_sidebar::add_button(const std::string& text, tgui::Container::Ptr pContainer)
 {
 	auto nbt = std::make_shared<tgui::Button>();
 	nbt->setText(text);
-	(pContainer ? pContainer : mEditor_layout)->add(nbt);
+	(pContainer ? *pContainer : *this).add(nbt);
 	return nbt;
 }
 
-std::shared_ptr<tgui_list_layout> editor_gui::add_sub_container(tgui::Container::Ptr pContainer)
+std::shared_ptr<tgui_list_layout> editor_sidebar::add_sub_container(tgui::Container::Ptr pContainer)
 {
 	auto slo = std::make_shared<tgui_list_layout>();
 	slo->setBackgroundColor({ 0, 0, 0, 0 });
 	slo->setSize(200, 500);
-	(pContainer ? pContainer : mEditor_layout)->add(slo);
+	(pContainer ? *pContainer : *this).add(slo);
 	return slo;
 }
 
-
-void editor_gui::update_scene()
+void editor_gui::setup_gui()
 {
-	if (mCb_scene->getSelectedItem() != mScene->get_name()
-		&& !mScene->get_name().empty())
+	mGui_base = std::make_shared<tgui::VerticalLayout>();
+	mGui_base->setSize("&.width", "&.height");
+	mRenderer.get_tgui().add(mGui_base);
+
+	// Top bar
+
+	auto topbar = std::make_shared<tgui::HorizontalLayout>();
+	topbar->setSize("&.width", 100);
+	topbar->setBackgroundColor(sf::Color(default_gui_bg_color));
+	mGui_base->add(topbar);
+	mGui_base->setFixedSize(topbar, 100);
+
+	topbar->addSpace();
+
+	mTabs = std::make_shared<tgui::Tab>();
+	mTabs->add("Game", true);
+	mTabs->add("Tilemap", false);
+	mTabs->add("Collision", false);
+	mTabs->add("Atlas", false);
+	mTabs->connect("TabSelected", [&]()
 	{
-		populate_combox_with_scene_names(mCb_scene);
-		mCb_scene->setSelectedItem(mScene->get_name());
-	}
-}
+		switch (mTabs->getSelectedIndex())
+		{
+		case 0:
+			set_current_editor(mGame_editor);
+			break;
+		case 1:
+			set_current_editor(mTilemap_editor);
+			break;
+		case 2:
+			set_current_editor(mCollisionbox_editor);
+			break;
+		case 3:
+			set_current_editor(mAtlas_editor);
+			break;
+		}
+	});
+	topbar->add(mTabs);
+	topbar->setFixedSize(mTabs, 400);
 
+	topbar->addSpace();
 
-void editor_gui::refresh_renderer(engine::renderer & pR)
-{
-	pR.get_tgui().add(mGui_base);
+	// Middle section
+	auto middle = std::make_shared<tgui::HorizontalLayout>();
+	mGui_base->add(middle);
 
+	// Side bar
+
+	mSidebar = std::make_shared<tgui_list_layout>();
+	mSidebar->setBackgroundColor(sf::Color(default_gui_bg_color));
+	middle->add(mSidebar);
+	middle->setFixedSize(mSidebar, 200);
+
+	// Game window
+
+	mRender_container = std::make_shared<tgui::Panel>();
+	mRender_container->setBackgroundColor({ 0, 0, 0, 0 });
 	mRender_container->connect("Focused", [&]()
 	{
-		pR.set_transparent_gui_input(true);
+		mRenderer.set_transparent_gui_input(true);
 		mRender_container->getRenderer()->setBorders(3);
 		mRender_container->getRenderer()->setBorderColor({ 255, 255, 0, 100 });
 	});
 	mRender_container->connect("Unfocused", [&]()
 	{
-		pR.set_transparent_gui_input(false);
+		mRenderer.set_transparent_gui_input(false);
 		mRender_container->getRenderer()->setBorderColor({ 0, 0, 0, 0 });
 	});
+	middle->add(mRender_container);
+
+	// Bottom bar
+
+	auto bottombar = std::make_shared<tgui::HorizontalLayout>();
+	bottombar->setBackgroundColor(sf::Color(default_gui_bg_color));
+	bottombar->getRenderer()->setBorders(2);
+	bottombar->getRenderer()->setBorderColor({ 0, 0, 0, 255 });
+	mGui_base->add(bottombar);
+	mGui_base->setFixedSize(bottombar, 25);
+
+	mBottom_text = std::make_shared<tgui::Label>();
+	bottombar->add(mBottom_text);
 }
+
+void editor_gui::set_current_editor(editor & pEditor)
+{
+	if (mCurrent_editor)
+	{
+		mSidebar->remove(mCurrent_editor->get_sidebar());
+		mCurrent_editor->set_visible(false);
+	}
+	mCurrent_editor = &pEditor;
+	mSidebar->add(mCurrent_editor->get_sidebar());
+	mCurrent_editor->set_visible(true);
+}
+
 
 int editor_gui::draw(engine::renderer& pR)
 {
-	update_scene();
-
-	if (pR.is_key_down(engine::renderer::key_type::LControl)
+	/*if (pR.is_key_down(engine::renderer::key_type::LControl)
 	&&  pR.is_key_pressed(engine::renderer::key_type::E))
 	{
 		if (mGui_base->isVisible())
 		{
 			mGui_base->hide();
-			mCb_scene->hide();
 			pR.set_subwindow_enabled(false);
 		}
 		else
 		{
 			mGui_base->show();
-			mCb_scene->show();
 			pR.set_subwindow_enabled(true);
 		}
-	}
+	}*/
 
 	// Keep the sub window for the renderer updated
-	if (mGui_base->isVisible())
-	{
-		const engine::fvector position(mRender_container->getAbsolutePosition().x
-			, mRender_container->getAbsolutePosition().y);
-		const engine::fvector size = mRender_container->getFullSize();
 
-		pR.set_subwindow({ position, size});
-	}
-
-	// Lock the scene selector to not mess things up
-	if (!mEditor_layout->getWidgets().empty())
-		mCb_scene->disable();
-	else
-		mCb_scene->enable();
-
-	mUpdate_timer += pR.get_delta();
-	if (mUpdate_timer >= 0.5f)
-	{
-		const auto mouse_position_exact = pR.get_mouse_position();
-		const auto mouse_position = pR.get_mouse_position(get_exact_position()) / get_unit();
-		std::string position;
-		position += "(";
-		position += std::to_string(static_cast<int>(mouse_position_exact.x));
-		position += ", ";
-		position += std::to_string(static_cast<int>(mouse_position_exact.y));
-		position += ")\n(";
-		position += std::to_string(mouse_position.x);
-		position += ", ";
-		position += std::to_string(mouse_position.y);
-		position += ")";
-		mLb_mouse->setText(position);
-
-		mLb_fps->setText("FPS: " + std::to_string(pR.get_fps()));
-
-		mUpdate_timer = 0;
-	}
 	return 0;
 }
 
 
 editor::editor()
 {
-	mBlackout.set_color({ 0, 0, 0, 255 });
-	mBlackout.set_size({ 1000, 1000 });
+	mSidebar = std::make_shared<editor_sidebar>();
+	mSidebar->setSize("&.width", "&.height");
 }
 
-void editor::set_editor_gui(editor_gui & pEditor_gui)
-{
-	pEditor_gui.clear();
-	mEditor_gui = &pEditor_gui;
-	setup_editor(pEditor_gui);
-}
-
-void editor::set_resource_manager(engine::resource_manager& pResource_manager)
+void editor::set_resource_manager(engine::resource_manager & pResource_manager)
 {
 	mResource_manager = &pResource_manager;
+}
+
+
+std::shared_ptr<editor_sidebar> editor::get_sidebar()
+{
+	return mSidebar;
 }
 
 // ##########
@@ -747,7 +726,6 @@ scene_editor::scene_editor()
 {
 	mBoundary_visualization.set_parent(*this);
 	mTilemap_display.set_parent(*this);
-	mResource_manager = nullptr;
 }
 
 bool scene_editor::open_scene(std::string pPath)
@@ -755,7 +733,7 @@ bool scene_editor::open_scene(std::string pPath)
 	mTilemap_manipulator.clean();
 	mTilemap_display.clean();
 
-	auto path = engine::encoded_path(pPath);
+	engine::encoded_path path(pPath);
 	if (!mLoader.load(path.parent(), path.filename()))
 	{
 		logger::error("Unable to open scene '" + pPath + "'");
@@ -789,6 +767,7 @@ bool scene_editor::open_scene(std::string pPath)
 
 tilemap_editor::tilemap_editor()
 {
+	setup_gui();
 	set_depth(-1000);
 
 	mPreview.set_color({ 255, 255, 255, 150 });
@@ -832,9 +811,6 @@ bool tilemap_editor::open_editor()
 
 int tilemap_editor::draw(engine::renderer & pR)
 {
-	// Draw the black thing first
-	mBlackout.draw(pR);
-
 	// Editing is not allowed as there are no tiles to use.
 	if (mTile_list.empty())
 		return 1;
@@ -1041,19 +1017,19 @@ void tilemap_editor::load_terminal_interface(engine::terminal_system & pTerminal
 }
 
 
-void tilemap_editor::setup_editor(editor_gui & pEditor_gui)
+void tilemap_editor::setup_gui()
 {
-	mTb_texture = pEditor_gui.add_value_string("Texture", [&](std::string) { apply_texture(); });
+	mTb_texture = mSidebar->add_value_string("Texture", [&](std::string) { apply_texture(); });
 
-	mCb_tile = pEditor_gui.add_value_enum("Tile", [&](size_t pSelection) {
+	mCb_tile = mSidebar->add_value_enum("Tile", [&](size_t pSelection) {
 		mCurrent_tile = pSelection;
 		update_labels();
 		update_preview();
 	}, {}, 0, true);
 
-	mLb_layer = pEditor_gui.add_label("Layer: 0");
-	mLb_rotation = pEditor_gui.add_label("Rotation: N/A");
-	mCb_half_grid = pEditor_gui.add_checkbox("Half Grid");
+	mLb_layer = mSidebar->add_label("Layer: 0");
+	mLb_rotation = mSidebar->add_label("Rotation: N/A");
+	mCb_half_grid = mSidebar->add_checkbox("Half Grid");
 }
 
 void tilemap_editor::copy_tile_type_at(engine::fvector pAt)
@@ -1387,6 +1363,8 @@ private:
 
 collisionbox_editor::collisionbox_editor()
 {
+	setup_gui();
+
 	set_depth(-1000);
 
 	add_child(mTilemap_display);
@@ -1589,7 +1567,6 @@ int collisionbox_editor::draw(engine::renderer& pR)
 	}
 	}
 
-	mBlackout.draw(pR);
 	mTilemap_display.draw(pR);
 
 	if (mGrid_snap != grid_snap::none)
@@ -1647,17 +1624,17 @@ int collisionbox_editor::save()
 	return 0;
 }
 
-void collisionbox_editor::setup_editor(editor_gui & pEditor_gui)
+void collisionbox_editor::setup_gui()
 {
-	pEditor_gui.add_group("Editor");
-	pEditor_gui.add_value_enum("Grid Snapping", [&](size_t pI)
+	mSidebar->add_group("Editor");
+	mSidebar->add_value_enum("Grid Snapping", [&](size_t pI)
 	{
 		mGrid_snap = (grid_snap)pI;
 	}, { "None", "Pixel", "Quarter Tile", "Half Tile", "Full Tile" }, 4);
 
-	pEditor_gui.add_group("Box Properties");
+	mSidebar->add_group("Box Properties");
 
-	mCb_type = pEditor_gui.add_value_enum("Type", [&](size_t pI) {
+	mCb_type = mSidebar->add_value_enum("Type", [&](size_t pI) {
 		if (!mSelection) return;
 		mCurrent_type = static_cast<rpg::collision_box::type>(pI); // Lazy cast
 		auto temp = mSelection;
@@ -1670,7 +1647,7 @@ void collisionbox_editor::setup_editor(editor_gui & pEditor_gui)
 
 	mCb_type->setSelectedItemByIndex(0);
 
-	mTb_wallgroup = pEditor_gui.add_value_string("Wall Group", [&](std::string)
+	mTb_wallgroup = mSidebar->add_value_string("Wall Group", [&](std::string)
 	{
 		if (!mSelection) return;
 		if (mTb_wallgroup->getText().isEmpty())
@@ -1679,28 +1656,28 @@ void collisionbox_editor::setup_editor(editor_gui & pEditor_gui)
 			mSelection->set_wall_group(mContainer.create_group(mTb_wallgroup->getText()));
 	});
 
-	mTb_box_x = pEditor_gui.add_value_float("X", [&](float pVal)
+	mTb_box_x = mSidebar->add_value_float("X", [&](float pVal)
 	{
 		if (!mSelection) return;
 		auto rect = mSelection->get_region();
 		rect.x = pVal;
 		mSelection->set_region(rect);
 	});
-	mTb_box_y = pEditor_gui.add_value_float("Y", [&](float pVal)
+	mTb_box_y = mSidebar->add_value_float("Y", [&](float pVal)
 	{
 		if (!mSelection) return;
 		auto rect = mSelection->get_region();
 		rect.y = pVal;
 		mSelection->set_region(rect);
 	});
-	mTb_box_width = pEditor_gui.add_value_float("Width", [&](float pVal)
+	mTb_box_width = mSidebar->add_value_float("Width", [&](float pVal)
 	{
 		if (!mSelection) return;
 		auto rect = mSelection->get_region();
 		rect.w = pVal;
 		mSelection->set_region(rect);
 	}, false);
-	mTb_box_height = pEditor_gui.add_value_float("Height", [&](float pVal)
+	mTb_box_height = mSidebar->add_value_float("Height", [&](float pVal)
 	{
 		if (!mSelection) return;
 		auto rect = mSelection->get_region();
@@ -1708,28 +1685,28 @@ void collisionbox_editor::setup_editor(editor_gui & pEditor_gui)
 		mSelection->set_region(rect);
 	}, false);
 
-	pEditor_gui.add_group("Door Properties");
+	mSidebar->add_group("Door Properties");
 
-	mTb_door_name = pEditor_gui.add_value_string("Name", [&](std::string pVal)
+	mTb_door_name = mSidebar->add_value_string("Name", [&](std::string pVal)
 	{
 		if (mSelection && mSelection->get_type() == rpg::collision_box::type::door)
 			std::dynamic_pointer_cast<rpg::door>(mSelection)->set_name(pVal);
 	});
 
-	mTb_door_scene = pEditor_gui.add_value_enum("Destination Scene", [&](size_t pVal)
+	mTb_door_scene = mSidebar->add_value_enum("Destination Scene", [&](size_t pVal)
 	{
 		if (mSelection && mSelection->get_type() == rpg::collision_box::type::door)
 			std::dynamic_pointer_cast<rpg::door>(mSelection)->set_scene(mTb_door_scene->getSelectedItem());
 	}, {}, 0, true);
 	populate_combox_with_scene_names(mTb_door_scene);
 
-	mTb_door_destination = pEditor_gui.add_value_string("Destination Door", [&](std::string pVal)
+	mTb_door_destination = mSidebar->add_value_string("Destination Door", [&](std::string pVal)
 	{
 		if (mSelection && mSelection->get_type() == rpg::collision_box::type::door)
 			std::dynamic_pointer_cast<rpg::door>(mSelection)->set_destination(pVal);
 	});
 
-	mTb_door_offsetx = pEditor_gui.add_value_float("Offset X", [&](float pVal)
+	mTb_door_offsetx = mSidebar->add_value_float("Offset X", [&](float pVal)
 	{
 		if (mSelection && mSelection->get_type() != rpg::collision_box::type::door)
 		{
@@ -1738,7 +1715,7 @@ void collisionbox_editor::setup_editor(editor_gui & pEditor_gui)
 		}
 	});
 
-	mTb_door_offsety = pEditor_gui.add_value_float("Offset Y", [&](float pVal)
+	mTb_door_offsety = mSidebar->add_value_float("Offset Y", [&](float pVal)
 	{
 		if (mSelection && mSelection->get_type() == rpg::collision_box::type::door)
 		{
@@ -1821,6 +1798,8 @@ void collisionbox_editor::update_labels()
 
 atlas_editor::atlas_editor()
 {
+	setup_gui();
+
 	mTexture.reset(new engine::texture);
 
 	mFull_animation.set_color({ 100, 100, 255, 100 });
@@ -1887,7 +1866,6 @@ int atlas_editor::draw(engine::renderer & pR)
 	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left))
 		atlas_selection((mouse_position - mBackground.get_position())/mZoom);
 
-	mBlackout.draw(pR);
 	mBackground.draw(pR);
 
 	for (auto& i : mAtlas.get_raw_atlas())
@@ -2048,9 +2026,9 @@ void atlas_editor::atlas_selection(engine::fvector pPosition)
 	update_preview();
 }
 
-void atlas_editor::setup_editor(editor_gui & pEditor_gui)
+void atlas_editor::setup_gui()
 {
-	mCb_texture_select = pEditor_gui.add_combobox();
+	mCb_texture_select = mSidebar->add_combobox();
 	mCb_texture_select->connect("ItemSelected",
 		[&]() {
 		const int item = mCb_texture_select->getSelectedItemIndex();
@@ -2063,8 +2041,8 @@ void atlas_editor::setup_editor(editor_gui & pEditor_gui)
 		setup_for_texture(mTexture_list[item]);
 	});
 
-	pEditor_gui.add_small_label("Entry: ");
-	mCb_entry_select = pEditor_gui.add_combobox();
+	mSidebar->add_small_label("Entry: ");
+	mCb_entry_select = mSidebar->add_combobox();
 	mCb_entry_select->connect("ItemSelected",
 		[&]() {
 		const int item = mCb_entry_select->getSelectedItemIndex();
@@ -2078,9 +2056,9 @@ void atlas_editor::setup_editor(editor_gui & pEditor_gui)
 		update_preview();
 	});
 
-	pEditor_gui.add_group("Properties");
+	mSidebar->add_group("Properties");
 
-	mTb_name = pEditor_gui.add_value_string("Name", [&](std::string pVal)
+	mTb_name = mSidebar->add_value_string("Name", [&](std::string pVal)
 	{
 		if (!mSelection) return;
 		// Rename
@@ -2098,28 +2076,28 @@ void atlas_editor::setup_editor(editor_gui & pEditor_gui)
 		mAtlas_changed = true;
 	});
 
-	mTb_frames = pEditor_gui.add_value_int("Frames", [&](int pVal)
+	mTb_frames = mSidebar->add_value_int("Frames", [&](int pVal)
 	{
 		if (!mSelection || pVal < 1) return;
 		mSelection->set_frame_count(pVal);
 		mAtlas_changed = true;
 	}, false); 
 
-	mTb_interval = pEditor_gui.add_value_int("interval", [&](int pVal)
+	mTb_interval = mSidebar->add_value_int("interval", [&](int pVal)
 	{
 		if (!mSelection || pVal < 1) return;
 		mSelection->add_interval(0, static_cast<float>(pVal));
 		mAtlas_changed = true;
 	}, false);
 	
-	mTb_default_frame = pEditor_gui.add_value_int("Default Frame", [&](int pVal)
+	mTb_default_frame = mSidebar->add_value_int("Default Frame", [&](int pVal)
 	{
 		if (!mSelection || pVal < 1) return;
 		mSelection->set_default_frame(pVal);
 		mAtlas_changed = true;
 	}, false);
 
-	mTb_size_x = pEditor_gui.add_value_int("X", [&](int pVal)
+	mTb_size_x = mSidebar->add_value_int("X", [&](int pVal)
 	{
 		if (!mSelection || pVal < 0) return;
 		engine::frect rect = mSelection->get_frame_at(0);
@@ -2128,7 +2106,7 @@ void atlas_editor::setup_editor(editor_gui & pEditor_gui)
 		mAtlas_changed = true;
 	}, false);
 
-	mTb_size_y = pEditor_gui.add_value_int("Y", [&](int pVal)
+	mTb_size_y = mSidebar->add_value_int("Y", [&](int pVal)
 	{
 		if (!mSelection || pVal < 0) return;
 		engine::frect rect = mSelection->get_frame_at(0);
@@ -2137,7 +2115,7 @@ void atlas_editor::setup_editor(editor_gui & pEditor_gui)
 		mAtlas_changed = true;
 	}, false);
 
-	mTb_size_w = pEditor_gui.add_value_int("Width", [&](int pVal)
+	mTb_size_w = mSidebar->add_value_int("Width", [&](int pVal)
 	{
 		if (!mSelection || pVal < 0) return;
 		engine::frect rect = mSelection->get_frame_at(0);
@@ -2146,7 +2124,7 @@ void atlas_editor::setup_editor(editor_gui & pEditor_gui)
 		mAtlas_changed = true;
 	}, false);
 
-	mTb_size_h = pEditor_gui.add_value_int("Height", [&](int pVal)
+	mTb_size_h = mSidebar->add_value_int("Height", [&](int pVal)
 	{
 		if (!mSelection || pVal < 0) return;
 		engine::frect rect = mSelection->get_frame_at(0);
@@ -2155,22 +2133,22 @@ void atlas_editor::setup_editor(editor_gui & pEditor_gui)
 		mAtlas_changed = true;
 	}, false);
 
-	mCb_loop = pEditor_gui.add_value_enum("Loop", [&](size_t pVal)
+	mCb_loop = mSidebar->add_value_enum("Loop", [&](size_t pVal)
 	{
 		mSelection->set_loop(
 			static_cast<engine::animation::loop_type>
 			(pVal)); // Lazy cast
 	}, { "Disabled", "Linear", "Pingpong" });
 
-	pEditor_gui.add_horizontal_buttons(
+	mSidebar->add_horizontal_buttons(
 	{ 
 		{"New", [&]() { new_entry(); } },
 		{"Delete", [&]() { remove_selected(); } }
 	});
 	
-	pEditor_gui.add_group("Preview");
+	mSidebar->add_group("Preview");
 
-	pEditor_gui.add_button("Reload",
+	mSidebar->add_button("Reload",
 	[&](){
 		mTexture->unload();
 		mTexture->load();
@@ -2178,7 +2156,7 @@ void atlas_editor::setup_editor(editor_gui & pEditor_gui)
 		mBackground.set_texture_rect(engine::frect(engine::fvector(0, 0), mTexture->get_size()));
 	});
 
-	pEditor_gui.add_value_enum("Background", [&](size_t pVal)
+	mSidebar->add_value_enum("Background", [&](size_t pVal)
 	{
 		if (pVal == 0)
 			black_background();
@@ -2190,14 +2168,12 @@ void atlas_editor::setup_editor(editor_gui & pEditor_gui)
 
 void atlas_editor::black_background()
 {
-	mBlackout.set_color({ 0, 0, 0, 255 });
 	mPreview_bg.set_color({ 0, 0, 0, 150 });
 	mPreview_bg.set_outline_color({ 255, 255, 255, 200 });
 }
 
 void atlas_editor::white_background()
 {
-	mBlackout.set_color({ 255, 255, 255, 255 });
 	mPreview_bg.set_color({ 255, 255, 255, 150 });
 	mPreview_bg.set_outline_color({ 0, 0, 0, 200 });
 }
@@ -2279,107 +2255,6 @@ void scroll_control_node::movement(engine::renderer & pR)
 	set_position(position);
 }
 
-// ##########
-// editor_manager
-// ##########
-
-editor_manager::editor_manager()
-{
-	set_depth(-1000);
-	mTilemap_editor.set_parent(mRoot_node);
-	mCollisionbox_editor.set_parent(mRoot_node);
-	mCurrent_editor = nullptr;
-}
-
-bool editors::editor_manager::is_editor_open()
-{
-	return mCurrent_editor != nullptr;
-}
-
-void editor_manager::open_tilemap_editor(std::string pScene_path)
-{
-	logger::info("Opening tilemap editor...");
-	mTilemap_editor.set_editor_gui(mEditor_gui);
-	if (mTilemap_editor.open_scene(pScene_path))
-		mCurrent_editor = &mTilemap_editor;
-	mTilemap_editor.open_editor();
-	logger::info("Editor loaded");
-}
-
-void editor_manager::open_collisionbox_editor(std::string pScene_path)
-{
-	logger::info("Opening collisionbox editor...");
-	mCollisionbox_editor.set_editor_gui(mEditor_gui);
-	if (mCollisionbox_editor.open_scene(pScene_path))
-		mCurrent_editor = &mCollisionbox_editor;
-	mCollisionbox_editor.open_editor();
-	logger::info("Editor opened");
-}
-
-void editors::editor_manager::open_atlas_editor()
-{
-	logger::info("Opening texture/atlas editor...");
-	mAtlas_editor.set_editor_gui(mEditor_gui);
-	mCurrent_editor = &mAtlas_editor;
-	mAtlas_editor.open_editor();
-	logger::info("Editor opened");
-}
-
-void editor_manager::close_editor()
-{
-	if (!mCurrent_editor)
-		return;
-
-	logger::info("Closing Editor...");
-	mCurrent_editor->save();
-	mCurrent_editor = nullptr;
-	mEditor_gui.clear();
-	logger::info("Editor closed");
-}
-
-void editor_manager::set_world_node(node& pNode)
-{
-	mRoot_node.set_parent(pNode);
-	mEditor_gui.set_parent(mRoot_node);
-}
-
-void editor_manager::set_resource_manager(engine::resource_manager& pResource_manager)
-{
-	mTilemap_editor.set_resource_manager(pResource_manager);
-	mCollisionbox_editor.set_resource_manager(pResource_manager);
-}
-
-void editor_manager::load_terminal_interface(engine::terminal_system & pTerminal)
-{
-	mTilemap_editor.load_terminal_interface(pTerminal);
-	mCollisionbox_editor.load_terminal_interface(pTerminal);
-}
-
-void editor_manager::set_scene(rpg::scene& pScene)
-{
-	mEditor_gui.set_scene(&pScene);
-}
-
-int editor_manager::draw(engine::renderer& pR)
-{
-	if (mCurrent_editor != nullptr)
-	{
-		if (pR.is_key_down(engine::renderer::key_type::LControl)
-			&& pR.is_key_pressed(engine::renderer::key_type::S))
-			mCurrent_editor->save();
-		mRoot_node.movement(pR);
-		mCurrent_editor->draw(pR);
-	}else
-		mRoot_node.set_position({ 0, 0 });
-	return 0;
-}
-
-void editor_manager::refresh_renderer(engine::renderer & pR)
-{
-	mEditor_gui.set_renderer(pR);
-	mEditor_gui.set_depth(-1001);
-}
-
 editor_boundary_visualization::editor_boundary_visualization()
 {
 	const engine::color line_color(255, 255, 255, 150);
@@ -2404,4 +2279,123 @@ int editor_boundary_visualization::draw(engine::renderer & pR)
 	return 0;
 }
 
+game_editor::game_editor()
+{
+	mInfo_update_timer.start(1);
+	setup_gui();
+	mRenderer.set_subwindow_enabled(true);
+	mGame.set_renderer(mRenderer);
+}
 
+void game_editor::set_subwindow(engine::frect pRect)
+{
+	mRenderer.set_subwindow(pRect);
+}
+
+int game_editor::draw(engine::renderer& pR)
+{
+	if (mInfo_update_timer.is_reached())
+	{
+		const auto mouse_position_exact = mRenderer.get_mouse_position();
+		const auto mouse_position = mRenderer.get_mouse_position(get_exact_position()) / get_unit();
+		std::string position;
+		position += "(";
+		position += std::to_string(static_cast<int>(mouse_position_exact.x));
+		position += ", ";
+		position += std::to_string(static_cast<int>(mouse_position_exact.y));
+		position += ")\n(";
+		position += std::to_string(mouse_position.x);
+		position += ", ";
+		position += std::to_string(mouse_position.y);
+		position += ")";
+		mLb_mouse->setText(position);
+
+		mLb_fps->setText("FPS: " + std::to_string(mRenderer.get_fps()));
+
+		mInfo_update_timer.start(1);
+	}
+	mRenderer.update_events();
+	mGame.tick();
+	return mRenderer.draw();
+}
+
+rpg::game& game_editor::get_game()
+{
+	return mGame;
+}
+
+void game_editor::load_game(const std::string & pSource)
+{
+	mGame.load(pSource);
+	update_scene_list();
+}
+
+void editors::game_editor::refresh_renderer(engine::renderer & pR)
+{
+	assert(pR.get_window());
+	mRenderer.set_window(*pR.get_window());
+}
+
+void game_editor::setup_gui()
+{
+	mSidebar->add_group("Game");
+	mSidebar->add_horizontal_buttons(
+	{
+		{ "Stop", [&]() { mGame.stop(); update_scene_list(); } },
+		{ "Restart", [&]() { mGame.restart_game(); update_scene_list(); } }
+	});
+
+	mCb_scene = mSidebar->add_value_enum("Scene", [&](size_t pItem)
+	{
+		mGame.get_scene().load_scene(mCb_scene->getSelectedItem());
+		update_scene_list();
+	}, {}, 0, true);
+	update_scene_list();
+
+	mSidebar->add_button("Reload Scene", [&]() { mGame.get_scene().reload_scene(); update_scene_list(); });
+	mSidebar->add_button("Edit Script (notepad++)", [&]()
+	{
+		if (!mGame.get_scene().get_name().empty())
+			std::system((std::string("\"C:/Program Files (x86)/Notepad++/notepad++.exe\" ")
+				+ (mGame.get_source_path().relative_path() / "scenes" /
+				(mGame.get_scene().get_name() + ".as")).string()).c_str());
+	});
+
+	mLb_fps = std::make_shared<tgui::Label>();
+	mLb_fps->setMaximumTextWidth(0);
+	mLb_fps->setTextColor({ 255, 255, 255, 255 });
+	mLb_fps->setText("FPS: N/A");
+	mLb_fps->setTextSize(15);
+	mSidebar->add(mLb_fps);
+
+	mLb_mouse = tgui::Label::copy(mLb_fps);
+	mLb_mouse->setText("(n/a, n/a)\n(n/a, n/a)");
+	mLb_mouse->setTextSize(12);
+	mSidebar->add(mLb_mouse);
+
+	mSidebar->add_small_label("Visualizations:");
+	// Collision visualization checkbox
+	auto chb_collision = mSidebar->add_checkbox("Collision");
+	chb_collision->connect("Checked", [&]()
+	{ mGame.get_scene().get_visualizer().visualize_collision(true); });
+	chb_collision->connect("Unchecked", [&]()
+	{ mGame.get_scene().get_visualizer().visualize_collision(false); });
+
+	// Entities visualization checkbox
+	auto chb_entities = mSidebar->add_checkbox("Entities");
+	chb_entities->connect("Checked", [&]()
+	{ mGame.get_scene().get_visualizer().visualize_entities(true); });
+	chb_entities->connect("Unchecked", [&]()
+	{ mGame.get_scene().get_visualizer().visualize_entities(false); });
+
+}
+
+void game_editor::update_scene_list()
+{
+	if (mCb_scene->getSelectedItem() != mGame.get_scene().get_name()
+		&& !mGame.get_scene().get_name().empty())
+	{
+		populate_combox_with_scene_names(mCb_scene);
+		mCb_scene->setSelectedItem(mGame.get_scene().get_name());
+	}
+}

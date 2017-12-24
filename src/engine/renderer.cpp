@@ -9,8 +9,7 @@ using namespace engine;
 // render_object
 // ##########
 
-int 
-render_object::is_rendered()
+int  render_object::is_rendered()
 {
 	return mIndex >= 0;
 }
@@ -135,10 +134,9 @@ int renderer::draw()
 		refresh_objects();
 		mRequest_resort = false;
 	}
-	mWindow->mWindow.clear(mBackground_color);
+	//mWindow->mWindow.clear(mBackground_color);
 	draw_objects();
 	mTgui.draw();
-	mWindow->mWindow.display();
 	return 0;
 }
 
@@ -213,16 +211,14 @@ void renderer::refresh_gui_view()
 }
 
 
-void
-renderer::refresh_objects()
+void renderer::refresh_objects()
 {
 	for (size_t i = 0; i < mObjects.size(); i++)
 		mObjects[i]->mIndex = i;
 }
 
 // Sort items that have a higher depth to be farther behind
-void
-renderer::sort_objects()
+void renderer::sort_objects()
 {
 	struct
 	{
@@ -235,8 +231,7 @@ renderer::sort_objects()
 	refresh_objects();
 }
 
-int
-renderer::add_object(render_object& pObject)
+int renderer::add_object(render_object& pObject)
 {
 	// Already registered
 	if (pObject.mRenderer == this)
@@ -253,8 +248,7 @@ renderer::add_object(render_object& pObject)
 	return 0;
 }
 
-int 
-renderer::remove_object(render_object& pObject)
+int renderer::remove_object(render_object& pObject)
 {
 	// This is not the correct renderer to remove object from
 	if (pObject.mRenderer != this)
@@ -267,22 +261,19 @@ renderer::remove_object(render_object& pObject)
 }
 
 
-fvector
-renderer::get_mouse_position() const
+fvector renderer::get_mouse_position() const
 {
 	auto pos = sf::Mouse::getPosition(mWindow->mWindow);
 	auto wpos = mWindow->mWindow.mapPixelToCoords(pos);
 	return wpos;
 }
 
-fvector
-renderer::get_mouse_position(fvector pRelative) const
+fvector renderer::get_mouse_position(fvector pRelative) const
 {
 	return get_mouse_position() - pRelative;
 }
 
-bool
-renderer::is_focused()
+bool renderer::is_focused()
 {
 	return mWindow->mWindow.hasFocus();
 }
@@ -308,14 +299,12 @@ int renderer::set_icon(const std::vector<char>& pData)
 }
 
 
-void
-renderer::set_visible(bool pVisible)
+void renderer::set_visible(bool pVisible)
 {
 	mWindow->mWindow.setVisible(pVisible);
 }
 
-void
-renderer::set_background_color(color pColor)
+void renderer::set_background_color(color pColor)
 {
 	mBackground_color = pColor;
 }
@@ -359,8 +348,7 @@ void renderer::set_subwindow(frect pRect)
 	refresh_view();
 }
 
-void
-renderer::refresh_pressed()
+void renderer::refresh_pressed()
 {
 	for (auto &i : mPressed_keys)
 	{
@@ -375,8 +363,7 @@ renderer::refresh_pressed()
 	}
 }
 
-bool
-renderer::is_key_pressed(key_type pKey_type, bool pIgnore_gui)
+bool renderer::is_key_pressed(key_type pKey_type, bool pIgnore_gui)
 {
 	if (!mWindow->mWindow.hasFocus() || (mIs_keyboard_busy && !pIgnore_gui))
 		return false;
@@ -387,16 +374,14 @@ renderer::is_key_pressed(key_type pKey_type, bool pIgnore_gui)
 	return is_pressed;
 }
 
-bool
-renderer::is_key_down(key_type pKey_type, bool pIgnore_gui)
+bool renderer::is_key_down(key_type pKey_type, bool pIgnore_gui)
 {
 	if (!mWindow->mWindow.hasFocus() || (mIs_keyboard_busy && !pIgnore_gui))
 		return false;
 	return sf::Keyboard::isKeyPressed(pKey_type);
 }
 
-bool
-renderer::is_mouse_pressed(mouse_button pButton_type, bool pIgnore_gui)
+bool renderer::is_mouse_pressed(mouse_button pButton_type, bool pIgnore_gui)
 {
 	if (!mWindow->mWindow.hasFocus() || (mIs_mouse_busy && !pIgnore_gui) || !is_mouse_within_target())
 		return false;
@@ -407,33 +392,28 @@ renderer::is_mouse_pressed(mouse_button pButton_type, bool pIgnore_gui)
 	return is_pressed;
 }
 
-bool
-renderer::is_mouse_down(mouse_button pButton_type, bool pIgnore_gui)
+bool renderer::is_mouse_down(mouse_button pButton_type, bool pIgnore_gui)
 {
 	if (!mWindow->mWindow.hasFocus() || (mIs_mouse_busy && !pIgnore_gui) || !is_mouse_within_target())
 		return false;
 	return sf::Mouse::isButtonPressed((sf::Mouse::Button)pButton_type);
 }
 
-void engine::renderer::set_transparent_gui_input(bool pEnabled)
+void renderer::set_transparent_gui_input(bool pEnabled)
 {
 	mTransparent_gui_input = pEnabled;
 }
 
-int
-renderer::update_events()
+void renderer::update_events()
 {
 	refresh_pressed();
 
 	if (!mWindow->mWindow.isOpen())
-		return 1;
+		return;
 
-	while (mWindow->mWindow.pollEvent(mEvent))
+	for (const sf::Event& i : mWindow->mEvents)
 	{
-		if (mEvent.type == sf::Event::Closed)
-			return 1;
-
-		if (mEvent.type == sf::Event::Resized)
+		if (i.type == sf::Event::Resized)
 		{
 			mWindow->mSize = vector<unsigned int>(mWindow->mWindow.getSize()); // Update member
 
@@ -444,12 +424,12 @@ renderer::update_events()
 		}
 		
 		// Update tgui events
-		if (mTgui.handleEvent(mEvent) && !mTransparent_gui_input)
+		if (mTgui.handleEvent(i) && !mTransparent_gui_input)
 		{
-			mIs_mouse_busy = mEvent.type >= sf::Event::MouseWheelMoved
-				&& mEvent.type <= sf::Event::MouseLeft;
-			mIs_keyboard_busy = mEvent.type == sf::Event::KeyPressed
-				|| mEvent.type == sf::Event::KeyReleased;
+			mIs_mouse_busy = i.type >= sf::Event::MouseWheelMoved
+				&& i.type <= sf::Event::MouseLeft;
+			mIs_keyboard_busy = i.type == sf::Event::KeyPressed
+				|| i.type == sf::Event::KeyReleased;
 		}
 		else
 		{
@@ -457,7 +437,6 @@ renderer::update_events()
 			mIs_keyboard_busy = false;
 		}
 	}
-	return 0;
 }
 
 /*
@@ -658,6 +637,29 @@ void display_window::toggle_mode()
 bool display_window::is_fullscreen() const
 {
 	return mIs_fullscreen;
+}
+
+bool display_window::poll_events()
+{
+	mEvents.clear();
+	sf::Event event;
+	while (mWindow.pollEvent(event))
+	{
+		if (event.type == sf::Event::Closed)
+			return false;
+		mEvents.push_back(event);
+	}
+	return true;
+}
+
+void display_window::update()
+{
+	mWindow.display();
+}
+
+void engine::display_window::clear()
+{
+	mWindow.clear();
 }
 
 void display_window::fullscreen_mode()

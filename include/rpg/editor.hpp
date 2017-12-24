@@ -10,6 +10,7 @@
 #include <rpg/collision_box.hpp>
 
 #include <rpg/scene.hpp>
+#include <rpg/rpg.hpp>
 
 #include <vector>
 #include <string>
@@ -65,22 +66,12 @@ private:
 	void updateWidgetPositions();
 };
 
-class editor_config_gui :
+// This is the side used in all the editors.
+// It provides methods to conveniently building it.
+class editor_sidebar :
 	public tgui_list_layout
 {
-
-};
-
-class editor_gui :
-	public engine::render_object
-{
 public:
-	editor_gui();
-
-	void set_scene(rpg::scene* pScene);
-
-	void clear();
-
 	void add_group(const std::string& pText);
 
 	tgui::EditBox::Ptr add_value_int(const std::string& pLabel, std::function<void(int)> pCallback, bool pNeg = true);
@@ -102,33 +93,13 @@ public:
 	tgui::Label::Ptr add_small_label(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
 	tgui::TextBox::Ptr add_textbox(tgui::Container::Ptr pContainer = nullptr);
 	tgui::ComboBox::Ptr add_combobox(tgui::Container::Ptr pContainer = nullptr);
-	tgui::CheckBox::Ptr add_checkbox(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
+	tgui::CheckBox::Ptr add_checkbox(const std::string& pName);
 	tgui::Button::Ptr add_button(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
 	std::shared_ptr<tgui_list_layout> add_sub_container(tgui::Container::Ptr pContainer = nullptr);
 
-	int draw(engine::renderer& pR);
-
 private:
+	tgui::HorizontalLayout::Ptr create_value_line();
 	tgui::HorizontalLayout::Ptr create_value_line(const std::string& pText);
-
-	rpg::scene* mScene;
-
-	float mUpdate_timer;
-	tgui::ComboBox::Ptr mCb_scene;
-	tgui::Label::Ptr mLb_mouse;
-	tgui::Label::Ptr mLb_fps;
-	tgui::Tab::Ptr mTabs;
-
-	std::shared_ptr<tgui::VerticalLayout> mGui_base;
-	std::shared_ptr<tgui_list_layout> mSidebar;
-	std::shared_ptr<tgui_list_layout> mEditor_layout;
-	std::shared_ptr<tgui_list_layout> mVisualizations_layout;
-	tgui::Panel::Ptr mRender_container;
-	tgui::Label::Ptr mBottom_text;
-
-	void update_scene();
-
-	void refresh_renderer(engine::renderer& pR);
 };
 
 class scroll_control_node :
@@ -155,20 +126,15 @@ class editor :
 {
 public:
 	editor();
-	virtual bool open_editor() = 0;
-	void set_editor_gui(editor_gui& pEditor_gui);
 	void set_resource_manager(engine::resource_manager& pResource_manager);
+	std::shared_ptr<editor_sidebar> get_sidebar();
 
 	virtual int save() = 0;
 
 protected:
+	std::shared_ptr<editor_sidebar> mSidebar;
 
-	engine::rectangle_node mBlackout; // Each editor has control over where and how this is drawn
-
-	editor_gui* mEditor_gui;
 	engine::resource_manager* mResource_manager;
-
-	virtual void setup_editor(editor_gui& pEditor_gui){}
 };
 
 class scene_editor :
@@ -183,6 +149,37 @@ protected:
 	editor_boundary_visualization mBoundary_visualization;
 	rpg::tilemap_manipulator mTilemap_manipulator;
 	rpg::tilemap_display     mTilemap_display;
+};
+
+class game_editor :
+	public editor
+{
+public:
+	game_editor();
+
+	int save() { return 0; }
+
+	void set_subwindow(engine::frect pRect);
+
+	int draw(engine::renderer& pR);
+
+	rpg::game& get_game();
+
+	void load_game(const std::string& pSource);
+
+protected:
+	virtual void refresh_renderer(engine::renderer& pR);
+
+private:
+	void update_scene_list();
+	void setup_gui();
+	engine::renderer mRenderer;
+	rpg::game mGame;
+
+	engine::timer mInfo_update_timer;
+	tgui::ComboBox::Ptr mCb_scene;
+	tgui::Label::Ptr mLb_mouse;
+	tgui::Label::Ptr mLb_fps;
 };
 
 class tilemap_editor :
@@ -230,7 +227,7 @@ private:
 	tgui::EditBox::Ptr mTb_texture;
 	tgui::CheckBox::Ptr mCb_half_grid;
 
-	void setup_editor(editor_gui& pEditor_gui);
+	void setup_gui();
 
 	command_manager mCommand_manager;
 
@@ -321,7 +318,7 @@ private:
 	engine::rectangle_node mWall_display;
 	engine::rectangle_node mResize_display;
 
-	void setup_editor(editor_gui& pEditor_gui);
+	void setup_gui();
 
 	bool tile_selection(engine::fvector pCursor, bool pCycle = true);
 	void update_labels();
@@ -387,7 +384,7 @@ private:
 
 	void atlas_selection(engine::fvector pPosition);
 
-	void setup_editor(editor_gui& pEditor_gui);
+	void setup_gui();
 
 	void black_background();
 	void white_background();
@@ -398,40 +395,40 @@ private:
 	void clear_gui();
 };
 
-class editor_manager :
-	public engine::render_object
+class editor_gui
 {
 public:
-	editor_manager();
+	editor_gui();
 
-	bool is_editor_open();
-	void open_tilemap_editor(std::string pScene_path);
-	void open_collisionbox_editor(std::string pScene_path);
-	void open_atlas_editor();
-	void close_editor();
+	void initualize(const std::string& pCustom_location);
 
-	void set_world_node(node& pNode);
-
-	void set_resource_manager(engine::resource_manager& pResource_manager);
-	void load_terminal_interface(engine::terminal_system& pTerminal);
-
-	void set_scene(rpg::scene& pScene);
+	void run();
 
 	int draw(engine::renderer& pR);
 
 private:
-	void refresh_renderer(engine::renderer& pR);
+	tgui::Tab::Ptr mTabs;
 
-	editor* mCurrent_editor;
+	std::shared_ptr<tgui::VerticalLayout> mGui_base;
+	std::shared_ptr<tgui_list_layout> mSidebar;
+	std::shared_ptr<tgui_list_layout> mVisualizations_layout;
+	tgui::Panel::Ptr mRender_container;
+	tgui::Label::Ptr mBottom_text;
 
-	editor_gui          mEditor_gui;
-	scroll_control_node mRoot_node;
+	engine::renderer mRenderer;
+	engine::display_window mWindow;
 
+	game_editor         mGame_editor;
 	tilemap_editor      mTilemap_editor;
 	collisionbox_editor mCollisionbox_editor;
 	atlas_editor        mAtlas_editor;
-};
 
+	editor* mCurrent_editor;
+
+	void setup_gui();
+
+	void set_current_editor(editor& pEditor);
+};
 
 }
 

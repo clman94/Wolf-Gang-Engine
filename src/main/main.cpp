@@ -7,8 +7,9 @@
 
 #include <rpg/rpg.hpp>
 
+#include <rpg/editor.hpp>
 
-class wolf_gang_engine_editor
+/*class wolf_gang_engine_editor
 {
 public:
 	wolf_gang_engine_editor();
@@ -26,7 +27,6 @@ private:
 	rpg::terminal_gui mTerminal_gui;
 	engine::terminal_system mTerminal_system;
 
-	editors::editor_manager mEditor_manager;
 
 	rpg::game        mGame;
 	engine::controls mControls;
@@ -107,12 +107,14 @@ bool wolf_gang_engine_editor::run()
 
 void wolf_gang_engine_editor::update_events()
 {
-	if (mRenderer.update_events())
+	if (mWindow.poll_events())
 	{
 		logger::info("Closing with window event");
 		mRunning = false;
 		return;
 	}
+
+	mRenderer.update_events();
 
 	if (mRenderer.is_key_down(engine::renderer::key_type::Escape))
 	{
@@ -167,7 +169,7 @@ bool wolf_gang_engine_editor::update_editor()
 		}
 	}
 	return false;
-}
+}*/
 
 // Entry point of application
 int main(int argc, char* argv[])
@@ -175,14 +177,10 @@ int main(int argc, char* argv[])
 	logger::initialize("./log.txt");
 	try
 	{
-		wolf_gang_engine_editor wge;
+		editors::editor_gui editor;
 
-		if (argc > 2)
-			wge.initualize(argv[1]);
-		else
-			wge.initualize();
-		if (wge.run())
-			return 0;
+		editor.initualize("./data");
+		editor.run();
 	}
 	catch (std::exception& e)
 	{
