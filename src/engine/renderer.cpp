@@ -119,8 +119,13 @@ int renderer::draw_objects()
 {
 	assert(mWindow);
 	for (auto i : mObjects)
+	{
 		if (i->is_visible())
-		i->draw(*this);
+		{
+			mWindow->mWindow.setView(mView);
+			i->draw(*this);
+		}
+	}
 	return 0;
 }
 
@@ -143,6 +148,8 @@ int renderer::draw()
 int renderer::draw(render_object& pObject)
 {
 	assert(mWindow);
+
+	mWindow->mWindow.setView(mView);
 	return pObject.draw(*this);
 }
 
@@ -166,7 +173,7 @@ void renderer::refresh_view()
 	const fvector view_ratio = fvector(mTarget_size).normalize();
 	const fvector window_ratio = fvector(window_size).normalize();
 
-	sf::View view(sf::FloatRect(0, 0, mTarget_size.x, mTarget_size.y));
+	mView = sf::View(sf::FloatRect(0, 0, mTarget_size.x, mTarget_size.y));
 	sf::FloatRect viewport(0, 0, 0, 0);
 
 	// Resize view according to the ratio
@@ -199,9 +206,7 @@ void renderer::refresh_view()
 		viewport.width *= mSubwindow.get_size().x / mWindow->mWindow.getSize().x;
 		viewport.height *= mSubwindow.get_size().y / mWindow->mWindow.getSize().y;
 	}
-
-	view.setViewport(viewport);
-	mWindow->mWindow.setView(view);
+	mView.setViewport(viewport);
 }
 
 void renderer::refresh_gui_view()
@@ -260,11 +265,10 @@ int renderer::remove_object(render_object& pObject)
 	return 0;
 }
 
-
 fvector renderer::get_mouse_position() const
 {
 	auto pos = sf::Mouse::getPosition(mWindow->mWindow);
-	auto wpos = mWindow->mWindow.mapPixelToCoords(pos);
+	auto wpos = mWindow->mWindow.mapPixelToCoords(pos, mView);
 	return wpos;
 }
 
@@ -277,8 +281,6 @@ bool renderer::is_focused()
 {
 	return mWindow->mWindow.hasFocus();
 }
-
-
 
 int renderer::set_icon(const std::string & pPath)
 {
@@ -330,7 +332,7 @@ display_window * engine::renderer::get_window() const
 	return mWindow;
 }
 
-void engine::renderer::refresh()
+void renderer::refresh()
 {
 	refresh_view();
 	refresh_gui_view();
@@ -657,7 +659,7 @@ void display_window::update()
 	mWindow.display();
 }
 
-void engine::display_window::clear()
+void display_window::clear()
 {
 	mWindow.clear();
 }
@@ -666,4 +668,66 @@ void display_window::fullscreen_mode()
 {
 	mWindow.create(sf::VideoMode::getDesktopMode(), mTitle, sf::Style::None);
 	mIs_fullscreen = true;
+}
+
+int grid::draw(renderer & pR)
+{
+	if (mVertices.empty())
+		return 0;
+	sf::RenderStates rs;
+	rs.transform.translate(get_exact_position());
+	rs.transform.rotate(get_absolute_rotation());
+	rs.transform.scale(get_absolute_scale());
+	pR.get_sfml_render().draw(&mVertices[0], mVertices.size(), sf::Lines, rs);
+	return 0;
+}
+
+void grid::add_grid(int x, int y, fvector pCell_size, sf::Color pColor)
+{
+	for (int r = 0; r < x; r++)
+		add_line({ pCell_size.x*r, 0 }, { pCell_size.x*r, pCell_size.y*y }, pColor);
+	for (int c = 0; c < y; c++)
+		add_line({ 0, pCell_size.y*c }, { pCell_size.x*x, pCell_size.y*c }, pColor);
+}
+
+void grid::add_line(fvector pV0, fvector pV1, sf::Color pColor)
+{
+	sf::Vertex v0;
+	v0.position = pV0;
+	v0.color = pColor;
+	sf::Vertex v1;
+	v1.position = pV1;
+	v1.color = pColor;
+	mVertices.push_back(v0);
+	mVertices.push_back(v1);
+}
+
+grid::grid()
+{
+	mMajor_size = { 1, 1 };
+	mSub_grids = 1;
+}
+
+void grid::set_major_size(fvector pSize)
+{
+	assert(pSize.x > 0);
+	assert(pSize.y > 0);
+	mMajor_size = pSize;
+}
+
+void grid::set_sub_grids(int pAmount)
+{
+	assert(pAmount > 0);
+	mSub_grids = pAmount;
+}
+
+void grid::update_grid(renderer &pR)
+{
+	mVertices.clear();
+	for (int i = 1; i <= mSub_grids; i++)
+		add_grid(
+		      (pR.get_target_size().x / mMajor_size.x)*i
+			, (pR.get_target_size().y / mMajor_size.y)*i
+			, mMajor_size / i
+			, {255, 255, 255, (sf::Uint8)(i == 0 ? 190 : 100)});
 }

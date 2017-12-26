@@ -129,12 +129,18 @@ public:
 	void set_resource_manager(engine::resource_manager& pResource_manager);
 	std::shared_ptr<editor_sidebar> get_sidebar();
 
-	virtual int save() = 0;
+	bool is_changed() const;
+
+	virtual bool save() { mIs_changed = false; return true; };
 
 protected:
+	void editor_changed();
 	std::shared_ptr<editor_sidebar> mSidebar;
 
 	engine::resource_manager* mResource_manager;
+
+private:
+	bool mIs_changed;
 };
 
 class scene_editor :
@@ -157,7 +163,7 @@ class game_editor :
 public:
 	game_editor();
 
-	int save() { return 0; }
+	bool save() { return 0; }
 
 	void set_subwindow(engine::frect pRect);
 
@@ -191,7 +197,7 @@ public:
 	int draw(engine::renderer& pR);
 	void load_terminal_interface(engine::terminal_system& pTerminal);
 
-	int save();
+	bool save() override;
 
 	void clean();
 
@@ -266,7 +272,7 @@ public:
 	int draw(engine::renderer& pR);
 	void load_terminal_interface(engine::terminal_system& pTerminal);
 
-	int save();
+	bool save();
 
 private:
 	std::shared_ptr<engine::terminal_command_group> mCollision_editor_group;
@@ -314,9 +320,10 @@ private:
 	rpg::collision_box::type     mCurrent_type;
 	rpg::collision_box_container mContainer;
 
-	engine::rectangle_node mGrid;
 	engine::rectangle_node mWall_display;
 	engine::rectangle_node mResize_display;
+
+	engine::grid mGrid;
 
 	void setup_gui();
 
@@ -334,7 +341,7 @@ public:
 
 	int draw(engine::renderer& pR);
 
-	int save();
+	bool save();
 
 private:
 	void get_textures(const std::string& pPath);
@@ -395,16 +402,14 @@ private:
 	void clear_gui();
 };
 
-class editor_gui
+class WGE_editor
 {
 public:
-	editor_gui();
+	WGE_editor();
 
 	void initualize(const std::string& pCustom_location);
 
 	void run();
-
-	int draw(engine::renderer& pR);
 
 private:
 	tgui::Tab::Ptr mTabs;
@@ -414,6 +419,8 @@ private:
 	std::shared_ptr<tgui_list_layout> mVisualizations_layout;
 	tgui::Panel::Ptr mRender_container;
 	tgui::Label::Ptr mBottom_text;
+
+	tgui::Theme::Ptr mTheme;
 
 	engine::renderer mRenderer;
 	engine::display_window mWindow;

@@ -232,11 +232,12 @@ void tgui_list_layout::updateWidgetPositions()
 	}
 }
 
-editor_gui::editor_gui()
+WGE_editor::WGE_editor()
 {
 	mWindow.initualize("Editor", rpg::defs::SCREEN_SIZE);
 	mRenderer.set_target_size(rpg::defs::DISPLAY_SIZE);
 	mRenderer.set_window(mWindow);
+	mRenderer.set_subwindow_enabled(true);
 
 	mGame_editor.set_renderer(mRenderer);
 	mGame_editor.set_visible(false);
@@ -260,12 +261,12 @@ editor_gui::editor_gui()
 	mAtlas_editor.set_resource_manager(mGame_editor.get_game().get_resource_manager());
 }
 
-void editor_gui::initualize(const std::string & pCustom_location)
+void WGE_editor::initualize(const std::string & pCustom_location)
 {
 	mGame_editor.load_game(pCustom_location);
 }
 
-void editor_gui::run()
+void WGE_editor::run()
 {
 	bool running = true;
 	while (running)
@@ -290,9 +291,12 @@ void editor_gui::run()
 			mRenderer.refresh();
 		}
 
+		// Keep the sub window for the renderers updated.
+		// TODO: Only adjust if the window has changed size (or the panel).
 		const engine::fvector position(mRender_container->getAbsolutePosition().x
 			, mRender_container->getAbsolutePosition().y);
 		const engine::fvector size = mRender_container->getFullSize();
+		mRenderer.set_target_size(size);
 		mRenderer.set_subwindow({ position, size });
 		mGame_editor.set_subwindow({ position, size });
 
@@ -318,7 +322,8 @@ tgui::HorizontalLayout::Ptr editor_sidebar::create_value_line()
 	auto hl = std::make_shared<tgui::HorizontalLayout>();
 	hl->setBackgroundColor({ 0, 0, 0, 0 });
 	hl->setSize("&.width", 25);
-	hl->addSpace(0.1f);
+	hl->addSpace();
+	hl->setFixedSize(0, 10);
 
 	auto &hl_ref = *hl; // Prevent memory leak
 	hl->connect("MouseEntered", [&]()
@@ -368,6 +373,10 @@ tgui::EditBox::Ptr editor_sidebar::add_value_int(const std::string & pLabel, std
 	tb->connect("ReturnKeyPressed", apply);
 	tb->connect("Unfocused", apply);
 	hl->add(tb);
+	hl->connect("Clicked", [=]()
+	{
+		tb->focus();
+	});
 	return tb;
 }
 
@@ -394,6 +403,10 @@ tgui::EditBox::Ptr editor_sidebar::add_value_string(const std::string & pLabel, 
 	tb->connect("ReturnKeyPressed", apply);
 	tb->connect("Unfocused", apply);
 	hl->add(tb);
+	hl->connect("Clicked", [=]()
+	{
+		tb->focus();
+	});
 	return tb;
 }
 
@@ -422,6 +435,11 @@ tgui::EditBox::Ptr editor_sidebar::add_value_float(const std::string & pLabel, s
 	tb->connect("ReturnKeyPressed", apply);
 	tb->connect("Unfocused", apply);
 	hl->add(tb);
+
+	hl->connect("Clicked", [=]()
+	{
+		tb->focus();
+	});
 	return tb;
 }
 
@@ -486,6 +504,11 @@ tgui::ComboBox::Ptr editor_sidebar::add_value_enum(const std::string & pLabel, s
 	cb->setTextSize(12);
 	cb->setItemsToDisplay(10);
 	hl->add(cb);
+
+	hl->connect("Clicked", [=]()
+	{
+		cb->focus();
+	});
 	return cb;
 }
 
@@ -580,8 +603,10 @@ std::shared_ptr<tgui_list_layout> editor_sidebar::add_sub_container(tgui::Contai
 	return slo;
 }
 
-void editor_gui::setup_gui()
+void WGE_editor::setup_gui()
 {
+	mTheme = std::make_shared<tgui::Theme>("./editor/theme/theme.txt");
+
 	mGui_base = std::make_shared<tgui::VerticalLayout>();
 	mGui_base->setSize("&.width", "&.height");
 	mRenderer.get_tgui().add(mGui_base);
@@ -589,12 +614,14 @@ void editor_gui::setup_gui()
 	// Top bar
 
 	auto topbar = std::make_shared<tgui::HorizontalLayout>();
-	topbar->setSize("&.width", 100);
 	topbar->setBackgroundColor(sf::Color(default_gui_bg_color));
 	mGui_base->add(topbar);
-	mGui_base->setFixedSize(topbar, 100);
+	mGui_base->setFixedSize(topbar, 30);
 
-	topbar->addSpace();
+	auto logo = std::make_shared<tgui::Picture>("./editor/theme/logo.png");
+
+	topbar->add(logo);
+	topbar->setFixedSize(0, 200);
 
 	mTabs = std::make_shared<tgui::Tab>();
 	mTabs->add("Game", true);
@@ -624,7 +651,25 @@ void editor_gui::setup_gui()
 
 	topbar->addSpace();
 
+	// Save and Save All buttons
+
+	auto menubar = std::make_shared<tgui::HorizontalLayout>();
+	menubar->setBackgroundColor(sf::Color(default_gui_bg_color));
+	mGui_base->add(menubar);
+	mGui_base->setFixedSize(menubar, 25);
+
+	tgui::Button::Ptr bt_save = mTheme->load("save");
+
+	//bt_save->setText("Save");
+	menubar->add(bt_save);
+	menubar->setFixedSize(bt_save, 25);
+
+	tgui::Button::Ptr bt_save_all = mTheme->load("saveall");
+	menubar->add(bt_save_all);
+	menubar->setFixedSize(bt_save_all, 25);
+
 	// Middle section
+
 	auto middle = std::make_shared<tgui::HorizontalLayout>();
 	mGui_base->add(middle);
 
@@ -665,7 +710,7 @@ void editor_gui::setup_gui()
 	bottombar->add(mBottom_text);
 }
 
-void editor_gui::set_current_editor(editor & pEditor)
+void WGE_editor::set_current_editor(editor & pEditor)
 {
 	if (mCurrent_editor)
 	{
@@ -673,36 +718,13 @@ void editor_gui::set_current_editor(editor & pEditor)
 		mCurrent_editor->set_visible(false);
 	}
 	mCurrent_editor = &pEditor;
-	mSidebar->add(mCurrent_editor->get_sidebar());
-	mCurrent_editor->set_visible(true);
+	mSidebar->add(pEditor.get_sidebar());
+	pEditor.set_visible(true);
 }
-
-
-int editor_gui::draw(engine::renderer& pR)
-{
-	/*if (pR.is_key_down(engine::renderer::key_type::LControl)
-	&&  pR.is_key_pressed(engine::renderer::key_type::E))
-	{
-		if (mGui_base->isVisible())
-		{
-			mGui_base->hide();
-			pR.set_subwindow_enabled(false);
-		}
-		else
-		{
-			mGui_base->show();
-			pR.set_subwindow_enabled(true);
-		}
-	}*/
-
-	// Keep the sub window for the renderer updated
-
-	return 0;
-}
-
 
 editor::editor()
 {
+	mIs_changed = false;
 	mSidebar = std::make_shared<editor_sidebar>();
 	mSidebar->setSize("&.width", "&.height");
 }
@@ -716,6 +738,16 @@ void editor::set_resource_manager(engine::resource_manager & pResource_manager)
 std::shared_ptr<editor_sidebar> editor::get_sidebar()
 {
 	return mSidebar;
+}
+
+bool editor::is_changed() const
+{
+	return mIs_changed;
+}
+
+void editors::editor::editor_changed()
+{
+	mIs_changed = true;
 }
 
 // ##########
@@ -1226,7 +1258,7 @@ void tilemap_editor::apply_texture()
 	logger::info("Tilemap texture applied");
 }
 
-int tilemap_editor::save()
+bool tilemap_editor::save()
 {
 	auto& doc = mLoader.get_document();
 	auto ele_map = mLoader.get_tilemap();
@@ -1250,7 +1282,7 @@ int tilemap_editor::save()
 
 	logger::info("Tilemap saved");
 
-	return 0;
+	return editor::save();
 }
 
 void tilemap_editor::clean()
@@ -1374,10 +1406,11 @@ collisionbox_editor::collisionbox_editor()
 	mWall_display.set_outline_thinkness(1);
 	add_child(mWall_display);
 
-	mGrid.set_color({ 0, 0, 0, 0 });
-	mGrid.set_outline_color({ 100, 100, 100, 100 });
-	mGrid.set_outline_thinkness(0.5f);
+	mGrid.set_major_size({ 32, 32 });
+	mGrid.set_sub_grids(3);
 	add_child(mGrid);
+
+	set_unit(32);
 
 	mCurrent_type = rpg::collision_box::type::wall;
 	mGrid_snap = grid_snap::full;
@@ -1593,7 +1626,8 @@ int collisionbox_editor::draw(engine::renderer& pR)
 	}
 
 	mBoundary_visualization.draw(pR);
-
+	mGrid.update_grid(pR);
+	mGrid.draw(pR);
 	return 0;
 }
 
@@ -1611,17 +1645,16 @@ void collisionbox_editor::load_terminal_interface(engine::terminal_system & pTer
 	pTerminal.add_group(mCollision_editor_group);
 }
 
-int collisionbox_editor::save()
+bool collisionbox_editor::save()
 {
 	logger::info("Saving collision boxes");
 
 	mContainer.generate_xml(mLoader.get_document(), mLoader.get_collisionboxes());
-	
 	mLoader.save();
 
 	logger::info("Saved " + std::to_string(mContainer.get_count()) +" collision box(es)");
 
-	return 0;
+	return editor::save();
 }
 
 void collisionbox_editor::setup_gui()
@@ -1898,10 +1931,10 @@ int atlas_editor::draw(engine::renderer & pR)
 	return 0;
 }
 
-int atlas_editor::save()
+bool atlas_editor::save()
 {
-	if (mTexture_list.empty() || !mAtlas_changed)
-		return 0;
+	if (mTexture_list.empty())
+		return false;
 	const std::string xml_path = mLoaded_texture.string() + ".xml";
 	logger::info("Saving atlas '" + xml_path + "'...");
 	
@@ -1909,7 +1942,8 @@ int atlas_editor::save()
 	mAtlas.save(xml_path);
 	mAtlas_changed = false;
 	logger::info("Atlas save");
-	return 0;
+
+	return editor::save();
 }
 
 void atlas_editor::get_textures(const std::string & pPath)
@@ -2330,7 +2364,7 @@ void game_editor::load_game(const std::string & pSource)
 	update_scene_list();
 }
 
-void editors::game_editor::refresh_renderer(engine::renderer & pR)
+void game_editor::refresh_renderer(engine::renderer & pR)
 {
 	assert(pR.get_window());
 	mRenderer.set_window(*pR.get_window());
@@ -2356,7 +2390,7 @@ void game_editor::setup_gui()
 	mSidebar->add_button("Edit Script (notepad++)", [&]()
 	{
 		if (!mGame.get_scene().get_name().empty())
-			std::system((std::string("\"C:/Program Files (x86)/Notepad++/notepad++.exe\" ")
+			std::system((std::string("START \"C:/Program Files (x86)/Notepad++/notepad++.exe\" ")
 				+ (mGame.get_source_path().relative_path() / "scenes" /
 				(mGame.get_scene().get_name() + ".as")).string()).c_str());
 	});

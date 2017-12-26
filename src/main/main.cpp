@@ -177,7 +177,7 @@ int main(int argc, char* argv[])
 	logger::initialize("./log.txt");
 	try
 	{
-		editors::editor_gui editor;
+		editors::WGE_editor editor;
 
 		editor.initualize("./data");
 		editor.run();

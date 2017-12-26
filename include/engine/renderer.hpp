@@ -165,7 +165,6 @@ private:
 
 };*/
 
-class render_object;
 
 class display_window
 {
@@ -198,6 +197,45 @@ private:
 	std::vector<sf::Event> mEvents;
 
 	friend class renderer;
+};
+
+class renderer;
+
+class render_object :
+	public node,
+	public util::nocopy
+{
+public:
+	render_object();
+	~render_object();
+
+	// Depth defines the order in which this object will be called
+	void set_depth(depth_t pDepth);
+	float get_depth();
+
+	bool is_visible();
+	void set_visible(bool pVisible);
+
+	virtual int draw(renderer &pR) { return 0; }
+	virtual frect get_render_rect() const { return{}; }
+
+	int is_rendered();
+
+	void set_renderer(renderer& pR, bool pManual_render = false);
+	renderer* get_renderer() const;
+	void detach_renderer();
+
+	friend class renderer;
+
+protected:
+	virtual void refresh_renderer(renderer& pR) {}
+
+private:
+	renderer * mRenderer;
+	size_t mIndex;
+	bool mVisible;
+	depth_t mDepth;
+	bool mManual_render;
 };
 
 class renderer :
@@ -287,6 +325,7 @@ private:
 	bool mSubwindow_enabled;
 	frect mSubwindow;
 
+	sf::View mView;
 	display_window* mWindow;
 
 	std::vector<render_object*> mObjects;
@@ -329,42 +368,7 @@ private:
 	std::unique_ptr<sf::Shader> mSFML_shader;
 };
 
-class render_object :
-	public node,
-	public util::nocopy
-{
-public:
-	render_object();
-	~render_object();
 
-	// Depth defines the order in which this object will be called
-	void set_depth(depth_t pDepth);
-	float get_depth();
-
-	bool is_visible();
-	void set_visible(bool pVisible);
-	
-	virtual int draw(renderer &pR) { return 0; }
-	virtual frect get_render_rect() const { return{}; }
-
-	int is_rendered();
-
-	void set_renderer(renderer& pR, bool pManual_render = false);
-	renderer* get_renderer() const;
-	void detach_renderer();
-
-	friend class renderer;
-
-protected:
-	virtual void refresh_renderer(renderer& pR) {}
-
-private:
-	renderer* mRenderer;
-	size_t mIndex;
-	bool mVisible;
-	depth_t mDepth;
-	bool mManual_render;
-};
 
 class render_proxy
 {
@@ -464,6 +468,27 @@ private:
 	std::shared_ptr<shader>  mShader;
 	std::shared_ptr<texture> mTexture;
 	sf::RenderTexture mRender;
+};
+
+class grid :
+	public render_object
+{
+public:
+	grid();
+	void set_major_size(fvector pSize);
+	void set_sub_grids(int pAmount);
+
+	void update_grid(renderer &pR);
+
+	int draw(renderer &pR);
+private:
+	void add_grid(int x, int y, fvector pCell_size, sf::Color pColor);
+	void add_line(fvector pV0, fvector pV1, sf::Color pColor);
+
+	fvector mMajor_size;
+	int mSub_grids;
+
+	std::vector<sf::Vertex> mVertices;
 };
 
 
