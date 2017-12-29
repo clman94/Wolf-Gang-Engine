@@ -52,6 +52,13 @@ bool trigger::call_function()
 	return true;
 }
 
+void trigger::set(std::shared_ptr<collision_box> pBox)
+{
+	if (get_type() != pBox->get_type())
+		return;
+	*this = *std::dynamic_pointer_cast<trigger>(pBox);
+}
+
 std::shared_ptr<collision_box> trigger::copy()
 {
 	std::shared_ptr<trigger> box = std::make_shared<trigger>();
@@ -63,7 +70,7 @@ std::shared_ptr<collision_box> trigger::copy()
 // collision_box_container
 // ##########
 
-void collision_box_container::clean()
+void collision_box_container::clear()
 {
 	mWall_groups.clear();
 	mBoxes.clear();
@@ -220,7 +227,7 @@ std::shared_ptr<collision_box> rpg::collision_box_container::first_collision(col
 
 bool collision_box_container::load_xml(tinyxml2::XMLElement * pEle)
 {
-	clean();
+	clear();
 	auto ele_box = pEle->FirstChildElement();
 	while (ele_box)
 	{
@@ -400,6 +407,13 @@ void collision_box::generate_xml_attibutes(tinyxml2::XMLElement * pEle) const
 	generate_basic_attributes(pEle);
 }
 
+void collision_box::set(std::shared_ptr<collision_box> pBox)
+{
+	if (get_type() != pBox->get_type())
+		return;
+	*this = *pBox;
+}
+
 std::shared_ptr<collision_box> collision_box::copy()
 {
 	std::shared_ptr<collision_box> box = std::make_shared<collision_box>();
@@ -476,11 +490,25 @@ void door::generate_xml_attibutes(tinyxml2::XMLElement * pEle) const
 	pEle->SetAttribute("offsety", mOffset.y);
 }
 
-std::shared_ptr<collision_box> rpg::door::copy()
+void door::set(std::shared_ptr<collision_box> pBox)
+{
+	if (get_type() != pBox->get_type())
+		return;
+	*this = *std::dynamic_pointer_cast<door>(pBox);
+}
+
+std::shared_ptr<collision_box> door::copy()
 {
 	std::shared_ptr<door> box = std::make_shared<door>();
 	*box = *this;
 	return box;
+}
+
+void button::set(std::shared_ptr<collision_box> pBox)
+{
+	if (get_type() != pBox->get_type())
+		return;
+	*this = *std::dynamic_pointer_cast<button>(pBox);
 }
 
 std::shared_ptr<collision_box> button::copy()

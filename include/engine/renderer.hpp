@@ -278,6 +278,7 @@ public:
 
 	fvector get_mouse_position() const;
 	fvector get_mouse_position(fvector pRelative) const;
+	fvector get_mouse_position(const node& pNode) const;
 
 	bool is_focused();
 
@@ -367,8 +368,6 @@ private:
 	std::string mFragment_shader_path;
 	std::unique_ptr<sf::Shader> mSFML_shader;
 };
-
-
 
 class render_proxy
 {
@@ -462,6 +461,8 @@ public:
 private:
 	bool mUse_render_texture;
 
+	void update_texture(renderer& pR);
+
 	virtual void refresh_renderer(renderer& pR);
 
 	std::vector<sf::Vertex> mVertices;
@@ -475,6 +476,7 @@ class grid :
 {
 public:
 	grid();
+	~grid();
 	void set_major_size(fvector pSize);
 	void set_sub_grids(int pAmount);
 

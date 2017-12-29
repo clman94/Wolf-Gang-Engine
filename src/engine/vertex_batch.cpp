@@ -185,6 +185,7 @@ int vertex_batch::draw(renderer & pR, const sf::Texture & pTexture)
 
 	if (mUse_render_texture)
 	{
+		update_texture(pR);
 		const sf::Vector2f position_nondec = fvector(position).floor();
 		rs.transform.translate(position_nondec + sf::Vector2f(1, 1));
 		rs.transform.rotate(get_absolute_rotation());
@@ -223,11 +224,15 @@ void vertex_batch::set_color(color pColor)
 	}
 }
 
+void vertex_batch::update_texture(renderer& pR)
+{
+	sf::Vector2u size = vector<unsigned int>::cast(pR.get_target_size() + fvector(2, 2));
+	if (mRender.getSize() != size)
+		mRender.create(size.x, size.y);
+}
+
 void vertex_batch::refresh_renderer(renderer& pR)
 {
 	if (mUse_render_texture)
-	{
-		const auto target = pR.get_target_size();
-		mRender.create(static_cast<unsigned int>(target.x) + 2, static_cast<unsigned int>(target.y) + 2);
-	}
+		update_texture(pR);
 }

@@ -70,6 +70,7 @@ public:
 
 	virtual void generate_xml_attibutes(tinyxml2::XMLElement* pEle) const;
 
+	virtual void set(std::shared_ptr<collision_box> pBox);
 	virtual std::shared_ptr<collision_box> copy();
 
 protected:
@@ -79,7 +80,8 @@ protected:
 	void generate_basic_attributes(tinyxml2::XMLElement* pEle) const;
 };
 
-class trigger : public collision_box
+class trigger :
+	public collision_box
 {
 public:
 	bool call_function();
@@ -89,6 +91,7 @@ public:
 		return type::trigger;
 	}
 
+	virtual void set(std::shared_ptr<collision_box> pBox) override;
 	virtual std::shared_ptr<collision_box> copy() override;
 };
 
@@ -101,6 +104,7 @@ public:
 		return type::button;
 	}
 
+	virtual void set(std::shared_ptr<collision_box> pBox) override; 
 	virtual std::shared_ptr<collision_box> copy() override;
 };
 
@@ -129,6 +133,8 @@ public:
 
 	virtual void generate_xml_attibutes(tinyxml2::XMLElement* pEle) const;
 
+
+	virtual void set(std::shared_ptr<collision_box> pBox) override;
 	virtual std::shared_ptr<collision_box> copy() override;
 
 private:
@@ -141,7 +147,7 @@ private:
 class collision_box_container
 {
 public:
-	void clean();
+	void clear();
 
 	std::shared_ptr<wall_group>    get_group(const std::string& pName);
 	std::shared_ptr<wall_group>    create_group(const std::string& pName);

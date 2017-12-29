@@ -45,7 +45,7 @@ public:
 
 	bool undo();
 	bool redo();
-	void clean();
+	void clear();
 
 private:
 	std::shared_ptr<command> mCurrent;
@@ -107,6 +107,9 @@ class scroll_control_node :
 {
 public:
 	void movement(engine::renderer& pR);
+
+private:
+	//engine::fvector mOffset;
 };
 
 class editor_boundary_visualization :
@@ -126,18 +129,21 @@ class editor :
 {
 public:
 	editor();
-	void set_resource_manager(engine::resource_manager& pResource_manager);
 	std::shared_ptr<editor_sidebar> get_sidebar();
+
+	void set_game(rpg::game& pGame);
+
+	virtual bool open_editor() { return true;  }
 
 	bool is_changed() const;
 
 	virtual bool save() { mIs_changed = false; return true; };
 
 protected:
+	rpg::game* mGame;
+
 	void editor_changed();
 	std::shared_ptr<editor_sidebar> mSidebar;
-
-	engine::resource_manager* mResource_manager;
 
 private:
 	bool mIs_changed;
@@ -148,13 +154,20 @@ class scene_editor :
 {
 public:
 	scene_editor();
-	bool open_scene(std::string pPath); // Should be called before open_editor()
+	bool open_scene(std::string pName); // Should be called before open_editor()
+
+private:
+	tgui::ComboBox::Ptr mCb_scene;
 
 protected:
+	float mZoom;
+	void update_zoom(engine::renderer& pR);
+
 	rpg::scene_loader mLoader;
 	editor_boundary_visualization mBoundary_visualization;
 	rpg::tilemap_manipulator mTilemap_manipulator;
 	rpg::tilemap_display     mTilemap_display;
+	scroll_control_node mMain_scroll;
 };
 
 class game_editor :
@@ -233,6 +246,8 @@ private:
 	tgui::EditBox::Ptr mTb_texture;
 	tgui::CheckBox::Ptr mCb_half_grid;
 
+	engine::grid mGrid;
+
 	void setup_gui();
 
 	command_manager mCommand_manager;
@@ -258,7 +273,6 @@ private:
 	void tick_highlight(engine::renderer& pR);
 
 	void apply_texture();
-
 };
 
 class collisionbox_editor :
@@ -273,13 +287,14 @@ public:
 	void load_terminal_interface(engine::terminal_system& pTerminal);
 
 	bool save();
-
+	
 private:
 	std::shared_ptr<engine::terminal_command_group> mCollision_editor_group;
 
 	command_manager mCommand_manager;
 
 	std::shared_ptr<rpg::collision_box> mSelection;
+
 
 	enum class state
 	{
@@ -296,8 +311,8 @@ private:
 	{
 		none,
 		pixel,
+		eighth,
 		quarter,
-		half,
 		full
 	} mGrid_snap;
 
@@ -311,11 +326,11 @@ private:
 	tgui::EditBox::Ptr  mTb_box_width;
 	tgui::EditBox::Ptr  mTb_box_height;
 
-	tgui::EditBox::Ptr mTb_door_name;
-	tgui::EditBox::Ptr mTb_door_destination;
+	tgui::EditBox::Ptr  mTb_door_name;
+	tgui::EditBox::Ptr  mTb_door_destination;
 	tgui::ComboBox::Ptr mTb_door_scene;
-	tgui::EditBox::Ptr mTb_door_offsetx;
-	tgui::EditBox::Ptr mTb_door_offsety;
+	tgui::EditBox::Ptr  mTb_door_offsetx;
+	tgui::EditBox::Ptr  mTb_door_offsety;
 
 	rpg::collision_box::type     mCurrent_type;
 	rpg::collision_box_container mContainer;
@@ -370,7 +385,8 @@ private:
 
 	float mZoom;
 
-	engine::sprite_node mBackground;
+	engine::rectangle_node mBackground;
+	engine::sprite_node mSprite;
 	engine::rectangle_node mPreview_bg;
 	engine::animation_node mPreview;
 	engine::rectangle_node mFull_animation;
@@ -419,6 +435,9 @@ private:
 	std::shared_ptr<tgui_list_layout> mVisualizations_layout;
 	tgui::Panel::Ptr mRender_container;
 	tgui::Label::Ptr mBottom_text;
+
+	tgui::Panel::Ptr mSave_background;
+	tgui::Panel::Ptr mSave_accept;
 
 	tgui::Theme::Ptr mTheme;
 

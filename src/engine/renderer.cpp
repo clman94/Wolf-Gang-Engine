@@ -277,6 +277,16 @@ fvector renderer::get_mouse_position(fvector pRelative) const
 	return get_mouse_position() - pRelative;
 }
 
+fvector renderer::get_mouse_position(const node & pNode) const
+{
+	const fvector pos = pNode.get_exact_position();
+	const float rot = pNode.get_absolute_rotation();
+	const fvector scale = pNode.get_absolute_scale();
+	if (scale.has_zero())
+		return fvector(0, 0);
+	return (get_mouse_position(pos)).rotate(pos, -rot)/scale;
+}
+
 bool renderer::is_focused()
 {
 	return mWindow->mWindow.hasFocus();
@@ -649,6 +659,10 @@ bool display_window::poll_events()
 	{
 		if (event.type == sf::Event::Closed)
 			return false;
+		if (event.type == sf::Event::LostFocus)
+			mWindow.setFramerateLimit(15);
+		if (event.type == sf::Event::GainedFocus)
+			mWindow.setFramerateLimit(60);
 		mEvents.push_back(event);
 	}
 	return true;
@@ -675,7 +689,9 @@ int grid::draw(renderer & pR)
 	if (mVertices.empty())
 		return 0;
 	sf::RenderStates rs;
-	rs.transform.translate(get_exact_position());
+
+	fvector major_size_scaled = mMajor_size * get_absolute_scale();
+	rs.transform.translate((get_exact_position() % major_size_scaled) - major_size_scaled);
 	rs.transform.rotate(get_absolute_rotation());
 	rs.transform.scale(get_absolute_scale());
 	pR.get_sfml_render().draw(&mVertices[0], mVertices.size(), sf::Lines, rs);
@@ -708,6 +724,10 @@ grid::grid()
 	mSub_grids = 1;
 }
 
+grid::~grid()
+{
+}
+
 void grid::set_major_size(fvector pSize)
 {
 	assert(pSize.x > 0);
@@ -717,17 +737,30 @@ void grid::set_major_size(fvector pSize)
 
 void grid::set_sub_grids(int pAmount)
 {
-	assert(pAmount > 0);
+	assert(pAmount >= 0);
 	mSub_grids = pAmount;
 }
 
 void grid::update_grid(renderer &pR)
 {
 	mVertices.clear();
-	for (int i = 1; i <= mSub_grids; i++)
+
+	sf::Color top_grid_color = { 130, 130, 130, 255 };
+	sf::Color sub_grid_color = { 50, 50, 50, 255 };
+
+	if (mSub_grids > 0)
+	{
+		int grid_depth = std::pow(2, mSub_grids);
 		add_grid(
-		      (pR.get_target_size().x / mMajor_size.x)*i
-			, (pR.get_target_size().y / mMajor_size.y)*i
-			, mMajor_size / i
-			, {255, 255, 255, (sf::Uint8)(i == 0 ? 190 : 100)});
+			(pR.get_target_size().x / mMajor_size.x)*grid_depth + grid_depth
+			, (pR.get_target_size().y / mMajor_size.y)*grid_depth + grid_depth
+			, mMajor_size / grid_depth
+			, sub_grid_color);
+	}
+
+	add_grid(
+		pR.get_target_size().x / mMajor_size.x + 2
+		, pR.get_target_size().y / mMajor_size.y + 2
+		, mMajor_size
+		, top_grid_color);
 }

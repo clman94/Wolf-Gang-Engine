@@ -82,10 +82,11 @@ bool command_manager::redo()
 	return redo_cmd->redo();
 }
 
-void command_manager::clean()
+void command_manager::clear()
 {
 	mUndo.clear();
 	mRedo.clear();
+	mCurrent.reset();
 }
 
 class command_set_tiles :
@@ -256,14 +257,17 @@ WGE_editor::WGE_editor()
 	mCurrent_editor = nullptr;
 	set_current_editor(mGame_editor);
 
-	mTilemap_editor.set_resource_manager(mGame_editor.get_game().get_resource_manager());
-	mCollisionbox_editor.set_resource_manager(mGame_editor.get_game().get_resource_manager());
-	mAtlas_editor.set_resource_manager(mGame_editor.get_game().get_resource_manager());
+	mTilemap_editor.set_game(mGame_editor.get_game());
+	mCollisionbox_editor.set_game(mGame_editor.get_game());
+	mAtlas_editor.set_game(mGame_editor.get_game());
 }
 
 void WGE_editor::initualize(const std::string & pCustom_location)
 {
 	mGame_editor.load_game(pCustom_location);
+	float unit = mGame_editor.get_game().get_scene().get_world_node().get_unit(); // well... TODO: do something different
+	mTilemap_editor.set_unit(unit);
+	mCollisionbox_editor.set_unit(unit);
 }
 
 void WGE_editor::run()
@@ -659,8 +663,11 @@ void WGE_editor::setup_gui()
 	mGui_base->setFixedSize(menubar, 25);
 
 	tgui::Button::Ptr bt_save = mTheme->load("save");
-
-	//bt_save->setText("Save");
+	bt_save->connect("Pressed", [&]()
+	{
+		assert(mCurrent_editor);
+		mCurrent_editor->save();
+	});
 	menubar->add(bt_save);
 	menubar->setFixedSize(bt_save, 25);
 
@@ -693,6 +700,7 @@ void WGE_editor::setup_gui()
 	mRender_container->connect("Unfocused", [&]()
 	{
 		mRenderer.set_transparent_gui_input(false);
+		mRender_container->getRenderer()->setBorders(0);
 		mRender_container->getRenderer()->setBorderColor({ 0, 0, 0, 0 });
 	});
 	middle->add(mRender_container);
@@ -708,6 +716,20 @@ void WGE_editor::setup_gui()
 
 	mBottom_text = std::make_shared<tgui::Label>();
 	bottombar->add(mBottom_text);
+
+	mGame_editor.get_sidebar()->add_button("Edit Tilemap", [&]()
+	{
+		mTilemap_editor.open_scene(mGame_editor.get_game().get_scene().get_name());
+		set_current_editor(mTilemap_editor);
+		mCurrent_editor->open_editor();
+	});
+
+	mGame_editor.get_sidebar()->add_button("Edit Collision", [&]()
+	{
+		mCollisionbox_editor.open_scene(mGame_editor.get_game().get_scene().get_path());
+		set_current_editor(mCollisionbox_editor);
+		mCurrent_editor->open_editor();
+	});
 }
 
 void WGE_editor::set_current_editor(editor & pEditor)
@@ -729,15 +751,15 @@ editor::editor()
 	mSidebar->setSize("&.width", "&.height");
 }
 
-void editor::set_resource_manager(engine::resource_manager & pResource_manager)
-{
-	mResource_manager = &pResource_manager;
-}
-
 
 std::shared_ptr<editor_sidebar> editor::get_sidebar()
 {
 	return mSidebar;
+}
+
+void editor::set_game(rpg::game & pGame)
+{
+	mGame = &pGame;
 }
 
 bool editor::is_changed() const
@@ -756,24 +778,34 @@ void editors::editor::editor_changed()
 
 scene_editor::scene_editor()
 {
-	mBoundary_visualization.set_parent(*this);
-	mTilemap_display.set_parent(*this);
+	mBoundary_visualization.set_parent(mMain_scroll);
+	mTilemap_display.set_parent(mMain_scroll);
+	add_child(mMain_scroll);
+
+	mCb_scene = mSidebar->add_value_enum("Scene", [&](size_t pItem)
+	{
+		open_scene(mCb_scene->getSelectedItem());
+		open_editor();
+	}, {}, 0, true);
+	populate_combox_with_scene_names(mCb_scene);
 }
 
-bool scene_editor::open_scene(std::string pPath)
+bool scene_editor::open_scene(std::string pName)
 {
 	mTilemap_manipulator.clean();
 	mTilemap_display.clean();
 
-	engine::encoded_path path(pPath);
+	assert(mGame);
+
+	engine::encoded_path path((mGame->get_source_path() / "scenes" / pName).string());
 	if (!mLoader.load(path.parent(), path.filename()))
 	{
-		logger::error("Unable to open scene '" + pPath + "'");
+		logger::error("Unable to open scene '" + pName + "'");
 		return false;
 	}
 
-	assert(mResource_manager != nullptr);
-	auto texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, mLoader.get_tilemap_texture());
+	assert(mGame != nullptr);
+	auto texture = mGame->get_resource_manager().get_resource<engine::texture>(engine::resource_type::texture, mLoader.get_tilemap_texture());
 	if (!texture)
 	{
 		logger::warning("Invalid tilemap texture in scene");
@@ -790,7 +822,18 @@ bool scene_editor::open_scene(std::string pPath)
 
 	mBoundary_visualization.set_boundary(mLoader.get_boundary());
 
+
 	return true;
+}
+
+void scene_editor::update_zoom(engine::renderer & pR)
+{
+	if (pR.is_key_pressed(engine::renderer::key_type::Add))
+		mZoom += 0.5;
+	if (pR.is_key_pressed(engine::renderer::key_type::Subtract))
+		mZoom -= 0.5;
+	float factor = std::pow(2, mZoom);
+	set_scale({ factor, factor });
 }
 
 // ##########
@@ -800,10 +843,9 @@ bool scene_editor::open_scene(std::string pPath)
 tilemap_editor::tilemap_editor()
 {
 	setup_gui();
-	set_depth(-1000);
 
 	mPreview.set_color({ 255, 255, 255, 150 });
-	mPreview.set_parent(*this);
+	mPreview.set_parent(mMain_scroll);
 
 	mCurrent_tile = 0;
 	mRotation = 0;
@@ -812,6 +854,8 @@ tilemap_editor::tilemap_editor()
 	mIs_highlight = false;
 
 	mState = state::none;
+
+	mGrid.set_parent(mMain_scroll);
 }
 
 bool tilemap_editor::open_editor()
@@ -836,8 +880,6 @@ bool tilemap_editor::open_editor()
 	update_preview();
 	update_labels();
 
-	mTilemap_group->set_enabled(true);
-
 	return true;
 }
 
@@ -846,8 +888,11 @@ int tilemap_editor::draw(engine::renderer & pR)
 	// Editing is not allowed as there are no tiles to use.
 	if (mTile_list.empty())
 		return 1;
+	mMain_scroll.movement(pR);
 
-	const engine::fvector mouse_position = pR.get_mouse_position(mTilemap_display.get_exact_position());
+	update_zoom(pR);
+
+	const engine::fvector mouse_position = pR.get_mouse_position(mMain_scroll);
 
 	const engine::fvector tile_position_exact = mouse_position / get_unit();
 	const engine::fvector tile_position
@@ -967,6 +1012,10 @@ int tilemap_editor::draw(engine::renderer & pR)
 	tick_highlight(pR);
 
 	mTilemap_display.draw(pR);
+
+	mGrid.set_major_size({ get_unit(), get_unit() });
+	mGrid.update_grid(pR);
+	mGrid.draw(pR);
 
 	mBoundary_visualization.draw(pR);
 
@@ -1231,7 +1280,9 @@ void tilemap_editor::apply_texture()
 	const std::string tilemap_texture_name = mTb_texture->getText();
 
 	logger::info("Applying tilemap Texture '" + tilemap_texture_name + "'...");
-	auto new_texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, tilemap_texture_name);
+
+	assert(mGame != nullptr);
+	auto new_texture = mGame->get_resource_manager().get_resource<engine::texture>(engine::resource_type::texture, tilemap_texture_name);
 	if (!new_texture)
 	{
 		logger::error("Failed to load texture '" + tilemap_texture_name + "'");
@@ -1295,8 +1346,7 @@ void tilemap_editor::clean()
 	mTexture = nullptr;
 	mCurrent_texture_name.clear();
 	mPreview.set_texture(nullptr);
-	mCommand_manager.clean();
-	mTilemap_group->set_enabled(false);
+	mCommand_manager.clear();
 }
 
 // ##########
@@ -1362,19 +1412,19 @@ private:
 	command_add_wall pOpposing;
 };
 
-class command_transform_wall :
+class command_wall_changed :
 	public command
 {
 public:
-	command_transform_wall(std::shared_ptr<rpg::collision_box> pBox)
-		: mBox(pBox), mOpposing(pBox->get_region())
+	command_wall_changed(std::shared_ptr<rpg::collision_box> pBox)
+		: mBox(pBox), mOpposing(pBox->copy())
 	{}
 
 	bool execute()
 	{
-		auto temp = mBox->get_region();
-		mBox->set_region(mOpposing);
-		mOpposing = temp;
+		std::shared_ptr<rpg::collision_box> temp(mBox->copy());
+		mBox->set(mOpposing);
+		mOpposing->set(temp);
 		return true;
 	}
 
@@ -1390,27 +1440,23 @@ public:
 
 private:
 	std::shared_ptr<rpg::collision_box> mBox;
-	engine::frect mOpposing;
+	std::shared_ptr<rpg::collision_box> mOpposing;
 };
 
 collisionbox_editor::collisionbox_editor()
 {
 	setup_gui();
 
-	set_depth(-1000);
-
-	add_child(mTilemap_display);
+	mZoom = 0;
 
 	mWall_display.set_color({ 100, 255, 100, 200 });
 	mWall_display.set_outline_color({ 255, 255, 255, 255 });
 	mWall_display.set_outline_thinkness(1);
-	add_child(mWall_display);
+	mMain_scroll.add_child(mWall_display);
 
 	mGrid.set_major_size({ 32, 32 });
-	mGrid.set_sub_grids(3);
-	add_child(mGrid);
-
-	set_unit(32);
+	mGrid.set_sub_grids(2);
+	mMain_scroll.add_child(mGrid);
 
 	mCurrent_type = rpg::collision_box::type::wall;
 	mGrid_snap = grid_snap::full;
@@ -1420,21 +1466,26 @@ collisionbox_editor::collisionbox_editor()
 
 bool collisionbox_editor::open_editor()
 {
-	mCollision_editor_group->set_enabled(true);
-	mCommand_manager.clean();
-
-	return mContainer.load_xml(mLoader.get_collisionboxes());
+	mCommand_manager.clear();
+	mContainer.clear();
+	if (mLoader.get_collisionboxes())
+		return mContainer.load_xml(mLoader.get_collisionboxes());
+	return true;
 }
 
 int collisionbox_editor::draw(engine::renderer& pR)
 {
+	mMain_scroll.movement(pR);
+
+	update_zoom(pR);
+
 	const bool button_left = pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left);
 	const bool button_left_down = pR.is_mouse_down(engine::renderer::mouse_button::mouse_left);
 	const bool button_right = pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_right);
-	const bool button_shift  = pR.is_key_down(engine::renderer::key_type::LShift);
-	const bool button_ctrl   = pR.is_key_down(engine::renderer::key_type::LControl);
+	const bool button_shift = pR.is_key_down(engine::renderer::key_type::LShift);
+	const bool button_ctrl = pR.is_key_down(engine::renderer::key_type::LControl);
 
-	const engine::fvector mouse_position = pR.get_mouse_position(get_exact_position());
+	const engine::fvector mouse_position = pR.get_mouse_position(mMain_scroll);
 	const engine::fvector exact_tile_position = (mouse_position * get_unit()).floor()/std::pow(get_unit(), 2);
 
 	engine::fvector tile_position;
@@ -1451,8 +1502,8 @@ int collisionbox_editor::draw(engine::renderer& pR)
 		switch (mGrid_snap)
 		{
 		case grid_snap::pixel:   scale = 1 / get_unit(); break;
-		case grid_snap::quarter: scale = 0.25f;          break;
-		case grid_snap::half:    scale = 0.5f;           break;
+		case grid_snap::eighth:  scale = 0.25f;          break;
+		case grid_snap::quarter: scale = 0.5f;           break;
 		case grid_snap::full:    scale = 1;              break;
 		}
 		tile_position = (exact_tile_position / scale).floor() * scale;
@@ -1484,17 +1535,15 @@ int collisionbox_editor::draw(engine::renderer& pR)
 						mResize_mask = engine::frect(0, 1, 0, -1); // Top
 				}
 				mState = state::resize_mode;
-				mCommand_manager.add(std::make_shared<command_transform_wall>(mSelection));
+				mCommand_manager.add(std::make_shared<command_wall_changed>(mSelection));
 				mOriginal_rect = mSelection->get_region();
 				mDrag_from = tile_position;
 			}
 			else if (!tile_selection(exact_tile_position) // Create/Select
-				|| button_shift) // Left shift allows use to place wall on another wall
+				|| button_shift) // Left shift allows us to place wall on another wall
 			{
 				mSelection = mContainer.add_collision_box(mCurrent_type);
-
-				mCommand_manager.add(std::shared_ptr<command_add_wall>(new command_add_wall(mSelection, &mContainer)));
-
+				mCommand_manager.add(std::make_shared<command_add_wall>(mSelection, &mContainer));
 				mSelection->set_region({ tile_position, selection_size });
 
 				mState = state::size_mode;
@@ -1502,7 +1551,7 @@ int collisionbox_editor::draw(engine::renderer& pR)
 			}
 			else // Move
 			{
-				mCommand_manager.add(std::make_shared<command_transform_wall>(mSelection));
+				mCommand_manager.add(std::make_shared<command_wall_changed>(mSelection));
 				mState = state::move_mode;
 				mDrag_from = tile_position - mSelection->get_region().get_offset();
 			}
@@ -1515,10 +1564,7 @@ int collisionbox_editor::draw(engine::renderer& pR)
 			// No cycling when removing tile.
 			if (tile_selection(exact_tile_position, false))
 			{
-				mCommand_manager.add(std::shared_ptr<command_remove_wall>(new command_remove_wall(mSelection, &mContainer)));
-
-				mContainer.remove_box(mSelection);
-
+				mCommand_manager.execute(std::make_shared<command_remove_wall>(mSelection, &mContainer));
 				mSelection = nullptr;
 				update_labels();
 			}
@@ -1527,9 +1573,15 @@ int collisionbox_editor::draw(engine::renderer& pR)
 		else if (pR.is_key_down(engine::renderer::key_type::LControl))
 		{
 			if (pR.is_key_pressed(engine::renderer::key_type::Z)) // Undo
+			{
 				mCommand_manager.undo();
+				update_labels();
+			}
 			else if (pR.is_key_pressed(engine::renderer::key_type::Y)) // Redo
+			{
 				mCommand_manager.redo();
+				update_labels();
+			}
 		}
 
 		break;
@@ -1602,10 +1654,8 @@ int collisionbox_editor::draw(engine::renderer& pR)
 
 	mTilemap_display.draw(pR);
 
-	if (mGrid_snap != grid_snap::none)
-	{
-		// TODO: draw grid
-	}
+	mGrid.update_grid(pR);
+	mGrid.draw(pR);
 
 	for (auto& i : mContainer.get_boxes()) // TODO: Optimize
 	{
@@ -1626,8 +1676,6 @@ int collisionbox_editor::draw(engine::renderer& pR)
 	}
 
 	mBoundary_visualization.draw(pR);
-	mGrid.update_grid(pR);
-	mGrid.draw(pR);
 	return 0;
 }
 
@@ -1638,7 +1686,7 @@ void collisionbox_editor::load_terminal_interface(engine::terminal_system & pTer
 	mCollision_editor_group->add_command("clear",
 		[&](const engine::terminal_arglist& pArgs)->bool
 	{
-		mContainer.clean();
+		mContainer.clear();
 		mSelection.reset();
 		return true;
 	}, "- Clear all collision boxes (Warning: Can't undo)");
@@ -1657,13 +1705,14 @@ bool collisionbox_editor::save()
 	return editor::save();
 }
 
+
 void collisionbox_editor::setup_gui()
 {
 	mSidebar->add_group("Editor");
 	mSidebar->add_value_enum("Grid Snapping", [&](size_t pI)
 	{
 		mGrid_snap = (grid_snap)pI;
-	}, { "None", "Pixel", "Quarter Tile", "Half Tile", "Full Tile" }, 4);
+	}, { "None", "Pixel", "Eighth", "Quarter", "Full" }, 4);
 
 	mSidebar->add_group("Box Properties");
 
@@ -1683,6 +1732,7 @@ void collisionbox_editor::setup_gui()
 	mTb_wallgroup = mSidebar->add_value_string("Wall Group", [&](std::string)
 	{
 		if (!mSelection) return;
+		mCommand_manager.add(std::make_shared<command_wall_changed>(mSelection));
 		if (mTb_wallgroup->getText().isEmpty())
 			mSelection->set_wall_group(nullptr);
 		else
@@ -1692,6 +1742,7 @@ void collisionbox_editor::setup_gui()
 	mTb_box_x = mSidebar->add_value_float("X", [&](float pVal)
 	{
 		if (!mSelection) return;
+		mCommand_manager.add(std::make_shared<command_wall_changed>(mSelection));
 		auto rect = mSelection->get_region();
 		rect.x = pVal;
 		mSelection->set_region(rect);
@@ -1699,6 +1750,7 @@ void collisionbox_editor::setup_gui()
 	mTb_box_y = mSidebar->add_value_float("Y", [&](float pVal)
 	{
 		if (!mSelection) return;
+		mCommand_manager.add(std::make_shared<command_wall_changed>(mSelection));
 		auto rect = mSelection->get_region();
 		rect.y = pVal;
 		mSelection->set_region(rect);
@@ -1706,6 +1758,7 @@ void collisionbox_editor::setup_gui()
 	mTb_box_width = mSidebar->add_value_float("Width", [&](float pVal)
 	{
 		if (!mSelection) return;
+		mCommand_manager.add(std::make_shared<command_wall_changed>(mSelection));
 		auto rect = mSelection->get_region();
 		rect.w = pVal;
 		mSelection->set_region(rect);
@@ -1713,6 +1766,7 @@ void collisionbox_editor::setup_gui()
 	mTb_box_height = mSidebar->add_value_float("Height", [&](float pVal)
 	{
 		if (!mSelection) return;
+		mCommand_manager.add(std::make_shared<command_wall_changed>(mSelection));
 		auto rect = mSelection->get_region();
 		rect.h = pVal;
 		mSelection->set_region(rect);
@@ -1723,26 +1777,36 @@ void collisionbox_editor::setup_gui()
 	mTb_door_name = mSidebar->add_value_string("Name", [&](std::string pVal)
 	{
 		if (mSelection && mSelection->get_type() == rpg::collision_box::type::door)
+		{
+			mCommand_manager.add(std::make_shared<command_wall_changed>(mSelection));
 			std::dynamic_pointer_cast<rpg::door>(mSelection)->set_name(pVal);
+		}
 	});
 
 	mTb_door_scene = mSidebar->add_value_enum("Destination Scene", [&](size_t pVal)
 	{
 		if (mSelection && mSelection->get_type() == rpg::collision_box::type::door)
+		{
+			mCommand_manager.add(std::make_shared<command_wall_changed>(mSelection));
 			std::dynamic_pointer_cast<rpg::door>(mSelection)->set_scene(mTb_door_scene->getSelectedItem());
+		}
 	}, {}, 0, true);
 	populate_combox_with_scene_names(mTb_door_scene);
 
 	mTb_door_destination = mSidebar->add_value_string("Destination Door", [&](std::string pVal)
 	{
 		if (mSelection && mSelection->get_type() == rpg::collision_box::type::door)
+		{
+			mCommand_manager.add(std::make_shared<command_wall_changed>(mSelection));
 			std::dynamic_pointer_cast<rpg::door>(mSelection)->set_destination(pVal);
+		}
 	});
 
 	mTb_door_offsetx = mSidebar->add_value_float("Offset X", [&](float pVal)
 	{
 		if (mSelection && mSelection->get_type() != rpg::collision_box::type::door)
 		{
+			mCommand_manager.add(std::make_shared<command_wall_changed>(mSelection));
 			auto door = std::dynamic_pointer_cast<rpg::door>(mSelection);
 			door->set_offset({ pVal, door->get_offset().y });
 		}
@@ -1752,6 +1816,7 @@ void collisionbox_editor::setup_gui()
 	{
 		if (mSelection && mSelection->get_type() == rpg::collision_box::type::door)
 		{
+			mCommand_manager.add(std::make_shared<command_wall_changed>(mSelection));
 			auto door = std::dynamic_pointer_cast<rpg::door>(mSelection);
 			door->set_offset({ door->get_offset().x, pVal });
 		}
@@ -1836,25 +1901,24 @@ atlas_editor::atlas_editor()
 	mTexture.reset(new engine::texture);
 
 	mFull_animation.set_color({ 100, 100, 255, 100 });
-	mFull_animation.set_parent(mBackground);
+	mFull_animation.set_parent(mSprite);
 
 	mSelected_firstframe.set_color({ 0, 0, 0, 0 });
 	mSelected_firstframe.set_outline_color({ 255, 255, 0, 255 });
 	mSelected_firstframe.set_outline_thinkness(1);
-	mSelected_firstframe.set_parent(mBackground);
+	mSelected_firstframe.set_parent(mSprite);
 	
 	mPreview_bg.set_anchor(engine::anchor::bottom);
 	mPreview_bg.set_color({ 0, 0, 0, 200 });
 	mPreview_bg.set_outline_color({ 255, 255, 255, 200 });
 	mPreview_bg.set_outline_thinkness(1);
-	mPreview_bg.set_parent(mBackground);
+	mPreview_bg.set_parent(mSprite);
 
 	mPreview.set_anchor(engine::anchor::bottom);
 	mPreview.set_parent(mPreview_bg);
-}
 
-bool atlas_editor::open_editor()
-{
+	mBackground.set_color({ 0, 0, 0, 255 });
+
 	black_background();
 	mZoom = 1;
 	mPreview.set_visible(false);
@@ -1864,6 +1928,11 @@ bool atlas_editor::open_editor()
 		mCb_texture_select->setSelectedItemByIndex(0);
 		setup_for_texture(mTexture_list[0]);
 	}
+}
+
+bool atlas_editor::open_editor()
+{
+
 	return true;
 }
 
@@ -1878,28 +1947,28 @@ int atlas_editor::draw(engine::renderer & pR)
 	const engine::fvector mouse_position = pR.get_mouse_position();
 
 	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_right))
-		mDrag_offset = mBackground.get_position() - mouse_position;
+		mDrag_offset = mSprite.get_position() - mouse_position;
 	else if (pR.is_mouse_down(engine::renderer::mouse_button::mouse_right))
-		mBackground.set_position(mouse_position + mDrag_offset);
+		mSprite.set_position(mouse_position + mDrag_offset);
 
 	if (pR.is_key_pressed(engine::renderer::key_type::Add))
 	{
 		mZoom += 1;
-		mBackground.set_scale({ mZoom, mZoom });
+		mSprite.set_scale({ mZoom, mZoom });
 		update_preview();
 	}
 	
 	if (pR.is_key_pressed(engine::renderer::key_type::Subtract))
 	{
 		mZoom -= 1;
-		mBackground.set_scale({ mZoom, mZoom });
+		mSprite.set_scale({ mZoom, mZoom });
 		update_preview();
 	}
 
 	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left))
-		atlas_selection((mouse_position - mBackground.get_position())/mZoom);
+		atlas_selection((mouse_position - mSprite.get_position())/mZoom);
 
-	mBackground.draw(pR);
+	mSprite.draw(pR);
 
 	for (auto& i : mAtlas.get_raw_atlas())
 	{
@@ -1974,8 +2043,8 @@ void atlas_editor::setup_for_texture(const engine::encoded_path& pPath)
 	mTexture->set_texture_source(texture_path);
 	mTexture->load();
 	mPreview.set_texture(mTexture);
-	mBackground.set_texture(mTexture);
-	mBackground.set_texture_rect({ engine::fvector(0, 0), mTexture->get_size() });
+	mSprite.set_texture(mTexture);
+	mSprite.set_texture_rect({ engine::fvector(0, 0), mTexture->get_size() });
 
 	mSelection = nullptr;
 	mAtlas.clear();
@@ -2186,8 +2255,8 @@ void atlas_editor::setup_gui()
 	[&](){
 		mTexture->unload();
 		mTexture->load();
-		mBackground.set_texture(mTexture);
-		mBackground.set_texture_rect(engine::frect(engine::fvector(0, 0), mTexture->get_size()));
+		mSprite.set_texture(mTexture);
+		mSprite.set_texture_rect(engine::frect(engine::fvector(0, 0), mTexture->get_size()));
 	});
 
 	mSidebar->add_value_enum("Background", [&](size_t pVal)
@@ -2276,17 +2345,29 @@ void atlas_editor::clear_gui()
 
 void scroll_control_node::movement(engine::renderer & pR)
 {
-	float speed = pR.get_delta() * 4;
-	engine::fvector position = get_position();
-	if (pR.is_key_down(engine::renderer::key_type::Left))
-		position += engine::fvector(1, 0)*speed;
-	if (pR.is_key_down(engine::renderer::key_type::Right))
-		position -= engine::fvector(1, 0)*speed;
-	if (pR.is_key_down(engine::renderer::key_type::Up))
-		position += engine::fvector(0, 1)*speed;
-	if (pR.is_key_down(engine::renderer::key_type::Down))
-		position -= engine::fvector(0, 1)*speed;
-	set_position(position);
+	// TODO: Finish middle mouse scrolling
+	/*if (pR.is_mouse_pressed(engine::renderer::mouse_middle))
+	{
+		mOffset = pR.get_mouse_position() - get_exact_position();
+	}
+	else if (pR.is_mouse_down(engine::renderer::mouse_middle))
+	{
+		set_position(((pR.get_mouse_position() - mOffset)/get_unit()));
+	}
+	else
+	{*/
+		float speed = pR.get_delta() * 4;
+		engine::fvector position = get_position();
+		if (pR.is_key_down(engine::renderer::key_type::Left))
+			position += engine::fvector(1, 0)*speed;
+		if (pR.is_key_down(engine::renderer::key_type::Right))
+			position -= engine::fvector(1, 0)*speed;
+		if (pR.is_key_down(engine::renderer::key_type::Up))
+			position += engine::fvector(0, 1)*speed;
+		if (pR.is_key_down(engine::renderer::key_type::Down))
+			position -= engine::fvector(0, 1)*speed;
+		set_position(position);
+	//}
 }
 
 editor_boundary_visualization::editor_boundary_visualization()

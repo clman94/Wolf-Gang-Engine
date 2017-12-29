@@ -21,7 +21,7 @@ std::shared_ptr<const door> collision_system::get_door_entry(std::string pName)
 
 void collision_system::clean()
 {
-	mContainer.clean();
+	mContainer.clear();
 }
 
 int collision_system::load_collision_boxes(tinyxml2::XMLElement* pEle)

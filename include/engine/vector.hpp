@@ -101,6 +101,11 @@ struct vector
 		return *this;
 	}
 
+	vector operator - () const
+	{
+		return{ -x, -y };
+	}
+
 	vector operator + (const vector& A) const
 	{
 		return{ x + A.x, y + A.y};
@@ -111,17 +116,19 @@ struct vector
 		return{ x - A.x, y - A.y};
 	}
 
-	vector operator - () const
-	{
-		return{ -x, -y };
-	}
-
 	vector operator * (const vector& A) const
 	{
 		return{ x * A.x, y * A.y};
 	}
 
-	// No division, high chance of dividing by zero.
+	vector operator / (const vector& A) const
+	{
+		return{ x / A.x, y / A.y };
+	}
+	vector operator % (const vector& A) const
+	{
+		return{ std::fmod(x, A.x), std::fmod(y, A.y) };
+	}
 
 	vector operator * (T A) const
 	{
@@ -183,6 +190,13 @@ struct vector
 		return *this;
 	}
 
+	vector& operator %= (const vector& A)
+	{
+		x = std::fmod(x, A.x);
+		y = std::fmod(y, A.y);
+		return *this;
+	}
+
 	template<typename T1>
 	bool operator==(const vector<T1>& R) const
 	{
@@ -241,9 +255,21 @@ struct vector
 		return std::fmod(a + 360, static_cast<T>(360));
 	}
 
+	vector& abs()
+	{
+		x = std::abs(x);
+		y = std::abs(y);
+		return *this;
+	}
+
 	std::string to_string() const
 	{
 		return "(" + std::to_string(x) + ", " + std::to_string(y) + ")";
+	}
+
+	bool has_zero() const
+	{
+		return x == 0 || y == 0;
 	}
 
 #ifdef SFML_VERTEX_HPP
@@ -266,8 +292,6 @@ struct vector
 	}
 
 #endif
-
-	// No division, high chance of dividing by zero.
 
 	template<typename>
 	friend struct vector;
