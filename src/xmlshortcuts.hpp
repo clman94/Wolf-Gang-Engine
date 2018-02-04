@@ -6,7 +6,7 @@
 
 #include "../tinyxml2/tinyxml2.h"
 #include <engine/parsers.hpp>
-#include <engine/log.hpp>
+#include <engine/logger.hpp>
 
 #include <cassert>
 

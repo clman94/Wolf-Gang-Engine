@@ -3,6 +3,10 @@
 
 #include <rpg/sprite_entity.hpp>
 
+
+// TODO: This will be removed and implemented via scripts.
+// Reason: This functionality greatly depends on the type of game.
+
 namespace rpg {
 
 // An sprite_entity that has a specific role as a character_entity.

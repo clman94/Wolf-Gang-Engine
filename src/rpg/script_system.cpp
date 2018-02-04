@@ -5,7 +5,7 @@
 #include <angelscript/add_on/scriptmath/scriptmath.h>
 
 #include <engine/parsers.hpp>
-#include <engine/log.hpp>
+#include <engine/logger.hpp>
 
 #include "../xmlshortcuts.hpp"
 

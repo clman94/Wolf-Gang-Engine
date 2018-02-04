@@ -275,6 +275,7 @@ private:
 template<typename T>
 inline T floor_align(T pVal, T pAlign)
 {
+	assert(align > 0);
 	return std::floor(pVal / pAlign)*pAlign;
 }
 
@@ -292,7 +293,7 @@ private:
 inline std::string safe_string(const char* str)
 {
 	if (str == nullptr)
-		return std::string();
+		return{};
 	return str;
 }
 
@@ -364,13 +365,6 @@ inline const T& clamp(const T& v, const T& min, const T& max)
 	if (v > max) return max;
 	return v;
 }
-
-template<typename T>
-inline const T& min(const T& v, const T& min)
-{
-	return v < min ? min : v;
-}
-
 
 // Pingpong array
 template<typename T>

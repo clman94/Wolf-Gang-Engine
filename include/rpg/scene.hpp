@@ -63,6 +63,7 @@ public:
 	void clean();
 	void set_resource_manager(engine::resource_manager& pResource_manager);
 	void pause_music();
+	void set_mixer(engine::mixer& pMixer);
 
 private:
 
@@ -167,6 +168,8 @@ public:
 
 	bool is_ready() const;
 
+	engine::mixer& get_mixer();
+
 private:
 	bool mIs_ready;
 
@@ -185,11 +188,13 @@ private:
 	tilemap_manipulator   mTilemap_manipulator;
 	collision_system      mCollision_system;
 	entity_manager        mEntity_manager;
-	background_music      mBackground_music;
-	engine::sound_spawner mSound_FX;
 	player_character      mPlayer;
 	colored_overlay       mColored_overlay;
 	pathfinding_system    mPathfinding_system;
+
+	engine::mixer         mMixer;
+	background_music      mBackground_music;
+	engine::sound_spawner mSound_FX;
 
 #ifndef LOCKED_RELEASE_MODE
 	std::shared_ptr<engine::terminal_command_group> mTerminal_cmd_group;

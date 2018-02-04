@@ -1,7 +1,7 @@
 #include <rpg/scene_loader.hpp>
 #include <rpg/rpg_config.hpp>
 
-#include <engine/log.hpp>
+#include <engine/logger.hpp>
 #include <algorithm>
 
 using namespace rpg;

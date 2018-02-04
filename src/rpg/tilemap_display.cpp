@@ -1,5 +1,5 @@
 #include <rpg/tilemap_display.hpp>
-#include <engine/log.hpp>
+#include <engine/logger.hpp>
 
 using namespace rpg;
 

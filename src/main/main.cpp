@@ -3,7 +3,7 @@
 
 #include <engine/renderer.hpp>
 #include <engine/time.hpp>
-#include <engine/log.hpp>
+#include <engine/logger.hpp>
 
 #include <rpg/rpg.hpp>
 

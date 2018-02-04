@@ -6,7 +6,7 @@
 #include <engine/texture.hpp>
 #include <rpg/rpg_resource_directories.hpp>
 #include <engine/renderer.hpp>
-#include <engine/log.hpp>
+#include <engine/logger.hpp>
 
 #include <string>
 #include <vector>

@@ -1,6 +1,6 @@
 #include <rpg/scene.hpp>
 #include <rpg/rpg_config.hpp>
-#include <engine/log.hpp>
+#include <engine/logger.hpp>
 
 using namespace rpg;
 
@@ -27,6 +27,9 @@ scene::scene()
 	mResource_manager = nullptr;
 
 	mIs_ready = false;
+
+	mSound_FX.attach_mixer(mMixer);
+	mBackground_music.set_mixer(mMixer);
 
 	//mScene_node.set_rotation(0);
 	//mScene_node.set_position({8, 8});
@@ -405,6 +408,11 @@ scene_visualizer & scene::get_visualizer()
 bool scene::is_ready() const
 {
 	return mIs_ready;
+}
+
+engine::mixer & rpg::scene::get_mixer()
+{
+	return mMixer;
 }
 
 void scene::script_set_focus(engine::fvector pPosition)

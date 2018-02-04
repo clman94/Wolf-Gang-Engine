@@ -7,7 +7,7 @@ using namespace editors;
 #include <cassert>
 
 #include <engine/parsers.hpp>
-#include <engine/log.hpp>
+#include <engine/logger.hpp>
 
 void populate_combox_with_scene_names(tgui::ComboBox::Ptr pCB)
 {
@@ -363,10 +363,11 @@ tgui::EditBox::Ptr editor_sidebar::add_value_int(const std::string & pLabel, std
 	auto hl = create_value_line(pLabel);
 	auto tb = std::make_shared<tgui::EditBox>();
 	//tb->setInputValidator(std::string(pNeg ? "[-+]" : "") + "[0-9]*");
+	auto* tb_ptr = tb.get();
 	auto apply = [=]()
 	{
 		try {
-			pCallback(std::stoi(std::string(tb->getText())));
+			pCallback(std::stoi(std::string(tb_ptr->getText())));
 		}
 		catch (...)
 		{
@@ -389,15 +390,17 @@ tgui::EditBox::Ptr editor_sidebar::add_value_int(const std::string & pLabel, int
 	return add_value_int(pLabel, std::function<void(int)>([&](int pCallback_value) { pValue = pCallback_value; }), pNeg);
 }
 
+
 tgui::EditBox::Ptr editor_sidebar::add_value_string(const std::string & pLabel, std::function<void(std::string)> pCallback)
 {
 	auto hl = create_value_line(pLabel);
 	auto tb = std::make_shared<tgui::EditBox>();
+	auto* tb_ptr = tb.get();
 	auto apply = [=]()
 	{
 		try {
 			if (pCallback)
-				pCallback(tb->getText());
+				pCallback(tb_ptr->getText());
 		}
 		catch (...)
 		{
@@ -426,10 +429,11 @@ tgui::EditBox::Ptr editor_sidebar::add_value_float(const std::string & pLabel, s
 	auto tb = std::make_shared<tgui::EditBox>();
 	//tb->setInputValidator(std::string(pNeg ? "[-+]" : "") + "[0-9]*\\.[0-9]*");
 
+	auto* tb_ptr = tb.get();
 	auto apply = [=]()
 	{
 		try {
-			pCallback(std::stof(std::string(tb->getText())));
+			pCallback(std::stof(std::string(tb_ptr->getText())));
 		}
 		catch (...)
 		{
@@ -767,7 +771,7 @@ bool editor::is_changed() const
 	return mIs_changed;
 }
 
-void editors::editor::editor_changed()
+void editor::editor_changed()
 {
 	mIs_changed = true;
 }
@@ -832,7 +836,7 @@ void scene_editor::update_zoom(engine::renderer & pR)
 		mZoom += 0.5;
 	if (pR.is_key_pressed(engine::renderer::key_type::Subtract))
 		mZoom -= 0.5;
-	float factor = std::pow(2, mZoom);
+	float factor = std::pow(2.f, mZoom);
 	set_scale({ factor, factor });
 }
 
@@ -1721,7 +1725,7 @@ void collisionbox_editor::setup_gui()
 		mCurrent_type = static_cast<rpg::collision_box::type>(pI); // Lazy cast
 		auto temp = mSelection;
 		mContainer.remove_box(mSelection);
-		auto new_box = mContainer.add_collision_box((rpg::collision_box::type)mCb_type->getSelectedItemIndex());
+		auto new_box = mContainer.add_collision_box(mCurrent_type);
 		new_box->set_region(temp->get_region());
 		new_box->set_wall_group(temp->get_wall_group());
 		mSelection = new_box;
@@ -2412,7 +2416,7 @@ int game_editor::draw(engine::renderer& pR)
 	if (mInfo_update_timer.is_reached())
 	{
 		const auto mouse_position_exact = mRenderer.get_mouse_position();
-		const auto mouse_position = mRenderer.get_mouse_position(get_exact_position()) / get_unit();
+		const auto mouse_position = mRenderer.get_mouse_position(mGame.get_scene().get_world_node().get_exact_position()) / mGame.get_scene().get_scene_node().get_unit();
 		std::string position;
 		position += "(";
 		position += std::to_string(static_cast<int>(mouse_position_exact.x));
@@ -2503,6 +2507,14 @@ void game_editor::setup_gui()
 	chb_entities->connect("Unchecked", [&]()
 	{ mGame.get_scene().get_visualizer().visualize_entities(false); });
 
+	auto volume_nob = std::make_shared<tgui::Slider>();
+	volume_nob->setMaximum(100);
+	volume_nob->setValue(100);
+	volume_nob->connect("ValueChanged", [&](int pVal)
+	{
+		mGame.get_scene().get_mixer().set_master_volume((float)pVal/100.f);
+	});
+	mSidebar->add(volume_nob);
 }
 
 void game_editor::update_scene_list()

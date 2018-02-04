@@ -1,6 +1,6 @@
 #include <rpg/entity_manager.hpp>
 #include <rpg/rpg_config.hpp>
-#include <engine/log.hpp>
+#include <engine/logger.hpp>
 
 using namespace rpg;
 

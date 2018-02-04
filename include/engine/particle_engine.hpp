@@ -10,6 +10,7 @@
 namespace engine
 {
 
+// TODO: Add different types of emitter sources.
 class particle_emitter :
 	public render_object
 {

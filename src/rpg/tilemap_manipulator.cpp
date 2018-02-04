@@ -1,6 +1,6 @@
 #include <rpg/tilemap_manipulator.hpp>
 #include <rpg/rpg_config.hpp>
-#include <engine/log.hpp>
+#include <engine/logger.hpp>
 
 using namespace rpg;
 

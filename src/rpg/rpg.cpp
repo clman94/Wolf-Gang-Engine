@@ -1,7 +1,7 @@
 #include <rpg/rpg.hpp>
 
 #include <engine/parsers.hpp>
-#include <engine/log.hpp>
+#include <engine/logger.hpp>
 
 #include "../xmlshortcuts.hpp"
 
@@ -410,8 +410,7 @@ float game::script_get_tile_size()
 	return mScene.get_world_node().get_unit();
 }
 
-void
-game::load_script_interface()
+void game::load_script_interface()
 {
 	logger::info("Loading script interface...");
 	mScript.add_function("get_delta", &game::get_delta, this);
@@ -449,13 +448,13 @@ game::load_script_interface()
 
 void game::load_icon()
 {
-	get_renderer()->set_icon((mData_directory / "icon.png").string());
+	get_renderer()->get_window()->set_icon((mData_directory / "icon.png").string());
 }
 
 void game::load_icon_pack()
 {
 	auto data = mPack.read_all("icon.png");
-	get_renderer()->set_icon(data);
+	get_renderer()->get_window()->set_icon(data);
 }
 
 #ifndef LOCKED_RELEASE_MODE
@@ -570,7 +569,7 @@ void game::load_terminal_interface(engine::terminal_system& pTerminal)
 
 		size_t slot = 0;
 		try {
-			slot = static_cast<size_t>(util::min(util::to_numeral<int>(pArgs[0].get_raw()), 0));
+			slot = static_cast<size_t>(std::max(util::to_numeral<int>(pArgs[0].get_raw()), 0));
 		}
 		catch (...)
 		{
@@ -595,7 +594,7 @@ void game::load_terminal_interface(engine::terminal_system& pTerminal)
 
 		size_t slot = 0;
 		try {
-			slot = static_cast<size_t>(util::min(util::to_numeral<int>(pArgs[0].get_raw()), 0));
+			slot = static_cast<size_t>(std::max(util::to_numeral<int>(pArgs[0].get_raw()), 0));
 		}
 		catch (...)
 		{
@@ -640,28 +639,10 @@ bool game::load(engine::fs::path pData_dir)
 	mData_directory = pData_dir;
 
 	game_settings_loader settings;
-	if (!engine::fs::is_directory(pData_dir)) // This is a package
-	{
-		logger::info("Loading settings from pack...");
-		if (!mPack.open(pData_dir.string()))
-		{
-			logger::error("Could not load pack");
-			return (mIs_ready = false, false);
-		}
-
-		const auto settings_data = mPack.read_all("game.xml");
-		
-		if (!settings.load_memory(&settings_data[0], settings_data.size()))
-			return (mIs_ready = false, false);
-
-		mResource_manager.set_resource_pack(&mPack);
-		mScene.set_resource_pack(&mPack);
-
-		load_icon_pack();
-	}
-	else // Data folder
+	if (engine::fs::is_directory(pData_dir)) // Data folder 
 	{
 		logger::info("Loading settings from data folder...");
+
 		std::string settings_path = (pData_dir / "game.xml").string();
 		if (!settings.load(settings_path, pData_dir.string() + "/"))
 			return (mIs_ready = false, false);
@@ -672,8 +653,30 @@ bool game::load(engine::fs::path pData_dir)
 
 		load_icon();
 	}
+	else // This is a package
+	{
+		logger::info("Loading settings from pack...");
+
+		if (!mPack.open(pData_dir.string()))
+		{
+			logger::error("Could not load pack");
+			return (mIs_ready = false, false);
+		}
+
+		const auto settings_data = mPack.read_all("game.xml");
+
+		if (!settings.load_memory(&settings_data[0], settings_data.size()))
+			return (mIs_ready = false, false);
+
+		mResource_manager.set_resource_pack(&mPack);
+		mScene.set_resource_pack(&mPack);
+
+		load_icon_pack();
+	}
 
 	logger::info("Settings loaded");
+
+	get_renderer()->get_window()->set_title(settings.get_title());
 
 	get_renderer()->set_target_size(settings.get_screen_size());
 
@@ -761,8 +764,7 @@ bool game::restart_game()
 	return succ;
 }
 
-void
-game::refresh_renderer(engine::renderer & pR)
+void game::refresh_renderer(engine::renderer & pR)
 {
 	mScene.set_renderer(pR);
 }
@@ -779,8 +781,7 @@ script_function::~script_function()
 {
 }
 
-bool
-script_function::is_running()
+bool script_function::is_running()
 {
 	if (!mFunc_ctx || !mFunc_ctx->context)
 		return false;
@@ -789,13 +790,12 @@ script_function::is_running()
 	return true;
 }
 
-void
-script_function::set_function(AS::asIScriptFunction* pFunction)
+void script_function::set_function(AS::asIScriptFunction* pFunction)
 {
 	mFunction = pFunction;
 }
 
-util::optional_pointer<AS::asIScriptFunction> rpg::script_function::get_function() const
+util::optional_pointer<AS::asIScriptFunction> script_function::get_function() const
 {
 	return mFunction;
 }
@@ -806,16 +806,14 @@ script_function::set_script_system(script_system& pScript_system)
 	mScript_system = &pScript_system;
 }
 
-void
-script_function::set_arg(unsigned int index, void* ptr)
+void script_function::set_arg(unsigned int index, void* ptr)
 {
 	assert(mFunc_ctx != nullptr && mFunc_ctx->context != nullptr);
 	if(index < mFunction->GetParamCount())
 		mFunc_ctx->context->SetArgObject(index, ptr);
 }
 
-bool
-script_function::call()
+bool script_function::call()
 {
 	if (!is_running())
 	{
@@ -884,6 +882,12 @@ void background_music::set_resource_manager(engine::resource_manager & pResource
 void background_music::pause_music()
 {
 	mStream->pause();
+}
+
+void background_music::set_mixer(engine::mixer & pMixer)
+{
+	mStream->attach_mixer(pMixer);
+	mOverlap_stream->attach_mixer(pMixer);
 }
 
 bool background_music::script_music_open(const std::string & pName)
@@ -1533,6 +1537,11 @@ bool game_settings_loader::load_memory(const char * pData, size_t pSize, const s
 	return parse_settings(doc, pPrefix_path);
 }
 
+const std::string & rpg::game_settings_loader::get_title() const
+{
+	return mTitle;
+}
+
 const std::string & game_settings_loader::get_start_scene() const
 {
 	return mStart_scene;
@@ -1566,6 +1575,17 @@ bool game_settings_loader::parse_settings(tinyxml2::XMLDocument & pDoc, const st
 	{
 		logger::error("Root element missing in settings");
 		return false;
+	}
+
+	auto ele_title = ele_root->FirstChildElement("title");
+	if (!ele_title || !ele_title->GetText())
+	{
+		logger::warning("Please specify title of game.");
+		mTitle = "[Unititled]";
+	}
+	else
+	{
+		mTitle = ele_title->GetText();
 	}
 
 	auto ele_scene = ele_root->FirstChildElement("scene");

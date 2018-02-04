@@ -1,22 +1,27 @@
 #include <engine/audio.hpp>
-#include <engine/log.hpp>
+#include <engine/logger.hpp>
 #include <engine/filesystem.hpp>
 using namespace engine;
 
-engine::sound * engine::sound_spawner::get_new_sound_object()
+engine::sound * engine::sound_spawner::new_sound_object()
 {
 	for (auto &i : mSounds)
 		if (!i.is_playing())
 			return &i;
-
 	mSounds.emplace_back();
 	return &mSounds.back();
 }
 
+sound_spawner::sound_spawner()
+{
+	mMixer = nullptr;
+}
+
 void sound_spawner::spawn(std::shared_ptr<sound_file> pBuffer, float pVolume, float pPitch)
 {
-	engine::sound* sound_object = get_new_sound_object();
-
+	engine::sound* sound_object = new_sound_object();
+	if (mMixer)
+		sound_object->attach_mixer(*mMixer);
 	sound_object->set_sound_resource(pBuffer);
 	sound_object->set_volume(pVolume);
 	sound_object->set_pitch(pPitch);
@@ -29,9 +34,26 @@ void sound_spawner::stop_all()
 	mSounds.clear();
 }
 
-inline engine::sound::sound()
+void sound_spawner::attach_mixer(mixer& pMixer)
+{
+	mMixer = &pMixer;
+}
+
+void sound_spawner::detach_mixer()
+{
+	mMixer = nullptr;
+}
+
+inline sound::sound()
 {
 	mReady = false;
+	mMixer = nullptr;
+}
+
+sound::~sound()
+{
+	if (mMixer)
+		mMixer->remove(*this);
 }
 
 void sound::set_sound_resource(std::shared_ptr<sound_file> pResource)
@@ -127,7 +149,7 @@ void sound::set_loop(bool pLoop)
 	mSFML_streamless_sound.setLoop(pLoop);
 }
 
-float sound::get_loop() const
+bool sound::get_loop() const
 {
 	if (!mSource)
 		return false;
@@ -139,19 +161,22 @@ float sound::get_loop() const
 
 void sound::set_volume(float pVolume)
 {
-	float volume = util::clamp(pVolume, 0.f, 1.f)*100;
-	mSFML_stream_sound.setVolume(volume);
-	mSFML_streamless_sound.setVolume(volume);
+	float volume = util::clamp(pVolume, 0.f, 1.f);
+	mVolume = volume;
+	if (mMixer)
+		volume *= mMixer->get_master_volume();
+	mSFML_stream_sound.setVolume(volume*100);
+	mSFML_streamless_sound.setVolume(volume*100);
 }
 
 float sound::get_volume() const
 {
-	if (!mSource)
-		return 0;
-	if (mSource->mRequires_streaming)
-		return mSFML_stream_sound.getVolume() / 100;
-	else
-		return mSFML_streamless_sound.getVolume() / 100;
+	return mVolume;
+}
+
+void sound::update_volume()
+{
+	set_volume(mVolume);
 }
 
 bool sound::is_playing() const
@@ -190,6 +215,19 @@ void sound::set_playoffset(float pSeconds)
 	else
 		mSFML_streamless_sound.setPlayingOffset(sf::seconds(pSeconds));
 }
+
+bool sound::attach_mixer(mixer& pMixer)
+{
+	return pMixer.add(*this);
+}
+
+bool sound::detach_mixer()
+{
+	if (!mMixer)
+		return false;
+	return mMixer->remove(*this);
+}
+
 inline sf::Int64 sound::sfml_stream_::read(void * pData, sf::Int64 pSize)
 {
 	if (!stream.is_valid())
@@ -253,4 +291,53 @@ bool sound_file::unload()
 void sound_file::set_filepath(const std::string & pPath)
 {
 	mSound_source = pPath;
+}
+
+mixer::mixer()
+{
+	mMaster_volume = 1;
+}
+
+mixer::~mixer()
+{
+	for (auto i : mSounds)
+		i->mMixer = nullptr;
+}
+
+void mixer::set_master_volume(float pVolume)
+{
+	mMaster_volume = util::clamp(pVolume, 0.f, 1.f);
+	for (auto i : mSounds)
+		i->update_volume();
+}
+
+float mixer::get_master_volume() const
+{
+	return mMaster_volume;
+}
+
+bool mixer::add(sound & pSound)
+{
+	for (auto i : mSounds)
+		if (i == &pSound)
+			return false;
+	pSound.detach_mixer();
+	pSound.mMixer = this;
+	pSound.update_volume();
+	mSounds.push_back(&pSound);
+	return true;
+}
+
+bool mixer::remove(sound & pSound)
+{
+	for (size_t i = 0; i < mSounds.size(); i++)
+	{
+		if (mSounds[i] == &pSound)
+		{
+			mSounds.erase(mSounds.begin() + i);
+			pSound.mMixer = nullptr;
+			pSound.update_volume();
+		}
+	}
+	return false;
 }

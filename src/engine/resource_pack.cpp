@@ -2,7 +2,7 @@
 #include <fstream>
 #include <engine/filesystem.hpp>
 #include <engine/resource_pack.hpp>
-#include <engine/log.hpp>
+#include <engine/logger.hpp>
 
 using namespace engine;
 

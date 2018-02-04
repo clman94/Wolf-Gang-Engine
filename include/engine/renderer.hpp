@@ -179,6 +179,11 @@ public:
 	void toggle_mode();
 	bool is_fullscreen() const;
 
+	void set_title(const std::string& pTitle);
+
+	int set_icon(const std::string& pPath);
+	int set_icon(const std::vector<char>& pData);
+
 	// Returns false when window is closed
 	bool poll_events();
 
@@ -224,7 +229,6 @@ public:
 	void set_renderer(renderer& pR, bool pManual_render = false);
 	renderer* get_renderer() const;
 	void detach_renderer();
-
 	friend class renderer;
 
 protected:
@@ -282,8 +286,6 @@ public:
 
 	bool is_focused();
 
-	int set_icon(const std::string& pPath);
-	int set_icon(const std::vector<char>& pData);
 
 	void set_visible(bool pVisible);
 	void set_background_color(color pColor);

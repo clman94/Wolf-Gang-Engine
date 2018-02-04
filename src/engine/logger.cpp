@@ -1,5 +1,5 @@
 #include <engine/filesystem.hpp>
-#include <engine/log.hpp>
+#include <engine/logger.hpp>
 #include <fstream>
 #include <iostream>
 #include <cassert>
@@ -19,7 +19,7 @@ void initialize(const std::string & pOutput)
 	if (!mLog_file)
 		std::cout << "Failed to open log output file\n";
 	else
-		std::cout << "Log file at '" + pOutput + "'\n";
+		std::cout << "Log file initialized at '" + pOutput + "'\n";
 
 	mSub_routine_level = 0;
 }

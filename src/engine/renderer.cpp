@@ -1,7 +1,7 @@
 #define ENGINE_INTERNAL
 
 #include <engine/renderer.hpp>
-#include <engine/log.hpp>
+#include <engine/logger.hpp>
 
 using namespace engine;
 
@@ -292,23 +292,7 @@ bool renderer::is_focused()
 	return mWindow->mWindow.hasFocus();
 }
 
-int renderer::set_icon(const std::string & pPath)
-{
-	sf::Image image;
-	if (!image.loadFromFile(pPath))
-		return 1;
-	mWindow->mWindow.setIcon(image.getSize().x, image.getSize().y, image.getPixelsPtr());
-	return 0;
-}
 
-int renderer::set_icon(const std::vector<char>& pData)
-{
-	sf::Image image;
-	if (!image.loadFromMemory(&pData[0], pData.size()))
-		return 1;
-	mWindow->mWindow.setIcon(image.getSize().x, image.getSize().y, image.getPixelsPtr());
-	return 0;
-}
 
 
 void renderer::set_visible(bool pVisible)
@@ -651,6 +635,29 @@ bool display_window::is_fullscreen() const
 	return mIs_fullscreen;
 }
 
+void engine::display_window::set_title(const std::string & pTitle)
+{
+	mWindow.setTitle(pTitle);
+}
+
+int display_window::set_icon(const std::string & pPath)
+{
+	sf::Image image;
+	if (!image.loadFromFile(pPath))
+		return 1;
+	mWindow.setIcon(image.getSize().x, image.getSize().y, image.getPixelsPtr());
+	return 0;
+}
+
+int display_window::set_icon(const std::vector<char>& pData)
+{
+	sf::Image image;
+	if (!image.loadFromMemory(&pData[0], pData.size()))
+		return 1;
+	mWindow.setIcon(image.getSize().x, image.getSize().y, image.getPixelsPtr());
+	return 0;
+}
+
 bool display_window::poll_events()
 {
 	mEvents.clear();
@@ -750,11 +757,11 @@ void grid::update_grid(renderer &pR)
 
 	if (mSub_grids > 0)
 	{
-		int grid_depth = std::pow(2, mSub_grids);
+		int grid_depth = (int)std::pow(2, mSub_grids);
 		add_grid(
-			(pR.get_target_size().x / mMajor_size.x)*grid_depth + grid_depth
-			, (pR.get_target_size().y / mMajor_size.y)*grid_depth + grid_depth
-			, mMajor_size / grid_depth
+			(int)((pR.get_target_size().x / mMajor_size.x)*grid_depth + grid_depth)
+			, (int)((pR.get_target_size().y / mMajor_size.y)*grid_depth + grid_depth)
+			, mMajor_size / (float)grid_depth
 			, sub_grid_color);
 	}
 

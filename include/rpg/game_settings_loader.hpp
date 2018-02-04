@@ -15,6 +15,7 @@ public:
 	bool load(const std::string& pPath, const std::string& pPrefix_path = std::string());
 	bool load_memory(const char* pData, size_t pSize, const std::string& pPrefix_path = std::string());
 
+	const std::string& get_title() const;
 	const std::string& get_start_scene() const;
 	const std::string& get_player_texture() const;
 	engine::fvector    get_screen_size() const;
@@ -27,6 +28,7 @@ private:
 	bool parse_binding_attributes(tinyxml2::XMLElement* pEle, const std::string& pName
 		, const std::string& pPrefix, bool pAlternative);
 
+	std::string mTitle;
 	std::string mStart_scene;
 	std::string mPlayer_texture;
 	engine::fvector mScreen_size;

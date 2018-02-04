@@ -1,7 +1,7 @@
 #define ENGINE_INTERNAL
 
 #include <engine/renderer.hpp>
-#include <engine/log.hpp>
+#include <engine/logger.hpp>
 
 using namespace engine;
 

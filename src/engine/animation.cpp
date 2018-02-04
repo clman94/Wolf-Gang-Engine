@@ -2,6 +2,7 @@
 
 #include <engine/renderer.hpp>
 #include <engine/utility.hpp>
+#include <engine/logger.hpp>
 
 using namespace engine;
 
@@ -124,7 +125,7 @@ animation_node::animation_node()
 	mInterval = 1;
 }
 
-size_t engine::animation_node::get_frame() const
+size_t animation_node::get_frame() const
 {
 	if (mAnimation->get_frame_count() == 0)
 		return 0;
@@ -247,6 +248,11 @@ float animation_node::get_speed() const
 
 void animation_node::set_speed(float pSpeed)
 {
+	if (pSpeed <= 0)
+	{
+		logger::error("Animation speed cannot be less than or equal to 0");
+		return;
+	}
 	mSpeed = pSpeed;
 }
 
