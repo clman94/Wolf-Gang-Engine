@@ -47,8 +47,8 @@ public:
 	bool load_memory(const char* pData, size_t pSize);
 	void clear();
 
-	std::shared_ptr<subtexture> get_entry(const std::string& pName) const;
-	std::shared_ptr<subtexture> get_entry(const fvector& pVec) const;
+	subtexture::ptr get_entry(const std::string& pName) const;
+	subtexture::ptr get_entry(const fvector& pVec) const;
 
 	bool add_entry(const subtexture& pEntry);
 	bool add_entry(subtexture::ptr& pEntry);
@@ -65,7 +65,7 @@ public:
 	bool is_empty() const;
 
 private:
-	bool load_settings(tinyxml2::XMLDocument& pDoc);
+	bool load_entries(tinyxml2::XMLDocument& pDoc);
 
 	std::vector<subtexture::ptr> mAtlas;
 };
@@ -78,9 +78,6 @@ public:
 	void set_atlas_source(const std::string& pFilepath);
 	bool load();
 	bool unload();
-
-	//bool load(const std::string& pPath);
-	//bool load_memory(const char* pData, size_t pSize);
 
 	std::shared_ptr<subtexture> get_entry(const std::string& pName) const;
 

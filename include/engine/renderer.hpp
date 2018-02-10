@@ -703,6 +703,13 @@ public:
 		std::string mMeta;
 		color       mColor;
 		uint32_t    mFormat;
+
+		/*struct format_options // TODO: More customization
+		{
+			float wave_height;
+			float wave_speed;
+			float shake_amount;
+		};*/
 	};
 
 	text_format();

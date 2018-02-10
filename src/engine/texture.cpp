@@ -32,17 +32,13 @@ bool subtexture::load(tinyxml2::XMLElement * pEle)
 	set_frame_rect(util::shortcuts::load_rect_float_att(pEle));
 
 	// Set frame count
-	int att_frames = pEle->IntAttribute("frames");
-	engine::frame_t frame_count = (att_frames <= 0 ? 1 : att_frames);// Default one frame
-	set_frame_count(frame_count);
+	set_frame_count(pEle->IntAttribute("frames", 1));
 
 	// Set starting interval
-	float att_interval = pEle->FloatAttribute("interval");
-	add_interval(0, att_interval);
+	add_interval(0, pEle->FloatAttribute("interval", 0));
 
 	// Set default frame (default : 0)
-	int att_default = pEle->IntAttribute("default");
-	set_default_frame(att_default);
+	set_default_frame(pEle->IntAttribute("default", 0));
 
 	// Set loop type (default : none)
 	bool att_loop = pEle->BoolAttribute("loop");
@@ -100,7 +96,7 @@ bool texture_atlas::load(const std::string & pPath)
 	XMLDocument doc;
 	if (doc.LoadFile(pPath.c_str()))
 		return false;
-	return load_settings(doc);
+	return load_entries(doc);
 }
 
 bool texture_atlas::save(const std::string & pPath)
@@ -129,7 +125,7 @@ bool texture_atlas::load_memory(const char * pData, size_t pSize)
 	XMLDocument doc;
 	if (doc.Parse(pData, pSize))
 		return false;
-	return load_settings(doc);
+	return load_entries(doc);
 }
 
 void texture_atlas::clear()
@@ -226,7 +222,7 @@ bool texture_atlas::is_empty() const
 }
 
 
-bool texture_atlas::load_settings(tinyxml2::XMLDocument& pDoc)
+bool texture_atlas::load_entries(tinyxml2::XMLDocument& pDoc)
 {
 	auto ele_atlas = pDoc.FirstChildElement("atlas");
 	if (!ele_atlas)
@@ -277,7 +273,8 @@ bool texture::load()
 		{
 			set_loaded(mSFML_texture->loadFromFile(mTexture_source));
 			if (!mAtlas_source.empty())
-				mAtlas.load(mAtlas_source);
+				if (!mAtlas.load(mAtlas_source))
+					logger::error("Failed to load atlas '" + mAtlas_source + "'");
 		}
 	}
 	return is_loaded();

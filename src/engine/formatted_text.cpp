@@ -13,17 +13,17 @@ text_format::text_format()
 
 text_format::text_format(const char * pText)
 {
-	mDefault_color = color(255, 255, 255, 255);
+	text_format();
 	parse(pText);
 }
 
 text_format::text_format(const std::string & pText)
 {
-	mDefault_color = color(255, 255, 255, 255);
+	text_format();
 	parse(pText);
 }
 
-inline size_t parse_hex(const std::string& pHex)
+size_t parse_hex(const std::string& pHex)
 {
 	size_t val = 0;
 	for (size_t i = 0; i < pHex.size(); i++)
@@ -68,7 +68,7 @@ color parse_xml_color(tinyxml2::XMLElement* pEle)
 	};
 }
 
-inline bool parse_xml_format(tinyxml2::XMLNode* pNode, std::vector<text_format::format>& pFormat_stack
+bool parse_xml_format(tinyxml2::XMLNode* pNode, std::vector<text_format::format>& pFormat_stack
 	, color pColor, std::vector<text_format::block>& pBlocks)
 {
 	while (pNode)
@@ -166,7 +166,7 @@ const text_format::block & text_format::get_block(size_t pIndex) const
 	return mBlocks[pIndex];
 }
 
-text_format & engine::text_format::operator+=(const std::string & pText)
+text_format & text_format::operator+=(const std::string & pText)
 {
 	append(pText);
 	return *this;
@@ -199,34 +199,29 @@ text_format text_format::substr(size_t pOffset, size_t pCount) const
 	text_format retformat;
 
 	size_t characters_passed = 0;
-	for (size_t i = 0; i < mBlocks.size(); i++)
+	for (auto& i : mBlocks)
 	{
 		// Has reached the Start, now keep added blocks
-		if (characters_passed + (mBlocks[i].mText.size() - 1) >= pOffset)
+		if (characters_passed + (i.mText.size() - 1) >= pOffset)
 		{
-			retformat.mBlocks.push_back(mBlocks[i]);
+			retformat.mBlocks.push_back(i);
 
 			// Cut the extra characters at the front
-			if (characters_passed < pOffset)
-			{
-				const std::string cut_text
-					= retformat.mBlocks.back().mText.substr(pOffset - characters_passed);
-				retformat.mBlocks.back().mText = cut_text;
-			}
+			auto& last_block = retformat.mBlocks.back();
+			last_block.mText = last_block.mText.substr(pOffset - characters_passed);
 		}
 
 		// Has reached the end
-		if (characters_passed + (mBlocks[i].mText.size() - 1) >= pOffset + pCount)
+		if (characters_passed + (i.mText.size() - 1) >= pOffset + pCount)
 		{
 			// Cut the extra characters at the back
-			const std::string cut_text
-				= retformat.mBlocks.back().mText.substr(0, pOffset + pCount - characters_passed);
-			retformat.mBlocks.back().mText = cut_text;
+			auto& last_block = retformat.mBlocks.back();
+			last_block.mText = last_block.mText.substr(0, pOffset + pCount - characters_passed);
 
 			// Everything is done!
 			return retformat;
 		}
-		characters_passed += mBlocks[i].mText.size();
+		characters_passed += i.mText.size();
 	}
 	return retformat;
 }
@@ -318,9 +313,7 @@ size_t text_format::length() const
 {
 	size_t total = 0;
 	for (auto& i : mBlocks)
-	{
 		total += i.mText.length();
-	}
 	return total;
 }
 

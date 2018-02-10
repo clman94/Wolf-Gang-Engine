@@ -234,6 +234,7 @@ bool scene::create_scene(const std::string & pName)
 }
 #endif
 
+
 bool scene::reload_scene()
 {
 	if (mCurrent_scene_name.empty())

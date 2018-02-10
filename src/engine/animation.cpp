@@ -108,10 +108,10 @@ frame_t animation::calculate_frame(frame_t pCount) const
 		return pCount >= mFrame_count ? mFrame_count - 1 : pCount;
 
 	case animation::loop_type::linear:
-			return pCount%mFrame_count;
+		return pCount%mFrame_count;
 
 	case animation::loop_type::pingpong:
-			return util::pingpong_index(pCount, mFrame_count - 1);
+		return util::pingpong_index(pCount, mFrame_count - 1);
 	}
 	return 0;
 }

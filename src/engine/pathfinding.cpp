@@ -18,7 +18,7 @@ enum neighbor_position
 
 
 path_node::path_node() :
-	mF(0),
+	mTotal_cost(0),
 	mH(0),
 	mPredecessor(nullptr)
 {
@@ -28,8 +28,8 @@ float path_node::calculate_cost(fvector pStart, fvector pDestination)
 {
 	float G = mPosition.distance(pStart);
 	mH = mPosition.distance(pDestination);
-	mF = G + mH;
-	return mF;
+	mTotal_cost = G + mH;
+	return mTotal_cost;
 }
 void path_node::set_position(fvector pPosition)
 {
@@ -62,10 +62,15 @@ path_node& path_node::get_predecessor()
 	return *mPredecessor;
 }
 
+float path_node::get_total_cost() const
+{
+	return mTotal_cost;
+}
+
 bool path_node::is_less_costly(const path_node & pNode) const
 {
-	return (mF < pNode.mF)
-		|| (mF == pNode.mF
+	return (mTotal_cost < pNode.mTotal_cost)
+		|| (mTotal_cost == pNode.mTotal_cost
 			&& mH < pNode.mH);
 }
 
