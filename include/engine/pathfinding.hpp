@@ -11,7 +11,7 @@
 
 namespace engine {
 
-typedef std::function<bool(engine::fvector&)> collision_callback;
+typedef std::function<bool(fvector&)> collision_callback;
 typedef std::deque<engine::fvector> path_t;
 
 class path_node
@@ -30,10 +30,12 @@ public:
 	void set_predecessor(path_node& pPath_node);
 	path_node& get_predecessor();
 
+	float get_total_cost() const;
+
 	bool is_less_costly(const path_node& pNode) const;
 
 private:
-	float mF;
+	float mTotal_cost;
 	float mH;
 	engine::fvector mPosition;
 	path_node* mPredecessor;
@@ -95,7 +97,7 @@ public:
 	pathfinder();
 
 	// Find shortest path to destination
-	bool start(engine::fvector pStart, fvector pDestination);
+	bool start(fvector pStart, fvector pDestination);
 
 	// Set the custom callback for collision checking
 	void set_collision_callback(collision_callback pCollision_callback);
