@@ -2,7 +2,7 @@
 
 #include <engine/renderer.hpp>
 
-#include "../../tinyxml2/tinyxml2.h"
+#include "../../3rdparty/tinyxml2/tinyxml2.h"
 
 using namespace engine;
 

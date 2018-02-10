@@ -1,7 +1,7 @@
 #ifndef RPG_COLLISION_BOX_HPP
 #define RPG_COLLISION_BOX_HPP
 
-#include "../../tinyxml2/tinyxml2.h"
+#include "../../3rdparty/tinyxml2/tinyxml2.h"
 
 #include <string>
 

@@ -5,7 +5,7 @@
 #include <engine/vector.hpp>
 #include <engine/controls.hpp>
 
-#include "../../tinyxml2/tinyxml2.h"
+#include "../../3rdparty/tinyxml2/tinyxml2.h"
 
 namespace rpg {
 

@@ -9,7 +9,7 @@
 #include <engine/resource.hpp>
 #include <engine/utility.hpp>
 
-#include "../../tinyxml2/tinyxml2.h"
+#include "../../3rdparty/tinyxml2/tinyxml2.h"
 
 #include <map>
 #include <vector>

@@ -1,7 +1,7 @@
 #ifndef RPG_SCENE_LOADER_HPP
 #define RPG_SCENE_LOADER_HPP
 
-#include "../../tinyxml2/tinyxml2.h"
+#include "../../3rdparty/tinyxml2/tinyxml2.h"
 #include "../../src/xmlshortcuts.hpp"
 
 #include <engine/vector.hpp>
