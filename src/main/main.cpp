@@ -175,18 +175,18 @@ bool wolf_gang_engine_editor::update_editor()
 int main(int argc, char* argv[])
 {
 	logger::initialize("./log.txt");
-	try
-	{
+	//try
+	//{
 		editors::WGE_editor editor;
 
 		editor.initualize("./data");
 		editor.run();
-	}
+	/*}
 	catch (std::exception& e)
 	{
 		logger::error("A main exception occurred: " + std::string(e.what()) + "\n");
 		std::getchar();
-	}
+	}*/
 	
 	return 0;
 }

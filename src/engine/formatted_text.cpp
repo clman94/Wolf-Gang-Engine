@@ -13,13 +13,13 @@ text_format::text_format()
 
 text_format::text_format(const char * pText)
 {
-	text_format();
+	mDefault_color = color(255, 255, 255, 255);
 	parse(pText);
 }
 
 text_format::text_format(const std::string & pText)
 {
-	text_format();
+	mDefault_color = color(255, 255, 255, 255);
 	parse(pText);
 }
 
@@ -201,18 +201,23 @@ text_format text_format::substr(size_t pOffset, size_t pCount) const
 	size_t characters_passed = 0;
 	for (auto& i : mBlocks)
 	{
+		size_t block_end_index = characters_passed + i.mText.size() - 1;
+
 		// Has reached the Start, now keep added blocks
-		if (characters_passed + (i.mText.size() - 1) >= pOffset)
+		if (block_end_index >= pOffset)
 		{
 			retformat.mBlocks.push_back(i);
 
 			// Cut the extra characters at the front
-			auto& last_block = retformat.mBlocks.back();
-			last_block.mText = last_block.mText.substr(pOffset - characters_passed);
+			if (pOffset > characters_passed)
+			{
+				auto& last_block = retformat.mBlocks.back();
+				last_block.mText = last_block.mText.substr(pOffset - characters_passed);
+			}
 		}
 
 		// Has reached the end
-		if (characters_passed + (i.mText.size() - 1) >= pOffset + pCount)
+		if (block_end_index >= pOffset + pCount)
 		{
 			// Cut the extra characters at the back
 			auto& last_block = retformat.mBlocks.back();

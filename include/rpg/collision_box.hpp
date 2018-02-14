@@ -13,8 +13,6 @@
 
 #include <engine/AS_utility.hpp>
 
-
-
 namespace rpg {
 
 class wall_group
