@@ -4,3 +4,6 @@
 [submodule "3rdparty/box2d"]
 	path = 3rdparty/box2d
 	url = https://github.com/erincatto/Box2D.git
+[submodule "3rdparty/tgui"]
+	path = 3rdparty/tgui
+	url = https://github.com/texus/TGUI.git
