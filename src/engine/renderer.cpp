@@ -267,9 +267,7 @@ int renderer::remove_object(render_object& pObject)
 
 fvector renderer::get_mouse_position() const
 {
-	auto pos = sf::Mouse::getPosition(mWindow->mWindow);
-	auto wpos = mWindow->mWindow.mapPixelToCoords(pos, mView);
-	return wpos;
+	return mWindow->mWindow.mapPixelToCoords(mMouse_position, mView);
 }
 
 fvector renderer::get_mouse_position(fvector pRelative) const
@@ -291,9 +289,6 @@ bool renderer::is_focused()
 {
 	return mWindow->mWindow.hasFocus();
 }
-
-
-
 
 void renderer::set_visible(bool pVisible)
 {
@@ -348,14 +343,14 @@ void renderer::refresh_pressed()
 {
 	for (auto &i : mPressed_keys)
 	{
-		if (i == 1)
-			i = -1;
+		if (i == input_state::pressed)
+			i = input_state::hold;
 	}
 
 	for (auto &i : mPressed_buttons)
 	{
-		if (i == 1)
-			i = -1;
+		if (i == input_state::pressed)
+			i = input_state::hold;
 	}
 }
 
@@ -363,36 +358,30 @@ bool renderer::is_key_pressed(key_type pKey_type, bool pIgnore_gui)
 {
 	if (!mWindow->mWindow.hasFocus() || (mIs_keyboard_busy && !pIgnore_gui))
 		return false;
-	bool is_pressed = sf::Keyboard::isKeyPressed(pKey_type);
-	if (mPressed_keys[pKey_type] == -1 && is_pressed)
-		return false;
-	mPressed_keys[pKey_type] = is_pressed ? 1 : 0;
-	return is_pressed;
+	return mPressed_keys[pKey_type] == input_state::pressed;
 }
 
 bool renderer::is_key_down(key_type pKey_type, bool pIgnore_gui)
 {
 	if (!mWindow->mWindow.hasFocus() || (mIs_keyboard_busy && !pIgnore_gui))
 		return false;
-	return sf::Keyboard::isKeyPressed(pKey_type);
+	return mPressed_keys[pKey_type] == input_state::pressed
+		|| mPressed_keys[pKey_type] == input_state::hold;
 }
 
 bool renderer::is_mouse_pressed(mouse_button pButton_type, bool pIgnore_gui)
 {
 	if (!mWindow->mWindow.hasFocus() || (mIs_mouse_busy && !pIgnore_gui) || !is_mouse_within_target())
 		return false;
-	bool is_pressed = sf::Mouse::isButtonPressed((sf::Mouse::Button)pButton_type);
-	if (mPressed_buttons[pButton_type] == -1 && is_pressed)
-		return false;
-	mPressed_buttons[pButton_type] = is_pressed ? 1 : 0;
-	return is_pressed;
+	return mPressed_buttons[pButton_type] == input_state::pressed;
 }
 
 bool renderer::is_mouse_down(mouse_button pButton_type, bool pIgnore_gui)
 {
 	if (!mWindow->mWindow.hasFocus() || (mIs_mouse_busy && !pIgnore_gui) || !is_mouse_within_target())
 		return false;
-	return sf::Mouse::isButtonPressed((sf::Mouse::Button)pButton_type);
+	return mPressed_buttons[pButton_type] == input_state::pressed
+		|| mPressed_buttons[pButton_type] == input_state::hold;
 }
 
 void renderer::set_transparent_gui_input(bool pEnabled)
@@ -418,7 +407,20 @@ void renderer::update_events()
 			// Adjust view of gui so it won't stretch
 			refresh_gui_view();
 		}
+
+		if (i.type == sf::Event::KeyPressed)
+			mPressed_keys[(size_t)i.key.code] = input_state::pressed;
+		else if (i.type == sf::Event::KeyReleased)
+			mPressed_keys[(size_t)i.key.code] = input_state::none;
 		
+		if (i.type == sf::Event::MouseButtonPressed)
+			mPressed_buttons[(size_t)i.mouseButton.button] = input_state::pressed;
+		else if (i.type == sf::Event::MouseButtonReleased)
+			mPressed_buttons[(size_t)i.mouseButton.button] = input_state::none;
+
+		if (i.type == sf::Event::MouseMoved)
+			mMouse_position = { i.mouseMove.x, i.mouseMove.y };
+
 		// Update tgui events
 		if (mTgui.handleEvent(i) && !mTransparent_gui_input)
 		{
@@ -766,8 +768,8 @@ void grid::update_grid(renderer &pR)
 	}
 
 	add_grid(
-		pR.get_target_size().x / mMajor_size.x + 2
-		, pR.get_target_size().y / mMajor_size.y + 2
+		(int)(pR.get_target_size().x / mMajor_size.x + 2)
+		, (int)(pR.get_target_size().y / mMajor_size.y + 2)
 		, mMajor_size
 		, top_grid_color);
 }

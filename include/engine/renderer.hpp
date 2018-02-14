@@ -286,7 +286,6 @@ public:
 
 	bool is_focused();
 
-
 	void set_visible(bool pVisible);
 	void set_background_color(color pColor);
 
@@ -335,8 +334,18 @@ private:
 	bool mRequest_resort;
 	frame_clock mFrame_clock;
 
-	std::array<char, 256> mPressed_keys;
-	std::array<char, 16> mPressed_buttons;
+	enum input_state
+	{
+		none,     // No input
+		pressed,  // First frame
+		hold,     // Still holding...
+	};
+
+	std::array<input_state, 256> mPressed_keys;
+	std::array<input_state, 16> mPressed_buttons;
+	
+	ivector mMouse_position;
+
 	void refresh_pressed();
 
 	int draw_objects();
