@@ -7,3 +7,6 @@
 [submodule "3rdparty/tgui"]
 	path = 3rdparty/tgui
 	url = https://github.com/texus/TGUI.git
+[submodule "tests/catch"]
+	path = tests/catch
+	url = https://github.com/catchorg/Catch2.git
