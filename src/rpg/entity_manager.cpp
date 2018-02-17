@@ -34,8 +34,6 @@ void entity_manager::set_scene_node(engine::node & pNode)
 
 void entity_manager::register_entity_type(script_system & pScript)
 {
-	auto& engine = pScript.get_engine();
-
 	pScript.add_object<entity_reference>("entity");
 
 	pScript.add_method<entity_reference, entity_reference&, const entity_reference&>("entity", operator_method::assign, &entity_reference::operator=);

@@ -1634,7 +1634,7 @@ bool game_settings_loader::parse_settings(tinyxml2::XMLDocument & pDoc, const st
 
 bool game_settings_loader::parse_key_bindings(tinyxml2::XMLElement * pEle)
 {
-	mKey_bindings.clean();
+	mKey_bindings.clear();
 
 	auto current_entry = pEle->FirstChildElement();
 	while (current_entry)
@@ -1858,8 +1858,8 @@ inline std::string snip_bottom_string(const std::string& pStr, size_t pLines)
 
 void terminal_gui::update(engine::renderer& pR)
 {
-	if (pR.is_key_down(engine::renderer::key_type::LControl, true) // Toggle visibility
-		&& pR.is_key_pressed(engine::renderer::key_type::T, true))
+	if (pR.is_key_down(engine::renderer::key_code::LControl, true) // Toggle visibility
+		&& pR.is_key_pressed(engine::renderer::key_code::T, true))
 	{
 		if (mEb_input->isVisible())
 		{
@@ -1878,14 +1878,14 @@ void terminal_gui::update(engine::renderer& pR)
 
 	if (mEb_input->isFocused())
 	{
-		if (pR.is_key_pressed(engine::renderer::key_type::Up, true)
+		if (pR.is_key_pressed(engine::renderer::key_code::Up, true)
 			&& mCurrent_history_entry >= 1)
 		{
 			--mCurrent_history_entry;
 			mEb_input->setText(mHistory[mCurrent_history_entry]);
 		}
 
-		if (pR.is_key_pressed(engine::renderer::key_type::Down, true)
+		if (pR.is_key_pressed(engine::renderer::key_code::Down, true)
 			&& mCurrent_history_entry < mHistory.size())
 		{
 			++mCurrent_history_entry;

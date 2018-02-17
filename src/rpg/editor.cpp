@@ -283,13 +283,13 @@ void WGE_editor::run()
 
 		mRenderer.update_events();
 
-		if (mRenderer.is_key_down(engine::renderer::key_type::Escape))
+		if (mRenderer.is_key_down(engine::renderer::key_code::Escape))
 		{
 			logger::info("Closing with 'Escape'");
 			return;
 		}
 
-		if (mRenderer.is_key_pressed(engine::renderer::key_type::F11))
+		if (mRenderer.is_key_pressed(engine::renderer::key_code::F11))
 		{
 			mWindow.toggle_mode();
 			mRenderer.refresh();
@@ -832,9 +832,9 @@ bool scene_editor::open_scene(std::string pName)
 
 void scene_editor::update_zoom(engine::renderer & pR)
 {
-	if (pR.is_key_pressed(engine::renderer::key_type::Add))
+	if (pR.is_key_pressed(engine::renderer::key_code::Add))
 		mZoom += 0.5;
-	if (pR.is_key_pressed(engine::renderer::key_type::Subtract))
+	if (pR.is_key_pressed(engine::renderer::key_code::Subtract))
 		mZoom -= 0.5;
 	float factor = std::pow(2.f, mZoom);
 	set_scale({ factor, factor });
@@ -909,19 +909,19 @@ int tilemap_editor::draw(engine::renderer & pR)
 	case state::none:
 	{
 		if (pR.is_mouse_down(engine::renderer::mouse_button::mouse_left)
-			&& pR.is_key_down(engine::renderer::key_type::LShift))
+			&& pR.is_key_down(engine::renderer::key_code::LShift))
 		{
 			mState = state::drawing_region;
 			mLast_tile = tile_position;
 		}
-		else if (pR.is_key_down(engine::renderer::key_type::LControl))
+		else if (pR.is_key_down(engine::renderer::key_code::LControl))
 		{
-			if (pR.is_key_pressed(engine::renderer::key_type::Z)) // Undo
+			if (pR.is_key_pressed(engine::renderer::key_code::Z)) // Undo
 			{
 				mCommand_manager.undo();
 				update_tilemap();
 			}
-			else if (pR.is_key_pressed(engine::renderer::key_type::Y)) // Redo
+			else if (pR.is_key_pressed(engine::renderer::key_code::Y)) // Redo
 			{
 				mCommand_manager.redo();
 				update_tilemap();
@@ -943,23 +943,23 @@ int tilemap_editor::draw(engine::renderer & pR)
 		{
 			copy_tile_type_at(tile_position_exact); // Copy tile (no need for a specific state for this)
 		}
-		else if (pR.is_key_pressed(engine::renderer::key_type::Period))
+		else if (pR.is_key_pressed(engine::renderer::key_code::Period))
 		{
 			next_tile();
 		}
-		else if (pR.is_key_pressed(engine::renderer::key_type::Comma))
+		else if (pR.is_key_pressed(engine::renderer::key_code::Comma))
 		{
 			previous_tile();
 		}
-		else if (pR.is_key_pressed(engine::renderer::key_type::Quote))
+		else if (pR.is_key_pressed(engine::renderer::key_code::Quote))
 		{
 			layer_up();
 		}
-		else if (pR.is_key_pressed(engine::renderer::key_type::Slash))
+		else if (pR.is_key_pressed(engine::renderer::key_code::Slash))
 		{
 			layer_down();
 		}
-		else if (pR.is_key_pressed(engine::renderer::key_type::R))
+		else if (pR.is_key_pressed(engine::renderer::key_code::R))
 		{
 			rotate_clockwise();
 		}
@@ -1272,7 +1272,7 @@ void tilemap_editor::update_tilemap()
 
 void tilemap_editor::tick_highlight(engine::renderer& pR)
 {
-	if (pR.is_key_pressed(engine::renderer::key_type::RShift))
+	if (pR.is_key_pressed(engine::renderer::key_code::RShift))
 	{
 		mIs_highlight = !mIs_highlight;
 		update_highlight();
@@ -1486,8 +1486,8 @@ int collisionbox_editor::draw(engine::renderer& pR)
 	const bool button_left = pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left);
 	const bool button_left_down = pR.is_mouse_down(engine::renderer::mouse_button::mouse_left);
 	const bool button_right = pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_right);
-	const bool button_shift = pR.is_key_down(engine::renderer::key_type::LShift);
-	const bool button_ctrl = pR.is_key_down(engine::renderer::key_type::LControl);
+	const bool button_shift = pR.is_key_down(engine::renderer::key_code::LShift);
+	const bool button_ctrl = pR.is_key_down(engine::renderer::key_code::LControl);
 
 	const engine::fvector mouse_position = pR.get_mouse_position(mMain_scroll);
 	const engine::fvector exact_tile_position = (mouse_position * get_unit()).floor()/std::pow(get_unit(), 2);
@@ -1574,14 +1574,14 @@ int collisionbox_editor::draw(engine::renderer& pR)
 			}
 		}
 
-		else if (pR.is_key_down(engine::renderer::key_type::LControl))
+		else if (pR.is_key_down(engine::renderer::key_code::LControl))
 		{
-			if (pR.is_key_pressed(engine::renderer::key_type::Z)) // Undo
+			if (pR.is_key_pressed(engine::renderer::key_code::Z)) // Undo
 			{
 				mCommand_manager.undo();
 				update_labels();
 			}
-			else if (pR.is_key_pressed(engine::renderer::key_type::Y)) // Redo
+			else if (pR.is_key_pressed(engine::renderer::key_code::Y)) // Redo
 			{
 				mCommand_manager.redo();
 				update_labels();
@@ -1945,8 +1945,8 @@ int atlas_editor::draw(engine::renderer & pR)
 	const bool button_left = pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left);
 	const bool button_left_down = pR.is_mouse_down(engine::renderer::mouse_button::mouse_left);
 	const bool button_right = pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_right);
-	const bool button_shift = pR.is_key_down(engine::renderer::key_type::LShift);
-	const bool button_ctrl = pR.is_key_down(engine::renderer::key_type::LControl);
+	const bool button_shift = pR.is_key_down(engine::renderer::key_code::LShift);
+	const bool button_ctrl = pR.is_key_down(engine::renderer::key_code::LControl);
 
 	const engine::fvector mouse_position = pR.get_mouse_position();
 
@@ -1955,14 +1955,14 @@ int atlas_editor::draw(engine::renderer & pR)
 	else if (pR.is_mouse_down(engine::renderer::mouse_button::mouse_right))
 		mSprite.set_position(mouse_position + mDrag_offset);
 
-	if (pR.is_key_pressed(engine::renderer::key_type::Add))
+	if (pR.is_key_pressed(engine::renderer::key_code::Add))
 	{
 		mZoom += 1;
 		mSprite.set_scale({ mZoom, mZoom });
 		update_preview();
 	}
 	
-	if (pR.is_key_pressed(engine::renderer::key_type::Subtract))
+	if (pR.is_key_pressed(engine::renderer::key_code::Subtract))
 	{
 		mZoom -= 1;
 		mSprite.set_scale({ mZoom, mZoom });
@@ -2362,13 +2362,13 @@ void scroll_control_node::movement(engine::renderer & pR)
 	{*/
 		float speed = pR.get_delta() * 4;
 		engine::fvector position = get_position();
-		if (pR.is_key_down(engine::renderer::key_type::Left))
+		if (pR.is_key_down(engine::renderer::key_code::Left))
 			position += engine::fvector(1, 0)*speed;
-		if (pR.is_key_down(engine::renderer::key_type::Right))
+		if (pR.is_key_down(engine::renderer::key_code::Right))
 			position -= engine::fvector(1, 0)*speed;
-		if (pR.is_key_down(engine::renderer::key_type::Up))
+		if (pR.is_key_down(engine::renderer::key_code::Up))
 			position += engine::fvector(0, 1)*speed;
-		if (pR.is_key_down(engine::renderer::key_type::Down))
+		if (pR.is_key_down(engine::renderer::key_code::Down))
 			position -= engine::fvector(0, 1)*speed;
 		set_position(position);
 	//}

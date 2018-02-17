@@ -24,6 +24,7 @@
 #include "animation.hpp"
 #include "resource.hpp"
 
+
 namespace engine
 {
 
@@ -249,7 +250,7 @@ public:
 	renderer();
 	~renderer();
 
-	typedef sf::Keyboard::Key key_type;
+	typedef sf::Keyboard::Key key_code;
 
 	enum mouse_button
 	{
@@ -258,8 +259,8 @@ public:
 		mouse_middle
 	};
 
-	bool is_key_pressed(key_type pKey_type, bool pIgnore_gui = false);
-	bool is_key_down(key_type pKey_type, bool pIgnore_gui = false);
+	bool is_key_pressed(key_code pKey_type, bool pIgnore_gui = false);
+	bool is_key_down(key_code pKey_type, bool pIgnore_gui = false);
 	bool is_mouse_pressed(mouse_button pButton_type, bool pIgnore_gui = false);
 	bool is_mouse_down(mouse_button pButton_type, bool pIgnore_gui = false);
 
@@ -271,8 +272,8 @@ public:
 	int draw();
 	int draw(render_object& pObject);
 	
-	int add_object(render_object& pObject);
-	int remove_object(render_object& pObject);
+	bool add_object(render_object& pObject);
+	bool remove_object(render_object& pObject);
 
 	void set_target_size(fvector pSize);
 	fvector get_target_size() const;
@@ -334,7 +335,7 @@ private:
 	bool mRequest_resort;
 	frame_clock mFrame_clock;
 
-	enum input_state
+	enum class input_state
 	{
 		none,     // No input
 		pressed,  // First frame

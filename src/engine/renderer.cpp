@@ -9,7 +9,7 @@ using namespace engine;
 // render_object
 // ##########
 
-int  render_object::is_rendered()
+int render_object::is_rendered()
 {
 	return mIndex >= 0;
 }
@@ -236,11 +236,11 @@ void renderer::sort_objects()
 	refresh_objects();
 }
 
-int renderer::add_object(render_object& pObject)
+bool renderer::add_object(render_object& pObject)
 {
 	// Already registered
 	if (pObject.mRenderer == this)
-		return 0;
+		return false;
 
 	// Remove object from its previous renderer (if there is one)
 	pObject.detach_renderer();
@@ -250,19 +250,19 @@ int renderer::add_object(render_object& pObject)
 	mObjects.push_back(&pObject);
 	pObject.refresh_renderer(*this);
 	sort_objects();
-	return 0;
+	return true;
 }
 
-int renderer::remove_object(render_object& pObject)
+bool renderer::remove_object(render_object& pObject)
 {
 	// This is not the correct renderer to remove object from
 	if (pObject.mRenderer != this)
-		return 1;
+		return false;
 
 	mObjects.erase(mObjects.begin() + pObject.mIndex);
 	refresh_objects();
 	pObject.mRenderer = nullptr;
-	return 0;
+	return true;
 }
 
 fvector renderer::get_mouse_position() const
@@ -278,11 +278,10 @@ fvector renderer::get_mouse_position(fvector pRelative) const
 fvector renderer::get_mouse_position(const node & pNode) const
 {
 	const fvector pos = pNode.get_exact_position();
-	const float rot = pNode.get_absolute_rotation();
 	const fvector scale = pNode.get_absolute_scale();
 	if (scale.has_zero())
 		return fvector(0, 0);
-	return (get_mouse_position(pos)).rotate(pos, -rot)/scale;
+	return (get_mouse_position(pos)).rotate(pos, -pNode.get_absolute_rotation())/scale;
 }
 
 bool renderer::is_focused()
@@ -342,26 +341,22 @@ void renderer::set_subwindow(frect pRect)
 void renderer::refresh_pressed()
 {
 	for (auto &i : mPressed_keys)
-	{
 		if (i == input_state::pressed)
 			i = input_state::hold;
-	}
 
 	for (auto &i : mPressed_buttons)
-	{
 		if (i == input_state::pressed)
 			i = input_state::hold;
-	}
 }
 
-bool renderer::is_key_pressed(key_type pKey_type, bool pIgnore_gui)
+bool renderer::is_key_pressed(key_code pKey_type, bool pIgnore_gui)
 {
 	if (!mWindow->mWindow.hasFocus() || (mIs_keyboard_busy && !pIgnore_gui))
 		return false;
 	return mPressed_keys[pKey_type] == input_state::pressed;
 }
 
-bool renderer::is_key_down(key_type pKey_type, bool pIgnore_gui)
+bool renderer::is_key_down(key_code pKey_type, bool pIgnore_gui)
 {
 	if (!mWindow->mWindow.hasFocus() || (mIs_keyboard_busy && !pIgnore_gui))
 		return false;
@@ -408,9 +403,9 @@ void renderer::update_events()
 			refresh_gui_view();
 		}
 
-		if (i.type == sf::Event::KeyPressed)
+		if (i.type == sf::Event::KeyPressed && (size_t)i.key.code < mPressed_keys.size())
 			mPressed_keys[(size_t)i.key.code] = input_state::pressed;
-		else if (i.type == sf::Event::KeyReleased)
+		else if (i.type == sf::Event::KeyReleased && (size_t)i.key.code < mPressed_keys.size())
 			mPressed_keys[(size_t)i.key.code] = input_state::none;
 		
 		if (i.type == sf::Event::MouseButtonPressed)

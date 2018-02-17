@@ -1,59 +1,80 @@
 #include <engine/controls.hpp>
 
+#include <algorithm>
+#include <array>
+
 using namespace engine;
 
-
-inline util::optional<engine::renderer::key_type> translate_key_name(const std::string& pName)
+inline const std::vector<std::pair<std::string, renderer::key_code>> key_names_codes =
 {
-	using key_type = engine::renderer::key_type;
+	{ "up",     renderer::key_code::Up },
+	{ "down",   renderer::key_code::Down },
+	{ "left",   renderer::key_code::Left },
+	{ "right",  renderer::key_code::Right },
+
+	{ "lctrl",  renderer::key_code::LControl },
+	{ "rctrl",  renderer::key_code::RControl },
+	{ "lshift", renderer::key_code::LShift },
+	{ "rshift", renderer::key_code::RShift },
+
+	{ "return", renderer::key_code::Return },
+	{ "tab",    renderer::key_code::Tab },
+
+	{ "+",      renderer::key_code::Add },
+	{ "-",      renderer::key_code::Subtract },
+	{ "*",      renderer::key_code::Multiply },
+	{ "/",      renderer::key_code::Divide },
+};
+
+renderer::key_code key_name_to_code(const std::string& pName)
+{
+	using key_code = renderer::key_code;
+
+	std::string lc_name(pName);
+	std::transform(pName.begin(), pName.end(), lc_name.begin(), ::tolower);
+	lc_name.erase(std::remove_if(lc_name.begin(), lc_name.end(), ::isspace), lc_name.end());
 
 	// a-z
-	if (pName.size() == 1)
+	if (lc_name.size() == 1)
 	{
-		if (pName[0] >= 'a'
-			&& pName[0] <= 'z')
-			return static_cast<key_type>(
-				static_cast<size_t>(key_type::A)
-				+ (pName[0] - 'a'));
+		if (lc_name[0] >= 'a'
+			&& lc_name[0] <= 'z')
+			return static_cast<key_code>(key_code::A
+				+ (lc_name[0] - 'a'));
 	}
 
 	// "num#"
-	if (pName.size() == 4)
+	if (lc_name.size() == 4)
 	{
-		if (pName.substr(0, 3) == "num"
-			&& pName[3] >= '0'
-			&& pName[3] <= '9')
-			return static_cast<key_type>(
-				static_cast<size_t>(key_type::Num0)
-				+ (pName[3] - '0'));
+		if (lc_name.substr(0, 3) == "num"
+			&& lc_name[3] >= '0'
+			&& lc_name[3] <= '9')
+			return static_cast<key_code>(key_code::Num0
+				+ (lc_name[3] - '0'));
 	}
 
-	// Other stuff
-	const std::map<std::string, key_type> translations =
-	{
-		{ "up", key_type::Up },
-		{ "down", key_type::Down },
-		{ "left", key_type::Left },
-		{ "right", key_type::Right },
+	// Search for key name
+	auto find_item = std::find_if(key_names_codes.begin(), key_names_codes.end()
+		, [&](const std::pair<std::string, key_code>& p)->bool { return p.first == lc_name; });
+	if (find_item != key_names_codes.end())
+		return find_item->second;
 
-		{ "lctrl", key_type::LControl },
-		{ "rctrl", key_type::RControl },
-		{ "lshift", key_type::LShift },
-		{ "rshift", key_type::RShift },
+	return key_code::Unknown;
+}
 
-		{ "return", key_type::Return },
-		{ "tab", key_type::Tab },
+std::string key_code_to_name(renderer::key_code pCode)
+{
+	using key_code = renderer::key_code;
+	if (pCode >= key_code::A && pCode <= key_code::Z)
+		return std::string(1, (char)((pCode - key_code::A) + 'a'));
 
-		{ "+", key_type::Add },
-		{ "-", key_type::Subtract },
-		{ "*", key_type::Multiply },
-		{ "/", key_type::Divide },
-	};
+	if (pCode >= key_code::Num0 && pCode <= key_code::Num9)
+		return std::string("num") + std::to_string(pCode - key_code::Num0);
 
-	const auto find = translations.find(pName);
-	if (find != translations.end())
-		return find->second;
-
+	auto find_item = std::find_if(key_names_codes.begin(), key_names_codes.end()
+		, [&](const std::pair<std::string, key_code>& p)->bool { return p.second == pCode; });
+	if (find_item != key_names_codes.end())
+		return find_item->first;
 	return{};
 }
 
@@ -65,7 +86,7 @@ bool controls::is_triggered(const std::string& pName)
 	return find->second.mIs_pressed;
 }
 
-void controls::update(engine::renderer & pR)
+void controls::update(renderer & pR)
 {
 	for (auto& i : mBindings)
 	{
@@ -107,22 +128,22 @@ bool controls::set_press_only(const std::string & pName, bool pIs_press_only)
 
 bool controls::bind_key(const std::string & pName, const std::string & pKey_name, bool pAlternative)
 {
-	const auto key = translate_key_name(pKey_name);
-	if (!key) // Could not translate
+	const auto key = key_name_to_code(pKey_name);
+	if (key == renderer::key_code::Unknown) // Could not translate
 		return false;
 
 	const size_t alternative = pAlternative ? 1 : 0;
 
 	// Prevent duplicates
 	for (auto& i : mBindings[pName].keys[alternative])
-		if (i == *key)
+		if (i == key)
 			return false;
 
-	mBindings[pName].keys[alternative].push_back(*key);
+	mBindings[pName].keys[alternative].push_back(key);
 	return true;
 }
 
-void controls::clean()
+void controls::clear()
 {
 	mBindings.clear();
 }
