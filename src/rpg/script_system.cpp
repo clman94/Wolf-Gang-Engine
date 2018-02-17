@@ -136,8 +136,7 @@ void script_system::timeout_callback(AS::asIScriptContext *ctx)
 	}
 }
 
-void
-script_system::script_debug_print(std::string &pMessage)
+void script_system::script_debug_print(std::string &pMessage)
 {
 	if (!is_executing())
 	{
@@ -163,12 +162,11 @@ void script_system::script_error_print(std::string & pMessage)
 	assert(mCurrect_thread_context->context != nullptr);
 	assert(mCurrect_thread_context->context->GetFunction() != nullptr);
 
-	std::string details = std::string(mCurrect_thread_context->context->GetFunction()->GetModuleName());
+	std::string details(mCurrect_thread_context->context->GetFunction()->GetModuleName());
 	logger::print(details, get_current_line(), 0, logger::level::error, pMessage);
 }
 
-void
-script_system::register_vector_type()
+void script_system::register_vector_type()
 {
 	add_object<engine::fvector>("vec", true);
 	add_constructor<engine::fvector, float, float>("vec");
@@ -289,12 +287,11 @@ int script_system::tick()
 
 		// 5 second timeout for scripts
 		mTimeout_timer.start(5);
-		mCurrect_thread_context->context->SetLineCallback(AS::asMETHOD(script_system, timeout_callback), this, asCALL_THISCALL);
+		mCurrect_thread_context->context->SetLineCallback(
+			AS::asMETHOD(script_system, timeout_callback), this, asCALL_THISCALL);
 #endif
 
-		int r = mCurrect_thread_context->context->Execute();
-
-		if (r != AS::asEXECUTION_SUSPENDED)
+		if (mCurrect_thread_context->context->Execute() != AS::asEXECUTION_SUSPENDED)
 		{
 			if (!mCurrect_thread_context->keep_context)
 			{
@@ -338,21 +335,21 @@ AS::asIScriptEngine& script_system::get_engine()
 	return *mEngine;
 }
 
-std::shared_ptr<script_system::thread> script_system::create_thread(AS::asIScriptFunction * pFunc, bool pKeep_context)
+std::shared_ptr<script_system::thread> script_system::create_thread(AS::asIScriptFunction * pFunc
+	, bool pKeep_context)
 {
 	asIScriptContext* context = mEngine->RequestContext();
 	if (!context)
 		return nullptr;
 
-	int r = context->Prepare(pFunc);
-	if (r < 0)
+	if (context->Prepare(pFunc) < 0)
 	{
 		mEngine->ReturnContext(context);
 		return nullptr;
 	}
 
 	// Create a new one if necessary
-	std::shared_ptr<thread> new_thread(new thread);
+	std::shared_ptr<thread> new_thread(std::make_shared<thread>());
 	new_thread->context = context;
 	new_thread->keep_context = pKeep_context;
 	mThread_contexts.push_back(new_thread);

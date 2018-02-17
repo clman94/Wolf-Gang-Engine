@@ -70,7 +70,6 @@ public:
 
 	packing_ignore()
 	{
-		mIs_whitelist = false;
 		mIs_valid = false;
 	}
 
@@ -80,19 +79,6 @@ public:
 		std::ifstream stream(pPath.string().c_str());
 		if (!stream)
 			return false;
-
-		// Check if its a blacklist or a whitelist
-		std::string list_type;
-		std::getline(stream, list_type);
-		if (list_type == "whitelist")
-			mIs_whitelist = true;
-		else if (list_type == "blacklist")
-			mIs_whitelist = false;
-		else
-		{
-			logger::error("Please specify 'blacklist' or 'whitelist'");
-			return false;
-		}
 
 		// Iterate through each line and create an entry for each
 		const encoded_path parent_folder(pPath.parent());
@@ -113,7 +99,7 @@ public:
 		}
 
 		// Add entry so it can ignore itself when validating files
-		if (pIgnore_self && !mIs_whitelist)
+		if (pIgnore_self)
 		{
 			entry self_entry;
 			self_entry.is_directory = false;
@@ -140,7 +126,7 @@ public:
 				break;
 			}
 		}
-		return has_entry == mIs_whitelist;
+		return has_entry;
 	}
 
 	bool is_valid() const
@@ -155,8 +141,6 @@ private:
 		bool is_directory;
 		encoded_path path;
 	};
-
-	bool mIs_whitelist;
 	bool mIs_valid;
 	std::vector<entry> mFiles;
 };
