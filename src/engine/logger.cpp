@@ -42,8 +42,6 @@ void print(level pType, const std::string& pMessage)
 	case level::debug:   type = "DEBUG  ";   break;
 	}
 
-	std::string message;
-
 	// Print time
 	std::time_t time = std::time(nullptr);
 	std::tm timeinfo;
@@ -55,8 +53,10 @@ void print(level pType, const std::string& pMessage)
 #endif
 
 	char time_str[100];
-	std::size_t time_str_length = strftime(time_str, 100, "[%c]", &timeinfo);
-	message += std::string(time_str, time_str_length) + " ";
+	std::size_t time_str_length = strftime(time_str, 100, "[%T]", &timeinfo);
+	std::string log_time(time_str, time_str_length);
+
+	std::string message = log_time + " " + type + " : ";
 
 	for (size_t i = 0; i < mSub_routine_level; i++)
 		message += "| ";
