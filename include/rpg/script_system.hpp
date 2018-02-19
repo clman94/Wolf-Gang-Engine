@@ -181,7 +181,9 @@ public:
 	void abort_all();
 	void return_context(AS::asIScriptContext* pContext);
 	int tick();
+
 	int get_current_line();
+	std::string get_current_file() const;
 
 	void set_namespace(const std::string& pName);
 	void reset_namespace();

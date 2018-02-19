@@ -319,6 +319,17 @@ int script_system::get_current_line()
 	return 0;
 }
 
+std::string script_system::get_current_file() const
+{
+	if (!mCurrect_thread_context)
+	{
+		logger::error("Could not get script of function");
+		return{};
+	}
+
+	return mCurrect_thread_context->context->GetFunction()->GetScriptSectionName();
+}
+
 void script_system::set_namespace(const std::string & pName)
 {
 	mEngine->SetDefaultNamespace(pName.c_str());
