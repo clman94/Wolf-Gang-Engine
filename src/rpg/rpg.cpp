@@ -68,7 +68,7 @@ bool scene_script_context::build_script(const std::string & pPath)
 
 	mBuilder.SetIncludeCallback(nullptr, nullptr);
 
-	mBuilder.StartNewModule(&mScript->get_engine(), pPath.c_str());
+	mBuilder.StartNewModule(mScript->mEngine, pPath.c_str());
 	mBuilder.AddSectionFromMemory("scene_commands", defs::INTERNAL_SCRIPTS_INCLUDE.c_str());
 	mBuilder.AddSectionFromFile(pPath.c_str());
 	if (mBuilder.BuildModule())
@@ -92,7 +92,7 @@ bool scene_script_context::build_script(const std::string & pPath, engine::pack_
 
 	mBuilder.SetIncludeCallback(pack_include_callback, &pPack);
 
-	mBuilder.StartNewModule(&mScript->get_engine(), pPath.c_str());
+	mBuilder.StartNewModule(mScript->mEngine, pPath.c_str());
 
 	if (add_section_from_pack(defs::INTERNAL_SCRIPTS_PATH.string(), pPack, mBuilder) < 0)
 		return false;
@@ -382,17 +382,11 @@ bool game::script_set_string_value(const std::string & pPath, const std::string 
 AS_array<std::string>* game::script_get_director_entries(const std::string & pPath)
 {
 	const auto entries = mSave_system.get_directory_entries(pPath);
-
-	auto& engine = mScript.get_engine();
-
-	AS::asITypeInfo* type = engine.GetTypeInfoByDecl("array<string>");
-	AS::CScriptArray* arr = AS::CScriptArray::Create(type, entries.size());
+	auto arr = mScript.create_array<std::string>(entries.size());
 	for (size_t i = 0; i < entries.size(); i++)
-	{
 		arr->SetValue(i, (void*)&entries[i]);
-	}
 
-	return static_cast<AS_array<std::string>*>(arr);
+	return arr;
 }
 
 bool game::script_remove_value(const std::string & pPath)
@@ -829,7 +823,7 @@ void script_function::return_context()
 	if (mFunc_ctx && mFunc_ctx->context)
 	{
 		mFunc_ctx->context->Abort();
-		mScript_system->return_context(mFunc_ctx->context);
+		mScript_system->mEngine->ReturnContext(mFunc_ctx->context);
 		mFunc_ctx->context = nullptr;
 	}
 }

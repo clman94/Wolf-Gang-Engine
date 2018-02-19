@@ -75,8 +75,8 @@ entity_reference entity_manager::script_add_entity(const std::string & pName)
 	}
 
 	new_entity->mSprite.set_texture(resource);
-	new_entity->mSprite.set_animation("default:default"); // No warning because scripter might set it later
-
+	new_entity->mSprite.set_animation("default:default"); // No warning if it doesn't work at first.
+	                                                      // Scripter probably has other plans.
 	return *new_entity;
 }
 

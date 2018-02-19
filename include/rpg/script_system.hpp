@@ -21,7 +21,7 @@
 
 namespace AS = AngelScript;
 
-// This allows us to seporate the arrays with diffent types
+// This allows us to separate the arrays with different types
 template<typename T>
 struct AS_array : public AS::CScriptArray {};
 
@@ -71,12 +71,6 @@ const std::string equals = "opEquals";
 class script_system
 {
 public:
-
-	struct thread
-	{
-		AS::asIScriptContext* context;
-		bool keep_context;
-	};
 
 	script_system();
 	~script_system();
@@ -179,7 +173,6 @@ public:
 	}
 
 	void abort_all();
-	void return_context(AS::asIScriptContext* pContext);
 	int tick();
 
 	int get_current_line();
@@ -188,13 +181,27 @@ public:
 	void set_namespace(const std::string& pName);
 	void reset_namespace();
 
-	AS::asIScriptEngine& get_engine();
-
-	std::shared_ptr<thread> create_thread(AS::asIScriptFunction *pFunc, bool keep_context = false);
-
 	bool is_executing();
 
+	template<typename T>
+	AS_array<T>* create_array(size_t pSize = 0)
+	{
+		AS::asITypeInfo* type = mEngine->GetTypeInfoByDecl(util::AS_type_to_string<AS_array<T>>().string().c_str());
+		AS::CScriptArray* arr = AS::CScriptArray::Create(type, pSize);
+		assert(arr != nullptr);
+		return static_cast<AS_array<T>*>(arr);
+	}
+
 private:
+
+	struct thread
+	{
+		AS::asIScriptContext* context;
+		bool keep_context;
+	};
+
+	std::shared_ptr<thread> create_thread(AS::asIScriptFunction *pFunc, bool keep_context = false);
+	
 	template<typename T>
 	static void script_default_constructor(void *pMemory)
 	{
@@ -229,8 +236,8 @@ private:
 	void message_callback(const AS::asSMessageInfo * msg);
 
 	void script_abort();
-	void script_debug_print(std::string &pMessage);
-	void script_error_print(std::string &pMessage);
+	void script_debug_print(const std::string &pMessage);
+	void script_error_print(const std::string &pMessage);
 	void script_create_thread(AS::asIScriptFunction *func, AS::CScriptDictionary *arg);
 	void script_create_thread_noargs(AS::asIScriptFunction *func);
 	bool script_yield();
@@ -243,7 +250,12 @@ private:
 	void load_script_interface();
 
 	void timeout_callback(AS::asIScriptContext *ctx);
+
+	friend class script_function;
+	friend class scene_script_context;
 };
+
+
 
 }
 

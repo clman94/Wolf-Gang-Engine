@@ -130,40 +130,38 @@ void script_system::timeout_callback(AS::asIScriptContext *ctx)
 	{
 		logger::error("Script running too long. (Infinite loop?)");
 		ctx->Abort();
-		logger::info("In file '" + std::string(ctx->GetFunction()->GetModuleName()) + "' :");
+		logger::info("In file '" + std::string(ctx->GetFunction()->GetScriptSectionName()) + "' :");
 		logger::info("  Script aborted at line " + std::to_string(ctx->GetLineNumber())
 			+ " in function '" + std::string(ctx->GetFunction()->GetDeclaration(true, true)) + "'");
 	}
 }
 
-void script_system::script_debug_print(std::string &pMessage)
+void script_system::script_debug_print(const std::string &pMessage)
 {
 	if (!is_executing())
 	{
-		logger::print("Unknown", 0, 0, logger::level::debug, pMessage);
+		logger::print("Unknown", 0, logger::level::debug, pMessage);
 		return;
 	}
 
 	assert(mCurrect_thread_context->context != nullptr);
 	assert(mCurrect_thread_context->context->GetFunction() != nullptr);
 
-	std::string details = std::string(mCurrect_thread_context->context->GetFunction()->GetModuleName());
-	logger::print(details, get_current_line(), 0, logger::level::debug, pMessage);
+	logger::print(get_current_file(), get_current_line(), logger::level::debug, pMessage);
 }
 
-void script_system::script_error_print(std::string & pMessage)
+void script_system::script_error_print(const std::string & pMessage)
 {
 	if (!is_executing())
 	{
-		logger::print("Unknown", 0, 0, logger::level::error, pMessage);
+		logger::print("Unknown", 0, logger::level::error, pMessage);
 		return;
 	}
 
 	assert(mCurrect_thread_context->context != nullptr);
 	assert(mCurrect_thread_context->context->GetFunction() != nullptr);
 
-	std::string details(mCurrect_thread_context->context->GetFunction()->GetModuleName());
-	logger::print(details, get_current_line(), 0, logger::level::error, pMessage);
+	logger::print(get_current_file(), get_current_line(), logger::level::error, pMessage);
 }
 
 void script_system::register_vector_type()
@@ -270,14 +268,8 @@ void script_system::abort_all()
 	mEngine->GarbageCollect(asGC_FULL_CYCLE | asGC_DESTROY_GARBAGE);
 }
 
-void script_system::return_context(AS::asIScriptContext * pContext)
-{
-	mEngine->ReturnContext(pContext);
-}
-
 int script_system::tick()
 {
-
 	for (size_t i = 0; i < mThread_contexts.size(); i++)
 	{
 		mCurrect_thread_context = mThread_contexts[i];
@@ -338,12 +330,6 @@ void script_system::set_namespace(const std::string & pName)
 void script_system::reset_namespace()
 {
 	mEngine->SetDefaultNamespace("");
-}
-
-AS::asIScriptEngine& script_system::get_engine()
-{
-	assert(mEngine != nullptr);
-	return *mEngine;
 }
 
 std::shared_ptr<script_system::thread> script_system::create_thread(AS::asIScriptFunction * pFunc
