@@ -9,6 +9,8 @@
 #include "vector.hpp"
 #include "rect.hpp"
 
+#include <algorithm>
+
 // A series of random string parsers for random things
 
 namespace parsers
@@ -93,32 +95,6 @@ static bool is_whitespace(char c)
 	return false;
 }
 
-static std::string remove_trailing_whitespace(const std::string& pString)
-{
-	if (pString.empty())
-		return std::string();
-
-	auto start = pString.begin();
-	for (; start != pString.end(); start++)
-	{
-		if (!is_whitespace(*start))
-			break;
-	}
-	if (start == pString.end()) // All whitespace, return empty
-		return std::string();
-
-	auto end = pString.end() - 1;
-	for (; end != pString.begin(); end--)
-	{
-		if (!is_whitespace(*end))
-		{
-			++end;
-			break;
-		}
-	}
-
-	return std::string(start, end);
-}
 
 static bool is_numeral(char c)
 {

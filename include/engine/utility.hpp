@@ -4,15 +4,13 @@
 #include <string>
 #include <iostream>
 #include <memory>
-#include <list>
 #include <cassert>
-#include <type_traits>
 #include <cmath>
-#include <fstream>
-#include <typeinfo>
 
 namespace util
 {
+
+std::string remove_trailing_whitespace(const std::string& pString);
 
 // Inspired from angelscript just without the nasty macros
 template<typename Tclass, typename Tmember>

@@ -49,8 +49,10 @@ bool entity_manager::check_entity(entity_reference & e)
 
 	if (!e.is_valid())
 	{
-		logger::warning("(" + std::to_string(mScript_system->get_current_line()) + ") "
-			+ "Entity object invalid.");
+		logger::print(mScript_system->get_current_file()
+			, mScript_system->get_current_line()
+			, logger::level::warning
+			, "Entity object invalid.");
 		return false;
 	}
 	return true;

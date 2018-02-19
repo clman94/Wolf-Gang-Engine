@@ -161,7 +161,7 @@ std::vector<std::shared_ptr<script_function>> scene_script_context::get_all_with
 	for (size_t i = 0; i < func_count; i++)
 	{
 		auto func = mScene_module->GetFunctionByIndex(i);
-		std::string metadata = parsers::remove_trailing_whitespace(mBuilder.GetMetadataStringForFunc(func));
+		std::string metadata = util::remove_trailing_whitespace(mBuilder.GetMetadataStringForFunc(func));
 		if (metadata == pTag)
 		{
 			std::shared_ptr<script_function> sfunc(new script_function);
@@ -191,7 +191,7 @@ void scene_script_context::parse_wall_group_functions()
 	for (size_t i = 0; i < func_count; i++)
 	{
 		auto as_function = mScene_module->GetFunctionByIndex(i);
-		const std::string metadata = parsers::remove_trailing_whitespace(mBuilder.GetMetadataStringForFunc(as_function));
+		const std::string metadata = util::remove_trailing_whitespace(mBuilder.GetMetadataStringForFunc(as_function));
 		const std::string type = get_metadata_type(metadata);
 
 		if (type == "group")

@@ -3,58 +3,9 @@
 #include <engine/filesystem.hpp>
 #include <engine/resource_pack.hpp>
 #include <engine/logger.hpp>
+#include <engine/binary_util.hpp>
 
 using namespace engine;
-
-// Read an unsigned integer value (of any size) from a stream.
-// Format is little endian (for convenience)
-template<typename T>
-inline T read_unsignedint_binary(std::istream& pStream)
-{
-	if constexpr(!std::is_unsigned<T>())
-		static_assert("T is not unsigned");
-
-	uint8_t bytes[sizeof(T)];// char gives negative values and causes issues when converting to unsigned.
-	if (!pStream.read((char*)&bytes, sizeof(T))) // And passing this unsigned char array as a char* works well.
-		return 0;
-
-	T val = 0;
-	for (size_t i = 0; i < sizeof(T); i++)
-		val += static_cast<T>(bytes[i]) << (i * 8);
-	return val;
-}
-
-// Stores an unsigned integer value (of any size) to a stream.
-// Format is little endian (for convenience)
-template<typename T>
-inline bool write_unsignedint_binary(std::ostream& pStream, const T pVal)
-{
-	if constexpr(!std::is_unsigned<T>())
-		static_assert("T is not unsigned");
-
-	uint8_t bytes[sizeof(T)];
-	for (size_t i = 0; i < sizeof(T); i++)
-		bytes[i] = static_cast<uint8_t>(static_cast<T>(pVal & (0xFF << (8 * i))) >> (8 * i));
-	pStream.write((char*)&bytes, sizeof(T));
-	return pStream.good();
-}
-
-// Test
-/*int main()
-{
-    
-    std::stringstream stream(std::ios_base::binary|std::ios_base::in|std::ios_base::out);
-    write_unsignedint_binary<uint32_t>(stream, 10000000);
-    std::cout << stream.str().size() << "\n" << "\n";
-    for (unsigned char i : stream.str())
-    {
-        std::cout << (unsigned int)i << "\n";
-    }
-    
-    stream.seekg(0);
-    uint32_t read = read_unsignedint_binary<uint32_t>(stream);
-    std::cout << "\n" << read;
-}*/
 
 class packing_ignore
 {
@@ -516,18 +467,18 @@ void pack_header::add_file(file_info pFile)
 bool pack_header::generate(std::ostream & pStream) const
 {
 	// File count
-	write_unsignedint_binary<uint64_t>(pStream, mFiles.size());
+	binary_util::write_unsignedint_binary<uint64_t>(pStream, mFiles.size());
 
 	// File list
 	for (auto& i : mFiles)
 	{
 		// Write path string
 		std::string path = i.path.string();
-		write_unsignedint_binary<uint16_t>(pStream, static_cast<uint16_t>(path.size()));
+		binary_util::write_unsignedint_binary<uint16_t>(pStream, static_cast<uint16_t>(path.size()));
 		pStream.write(path.c_str(), path.size());
 
-		write_unsignedint_binary<uint64_t>(pStream, i.position);
-		write_unsignedint_binary<uint64_t>(pStream, i.size);
+		binary_util::write_unsignedint_binary<uint64_t>(pStream, i.position);
+		binary_util::write_unsignedint_binary<uint64_t>(pStream, i.size);
 	}
 	return true;
 }
@@ -537,7 +488,7 @@ bool pack_header::parse(std::istream & pStream)
 	mFiles.clear();
 
 	// File count
-	uint64_t file_count = read_unsignedint_binary<uint64_t>(pStream);
+	uint64_t file_count = binary_util::read_unsignedint_binary<uint64_t>(pStream);
 	if (file_count == 0)
 		return false;
 
@@ -547,15 +498,15 @@ bool pack_header::parse(std::istream & pStream)
 		file_info file;
 
 		// Read path string
-		uint16_t path_size = read_unsignedint_binary<uint16_t>(pStream);
+		uint16_t path_size = binary_util::read_unsignedint_binary<uint16_t>(pStream);
 		std::string path;
 		path.resize(path_size);
 		if (!pStream.read(&path[0], path_size))
 			return false;
 
 		file.path = path;
-		file.position = read_unsignedint_binary<uint64_t>(pStream);
-		file.size = read_unsignedint_binary<uint64_t>(pStream);
+		file.position = binary_util::read_unsignedint_binary<uint64_t>(pStream);
+		file.size = binary_util::read_unsignedint_binary<uint64_t>(pStream);
 
 		mFiles.push_back(file);
 	}
