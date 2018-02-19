@@ -17,6 +17,7 @@ void initialize(const std::string& pOutput);
 
 void print(level pType, const std::string& pMessage);
 
+void print(const std::string& pFile, int pLine, level pType, const std::string& pMessage);
 void print(const std::string& pFile, int pLine, int pCol, level pType, const std::string& pMessage);
 
 void error(const std::string& pMessage);

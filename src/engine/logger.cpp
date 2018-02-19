@@ -4,6 +4,11 @@
 #include <iostream>
 #include <cassert>
 
+// For time
+#include <ctime>
+#include <iomanip>
+#include <chrono>
+
 namespace logger {
 
 static std::string mLog;
@@ -27,6 +32,8 @@ void initialize(const std::string & pOutput)
 void print(level pType, const std::string& pMessage)
 {
 	std::string type;
+
+
 	switch (pType)
 	{
 	case level::error:   type = "ERROR  ";   break;
@@ -35,7 +42,22 @@ void print(level pType, const std::string& pMessage)
 	case level::debug:   type = "DEBUG  ";   break;
 	}
 
-	std::string message = type + " : ";
+	std::string message;
+
+	// Print time
+	std::time_t time = std::time(nullptr);
+	std::tm timeinfo;
+
+#ifdef __linux__
+	localtime_r(&time, &timeinfo);
+#else
+	localtime_s(&timeinfo, &time);
+#endif
+
+	char time_str[100];
+	std::size_t time_str_length = strftime(time_str, 100, "[%c]", &timeinfo);
+	message += std::string(time_str, time_str_length) + " ";
+
 	for (size_t i = 0; i < mSub_routine_level; i++)
 		message += "| ";
 	message += pMessage + "\n";
@@ -53,6 +75,17 @@ void print(level pType, const std::string& pMessage)
 #ifndef LOCKED_RELEASE_MODE
 	std::cout << message; // Print to console  
 #endif
+}
+
+void print(const std::string& pFile, int pLine, level pType, const std::string& pMessage)
+{
+	std::string message = pFile;
+	message += " ( ";
+	message += std::to_string(pLine);
+	message += " ) : ";
+	message += pMessage;
+
+	print(pType, message);
 }
 
 void print(const std::string& pFile, int pLine, int pCol, level pType, const std::string& pMessage)
