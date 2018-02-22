@@ -5,7 +5,6 @@
 
 #include <engine/animation.hpp>
 #include <engine/rect.hpp>
-#include <engine/types.hpp>
 #include <engine/resource.hpp>
 #include <engine/utility.hpp>
 
@@ -43,8 +42,9 @@ class texture_atlas
 {
 public:
 	bool load(const std::string& pPath);
-	bool save(const std::string& pPath);
 	bool load_memory(const char* pData, size_t pSize);
+	bool save(const std::string& pPath) const;
+
 	void clear();
 
 	subtexture::ptr get_entry(const std::string& pName) const;
@@ -54,13 +54,13 @@ public:
 	bool add_entry(subtexture::ptr& pEntry);
 
 	bool rename_entry(const std::string& pOriginal, const std::string& pRename);
-
+	
 	bool remove_entry(const std::string& pName);
 	bool remove_entry(subtexture::ptr& pEntry);
 
 	std::vector<std::string> compile_list() const;
 
-	const std::vector<subtexture::ptr>& get_raw_atlas() const;
+	const std::vector<subtexture::ptr>& get_all() const;
 
 	bool is_empty() const;
 

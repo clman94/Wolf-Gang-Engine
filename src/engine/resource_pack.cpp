@@ -543,14 +543,18 @@ uint64_t pack_header::get_header_size() const
 
 pack_stream::pack_stream()
 {
-	mHeader_offset = 0;
+	mPack = nullptr;
+}
+
+pack_stream::pack_stream(const pack_stream_factory& pPack)
+{
+	mPack = &pPack;
 }
 
 pack_stream::pack_stream(const pack_stream & pCopy)
 {
-	mHeader_offset = pCopy.mHeader_offset;
-	mFile = pCopy.mFile;
-	mPack_path = pCopy.mPack_path;
+	mPack = pCopy.mPack;
+	mFile_info = pCopy.mFile_info;
 }
 
 pack_stream::~pack_stream()
@@ -558,11 +562,26 @@ pack_stream::~pack_stream()
 	close();
 }
 
-void pack_stream::open()
+void pack_stream::set_pack(const pack_stream_factory & pPack)
+{
+	mPack = &pPack;
+}
+
+bool pack_stream::open(const encoded_path & pPath)
 {
 	close();
-	mStream.open(mPack_path.string().c_str(), std::fstream::binary);
-	mStream.seekg(mFile.position + mHeader_offset);
+	mStream.open(mPack->mPath.string().c_str(), std::fstream::binary);
+	if (!mStream)
+		return false;
+
+	auto fi = mPack->mHeader.get_file(pPath);
+	if (!fi)
+		return false;
+	mFile_info = *fi;
+
+	mStream.seekg(mFile_info.position + mPack->mHeader.get_header_size());
+
+	return is_valid();
 }
 
 void pack_stream::close()
@@ -590,7 +609,7 @@ int64_t pack_stream::read(char * pData, uint64_t pCount)
 		return -1;
 
 	// Check bounds
-	uint64_t remaining = mFile.size - tell();
+	uint64_t remaining = mFile_info.size - tell();
 	if (remaining < pCount)
 	{
 		mStream.read(pData, remaining);
@@ -615,10 +634,10 @@ std::vector<char> pack_stream::read_all()
 	seek(0);
 
 	std::vector<char> retval;
-	retval.reserve(static_cast<size_t>(mFile.size));
+	retval.reserve(static_cast<size_t>(mFile_info.size));
 	while (is_valid())
 	{
-		if (tell() + chuck_size < mFile.size) // Full chunk
+		if (tell() + chuck_size < mFile_info.size) // Full chunk
 		{
 			const std::vector<char> data = read(chuck_size);
 			if (data.empty())
@@ -627,7 +646,7 @@ std::vector<char> pack_stream::read_all()
 		}
 		else // Remainder
 		{
-			const std::vector<char> data = read(mFile.size - tell());
+			const std::vector<char> data = read(mFile_info.size - tell());
 			retval.insert(retval.end(), data.begin(), data.end());
 			return retval;
 		}
@@ -643,9 +662,9 @@ bool pack_stream::seek(uint64_t pPosition)
 	else if (!is_valid())
 		return false;
 
-	if (pPosition >= mFile.size)
+	if (pPosition >= mFile_info.size)
 		return false;
-	mStream.seekg(mFile.position + pPosition + mHeader_offset);
+	mStream.seekg(mFile_info.position + pPosition + mPack->mHeader.get_header_size());
 	return true;
 }
 
@@ -654,27 +673,26 @@ uint64_t pack_stream::tell()
 	if (!is_valid())
 		return 0;
 
-	return (uint64_t)mStream.tellg() - mFile.position - mHeader_offset;
+	return (uint64_t)mStream.tellg() - mFile_info.position - mPack->mHeader.get_header_size();
 }
 
 bool pack_stream::is_valid()
 {
 	return mStream.good() 
-		&& (uint64_t)mStream.tellg() - mFile.position - mHeader_offset
-			< mFile.position + mFile.size;
+		&& (uint64_t)mStream.tellg() - mFile_info.position - mPack->mHeader.get_header_size()
+			< mFile_info.position + mFile_info.size;
 }
 
 uint64_t pack_stream::size() const
 {
-	return mFile.size;
+	return mFile_info.size;
 }
 
 pack_stream & pack_stream::operator=(const pack_stream & pRight)
 {
 	close();
-	mHeader_offset = pRight.mHeader_offset;
-	mFile = pRight.mFile;
-	mPack_path = pRight.mPack_path;
+	mPack = pRight.mPack;
+	mFile_info = pRight.mFile_info;
 	return *this;
 }
 
@@ -688,22 +706,10 @@ bool pack_stream_factory::open(const encoded_path& pPath)
 	return mHeader.parse(stream);
 }
 
-pack_stream pack_stream_factory::create_stream(const encoded_path & pPath) const
+std::vector<char> pack_stream_factory::read_all(const encoded_path & pPath) const
 {
-	auto file = mHeader.get_file(pPath);
-	if (!file)
-		return{};
-	pack_stream stream;
-	stream.mFile = *file;
-	stream.mHeader_offset = mHeader.get_header_size();
-	stream.mPack_path = mPath;
-	return stream;
-}
-
-std::vector<char> engine::pack_stream_factory::read_all(const encoded_path & pPath) const
-{
-	auto stream = create_stream(pPath);
-	stream.open();
+	pack_stream stream(*this);
+	stream.open(pPath);
 	return stream.read_all();
 }
 

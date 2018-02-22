@@ -13,12 +13,7 @@ namespace rpg {
 class script_function
 {
 public:
-	script_function();
-	~script_function();
 	bool is_running();
-	void set_function(AS::asIScriptFunction* pFunction);
-	util::optional_pointer<AS::asIScriptFunction> get_function() const;
-	void set_script_system(script_system& pScript_system);
 	void set_arg(unsigned int index, void* ptr);
 	bool call();
 
@@ -27,6 +22,9 @@ private:
 	util::optional_pointer<script_system>         mScript_system;
 	std::shared_ptr<script_system::thread>        mFunc_ctx;
 	void return_context();
+
+	friend class collision_system; // TODO: Change this soon!
+	friend class scene_script_context;
 };
 
 }

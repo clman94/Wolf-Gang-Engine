@@ -10,6 +10,38 @@
 
 namespace engine {
 
+class key
+{
+public:
+	key();
+	key(renderer::key_code pKey_code);
+	key(const std::string& pKey_name);
+
+	void set_key(renderer::key_code pKey_code);
+	void set_key(const std::string& pKey_name);
+
+	void set_constant(bool mIs_constant);
+	bool is_constant() const;
+
+	std::string to_string() const;
+	operator std::string() const;
+
+	renderer::key_code get_key_code() const;
+private:
+	renderer::key_code mKey_code;
+};
+
+typedef void(*key_binding_callback)();
+
+class key_binding
+{
+public:
+	bool is_triggered() const;
+
+private:
+
+};
+
 class controls
 {
 public:
@@ -18,14 +50,14 @@ public:
 
 	bool set_press_only(const std::string& pName, bool pIs_press_only);
 	bool bind_key(const std::string& pName, const std::string& pKey_name, bool pAlternative = false);
-	void clean();
+	void clear();
 
 	bool is_enabled(const std::string& pName) const;
 	bool set_enabled(const std::string& pName, bool pIs_enabled);
 
 private:
 
-	typedef std::vector<renderer::key_type> bound_keys;
+	typedef std::vector<renderer::key_code> bound_keys;
 	struct binding
 	{
 		binding();

@@ -66,7 +66,7 @@ render_object::~render_object()
 	detach_renderer();
 }
 
-void render_object::set_depth(depth_t pDepth)
+void render_object::set_depth(float pDepth)
 {
 	mDepth = pDepth;
 	if (mRenderer)

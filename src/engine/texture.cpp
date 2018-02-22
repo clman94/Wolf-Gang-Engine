@@ -1,9 +1,9 @@
 #define ENGINE_INTERNAL
 
 #include <engine/texture.hpp>
+#include <engine/logger.hpp>
 
 #include "../../3rdparty/tinyxml2/tinyxml2.h"
-#include "../xmlshortcuts.hpp"
 
 #include <iostream>
 
@@ -29,7 +29,13 @@ bool subtexture::load(tinyxml2::XMLElement * pEle)
 	assert(pEle != nullptr);
 
 	// Set root frame
-	set_frame_rect(util::shortcuts::load_rect_float_att(pEle));
+	frect frame = {
+		pEle->FloatAttribute("x"),
+		pEle->FloatAttribute("y"),
+		pEle->FloatAttribute("w"),
+		pEle->FloatAttribute("h")
+	};
+	set_frame_rect(frame);
 
 	// Set frame count
 	set_frame_count(pEle->IntAttribute("frames", 1));
@@ -63,7 +69,12 @@ bool subtexture::load(tinyxml2::XMLElement * pEle)
 
 bool subtexture::save(tinyxml2::XMLElement * pEle)
 {
-	util::shortcuts::save_rect_float_att(pEle, get_root_frame());
+	auto root_frame = get_root_frame();
+	pEle->SetAttribute("x", root_frame.x);
+	pEle->SetAttribute("y", root_frame.y);
+	pEle->SetAttribute("w", root_frame.w);
+	pEle->SetAttribute("h", root_frame.h);
+
 	if (get_frame_count() > 1)
 		pEle->SetAttribute("frames", static_cast<unsigned int>(get_frame_count()));
 	if (get_interval() > 0)
@@ -99,7 +110,7 @@ bool texture_atlas::load(const std::string & pPath)
 	return load_entries(doc);
 }
 
-bool texture_atlas::save(const std::string & pPath)
+bool texture_atlas::save(const std::string & pPath) const
 {
 	using namespace tinyxml2;
 
@@ -211,7 +222,7 @@ std::vector<std::string> texture_atlas::compile_list() const
 	return std::move(list);
 }
 
-const std::vector<subtexture::ptr>& texture_atlas::get_raw_atlas() const
+const std::vector<subtexture::ptr>& texture_atlas::get_all() const
 {
 	return mAtlas;
 }

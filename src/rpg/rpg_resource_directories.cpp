@@ -1,19 +1,19 @@
+
 #include <engine/utility.hpp>
 #include <engine/filesystem.hpp>
 #include <engine/audio.hpp>
 #include <engine/utility.hpp>
-#include <rpg/rpg_config.hpp>
 #include <engine/texture.hpp>
-#include <rpg/rpg_resource_directories.hpp>
 #include <engine/renderer.hpp>
 #include <engine/logger.hpp>
+
+#include <rpg/rpg_resource_directories.hpp>
+#include <rpg/rpg_config.hpp>
 
 #include <string>
 #include <vector>
 #include <list>
 #include <set>
-
-#include "../xmlshortcuts.hpp"
 
 using namespace rpg;
 

@@ -19,7 +19,6 @@
 #include "texture.hpp"
 #include "time.hpp"
 #include "rect.hpp"
-#include "types.hpp"
 #include "utility.hpp"
 #include "animation.hpp"
 #include "resource.hpp"
@@ -27,6 +26,8 @@
 
 namespace engine
 {
+
+typedef uint8_t color_t;
 
 class color
 {
@@ -216,7 +217,7 @@ public:
 	~render_object();
 
 	// Depth defines the order in which this object will be called
-	void set_depth(depth_t pDepth);
+	void set_depth(float pDepth);
 	float get_depth();
 
 	bool is_visible();
@@ -239,7 +240,7 @@ private:
 	renderer * mRenderer;
 	size_t mIndex;
 	bool mVisible;
-	depth_t mDepth;
+	float mDepth;
 	bool mManual_render;
 };
 

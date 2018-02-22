@@ -79,7 +79,7 @@ private:
 
 	sf::Sound mSFML_streamless_sound;
 
-	struct sfml_stream_ : public sf::InputStream
+	struct sfml_stream : public sf::InputStream
 	{
 		engine::pack_stream stream;
 		virtual sf::Int64 read(void* pData, sf::Int64 pSize);

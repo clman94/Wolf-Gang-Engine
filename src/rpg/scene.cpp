@@ -144,7 +144,7 @@ bool scene::load_scene(std::string pName)
 	{
 		context.clean_globals();
 		mCollision_system.setup_script_defined_triggers(context);
-		context.start_all_with_tag("start");
+		context.call_all_with_tag("start");
 		mEnd_functions = context.get_all_with_tag("door");
 	}
 

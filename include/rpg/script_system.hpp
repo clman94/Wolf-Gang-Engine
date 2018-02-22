@@ -25,6 +25,8 @@ namespace AS = AngelScript;
 template<typename T>
 struct AS_array : public AS::CScriptArray {};
 
+
+
 namespace util {
 template<>
 struct AS_type_to_string<engine::fvector> :

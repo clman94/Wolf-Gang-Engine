@@ -6,7 +6,6 @@ using namespace editors;
 #include <memory>
 #include <cassert>
 
-#include <engine/parsers.hpp>
 #include <engine/logger.hpp>
 
 void populate_combox_with_scene_names(tgui::ComboBox::Ptr pCB)
@@ -1974,9 +1973,9 @@ int atlas_editor::draw(engine::renderer & pR)
 
 	mSprite.draw(pR);
 
-	for (auto& i : mAtlas.get_raw_atlas())
+	for (auto& i : mAtlas.get_all())
 	{
-		auto full_region = i->full_region()*mZoom;
+		auto full_region = i->get_full_region()*mZoom;
 		if (i == mSelection)
 			mFull_animation.set_color({ 255, 255, 100, 50 });
 		else
@@ -2063,10 +2062,10 @@ void atlas_editor::setup_for_texture(const engine::encoded_path& pPath)
 	}
 
 	mAtlas.load(pPath.string() + ".xml");
-	if (!mAtlas.get_raw_atlas().empty())
+	if (!mAtlas.get_all().empty())
 	{
 		mCb_entry_select->setSelectedItemByIndex(0);
-		mSelection = mAtlas.get_raw_atlas().back();
+		mSelection = mAtlas.get_all().back();
 		update_settings();
 		update_preview();
 	}
@@ -2100,7 +2099,7 @@ void atlas_editor::remove_selected()
 	if (mAtlas.is_empty())
 		mSelection = nullptr;
 	else
-		mSelection = mAtlas.get_raw_atlas().back();
+		mSelection = mAtlas.get_all().back();
 	update_entry_list();
 	update_settings();
 	update_preview();
@@ -2110,8 +2109,8 @@ void atlas_editor::remove_selected()
 void atlas_editor::atlas_selection(engine::fvector pPosition)
 {
 	std::vector<engine::subtexture::ptr> hits;
-	for (auto& i : mAtlas.get_raw_atlas())
-		if (i->full_region().is_intersect(pPosition))
+	for (auto& i : mAtlas.get_all())
+		if (i->get_full_region().is_intersect(pPosition))
 			hits.push_back(i);
 
 	if (hits.empty())
@@ -2158,7 +2157,7 @@ void atlas_editor::setup_gui()
 			logger::warning("No item selected");
 			return;
 		}
-		mSelection = mAtlas.get_raw_atlas()[item];
+		mSelection = mAtlas.get_all()[item];
 		update_settings();
 		update_preview();
 	});
@@ -2168,9 +2167,9 @@ void atlas_editor::setup_gui()
 	mTb_name = mSidebar->add_value_string("Name", [&](std::string pVal)
 	{
 		if (!mSelection) return;
-		// Rename
-		if (pVal != mSelection->get_name()
-			&& util::shortcuts::validate_potential_xml_name(pVal))
+
+		// Check if already exists
+		if (pVal != mSelection->get_name())
 		{
 			if (!mAtlas.get_entry(pVal))
 			{
@@ -2289,7 +2288,7 @@ void atlas_editor::white_background()
 void atlas_editor::update_entry_list()
 {
 	mCb_entry_select->removeAllItems();
-	for (auto& i : mAtlas.get_raw_atlas())
+	for (auto& i : mAtlas.get_all())
 		mCb_entry_select->addItem(i->get_name());
 	if (mSelection)
 		mCb_entry_select->setSelectedItem(mSelection->get_name());
@@ -2319,7 +2318,7 @@ void atlas_editor::update_preview()
 		return;
 
 	auto position = mSelection->get_frame_at(0).get_offset();
-	position.x += mSelection->full_region().w / 2;
+	position.x += mSelection->get_full_region().w / 2;
 	mPreview_bg.set_position(position);
 
 	mPreview.set_scale({ mZoom, mZoom });

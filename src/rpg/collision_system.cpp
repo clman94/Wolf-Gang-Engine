@@ -58,7 +58,6 @@ void collision_system::load_script_interface(script_system & pScript)
 	pScript.add_function("_set_wall_group_enabled", &collision_system::script_set_wall_group_enabled, this);
 	pScript.add_function("_get_wall_group_enabled", &collision_system::script_get_wall_group_enabled, this);
 	//pScript.add_function("void _bind_box_function(coroutine@+, dictionary @+)", AS::asMETHOD(collision_system, script_bind_group_function), this);
-
 }
 
 collision_box_container& collision_system::get_container()
@@ -118,8 +117,8 @@ void collision_system::script_bind_group_function(const std::string & pName, AS:
 	}
 
 	std::shared_ptr<script_function> func(new script_function);
-	func->set_function(pFunc);
-	func->set_script_system(*mScript);
+	func->mFunction = pFunc;
+	func->mScript_system = mScript;
 	group->add_function(func);
 }
 

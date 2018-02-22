@@ -18,8 +18,6 @@
 #include <functional>
 #include <tuple>
 
-#include "../../src/xmlshortcuts.hpp"
-
 
 class command
 {

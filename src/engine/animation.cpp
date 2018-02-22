@@ -90,10 +90,9 @@ frame_t animation::get_default_frame() const
 	return mDefault_frame;
 }
 
-frect engine::animation::full_region() const
+frect animation::get_full_region() const
 {
-	frect retval;
-	retval = mFrame_rect;
+	frect retval(mFrame_rect);
 	retval.w *= mFrame_count;
 	return retval;
 }
@@ -105,7 +104,7 @@ frame_t animation::calculate_frame(frame_t pCount) const
 	switch (mLoop)
 	{
 	case animation::loop_type::none:
-		return pCount >= mFrame_count ? mFrame_count - 1 : pCount;
+		return util::clamp<frame_t>(pCount, 0, mFrame_count - 1);
 
 	case animation::loop_type::linear:
 		return pCount%mFrame_count;

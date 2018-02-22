@@ -41,7 +41,7 @@ public:
 	bool build_script(const std::string& pPath, engine::pack_stream_factory& pPack);
 	bool is_valid() const;
 	void clean();
-	void start_all_with_tag(const std::string& pTag);
+	void call_all_with_tag(const std::string& pTag);
 
 	std::vector<std::shared_ptr<script_function>> get_all_with_tag(const std::string& pTag);
 

@@ -63,11 +63,11 @@ void sound::set_sound_resource(std::shared_ptr<sound_file> pResource)
 	{
 		if (pResource->mPack)
 		{
-			mSfml_stream.stream = pResource->mPack->create_stream(pResource->mSound_source);
+			mSfml_stream.stream.set_pack(*pResource->mPack);
+			mSfml_stream.stream.open(pResource->mSound_source);
 			if (!mSfml_stream.stream.is_valid())
 			{
 				logger::error("Failed to load stream '" + pResource->mSound_source + "' from pack");
-
 				mReady = false;
 				return;
 			}
@@ -77,7 +77,6 @@ void sound::set_sound_resource(std::shared_ptr<sound_file> pResource)
 			if (!mSFML_stream_sound.openFromFile(pResource->mSound_source))
 			{
 				logger::error("Failed to load stream from '" + pResource->mSound_source + "'");
-
 				mReady = false;
 				return;
 			}
@@ -228,28 +227,28 @@ bool sound::detach_mixer()
 	return mMixer->remove(*this);
 }
 
-inline sf::Int64 sound::sfml_stream_::read(void * pData, sf::Int64 pSize)
+inline sf::Int64 sound::sfml_stream::read(void * pData, sf::Int64 pSize)
 {
 	if (!stream.is_valid())
 		return -1;
 	return stream.read((char*)pData, pSize);
 }
 
-inline sf::Int64 sound::sfml_stream_::seek(sf::Int64 pPosition)
+inline sf::Int64 sound::sfml_stream::seek(sf::Int64 pPosition)
 {
 	if (!stream.is_valid())
 		return -1;
 	return stream.seek(pPosition) ? pPosition : -1;
 }
 
-inline sf::Int64 sound::sfml_stream_::tell()
+inline sf::Int64 sound::sfml_stream::tell()
 {
 	if (!stream.is_valid())
 		return -1;
 	return stream.tell();
 }
 
-inline sf::Int64 sound::sfml_stream_::getSize()
+inline sf::Int64 sound::sfml_stream::getSize()
 {
 	if (!stream.is_valid())
 		return -1;

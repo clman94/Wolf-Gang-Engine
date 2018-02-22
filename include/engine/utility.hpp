@@ -269,13 +269,6 @@ private:
 	T* mPointer;
 };
 
-/// Floor a value to a specific alignment.
-template<typename T>
-inline T floor_align(T pVal, T pAlign)
-{
-	assert(align > 0);
-	return std::floor(pVal / pAlign)*pAlign;
-}
 
 /// Prevents unwanted copying of a class
 class nocopy {

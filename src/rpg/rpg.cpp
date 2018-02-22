@@ -1,9 +1,6 @@
 #include <rpg/rpg.hpp>
 
-#include <engine/parsers.hpp>
 #include <engine/logger.hpp>
-
-#include "../xmlshortcuts.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -91,7 +88,6 @@ bool scene_script_context::build_script(const std::string & pPath, engine::pack_
 	clean();
 
 	mBuilder.SetIncludeCallback(pack_include_callback, &pPack);
-
 	mBuilder.StartNewModule(mScript->mEngine, pPath.c_str());
 
 	if (add_section_from_pack(defs::INTERNAL_SCRIPTS_PATH.string(), pPack, mBuilder) < 0)
@@ -114,10 +110,8 @@ bool scene_script_context::build_script(const std::string & pPath, engine::pack_
 std::string scene_script_context::get_metadata_type(const std::string & pMetadata)
 {
 	for (auto i = pMetadata.begin(); i != pMetadata.end(); i++)
-	{
-		if (!parsers::is_letter(*i))
+		if (std::isspace(*i))
 			return std::string(pMetadata.begin(), i);
-	}
 	return pMetadata;
 }
 
@@ -139,7 +133,7 @@ void scene_script_context::clean()
 	}
 }
 
-void scene_script_context::start_all_with_tag(const std::string & pTag)
+void scene_script_context::call_all_with_tag(const std::string & pTag)
 {
 	auto funcs = get_all_with_tag(pTag);
 
@@ -148,8 +142,8 @@ void scene_script_context::start_all_with_tag(const std::string & pTag)
 
 	for (auto& i : funcs)
 	{
-		logger::info("Calling '" + std::string(i->get_function()->GetDeclaration())
-			+ "' in '" + i->get_function()->GetModuleName() + "'");
+		logger::info("Calling '" + std::string(i->mFunction->GetDeclaration())
+			+ "' in '" + engine::fs::path(i->mFunction->GetScriptSectionName()).relative_path().string() + "'");
 		i->call();
 	}
 }
@@ -165,8 +159,8 @@ std::vector<std::shared_ptr<script_function>> scene_script_context::get_all_with
 		if (metadata == pTag)
 		{
 			std::shared_ptr<script_function> sfunc(new script_function);
-			sfunc->set_function(func);
-			sfunc->set_script_system(*mScript);
+			sfunc->mFunction = func;
+			sfunc->mScript_system = mScript;
 			ret.push_back(sfunc);
 		}
 	}
@@ -203,8 +197,8 @@ void scene_script_context::parse_wall_group_functions()
 			}
 
 			std::shared_ptr<script_function> function(new script_function);
-			function->set_script_system(*mScript);
-			function->set_function(as_function);
+			function->mScript_system = mScript;
+			function->mFunction = as_function;
 
 			wall_group_function wgf;
 			wgf.function = function;
@@ -767,14 +761,6 @@ void game::refresh_renderer(engine::renderer & pR)
 // script_function
 // ##########
 
-script_function::script_function()
-{
-}
-
-script_function::~script_function()
-{
-}
-
 bool script_function::is_running()
 {
 	if (!mFunc_ctx || !mFunc_ctx->context)
@@ -784,27 +770,12 @@ bool script_function::is_running()
 	return true;
 }
 
-void script_function::set_function(AS::asIScriptFunction* pFunction)
-{
-	mFunction = pFunction;
-}
-
-util::optional_pointer<AS::asIScriptFunction> script_function::get_function() const
-{
-	return mFunction;
-}
-
-void
-script_function::set_script_system(script_system& pScript_system)
-{
-	mScript_system = &pScript_system;
-}
-
 void script_function::set_arg(unsigned int index, void* ptr)
 {
-	assert(mFunc_ctx != nullptr && mFunc_ctx->context != nullptr);
-	if(index < mFunction->GetParamCount())
-		mFunc_ctx->context->SetArgObject(index, ptr);
+	assert(mFunc_ctx != nullptr);
+	assert(mFunc_ctx->context != nullptr);
+	assert(index < mFunction->GetParamCount());
+	mFunc_ctx->context->SetArgObject(index, ptr);
 }
 
 bool script_function::call()
@@ -1612,7 +1583,10 @@ bool game_settings_loader::parse_settings(tinyxml2::XMLDocument & pDoc, const st
 		logger::error("Please specify the screen size");
 		return false;
 	}
-	mScreen_size = util::shortcuts::load_vector_float_att(ele_screen_size);
+	mScreen_size = {
+		ele_screen_size->FloatAttribute("x"),
+		ele_screen_size->FloatAttribute("y")
+	};
 	
 	auto ele_controls = ele_root->FirstChildElement("controls");
 	if (!ele_controls)

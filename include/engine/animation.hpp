@@ -6,11 +6,12 @@
 
 #include "texture.hpp"
 #include "resource.hpp"
-#include "types.hpp"
 #include "rect.hpp"
 
 namespace engine
 {
+
+typedef size_t frame_t;
 
 class texture;
 
@@ -29,7 +30,7 @@ public:
 	};
 
 	void set_loop(loop_type pLoop);
-	loop_type  get_loop() const;
+	loop_type get_loop() const;
 
 	void add_interval(frame_t pFrom, float pInterval);
 
@@ -38,7 +39,7 @@ public:
 	void set_frame_count(frame_t pCount);
 	frame_t get_frame_count() const;
 
-	void set_frame_rect(frect pRect) ;
+	void set_frame_rect(frect pRect);
 	frect get_frame_at(frame_t pAt) const;
 
 	frect get_root_frame() const;
@@ -46,9 +47,9 @@ public:
 	fvector get_size() const;
 
 	void set_default_frame(frame_t pFrame);
-	frame_t  get_default_frame() const;
+	frame_t get_default_frame() const;
 
-	frect full_region() const;
+	frect get_full_region() const;
 
 	frame_t calculate_frame(frame_t pCount) const;
 

@@ -111,14 +111,30 @@ private:
 	std::vector<file_info> mFiles;
 };
 
+// Reads the header of a pack file and generates streams for the contained files
+class pack_stream_factory
+{
+public:
+	bool open(const encoded_path& pPath);
+	std::vector<char> read_all(const encoded_path& pPath) const;
+	std::vector<encoded_path> recursive_directory(const encoded_path& pPath) const;
+private:
+	encoded_path mPath;
+	pack_header mHeader;
+	friend class pack_stream;
+};
+
 class pack_stream
 {
 public:
 	pack_stream();
+	pack_stream(const pack_stream_factory& pPack);
 	pack_stream(const pack_stream& pCopy);
 	~pack_stream();
 
-	void open();
+	void set_pack(const pack_stream_factory& pPack);
+
+	bool open(const encoded_path & pPath);
 	void close();
 
 	std::vector<char> read(uint64_t pCount);
@@ -128,7 +144,6 @@ public:
 	std::vector<char> read_all();
 
 	bool seek(uint64_t pPosition);
-
 	uint64_t tell();
 
 	bool is_valid();
@@ -137,26 +152,14 @@ public:
 
 	pack_stream& operator=(const pack_stream& pRight);
 
+	operator bool() { return is_valid(); }
+
 	friend class pack_stream_factory;
 
 private:
-	uint64_t mHeader_offset;
-	pack_header::file_info mFile;
-	encoded_path mPack_path;
+	const pack_stream_factory * mPack;
+	pack_header::file_info mFile_info;
 	std::ifstream mStream;
-};
-
-// Reads the header of a pack file and generates streams for the contained files
-class pack_stream_factory
-{
-public:
-	bool open(const encoded_path& pPath);
-	pack_stream create_stream(const encoded_path& pPath) const;
-	std::vector<char> read_all(const encoded_path& pPath) const;
-	std::vector<encoded_path> recursive_directory(const encoded_path& pPath) const;
-private:
-	encoded_path mPath;
-	pack_header mHeader;
 };
 
 bool create_resource_pack(const std::string& pSrc_directory, const std::string& pDest);

@@ -36,10 +36,10 @@ void print(level pType, const std::string& pMessage)
 
 	switch (pType)
 	{
-	case level::error:   type = "ERROR  ";   break;
-	case level::info:    type = "INFO   ";    break;
+	case level::error:   type = "ERROR  "; break;
+	case level::info:    type = "INFO   "; break;
 	case level::warning: type = "WARNING"; break;
-	case level::debug:   type = "DEBUG  ";   break;
+	case level::debug:   type = "DEBUG  "; break;
 	}
 
 	// Print time
@@ -80,9 +80,9 @@ void print(level pType, const std::string& pMessage)
 void print(const std::string& pFile, int pLine, level pType, const std::string& pMessage)
 {
 	std::string message = pFile;
-	message += " ( ";
+	message += " (";
 	message += std::to_string(pLine);
-	message += " ) : ";
+	message += ") : ";
 	message += pMessage;
 
 	print(pType, message);
@@ -91,11 +91,11 @@ void print(const std::string& pFile, int pLine, level pType, const std::string& 
 void print(const std::string& pFile, int pLine, int pCol, level pType, const std::string& pMessage)
 {
 	std::string message = pFile;
-	message += " ( ";
+	message += " (";
 	message += std::to_string(pLine);
 	message += ", ";
 	message += std::to_string(pCol);
-	message += " ) : ";
+	message += ") : ";
 	message += pMessage;
 
 	print(pType, message);
