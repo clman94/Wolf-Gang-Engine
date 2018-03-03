@@ -11,7 +11,7 @@ class texture_directory :
 {
 public:
 	virtual bool load(engine::resource_manager& pResource_manager, const std::string& mData_filepath);
-	virtual bool load_pack(engine::resource_manager& pResource_manager, engine::pack_stream_factory& pPack);
+	virtual bool load_pack(engine::resource_manager& pResource_manager, engine::resource_pack& pPack);
 };
 
 class font_directory :
@@ -19,7 +19,7 @@ class font_directory :
 {
 public:
 	virtual bool load(engine::resource_manager& pResource_manager, const std::string& mData_filepath);
-	virtual bool load_pack(engine::resource_manager& pResource_manager, engine::pack_stream_factory& pPack);
+	virtual bool load_pack(engine::resource_manager& pResource_manager, engine::resource_pack& pPack);
 };
 
 class audio_directory :
@@ -27,7 +27,7 @@ class audio_directory :
 {
 public:
 	virtual bool load(engine::resource_manager& pResource_manager, const std::string& mData_filepath);
-	virtual bool load_pack(engine::resource_manager& pResource_manager, engine::pack_stream_factory& pPack);
+	virtual bool load_pack(engine::resource_manager& pResource_manager, engine::resource_pack& pPack);
 };
 
 }

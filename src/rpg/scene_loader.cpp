@@ -49,7 +49,7 @@ bool scene_loader::load(const engine::encoded_path& pDir, const std::string & pN
 	return load_settings();
 }
 
-bool scene_loader::load(const engine::encoded_path& pDir, const std::string & pName, engine::pack_stream_factory& pPack)
+bool scene_loader::load(const engine::encoded_path& pDir, const std::string & pName, engine::resource_pack& pPack)
 {
 	clean();
 

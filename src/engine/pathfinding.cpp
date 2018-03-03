@@ -74,6 +74,11 @@ bool path_node::is_less_costly(const path_node & pNode) const
 			&& mH < pNode.mH);
 }
 
+bool path_node::operator<(const path_node & pNode)
+{
+	return false;
+}
+
 void path_set::clean()
 {
 	mOpen_set.clear();

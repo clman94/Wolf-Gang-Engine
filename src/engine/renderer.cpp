@@ -403,11 +403,13 @@ void renderer::update_events()
 			refresh_gui_view();
 		}
 
+		// Key events
 		if (i.type == sf::Event::KeyPressed && (size_t)i.key.code < mPressed_keys.size())
 			mPressed_keys[(size_t)i.key.code] = input_state::pressed;
 		else if (i.type == sf::Event::KeyReleased && (size_t)i.key.code < mPressed_keys.size())
 			mPressed_keys[(size_t)i.key.code] = input_state::none;
 		
+		// Mouse events
 		if (i.type == sf::Event::MouseButtonPressed)
 			mPressed_buttons[(size_t)i.mouseButton.button] = input_state::pressed;
 		else if (i.type == sf::Event::MouseButtonReleased)

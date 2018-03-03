@@ -62,7 +62,7 @@ bool texture_directory::load(engine::resource_manager& pResource_manager, const 
 	return true;
 }
 
-bool texture_directory::load_pack(engine::resource_manager & pResource_manager, engine::pack_stream_factory & pPack)
+bool texture_directory::load_pack(engine::resource_manager & pResource_manager, engine::resource_pack & pPack)
 {
 	auto file_list = pPack.recursive_directory(defs::DEFAULT_TEXTURES_PATH.string());
 	for (auto &i : file_list)
@@ -121,7 +121,7 @@ bool font_directory::load(engine::resource_manager& pResource_manager, const std
 	return true;
 }
 
-bool font_directory::load_pack(engine::resource_manager & pResource_manager, engine::pack_stream_factory & pPack)
+bool font_directory::load_pack(engine::resource_manager & pResource_manager, engine::resource_pack & pPack)
 {
 	auto file_list = pPack.recursive_directory(defs::DEFAULT_FONTS_PATH.string());
 	for (auto& i : file_list)
@@ -172,7 +172,7 @@ bool audio_directory::load(engine::resource_manager & pResource_manager, const s
 	return true;
 }
 
-bool audio_directory::load_pack(engine::resource_manager & pResource_manager, engine::pack_stream_factory & pPack)
+bool audio_directory::load_pack(engine::resource_manager & pResource_manager, engine::resource_pack & pPack)
 {
 	auto file_list = pPack.recursive_directory(defs::DEFAULT_AUDIO_PATH.string());
 	for (auto& i : file_list)

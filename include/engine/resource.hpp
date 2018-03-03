@@ -16,16 +16,16 @@ class resource
 {
 public:
 	resource();
-	virtual ~resource();
+	virtual ~resource() {}
 	virtual bool load() = 0;
 	virtual bool unload() = 0;
 	bool is_loaded();
 
-	void set_resource_pack(pack_stream_factory* pPack);
+	void set_resource_pack(resource_pack* pPack);
 
 protected:
-	void set_loaded(bool pIs_loaded);
-	pack_stream_factory* mPack;
+	bool set_loaded(bool pIs_loaded);
+	resource_pack* mPack;
 
 private:
 	bool mIs_loaded;
@@ -35,7 +35,7 @@ class resource_directory
 {
 public:
 	virtual bool load(resource_manager& pResource_manager, const std::string& mData_filepath) = 0;
-	virtual bool load_pack(resource_manager& pResource_manager, pack_stream_factory& pPack) = 0;
+	virtual bool load_pack(resource_manager& pResource_manager, resource_pack& pPack) = 0;
 };
 
 template<typename T1, typename T2>
@@ -75,7 +75,7 @@ public:
 	void unload_all();
 	void unload_unused();
 
-	void set_resource_pack(pack_stream_factory* pPack);
+	void set_resource_pack(resource_pack* pPack);
 
 	std::string get_resource_log() const;
 
@@ -84,7 +84,7 @@ public:
 private:
 	std::string mData_filepath;
 
-	pack_stream_factory* mPack;
+	resource_pack* mPack;
 
 	std::shared_ptr<resource> get_resource_precast(resource_type pType, const std::string& pName);
 

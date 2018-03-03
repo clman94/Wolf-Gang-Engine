@@ -112,7 +112,7 @@ private:
 };
 
 // Reads the header of a pack file and generates streams for the contained files
-class pack_stream_factory
+class resource_pack
 {
 public:
 	bool open(const encoded_path& pPath);
@@ -128,11 +128,12 @@ class pack_stream
 {
 public:
 	pack_stream();
-	pack_stream(const pack_stream_factory& pPack);
+	pack_stream(const resource_pack& pPack);
+	pack_stream(const resource_pack& pPack, const encoded_path & pPath);
 	pack_stream(const pack_stream& pCopy);
 	~pack_stream();
 
-	void set_pack(const pack_stream_factory& pPack);
+	void set_pack(const resource_pack& pPack);
 
 	bool open(const encoded_path & pPath);
 	void close();
@@ -154,10 +155,10 @@ public:
 
 	operator bool() { return is_valid(); }
 
-	friend class pack_stream_factory;
+	friend class resource_pack;
 
 private:
-	const pack_stream_factory * mPack;
+	const resource_pack * mPack;
 	pack_header::file_info mFile_info;
 	std::ifstream mStream;
 };

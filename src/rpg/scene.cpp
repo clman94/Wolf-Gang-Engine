@@ -30,10 +30,6 @@ scene::scene()
 
 	mSound_FX.attach_mixer(mMixer);
 	mBackground_music.set_mixer(mMixer);
-
-	//mScene_node.set_rotation(0);
-	//mScene_node.set_position({8, 8});
-	//mScene_node.set_scale({ 0.5, 0.5 });
 }
 
 scene::~scene()
@@ -396,7 +392,7 @@ void scene::focus_player(bool pFocus)
 	mFocus_player = pFocus;
 }
 
-void scene::set_resource_pack(engine::pack_stream_factory* pPack)
+void scene::set_resource_pack(engine::resource_pack* pPack)
 {
 	mPack = pPack;
 }

@@ -12,7 +12,7 @@ using namespace rpg;
 // script_context
 // #########
 
-static int add_section_from_pack(const engine::encoded_path& pPath, engine::pack_stream_factory& pPack,  AS::CScriptBuilder& pBuilder)
+static int add_section_from_pack(const engine::encoded_path& pPath, engine::resource_pack& pPack,  AS::CScriptBuilder& pBuilder)
 {
 	auto data = pPack.read_all(pPath);
 	if (data.empty())
@@ -22,7 +22,7 @@ static int add_section_from_pack(const engine::encoded_path& pPath, engine::pack
 
 static int pack_include_callback(const char *include, const char *from, AS::CScriptBuilder *pBuilder, void *pUser)
 {
-	engine::pack_stream_factory* pack = reinterpret_cast<engine::pack_stream_factory*>(pUser);
+	engine::resource_pack* pack = reinterpret_cast<engine::resource_pack*>(pUser);
 	auto path = engine::encoded_path(from).parent() / engine::encoded_path(include);
 	return add_section_from_pack(path, *pack, *pBuilder);
 }
@@ -81,7 +81,7 @@ bool scene_script_context::build_script(const std::string & pPath)
 	return true;
 }
 
-bool scene_script_context::build_script(const std::string & pPath, engine::pack_stream_factory & pPack)
+bool scene_script_context::build_script(const std::string & pPath, engine::resource_pack & pPack)
 {
 	logger::info("Compiling script '" + pPath + "'...");
 
@@ -807,7 +807,9 @@ void script_function::return_context()
 background_music::background_music()
 {
 	mStream.reset(new engine::sound);
+	mStream->set_mono(false);
 	mOverlap_stream.reset(new engine::sound);
+	mOverlap_stream->set_mono(false);
 }
 
 void background_music::load_script_interface(script_system & pScript)

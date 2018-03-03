@@ -1,15 +1,15 @@
 #ifndef ENGINE_AUDIO_HPP
 #define ENGINE_AUDIO_HPP
 
+#include <engine/node.hpp>
 #include <engine/resource.hpp>
-
-#include <string>
-#include <SFML/Audio.hpp>
-#include <list>
-#include <memory>
 #include <engine/resource_pack.hpp>
 
-// Wrapper class for sfml sound
+#include <string>
+#include <list>
+#include <memory>
+
+#include <SFML/Audio.hpp>
 
 namespace engine
 {
@@ -19,7 +19,6 @@ class sound_file :
 {
 public:
 	static const size_t streaming_threshold = 1000000;
-	bool requires_streaming() const;
 
 	bool load();
 	bool unload();
@@ -27,18 +26,17 @@ public:
 	void set_filepath(const std::string& pPath);
 
 private:
+	bool load_buffer();
 	std::string mSound_source;
 	sf::SoundBuffer mSFML_buffer;
 
-	bool mRequires_streaming;
+	bool mBuffer_loaded;
 
 	friend class sound;
 };
 
 class mixer;
 
-// This sound classs automatically chooses between loading the sound file
-// to memory in its entirety or streaming it.
 class sound
 {
 public:
@@ -59,25 +57,31 @@ public:
 
 	void set_volume(float pVolume);
 	float get_volume() const;
-	void update_volume();
 
 	bool is_playing() const;
 	float get_duration() const;
+
 	float get_playoffset() const;
 	void set_playoffset(float pSeconds);
 
 	bool attach_mixer(mixer& pMixer);
 	bool detach_mixer();
+
+	void set_mono(bool pIs_mono);
+	bool get_mono() const;
+
+
 private:
 	mixer* mMixer;
+	void update_volume();
 
 	float mVolume;
 
 	std::shared_ptr<sound_file> mSource;
 
-	bool mReady;
+	bool mMono;
 
-	sf::Sound mSFML_streamless_sound;
+	bool mReady;
 
 	struct sfml_stream : public sf::InputStream
 	{
@@ -88,7 +92,8 @@ private:
 		virtual sf::Int64 getSize();
 	} mSfml_stream;
 
-	sf::Music mSFML_stream_sound;
+	sf::Music mSFML_stereo_source;
+	sf::Sound mSFML_mono_source;
 
 	friend class mixer;
 };

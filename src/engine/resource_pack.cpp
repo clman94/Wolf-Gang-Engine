@@ -546,9 +546,15 @@ pack_stream::pack_stream()
 	mPack = nullptr;
 }
 
-pack_stream::pack_stream(const pack_stream_factory& pPack)
+pack_stream::pack_stream(const resource_pack& pPack)
 {
 	mPack = &pPack;
+}
+
+pack_stream::pack_stream(const resource_pack & pPack, const encoded_path & pPath)
+{
+	mPack = &pPack;
+	open(pPath);
 }
 
 pack_stream::pack_stream(const pack_stream & pCopy)
@@ -562,7 +568,7 @@ pack_stream::~pack_stream()
 	close();
 }
 
-void pack_stream::set_pack(const pack_stream_factory & pPack)
+void pack_stream::set_pack(const resource_pack & pPack)
 {
 	mPack = &pPack;
 }
@@ -697,7 +703,7 @@ pack_stream & pack_stream::operator=(const pack_stream & pRight)
 }
 
 
-bool pack_stream_factory::open(const encoded_path& pPath)
+bool resource_pack::open(const encoded_path& pPath)
 {
 	std::ifstream stream(pPath.string().c_str(), std::fstream::binary);
 	if (!stream)
@@ -706,14 +712,14 @@ bool pack_stream_factory::open(const encoded_path& pPath)
 	return mHeader.parse(stream);
 }
 
-std::vector<char> pack_stream_factory::read_all(const encoded_path & pPath) const
+std::vector<char> resource_pack::read_all(const encoded_path & pPath) const
 {
 	pack_stream stream(*this);
 	stream.open(pPath);
 	return stream.read_all();
 }
 
-std::vector<encoded_path> pack_stream_factory::recursive_directory(const encoded_path & pPath) const
+std::vector<encoded_path> resource_pack::recursive_directory(const encoded_path & pPath) const
 {
 	return mHeader.recursive_directory(pPath);
 }

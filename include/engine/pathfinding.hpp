@@ -11,7 +11,7 @@
 
 namespace engine {
 
-typedef std::function<bool(fvector&)> collision_callback;
+
 typedef std::deque<engine::fvector> path_t;
 
 class path_node
@@ -34,12 +34,16 @@ public:
 
 	bool is_less_costly(const path_node& pNode) const;
 
+	bool operator<(const path_node& pNode);
+
 private:
 	float mTotal_cost;
 	float mH;
 	engine::fvector mPosition;
 	path_node* mPredecessor;
 };
+
+typedef std::function<bool(fvector&)> collision_callback;
 
 class grid_set
 {
@@ -67,7 +71,7 @@ public:
 	// Check collision and construct new nodes
 	bool step(collision_callback pCollision_callback);
 
-	// Trace path from closest node to destination to the goal
+	// Trace path from closest node to destination
 	std::deque<engine::fvector> construct_path();
 
 	// Create nodes around the specified location

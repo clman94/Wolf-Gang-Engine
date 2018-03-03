@@ -38,7 +38,7 @@ public:
 
 	void set_script_system(script_system& pScript);
 	bool build_script(const std::string& pPath);
-	bool build_script(const std::string& pPath, engine::pack_stream_factory& pPack);
+	bool build_script(const std::string& pPath, engine::resource_pack& pPack);
 	bool is_valid() const;
 	void clean();
 	void call_all_with_tag(const std::string& pTag);

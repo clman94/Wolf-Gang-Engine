@@ -3,7 +3,7 @@
 #include <engine/filesystem.hpp>
 using namespace engine;
 
-engine::sound * engine::sound_spawner::new_sound_object()
+sound * sound_spawner::new_sound_object()
 {
 	for (auto &i : mSounds)
 		if (!i.is_playing())
@@ -48,6 +48,8 @@ inline sound::sound()
 {
 	mReady = false;
 	mMixer = nullptr;
+	mMono = true;
+	mSFML_stereo_source.setRelativeToListener(true);
 }
 
 sound::~sound()
@@ -59,8 +61,15 @@ sound::~sound()
 void sound::set_sound_resource(std::shared_ptr<sound_file> pResource)
 {
 	stop();
-	if (pResource->requires_streaming())
+
+	if (mMono)
 	{
+		logger::info("Loading in mono");
+		pResource->load_buffer();
+		mSFML_mono_source.setBuffer(pResource->mSFML_buffer);
+	}else
+	{
+		logger::info("Loading in stereo");
 		if (pResource->mPack)
 		{
 			mSfml_stream.stream.set_pack(*pResource->mPack);
@@ -71,20 +80,17 @@ void sound::set_sound_resource(std::shared_ptr<sound_file> pResource)
 				mReady = false;
 				return;
 			}
+			mSFML_stereo_source.openFromStream(mSfml_stream);
 		}
 		else
 		{
-			if (!mSFML_stream_sound.openFromFile(pResource->mSound_source))
+			if (!mSFML_stereo_source.openFromFile(pResource->mSound_source))
 			{
 				logger::error("Failed to load stream from '" + pResource->mSound_source + "'");
 				mReady = false;
 				return;
 			}
 		}
-	}
-	else
-	{
-		mSFML_streamless_sound.setBuffer(pResource->mSFML_buffer);
 	}
 
 	mSource = pResource;
@@ -100,62 +106,60 @@ void sound::play()
 {
 	if (!mSource)
 		return;
-	if (mSource->mRequires_streaming)
-		mSFML_stream_sound.play();
+	if (mMono)
+		mSFML_mono_source.play();
 	else
-		mSFML_streamless_sound.play();
+		mSFML_stereo_source.play();
 }
 
 void sound::stop()
 {
 	if (!mSource)
 		return;
-	if (mSource->mRequires_streaming)
-		mSFML_stream_sound.stop();
+	if (mMono)
+		mSFML_mono_source.stop();
 	else
-		mSFML_streamless_sound.stop();
+		mSFML_stereo_source.stop();
 }
 
 void sound::pause()
 {
 	if (!mSource)
 		return;
-	if (mSource->mRequires_streaming)
-		mSFML_stream_sound.pause();
+	if (mMono)
+		mSFML_mono_source.pause();
 	else
-		mSFML_streamless_sound.pause();
+		mSFML_stereo_source.pause();
 }
 
 void sound::set_pitch(float pPitch)
 {
-	mSFML_stream_sound.setPitch(pPitch);
-	mSFML_streamless_sound.setPitch(pPitch);
+	mSFML_stereo_source.setPitch(pPitch);
+	mSFML_mono_source.setPitch(pPitch);
 }
 
 float sound::get_pitch() const
 {
 	if (!mSource)
 		return 0;
-	if (mSource->mRequires_streaming)
-		return mSFML_stream_sound.getPitch();
-	else
-		return mSFML_streamless_sound.getPitch();
+
+	// Doesn't matter which one
+	return mSFML_mono_source.getPitch();
 }
 
 void sound::set_loop(bool pLoop)
 {
-	mSFML_stream_sound.setLoop(pLoop);
-	mSFML_streamless_sound.setLoop(pLoop);
+	mSFML_stereo_source.setLoop(pLoop);
+	mSFML_mono_source.setLoop(pLoop);
 }
 
 bool sound::get_loop() const
 {
 	if (!mSource)
 		return false;
-	if (mSource->mRequires_streaming)
-		return mSFML_stream_sound.getLoop();
-	else
-		return mSFML_streamless_sound.getLoop();
+
+	// Doesn't matter which one
+	return mSFML_mono_source.getLoop();
 }
 
 void sound::set_volume(float pVolume)
@@ -164,8 +168,8 @@ void sound::set_volume(float pVolume)
 	mVolume = volume;
 	if (mMixer)
 		volume *= mMixer->get_master_volume();
-	mSFML_stream_sound.setVolume(volume*100);
-	mSFML_streamless_sound.setVolume(volume*100);
+	mSFML_stereo_source.setVolume(volume*100);
+	mSFML_mono_source.setVolume(volume*100);
 }
 
 float sound::get_volume() const
@@ -182,37 +186,37 @@ bool sound::is_playing() const
 {
 	if (!mSource)
 		return false;
-	if (mSource->mRequires_streaming)
-		return mSFML_stream_sound.getStatus() == sf::SoundSource::Playing;
+	if (mMono)
+		return mSFML_mono_source.getStatus() == sf::SoundSource::Playing;
 	else
-		return mSFML_streamless_sound.getStatus() == sf::SoundSource::Playing;
+		return mSFML_stereo_source.getStatus() == sf::SoundSource::Playing;
 }
 float sound::get_duration() const
 {
 	if (!mSource)
 		return 0;
-	if (mSource->mRequires_streaming)
-		return mSFML_stream_sound.getDuration().asSeconds();
+	if (mMono)
+		return mSFML_mono_source.getBuffer()->getDuration().asSeconds();
 	else
-		return mSFML_streamless_sound.getBuffer()->getDuration().asSeconds();
+		return mSFML_stereo_source.getDuration().asSeconds();
 }
 float sound::get_playoffset() const
 {
 	if (!mSource)
 		return 0;
-	if (mSource->mRequires_streaming)
-		return mSFML_stream_sound.getPlayingOffset().asSeconds();
+	if (mMono)
+		return mSFML_mono_source.getPlayingOffset().asSeconds();
 	else
-		return mSFML_streamless_sound.getPlayingOffset().asSeconds();
+		return mSFML_stereo_source.getPlayingOffset().asSeconds();
 }
 void sound::set_playoffset(float pSeconds)
 {
 	if (!mSource)
 		return;
-	if (mSource->mRequires_streaming)
-		mSFML_stream_sound.setPlayingOffset(sf::seconds(pSeconds));
+	if (mMono)
+		mSFML_mono_source.setPlayingOffset(sf::seconds(pSeconds));
 	else
-		mSFML_streamless_sound.setPlayingOffset(sf::seconds(pSeconds));
+		mSFML_stereo_source.setPlayingOffset(sf::seconds(pSeconds));
 }
 
 bool sound::attach_mixer(mixer& pMixer)
@@ -225,6 +229,20 @@ bool sound::detach_mixer()
 	if (!mMixer)
 		return false;
 	return mMixer->remove(*this);
+}
+
+void sound::set_mono(bool pIs_mono)
+{
+	mMono = pIs_mono;
+
+	// Setup resource
+	if (mSource)
+		set_sound_resource(mSource);
+}
+
+bool sound::get_mono() const
+{
+	return mMono;
 }
 
 inline sf::Int64 sound::sfml_stream::read(void * pData, sf::Int64 pSize)
@@ -255,33 +273,23 @@ inline sf::Int64 sound::sfml_stream::getSize()
 	return stream.size();
 }
 
-bool sound_file::requires_streaming() const
-{
-	return mRequires_streaming;
-}
-
 bool sound_file::load()
 {
-	if (!(mRequires_streaming = (fs::file_size(mSound_source) >= streaming_threshold)))
+	bool preload = false;
+	if (mPack)
 	{
-		if (!is_loaded())
-		{
-			if (mPack)
-			{
-				auto data = mPack->read_all(mSound_source);
-				set_loaded(mSFML_buffer.loadFromMemory(&data[0], data.size()));
-			}
-			else
-				set_loaded(mSFML_buffer.loadFromFile(mSound_source));
-		}
-		return is_loaded();
+		pack_stream stream(*mPack, mSound_source);
+		if (stream && stream.size() < streaming_threshold)
+			return set_loaded(load_buffer());
 	}
-	set_loaded(true);
-	return true;
+	else if (fs::file_size(mSound_source) < streaming_threshold)
+		return set_loaded(load_buffer());
+	return set_loaded(true);
 }
 
 bool sound_file::unload()
 {
+	mBuffer_loaded = false;
 	mSFML_buffer = sf::SoundBuffer();
 	set_loaded(false);
 	return true;
@@ -290,6 +298,25 @@ bool sound_file::unload()
 void sound_file::set_filepath(const std::string & pPath)
 {
 	mSound_source = pPath;
+}
+
+bool sound_file::load_buffer()
+{
+	if (mBuffer_loaded)
+		return true;
+
+	if (mPack)
+	{
+		pack_stream stream(*mPack);
+		stream.open(mSound_source);
+		auto data = stream.read_all();
+		if (data.empty())
+			return false;
+		mBuffer_loaded = mSFML_buffer.loadFromMemory(&data[0], data.size());
+	}
+	mBuffer_loaded = mSFML_buffer.loadFromFile(mSound_source);
+
+	return mBuffer_loaded;
 }
 
 mixer::mixer()

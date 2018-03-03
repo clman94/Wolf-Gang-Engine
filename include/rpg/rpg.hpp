@@ -236,7 +236,7 @@ private:
 
 	scene            mScene;
 	engine::resource_manager mResource_manager;
-	engine::pack_stream_factory mPack;
+	engine::resource_pack mPack;
 	flag_container   mFlags;
 	script_system    mScript;
 	engine::controls mControls;

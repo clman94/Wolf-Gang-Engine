@@ -60,11 +60,11 @@ private:
 
 	size_t mChild_index;
 
+	float mUnit;
+
 	fvector mPosition;
 	float mRotation;
 	fvector mScale;
-
-	float mUnit;
 };
 
 }

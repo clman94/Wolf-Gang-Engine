@@ -26,7 +26,7 @@ public:
 	scene_loader();
 
 	bool load(const engine::encoded_path& pDir, const std::string& pName);
-	bool load(const engine::encoded_path& pDir, const std::string& pName, engine::pack_stream_factory& pPack);
+	bool load(const engine::encoded_path& pDir, const std::string& pName, engine::resource_pack& pPack);
 	bool save();
 
 	void clean();

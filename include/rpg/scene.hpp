@@ -162,7 +162,7 @@ public:
 
 	void focus_player(bool pFocus);
 
-	void set_resource_pack(engine::pack_stream_factory* pPack);
+	void set_resource_pack(engine::resource_pack* pPack);
 
 	scene_visualizer& get_visualizer();
 
@@ -180,7 +180,7 @@ private:
 	panning_node mWorld_node;
 	engine::node mScene_node;
 
-	engine::pack_stream_factory* mPack;
+	engine::resource_pack* mPack;
 	engine::resource_manager* mResource_manager;
 	script_system*            mScript;
 

@@ -12,24 +12,20 @@ resource::resource()
 	mPack = nullptr;
 }
 
-resource::~resource()
-{
-
-}
-
 bool resource::is_loaded()
 {
 	return mIs_loaded;
 }
 
-void resource::set_resource_pack(pack_stream_factory * pPack)
+void resource::set_resource_pack(resource_pack * pPack)
 {
 	mPack = pPack;
 }
 
-void resource::set_loaded(bool pIs_loaded)
+bool resource::set_loaded(bool pIs_loaded)
 {
 	mIs_loaded = pIs_loaded;
+	return pIs_loaded;
 }
 
 resource_manager::resource_manager()
@@ -89,7 +85,7 @@ void resource_manager::unload_unused()
 				j.second->unload();
 }
 
-void resource_manager::set_resource_pack(pack_stream_factory * pPack)
+void resource_manager::set_resource_pack(resource_pack * pPack)
 {
 	mPack = pPack;
 	for (auto& i : mResources)
