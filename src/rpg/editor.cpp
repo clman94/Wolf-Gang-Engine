@@ -808,7 +808,7 @@ bool scene_editor::open_scene(std::string pName)
 	}
 
 	assert(mGame != nullptr);
-	auto texture = mGame->get_resource_manager().get_resource<engine::texture>(engine::resource_type::texture, mLoader.get_tilemap_texture());
+	auto texture = mGame->get_resource_manager().get_resource<engine::texture>("texture", mLoader.get_tilemap_texture());
 	if (!texture)
 	{
 		logger::warning("Invalid tilemap texture in scene");
@@ -1285,7 +1285,7 @@ void tilemap_editor::apply_texture()
 	logger::info("Applying tilemap Texture '" + tilemap_texture_name + "'...");
 
 	assert(mGame != nullptr);
-	auto new_texture = mGame->get_resource_manager().get_resource<engine::texture>(engine::resource_type::texture, tilemap_texture_name);
+	auto new_texture = mGame->get_resource_manager().get_resource<engine::texture>("texture", tilemap_texture_name);
 	if (!new_texture)
 	{
 		logger::error("Failed to load texture '" + tilemap_texture_name + "'");

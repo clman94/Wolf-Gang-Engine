@@ -67,7 +67,7 @@ entity_reference entity_manager::script_add_entity(const std::string & pName)
 	if (!new_entity)
 		return{}; // Return empty on error
 
-	auto resource = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, pName);
+	auto resource = mResource_manager->get_resource<engine::texture>("texture", pName);
 	if (!resource)
 	{
 		logger::warning("Could not load texture '" + pName + "'");
@@ -97,7 +97,7 @@ entity_reference entity_manager::script_add_text()
 	assert(get_renderer() != nullptr);
 	assert(mResource_manager != nullptr);
 
-	auto font = mResource_manager->get_resource<engine::font>(engine::resource_type::font, "default");
+	auto font = mResource_manager->get_resource<engine::font>("font", "default");
 	if (!font)
 	{
 		logger::warning("Could not find default font");
@@ -150,7 +150,7 @@ entity_reference entity_manager::script_add_character(const std::string & pName)
 	if (!new_entity)
 		return entity_reference(); // Return empty on error
 
-	auto resource = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, pName);
+	auto resource = mResource_manager->get_resource<engine::texture>("texture", pName);
 	if (!resource)
 	{
 		logger::error("Could not load texture '" + pName + "' (Entity will not have a texture)");
@@ -429,7 +429,7 @@ void entity_manager::script_set_texture(entity_reference & e, const std::string 
 		logger::warning("Entity is not sprite-based");
 		return;
 	}
-	auto texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, name);
+	auto texture = mResource_manager->get_resource<engine::texture>("texture", name);
 	if (!texture)
 	{
 		logger::warning("Could not load texture '" + name + "'");
@@ -449,7 +449,7 @@ void entity_manager::script_set_font(entity_reference & e, const std::string & p
 		return;
 	}
 
-	auto font = mResource_manager->get_resource<engine::font>(engine::resource_type::font, pName);
+	auto font = mResource_manager->get_resource<engine::font>("font", pName);
 	if (!font)
 	{
 		logger::warning("Could not load font '" + pName + "'");
@@ -567,7 +567,7 @@ entity_reference entity_manager::script_add_dialog_text()
 	assert(get_renderer() != nullptr);
 	assert(mResource_manager != nullptr);
 
-	auto font = mResource_manager->get_resource<engine::font>(engine::resource_type::font, "default");
+	auto font = mResource_manager->get_resource<engine::font>("font", "default");
 	if (!font)
 	{
 		logger::error("Could not find default font");

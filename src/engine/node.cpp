@@ -141,8 +141,7 @@ util::optional_pointer<node> node::get_parent() const
 	return mParent;
 }
 
-node_arr
-node::get_children() const
+node_arr node::get_children() const
 {
 	return mChildren;
 }

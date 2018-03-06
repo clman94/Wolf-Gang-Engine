@@ -23,6 +23,11 @@ public:
 	bool load();
 	bool unload();
 
+	std::string get_type() const override
+	{
+		return "audio";
+	}
+
 	void set_filepath(const std::string& pPath);
 
 private:
@@ -69,7 +74,6 @@ public:
 
 	void set_mono(bool pIs_mono);
 	bool get_mono() const;
-
 
 private:
 	mixer* mMixer;

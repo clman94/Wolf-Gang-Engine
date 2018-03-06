@@ -361,11 +361,16 @@ class shader :
 	public resource
 {
 public:
-	bool load();
-	bool unload();
+	bool load() override;
+	bool unload() override;
 
 	void set_vertex_path(const std::string& pPath);
 	void set_fragment_path(const std::string& pPath);
+
+	std::string get_type() const override
+	{
+		return "shader";
+	}
 
 #ifdef ENGINE_INTERNAL
 	sf::Shader* get_sfml_shader()
@@ -644,8 +649,13 @@ class font :
 public:
 	void set_font_source(const std::string& pFilepath);
 	void set_preferences_source(const std::string& pFilepath);
-	bool load();
-	bool unload();
+	bool load() override;
+	bool unload() override;
+
+	std::string get_type() const override
+	{
+		return "font";
+	}
 
 private:
 	bool load_preferences();

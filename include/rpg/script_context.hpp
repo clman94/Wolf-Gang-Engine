@@ -43,6 +43,11 @@ public:
 	void clean();
 	void call_all_with_tag(const std::string& pTag);
 
+	std::string get_type() const override
+	{
+		return "script";
+	}
+
 	std::vector<std::shared_ptr<script_function>> get_all_with_tag(const std::string& pTag);
 
 	void clean_globals();

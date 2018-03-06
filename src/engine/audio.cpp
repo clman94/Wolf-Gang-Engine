@@ -64,12 +64,10 @@ void sound::set_sound_resource(std::shared_ptr<sound_file> pResource)
 
 	if (mMono)
 	{
-		logger::info("Loading in mono");
 		pResource->load_buffer();
 		mSFML_mono_source.setBuffer(pResource->mSFML_buffer);
 	}else
 	{
-		logger::info("Loading in stereo");
 		if (pResource->mPack)
 		{
 			mSfml_stream.stream.set_pack(*pResource->mPack);

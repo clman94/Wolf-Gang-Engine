@@ -6,24 +6,24 @@
 namespace rpg
 {
 
-class texture_directory :
-	public engine::resource_directory
+class texture_loader :
+	public engine::resource_loader
 {
 public:
 	virtual bool load(engine::resource_manager& pResource_manager, const std::string& mData_filepath);
 	virtual bool load_pack(engine::resource_manager& pResource_manager, engine::resource_pack& pPack);
 };
 
-class font_directory :
-	public engine::resource_directory
+class font_loader :
+	public engine::resource_loader
 {
 public:
 	virtual bool load(engine::resource_manager& pResource_manager, const std::string& mData_filepath);
 	virtual bool load_pack(engine::resource_manager& pResource_manager, engine::resource_pack& pPack);
 };
 
-class audio_directory :
-	public engine::resource_directory
+class audio_loader :
+	public engine::resource_loader
 {
 public:
 	virtual bool load(engine::resource_manager& pResource_manager, const std::string& mData_filepath);

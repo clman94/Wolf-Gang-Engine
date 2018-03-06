@@ -153,7 +153,7 @@ bool scene::load_scene(std::string pName)
 		logger::info("Loading Tilemap...");
 		logger::sub_routine _srtn_loading_tilemap;
 
-		auto tilemap_texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, mLoader.get_tilemap_texture());
+		auto tilemap_texture = mResource_manager->get_resource<engine::texture>("texture", mLoader.get_tilemap_texture());
 		if (!tilemap_texture)
 		{
 			logger::error("Invalid tilemap texture");
@@ -360,7 +360,7 @@ bool scene::load_settings(const game_settings_loader& pSettings)
 
 	mWorld_node.set_viewport(pSettings.get_screen_size());
 
-	auto player_texture = mResource_manager->get_resource<engine::texture>(engine::resource_type::texture, pSettings.get_player_texture());
+	auto player_texture = mResource_manager->get_resource<engine::texture>("texture", pSettings.get_player_texture());
 	if (!player_texture)
 	{
 		logger::error("Could not load texture '" + pSettings.get_player_texture() + "' for player character");
@@ -445,7 +445,7 @@ void scene::script_set_boundary_size(engine::fvector pSize)
 
 void scene::script_spawn_sound(const std::string & pName, float pVolume, float pPitch)
 {
-	auto sound = mResource_manager->get_resource<engine::sound_file>(engine::resource_type::audio, pName);
+	auto sound = mResource_manager->get_resource<engine::sound_file>("audio", pName);
 	if (!sound)
 	{
 		logger::error("Could not spawn sound '" + pName + "'");

@@ -228,9 +228,9 @@ game::game()
 
 	mScene.set_resource_manager(mResource_manager);
 
-	mResource_manager.add_directory(std::make_shared<texture_directory>());
-	mResource_manager.add_directory(std::make_shared<font_directory>());
-	mResource_manager.add_directory(std::make_shared<audio_directory>());
+	mResource_manager.add_loader(std::make_shared<texture_loader>());
+	mResource_manager.add_loader(std::make_shared<font_loader>());
+	mResource_manager.add_loader(std::make_shared<audio_loader>());
 }
 
 game::~game()
@@ -672,7 +672,7 @@ bool game::load(engine::fs::path pData_dir)
 
 	logger::info("Loading Resources...");
 
-	if (!mResource_manager.reload_directories()) // Load the resources from the directories
+	if (!mResource_manager.reload_all()) // Load the resources from the loaders
 	{
 		logger::error("Resources failed to load");
 		return (mIs_ready = false, false);
@@ -859,7 +859,7 @@ void background_music::set_mixer(engine::mixer & pMixer)
 
 bool background_music::script_music_open(const std::string & pName)
 {
-	auto resource = mResource_manager->get_resource<engine::sound_file>(engine::resource_type::audio, pName);
+	auto resource = mResource_manager->get_resource<engine::sound_file>("audio", pName);
 	if (!resource)
 	{
 		logger::error("Music '" + pName + "' failed to load");
@@ -880,7 +880,7 @@ bool background_music::script_music_swap(const std::string & pName)
 
 	// Open a second stream and set its position similar to
 	// the first one.
-	auto resource = mResource_manager->get_resource<engine::sound_file>(engine::resource_type::audio, pName);
+	auto resource = mResource_manager->get_resource<engine::sound_file>("audio", pName);
 	if (!resource)
 		return false;
 	mOverlap_stream->set_sound_resource(resource);
@@ -903,7 +903,7 @@ int background_music::script_music_start_transition_play(const std::string & pNa
 	if (mPath == pName)
 		return 0;
 
-	auto resource = mResource_manager->get_resource<engine::sound_file>(engine::resource_type::audio, pName);
+	auto resource = mResource_manager->get_resource<engine::sound_file>("audio", pName);
 	if (!resource)
 		return false;
 	mOverlap_stream->set_sound_resource(resource);
@@ -1708,7 +1708,7 @@ bool scenes_directory::load(engine::resource_manager & pResource_manager)
 
 		if (script_path.extension().string() == ".xml")
 		{
-			std::shared_ptr<scene_script_context> context(new scene_script_context);
+			std::shared_ptr<scene_script_context> context(std::make_shared<scene_script_context>());
 			//context->set_path(script_path.parent_path() + (script_path.stem().string() + ".as"));
 			//pResource_manager.add_resource(engine::resource_type::script, , context);
 		}

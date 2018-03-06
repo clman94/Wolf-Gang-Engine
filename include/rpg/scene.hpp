@@ -66,7 +66,6 @@ public:
 	void set_mixer(engine::mixer& pMixer);
 
 private:
-
 	engine::resource_manager* mResource_manager;
 
 	std::unique_ptr<engine::sound> mStream;

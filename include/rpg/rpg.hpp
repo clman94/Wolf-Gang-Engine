@@ -20,7 +20,7 @@
 #include <rpg/collision_system.hpp>
 #include <rpg/flag_container.hpp>
 #include <rpg/panning_node.hpp>
-#include <rpg/rpg_resource_directories.hpp>
+#include <rpg/rpg_resource_loaders.hpp>
 #include <rpg/script_context.hpp>
 #include <rpg/game_settings_loader.hpp>
 #include <rpg/scene.hpp>
@@ -60,7 +60,7 @@ private:
 };
 
 class scenes_directory :
-	public engine::resource_directory
+	public engine::resource_loader
 {
 public:
 	scenes_directory();

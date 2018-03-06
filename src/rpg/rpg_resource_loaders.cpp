@@ -7,7 +7,7 @@
 #include <engine/renderer.hpp>
 #include <engine/logger.hpp>
 
-#include <rpg/rpg_resource_directories.hpp>
+#include <rpg/rpg_resource_loaders.hpp>
 #include <rpg/rpg_config.hpp>
 
 #include <string>
@@ -17,7 +17,7 @@
 
 using namespace rpg;
 
-bool texture_directory::load(engine::resource_manager& pResource_manager, const std::string& mData_filepath)
+bool texture_loader::load(engine::resource_manager& pResource_manager, const std::string& mData_filepath)
 {
 	const engine::fs::path folder_path = mData_filepath + "/" + defs::DEFAULT_TEXTURES_PATH.string();
 
@@ -34,15 +34,19 @@ bool texture_directory::load(engine::resource_manager& pResource_manager, const 
 		if (texture_path.extension() == ".png")
 		{
 			const std::string texture_name = texture_path.stem().string();
-			if (pResource_manager.has_resource(engine::resource_type::texture, texture_name)) // Check if unique
+
+			// Check if unique
+			if (pResource_manager.has_resource("texture", texture_name))
 			{
 				logger::warning("Texture '" + texture_name + "' is not unique. Please give it a unique name.");
 				continue;
 			}
-			std::shared_ptr<engine::texture> texture(new engine::texture());
+
+			std::shared_ptr<engine::texture> texture(std::make_shared<engine::texture>());
+			texture->set_name(texture_name);
 			texture->set_texture_source(texture_path.string());
 
-			// Get atlas path (if it exists)
+			// Parse atlas (if it exists)
 			auto atlas_path = texture_path.parent_path();
 			atlas_path /= texture_name + ".xml";
 			if (engine::fs::exists(atlas_path))
@@ -55,14 +59,14 @@ bool texture_directory::load(engine::resource_manager& pResource_manager, const 
 				continue; // Texture requires atlas
 			}
 
-			pResource_manager.add_resource(engine::resource_type::texture, texture_name, texture);
+			pResource_manager.add_resource(texture);
 		}
 	}
 
 	return true;
 }
 
-bool texture_directory::load_pack(engine::resource_manager & pResource_manager, engine::resource_pack & pPack)
+bool texture_loader::load_pack(engine::resource_manager & pResource_manager, engine::resource_pack & pPack)
 {
 	auto file_list = pPack.recursive_directory(defs::DEFAULT_TEXTURES_PATH.string());
 	for (auto &i : file_list)
@@ -71,20 +75,21 @@ bool texture_directory::load_pack(engine::resource_manager & pResource_manager, 
 		{
 			const std::string texture_name = i.stem();
 
-			std::shared_ptr<engine::texture> texture(new engine::texture());
+			std::shared_ptr<engine::texture> texture(std::make_shared<engine::texture>());
+			texture->set_name(texture_name);
 			texture->set_texture_source(i.string());
 
-			// Get atlas path (if it exists)
+			// Parse atlas xml (if it exists)
 			auto atlas_path = i.parent() / (texture_name + ".xml");
 			texture->set_atlas_source(atlas_path.string());
 
-			pResource_manager.add_resource(engine::resource_type::texture, texture_name, texture);
+			pResource_manager.add_resource(texture);
 		}
 	}
 	return true;
 }
 
-bool font_directory::load(engine::resource_manager& pResource_manager, const std::string& mData_filepath)
+bool font_loader::load(engine::resource_manager& pResource_manager, const std::string& mData_filepath)
 {
 	const engine::fs::path folder_path = mData_filepath + "/" + defs::DEFAULT_FONTS_PATH.string();
 
@@ -101,27 +106,31 @@ bool font_directory::load(engine::resource_manager& pResource_manager, const std
 		if (font_path.extension() == ".ttf")
 		{
 			const std::string font_name = font_path.stem().string();
-			if (pResource_manager.has_resource(engine::resource_type::font, font_name)) // Check if unique
+
+			// Check if unique
+			if (pResource_manager.has_resource("font", font_name))
 			{
 				logger::warning("Font '" + font_name + "' is not unique. Please give it a unique name.");
 				continue;
 			}
-			std::shared_ptr<engine::font> font(new engine::font());
+
+			std::shared_ptr<engine::font> font(std::make_shared<engine::font>());
+			font->set_name(font_name);
 			font->set_font_source(font_path.string());
 
-			// Get preferences path (if it exists)
+			// Parse preferences xml file (if it exists)
 			auto preferences_path = font_path.parent_path();
 			preferences_path /= font_name + ".xml";
 			if (engine::fs::exists(preferences_path))
 				font->set_preferences_source(preferences_path.string());
 
-			pResource_manager.add_resource(engine::resource_type::font, font_name, font);
+			pResource_manager.add_resource(font);
 		}
 	}
 	return true;
 }
 
-bool font_directory::load_pack(engine::resource_manager & pResource_manager, engine::resource_pack & pPack)
+bool font_loader::load_pack(engine::resource_manager & pResource_manager, engine::resource_pack & pPack)
 {
 	auto file_list = pPack.recursive_directory(defs::DEFAULT_FONTS_PATH.string());
 	for (auto& i : file_list)
@@ -130,13 +139,14 @@ bool font_directory::load_pack(engine::resource_manager & pResource_manager, eng
 		{
 			const std::string font_name = i.stem();
 
-			std::shared_ptr<engine::font> font(new engine::font());
+			std::shared_ptr<engine::font> font(std::make_shared<engine::font>());
+			font->set_name(font_name);
 			font->set_font_source(i.string());
 
 			auto preferences_path = i.parent() / (font_name + ".xml");
 			font->set_preferences_source(preferences_path.string());
 
-			pResource_manager.add_resource(engine::resource_type::font, font_name, font);
+			pResource_manager.add_resource(font);
 		}
 	}
 	return true;
@@ -149,7 +159,7 @@ static const std::set<std::string> supported_sound_extensions =
 };
 
 
-bool audio_directory::load(engine::resource_manager & pResource_manager, const std::string& mData_filepath)
+bool audio_loader::load(engine::resource_manager & pResource_manager, const std::string& mData_filepath)
 {
 	const engine::fs::path folder_path = mData_filepath + "/" + defs::DEFAULT_AUDIO_PATH.string();
 
@@ -164,24 +174,26 @@ bool audio_directory::load(engine::resource_manager & pResource_manager, const s
 		auto& sound_path = i.path();
 		if (supported_sound_extensions.find(sound_path.extension().string()) != supported_sound_extensions.end())
 		{
-			std::shared_ptr<engine::sound_file> buffer(new engine::sound_file());
+			std::shared_ptr<engine::sound_file> buffer(std::make_shared<engine::sound_file>());
+			buffer->set_name(sound_path.stem().string());
 			buffer->set_filepath(sound_path.string());
-			pResource_manager.add_resource(engine::resource_type::audio, sound_path.stem().string(), buffer);
+			pResource_manager.add_resource(buffer);
 		}
 	}
 	return true;
 }
 
-bool audio_directory::load_pack(engine::resource_manager & pResource_manager, engine::resource_pack & pPack)
+bool audio_loader::load_pack(engine::resource_manager & pResource_manager, engine::resource_pack & pPack)
 {
 	auto file_list = pPack.recursive_directory(defs::DEFAULT_AUDIO_PATH.string());
 	for (auto& i : file_list)
 	{
 		if (supported_sound_extensions.find(i.extension()) != supported_sound_extensions.end())
 		{
-			std::shared_ptr<engine::sound_file> buffer(new engine::sound_file());
+			std::shared_ptr<engine::sound_file> buffer(std::make_shared<engine::sound_file>());
+			buffer->set_name(i.stem());
 			buffer->set_filepath(i.string());
-			pResource_manager.add_resource(engine::resource_type::audio, i.stem(), buffer);
+			pResource_manager.add_resource(buffer);
 		}
 	}
 	return true;
