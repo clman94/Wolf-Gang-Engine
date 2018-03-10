@@ -1,4 +1,4 @@
-[submodule "tinyxml2"]
+[submodule "3rdparty/tinyxml2"]
 	path = 3rdparty/tinyxml2
 	url = https://github.com/leethomason/tinyxml2.git
 [submodule "3rdparty/box2d"]
@@ -10,3 +10,9 @@
 [submodule "tests/catch"]
 	path = tests/catch
 	url = https://github.com/catchorg/Catch2.git
+[submodule "3rdparty/AngelScript"]
+	path = 3rdparty/AngelScript
+	url = https://github.com/clman94/AngelScript-Mirror.git
+[submodule "3rdparty/sfml"]
+	path = 3rdparty/sfml
+	url = https://github.com/SFML/SFML.git
