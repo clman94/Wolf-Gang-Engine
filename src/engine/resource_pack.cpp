@@ -201,6 +201,12 @@ encoded_path::encoded_path(const std::string & pString)
 	parse(pString);
 }
 
+encoded_path::encoded_path(const fs::path & pPath)
+{
+	for (auto& i : pPath)
+		mHierarchy.push_back(i.string());
+}
+
 bool encoded_path::parse(const std::string & pString, const std::set<char>& pDelimitors)
 {
 	if (pString.empty())
@@ -230,17 +236,13 @@ bool encoded_path::parse(const std::string & pString, const std::set<char>& pDel
 
 bool encoded_path::in_directory(const encoded_path & pPath) const
 {
-	if (pPath.mHierarchy.size() >= mHierarchy.size())
+	if (pPath.mHierarchy.size() >= mHierarchy.size()) // too big
 		return false;
 	if (mHierarchy[pPath.mHierarchy.size() - 1] != pPath.filename())
 		return false;
-
-	
 	for (size_t i = 0; i < pPath.mHierarchy.size(); i++)
-	{
 		if (mHierarchy[i] != pPath.mHierarchy[i])
 			return false;
-	}
 	return true;
 }
 
@@ -258,14 +260,14 @@ encoded_path encoded_path::subpath(size_t pOffset, size_t pCount) const
 	if (pOffset >= mHierarchy.size())
 		return{};
 
-	encoded_path new_path;
-
 	if (pOffset + pCount >= mHierarchy.size() || pCount == 0)
 	{
+		encoded_path new_path;
 		new_path.mHierarchy = std::vector<std::string>(mHierarchy.begin() + pOffset, mHierarchy.end());
 		return new_path;
 	}
 
+	encoded_path new_path;
 	new_path.mHierarchy 
 		= std::vector<std::string>(mHierarchy.begin() + pOffset
 			, mHierarchy.begin() + pOffset + pCount);
@@ -274,7 +276,8 @@ encoded_path encoded_path::subpath(size_t pOffset, size_t pCount) const
 
 std::string encoded_path::string() const
 {
-	return string('/');
+	return string('/'); // Supported by windows and linux, however may still not be entirely portable.
+					    // TODO: Add preprocessor directives to check for type of system
 }
 
 std::string encoded_path::string(char pSeperator) const
@@ -283,10 +286,7 @@ std::string encoded_path::string(char pSeperator) const
 		return{};
 	std::string retval;
 	for (auto i : mHierarchy)
-	{
-		retval += i + pSeperator; // Supported by windows and linux, however may still not be entirely portable.
-						   // TODO: Add preprocessor directives to check for type of system
-	}
+		retval += i + pSeperator;
 	retval.pop_back(); // Remove the last divider
 	return retval;
 }
@@ -297,7 +297,7 @@ std::string encoded_path::stem() const
 	for (auto i = name.begin(); i != name.end(); i++)
 		if (*i == '.')
 			return std::string(name.begin(), i);
-	return{};
+	return name;
 }
 
 std::string encoded_path::extension() const
@@ -307,7 +307,7 @@ std::string encoded_path::extension() const
 		return{};
 	for (auto i = name.rbegin(); i != name.rend(); i++)
 		if (*i == '.')
-			return std::string(i.base() - 1, (name.rbegin()).base()); // Include the '.'
+			return std::string(i.base() - 1, name.rbegin().base()); // Include the '.'
 	return{};
 }
 
@@ -398,6 +398,14 @@ encoded_path& encoded_path::operator=(const std::string& pString)
 bool encoded_path::operator==(const encoded_path& pRight) const
 {
 	return is_same(pRight);
+}
+
+fs::path encoded_path::to_path() const
+{
+	fs::path path;
+	for (auto i : mHierarchy)
+		path /= i;
+	return path;
 }
 
 encoded_path encoded_path::operator/(const encoded_path& pRight) const

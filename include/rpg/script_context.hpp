@@ -23,6 +23,8 @@ class scene_script_context :
 	public engine::resource
 {
 public:
+	const std::string type = "script";
+
 	struct wall_group_function
 	{
 		std::string group;
@@ -33,8 +35,8 @@ public:
 	~scene_script_context();
 
 	void set_path(const std::string& pFilepath);
-	bool load();
-	bool unload();
+	bool load() override;
+	bool unload() override;
 
 	void set_script_system(script_system& pScript);
 	bool build_script(const std::string& pPath);
@@ -43,9 +45,9 @@ public:
 	void clean();
 	void call_all_with_tag(const std::string& pTag);
 
-	std::string get_type() const override
+	const std::string& get_type() const override
 	{
-		return "script";
+		return type;
 	}
 
 	std::vector<std::shared_ptr<script_function>> get_all_with_tag(const std::string& pTag);

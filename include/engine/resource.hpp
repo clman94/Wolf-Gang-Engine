@@ -23,7 +23,7 @@ public:
 	void set_name(const std::string& pName);
 	const std::string& get_name() const;
 
-	virtual std::string get_type() const = 0;
+	virtual const std::string& get_type() const = 0;
 
 	void set_resource_pack(resource_pack* pPack);
 

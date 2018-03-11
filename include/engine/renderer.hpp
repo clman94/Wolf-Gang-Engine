@@ -361,15 +361,17 @@ class shader :
 	public resource
 {
 public:
+	const std::string type = "shader";
+
 	bool load() override;
 	bool unload() override;
 
 	void set_vertex_path(const std::string& pPath);
 	void set_fragment_path(const std::string& pPath);
 
-	std::string get_type() const override
+	const std::string& get_type() const override
 	{
-		return "shader";
+		return type;
 	}
 
 #ifdef ENGINE_INTERNAL
@@ -647,14 +649,16 @@ class font :
 	public resource
 {
 public:
+	const std::string type = "font";
+
 	void set_font_source(const std::string& pFilepath);
 	void set_preferences_source(const std::string& pFilepath);
 	bool load() override;
 	bool unload() override;
 
-	std::string get_type() const override
+	const std::string& get_type() const override
 	{
-		return "font";
+		return type;
 	}
 
 private:

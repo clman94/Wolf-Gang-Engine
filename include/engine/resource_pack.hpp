@@ -7,17 +7,18 @@
 #include <fstream>
 #include <set>
 #include <engine/utility.hpp>
+#include <engine/filesystem.hpp>
 
 namespace engine {
 
-// A path somewhat similar to boost path but with more features
-// related to manipulating the path.
+// An filepath-like class that doesn't associate with any one filesystem.
 class encoded_path
 {
 public:
 	encoded_path() {}
 	encoded_path(const char* pString);
 	encoded_path(const std::string& pString);
+	encoded_path(const fs::path& pPath);
 
 	bool parse(const std::string& pString, const std::set<char>& pDelimitors = {'\\', '/'});
 
@@ -59,6 +60,8 @@ public:
 	int compare(const encoded_path& pCmp) const;
 	bool operator<(const encoded_path& pRight) const;
 	bool operator==(const encoded_path& pRight) const;
+
+	fs::path to_path() const;
 
 private:
 	void simplify();

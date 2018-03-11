@@ -151,7 +151,8 @@ bool font_loader::load_pack(engine::resource_manager & pResource_manager, engine
 	}
 	return true;
 }
-// File with these extensions will be used
+
+// Files with these extensions will be used
 static const std::set<std::string> supported_sound_extensions =
 {
 	".ogg",
@@ -161,7 +162,7 @@ static const std::set<std::string> supported_sound_extensions =
 
 bool audio_loader::load(engine::resource_manager & pResource_manager, const std::string& mData_filepath)
 {
-	const engine::fs::path folder_path = mData_filepath + "/" + defs::DEFAULT_AUDIO_PATH.string();
+	const engine::fs::path folder_path = engine::fs::path(mData_filepath) / defs::DEFAULT_AUDIO_PATH;
 
 	if (!engine::fs::exists(folder_path))
 	{
@@ -185,7 +186,7 @@ bool audio_loader::load(engine::resource_manager & pResource_manager, const std:
 
 bool audio_loader::load_pack(engine::resource_manager & pResource_manager, engine::resource_pack & pPack)
 {
-	auto file_list = pPack.recursive_directory(defs::DEFAULT_AUDIO_PATH.string());
+	auto file_list = pPack.recursive_directory(defs::DEFAULT_AUDIO_PATH);
 	for (auto& i : file_list)
 	{
 		if (supported_sound_extensions.find(i.extension()) != supported_sound_extensions.end())
@@ -197,4 +198,9 @@ bool audio_loader::load_pack(engine::resource_manager & pResource_manager, engin
 		}
 	}
 	return true;
+}
+
+bool script_loader::load(engine::resource_manager & pResource_manager, const std::string & mData_filepath)
+{
+	return false;
 }

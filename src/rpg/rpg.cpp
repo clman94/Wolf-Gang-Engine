@@ -601,6 +601,8 @@ void game::load_terminal_interface(engine::terminal_system& pTerminal)
 	pTerminal.add_group(mGroup_global1);
 	pTerminal.add_group(mGroup_slot);
 }
+#endif
+
 scene & game::get_scene()
 {
 	return mScene;
@@ -613,7 +615,6 @@ const engine::fs::path & rpg::game::get_source_path() const
 {
 	return mData_directory;
 }
-#endif
 
 float game::get_delta()
 {

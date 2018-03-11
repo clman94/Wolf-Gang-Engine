@@ -282,11 +282,12 @@ void WGE_editor::run()
 
 		mRenderer.update_events();
 
-		if (mRenderer.is_key_down(engine::renderer::key_code::Escape))
+		// Disabling exit by escape for now
+		/*if (mRenderer.is_key_down(engine::renderer::key_code::Escape))
 		{
 			logger::info("Closing with 'Escape'");
 			return;
-		}
+		}*/
 
 		if (mRenderer.is_key_pressed(engine::renderer::key_code::F11))
 		{

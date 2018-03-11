@@ -155,8 +155,7 @@ private:
 		}
 
 		// Just cast and go
-		auto cast = dynamic_cast<T*>(val);
-		return cast;
+		return dynamic_cast<T*>(val);
 	}
 
 	tinyxml2::XMLDocument mDocument;
@@ -240,13 +239,13 @@ private:
 	flag_container   mFlags;
 	script_system    mScript;
 	engine::controls mControls;
+
 	size_t           mSlot;
 	save_system      mSave_system;
 
 	engine::fs::path mData_directory;
 
 #ifndef LOCKED_RELEASE_MODE
-
 	std::shared_ptr<engine::terminal_command_group> mGroup_flags;
 	std::shared_ptr<engine::terminal_command_group> mGroup_game;
 	std::shared_ptr<engine::terminal_command_group> mGroup_global1;

@@ -9,10 +9,10 @@
 
 
 #include <angelscript.h> // AS_USE_NAMESPACE will need to be defined
-#include <angelscript/add_on/scriptbuilder/scriptbuilder.h>
-#include <angelscript/add_on/scriptarray/scriptarray.h>
-#include <angelscript/add_on/scripthandle/scripthandle.h>
-#include <angelscript/add_on/scriptdictionary/scriptdictionary.h>
+#include "../3rdparty/AngelScript/sdk/add_on/scriptbuilder/scriptbuilder.h"
+#include "../3rdparty/AngelScript/sdk/add_on/scriptarray/scriptarray.h"
+#include "../3rdparty/AngelScript/sdk/add_on/scripthandle/scripthandle.h"
+#include "../3rdparty/AngelScript/sdk/add_on/scriptdictionary/scriptdictionary.h"
 
 #include <memory>
 #include <list>
@@ -24,8 +24,6 @@ namespace AS = AngelScript;
 // This allows us to separate the arrays with different types
 template<typename T>
 struct AS_array : public AS::CScriptArray {};
-
-
 
 namespace util {
 template<>
@@ -184,6 +182,8 @@ public:
 	void reset_namespace();
 
 	bool is_executing();
+
+	void throw_exception(const std::string& pMessage);
 
 	template<typename T>
 	AS_array<T>* create_array(size_t pSize = 0)

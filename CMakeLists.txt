@@ -1,0 +1,171 @@
+cmake_minimum_required(VERSION 3.0.2)
+
+project(WolfGangEngine)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Use static libs for visual studio
+set(CompilerFlags
+	CMAKE_CXX_FLAGS
+	CMAKE_CXX_FLAGS_DEBUG
+	CMAKE_CXX_FLAGS_RELEASE
+	CMAKE_C_FLAGS
+	CMAKE_C_FLAGS_DEBUG
+	CMAKE_C_FLAGS_RELEASE
+	)
+foreach(CompilerFlag ${CompilerFlags})
+  string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
+endforeach()
+
+# Use latest standard in Visual Studio
+if (MSVC_VERSION GREATER_EQUAL "1900")
+	include(CheckCXXCompilerFlag)
+	CHECK_CXX_COMPILER_FLAG("/std:c++latest" _cpp_latest_flag_supported)
+	if (_cpp_latest_flag_supported)
+		add_compile_options("/std:c++latest")
+	endif()
+endif()
+
+# Engine sources and Headers
+file(GLOB_RECURSE ENGINE_SOURCES "${CMAKE_SOURCE_DIR}/src/*.cpp")
+file(GLOB_RECURSE ENGINE_HEADERS "${CMAKE_SOURCE_DIR}/include/*.hpp")
+
+# Box2d sources and Headers
+file(GLOB_RECURSE BOX2D_SOURCES "${CMAKE_SOURCE_DIR}/3rdparty/box2d/Box2D/Box2D/*.cpp")
+file(GLOB_RECURSE BOX2D_HEADERS "${CMAKE_SOURCE_DIR}/3rdparty/box2d/Box2D/Box2D/*.h")
+
+# Tinyxml2 sources and Headers
+set(TINYXML2_SOURCES "${CMAKE_SOURCE_DIR}/3rdparty/tinyxml2/tinyxml2.cpp")
+set(TINYXML2_HEADERS "${CMAKE_SOURCE_DIR}/3rdparty/tinyxml2/tinyxml2.h")
+
+# Angelscript Addon sources and Headers
+set(AS_ADDONS "${CMAKE_SOURCE_DIR}/3rdparty/AngelScript/sdk/add_on")
+set(AS_ADDONS_SOURCES
+	"${AS_ADDONS}/scriptbuilder/scriptbuilder.cpp"
+	"${AS_ADDONS}/scriptdictionary/scriptdictionary.cpp"
+	"${AS_ADDONS}/scripthandle/scripthandle.cpp"
+	"${AS_ADDONS}/scriptstdstring/scriptstdstring.cpp"
+	"${AS_ADDONS}/scriptarray/scriptarray.cpp"
+	"${AS_ADDONS}/scriptdictionary/scriptdictionary.cpp"
+	"${AS_ADDONS}/scriptmath/scriptmath.cpp"
+	)
+set(AS_ADDONS_HEADERS
+	"${AS_ADDONS}/scriptbuilder/scriptbuilder.h"
+	"${AS_ADDONS}/scriptdictionary/scriptdictionary.h"
+	"${AS_ADDONS}/scripthandle/scripthandle.h"
+	"${AS_ADDONS}/scriptstdstring/scriptstdstring.h"
+	"${AS_ADDONS}/scriptarray/scriptarray.h"
+	"${AS_ADDONS}/scriptdictionary/scriptdictionary.h"
+	"${AS_ADDONS}/scriptmath/scriptmath.h"
+	)
+
+# Organize into little folders for ease of use
+source_group("Engine Sources" FILES ${ENGINE_SOURCES})
+source_group("Engine Headers" FILES ${ENGINE_HEADERS})
+
+source_group("Box2d Sources" FILES ${BOX2D_SOURCES})
+source_group("Box2d Headers" FILES ${BOX2D_HEADERS})
+
+source_group("Tinyxml2 Sources" FILES ${TINYXML2_SOURCES})
+source_group("Tinyxml2 Headers" FILES ${TINYXML2_HEADERS})
+
+source_group("Angelscript Addons Sources" FILES ${AS_ADDONS_SOURCES})
+source_group("Angelscript Addons Headers" FILES ${AS_ADDONS_HEADERS})
+
+# Executable
+add_executable(WolfGangEngine
+	${ENGINE_SOURCES}
+	${ENGINE_HEADERS}
+	${BOX2D_SOURCES}
+	${BOX2D_HEADERS}
+	${TINYXML2_SOURCES}
+	${TINYXML2_HEADERS}
+	${AS_ADDONS_SOURCES}
+	${AS_ADDONS_HEADERS}
+	)
+
+# WGE includes
+include_directories("${CMAKE_SOURCE_DIR}/include")
+
+# Box2d includes
+include_directories("${CMAKE_SOURCE_DIR}/3rdparty/box2d/Box2D")
+
+# SFML
+set(SFML_STATIC_LIBRARIES TRUE)
+set(SFML_ROOT "${CMAKE_SOURCE_DIR}/3rdparty/sfml")
+
+# Link to sfml dependencies (Stolen from tgui)
+include(${CMAKE_SOURCE_DIR}/3rdparty/sfml/cmake/Config.cmake)
+if (SFML_OS_WINDOWS)
+	set(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} "${SFML_ROOT}/extlibs/headers")
+	if(ARCH_32BITS)
+		if(SFML_COMPILER_MSVC AND MSVC_VERSION LESS 1900) # older than VC++14
+			set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "${SFML_ROOT}/extlibs/libs-msvc/x86")
+		elseif(SFML_COMPILER_MSVC) # VC++14 or newer
+			set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "${SFML_ROOT}/extlibs/libs-msvc-universal/x86")
+		else() # gcc
+			set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "${SFML_ROOT}/extlibs/libs-mingw/x86")
+		endif()
+	elseif(ARCH_64BITS)
+		if(SFML_COMPILER_MSVC AND MSVC_VERSION LESS 1900) # older than VC++14
+			set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "${SFML_ROOT}/extlibs/libs-msvc/x64")
+		elseif(SFML_COMPILER_MSVC) # VC++14 or newer
+			set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "${SFML_ROOT}/extlibs/libs-msvc-universal/x64")
+		else() # gcc
+			set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "${SFML_ROOT}/extlibs/libs-mingw/x64")
+		endif()
+	endif()
+elseif(SFML_OS_MACOSX)
+	set(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} "${SFML_ROOT}/extlibs/headers")
+	set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "${SFML_ROOT}/extlibs/libs-osx/lib/")
+elseif(SFML_OS_ANDROID)
+	set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "${ANDROID_NDK}/sources/sfml/extlibs/lib/armeabi/")
+elseif(SFML_OS_IOS)
+	set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "${SFML_ROOT}/extlibs/libs-ios/")
+endif()
+
+# Do all the modules
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake_modules" ${CMAKE_MODULE_PATH})
+
+find_package(SFML 2 COMPONENTS audio graphics window system)
+if(SFML_FOUND)
+  include_directories(${SFML_INCLUDE_DIR})
+  target_link_libraries(WolfGangEngine ${SFML_LIBRARIES} ${SFML_DEPENDENCIES})
+endif()
+
+# TGUI
+set(TGUI_ROOT "${CMAKE_SOURCE_DIR}/3rdparty/tgui")
+find_package(TGUI 0.7)
+if(TGUI_FOUND)
+  include_directories(${TGUI_INCLUDE_DIR})
+  target_link_libraries(WolfGangEngine ${TGUI_LIBRARY})
+endif()
+
+# AngelScript stuffs
+add_definitions(-DAS_USE_NAMESPACE)
+include_directories("${CMAKE_SOURCE_DIR}/3rdparty/AngelScript/sdk/angelscript/include")
+set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "${CMAKE_SOURCE_DIR}/3rdparty/AngelScript/sdk/angelscript")
+
+# Set Angelscript room folder (libs and include here)
+set(AS_ROOT "${CMAKE_SOURCE_DIR}/3rdparty/AngelScript/sdk/angelscript")
+
+# Static angelscript debug library
+find_library(AS_LIBRARY_DEBUG
+	NAMES angelscriptd
+	PATH_SUFFIXES lib build/lib build/lib/Debug
+	PATHS ${AS_ROOT}
+	)
+
+# Static angelscript release library
+find_library(AS_LIBRARY_RELEASE
+	NAMES angelscript
+	PATH_SUFFIXES lib build/lib build/lib/Release
+	PATHS ${AS_ROOT}
+	)
+target_link_libraries(WolfGangEngine
+	debug     ${AS_LIBRARY_DEBUG}
+	optimized ${AS_LIBRARY_RELEASE}
+	)
+

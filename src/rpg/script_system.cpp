@@ -1,10 +1,10 @@
 
+#include <engine/logger.hpp>
+
 #include <rpg/script_system.hpp>
 
-#include <angelscript/add_on/scriptstdstring/scriptstdstring.h>
-#include <angelscript/add_on/scriptmath/scriptmath.h>
-
-#include <engine/logger.hpp>
+#include "../3rdparty/AngelScript/sdk/add_on/scriptstdstring/scriptstdstring.h"
+#include "../3rdparty/AngelScript/sdk/add_on/scriptmath/scriptmath.h"
 
 #include <functional>
 #include <algorithm>

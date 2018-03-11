@@ -18,14 +18,16 @@ class sound_file :
 	public resource
 {
 public:
+	const std::string type = "audio";
+
 	static const size_t streaming_threshold = 1000000;
 
 	bool load();
 	bool unload();
 
-	std::string get_type() const override
+	const std::string& get_type() const override
 	{
-		return "audio";
+		return type;
 	}
 
 	void set_filepath(const std::string& pPath);

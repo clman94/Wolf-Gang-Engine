@@ -74,15 +74,17 @@ class texture :
 	public resource
 {
 public:
+	const std::string type = "texture";
+
 	void set_texture_source(const std::string& pFilepath);
 	void set_atlas_source(const std::string& pFilepath);
 
 	bool load() override;
 	bool unload() override;
 
-	std::string get_type() const override
+	const std::string& get_type() const override
 	{
-		return "texture";
+		return type;
 	}
 
 	std::shared_ptr<subtexture> get_entry(const std::string& pName) const;
