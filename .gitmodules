@@ -7,12 +7,15 @@
 [submodule "3rdparty/tgui"]
 	path = 3rdparty/tgui
 	url = https://github.com/texus/TGUI.git
+	ignore = dirty
 [submodule "tests/catch"]
 	path = tests/catch
 	url = https://github.com/catchorg/Catch2.git
 [submodule "3rdparty/AngelScript"]
 	path = 3rdparty/AngelScript
 	url = https://github.com/clman94/AngelScript-Mirror.git
+	ignore = dirty
 [submodule "3rdparty/sfml"]
 	path = 3rdparty/sfml
 	url = https://github.com/SFML/SFML.git
+	ignore = dirty

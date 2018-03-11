@@ -1,4 +1,3 @@
-#ifdef TESTS
 #define CATCH_CONFIG_RUNNER
 
 #include "catch/single_include/catch.hpp"
@@ -12,7 +11,7 @@
 engine::renderer::key_code key_name_to_code(const std::string& pName);
 std::string key_code_to_name(engine::renderer::key_code pCode);
 
-
+// Entry point
 int main(int argc, char* const argv[])
 {
 	int r = Catch::Session().run();
@@ -20,6 +19,7 @@ int main(int argc, char* const argv[])
 	return r;
 }
 
+// Tests below
 namespace {
 
 TEST_CASE("remove_trailing_whitespace")
@@ -124,8 +124,4 @@ TEST_CASE("key_code_to_name")
 	}
 }
 
-
 }
-
-
-#endif

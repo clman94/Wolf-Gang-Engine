@@ -2,11 +2,12 @@ cmake_minimum_required(VERSION 3.0.2)
 
 project(WolfGangEngine)
 
+# Use C++17
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Use static libs for visual studio
+# Use static libs
 set(CompilerFlags
 	CMAKE_CXX_FLAGS
 	CMAKE_CXX_FLAGS_DEBUG
@@ -28,8 +29,20 @@ if (MSVC_VERSION GREATER_EQUAL "1900")
 	endif()
 endif()
 
+# Main (editor) sources
+set(MAIN_SOURCES "${CMAKE_SOURCE_DIR}/src/main/main.cpp")
+
+# Locked sources
+set(LOCKED_MAIN_SOURCES "${CMAKE_SOURCE_DIR}/src/main/main.cpp")
+
+# Test sources
+set(TEST_SOURCES "${CMAKE_SOURCE_DIR}/tests/tests1.cpp")
+
 # Engine sources and Headers
-file(GLOB_RECURSE ENGINE_SOURCES "${CMAKE_SOURCE_DIR}/src/*.cpp")
+file(GLOB_RECURSE ENGINE_RPG_SOURCES "${CMAKE_SOURCE_DIR}/src/rpg/*.cpp")
+file(GLOB_RECURSE ENGINE_ENGINE_SOURCES "${CMAKE_SOURCE_DIR}/src/engine/*.cpp")
+set(ENGINE_SOURCES ${ENGINE_RPG_SOURCES} ${ENGINE_ENGINE_SOURCES})
+
 file(GLOB_RECURSE ENGINE_HEADERS "${CMAKE_SOURCE_DIR}/include/*.hpp")
 
 # Box2d sources and Headers
@@ -61,6 +74,7 @@ set(AS_ADDONS_HEADERS
 	"${AS_ADDONS}/scriptmath/scriptmath.h"
 	)
 
+
 # Organize into little folders for ease of use
 source_group("Engine Sources" FILES ${ENGINE_SOURCES})
 source_group("Engine Headers" FILES ${ENGINE_HEADERS})
@@ -74,8 +88,9 @@ source_group("Tinyxml2 Headers" FILES ${TINYXML2_HEADERS})
 source_group("Angelscript Addons Sources" FILES ${AS_ADDONS_SOURCES})
 source_group("Angelscript Addons Headers" FILES ${AS_ADDONS_HEADERS})
 
-# Executable
-add_executable(WolfGangEngine
+source_group("Main Sources" FILES ${MAIN_SOURCES} ${LOCKED_MAIN_SOURCES} ${TEST_SOURCES})
+
+set(WGE_ALL_SOURCES
 	${ENGINE_SOURCES}
 	${ENGINE_HEADERS}
 	${BOX2D_SOURCES}
@@ -85,6 +100,14 @@ add_executable(WolfGangEngine
 	${AS_ADDONS_SOURCES}
 	${AS_ADDONS_HEADERS}
 	)
+
+# Setup executables with appropriate sources and headers
+add_executable(WolfGangEngine        ${MAIN_SOURCES}        ${WGE_ALL_SOURCES})
+add_executable(WolfGangEngine_Locked ${LOCKED_MAIN_SOURCES} ${WGE_ALL_SOURCES})
+add_executable(WolfGangEngine_Tests  ${TEST_SOURCES}        ${WGE_ALL_SOURCES})
+
+# Set the locked release mode for the WolfGangEngine_Locked target
+target_compile_definitions(WolfGangEngine_Tests PRIVATE LOCKED_RELEASE_MODE=1)
 
 # WGE includes
 include_directories("${CMAKE_SOURCE_DIR}/include")
@@ -129,43 +152,64 @@ endif()
 # Do all the modules
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake_modules" ${CMAKE_MODULE_PATH})
 
+# Find SFML
 find_package(SFML 2 COMPONENTS audio graphics window system)
 if(SFML_FOUND)
   include_directories(${SFML_INCLUDE_DIR})
-  target_link_libraries(WolfGangEngine ${SFML_LIBRARIES} ${SFML_DEPENDENCIES})
+
+  # Link SFML
+  target_link_libraries(WolfGangEngine        ${SFML_LIBRARIES} ${SFML_DEPENDENCIES})
+  target_link_libraries(WolfGangEngine_Locked ${SFML_LIBRARIES} ${SFML_DEPENDENCIES})
+  target_link_libraries(WolfGangEngine_Tests  ${SFML_LIBRARIES} ${SFML_DEPENDENCIES})
+
 endif()
 
-# TGUI
+# Find TGUI
 set(TGUI_ROOT "${CMAKE_SOURCE_DIR}/3rdparty/tgui")
 find_package(TGUI 0.7)
 if(TGUI_FOUND)
   include_directories(${TGUI_INCLUDE_DIR})
+
+  # Link TGUI
   target_link_libraries(WolfGangEngine ${TGUI_LIBRARY})
+  target_link_libraries(WolfGangEngine_Locked ${TGUI_LIBRARY})
+  target_link_libraries(WolfGangEngine_Tests ${TGUI_LIBRARY})
+
 endif()
 
-# AngelScript stuffs
+# Use namespaces in AngelScript
 add_definitions(-DAS_USE_NAMESPACE)
-include_directories("${CMAKE_SOURCE_DIR}/3rdparty/AngelScript/sdk/angelscript/include")
-set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "${CMAKE_SOURCE_DIR}/3rdparty/AngelScript/sdk/angelscript")
 
-# Set Angelscript room folder (libs and include here)
+# Angelscript Includes
+include_directories("${CMAKE_SOURCE_DIR}/3rdparty/AngelScript/sdk/angelscript/include")
+
+# We will search in here for angelscript libs
+# set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "${CMAKE_SOURCE_DIR}/3rdparty/AngelScript/sdk/angelscript")
+
+# Set Angelscript root folder (libs and include here)
 set(AS_ROOT "${CMAKE_SOURCE_DIR}/3rdparty/AngelScript/sdk/angelscript")
 
-# Static angelscript debug library
+# Find the static angelscript debug library
 find_library(AS_LIBRARY_DEBUG
 	NAMES angelscriptd
 	PATH_SUFFIXES lib build/lib build/lib/Debug
 	PATHS ${AS_ROOT}
 	)
 
-# Static angelscript release library
+# Find the static angelscript release library
 find_library(AS_LIBRARY_RELEASE
 	NAMES angelscript
 	PATH_SUFFIXES lib build/lib build/lib/Release
 	PATHS ${AS_ROOT}
 	)
-target_link_libraries(WolfGangEngine
+
+set(AS_LINK_LIBRARIES
 	debug     ${AS_LIBRARY_DEBUG}
 	optimized ${AS_LIBRARY_RELEASE}
 	)
+	
+# Link AngelScript
+target_link_libraries(WolfGangEngine ${AS_LINK_LIBRARIES})
+target_link_libraries(WolfGangEngine_Locked ${AS_LINK_LIBRARIES})
+target_link_libraries(WolfGangEngine_Tests ${AS_LINK_LIBRARIES})
 

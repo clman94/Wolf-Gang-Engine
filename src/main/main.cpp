@@ -6,10 +6,7 @@
 #include <engine/logger.hpp>
 
 #include <rpg/rpg.hpp>
-
 #include <rpg/editor.hpp>
-
-#ifndef TESTS
 
 // Entry point of application
 int main(int argc, char* argv[])
@@ -30,5 +27,3 @@ int main(int argc, char* argv[])
 	
 	return 0;
 }
-
-#endif
