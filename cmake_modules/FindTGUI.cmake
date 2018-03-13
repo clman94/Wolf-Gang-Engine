@@ -43,14 +43,17 @@
 set(FIND_TGUI_PATHS
     ${TGUI_ROOT}
     $ENV{TGUI_ROOT}
-    ~/Library/Frameworks
-    /Library/Frameworks
-    /usr/local
-    /usr
-    /sw
-    /opt/local
-    /opt/csw
-    /opt)
+
+# We want our own version
+#    ~/Library/Frameworks
+#    /Library/Frameworks
+#    /usr/local
+#    /usr
+#    /sw
+#    /opt/local
+#    /opt/csw
+#    /opt
+	)
 
 # find the TGUI include directory
 find_path(TGUI_INCLUDE_DIR TGUI/Config.hpp

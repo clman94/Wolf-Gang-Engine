@@ -189,12 +189,14 @@ include_directories("${CMAKE_SOURCE_DIR}/3rdparty/AngelScript/sdk/angelscript/in
 # Set Angelscript root folder (libs and include here)
 set(AS_ROOT "${CMAKE_SOURCE_DIR}/3rdparty/AngelScript/sdk/angelscript")
 
+if(NOT UNIX)
 # Find the static angelscript debug library
 find_library(AS_LIBRARY_DEBUG
 	NAMES angelscriptd
 	PATH_SUFFIXES lib build/lib build/lib/Debug
 	PATHS ${AS_ROOT}
 	)
+endif()
 
 # Find the static angelscript release library
 find_library(AS_LIBRARY_RELEASE
