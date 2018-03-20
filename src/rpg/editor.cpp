@@ -105,17 +105,15 @@ public:
 		// Track all the tiles that are replaced
 		for (auto& i : mTiles)
 		{
-			mTilemap_manipulator->explode_tile(i.get_position(), mLayer);
-			auto replaced_tile = mTilemap_manipulator->get_tile(i.get_position(), mLayer);
+			auto replaced_tile = mTilemap_manipulator->get_layer(mLayer).find_tile(i.get_position());
 			if (replaced_tile)
 				mReplaced_tiles.push_back(*replaced_tile);
 		}
 
 		// Replace all the tiles
 		for (auto& i : mTiles)
-		{
-			mTilemap_manipulator->set_tile(i, mLayer);
-		}
+			mTilemap_manipulator->get_layer(mLayer).set_tile(i);
+
 		return true;
 	}
 
@@ -126,21 +124,16 @@ public:
 		// Remove all placed tiles
 		for (auto& i : mTiles)
 		{
-			mTilemap_manipulator->remove_tile(i.get_position(), mLayer);
+			mTilemap_manipulator->get_layer(mLayer).remove_tile(i.get_position());
 		}
 
 		// Place all replaced tiles back
 		for (auto& i : mReplaced_tiles)
 		{
-			mTilemap_manipulator->set_tile(i, mLayer);
+			mTilemap_manipulator->get_layer(mLayer).set_tile(i);
 		}
 
 		return true;
-	}
-
-	bool redo()
-	{
-		return execute();
 	}
 
 	void add(rpg::tile& pTile)
@@ -174,12 +167,11 @@ public:
 		// Track all the tiles that are replaced
 		for (auto& i : mTiles_to_remove)
 		{
-			mTilemap_manipulator->explode_tile(i, mLayer);
-			auto replaced_tile = mTilemap_manipulator->get_tile(i, mLayer);
+			auto replaced_tile = mTilemap_manipulator->get_layer(mLayer).find_tile(i);
 			if (replaced_tile)
 			{
 				mRemoved_tiles.push_back(*replaced_tile);
-				mTilemap_manipulator->remove_tile(i, mLayer);
+				mTilemap_manipulator->get_layer(mLayer).remove_tile(i);
 			}
 		}
 
@@ -189,15 +181,8 @@ public:
 	bool undo()
 	{
 		for (auto& i : mRemoved_tiles)
-		{
-			mTilemap_manipulator->set_tile(i, mLayer);
-		}
+			mTilemap_manipulator->get_layer(mLayer).set_tile(i);
 		return true;
-	}
-
-	bool redo()
-	{
-		return execute();
 	}
 
 	void add(engine::fvector pPosition)
@@ -310,6 +295,10 @@ void WGE_editor::run()
 	}
 }
 
+editor_sidebar::editor_sidebar()
+{
+}
+
 inline void editor_sidebar::add_group(const std::string & pText)
 {
 	auto lb = std::make_shared<tgui::Label>();
@@ -353,7 +342,7 @@ tgui::HorizontalLayout::Ptr editor_sidebar::create_value_line(const std::string&
 	lb->setTextSize(12);
 	lb->setVerticalAlignment(tgui::Label::VerticalAlignment::Center);
 	hl->add(lb);
-
+	
 	return hl;
 }
 
@@ -462,9 +451,8 @@ tgui::ComboBox::Ptr editor_sidebar::add_value_enum(const std::string & pLabel, s
 	auto hl = create_value_line(pLabel);
 	auto cb = std::make_shared<tgui::ComboBox>();
 	for (const auto& i : pValues)
-	{
 		cb->addItem(i);
-	}
+
 	//tb->setInputValidator(std::string(pNeg ? "[-+]" : "") + "[0-9]*\\.[0-9]*");
 	cb->connect("ItemSelected", [=](sf::String pVal)
 	{
@@ -555,7 +543,10 @@ tgui::Label::Ptr editor_sidebar::add_label(const std::string & pText, tgui::Cont
 	if (pContainer)
 		pContainer->add(nlb);
 	else
+	{
 		add(nlb);
+		setFixedSize(nlb, 15);
+	}
 	return nlb;
 }
 
@@ -792,12 +783,14 @@ scene_editor::scene_editor()
 		open_editor();
 	}, {}, 0, true);
 	populate_combox_with_scene_names(mCb_scene);
+
+	mZoom = 0;
 }
 
 bool scene_editor::open_scene(std::string pName)
 {
-	mTilemap_manipulator.clean();
-	mTilemap_display.clean();
+	mTilemap_manipulator.clear();
+	mTilemap_display.clear();
 
 	assert(mGame);
 
@@ -818,10 +811,10 @@ bool scene_editor::open_scene(std::string pName)
 	else
 	{
 		mTilemap_display.set_texture(texture);
-		mTilemap_display.set_color({ 100, 100, 255, 150 });
+		//mTilemap_display.set_color({ 100, 100, 255, 150 });
 
 		mTilemap_manipulator.load_tilemap_xml(mLoader.get_tilemap());
-		mTilemap_manipulator.update_display(mTilemap_display);
+		mTilemap_display.update(mTilemap_manipulator);
 	}
 
 	mBoundary_visualization.set_boundary(mLoader.get_boundary());
@@ -872,17 +865,19 @@ bool tilemap_editor::open_editor()
 	if (mTexture)
 	{
 		mCurrent_texture_name = mLoader.get_tilemap_texture();
-
 		mTile_list = std::move(mTexture->compile_list());
-
 		mPreview.set_texture(mTexture);
 	}
 
 	mTb_texture->setText(mLoader.get_tilemap_texture());
 
+	mMain_scroll.set_position(-mTilemap_manipulator.get_center_point());
+
 	update_tile_combobox_list();
 	update_preview();
 	update_labels();
+
+	mLayer_list->refresh_list();
 
 	return true;
 }
@@ -1044,12 +1039,12 @@ void tilemap_editor::load_terminal_interface(engine::terminal_system & pTerminal
 	mTilemap_group->add_command("clear",
 		[&](const engine::terminal_arglist& pArgs)->bool
 	{
-		mTilemap_manipulator.clean();
+		mTilemap_manipulator.clear();
 		update_tilemap();
 		return true;
 	}, "- Clear the entire tilemap (Warning: Can't undo)");
 
-	mTilemap_group->add_command("shift",
+	/*mTilemap_group->add_command("shift",
 		[&](const engine::terminal_arglist& pArgs)->bool
 	{
 		if (pArgs.size() < 2)
@@ -1095,7 +1090,7 @@ void tilemap_editor::load_terminal_interface(engine::terminal_system & pTerminal
 		}
 		update_tilemap();
 		return true;
-	}, "<X> <Y> [Layer#/current] - Shift the entire/layer of tilemap (Warning: Can't undo)");
+	}, "<X> <Y> [Layer#/current] - Shift the entire/layer of tilemap (Warning: Can't undo)");*/
 
 	mTilemap_group->set_enabled(false);
 	pTerminal.add_group(mTilemap_group);
@@ -1115,17 +1110,29 @@ void tilemap_editor::setup_gui()
 	mLb_layer = mSidebar->add_label("Layer: 0");
 	mLb_rotation = mSidebar->add_label("Rotation: N/A");
 	mCb_half_grid = mSidebar->add_checkbox("Half Grid");
+
+	mLayer_list = std::make_shared<tilemap_layer_list>();
+	mLayer_list->set_tilemap_display(mTilemap_display);
+	mLayer_list->set_tilemap_manipulator(mTilemap_manipulator);
+	mLayer_list->set_selection_callback([&](size_t pIndex)
+	{
+		mLayer = pIndex;
+		update_labels();
+		update_highlight();
+	});
+	mLayer_list->setSize("&.width", "&.height - y");
+	mSidebar->add(mLayer_list);
 }
 
 void tilemap_editor::copy_tile_type_at(engine::fvector pAt)
 {
-	const std::string atlas = mTilemap_manipulator.find_tile_name(pAt, mLayer);
-	if (atlas.empty())
+	rpg::tile* t = mTilemap_manipulator.get_layer(mLayer).find_tile(pAt);
+	if (!t)
 		return;
 
 	for (size_t i = 0; i < mTile_list.size(); i++) // Find tile in tile_list and set it as current tile
 	{
-		if (mTile_list[i] == atlas)
+		if (mTile_list[i] == t->get_atlas())
 		{
 			mCurrent_tile = i;
 			update_preview();
@@ -1138,17 +1145,12 @@ void tilemap_editor::copy_tile_type_at(engine::fvector pAt)
 
 void tilemap_editor::draw_tile_at(engine::fvector pAt)
 {
-	assert(mTile_list.size() != 0);
-	mTilemap_manipulator.explode_tile(pAt, mLayer);
-
-	rpg::tile new_tile;
-	new_tile.set_position(pAt);
-	new_tile.set_atlas(mTile_list[mCurrent_tile]);
-	new_tile.set_rotation(mRotation);
+	assert(!mTile_list.empty());
+	rpg::tile* ntile = mTilemap_manipulator.get_layer(mLayer).set_tile(pAt, mTile_list[mCurrent_tile], mRotation);
 
 	std::shared_ptr<command_set_tiles> command
 	(new command_set_tiles(mLayer, &mTilemap_manipulator));
-	command->add(new_tile);
+	command->add(*ntile);
 
 	mCommand_manager.execute(command);
 	update_tilemap();
@@ -1156,15 +1158,12 @@ void tilemap_editor::draw_tile_at(engine::fvector pAt)
 
 void tilemap_editor::erase_tile_at(engine::fvector pAt)
 {
-	mTilemap_manipulator.explode_tile(pAt, mLayer);
-
 	std::shared_ptr<command_remove_tiles> command
 		(new command_remove_tiles(mLayer, &mTilemap_manipulator));
 	command->add(pAt);
 
 	mCommand_manager.execute(command);
-
-	mTilemap_manipulator.update_display(mTilemap_display);
+	mTilemap_display.update(mTilemap_manipulator);
 	update_tilemap();
 }
 
@@ -1266,7 +1265,7 @@ void tilemap_editor::update_highlight()
 
 void tilemap_editor::update_tilemap()
 {
-	mTilemap_manipulator.update_display(mTilemap_display);
+	mTilemap_display.update(mTilemap_manipulator);
 	update_highlight();
 }
 
@@ -1450,8 +1449,6 @@ private:
 collisionbox_editor::collisionbox_editor()
 {
 	setup_gui();
-
-	mZoom = 0;
 
 	mWall_display.set_color({ 100, 255, 100, 200 });
 	mWall_display.set_outline_color({ 255, 255, 255, 255 });
@@ -2525,4 +2522,133 @@ void game_editor::update_scene_list()
 		populate_combox_with_scene_names(mCb_scene);
 		mCb_scene->setSelectedItem(mGame.get_scene().get_name());
 	}
+}
+
+tilemap_layer_list::tilemap_layer_list()
+{
+	mTilemap_manipulator = nullptr;
+	mTilemap_display = nullptr;
+	mSelected_index = 0;
+
+	auto actions_layout = std::make_shared<tgui::HorizontalLayout>();
+
+	auto bt_add_layer = std::make_shared<tgui::Button>();
+	bt_add_layer->setText("Add");
+	bt_add_layer->connect("Pressed", [&]()
+	{
+		if (mTilemap_manipulator->get_layer_count() == 0)
+			mTilemap_manipulator->new_layer();
+		else
+			mTilemap_manipulator->insert_layer(mSelected_index + 1);
+		mTilemap_display->update(*mTilemap_manipulator);
+		refresh_list();
+	});
+	actions_layout->add(bt_add_layer);
+
+	auto bt_delete_layer = std::make_shared<tgui::Button>();
+	bt_delete_layer->setText("Delete");
+	bt_delete_layer->connect("Pressed", [&]()
+	{
+		if (mTilemap_manipulator->get_layer_count() != 0)
+		{
+			mTilemap_manipulator->remove_layer(mSelected_index);
+			mTilemap_display->update(*mTilemap_manipulator);
+			refresh_list();
+		}
+	});
+	actions_layout->add(bt_delete_layer);
+
+	auto bt_rename_layer = std::make_shared<tgui::Button>();
+	bt_rename_layer->setText("Rename");
+	actions_layout->add(bt_rename_layer);
+
+	add(actions_layout);
+	setFixedSize(0, 25);
+
+	mLo_list = std::make_shared<tgui::VerticalLayout>();
+	add(mLo_list);
+}
+
+void tilemap_layer_list::set_tilemap_manipulator(rpg::tilemap_manipulator & pTm_man)
+{
+	mTilemap_manipulator = &pTm_man;
+}
+
+void tilemap_layer_list::set_tilemap_display(rpg::tilemap_display & pTm_displ)
+{
+	mTilemap_display = &pTm_displ;
+}
+
+void tilemap_layer_list::refresh_list()
+{
+	assert(mTilemap_manipulator);
+	mLo_list->removeAllWidgets();
+	for (size_t i = 0; i < mTilemap_manipulator->get_layer_count(); i++)
+		create_item(mTilemap_manipulator->get_layer(i), i);
+	mLo_list->addSpace();
+}
+
+void tilemap_layer_list::set_selected_layer(size_t pIndex)
+{
+	mSelected_index = pIndex;
+	refresh_list();
+}
+
+void tilemap_layer_list::set_selection_callback(selection_callback pCallback)
+{
+	mSelection_callback = pCallback;
+}
+
+void tilemap_layer_list::create_item(rpg::tilemap_layer& pLayer, size_t pIndex)
+{
+	auto hl = std::make_shared<tgui::HorizontalLayout>();
+
+	auto hl_ptr = hl.get();
+	hl->connect("MouseEntered", [=]()
+	{
+		hl->getRenderer()->setBackgroundColor({ 255, 255, 255, 100 });
+		mTilemap_display->highlight_layer(pIndex, {100, 255, 100, 255}, {255, 255, 255, 100});
+	});
+	hl->connect("MouseLeft", [=]()
+	{
+		hl->getRenderer()->setBackgroundColor({ 255, 255, 255, 0 });
+		mTilemap_display->remove_highlight();
+	});
+	mLo_list->insert(0, hl); // Insert at top
+
+	auto cb_visible = std::make_shared<tgui::CheckBox>();
+	cb_visible->setText({});
+	if (mTilemap_display->is_layer_visible(pIndex))
+		cb_visible->check();
+	else
+		cb_visible->uncheck();
+	cb_visible->connect("Checked", [=]()
+	{
+		mTilemap_display->set_layer_visible(pIndex, true);
+	});
+	cb_visible->connect("Unchecked", [=]()
+	{
+		mTilemap_display->set_layer_visible(pIndex, false);
+	});
+	hl->add(cb_visible);
+	hl->setFixedSize(cb_visible, 20);
+
+	auto lb_name = std::make_shared<tgui::Label>();
+	lb_name->setText(pLayer.get_name());
+	lb_name->setTextColor({ 200, 200, 200, 255 });
+	lb_name->connect("Clicked", [=]()
+	{
+		set_selected_layer(pIndex);
+		mSelection_callback(pIndex);
+	});
+	if (pIndex == mSelected_index)
+	{
+		lb_name->getRenderer()->setBorders(3);
+		lb_name->getRenderer()->setBorderColor({ 255, 255, 100, 200 });
+	}
+
+	// Insert at top
+	hl->add(lb_name);
+
+	mLo_list->setFixedSize(hl, 25);
 }

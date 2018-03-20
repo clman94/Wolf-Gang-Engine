@@ -62,6 +62,8 @@ public:
 	std::shared_ptr<T> get_resource(const std::string& pType, const std::string& pName)
 	{
 		auto res = find_resource(pType, pName);
+		if (!res)
+			return{};
 		res->load();
 		return cast_resource<T>(res);
 	}

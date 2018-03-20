@@ -13,6 +13,7 @@
 #include <rpg/tilemap_manipulator.hpp>
 #include <rpg/entity_manager.hpp>
 #include <rpg/game_settings_loader.hpp>
+#include <rpg/tilemap_display.hpp>
 
 namespace rpg {
 

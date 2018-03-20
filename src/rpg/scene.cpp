@@ -60,8 +60,8 @@ scene::clean(bool pFull)
 
 	mEnd_functions.clear();
 
-	mTilemap_display.clean();
-	mTilemap_manipulator.clean();
+	mTilemap_display.clear();
+	mTilemap_manipulator.clear();
 	mCollision_system.clean();
 	mEntity_manager.clean();
 	mColored_overlay.clean();
@@ -162,7 +162,7 @@ bool scene::load_scene(std::string pName)
 		mTilemap_display.set_texture(tilemap_texture);
 
 		mTilemap_manipulator.load_tilemap_xml(mLoader.get_tilemap());
-		mTilemap_manipulator.update_display(mTilemap_display);
+		mTilemap_display.update(mTilemap_manipulator);
 	}
 
 	mPlayer.set_visible(true);
@@ -469,14 +469,14 @@ void scene::script_set_boundary_position(engine::fvector pPosition)
 void scene::script_set_tile(const std::string& pAtlas, engine::fvector pPosition
 	, int pLayer, int pRotation)
 {
-	mTilemap_manipulator.set_tile(pPosition, pLayer, pAtlas, pRotation);
-	mTilemap_manipulator.update_display(mTilemap_display);
+	mTilemap_manipulator.get_layer(pLayer).set_tile(pPosition, pAtlas, pRotation);
+	mTilemap_display.update(mTilemap_manipulator);
 }
 
 void scene::script_remove_tile(engine::fvector pPosition, int pLayer)
 {
-	mTilemap_manipulator.remove_tile(pPosition, pLayer);
-	mTilemap_manipulator.update_display(mTilemap_display);
+	mTilemap_manipulator.get_layer(pLayer).remove_tile(pPosition);
+	mTilemap_display.update(mTilemap_manipulator);
 }
 
 void scene::refresh_renderer(engine::renderer& pR)

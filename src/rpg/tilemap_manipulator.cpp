@@ -4,12 +4,11 @@
 
 using namespace rpg;
 
-void
-tile::load_xml(tinyxml2::XMLElement * pEle)
+void tile::load_xml(tinyxml2::XMLElement * pEle, tile_atlas_pool& pPool)
 {
 	assert(pEle != nullptr);
 
-	mAtlas = util::safe_string(pEle->Name());
+	set_atlas(util::safe_string(pEle->Name()), pPool);
 
 	mPosition.x = pEle->FloatAttribute("x");
 	mPosition.y = pEle->FloatAttribute("y");
@@ -24,23 +23,21 @@ tile::load_xml(tinyxml2::XMLElement * pEle)
 	mRotation = pEle->UnsignedAttribute("r") % 4;
 }
 
-bool
-tile::is_adjacent_above(tile & a)
+bool tile::is_adjacent_above(tile & a)
 {
 	return (
-		mAtlas == a.mAtlas
+		mAtlas_handle == a.mAtlas_handle
 		&& mPosition.x == a.mPosition.x
-		&& mPosition.y == a.mPosition.y + a.mFill.y
+		&& mPosition.y + static_cast<float>(mFill.y) == a.mPosition.y
 		&& mFill.x == a.mFill.x
 		&& mRotation == a.mRotation
 		);
 }
 
-bool
-tile::is_adjacent_right(tile & a)
+bool tile::is_adjacent_left(tile & a)
 {
 	return (
-		mAtlas == a.mAtlas
+		mAtlas_handle == a.mAtlas_handle
 		&& mPosition.y == a.mPosition.y
 		&& mPosition.x + static_cast<float>(mFill.x) == a.mPosition.x
 		&& mFill.y == a.mFill.y
@@ -48,122 +45,54 @@ tile::is_adjacent_right(tile & a)
 		);
 }
 
+bool tile::is_condensed() const
+{
+	return mFill.x > 1 || mFill.y > 1;
+}
+
 bool tile::operator<(const tile & pTile)
 {
 	return mPosition < pTile.mPosition;
 }
 
-tile* tilemap_manipulator::find_tile(engine::fvector pos, int layer)
+void tilemap_manipulator::condense_map()
 {
-	for (auto &i : mMap[layer])
-	{
-		if (i.second.get_position() == pos)
-			return &i.second;
-	}
-	return nullptr;
-}
-
-// Uses brute force to merge adjacent tiles (still a little wonky)
-void tilemap_manipulator::condense_layer(layer &pMap)
-{
-	// 2 or more tiles present are required
-	if (pMap.size() < 2)
+	if (mMap.empty())
 		return;
 
-	layer nmap;
-
-	tile new_tile = pMap.begin()->second;
-
-	bool merged = false;
-	for (auto i = pMap.begin(); i != pMap.end(); i++)
-	{
-		auto& current_tile = i->second;
-
-		// Merge adjacent tile
-		if (new_tile.is_adjacent_right(current_tile))
-		{
-			auto fill = new_tile.get_fill();
-			fill.x += current_tile.get_fill().x;
-			new_tile.set_fill(fill);
-		}
-		else // No more tiles to the right
-		{
-			// Merge ntime to any tile above
-			for (auto &j : nmap)
-			{
-				if (new_tile.is_adjacent_above(j.second))
-				{
-					auto fill = j.second.get_fill();
-					fill.y += new_tile.get_fill().y;
-					j.second.set_fill(fill);
-					merged = true;
-					break; //
-				}
-			}
-			if (!merged) // Do not add when it was merged to another tile
-			{
-				nmap[new_tile.get_position()] = new_tile;
-			}
-			merged = false;
-			new_tile = current_tile;
-		}
-	}
-	nmap[new_tile.get_position()] = new_tile; // add last tile
-	pMap = std::move(nmap);
-}
-
-void
-tilemap_manipulator::condense_map()
-{
-	if (!mMap.size()) return;
+	float sum = 0;
 	for (auto &i : mMap)
 	{
-		condense_layer(i.second);
+		float r = i.condense();
+		logger::info("Condensed layer '" + i.get_name() + "' to " + std::to_string(r*100) + "%");
+		sum += r;
 	}
+	logger::info("Tilemap condensed to " + std::to_string(sum / static_cast<float>(mMap.size()) * 100) + "%");
 }
 
-int
-tilemap_manipulator::load_layer(tinyxml2::XMLElement * pEle, int pLayer)
+int tilemap_manipulator::load_tilemap_xml(tinyxml2::XMLElement *pRoot)
 {
-	auto i = pEle->FirstChildElement();
-	while (i)
-	{
-		tile ntile;
-		ntile.load_xml(i);
-		mMap[pLayer][ntile.get_position()] = ntile;
-		i = i->NextSiblingElement();
-	}
-	return 0;
-}
-
-tilemap_manipulator::tilemap_manipulator()
-{
-}
-
-int
-tilemap_manipulator::load_tilemap_xml(tinyxml2::XMLElement *pRoot)
-{
-	clean();
+	clear();
 
 	if (auto att_path = pRoot->Attribute("path"))
 	{
 		load_tilemap_xml(util::safe_string(att_path));
 	}
 
-	auto ele_tilemap = pRoot->FirstChildElement("layer");
-	while (ele_tilemap)
+	auto ele_layer = pRoot->FirstChildElement("layer");
+	while (ele_layer)
 	{
-		int att_layer = ele_tilemap->IntAttribute("id");
-		load_layer(ele_tilemap, att_layer);
-		ele_tilemap = ele_tilemap->NextSiblingElement("layer");
+		int att_id = ele_layer->IntAttribute("id");
+		tilemap_layer& nLayer = mMap[new_layer()];
+		nLayer.load_xml(ele_layer);
+		ele_layer = ele_layer->NextSiblingElement("layer");
 	}
 	return 0;
 }
 
 int tilemap_manipulator::load_tilemap_xml(std::string pPath)
 {
-	using namespace tinyxml2;
-	XMLDocument doc;
+	tinyxml2::XMLDocument doc;
 	if (doc.LoadFile(pPath.c_str()))
 	{
 		logger::error("Error loading tilemap file");
@@ -174,221 +103,88 @@ int tilemap_manipulator::load_tilemap_xml(std::string pPath)
 	return 0;
 }
 
-tile* tilemap_manipulator::find_tile_at(engine::fvector pPosition, int pLayer)
-{
-	for (auto &i : mMap[pLayer])
-	{
-		auto& tile = i.second;
-		if (engine::frect(tile.get_position(), tile.get_fill()).is_intersect(pPosition))
-		{
-			return &tile;
-		}
-	}
-	return nullptr;
-}
-
-void tilemap_manipulator::explode_tile(tile* pTile, int pLayer)
-{
-	auto atlas = pTile->get_atlas();
-	auto fill = pTile->get_fill();
-	auto rotation = pTile->get_rotation();
-	auto position = pTile->get_position();
-	pTile->set_fill({ 1, 1 });
-	for (float x = 0; x < fill.x; x += 1)
-		for (float y = 0; y < fill.y; y += 1)
-			set_tile(position + engine::fvector(x, y), pLayer, atlas, rotation);
-}
-
-void tilemap_manipulator::explode_tile(engine::fvector pPosition, int pLayer)
-{
-	auto t = find_tile_at(pPosition, pLayer);
-	if (!t || t->get_fill() == tile::fill_t(1, 1))
-		return;
-	explode_tile(t, pLayer);
-}
 
 void tilemap_manipulator::explode_all()
 {
-	for (auto &l : mMap)
-		for (auto& i : l.second)
-			explode_tile(&i.second, l.first);
+	for (auto &i : mMap)
+		i.explode();
 }
 
 void tilemap_manipulator::generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode * root)
 {
-	for (auto &l : mMap)
+	for (size_t i = 0; i < mMap.size(); i++)
 	{
-		if (!l.second.size())
-			continue;
-
 		auto ele_layer = doc.NewElement("layer");
-		ele_layer->SetAttribute("id", l.first);
+		ele_layer->SetAttribute("id", i);
+		mMap[i].generate_xml(ele_layer, doc);
 		root->InsertEndChild(ele_layer);
-
-		for (auto &i : l.second)
-		{
-			auto& tile = i.second;
-			auto ele = doc.NewElement(tile.get_atlas().c_str());
-			ele->SetAttribute("x", tile.get_position().x);
-			ele->SetAttribute("y", tile.get_position().y);
-			if (tile.get_fill().x > 1)    ele->SetAttribute("w", tile.get_fill().x);
-			if (tile.get_fill().y > 1)    ele->SetAttribute("h", tile.get_fill().y);
-			if (tile.get_rotation() != 0) ele->SetAttribute("r", tile.get_rotation());
-			ele_layer->InsertEndChild(ele);
-		}
 	}
 }
 
 void tilemap_manipulator::generate(const std::string& pPath)
 {
-	using namespace tinyxml2;
-	XMLDocument doc;
+	tinyxml2::XMLDocument doc;
 	auto root = doc.InsertEndChild(doc.NewElement("map"));
 	generate(doc, root);
 	doc.SaveFile(pPath.c_str());
 }
 
-util::optional<tile> tilemap_manipulator::get_tile(engine::fvector pPosition, int pLayer)
+size_t tilemap_manipulator::new_layer()
 {
-	auto hit = find_tile(pPosition, pLayer);
-	if (!hit)
-		return{};
-	return *hit;
+	mMap.emplace_back();
+	return mMap.size() - 1;
 }
 
-util::optional<tile> tilemap_manipulator::get_tile_at(engine::fvector pPosition, int pLayer)
+size_t tilemap_manipulator::insert_layer(size_t pIndex)
 {
-	auto hit = find_tile_at(pPosition, pLayer);
-	if (!hit)
-		return{};
-	return *hit;
+	mMap.emplace(mMap.begin() + pIndex);
+	return pIndex;
 }
 
-int tilemap_manipulator::set_tile(const tile & pTile, int pLayer)
+void tilemap_manipulator::remove_layer(size_t pIndex)
 {
-	engine::fvector off(0, 0);
-	for (off.y = 0; off.y <= pTile.get_fill().y; off.y++)
-	{
-		for (off.x = 0; off.x <= pTile.get_fill().x; off.x++)
-		{
-			mMap[pLayer][pTile.get_position()] = pTile;
-		}
-	}
-	return 0;
+	assert(pIndex < mMap.size());
+	mMap.erase(mMap.begin() + pIndex);
 }
 
-int tilemap_manipulator::set_tile(engine::fvector pPosition, engine::fvector pFill, int pLayer, const std::string& pAtlas, int pRotation)
+size_t tilemap_manipulator::get_layer_count() const
 {
-	engine::fvector off(0, 0);
-	for (off.y = 0; off.y <= pFill.y; off.y++)
-	{
-		for (off.x = 0; off.x <= pFill.x; off.x++)
-		{
-			set_tile(pPosition + off, pLayer, pAtlas, pRotation);
-		}
-	}
-	return 0;
+	return mMap.size();
 }
 
-int tilemap_manipulator::set_tile(engine::fvector pPosition, int pLayer, const std::string& pAtlas, int pRotation)
+tilemap_layer& tilemap_manipulator::get_layer(size_t pIndex)
 {
-	auto &nt = mMap[pLayer][pPosition];
-	nt.set_position(pPosition);
-	nt.set_fill({ 1, 1 });
-	nt.set_atlas(pAtlas);
-	nt.set_rotation(pRotation);
-	return 0;
+	return mMap[pIndex];
 }
 
-void tilemap_manipulator::remove_tile(engine::fvector pPosition, int pLayer)
+bool tilemap_manipulator::move_layer(size_t pFrom, size_t pTo)
 {
-	for (auto i = mMap[pLayer].begin(); i != mMap[pLayer].end(); i++)
-	{
-		auto& tile = i->second;
-		if (tile.get_position() == pPosition)
-		{
-			mMap[pLayer].erase(i);
-			return;
-		}
-	}
-}
+	if (pFrom == pTo)
+		return true;
 
-tilemap_manipulator::layer tilemap_manipulator::get_layer(int pLayer)
-{
-	return mMap[pLayer];
-}
-
-void tilemap_manipulator::set_layer(const layer & pTiles, int pLayer)
-{
-	mMap[pLayer] = pTiles;
-}
-
-bool tilemap_manipulator::shift(engine::fvector pAmount)
-{
-	for (auto &l : mMap) // Current layer
-	{
-		shift(pAmount, l.first);
-	}
+	tilemap_layer temp = std::move(mMap[pFrom]);
+	mMap.insert(mMap.begin() + pTo, std::move(temp));
+	if (pFrom > pTo)
+		mMap.erase(mMap.begin() + pFrom + 1);
+	else
+		mMap.erase(mMap.begin() + pFrom);
 	return true;
 }
 
-bool tilemap_manipulator::shift(engine::fvector pAmount, int pLayer)
-{
-	layer new_layer;
-	for (auto &i : mMap[pLayer]) // Tile
-	{
-		tile new_tile = i.second;
-		new_tile.set_position(new_tile.get_position() + pAmount);
-		new_layer[new_tile.get_position()] = new_tile;
-	}
-	mMap[pLayer] = std::move(new_layer);
-	return true;
-}
-
-inline bool tilemap_manipulator::move_layer(int pFrom, int pTo)
-{
-	if (mMap.find(pFrom) == mMap.end())
-		return false;
-
-	mMap[pTo] = std::move(mMap[pFrom]);
-
-	return true;
-}
-
-
-std::string tilemap_manipulator::find_tile_name(engine::fvector pPosition, int pLayer)
-{
-	auto f = find_tile_at(pPosition, pLayer);
-	if (!f)
-		return{};
-	return f->get_atlas();
-}
-
-void tilemap_manipulator::update_display(tilemap_display& tmA)
-{
-	tmA.clean();
-	for (auto &l : mMap) // Current layer
-	{
-		for (auto &i : l.second) // Tile
-		{
-			auto& tile = i.second;
-
-			// Fill an area with a tile (be it 1x1 or other larger sizes)
-			engine::fvector off(0, 0);
-			for (off.y = 0; off.y < static_cast<float>(tile.get_fill().y); off.y++)
-			{
-				for (off.x = 0; off.x < static_cast<float>(tile.get_fill().x); off.x++)
-				{
-					tmA.set_tile(tile.get_position() + off, tile.get_atlas(), l.first, tile.get_rotation());
-				}
-			}
-		}
-	}
-}
-
-void tilemap_manipulator::clean()
+void tilemap_manipulator::clear()
 {
 	mMap.clear();
+}
+
+engine::fvector tilemap_manipulator::get_center_point() const
+{
+	if (mMap.empty())
+		return{};
+
+	engine::fvector sum;
+	for (const auto& i : mMap)
+		sum += i.get_center_point();
+	return sum/static_cast<float>(mMap.size());
 }
 
 tile::tile()
@@ -401,7 +197,7 @@ tile::tile(tile && pMove)
 	mPosition = pMove.mPosition;
 	mFill = pMove.mFill;
 	mRotation = pMove.mRotation;
-	mAtlas = std::move(pMove.mAtlas);
+	mAtlas_handle = std::move(pMove.mAtlas_handle);
 }
 
 tile::tile(const tile & pTile)
@@ -409,7 +205,7 @@ tile::tile(const tile & pTile)
 	mPosition = pTile.mPosition;
 	mFill = pTile.mFill;
 	mRotation = pTile.mRotation;
-	mAtlas = pTile.mAtlas;
+	mAtlas_handle = pTile.mAtlas_handle;
 }
 
 tile & tile::operator=(const tile & pTile)
@@ -417,7 +213,7 @@ tile & tile::operator=(const tile & pTile)
 	mPosition = pTile.mPosition;
 	mFill = pTile.mFill;
 	mRotation = pTile.mRotation;
-	mAtlas = pTile.mAtlas;
+	mAtlas_handle = pTile.mAtlas_handle;
 	return *this;
 }
 
@@ -429,7 +225,7 @@ bool tile::operator==(const tile & pRight)
 		return false;
 	if (mRotation != pRight.mRotation)
 		return false;
-	if (mAtlas != pRight.mAtlas)
+	if (mAtlas_handle != pRight.mAtlas_handle)
 		return false;
 	return true;
 }
@@ -471,13 +267,271 @@ tile::rotation_t tile::get_rotation() const
 	return mRotation;
 }
 
-void tile::set_atlas(const std::string & pAtlas)
+void tile::set_atlas(const std::string & pAtlas, tile_atlas_pool & pPool)
 {
-	mAtlas = pAtlas;
+	mAtlas_handle = pPool.get(pAtlas);
+}
+
+void tile::set_atlas(tile_atlas_pool::handle pHandle)
+{
+	mAtlas_handle = pHandle;
 }
 
 const std::string& tile::get_atlas() const
 {
-	return mAtlas;
+	return *mAtlas_handle;
 }
 
+void tilemap_layer::set_name(const std::string & pName)
+{
+	mName = pName;
+}
+
+const std::string & tilemap_layer::get_name() const
+{
+	return mName;
+}
+
+tile* tilemap_layer::new_tile(const std::string & pAtlas)
+{
+	tile ntile;
+	ntile.set_atlas(pAtlas, mAtlas_pool);
+	mTiles.push_back(ntile);
+	return &mTiles.back();
+}
+
+tile* tilemap_layer::set_tile(engine::fvector pPosition, engine::fvector pFill, const std::string & pAtlas, int pRotation)
+{
+	// Replace Tile
+	if (tile* repl_tile = find_tile(pPosition))
+	{
+		repl_tile->set_fill(pFill);
+		repl_tile->set_atlas(pAtlas, mAtlas_pool);
+		repl_tile->set_rotation(pRotation);
+		return repl_tile;
+	}
+
+	// Add a new one
+	tile* ntile = new_tile(pAtlas);
+	ntile->set_fill(pFill);
+	ntile->set_position(pPosition);
+	return ntile;
+}
+
+tile* tilemap_layer::set_tile(engine::fvector pPosition, const std::string & pAtlas, int pRotation)
+{
+	return set_tile(pPosition, {1, 1}, pAtlas, pRotation);
+}
+
+tile* tilemap_layer::set_tile(const tile & pTile)
+{
+	return set_tile(pTile.get_position(), pTile.get_fill(), pTile.get_atlas(), pTile.get_rotation());
+}
+
+tile* tilemap_layer::find_tile(engine::fvector pPosition)
+{
+	for (auto& i : mTiles)
+		if (i.get_position() == pPosition)
+			return &i;
+	return nullptr;
+}
+
+size_t tilemap_layer::get_tile_count() const
+{
+	return mTiles.size();
+}
+
+tile* tilemap_layer::get_tile(size_t pIndex)
+{
+	return &mTiles[pIndex];
+}
+
+const tile* tilemap_layer::get_tile(size_t pIndex) const
+{
+	return &mTiles[pIndex];
+}
+
+bool tilemap_layer::remove_tile(engine::fvector pPosition)
+{
+	for (size_t i = 0; i < mTiles.size(); i++)
+		if (mTiles[i].get_position() == pPosition)
+		{
+			mTiles.erase(mTiles.begin() + i);
+			return true;
+		}
+	return false;
+}
+
+float tilemap_layer::condense()
+{
+	// There needs to be at least 2 tiles to work with.
+	if (mTiles.size() <= 1)
+		return 1.f;
+
+	size_t original_size = mTiles.size();
+
+	// Sort the tiles, adjacent tiles will naturally be adjacent left to right in the array.
+	std::sort(mTiles.begin(), mTiles.end(), [](const tile& l, const tile& r)
+	{
+		auto pos1 = l.get_position();
+		auto pos2 = r.get_position();
+		return (pos1.y < pos2.y) || ((pos1.y == pos2.y) && (pos1.x < pos2.x));
+	});
+
+	// Condense all tiles adjacent left and right.
+	for (size_t i = 0; i < mTiles.size() - 1; i++)
+	{
+		if (mTiles[i].is_adjacent_left(mTiles[i + 1]))
+		{
+			mTiles[i].set_fill(mTiles[i].get_fill() + tile::fill_t(mTiles[i + 1].get_fill().x, 0));
+			mTiles.erase(mTiles.begin() + i + 1);
+			--i;
+		}
+	}
+
+	// Sort the tiles, adjacent tiles will naturally be adjacent up to down in the array.
+	std::sort(mTiles.begin(), mTiles.end(), [](const tile& l, const tile& r)
+	{
+		auto pos1 = l.get_position();
+		auto pos2 = r.get_position();
+		return (pos1.x < pos2.x) || ((pos1.x == pos2.x) && (pos1.y < pos2.y)); // x and y swapped
+	});
+
+	// Condense all tiles adjacent up and down
+	for (size_t i = 0; i < mTiles.size() - 1; i++)
+	{
+		if (mTiles[i].is_adjacent_above(mTiles[i + 1]))
+		{
+			mTiles[i].set_fill(mTiles[i].get_fill() + tile::fill_t(0, mTiles[i + 1].get_fill().y));
+			mTiles.erase(mTiles.begin() + i + 1);
+			--i;
+		}
+	}
+
+	// Return [New size]/[Old size]
+	return static_cast<float>(mTiles.size()) / static_cast<float>(original_size);
+}
+
+void tilemap_layer::explode_tile(tile * pTile)
+{
+	assert(pTile);
+	tile cp_tile = *pTile; // Make a copy because mTiles gets modified
+	pTile->set_fill({ 1, 1 });
+	for (int x = 0; x < cp_tile.get_fill().x; x++)
+	{
+		for (int y = 0; y < cp_tile.get_fill().y; y++)
+		{
+			if (x == 0 && y == 0) continue; // This is the main tile. Skip it.
+			tile ntile = cp_tile;
+			ntile.set_fill({ 1, 1 });
+			ntile.set_position(cp_tile.get_position() + engine::fvector(x, y));
+			mTiles.push_back(ntile);
+		}
+	}
+}
+
+void tilemap_layer::explode()
+{
+	for (size_t i = 0; i < mTiles.size(); i++)
+		if (mTiles[i].is_condensed())
+			explode_tile(&mTiles[i]);
+}
+
+bool tilemap_layer::load_xml(tinyxml2::XMLElement * pRoot)
+{
+	auto i = pRoot->FirstChildElement();
+	while (i)
+	{
+		tile ntile;
+		ntile.load_xml(i, mAtlas_pool);
+		mTiles.push_back(ntile);
+		i = i->NextSiblingElement();
+	}
+	sort();
+	return true;
+}
+
+void tilemap_layer::generate_xml(tinyxml2::XMLElement * pRoot, tinyxml2::XMLDocument & doc) const
+{
+	pRoot->SetAttribute("name", mName.c_str());
+	for (auto &i : mTiles)
+	{
+		auto ele = doc.NewElement(i.get_atlas().c_str());
+		ele->SetAttribute("x", i.get_position().x);
+		ele->SetAttribute("y", i.get_position().y);
+		if (i.get_fill().x > 1)    ele->SetAttribute("w", i.get_fill().x);
+		if (i.get_fill().y > 1)    ele->SetAttribute("h", i.get_fill().y);
+		if (i.get_rotation() != 0) ele->SetAttribute("r", i.get_rotation());
+		pRoot->InsertEndChild(ele);
+	}
+}
+
+tile_atlas_pool & tilemap_layer::get_pool()
+{
+	return mAtlas_pool;
+}
+
+engine::fvector tilemap_layer::get_center_point() const
+{
+	if (mTiles.empty())
+		return{};
+	engine::fvector sum;
+	for (auto& i : mTiles)
+		sum += i.get_position();
+	return sum/static_cast<float>(mTiles.size());
+}
+
+void tilemap_layer::sort()
+{
+	std::sort(mTiles.begin(), mTiles.end(),
+		[](const tile& l, const tile& r)
+		{
+			return l.get_position() < r.get_position(); 
+		});
+}
+
+tile_atlas_pool::handle tile_atlas_pool::get(const std::string & pAtlas)
+{
+	auto item = std::find_if(mStrings.begin(), mStrings.end(),
+		[&](const std::shared_ptr<std::string>& a)->bool
+	{
+		return *a == pAtlas;
+	});
+
+	// Create a new item if it doesn't exist in this pool
+	if (item == mStrings.end())
+	{
+		auto nitem = std::make_shared<std::string>(pAtlas);
+		mStrings.push_back(nitem);
+		return nitem;
+	}
+	return *item;
+}
+
+bool tile_atlas_pool::replace(const std::string & pOriginal, const std::string & pNew)
+{
+	auto item = std::find_if(mStrings.begin(), mStrings.end(),
+		[&](const std::shared_ptr<std::string>& a)->bool
+		{
+			return *a == pOriginal;
+		});
+	if (item == mStrings.end())
+		return false;
+
+	(*item)->assign(pNew);
+	return true;
+}
+
+std::vector<std::string> tile_atlas_pool::get_invalid_entries(std::shared_ptr<engine::texture> pTexture) const
+{
+	std::vector<std::string> inval_entrs;
+	for (auto& i : mStrings)
+		if (!pTexture->get_entry(*i))
+			inval_entrs.push_back(*i);
+	return inval_entrs;
+}
+
+bool tile_atlas_pool::has_invalid_entries(std::shared_ptr<engine::texture> pTexture) const
+{
+	return !get_invalid_entries(pTexture).empty();
+}

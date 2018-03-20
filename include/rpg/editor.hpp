@@ -6,9 +6,9 @@
 #include <engine/terminal.hpp>
 
 #include <rpg/tilemap_manipulator.hpp>
+#include <rpg/tilemap_display.hpp>
 #include <rpg/scene_loader.hpp>
 #include <rpg/collision_box.hpp>
-
 #include <rpg/scene.hpp>
 #include <rpg/rpg.hpp>
 
@@ -24,7 +24,7 @@ class command
 public:
 	virtual bool execute() = 0;
 	virtual bool undo() = 0;
-	virtual bool redo() = 0;
+	virtual bool redo() { return execute(); };
 };
 
 class command_manager
@@ -70,6 +70,8 @@ class editor_sidebar :
 	public tgui_list_layout
 {
 public:
+	editor_sidebar();
+
 	void add_group(const std::string& pText);
 
 	tgui::EditBox::Ptr add_value_int(const std::string& pLabel, std::function<void(int)> pCallback, bool pNeg = true);
@@ -199,6 +201,33 @@ private:
 	tgui::Label::Ptr mLb_fps;
 };
 
+class tilemap_layer_list :
+	public tgui::VerticalLayout
+{
+public:
+	typedef std::function<void(size_t)> selection_callback;
+
+	tilemap_layer_list();
+
+	void set_tilemap_manipulator(rpg::tilemap_manipulator& pTm_man);
+	void set_tilemap_display(rpg::tilemap_display& pTm_displ);
+
+	void refresh_list();
+
+	void set_selected_layer(size_t pIndex);
+	void set_selection_callback(selection_callback pCallback);
+
+private:
+	void create_item(rpg::tilemap_layer& pLayer, size_t pIndex);
+	rpg::tilemap_manipulator* mTilemap_manipulator;
+	rpg::tilemap_display* mTilemap_display;
+
+	tgui::VerticalLayout::Ptr mLo_list;
+
+	size_t mSelected_index;
+	selection_callback mSelection_callback;
+};
+
 class tilemap_editor :
 	public scene_editor
 {
@@ -213,7 +242,6 @@ public:
 	void clean();
 
 private:
-
 	std::shared_ptr<engine::terminal_command_group> mTilemap_group;
 
 	enum class state
@@ -243,6 +271,7 @@ private:
 	tgui::Label::Ptr mLb_rotation;
 	tgui::EditBox::Ptr mTb_texture;
 	tgui::CheckBox::Ptr mCb_half_grid;
+	std::shared_ptr<tilemap_layer_list> mLayer_list;
 
 	engine::grid mGrid;
 

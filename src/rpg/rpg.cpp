@@ -1481,8 +1481,7 @@ int text_entity::draw(engine::renderer & pR)
 
 bool game_settings_loader::load(const std::string & pPath, const std::string& pPrefix_path)
 {
-	using namespace tinyxml2;
-	XMLDocument doc;
+	tinyxml2::XMLDocument doc;
 
 	if (doc.LoadFile(pPath.c_str()))
 	{
@@ -1494,8 +1493,7 @@ bool game_settings_loader::load(const std::string & pPath, const std::string& pP
 
 bool game_settings_loader::load_memory(const char * pData, size_t pSize, const std::string& pPrefix_path)
 {
-	using namespace tinyxml2;
-	XMLDocument doc;
+	tinyxml2::XMLDocument doc;
 
 	if (doc.Parse(pData, pSize))
 	{

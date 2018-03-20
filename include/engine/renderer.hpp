@@ -3,6 +3,7 @@
 
 #include <SFML/Graphics.hpp>
 #include <TGUI/TGUI.hpp>
+#include <SFML/OpenGL.hpp>
 
 #include <memory>
 #include <vector>
@@ -48,6 +49,12 @@ public:
 		default_mask();
 	}
 
+	color(const color& pColor)
+	{
+		for (int i = 0; i < 4; i++)
+			components[i] = pColor.components[i];
+	}
+
 #ifdef SFML_COLOR_HPP
 	operator sf::Color() const
 	{
@@ -57,42 +64,38 @@ public:
 
 	float intensity() const
 	{
-		return (r + b + g) / 3.0f;
+		return ((r + b + g) / 3.0f)*a;
 	}
 
 	color& operator+=(const color& pColor)
 	{
-		if (!mask[0]) r += pColor.r;
-		if (!mask[1]) g += pColor.g;
-		if (!mask[2]) b += pColor.b;
-		if (!mask[3]) a += pColor.a;
+		for (int i = 0; i < 4; i++)
+			if (!mask[i])
+				components[i] += pColor.components[i];
 		return *this;
 	}
 
 	color& operator-=(const color& pColor)
 	{
-		if (!mask[0]) r -= pColor.r;
-		if (!mask[1]) g -= pColor.g;
-		if (!mask[2]) b -= pColor.b;
-		if (!mask[3]) a -= pColor.a;
+		for (int i = 0; i < 4; i++)
+			if (!mask[i])
+				components[i] -= pColor.components[i];
 		return *this;
 	}
 
 	color& operator*=(const color& pColor)
 	{
-		if (!mask[0]) r *= pColor.r;
-		if (!mask[1]) g *= pColor.g;
-		if (!mask[2]) b *= pColor.b;
-		if (!mask[3]) a *= pColor.a;
+		for (int i = 0; i < 4; i++)
+			if (!mask[i])
+				components[i] *= pColor.components[i];
 		return *this;
 	}
 
 	color& operator/=(const color& pColor)
 	{
-		if (!mask[0]) r /= pColor.r;
-		if (!mask[1]) g /= pColor.g;
-		if (!mask[2]) b /= pColor.b;
-		if (!mask[3]) a /= pColor.a;
+		for (int i = 0; i < 4; i++)
+			if (!mask[i])
+				components[i] /= pColor.components[i];
 		return *this;
 	}
 
@@ -312,7 +315,15 @@ public:
 
 	tgui::Gui& get_tgui();
 
+
+	// Get the ascii text inputted last event handling
+	std::string get_entered_text() const;
+
+	// Get the unicode text inputted last event handling
+	std::u32string get_entered_text_unicode() const;
+
 private:
+	std::u32string mEntered_text;
 
 	bool is_mouse_within_target() const;
 
@@ -355,6 +366,25 @@ private:
 	void refresh_objects(); // Updates the indexs of all objects
 
 	color mBackground_color;
+
+	friend class scoped_clipping;
+};
+
+class scoped_clipping
+{
+public:
+	scoped_clipping(renderer& pRenderer, frect pRect)
+	{
+		mOrig_view = pRenderer.mView;
+
+		sf::View new_view(pRect);
+		frect viewport;
+		//viewport.x = 
+	}
+
+private:
+	sf::View mOrig_view;
+	renderer* mRenderer;
 };
 
 class shader :

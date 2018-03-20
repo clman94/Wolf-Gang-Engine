@@ -56,7 +56,7 @@ render_object::render_object()
 {
 	mManual_render = false;
 	mIndex = -1;
-	set_visible(true);
+	mVisible = true;
 	mDepth = 0;
 	mRenderer = nullptr;
 }
@@ -158,6 +158,22 @@ tgui::Gui & renderer::get_tgui()
 	return mTgui;
 }
 
+std::string renderer::get_entered_text() const
+{
+	std::string ascii;
+
+	// Convert to ascii
+	for (const auto& i : mEntered_text)
+		ascii += static_cast<char>(i < 128 ? i : '?');
+
+	return ascii;
+}
+
+std::u32string renderer::get_entered_text_unicode() const
+{
+	return mEntered_text;
+}
+
 bool renderer::is_mouse_within_target() const
 {
 	const auto pos = get_mouse_position();
@@ -176,22 +192,8 @@ void renderer::refresh_view()
 	mView = sf::View(sf::FloatRect(0, 0, mTarget_size.x, mTarget_size.y));
 	sf::FloatRect viewport(0, 0, 0, 0);
 
-	// Resize view according to the ratio
-	if (view_ratio.x > window_ratio.x)
-	{
-		viewport.width = 1;
-		viewport.height = mTarget_size.y*(window_size.x / mTarget_size.x) / window_size.y;
-	}
-	else if (view_ratio.x < window_ratio.x)
-	{
-		viewport.width = mTarget_size.x*(window_size.y / mTarget_size.y) / window_size.x;
-		viewport.height = 1;
-	}
-	else
-	{
-		viewport.width = 1;
-		viewport.height = 1;
-	}
+	viewport.width = std::min(mTarget_size.x*(window_size.y / mTarget_size.y) / window_size.x, 1.f);
+	viewport.height = std::min(mTarget_size.y*(window_size.x / mTarget_size.x) / window_size.y, 1.f);
 
 	// Center view
 	viewport.left = 0.5f - (viewport.width  / 2);
@@ -391,8 +393,14 @@ void renderer::update_events()
 	if (!mWindow->mWindow.isOpen())
 		return;
 
+	mEntered_text.clear();
+
 	for (const sf::Event& i : mWindow->mEvents)
 	{
+		if (i.type == sf::Event::TextEntered)
+			mEntered_text += static_cast<char32_t>(i.text.unicode);
+
+
 		if (i.type == sf::Event::Resized)
 		{
 			mWindow->mSize = vector<unsigned int>(mWindow->mWindow.getSize()); // Update member

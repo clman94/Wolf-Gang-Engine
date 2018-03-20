@@ -2,6 +2,7 @@
 
 #include <engine/renderer.hpp>
 #include <engine/logger.hpp>
+#include "../3rdparty/tinyxml2/tinyxml2.h"
 
 using namespace engine;
 
@@ -54,8 +55,7 @@ bool font::unload()
 
 bool font::load_preferences()
 {
-	using namespace tinyxml2;
-	XMLDocument doc;
+	tinyxml2::XMLDocument doc;
 	if (mPack)
 	{
 		const auto data = mPack->read_all(mPreferences_source);

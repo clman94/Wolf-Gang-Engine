@@ -1,5 +1,8 @@
 #include <rpg/tilemap_display.hpp>
+#include <rpg/tilemap_manipulator.hpp>
+
 #include <engine/logger.hpp>
+#include <cassert>
 
 using namespace rpg;
 
@@ -13,7 +16,7 @@ std::shared_ptr<engine::texture> tilemap_display::get_texture()
 	return mTexture;
 }
 
-bool tilemap_display::set_tile(engine::fvector pPosition, const std::string& pAtlas, int pLayer, int pRotation)
+bool tilemap_display::add_tile(engine::fvector pPosition, const std::string& pAtlas, int pLayer, int pRotation)
 {
 	assert(mTexture != nullptr);
 
@@ -21,15 +24,23 @@ bool tilemap_display::set_tile(engine::fvector pPosition, const std::string& pAt
 	if (!animation)
 		return false;
 
-	auto &ntile = mLayers[pLayer].tiles[pPosition];
+	// Go to the layer
+	auto& layer_iter = mLayers.begin();
+	std::advance(layer_iter, pLayer);
 
-	ntile.mRef = mLayers[pLayer].vertices.add_quad(pPosition*get_unit()
+	// Add quad to vertex batch
+	auto ntile = layer_iter->add_quad(pPosition*get_unit()
 		, animation->get_frame_at(0)
 		, pRotation);
-	ntile.set_animation(animation);
-	if (animation->get_frame_count() > 1)
-		mAnimated_tiles.push_back(&ntile);
 
+	// Register animated tile
+	if (animation->get_frame_count() > 1)
+	{
+		animated_tile n_anim_tile;
+		n_anim_tile.mRef = ntile;
+		n_anim_tile.set_animation(animation);
+		mAnimated_tiles.push_back(n_anim_tile);
+	}
 	return true;
 }
 
@@ -39,19 +50,20 @@ int tilemap_display::draw(engine::renderer& pR)
 	update_animations();
 	for (auto &i : mLayers)
 	{
-		auto& vb = i.second.vertices;
+		if (!i.is_visible())
+			continue;
 
 		// Ensure it is a child of this object
-		if (!vb.get_parent())
+		if (!i.get_parent())
 		{
-			vb.set_unit(get_unit());
-			vb.set_internal_parent(*this);
+			i.set_unit(get_unit());
+			i.set_internal_parent(*this);
 		}
 		
-		vb.set_texture(mTexture);
-		vb.use_render_texture(true);
+		i.set_texture(mTexture);
+		i.use_render_texture(true);
 
-		vb.draw(pR);
+		i.draw(pR);
 	}
 	return 0;
 }
@@ -60,9 +72,7 @@ void tilemap_display::update_animations()
 {
 	try {
 		for (auto i : mAnimated_tiles)
-		{
-			i->update_animation();
-		}
+			i.update_animation();
 	}
 	catch (const std::exception& e)
 	{
@@ -72,40 +82,60 @@ void tilemap_display::update_animations()
 	}
 }
 
-void tilemap_display::clean()
+void tilemap_display::clear()
 {
 	mLayers.clear();
 	mAnimated_tiles.clear();
 }
 
-void tilemap_display::set_color(engine::color pColor)
+void tilemap_display::highlight_layer(size_t pLayer, engine::color pHighlight, engine::color pOthers)
 {
-	for (auto& l : mLayers)
+	size_t index = 0;
+	for (auto& i : mLayers)
 	{
-		l.second.vertices.set_color(pColor);
-	}
-}
-
-void tilemap_display::highlight_layer(int pLayer, engine::color pHighlight, engine::color pOthers)
-{
-	for (auto& l : mLayers)
-	{
-		if (l.first == pLayer)
-			l.second.vertices.set_color(pHighlight);
+		if (index == pLayer)
+			i.set_color(pHighlight);
 		else
-			l.second.vertices.set_color(pOthers);
+			i.set_color(pOthers);
+		++index;
 	}
 }
 
 void tilemap_display::remove_highlight()
 {
 	for (auto& l : mLayers)
+		l.set_color({ 255, 255, 255, 255 });
+}
+
+void tilemap_display::update(tilemap_manipulator& pTile_manipulator)
+{
+	clear();
+	for (size_t i = 0; i < pTile_manipulator.get_layer_count(); i++)
 	{
-		l.second.vertices.set_color({ 255, 255, 255, 255 });
+		mLayers.emplace_back();
+		tilemap_layer& layer = pTile_manipulator.get_layer(i);
+		layer.explode();
+		for (size_t j = 0; j < layer.get_tile_count(); j++)
+		{
+			tile& t = *layer.get_tile(j);
+			add_tile(t.get_position(), t.get_atlas(), i, t.get_rotation());
+		}
 	}
 }
 
-void tilemap_display::displayed_tile::set_animation(std::shared_ptr<const engine::animation> pAnimation)
+void tilemap_display::set_layer_visible(size_t pIndex, bool pIs_visible)
+{
+	assert(pIndex < mLayers.size());
+	std::next(mLayers.begin(), pIndex)->set_visible(pIs_visible);
+}
+
+bool rpg::tilemap_display::is_layer_visible(size_t pIndex)
+{
+	assert(pIndex < mLayers.size());
+	return std::next(mLayers.begin(), pIndex)->is_visible();
+}
+
+void tilemap_display::animated_tile::set_animation(std::shared_ptr<const engine::animation> pAnimation)
 {
 	mAnimation = pAnimation;
 	mFrame = 0;
@@ -114,7 +144,7 @@ void tilemap_display::displayed_tile::set_animation(std::shared_ptr<const engine
 		mTimer.start(pAnimation->get_interval()*0.001f);
 }
 
-void tilemap_display::displayed_tile::update_animation()
+void tilemap_display::animated_tile::update_animation()
 {
 	if (!mAnimation) return;
 	if (!mAnimation->get_frame_count()) return;

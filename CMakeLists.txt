@@ -41,7 +41,8 @@ set(TEST_SOURCES "${CMAKE_SOURCE_DIR}/tests/tests1.cpp")
 # Engine sources and Headers
 file(GLOB_RECURSE ENGINE_RPG_SOURCES "${CMAKE_SOURCE_DIR}/src/rpg/*.cpp")
 file(GLOB_RECURSE ENGINE_ENGINE_SOURCES "${CMAKE_SOURCE_DIR}/src/engine/*.cpp")
-set(ENGINE_SOURCES ${ENGINE_RPG_SOURCES} ${ENGINE_ENGINE_SOURCES})
+file(GLOB_RECURSE ENGINE_UI_SOURCES "${CMAKE_SOURCE_DIR}/src/ui/*.cpp")
+set(ENGINE_SOURCES ${ENGINE_RPG_SOURCES} ${ENGINE_ENGINE_SOURCES} ${ENGINE_UI_SOURCES})
 
 file(GLOB_RECURSE ENGINE_HEADERS "${CMAKE_SOURCE_DIR}/include/*.hpp")
 
@@ -107,7 +108,7 @@ add_executable(WolfGangEngine_Locked ${LOCKED_MAIN_SOURCES} ${WGE_ALL_SOURCES})
 add_executable(WolfGangEngine_Tests  ${TEST_SOURCES}        ${WGE_ALL_SOURCES})
 
 # Set the locked release mode for the WolfGangEngine_Locked target
-target_compile_definitions(WolfGangEngine_Tests PRIVATE LOCKED_RELEASE_MODE=1)
+target_compile_definitions(WolfGangEngine_Locked PRIVATE LOCKED_RELEASE_MODE=1)
 
 # WGE includes
 include_directories("${CMAKE_SOURCE_DIR}/include")
@@ -183,20 +184,15 @@ add_definitions(-DAS_USE_NAMESPACE)
 # Angelscript Includes
 include_directories("${CMAKE_SOURCE_DIR}/3rdparty/AngelScript/sdk/angelscript/include")
 
-# We will search in here for angelscript libs
-# set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "${CMAKE_SOURCE_DIR}/3rdparty/AngelScript/sdk/angelscript")
-
 # Set Angelscript root folder (libs and include here)
 set(AS_ROOT "${CMAKE_SOURCE_DIR}/3rdparty/AngelScript/sdk/angelscript")
 
-if(NOT UNIX)
 # Find the static angelscript debug library
 find_library(AS_LIBRARY_DEBUG
 	NAMES angelscriptd
 	PATH_SUFFIXES lib build/lib build/lib/Debug
 	PATHS ${AS_ROOT}
 	)
-endif()
 
 # Find the static angelscript release library
 find_library(AS_LIBRARY_RELEASE
