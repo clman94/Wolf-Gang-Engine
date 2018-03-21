@@ -936,7 +936,7 @@ int tilemap_editor::draw(engine::renderer & pR)
 		}
 		else if (pR.is_mouse_down(engine::renderer::mouse_button::mouse_middle))
 		{
-			copy_tile_type_at(tile_position_exact); // Copy tile (no need for a specific state for this)
+			copy_tile_type_at(tile_position); // Copy tile (no need for a specific state for this)
 		}
 		else if (pR.is_key_pressed(engine::renderer::key_code::Period))
 		{
@@ -945,14 +945,6 @@ int tilemap_editor::draw(engine::renderer & pR)
 		else if (pR.is_key_pressed(engine::renderer::key_code::Comma))
 		{
 			previous_tile();
-		}
-		else if (pR.is_key_pressed(engine::renderer::key_code::Quote))
-		{
-			layer_up();
-		}
-		else if (pR.is_key_pressed(engine::renderer::key_code::Slash))
-		{
-			layer_down();
 		}
 		else if (pR.is_key_pressed(engine::renderer::key_code::R))
 		{
@@ -1148,8 +1140,7 @@ void tilemap_editor::draw_tile_at(engine::fvector pAt)
 	assert(!mTile_list.empty());
 	rpg::tile* ntile = mTilemap_manipulator.get_layer(mLayer).set_tile(pAt, mTile_list[mCurrent_tile], mRotation);
 
-	std::shared_ptr<command_set_tiles> command
-	(new command_set_tiles(mLayer, &mTilemap_manipulator));
+	auto command = std::make_shared<command_set_tiles>(mLayer, &mTilemap_manipulator);
 	command->add(*ntile);
 
 	mCommand_manager.execute(command);
@@ -1158,8 +1149,7 @@ void tilemap_editor::draw_tile_at(engine::fvector pAt)
 
 void tilemap_editor::erase_tile_at(engine::fvector pAt)
 {
-	std::shared_ptr<command_remove_tiles> command
-		(new command_remove_tiles(mLayer, &mTilemap_manipulator));
+	auto command = std::make_shared<command_remove_tiles>(mLayer, &mTilemap_manipulator);
 	command->add(pAt);
 
 	mCommand_manager.execute(command);
@@ -1183,19 +1173,6 @@ void tilemap_editor::previous_tile()
 	update_labels();
 }
 
-void tilemap_editor::layer_up()
-{
-	++mLayer;
-	update_labels();
-	update_highlight();
-}
-
-void tilemap_editor::layer_down()
-{
-	--mLayer;
-	update_labels();
-	update_highlight();
-}
 
 void tilemap_editor::rotate_clockwise()
 {
@@ -2633,9 +2610,9 @@ void tilemap_layer_list::create_item(rpg::tilemap_layer& pLayer, size_t pIndex)
 	hl->add(cb_visible);
 	hl->setFixedSize(cb_visible, 20);
 
-	auto lb_name = std::make_shared<tgui::Label>();
+	auto lb_name = std::make_shared<tgui::EditBox>();
 	lb_name->setText(pLayer.get_name());
-	lb_name->setTextColor({ 200, 200, 200, 255 });
+	lb_name->getRenderer()->setTextColor({ 200, 200, 200, 255 });
 	lb_name->connect("Clicked", [=]()
 	{
 		set_selected_layer(pIndex);
@@ -2647,7 +2624,6 @@ void tilemap_layer_list::create_item(rpg::tilemap_layer& pLayer, size_t pIndex)
 		lb_name->getRenderer()->setBorderColor({ 255, 255, 100, 200 });
 	}
 
-	// Insert at top
 	hl->add(lb_name);
 
 	mLo_list->setFixedSize(hl, 25);

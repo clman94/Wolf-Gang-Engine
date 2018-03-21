@@ -190,6 +190,7 @@ engine::fvector tilemap_manipulator::get_center_point() const
 tile::tile()
 {
 	mFill = engine::fvector(1, 1);
+	mRotation = 0;
 }
 
 tile::tile(tile && pMove)
@@ -259,7 +260,7 @@ tile::fill_t tile::get_fill() const
 
 void tile::set_rotation(rotation_t pRotation)
 {
-	mRotation = pRotation;
+	mRotation = pRotation%4;
 }
 
 tile::rotation_t tile::get_rotation() const
@@ -315,6 +316,7 @@ tile* tilemap_layer::set_tile(engine::fvector pPosition, engine::fvector pFill, 
 	tile* ntile = new_tile(pAtlas);
 	ntile->set_fill(pFill);
 	ntile->set_position(pPosition);
+	ntile->set_rotation(pRotation);
 	return ntile;
 }
 

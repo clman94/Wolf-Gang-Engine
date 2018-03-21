@@ -129,7 +129,7 @@ void tilemap_display::set_layer_visible(size_t pIndex, bool pIs_visible)
 	std::next(mLayers.begin(), pIndex)->set_visible(pIs_visible);
 }
 
-bool rpg::tilemap_display::is_layer_visible(size_t pIndex)
+bool tilemap_display::is_layer_visible(size_t pIndex)
 {
 	assert(pIndex < mLayers.size());
 	return std::next(mLayers.begin(), pIndex)->is_visible();

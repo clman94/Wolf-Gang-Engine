@@ -286,8 +286,6 @@ private:
 	void erase_tile_at(engine::fvector pAt);
 	void next_tile();
 	void previous_tile();
-	void layer_up();
-	void layer_down();
 	void rotate_clockwise();
 
 	void update_tile_combobox_list();
