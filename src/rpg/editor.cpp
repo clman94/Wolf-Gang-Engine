@@ -2223,8 +2223,8 @@ void atlas_editor::setup_gui()
 
 	mSidebar->add_horizontal_buttons(
 	{ 
-		{"New", [&]() { new_entry(); } },
-		{"Delete", [&]() { remove_selected(); } }
+		editor_sidebar::button_entry("New", [&]() { new_entry(); } ),
+		editor_sidebar::button_entry("Delete", [&]() { remove_selected(); } )
 	});
 	
 	mSidebar->add_group("Preview");

@@ -2,6 +2,8 @@
 #define RPG_ENTITY_MANAGER_HPP
 
 #include <engine/renderer.hpp>
+#include <engine/logger.hpp>
+
 #include <rpg/entity.hpp>
 #include <rpg/sprite_entity.hpp>
 #include <rpg/character_entity.hpp>
