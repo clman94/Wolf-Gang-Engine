@@ -61,7 +61,7 @@ int tilemap_display::draw(engine::renderer& pR)
 		}
 		
 		i.set_texture(mTexture);
-		i.use_render_texture(true);
+		//i.use_render_texture(true);
 
 		i.draw(pR);
 	}

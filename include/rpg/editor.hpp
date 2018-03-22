@@ -223,6 +223,7 @@ private:
 	rpg::tilemap_display* mTilemap_display;
 
 	tgui::VerticalLayout::Ptr mLo_list;
+	tgui::EditBox::Ptr mEb_rename;
 
 	size_t mSelected_index;
 	selection_callback mSelection_callback;

@@ -2535,12 +2535,21 @@ tilemap_layer_list::tilemap_layer_list()
 	});
 	actions_layout->add(bt_delete_layer);
 
-	auto bt_rename_layer = std::make_shared<tgui::Button>();
-	bt_rename_layer->setText("Rename");
-	actions_layout->add(bt_rename_layer);
-
 	add(actions_layout);
-	setFixedSize(0, 25);
+	setFixedSize(actions_layout, 25);
+
+
+	mEb_rename = std::make_shared<tgui::EditBox>();
+	mEb_rename->connect("TextChanged", [&](sf::String pName)
+	{
+		if (mTilemap_manipulator->get_layer_count() != 0)
+		{
+			mTilemap_manipulator->get_layer(mSelected_index).set_name(pName);
+			refresh_list();
+		}
+	});
+	add(mEb_rename);
+	setFixedSize(mEb_rename, 25);
 
 	mLo_list = std::make_shared<tgui::VerticalLayout>();
 	add(mLo_list);
@@ -2610,11 +2619,12 @@ void tilemap_layer_list::create_item(rpg::tilemap_layer& pLayer, size_t pIndex)
 	hl->add(cb_visible);
 	hl->setFixedSize(cb_visible, 20);
 
-	auto lb_name = std::make_shared<tgui::EditBox>();
+	auto lb_name = std::make_shared<tgui::Label>();
 	lb_name->setText(pLayer.get_name());
-	lb_name->getRenderer()->setTextColor({ 200, 200, 200, 255 });
+	lb_name->setTextColor({ 200, 200, 200, 255 });
 	lb_name->connect("Clicked", [=]()
 	{
+		mEb_rename->setText(pLayer.get_name());
 		set_selected_layer(pIndex);
 		mSelection_callback(pIndex);
 	});

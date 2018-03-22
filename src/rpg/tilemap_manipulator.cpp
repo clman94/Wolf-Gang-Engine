@@ -441,6 +441,8 @@ void tilemap_layer::explode()
 
 bool tilemap_layer::load_xml(tinyxml2::XMLElement * pRoot)
 {
+	mName = util::safe_string(pRoot->Attribute("name"));
+
 	auto i = pRoot->FirstChildElement();
 	while (i)
 	{
