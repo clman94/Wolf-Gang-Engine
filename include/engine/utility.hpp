@@ -292,7 +292,7 @@ inline std::string safe_string(const char* str)
 template<typename T>
 inline T to_numeral(const std::string& str, size_t *i = nullptr)
 {
-	static_assert("Unsupported type");
+	//static_assert("Unsupported type");
 	return 0;
 }
 

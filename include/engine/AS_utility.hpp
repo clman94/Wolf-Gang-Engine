@@ -35,7 +35,7 @@ template<typename T>
 struct AS_type_to_string :
 	AS_type_to_string_base
 {
-	static_assert("Unkown type");
+	//static_assert("Unkown type");
 	AS_type_to_string() {}
 };
 
