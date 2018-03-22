@@ -25,7 +25,7 @@ bool tilemap_display::add_tile(engine::fvector pPosition, const std::string& pAt
 		return false;
 
 	// Go to the layer
-	auto& layer_iter = mLayers.begin();
+	auto layer_iter = mLayers.begin();
 	std::advance(layer_iter, pLayer);
 
 	// Add quad to vertex batch
