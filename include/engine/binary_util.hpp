@@ -6,8 +6,7 @@ namespace binary_util
 template<typename T>
 inline T read_unsignedint_binary(std::istream& pStream)
 {
-	if constexpr(!std::is_unsigned<T>())
-		static_assert("T is not unsigned");
+	static_assert(std::is_unsigned<T>(), "T is not unsigned");
 
 	uint8_t bytes[sizeof(T)];// char gives negative values and causes issues when converting to unsigned.
 	if (!pStream.read((char*)&bytes, sizeof(T))) // And passing this unsigned char array as a char* works well.
@@ -24,8 +23,7 @@ inline T read_unsignedint_binary(std::istream& pStream)
 template<typename T>
 inline bool write_unsignedint_binary(std::ostream& pStream, const T pVal)
 {
-	if constexpr(!std::is_unsigned<T>())
-		static_assert("T is not unsigned");
+	static_assert(std::is_unsigned<T>(), "T is not unsigned");
 
 	uint8_t bytes[sizeof(T)];
 	for (size_t i = 0; i < sizeof(T); i++)
