@@ -115,7 +115,7 @@ void tilemap_manipulator::generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode
 	for (size_t i = 0; i < mMap.size(); i++)
 	{
 		auto ele_layer = doc.NewElement("layer");
-		ele_layer->SetAttribute("id", i);
+		ele_layer->SetAttribute("id", static_cast<unsigned int>(i));
 		mMap[i].generate_xml(ele_layer, doc);
 		root->InsertEndChild(ele_layer);
 	}

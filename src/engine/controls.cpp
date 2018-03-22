@@ -5,7 +5,9 @@
 
 using namespace engine;
 
-inline const std::vector<std::pair<std::string, renderer::key_code>> key_names_codes =
+namespace {
+
+const std::vector<std::pair<std::string, renderer::key_code>> key_names_codes =
 {
 	{ "up",     renderer::key_code::Up },
 	{ "down",   renderer::key_code::Down },
@@ -25,6 +27,8 @@ inline const std::vector<std::pair<std::string, renderer::key_code>> key_names_c
 	{ "*",      renderer::key_code::Multiply },
 	{ "/",      renderer::key_code::Divide },
 };
+
+}
 
 renderer::key_code key_name_to_code(const std::string& pName)
 {
