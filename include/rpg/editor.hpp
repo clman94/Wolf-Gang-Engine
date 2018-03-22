@@ -86,7 +86,9 @@ public:
 	tgui::ComboBox::Ptr add_value_enum(const std::string& pLabel, std::function<void(size_t)> pCallback, const std::vector<std::string>& pValues, size_t pDefault = 0, bool pBig_mode = false);
 	tgui::ComboBox::Ptr add_value_enum(const std::string& pLabel, size_t& pSelection, const std::vector<std::string>& pValues, size_t pDefault = 0, bool pBig_mode = false);
 
-	void add_horizontal_buttons(const std::vector<std::tuple<std::string, std::function<void()>>> pName_callbacks);
+	typedef std::tuple<std::string, std::function<void()>> button_entry;
+
+	void add_horizontal_buttons(const std::vector<button_entry> pName_callbacks);
 	void add_button(const std::string& pLabel, std::function<void()> pCallback);
 
 	tgui::Label::Ptr add_label(const std::string& text, tgui::Container::Ptr pContainer = nullptr);

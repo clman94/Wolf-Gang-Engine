@@ -513,7 +513,7 @@ tgui::ComboBox::Ptr editor_sidebar::add_value_enum(const std::string & pLabel, s
 	return add_value_enum(pLabel, std::function<void(size_t)>([&](size_t pCallback_value) { pSelection = pCallback_value; }), pValues, pDefault, pBig_mode);
 }
 
-void editor_sidebar::add_horizontal_buttons(const std::vector<std::tuple<std::string, std::function<void()>>> pName_callbacks)
+void editor_sidebar::add_horizontal_buttons(const std::vector<button_entry> pName_callbacks)
 {
 	auto hl = create_value_line();
 	
@@ -529,7 +529,7 @@ void editor_sidebar::add_horizontal_buttons(const std::vector<std::tuple<std::st
 
 void editor_sidebar::add_button(const std::string & pLabel, std::function<void()> pCallback)
 {
-	add_horizontal_buttons({ {pLabel, pCallback} });
+	add_horizontal_buttons({ button_entry(pLabel, pCallback) });
 }
 
 tgui::Label::Ptr editor_sidebar::add_label(const std::string & pText, tgui::Container::Ptr pContainer)
@@ -2434,8 +2434,8 @@ void game_editor::setup_gui()
 	mSidebar->add_group("Game");
 	mSidebar->add_horizontal_buttons(
 	{
-		{ "Stop", [&]() { mGame.stop(); update_scene_list(); } },
-		{ "Restart", [&]() { mGame.restart_game(); update_scene_list(); } }
+		editor_sidebar::button_entry( "Stop", [&]() { mGame.stop(); update_scene_list(); } ),
+		editor_sidebar::button_entry( "Restart", [&]() { mGame.restart_game(); update_scene_list(); } )
 	});
 
 	mCb_scene = mSidebar->add_value_enum("Scene", [&](size_t pItem)
