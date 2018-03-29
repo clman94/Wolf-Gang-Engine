@@ -54,6 +54,18 @@ file(GLOB_RECURSE BOX2D_HEADERS "${CMAKE_SOURCE_DIR}/3rdparty/box2d/Box2D/Box2D/
 set(TINYXML2_SOURCES "${CMAKE_SOURCE_DIR}/3rdparty/tinyxml2/tinyxml2.cpp")
 set(TINYXML2_HEADERS "${CMAKE_SOURCE_DIR}/3rdparty/tinyxml2/tinyxml2.h")
 
+set(IMGUI_SOURCES
+	"${CMAKE_SOURCE_DIR}/3rdparty/imgui/imgui.cpp"
+	"${CMAKE_SOURCE_DIR}/3rdparty/imgui/imgui_draw.cpp"
+	"${CMAKE_SOURCE_DIR}/3rdparty/imgui/imgui-SFML.cpp"
+	)
+set(IMGUI_HEADERS
+	"${CMAKE_SOURCE_DIR}/3rdparty/imgui/imgui.h"
+	"${CMAKE_SOURCE_DIR}/3rdparty/imgui/imgui-SFML.h"
+	"${CMAKE_SOURCE_DIR}/3rdparty/imgui/imconfig-SFML.h"
+	"${CMAKE_SOURCE_DIR}/3rdparty/imgui/imconfig.h"
+	)
+
 # Angelscript Addon sources and Headers
 set(AS_ADDONS "${CMAKE_SOURCE_DIR}/3rdparty/AngelScript/sdk/add_on")
 set(AS_ADDONS_SOURCES
@@ -89,8 +101,12 @@ source_group("Tinyxml2 Headers" FILES ${TINYXML2_HEADERS})
 source_group("Angelscript Addons Sources" FILES ${AS_ADDONS_SOURCES})
 source_group("Angelscript Addons Headers" FILES ${AS_ADDONS_HEADERS})
 
+source_group("ImGui Sources" FILES ${IMGUI_SOURCES})
+source_group("ImGui Headers" FILES ${IMGUI_HEADERS})
+
 source_group("Main Sources" FILES ${MAIN_SOURCES} ${LOCKED_MAIN_SOURCES} ${TEST_SOURCES})
 
+# TODO: Add subdirectories instead
 set(WGE_ALL_SOURCES
 	${ENGINE_SOURCES}
 	${ENGINE_HEADERS}
@@ -100,6 +116,8 @@ set(WGE_ALL_SOURCES
 	${TINYXML2_HEADERS}
 	${AS_ADDONS_SOURCES}
 	${AS_ADDONS_HEADERS}
+	${IMGUI_SOURCES}
+	${IMGUI_HEADERS}
 	)
 
 # Setup executables with appropriate sources and headers
@@ -115,6 +133,9 @@ include_directories("${CMAKE_SOURCE_DIR}/include")
 
 # Box2d includes
 include_directories("${CMAKE_SOURCE_DIR}/3rdparty/box2d/Box2D")
+
+# imgui includes
+include_directories("${CMAKE_SOURCE_DIR}/3rdparty/imgui")
 
 # SFML
 set(SFML_STATIC_LIBRARIES TRUE)
