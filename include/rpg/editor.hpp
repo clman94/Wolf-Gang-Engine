@@ -446,6 +446,38 @@ private:
 	void clear_gui();
 };
 
+class editor_settings_loader
+{
+public:
+	bool load(const engine::fs::path& pPath);
+
+	std::string generate_open_cmd(const std::string& pFilepath) const;
+	std::string generate_opento_cmd(const std::string& pFilepath, size_t pRow, size_t pCol);
+
+private:
+	std::string mPath;
+	std::string mOpen_param;
+	std::string mOpento_param;
+};
+
+// !!Under Developement and only mildly functional!!
+// This class displays a windowed list of
+// all the messages angelscript spat out during compilation.
+class script_message_window
+{
+public:
+	script_message_window();
+
+	void show_list(const std::vector<rpg::script_system::angelscript_message>& pMessages
+		, std::function<void(rpg::script_system::angelscript_message)> pClicked_callback);
+
+	void set_renderer(engine::renderer& pRenderer);
+
+private:
+	tgui::ChildWindow::Ptr mWindow;
+	tgui::VerticalLayout::Ptr mVl_list;
+};
+
 class WGE_editor
 {
 public:
@@ -476,6 +508,10 @@ private:
 	tilemap_editor      mTilemap_editor;
 	collisionbox_editor mCollisionbox_editor;
 	atlas_editor        mAtlas_editor;
+
+	script_message_window mMessage_window;
+
+	editor_settings_loader mSettings;
 
 	editor* mCurrent_editor;
 

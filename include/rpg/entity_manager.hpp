@@ -70,7 +70,7 @@ class entity_manager :
 public:
 	entity_manager();
 
-	void clean();
+	void clear();
 
 	void load_script_interface(script_system& pScript);
 	void set_resource_manager(engine::resource_manager& pResource_manager);
@@ -145,7 +145,7 @@ private:
 	void             script_set_atlas(entity_reference& e, const std::string& name);
 	void             script_set_rotation(entity_reference& e, float pRotation);
 	float            script_get_rotation(entity_reference& e);
-	void             script_set_color(entity_reference& e, int r, int g, int b, int a);
+	void             script_set_color(entity_reference& e, float r, float g, float b, float a);
 	void             script_set_texture(entity_reference & e, const std::string & name);
 	void             script_set_scale(entity_reference& e, const engine::fvector& pScale);
 	engine::fvector  script_get_scale(entity_reference& e);

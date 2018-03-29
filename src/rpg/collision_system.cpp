@@ -19,7 +19,7 @@ std::shared_ptr<const door> collision_system::get_door_entry(std::string pName)
 	return{};
 }
 
-void collision_system::clean()
+void collision_system::clear()
 {
 	mContainer.clear();
 }

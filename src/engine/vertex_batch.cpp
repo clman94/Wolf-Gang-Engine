@@ -150,7 +150,7 @@ vertex_reference vertex_batch::add_quad(fvector pPosition, frect pTexture_rect, 
 	ref.set_texture_rect(pTexture_rect);
 	ref.set_rotation(pRotation);
 	ref.set_position(pPosition);
-	ref.set_color({ 255, 255, 255, 255 });
+	ref.set_color(color_preset::opaque);
 	return ref;
 }
 

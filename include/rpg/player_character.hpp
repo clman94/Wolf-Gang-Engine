@@ -12,7 +12,7 @@ class player_character :
 	public character_entity
 {
 public:
-	void clean();
+	void reset();
 
 	player_character();
 	void set_locked(bool pLocked);

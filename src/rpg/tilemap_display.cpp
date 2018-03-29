@@ -71,7 +71,7 @@ int tilemap_display::draw(engine::renderer& pR)
 void tilemap_display::update_animations()
 {
 	try {
-		for (auto i : mAnimated_tiles)
+		for (auto& i : mAnimated_tiles)
 			i.update_animation();
 	}
 	catch (const std::exception& e)

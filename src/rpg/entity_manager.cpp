@@ -12,7 +12,7 @@ entity_manager::entity_manager()
 {
 }
 
-void entity_manager::clean()
+void entity_manager::clear()
 {
 	mEntities.clear();
 }
@@ -372,19 +372,19 @@ float entity_manager::script_get_rotation(entity_reference & e)
 	return se->mSprite.get_rotation();
 }
 
-void entity_manager::script_set_color(entity_reference& e, int r, int g, int b, int a)
+void entity_manager::script_set_color(entity_reference& e, float r, float g, float b, float a)
 {
 	if (!check_entity(e)) return;
 	
 	if (e->get_type() == entity::type::sprite)
 	{
 		auto se = dynamic_cast<sprite_entity*>(e.get());
-		se->mSprite.set_color(engine::color(r, g, b, a));
+		se->mSprite.set_color(engine::color(r, g, b, a).clamp());
 	}
 	else if (e->get_type() == entity::type::text)
 	{
 		auto se = dynamic_cast<text_entity*>(e.get());
-		se->mText.set_color(engine::color(r, g, b, a));
+		se->mText.set_color(engine::color(r, g, b, a).clamp());
 	}
 	else
 		logger::error("Unsupported entity type");

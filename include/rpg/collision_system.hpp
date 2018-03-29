@@ -45,7 +45,7 @@ class collision_system
 public:
 	std::shared_ptr<const door> get_door_entry(std::string pName);
 
-	void clean();
+	void clear();
 
 	int load_collision_boxes(tinyxml2::XMLElement* pEle);
 	void setup_script_defined_triggers(const scene_script_context& pContext);

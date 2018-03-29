@@ -223,6 +223,8 @@ public:
 
 	const engine::fs::path& get_source_path() const;
 
+	script_system& get_script_system();
+
 protected:
 	void refresh_renderer(engine::renderer& r);
 

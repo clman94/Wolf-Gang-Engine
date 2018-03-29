@@ -1,5 +1,6 @@
 
 #include <engine/logger.hpp>
+#include <engine/utility.hpp>
 
 #include <rpg/script_system.hpp>
 
@@ -25,6 +26,15 @@ void script_system::message_callback(const asSMessageInfo * msg)
 		type = logger::level::warning;
 
 	logger::print(msg->section, msg->row, msg->col, type, msg->message);
+
+	// Record message
+	angelscript_message n_message;
+	n_message.file = util::safe_string(msg->section);
+	n_message.message = util::safe_string(msg->message);
+	n_message.row = msg->row;
+	n_message.col = msg->col;
+	n_message.level = type;
+	mMessages.push_back(n_message);
 }
 
 void script_system::script_abort()
@@ -300,6 +310,16 @@ void script_system::set_namespace(const std::string & pName)
 void script_system::reset_namespace()
 {
 	mEngine->SetDefaultNamespace("");
+}
+
+const std::vector<script_system::angelscript_message>& script_system::get_messages() const
+{
+	return mMessages;
+}
+
+void script_system::clear_messages()
+{
+	mMessages.clear();
 }
 
 std::shared_ptr<script_system::thread> script_system::create_thread(AS::asIScriptFunction * pFunc

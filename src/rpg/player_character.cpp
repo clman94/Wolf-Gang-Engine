@@ -2,9 +2,9 @@
 
 using namespace rpg;
 
-void player_character::clean()
+void player_character::reset()
 {
-	mSprite.set_color({ 255, 255, 255, 255 });
+	mSprite.set_color({ 1, 1, 1, 1 });
 	mSprite.set_rotation(0);
 
 	set_position({ 0, 0 });

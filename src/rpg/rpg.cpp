@@ -607,13 +607,18 @@ scene & game::get_scene()
 {
 	return mScene;
 }
-engine::resource_manager & rpg::game::get_resource_manager()
+engine::resource_manager & game::get_resource_manager()
 {
 	return mResource_manager;
 }
-const engine::fs::path & rpg::game::get_source_path() const
+const engine::fs::path & game::get_source_path() const
 {
 	return mData_directory;
+}
+
+script_system& game::get_script_system()
+{
+	return mScript;
 }
 
 float game::get_delta()
@@ -1260,7 +1265,7 @@ void save_system::string_value::load(tinyxml2::XMLElement * pEle_value)
 
 colored_overlay::colored_overlay()
 {
-	clean();
+	reset();
 	mOverlay.set_depth(-10000);
 }
 
@@ -1270,7 +1275,7 @@ void colored_overlay::load_script_interface(script_system & pScript)
 	pScript.add_function("set_overlay_opacity", &colored_overlay::script_set_overlay_opacity, this);
 }
 
-void colored_overlay::clean()
+void colored_overlay::reset()
 {
 	mOverlay.set_color({ 0, 0, 0, 0 });
 }
@@ -1281,20 +1286,15 @@ void colored_overlay::refresh_renderer(engine::renderer& pR)
 	mOverlay.set_size({1000, 1000});
 }
 
-void colored_overlay::script_set_overlay_color(int r, int g, int b)
+void colored_overlay::script_set_overlay_color(float r, float g, float b)
 {
-	auto color = mOverlay.get_color();
-	mOverlay.set_color(engine::color(
-		util::clamp(r, 0, 255)
-		, util::clamp(g, 0, 255)
-		, util::clamp(b, 0, 255)
-		, color.a ));
+	mOverlay.set_color(mOverlay.get_color().clamp());
 }
 
-void colored_overlay::script_set_overlay_opacity(int a)
+void colored_overlay::script_set_overlay_opacity(float a)
 {
 	auto color = mOverlay.get_color();
-	color.a = util::clamp(a, 0, 255);
+	color.a = util::clamp<float>(a, 0, 1);
 	mOverlay.set_color(color);
 }
 

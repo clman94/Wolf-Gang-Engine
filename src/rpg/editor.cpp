@@ -244,6 +244,13 @@ WGE_editor::WGE_editor()
 	mTilemap_editor.set_game(mGame_editor.get_game());
 	mCollisionbox_editor.set_game(mGame_editor.get_game());
 	mAtlas_editor.set_game(mGame_editor.get_game());
+
+	if (!mSettings.load("./editor/settings.xml"))
+	{
+		logger::error("Unable to load editor settings");
+	}
+
+	mMessage_window.set_renderer(mRenderer);
 }
 
 void WGE_editor::initualize(const std::string & pCustom_location)
@@ -725,6 +732,32 @@ void WGE_editor::setup_gui()
 		set_current_editor(mCollisionbox_editor);
 		mCurrent_editor->open_editor();
 	});
+
+	mGame_editor.get_sidebar()->add_button("Edit Script (notepad++)", [&]()
+	{
+		auto& game = mGame_editor.get_game();
+		if (!game.get_scene().get_name().empty()) // heh
+		{
+			engine::fs::path path = game.get_source_path().relative_path() / "scenes" /
+				(game.get_scene().get_name() + ".as");
+			std::string cmd = mSettings.generate_open_cmd(path.string().c_str());
+			logger::info("Calling system with command '" + cmd + "'");
+			std::system(("START " + cmd).c_str());
+		}
+	});
+
+	mGame_editor.get_sidebar()->add_button("Show messages", [&]()
+	{ 
+		mMessage_window.show_list(mGame_editor.get_game().get_script_system().get_messages()
+			, [&](rpg::script_system::angelscript_message pMessage)
+		{
+			// There is a possibility notepad++ commandline options are not working properly
+			// or this just won't do.
+			std::string cmd = mSettings.generate_opento_cmd(pMessage.file, pMessage.row, pMessage.col);
+			logger::info("Calling system with command '" + cmd + "'");
+			std::system((cmd).c_str());
+		});
+	});
 }
 
 void WGE_editor::set_current_editor(editor & pEditor)
@@ -841,7 +874,7 @@ tilemap_editor::tilemap_editor()
 {
 	setup_gui();
 
-	mPreview.set_color({ 255, 255, 255, 150 });
+	mPreview.set_color({ 1, 1, 1, 0.78f });
 	mPreview.set_parent(mMain_scroll);
 
 	mCurrent_tile = 0;
@@ -1952,9 +1985,9 @@ int atlas_editor::draw(engine::renderer & pR)
 	{
 		auto full_region = i->get_full_region()*mZoom;
 		if (i == mSelection)
-			mFull_animation.set_color({ 255, 255, 100, 50 });
+			mFull_animation.set_color({ 1, 1, 0.39f, 0.19f });
 		else
-			mFull_animation.set_color({ 100, 100, 255, 100 });
+			mFull_animation.set_color({ 0.39f, 0.39f, 1, 0.39f });
 		mFull_animation.set_position(full_region.get_offset());
 		mFull_animation.set_size(full_region.get_size());
 		mFull_animation.draw(pR);
@@ -2249,14 +2282,14 @@ void atlas_editor::setup_gui()
 
 void atlas_editor::black_background()
 {
-	mPreview_bg.set_color({ 0, 0, 0, 150 });
-	mPreview_bg.set_outline_color({ 255, 255, 255, 200 });
+	mPreview_bg.set_color({ 0, 0, 0, 0.58f });
+	mPreview_bg.set_outline_color({ 1, 1, 1, 0.78f });
 }
 
 void atlas_editor::white_background()
 {
-	mPreview_bg.set_color({ 255, 255, 255, 150 });
-	mPreview_bg.set_outline_color({ 0, 0, 0, 200 });
+	mPreview_bg.set_color({ 255, 255, 255, 0.58f });
+	mPreview_bg.set_outline_color({ 0, 0, 0, 0.78f });
 }
 
 
@@ -2350,7 +2383,7 @@ void scroll_control_node::movement(engine::renderer & pR)
 
 editor_boundary_visualization::editor_boundary_visualization()
 {
-	const engine::color line_color(255, 255, 255, 150);
+	const engine::color line_color(1, 1, 1, 0.58f);
 
 	mLines.set_outline_color(line_color);
 	mLines.set_color(engine::color(0, 0, 0, 0));
@@ -2446,13 +2479,7 @@ void game_editor::setup_gui()
 	update_scene_list();
 
 	mSidebar->add_button("Reload Scene", [&]() { mGame.get_scene().reload_scene(); update_scene_list(); });
-	mSidebar->add_button("Edit Script (notepad++)", [&]()
-	{
-		if (!mGame.get_scene().get_name().empty())
-			std::system((std::string("START \"C:/Program Files (x86)/Notepad++/notepad++.exe\" ")
-				+ (mGame.get_source_path().relative_path() / "scenes" /
-				(mGame.get_scene().get_name() + ".as")).string()).c_str());
-	});
+
 
 	mLb_fps = std::make_shared<tgui::Label>();
 	mLb_fps->setMaximumTextWidth(0);
@@ -2593,7 +2620,7 @@ void tilemap_layer_list::create_item(rpg::tilemap_layer& pLayer, size_t pIndex)
 	hl->connect("MouseEntered", [=]()
 	{
 		hl->getRenderer()->setBackgroundColor({ 255, 255, 255, 100 });
-		mTilemap_display->highlight_layer(pIndex, {100, 255, 100, 255}, {255, 255, 255, 100});
+		mTilemap_display->highlight_layer(pIndex, { 0.39f, 255, 0.39f, 255 }, { 1, 1, 1, 0.39f });
 	});
 	hl->connect("MouseLeft", [=]()
 	{
@@ -2637,4 +2664,115 @@ void tilemap_layer_list::create_item(rpg::tilemap_layer& pLayer, size_t pIndex)
 	hl->add(lb_name);
 
 	mLo_list->setFixedSize(hl, 25);
+}
+
+static void replace_all_with(std::string& pVal, const std::string& pTarget, const std::string& pNew)
+{
+	if (pTarget.length() > pVal.length()
+		|| pTarget.empty() || pVal.empty())
+		return;
+	for (size_t i = 0; i < pVal.length() - pTarget.length() + 1; i++)
+	{
+		if (std::string(pVal.begin() + i, pVal.begin() + i + pTarget.size()) == pTarget) // Compare this range
+		{
+			pVal.replace(i, pTarget.length(), pNew); // Replace
+			i += pNew.length() - 1; // Skip the new text
+		}
+	}
+}
+
+bool editor_settings_loader::load(const engine::fs::path& pPath)
+{
+	tinyxml2::XMLDocument doc;
+	if (doc.LoadFile(pPath.string().c_str()) != tinyxml2::XML_SUCCESS)
+		return false;
+	auto ele_root = doc.RootElement();
+	mPath = util::safe_string(ele_root->FirstChildElement("path")->GetText());
+	mOpen_param = util::safe_string(ele_root->FirstChildElement("open")->GetText());
+	mOpento_param = util::safe_string(ele_root->FirstChildElement("opento")->GetText());
+	return true;
+}
+
+
+
+std::string editor_settings_loader::generate_open_cmd(const std::string & pFilepath) const
+{
+	std::string modified_param = mOpen_param;
+	replace_all_with(modified_param, "%filename%", pFilepath);
+	return "\"" + mPath + "\" " + modified_param;
+}
+
+std::string editor_settings_loader::generate_opento_cmd(const std::string & pFilepath, size_t pRow, size_t pCol)
+{
+	std::string modified_param = mOpento_param;
+	replace_all_with(modified_param, "%filename%", pFilepath);
+	replace_all_with(modified_param, "%row%", std::to_string(pRow));
+	replace_all_with(modified_param, "%col%", std::to_string(pCol));
+	return "\"" + mPath + "\" " + modified_param;
+}
+
+script_message_window::script_message_window()
+{
+	mWindow = std::make_shared<tgui::ChildWindow>();
+	mWindow->hide();
+	mWindow->connect("Closed", [&]()
+	{
+		mWindow->hide();
+	});
+	mWindow->setResizable(true);
+	mWindow->getRenderer()->setBorders(5);
+
+	mVl_list = std::make_shared<tgui::VerticalLayout>();
+	mWindow->add(mVl_list);
+	mVl_list->setSize("&.w, &.h");
+	mVl_list->setPosition(0, 0);
+}
+
+void script_message_window::show_list(const std::vector<rpg::script_system::angelscript_message>& pMessages, std::function<void(rpg::script_system::angelscript_message)> pClicked_callback)
+{
+	auto parent = mWindow->getParent();
+	mWindow->setSize(parent->getSize()*0.6f);
+	mWindow->setPosition(parent->getSize() / 2.f - mWindow->getSize() / 2.f);
+	mWindow->show();
+
+	mVl_list->removeAllWidgets();
+	mVl_list->setSize(mWindow->getSize());
+
+	for (auto& i : pMessages)
+	{
+		auto lb = std::make_shared<tgui::Label>();
+		lb->setTextSize(10);
+		lb->setText(engine::fs::path(i.file).stem().string() + ": " + i.message);
+
+		sf::Color bg(255, 255, 255, 255);
+		if (i.level == logger::level::warning)
+			bg = { 255, 255, 160, 255 };
+		if (i.level == logger::level::error)
+			bg = { 255, 160, 160, 255 };
+		lb->getRenderer()->setBackgroundColor(bg);
+
+		auto lb_ptr = lb.get();
+		lb->connect("MouseEntered", [=]()
+		{
+			sf::Color modified_bg(bg);
+			modified_bg.a = 160;
+			lb_ptr->getRenderer()->setBackgroundColor(modified_bg);
+		});
+		lb->connect("MouseLeft", [=]()
+		{
+			lb_ptr->getRenderer()->setBackgroundColor(bg);
+		});
+		lb->connect("Clicked", [=]()
+		{
+			pClicked_callback(i);
+		});
+		mVl_list->add(lb);
+		mVl_list->setFixedSize(lb, 20);
+	}
+	mVl_list->addSpace();
+}
+
+void script_message_window::set_renderer(engine::renderer & pRenderer)
+{
+	pRenderer.get_tgui().add(mWindow);
 }

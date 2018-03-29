@@ -84,7 +84,6 @@ struct vector
 
 	vector& rotate(T pDegrees)
 	{
-		
 		const T r = degree_to_radian(pDegrees);
 		T x1 = x*std::cos(r) - y*std::sin(r);
 		T y1 = y*std::cos(r) + x*std::sin(r);
@@ -286,7 +285,7 @@ struct vector
 		return *this;
 	}*/
 
-	inline operator sf::Vector2<T>() const
+	operator sf::Vector2<T>() const
 	{
 		return{ x, y };
 	}

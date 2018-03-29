@@ -206,6 +206,7 @@ void renderer::refresh_view()
 		viewport.width *= mSubwindow.get_size().x / mWindow->mWindow.getSize().x;
 		viewport.height *= mSubwindow.get_size().y / mWindow->mWindow.getSize().y;
 	}
+
 	mView.setViewport(viewport);
 }
 
@@ -415,6 +416,12 @@ void renderer::update_events()
 		else if (i.type == sf::Event::KeyReleased && (size_t)i.key.code < mPressed_keys.size())
 			mPressed_keys[(size_t)i.key.code] = input_state::none;
 		
+
+		if (i.type == sf::Event::MouseWheelMoved)
+		{
+			// TODO
+		}
+
 		// Mouse events
 		if (i.type == sf::Event::MouseButtonPressed)
 			mPressed_buttons[(size_t)i.mouseButton.button] = input_state::pressed;
@@ -439,34 +446,6 @@ void renderer::update_events()
 		}
 	}
 }
-
-/*
-anchor_thing::anchor_thing()
-{
-	mAnchor_by = anchor_by::by_offset;
-}
-
-anchor_thing::anchor_thing(anchor pAnchor)
-{
-	mAnchor_by = anchor_by::by_anchor_point;
-	mAnchor = pAnchor;
-}
-
-anchor_thing::anchor_thing(offset pOffset)
-{
-	mAnchor_by = anchor_by::by_offset;
-	mPoint = pOffset;
-}
-
-fvector anchor_thing::calculate_offset()
-{
-	if (mAnchor_by == anchor_by::by_offset)
-	{
-		return mPoint;
-	}
-	return fvector();
-}
-*/
 
 bool shader::load()
 {
@@ -548,23 +527,22 @@ void rectangle_node::set_anchor(anchor pAnchor)
 
 void rectangle_node::set_color(const color & c)
 {
-	shape.setFillColor(sf::Color(c.r, c.g, c.b, c.a));
+	shape.setFillColor(c);
 }
 
 color rectangle_node::get_color()
 {
-	auto c = shape.getFillColor();
-	return{ c.r, c.g, c.b, c.a };
+	return shape.getFillColor();
 }
 
 void rectangle_node::set_size(fvector s)
 {
-	shape.setSize({ s.x, s.y });
+	shape.setSize(s);
 }
 
 fvector rectangle_node::get_size() const
 {
-	return{ shape.getSize().x, shape.getSize().y };
+	return shape.getSize();
 }
 
 void rectangle_node::set_outline_color(color pColor)
@@ -580,7 +558,7 @@ void rectangle_node::set_outline_thinkness(float pThickness)
 int rectangle_node::draw(renderer & pR)
 {
 	auto pos = get_exact_position() + engine::anchor_offset(get_size(), mAnchor);
-	shape.setPosition({ pos.x, pos.y });
+	shape.setPosition(pos);
 	shape.setRotation(get_absolute_rotation());
 	shape.setScale(get_absolute_scale());
 

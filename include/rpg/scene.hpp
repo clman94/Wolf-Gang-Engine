@@ -45,15 +45,15 @@ class colored_overlay :
 public:
 	colored_overlay();
 	void load_script_interface(script_system& pScript);
-	void clean();
+	void reset();
 
 private:
 	void refresh_renderer(engine::renderer& pR);
 
 	engine::rectangle_node mOverlay;
 
-	void script_set_overlay_color(int r, int g, int b);
-	void script_set_overlay_opacity(int a);
+	void script_set_overlay_color(float r, float g, float b);
+	void script_set_overlay_opacity(float a);
 };
 
 class background_music
@@ -180,7 +180,7 @@ private:
 	panning_node mWorld_node;
 	engine::node mScene_node;
 
-	engine::resource_pack* mPack;
+	engine::resource_pack*    mPack;
 	engine::resource_manager* mResource_manager;
 	script_system*            mScript;
 

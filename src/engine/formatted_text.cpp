@@ -8,18 +8,18 @@ using namespace engine;
 
 text_format::text_format()
 {
-	mDefault_color = color(255, 255, 255, 255);
+	mDefault_color = color(1, 1, 1, 1);
 }
 
 text_format::text_format(const char * pText)
 {
-	mDefault_color = color(255, 255, 255, 255);
+	mDefault_color = color_preset::white;
 	parse(pText);
 }
 
 text_format::text_format(const std::string & pText)
 {
-	mDefault_color = color(255, 255, 255, 255);
+	mDefault_color = color_preset::white;
 	parse(pText);
 }
 
@@ -46,25 +46,21 @@ color parse_xml_color(tinyxml2::XMLElement* pEle)
 	{
 		const std::string hex_string = util::safe_string(hex);
 		if (hex_string.size() != 8)
-			return{ 255, 255, 255, 255 };
+			return color_preset::white;
 		return
 		{
-			  static_cast<color_t>(parse_hex(hex_string.substr(0, 2)))
-			, static_cast<color_t>(parse_hex(hex_string.substr(2, 2)))
-			, static_cast<color_t>(parse_hex(hex_string.substr(4, 2)))
-			, static_cast<color_t>(parse_hex(hex_string.substr(6, 2)))
+			  static_cast<color_t>(parse_hex(hex_string.substr(0, 2)))/255.f
+			, static_cast<color_t>(parse_hex(hex_string.substr(2, 2)))/255.f
+			, static_cast<color_t>(parse_hex(hex_string.substr(4, 2)))/255.f
+			, static_cast<color_t>(parse_hex(hex_string.substr(6, 2)))/255.f
 		};
 	}
 
-	auto r = pEle->UnsignedAttribute("r");
-	auto g = pEle->UnsignedAttribute("g");
-	auto b = pEle->UnsignedAttribute("b");
-	auto a = !pEle->Attribute("a") ? 255 : pEle->UnsignedAttribute("a"); // Default 255
 	return{ 
-		  static_cast<color_t>(r)
-		, static_cast<color_t>(g)
-		, static_cast<color_t>(b)
-		, static_cast<color_t>(a)
+		  static_cast<color_t>(pEle->FloatAttribute("r"))
+		, static_cast<color_t>(pEle->FloatAttribute("g"))
+		, static_cast<color_t>(pEle->FloatAttribute("b"))
+		, static_cast<color_t>(!pEle->Attribute("a") ? 1 : pEle->FloatAttribute("a")) // Default 1
 	};
 }
 

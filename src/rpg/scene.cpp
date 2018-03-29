@@ -47,14 +47,12 @@ engine::node & scene::get_scene_node()
 	return mScene_node;
 }
 
-collision_system&
-scene::get_collision_system()
+collision_system& scene::get_collision_system()
 {
 	return mCollision_system;
 }
 
-void
-scene::clean(bool pFull)
+void scene::clean(bool pFull)
 {
 	mScript->abort_all();
 
@@ -62,15 +60,15 @@ scene::clean(bool pFull)
 
 	mTilemap_display.clear();
 	mTilemap_manipulator.clear();
-	mCollision_system.clean();
-	mEntity_manager.clean();
-	mColored_overlay.clean();
+	mCollision_system.clear();
+	mEntity_manager.clear();
+	mColored_overlay.reset();
 	mSound_FX.stop_all();
 	mBackground_music.pause_music();
 
 	focus_player(true);
 
-	mPlayer.clean();
+	mPlayer.reset();
 
 	if (pFull) // Cleanup everything
 	{
@@ -240,7 +238,7 @@ bool scene::reload_scene()
 	}
 
 	clean(true);
-
+	mResource_manager->reload_all();
 	return load_scene(mCurrent_scene_name);
 }
 
@@ -549,11 +547,11 @@ void scene::update_collision_interaction(engine::controls & pControls)
 
 scene_visualizer::scene_visualizer()
 {
-	mEntity_center_visualize.set_color(engine::color(255, 255, 0, 200));
+	mEntity_center_visualize.set_color(engine::color(1, 1, 0, 0.78f));
 	mEntity_center_visualize.set_size(engine::fvector(2, 2));
 
-	mEntity_visualize.set_outline_color(engine::color(0, 255, 0, 200));
-	mEntity_visualize.set_color(engine::color(0, 0, 0, 0));
+	mEntity_visualize.set_outline_color(engine::color(0, 1, 0, 0.78f));
+	mEntity_visualize.set_color(engine::color_preset::black);
 	mEntity_visualize.set_outline_thinkness(1);
 
 	mVisualize_entities = false;
@@ -639,7 +637,7 @@ void scene_visualizer::visualize_entities(engine::renderer & pR)
 void scene_visualizer::visualize_collision(engine::renderer & pR)
 {
 	mBox_visualize.set_unit(mScene->get_world_node().get_unit());
-	mBox_visualize.set_color(engine::color(0, 255, 255, 70));
+	mBox_visualize.set_color(engine::color(0, 1, 1, 0.27f));
 	for (const auto& i : mScene->get_collision_system().get_container())
 	{
 		mBox_visualize.set_position(i->get_region().get_offset() + mScene->get_world_node().get_absolute_position());
