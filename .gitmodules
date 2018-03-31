@@ -19,3 +19,9 @@
 	path = 3rdparty/sfml
 	url = https://github.com/SFML/SFML.git
 	ignore = dirty
+[submodule "3rdparty/imgui-sfml"]
+	path = 3rdparty/imgui-sfml
+	url = https://github.com/eliasdaler/imgui-sfml.git
+[submodule "3rdparty/imgui"]
+	path = 3rdparty/imgui
+	url = https://github.com/ocornut/imgui.git
