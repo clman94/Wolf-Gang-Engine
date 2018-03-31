@@ -18,6 +18,8 @@
 #include <functional>
 #include <tuple>
 
+#include <imgui.h>
+#include <imgui-SFML.h>
 
 class command
 {
@@ -56,82 +58,11 @@ namespace editors
 
 const engine::color default_gui_bg_color(30, 30, 30, 255);
 
-
-class tgui_list_layout :
-	public tgui::BoxLayout
-{
-private:
-	void updateWidgetPositions();
-};
-
-// This is the side used in all the editors.
-// It provides methods to conveniently building it.
-class editor_sidebar :
-	public tgui_list_layout
-{
-public:
-	editor_sidebar();
-
-	void add_group(const std::string& pText);
-
-	tgui::EditBox::Ptr add_value_int(const std::string& pLabel, std::function<void(int)> pCallback, bool pNeg = true);
-	tgui::EditBox::Ptr add_value_int(const std::string& pLabel, int& pValue, bool pNeg = true);
-
-	tgui::EditBox::Ptr add_value_string(const std::string& pLabel, std::function<void(std::string)> pCallback);
-	tgui::EditBox::Ptr add_value_string(const std::string& pLabel, std::string& pValue);
-
-	tgui::EditBox::Ptr add_value_float(const std::string& pLabel, std::function<void(float)> pCallback, bool pNeg = true);
-	tgui::EditBox::Ptr add_value_float(const std::string& pLabel, float& pValue, bool pNeg = true);
-
-	tgui::ComboBox::Ptr add_value_enum(const std::string& pLabel, std::function<void(size_t)> pCallback, const std::vector<std::string>& pValues, size_t pDefault = 0, bool pBig_mode = false);
-	tgui::ComboBox::Ptr add_value_enum(const std::string& pLabel, size_t& pSelection, const std::vector<std::string>& pValues, size_t pDefault = 0, bool pBig_mode = false);
-
-	typedef std::tuple<std::string, std::function<void()>> button_entry;
-
-	void add_horizontal_buttons(const std::vector<button_entry> pName_callbacks);
-	void add_button(const std::string& pLabel, std::function<void()> pCallback);
-
-	tgui::Label::Ptr add_label(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
-	tgui::Label::Ptr add_small_label(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
-	tgui::TextBox::Ptr add_textbox(tgui::Container::Ptr pContainer = nullptr);
-	tgui::ComboBox::Ptr add_combobox(tgui::Container::Ptr pContainer = nullptr);
-	tgui::CheckBox::Ptr add_checkbox(const std::string& pName);
-	tgui::Button::Ptr add_button(const std::string& text, tgui::Container::Ptr pContainer = nullptr);
-	std::shared_ptr<tgui_list_layout> add_sub_container(tgui::Container::Ptr pContainer = nullptr);
-
-private:
-	tgui::HorizontalLayout::Ptr create_value_line();
-	tgui::HorizontalLayout::Ptr create_value_line(const std::string& pText);
-};
-
-class scroll_control_node :
-	public engine::node
-{
-public:
-	void movement(engine::renderer& pR);
-
-private:
-	//engine::fvector mOffset;
-};
-
-class editor_boundary_visualization :
-	public engine::render_object
-{
-public:
-	editor_boundary_visualization();
-	void set_boundary(engine::frect pBoundary);
-
-	virtual int draw(engine::renderer &pR);
-private:
-	engine::rectangle_node mLines;
-};
-
 class editor :
 	public engine::render_object
 {
 public:
 	editor();
-	std::shared_ptr<editor_sidebar> get_sidebar();
 
 	void set_game(rpg::game& pGame);
 
@@ -145,7 +76,6 @@ protected:
 	rpg::game* mGame;
 
 	void editor_changed();
-	std::shared_ptr<editor_sidebar> mSidebar;
 
 private:
 	bool mIs_changed;
@@ -158,18 +88,13 @@ public:
 	scene_editor();
 	bool open_scene(std::string pName); // Should be called before open_editor()
 
-private:
-	tgui::ComboBox::Ptr mCb_scene;
-
 protected:
 	float mZoom;
 	void update_zoom(engine::renderer& pR);
 
 	rpg::scene_loader mLoader;
-	editor_boundary_visualization mBoundary_visualization;
 	rpg::tilemap_manipulator mTilemap_manipulator;
 	rpg::tilemap_display     mTilemap_display;
-	scroll_control_node mMain_scroll;
 };
 
 class game_editor :
@@ -179,8 +104,6 @@ public:
 	game_editor();
 
 	bool save() { return 0; }
-
-	void set_subwindow(engine::frect pRect);
 
 	int draw(engine::renderer& pR);
 
@@ -192,43 +115,10 @@ protected:
 	virtual void refresh_renderer(engine::renderer& pR);
 
 private:
-	void update_scene_list();
-	void setup_gui();
 	engine::renderer mRenderer;
 	rpg::game mGame;
 
 	engine::timer mInfo_update_timer;
-	tgui::ComboBox::Ptr mCb_scene;
-	tgui::Label::Ptr mLb_mouse;
-	tgui::Label::Ptr mLb_fps;
-};
-
-class tilemap_layer_list :
-	public tgui::VerticalLayout
-{
-public:
-	typedef std::function<void(size_t)> selection_callback;
-
-	tilemap_layer_list();
-
-	void set_tilemap_manipulator(rpg::tilemap_manipulator& pTm_man);
-	void set_tilemap_display(rpg::tilemap_display& pTm_displ);
-
-	void refresh_list();
-
-	void set_selected_layer(size_t pIndex);
-	void set_selection_callback(selection_callback pCallback);
-
-private:
-	void create_item(rpg::tilemap_layer& pLayer, size_t pIndex);
-	rpg::tilemap_manipulator* mTilemap_manipulator;
-	rpg::tilemap_display* mTilemap_display;
-
-	tgui::VerticalLayout::Ptr mLo_list;
-	tgui::EditBox::Ptr mEb_rename;
-
-	size_t mSelected_index;
-	selection_callback mSelection_callback;
 };
 
 class tilemap_editor :
@@ -269,16 +159,7 @@ private:
 
 	engine::sprite_node mPreview;
 
-	tgui::ComboBox::Ptr mCb_tile;
-	tgui::Label::Ptr mLb_layer;
-	tgui::Label::Ptr mLb_rotation;
-	tgui::EditBox::Ptr mTb_texture;
-	tgui::CheckBox::Ptr mCb_half_grid;
-	std::shared_ptr<tilemap_layer_list> mLayer_list;
-
 	engine::grid mGrid;
-
-	void setup_gui();
 
 	command_manager mCommand_manager;
 
@@ -291,9 +172,6 @@ private:
 	void previous_tile();
 	void rotate_clockwise();
 
-	void update_tile_combobox_list();
-	void update_tile_combobox_selected();
-	void update_labels();
 	void update_preview();
 	void update_highlight();
 	void update_tilemap();
@@ -347,19 +225,6 @@ private:
 	engine::frect mResize_mask;
 	engine::frect mOriginal_rect; // For resize_mode
 
-	tgui::ComboBox::Ptr mCb_type;
-	tgui::EditBox::Ptr  mTb_wallgroup;
-	tgui::EditBox::Ptr  mTb_box_x;
-	tgui::EditBox::Ptr  mTb_box_y;
-	tgui::EditBox::Ptr  mTb_box_width;
-	tgui::EditBox::Ptr  mTb_box_height;
-
-	tgui::EditBox::Ptr  mTb_door_name;
-	tgui::EditBox::Ptr  mTb_door_destination;
-	tgui::ComboBox::Ptr mTb_door_scene;
-	tgui::EditBox::Ptr  mTb_door_offsetx;
-	tgui::EditBox::Ptr  mTb_door_offsety;
-
 	rpg::collision_box::type     mCurrent_type;
 	rpg::collision_box_container mContainer;
 
@@ -368,10 +233,7 @@ private:
 
 	engine::grid mGrid;
 
-	void setup_gui();
-
 	bool tile_selection(engine::fvector pCursor, bool pCycle = true);
-	void update_labels();
 };
 
 class atlas_editor :
@@ -420,30 +282,12 @@ private:
 	engine::rectangle_node mFull_animation;
 	engine::rectangle_node mSelected_firstframe;
 
-	tgui::ComboBox::Ptr mCb_texture_select;
-	tgui::ComboBox::Ptr mCb_entry_select;
-	tgui::EditBox::Ptr  mTb_name;
-	tgui::EditBox::Ptr  mTb_frames;
-	tgui::EditBox::Ptr  mTb_default_frame;
-	tgui::EditBox::Ptr  mTb_interval;
-	tgui::ComboBox::Ptr mCb_loop;
-	tgui::EditBox::Ptr  mTb_size_x;
-	tgui::EditBox::Ptr  mTb_size_y;
-	tgui::EditBox::Ptr  mTb_size_w;
-	tgui::EditBox::Ptr  mTb_size_h;
-	tgui::ComboBox::Ptr mCb_bg_color;
-
 	void atlas_selection(engine::fvector pPosition);
-
-	void setup_gui();
 
 	void black_background();
 	void white_background();
 
-	void update_entry_list();
-	void update_settings();
 	void update_preview();
-	void clear_gui();
 };
 
 class editor_settings_loader
@@ -460,24 +304,6 @@ private:
 	std::string mOpento_param;
 };
 
-// !!Under Developement and only mildly functional!!
-// This class displays a windowed list of
-// all the messages angelscript spat out during compilation.
-class script_message_window
-{
-public:
-	script_message_window();
-
-	void show_list(const std::vector<rpg::script_system::angelscript_message>& pMessages
-		, std::function<void(rpg::script_system::angelscript_message)> pClicked_callback);
-
-	void set_renderer(engine::renderer& pRenderer);
-
-private:
-	tgui::ChildWindow::Ptr mWindow;
-	tgui::VerticalLayout::Ptr mVl_list;
-};
-
 class WGE_editor
 {
 public:
@@ -488,18 +314,6 @@ public:
 	void run();
 
 private:
-	tgui::Tab::Ptr mTabs;
-
-	std::shared_ptr<tgui::VerticalLayout> mGui_base;
-	std::shared_ptr<tgui_list_layout> mSidebar;
-	std::shared_ptr<tgui_list_layout> mVisualizations_layout;
-	tgui::Panel::Ptr mRender_container;
-	tgui::Label::Ptr mBottom_text;
-
-	tgui::Panel::Ptr mSave_background;
-	tgui::Panel::Ptr mSave_accept;
-
-	tgui::Theme::Ptr mTheme;
 
 	engine::renderer mRenderer;
 	engine::display_window mWindow;
@@ -509,15 +323,18 @@ private:
 	collisionbox_editor mCollisionbox_editor;
 	atlas_editor        mAtlas_editor;
 
-	script_message_window mMessage_window;
-
 	editor_settings_loader mSettings;
+};
 
-	editor* mCurrent_editor;
 
-	void setup_gui();
+class WGE_imgui_editor
+{
+public:
+	void run();
 
-	void set_current_editor(editor& pEditor);
+private:
+	sf::RenderWindow mWindow;
+
 };
 
 }

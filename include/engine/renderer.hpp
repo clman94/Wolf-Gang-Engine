@@ -2,7 +2,6 @@
 #define RENDERER_HPP
 
 #include <SFML/Graphics.hpp>
-#include <TGUI/TGUI.hpp>
 #include <SFML/OpenGL.hpp>
 
 #include <memory>
@@ -24,7 +23,6 @@
 #include "animation.hpp"
 #include "resource.hpp"
 #include "color.hpp"
-
 
 namespace engine
 {
@@ -126,8 +124,6 @@ public:
 	bool is_mouse_pressed(mouse_button pButton_type, bool pIgnore_gui = false);
 	bool is_mouse_down(mouse_button pButton_type, bool pIgnore_gui = false);
 
-	void set_transparent_gui_input(bool pEnabled);
-
 	// Call the window's poll_event method first
 	void update_events();
 
@@ -160,9 +156,6 @@ public:
 
 	void refresh();
 
-	void set_subwindow_enabled(bool pEnabled);
-	void set_subwindow(frect pRect);
-
 #ifdef ENGINE_INTERNAL
 	sf::RenderTarget& get_sfml_render()
 	{
@@ -170,9 +163,6 @@ public:
 		return mWindow->mWindow;
 	}
 #endif
-
-	tgui::Gui& get_tgui();
-
 
 	// Get the ascii text inputted last event handling
 	std::string get_entered_text() const;
@@ -188,15 +178,6 @@ private:
 	fvector mTarget_size;
 
 	void refresh_view();
-	void refresh_gui_view();
-
-	tgui::Gui mTgui;
-	bool mIs_mouse_busy;
-	bool mIs_keyboard_busy;
-	bool mTransparent_gui_input;
-
-	bool mSubwindow_enabled;
-	frect mSubwindow;
 
 	sf::View mView;
 	display_window* mWindow;

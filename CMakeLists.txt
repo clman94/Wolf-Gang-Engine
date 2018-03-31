@@ -57,13 +57,13 @@ set(TINYXML2_HEADERS "${CMAKE_SOURCE_DIR}/3rdparty/tinyxml2/tinyxml2.h")
 set(IMGUI_SOURCES
 	"${CMAKE_SOURCE_DIR}/3rdparty/imgui/imgui.cpp"
 	"${CMAKE_SOURCE_DIR}/3rdparty/imgui/imgui_draw.cpp"
-	"${CMAKE_SOURCE_DIR}/3rdparty/imgui/imgui-SFML.cpp"
+	"${CMAKE_SOURCE_DIR}/3rdparty/imgui-sfml/imgui-SFML.cpp"
 	)
 set(IMGUI_HEADERS
 	"${CMAKE_SOURCE_DIR}/3rdparty/imgui/imgui.h"
-	"${CMAKE_SOURCE_DIR}/3rdparty/imgui/imgui-SFML.h"
-	"${CMAKE_SOURCE_DIR}/3rdparty/imgui/imconfig-SFML.h"
-	"${CMAKE_SOURCE_DIR}/3rdparty/imgui/imconfig.h"
+	"${CMAKE_SOURCE_DIR}/3rdparty/imgui-sfml/imgui-SFML.h"
+	"${CMAKE_SOURCE_DIR}/3rdparty/imgui-sfml/imconfig-SFML.h"
+	"${CMAKE_SOURCE_DIR}/include/editor/imgui-config.hpp"
 	)
 
 # Angelscript Addon sources and Headers
@@ -128,6 +128,10 @@ add_executable(WolfGangEngine_Tests  ${TEST_SOURCES}        ${WGE_ALL_SOURCES})
 # Set the locked release mode for the WolfGangEngine_Locked target
 target_compile_definitions(WolfGangEngine_Locked PRIVATE LOCKED_RELEASE_MODE=1)
 
+# Set the correct imconfig file for imgui
+add_definitions(-DIMGUI_DISABLE_INCLUDE_IMCONFIG_H)
+add_definitions(-DIMGUI_USER_CONFIG=<editor/imgui-config.hpp>)
+
 # WGE includes
 include_directories("${CMAKE_SOURCE_DIR}/include")
 
@@ -136,6 +140,7 @@ include_directories("${CMAKE_SOURCE_DIR}/3rdparty/box2d/Box2D")
 
 # imgui includes
 include_directories("${CMAKE_SOURCE_DIR}/3rdparty/imgui")
+include_directories("${CMAKE_SOURCE_DIR}/3rdparty/imgui-sfml")
 
 # SFML
 set(SFML_STATIC_LIBRARIES TRUE)
@@ -183,19 +188,6 @@ if(SFML_FOUND)
   target_link_libraries(WolfGangEngine        ${SFML_LIBRARIES} ${SFML_DEPENDENCIES})
   target_link_libraries(WolfGangEngine_Locked ${SFML_LIBRARIES} ${SFML_DEPENDENCIES})
   target_link_libraries(WolfGangEngine_Tests  ${SFML_LIBRARIES} ${SFML_DEPENDENCIES})
-
-endif()
-
-# Find TGUI
-set(TGUI_ROOT "${CMAKE_SOURCE_DIR}/3rdparty/tgui")
-find_package(TGUI 0.7)
-if(TGUI_FOUND)
-  include_directories(${TGUI_INCLUDE_DIR})
-
-  # Link TGUI
-  target_link_libraries(WolfGangEngine ${TGUI_LIBRARY})
-  target_link_libraries(WolfGangEngine_Locked ${TGUI_LIBRARY})
-  target_link_libraries(WolfGangEngine_Tests ${TGUI_LIBRARY})
 
 endif()
 

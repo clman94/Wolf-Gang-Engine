@@ -14,9 +14,9 @@ int main(int argc, char* argv[])
 	logger::initialize("./log.txt");
 	//try
 	//{
-		editors::WGE_editor editor;
+		editors::WGE_imgui_editor editor;
 
-		editor.initualize("./data");
+		//editor.initualize("./data");
 		editor.run();
 	/*}
 	catch (std::exception& e)

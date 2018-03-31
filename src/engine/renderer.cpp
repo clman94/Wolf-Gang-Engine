@@ -1,4 +1,6 @@
 #define ENGINE_INTERNAL
+#include <imgui.h>
+#include <imgui-SFML.h>
 
 #include <engine/renderer.hpp>
 #include <engine/logger.hpp>
@@ -84,13 +86,9 @@ float render_object::get_depth()
 
 renderer::renderer()
 {
-	mTransparent_gui_input = false;
 	mWindow = nullptr;
 	mRequest_resort = false;
 	mTarget_size = ivector(800, 600); // Some arbitrary default
-
-	mSubwindow_enabled = false;
-	mSubwindow = frect(0, 0, 1, 1);
 }
 
 renderer::~renderer()
@@ -141,7 +139,6 @@ int renderer::draw()
 	}
 	//mWindow->mWindow.clear(mBackground_color);
 	draw_objects();
-	mTgui.draw();
 	return 0;
 }
 
@@ -151,11 +148,6 @@ int renderer::draw(render_object& pObject)
 
 	mWindow->mWindow.setView(mView);
 	return pObject.draw(*this);
-}
-
-tgui::Gui & renderer::get_tgui()
-{
-	return mTgui;
 }
 
 std::string renderer::get_entered_text() const
@@ -185,7 +177,7 @@ void renderer::refresh_view()
 {
 	if (!mWindow)
 		return;
-	const fvector window_size(mSubwindow_enabled ? mSubwindow.get_size() : fvector::cast(vector<unsigned int>(mWindow->mWindow.getSize())));
+	const fvector window_size(fvector::cast(vector<unsigned int>(mWindow->mWindow.getSize())));
 
 	mView = sf::View(sf::FloatRect(0, 0, mTarget_size.x, mTarget_size.y));
 	sf::FloatRect viewport(0, 0, 0, 0);
@@ -197,23 +189,7 @@ void renderer::refresh_view()
 	viewport.left = 0.5f - (viewport.width  / 2);
 	viewport.top  = 0.5f - (viewport.height / 2);
 
-	if (mSubwindow_enabled)
-	{
-		viewport.left = (mSubwindow.get_offset().x + viewport.left*mSubwindow.get_size().x)
-			/ mWindow->mWindow.getSize().x;
-		viewport.top = (mSubwindow.get_offset().y + viewport.top*mSubwindow.get_size().y)
-			/ mWindow->mWindow.getSize().y;
-		viewport.width *= mSubwindow.get_size().x / mWindow->mWindow.getSize().x;
-		viewport.height *= mSubwindow.get_size().y / mWindow->mWindow.getSize().y;
-	}
-
 	mView.setViewport(viewport);
-}
-
-void renderer::refresh_gui_view()
-{
-	assert(mWindow);
-	mTgui.setView(sf::View(sf::FloatRect(0, 0, static_cast<float>(mWindow->mWindow.getSize().x), static_cast<float>(mWindow->mWindow.getSize().y))));
 }
 
 
@@ -313,7 +289,6 @@ float renderer::get_delta() const
 void renderer::set_window(display_window & pWindow)
 {
 	mWindow = &pWindow;
-	mTgui.setWindow(pWindow.mWindow);
 }
 
 display_window * engine::renderer::get_window() const
@@ -323,19 +298,6 @@ display_window * engine::renderer::get_window() const
 
 void renderer::refresh()
 {
-	refresh_view();
-	refresh_gui_view();
-}
-
-void renderer::set_subwindow_enabled(bool pEnabled)
-{
-	mSubwindow_enabled = pEnabled;
-	refresh_view();
-}
-
-void renderer::set_subwindow(frect pRect)
-{
-	mSubwindow = pRect;
 	refresh_view();
 }
 
@@ -352,14 +314,14 @@ void renderer::refresh_pressed()
 
 bool renderer::is_key_pressed(key_code pKey_type, bool pIgnore_gui)
 {
-	if (!mWindow->mWindow.hasFocus() || (mIs_keyboard_busy && !pIgnore_gui))
+	if (!mWindow->mWindow.hasFocus())
 		return false;
 	return mPressed_keys[pKey_type] == input_state::pressed;
 }
 
 bool renderer::is_key_down(key_code pKey_type, bool pIgnore_gui)
 {
-	if (!mWindow->mWindow.hasFocus() || (mIs_keyboard_busy && !pIgnore_gui))
+	if (!mWindow->mWindow.hasFocus())
 		return false;
 	return mPressed_keys[pKey_type] == input_state::pressed
 		|| mPressed_keys[pKey_type] == input_state::hold;
@@ -367,22 +329,17 @@ bool renderer::is_key_down(key_code pKey_type, bool pIgnore_gui)
 
 bool renderer::is_mouse_pressed(mouse_button pButton_type, bool pIgnore_gui)
 {
-	if (!mWindow->mWindow.hasFocus() || (mIs_mouse_busy && !pIgnore_gui) || !is_mouse_within_target())
+	if (!mWindow->mWindow.hasFocus() || !is_mouse_within_target())
 		return false;
 	return mPressed_buttons[pButton_type] == input_state::pressed;
 }
 
 bool renderer::is_mouse_down(mouse_button pButton_type, bool pIgnore_gui)
 {
-	if (!mWindow->mWindow.hasFocus() || (mIs_mouse_busy && !pIgnore_gui) || !is_mouse_within_target())
+	if (!mWindow->mWindow.hasFocus() || !is_mouse_within_target())
 		return false;
 	return mPressed_buttons[pButton_type] == input_state::pressed
 		|| mPressed_buttons[pButton_type] == input_state::hold;
-}
-
-void renderer::set_transparent_gui_input(bool pEnabled)
-{
-	mTransparent_gui_input = pEnabled;
 }
 
 void renderer::update_events()
@@ -405,9 +362,6 @@ void renderer::update_events()
 			mWindow->mSize = vector<unsigned int>(mWindow->mWindow.getSize()); // Update member
 
 			refresh_view();
-
-			// Adjust view of gui so it won't stretch
-			refresh_gui_view();
 		}
 
 		// Key events
@@ -430,20 +384,6 @@ void renderer::update_events()
 
 		if (i.type == sf::Event::MouseMoved)
 			mMouse_position = { i.mouseMove.x, i.mouseMove.y };
-
-		// Update tgui events
-		if (mTgui.handleEvent(i) && !mTransparent_gui_input)
-		{
-			mIs_mouse_busy = i.type >= sf::Event::MouseWheelMoved
-				&& i.type <= sf::Event::MouseLeft;
-			mIs_keyboard_busy = i.type == sf::Event::KeyPressed
-				|| i.type == sf::Event::KeyReleased;
-		}
-		else
-		{
-			mIs_mouse_busy = false;
-			mIs_keyboard_busy = false;
-		}
 	}
 }
 
