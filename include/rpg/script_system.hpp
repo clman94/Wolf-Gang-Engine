@@ -262,5 +262,16 @@ private:
 }
 
 
+namespace logger
+{
+	static inline message print(rpg::script_system& pScript_system
+		, level pType, const std::string& pMessage)
+	{
+		return print(pScript_system.get_current_file()
+			, pScript_system.get_current_line()
+			, pType, pMessage);
+	}
+}
+
 
 #endif // !RPG_SCRIPT_SYSTEM_HPP

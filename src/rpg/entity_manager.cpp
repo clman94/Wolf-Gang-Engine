@@ -49,9 +49,7 @@ bool entity_manager::check_entity(entity_reference & e)
 
 	if (!e.is_valid())
 	{
-		logger::print(mScript_system->get_current_file()
-			, mScript_system->get_current_line()
-			, logger::level::error
+		logger::print(*mScript_system, logger::level::error
 			, "Entity object invalid.");
 		return false;
 	}
@@ -70,7 +68,8 @@ entity_reference entity_manager::script_add_entity(const std::string & pName)
 	auto resource = mResource_manager->get_resource<engine::texture>("texture", pName);
 	if (!resource)
 	{
-		logger::warning("Could not load texture '" + pName + "'");
+		logger::print(*mScript_system, logger::level::error
+			, "Could not find texture '" + pName + "'");
 		return{};
 	}
 
@@ -88,7 +87,8 @@ entity_reference entity_manager::script_add_entity_atlas(const std::string & pat
 
 	assert(new_entity->get_type() == entity::type::sprite);
 	if (!dynamic_cast<sprite_entity*>(new_entity.get())->mSprite.set_animation(atlas))
-		logger::warning("Could not load atlas entry '" + atlas + "'");
+		logger::print(*mScript_system, logger::level::error
+			, "Could not find atlas entry '" + atlas + "'");
 	return new_entity;
 }
 
@@ -100,7 +100,8 @@ entity_reference entity_manager::script_add_text()
 	auto font = mResource_manager->get_resource<engine::font>("font", "default");
 	if (!font)
 	{
-		logger::warning("Could not find default font");
+		logger::print(*mScript_system, logger::level::error
+			, "Could not default font. Please add one to the font directory.");
 		return{};
 	}
 
@@ -118,7 +119,8 @@ void entity_manager::script_set_text(entity_reference& e, const std::string & pT
 	text_entity* c = dynamic_cast<text_entity*>(e.get());
 	if (!c)
 	{
-		logger::error("Entity is not text");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a text entity.");
 		return;
 	}
 	c->mText.set_text(pText);
@@ -138,7 +140,8 @@ void entity_manager::script_remove_entity(entity_reference& e)
 		}
 	}
 
-	logger::error("Could not remove entity");
+	logger::print(*mScript_system, logger::level::error
+		, "Could not remove entity.");
 }
 
 entity_reference entity_manager::script_add_character(const std::string & pName)
@@ -153,7 +156,8 @@ entity_reference entity_manager::script_add_character(const std::string & pName)
 	auto resource = mResource_manager->get_resource<engine::texture>("texture", pName);
 	if (!resource)
 	{
-		logger::error("Could not load texture '" + pName + "' (Entity will not have a texture)");
+		logger::print(*mScript_system, logger::level::error
+			, "Could not find texture '" + pName + "'");
 	}
 	else
 	{
@@ -190,7 +194,8 @@ engine::fvector entity_manager::script_get_size(entity_reference & e)
 		return se->mText.get_size();
 	}
 	else
-		logger::warning("Unsupported entity type");
+		logger::print(*mScript_system, logger::level::error
+			, "Unsupported entity type");
 	return{};
 }
 
@@ -200,7 +205,8 @@ void entity_manager::script_set_direction(entity_reference& e, int dir)
 	character_entity* c = dynamic_cast<character_entity*>(e.get());
 	if (!c)
 	{
-		logger::error("Entity is not a character");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a character entity");
 		return;
 	}
 	c->set_direction(static_cast<character_entity::direction>(dir));
@@ -212,7 +218,8 @@ int entity_manager::script_get_direction(entity_reference& e)
 	character_entity* c = dynamic_cast<character_entity*>(e.get());
 	if (!c)
 	{
-		logger::error("Entity is not a character");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a character entity");
 		return 0;
 	}
 	return static_cast<int>(c->get_direction());
@@ -224,7 +231,8 @@ void entity_manager::script_set_cycle(entity_reference& e, const std::string& na
 	character_entity* c = dynamic_cast<character_entity*>(e.get());
 	if (c == nullptr)
 	{
-		logger::error("Entity is not a character");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a character entity");
 		return;
 	}
 	c->set_cycle_group(name);
@@ -251,7 +259,8 @@ void entity_manager::script_set_depth_fixed(entity_reference& e, bool pFixed)
 	auto se = dynamic_cast<sprite_entity*>(e.get());
 	if (!se)
 	{
-		logger::error("Entity is not sprite-based");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a sprite entity");
 		return;
 	}
 	se->set_dynamic_depth(!pFixed);
@@ -263,7 +272,8 @@ void entity_manager::script_start_animation(entity_reference& e)
 	auto se = dynamic_cast<sprite_entity*>(e.get());
 	if (!se)
 	{
-		logger::error("Entity is not sprite-based");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a sprite entity");
 		return;
 	}
 	se->mSprite.start();
@@ -275,7 +285,8 @@ void entity_manager::script_stop_animation(entity_reference& e)
 	auto se = dynamic_cast<sprite_entity*>(e.get());
 	if (!se)
 	{
-		logger::warning("Entity is not sprite-based");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a sprite entity");
 		return;
 	}
 	se->mSprite.stop();
@@ -287,7 +298,8 @@ void entity_manager::script_pause_animation(entity_reference & e)
 	auto se = dynamic_cast<sprite_entity*>(e.get());
 	if (!se)
 	{
-		logger::error("Entity is not sprite-based");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a sprite entity");
 		return;
 	}
 	se->mSprite.pause();
@@ -299,7 +311,8 @@ bool entity_manager::script_is_animation_playing(entity_reference & e)
 	auto se = dynamic_cast<sprite_entity*>(e.get());
 	if (!se)
 	{
-		logger::error("Entity is not sprite-based");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a sprite entity");
 		return false;
 	}
 	return se->mSprite.is_playing();
@@ -311,7 +324,8 @@ unsigned int rpg::entity_manager::script_get_animation_frame(entity_reference & 
 	auto se = dynamic_cast<sprite_entity*>(e.get());
 	if (!se)
 	{
-		logger::error("Entity is not sprite-based");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a sprite entity");
 		return false;
 	}
 	return se->mSprite.get_frame();
@@ -323,7 +337,8 @@ void entity_manager::script_set_atlas(entity_reference& e, const std::string & n
 	auto se = dynamic_cast<sprite_entity*>(e.get());
 	if (!se)
 	{
-		logger::error("Entity is not sprite-based");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a sprite entity");
 		return;
 	}
 	se->mSprite.set_animation(name);
@@ -345,7 +360,8 @@ void entity_manager::script_set_anchor(entity_reference& e, int pAnchor)
 		se->mText.set_anchor(static_cast<engine::anchor>(pAnchor));
 	}
 	else
-		logger::error("Unsupported entity type");
+		logger::print(*mScript_system, logger::level::error
+			, "Unsupported entity type");
 }
 
 void entity_manager::script_set_rotation(entity_reference& e, float pRotation)
@@ -354,7 +370,8 @@ void entity_manager::script_set_rotation(entity_reference& e, float pRotation)
 	auto se = dynamic_cast<sprite_entity*>(e.get());
 	if (!se)
 	{
-		logger::error("Entity is not sprite-based");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a sprite entity");
 		return;
 	}
 	se->mSprite.set_rotation(std::fmod(std::abs(pRotation), 360.f));
@@ -366,7 +383,8 @@ float entity_manager::script_get_rotation(entity_reference & e)
 	auto se = dynamic_cast<sprite_entity*>(e.get());
 	if (!se)
 	{
-		logger::error("Entity is not sprite-based");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a sprite entity");
 		return 0;
 	}
 	return se->mSprite.get_rotation();
@@ -387,7 +405,8 @@ void entity_manager::script_set_color(entity_reference& e, float r, float g, flo
 		se->mText.set_color(engine::color(r, g, b, a).clamp());
 	}
 	else
-		logger::error("Unsupported entity type");
+		logger::print(*mScript_system, logger::level::error
+			, "Unsupport entity type");
 }
 
 void entity_manager::script_set_animation_speed(entity_reference & e, float pSpeed)
@@ -396,7 +415,8 @@ void entity_manager::script_set_animation_speed(entity_reference & e, float pSpe
 	auto se = dynamic_cast<sprite_entity*>(e.get());
 	if (!se)
 	{
-		logger::error("Entity is not sprite-based");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a sprite entity");
 		return;
 	}
 	se->mSprite.set_speed(pSpeed);
@@ -408,7 +428,8 @@ float entity_manager::script_get_animation_speed(entity_reference & e)
 	auto se = dynamic_cast<sprite_entity*>(e.get());
 	if (!se)
 	{
-		logger::error("Entity is not sprite-based");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a sprite entity");
 		return 0;
 	}
 	return se->mSprite.get_speed();
@@ -426,13 +447,15 @@ void entity_manager::script_set_texture(entity_reference & e, const std::string 
 	auto se = dynamic_cast<sprite_entity*>(e.get());
 	if (!se)
 	{
-		logger::warning("Entity is not sprite-based");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a sprite entity");
 		return;
 	}
 	auto texture = mResource_manager->get_resource<engine::texture>("texture", name);
 	if (!texture)
 	{
-		logger::warning("Could not load texture '" + name + "'");
+		logger::print(*mScript_system, logger::level::error
+			, "Could not load texture '" + name + "'");
 		return;
 	}
 	se->mSprite.set_texture(texture);
@@ -445,14 +468,16 @@ void entity_manager::script_set_font(entity_reference & e, const std::string & p
 	auto te = dynamic_cast<text_entity*>(e.get());
 	if (!te)
 	{
-		logger::warning("Entity is not text-based");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a sprite entity");
 		return;
 	}
 
 	auto font = mResource_manager->get_resource<engine::font>("font", pName);
 	if (!font)
 	{
-		logger::warning("Could not load font '" + pName + "'");
+		logger::print(*mScript_system, logger::level::error
+			, "Could not load font '" + pName + "'");
 		return;
 	}
 	
@@ -509,7 +534,6 @@ void entity_manager::script_make_gui(entity_reference & e, float pOffset)
 
 	e->set_parent(*mScene_node);
 
-
 	e->set_dynamic_depth(false);
 	e->set_depth(defs::GUI_DEPTH - (util::clamp(pOffset, 0.f, 1000.f)/1000));
 }
@@ -532,7 +556,8 @@ void entity_manager::script_set_scale(entity_reference & e, const engine::fvecto
 	auto se = dynamic_cast<sprite_entity*>(e.get());
 	if (!se)
 	{
-		logger::error("Entity is not sprite-based");
+		logger::print(*mScript_system, logger::level::error
+			, "Entity is not sprite-based");
 		return;
 	}
 	se->mSprite.set_scale(pScale);
@@ -544,7 +569,8 @@ engine::fvector entity_manager::script_get_scale(entity_reference & e)
 	auto se = dynamic_cast<sprite_entity*>(e.get());
 	if (!se)
 	{
-		logger::error("Entity is not sprite-based");
+		logger::print(*mScript_system, logger::level::error
+			, "Entity is not sprite-based");
 		return{};
 	}
 	return se->mSprite.get_scale();
@@ -570,7 +596,8 @@ entity_reference entity_manager::script_add_dialog_text()
 	auto font = mResource_manager->get_resource<engine::font>("font", "default");
 	if (!font)
 	{
-		logger::error("Could not find default font");
+		logger::print(*mScript_system, logger::level::error
+			, "Could not find default font");
 		return{};
 	}
 
@@ -588,7 +615,8 @@ void entity_manager::script_reveal(entity_reference & e, const std::string& pTex
 	auto te = dynamic_cast<dialog_text_entity*>(e.get());
 	if (!te)
 	{
-		logger::warning("Entity is not a dialog_text_entity");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a dialog_text_entity entity");
 		return;
 	}
 
@@ -601,7 +629,8 @@ bool entity_manager::script_is_revealing(entity_reference & e)
 	auto te = dynamic_cast<dialog_text_entity*>(e.get());
 	if (!te)
 	{
-		logger::warning("Entity is not a dialog_text_entity");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a dialog_text_entity entity");
 		return false;
 	}
 	
@@ -614,7 +643,8 @@ void entity_manager::script_skip_reveal(entity_reference & e)
 	auto te = dynamic_cast<dialog_text_entity*>(e.get());
 	if (!te)
 	{
-		logger::warning("Entity is not a dialog_text_entity");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a dialog_text_entity entity");
 		return;
 	}
 	te->skip_reveal();
@@ -626,7 +656,8 @@ void entity_manager::script_set_interval(entity_reference & e, float pMilli)
 	auto te = dynamic_cast<dialog_text_entity*>(e.get());
 	if (!te)
 	{
-		logger::warning("Entity is not a dialog_text_entity");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a dialog_text_entity entity");
 		return;
 	}
 
@@ -639,7 +670,8 @@ bool entity_manager::script_has_displayed_new_character(entity_reference & e)
 	auto te = dynamic_cast<dialog_text_entity*>(e.get());
 	if (!te)
 	{
-		logger::warning("Entity is not a dialog_text_entity");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a dialog_text_entity entity");
 		return false;
 	}
 
@@ -652,7 +684,8 @@ void entity_manager::script_dialog_set_wordwrap(entity_reference & e, unsigned i
 	auto te = dynamic_cast<dialog_text_entity*>(e.get());
 	if (!te)
 	{
-		logger::warning("Entity is not a dialog_text_entity");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a dialog_text_entity entity");
 		return;
 	}
 
@@ -665,7 +698,8 @@ void entity_manager::script_dialog_set_max_lines(entity_reference & e, unsigned 
 	auto te = dynamic_cast<dialog_text_entity*>(e.get());
 	if (!te)
 	{
-		logger::warning("Entity is not a dialog_text_entity");
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a dialog_text_entity entity");
 		return;
 	}
 
