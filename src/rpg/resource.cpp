@@ -9,7 +9,7 @@ resource::resource()
 	mPack = nullptr;
 }
 
-bool resource::is_loaded()
+bool resource::is_loaded() const
 {
 	return mIs_loaded;
 }
@@ -100,9 +100,23 @@ std::string resource_manager::get_resource_log() const
 	return val;
 }
 
-void engine::resource_manager::set_data_folder(const std::string & pFilepath)
+void resource_manager::set_data_folder(const std::string & pFilepath)
 {
 	mData_filepath = pFilepath;
+}
+
+std::vector<std::shared_ptr<resource>> resource_manager::get_resources_with_type(const std::string & pType) const
+{
+	std::vector<std::shared_ptr<resource>> retval;
+	for (auto& i : mResources)
+		if (i->get_type() == pType)
+			retval.push_back(i);
+	return retval;
+}
+
+const std::vector<std::shared_ptr<resource>>& resource_manager::get_resources() const
+{
+	return mResources;
 }
 
 void resource_manager::add_loader(std::shared_ptr<resource_loader> pDirectory)

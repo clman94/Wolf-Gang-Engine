@@ -18,7 +18,7 @@ public:
 	virtual ~resource() {}
 	virtual bool load() = 0;
 	virtual bool unload() = 0;
-	bool is_loaded();
+	bool is_loaded() const;
 
 	void set_name(const std::string& pName);
 	const std::string& get_name() const;
@@ -83,6 +83,11 @@ public:
 	std::string get_resource_log() const;
 
 	void set_data_folder(const std::string& pFilepath);
+
+	// Get all resources in this manager. Used only for debugging
+	const std::vector<std::shared_ptr<resource>>& get_resources() const;
+
+	std::vector<std::shared_ptr<resource>> get_resources_with_type(const std::string& pType) const;
 
 private:
 	std::string mData_filepath;

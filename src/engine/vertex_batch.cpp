@@ -226,7 +226,7 @@ void vertex_batch::set_color(color pColor)
 
 void vertex_batch::update_texture(renderer& pR)
 {
-	sf::Vector2u size = vector<unsigned int>::cast(pR.get_target_size() + fvector(2, 2));
+	sf::Vector2u size = vector_cast<unsigned int>(pR.get_target_size() + fvector(2, 2));
 	if (mRender.getSize() != size)
 		mRender.create(size.x, size.y);
 }

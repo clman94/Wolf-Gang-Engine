@@ -17,24 +17,20 @@ using namespace AS;
 // script_system
 // #########
 
-void script_system::message_callback(const asSMessageInfo * msg)
+void script_system::message_callback(const asSMessageInfo * pMsg)
 {
+
 	logger::level type = logger::level::error;
-	if (msg->type == asEMsgType::asMSGTYPE_INFORMATION)
+	if (pMsg->type == asEMsgType::asMSGTYPE_INFORMATION)
 		type = logger::level::info;
-	else if (msg->type == asEMsgType::asMSGTYPE_WARNING)
+	else if (pMsg->type == asEMsgType::asMSGTYPE_WARNING)
 		type = logger::level::warning;
 
-	logger::print(msg->section, msg->row, msg->col, type, msg->message);
-
-	// Record message
-	angelscript_message n_message;
-	n_message.file = util::safe_string(msg->section);
-	n_message.message = util::safe_string(msg->message);
-	n_message.row = msg->row;
-	n_message.col = msg->col;
-	n_message.level = type;
-	mMessages.push_back(n_message);
+	logger::message msg;
+	if (util::safe_string(pMsg->section) == "Unknown")
+		msg = logger::print(type, pMsg->message);
+	else
+		msg = logger::print(pMsg->section, pMsg->row, pMsg->col, type, pMsg->message);
 }
 
 void script_system::script_abort()
@@ -310,16 +306,6 @@ void script_system::set_namespace(const std::string & pName)
 void script_system::reset_namespace()
 {
 	mEngine->SetDefaultNamespace("");
-}
-
-const std::vector<script_system::angelscript_message>& script_system::get_messages() const
-{
-	return mMessages;
-}
-
-void script_system::clear_messages()
-{
-	mMessages.clear();
 }
 
 std::shared_ptr<script_system::thread> script_system::create_thread(AS::asIScriptFunction * pFunc

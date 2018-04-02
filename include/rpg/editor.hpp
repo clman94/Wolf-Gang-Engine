@@ -314,7 +314,6 @@ public:
 	void run();
 
 private:
-
 	engine::renderer mRenderer;
 	engine::display_window mWindow;
 
@@ -330,11 +329,33 @@ private:
 class WGE_imgui_editor
 {
 public:
+	WGE_imgui_editor();
 	void run();
 
 private:
+
+	int mTile_size;
+	void draw_game_window();
+
+	bool mIs_game_view_window_focused; // Used to determine if game recieves events or not
+	void draw_game_view_window();
+
+	size_t mSelected_tile;
+	int mTile_rotation;
+	void draw_tile_window();
+
+	void draw_tilemap_layers_window();
+
+	void draw_collision_settings_window();
+
+
+	std::vector<std::string> mScene_list;
+
 	sf::RenderWindow mWindow;
 
+	sf::RenderTexture mGame_render_target;
+	rpg::game mGame;
+	engine::renderer mGame_renderer;
 };
 
 }

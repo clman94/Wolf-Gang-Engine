@@ -5,16 +5,13 @@
 #include <engine/renderer.hpp>
 #include <engine/logger.hpp>
 
+#include <algorithm>
+
 using namespace engine;
 
 // ##########
 // render_object
 // ##########
-
-int render_object::is_rendered()
-{
-	return mIndex >= 0;
-}
 
 void render_object::set_renderer(renderer& pR, bool pManual_render)
 {
@@ -29,7 +26,7 @@ void render_object::set_renderer(renderer& pR, bool pManual_render)
 		pR.add_object(*this);
 }
 
-renderer* engine::render_object::get_renderer() const
+renderer* render_object::get_renderer() const
 {
 	return mRenderer;
 }
@@ -57,7 +54,6 @@ bool render_object::is_visible()
 render_object::render_object()
 {
 	mManual_render = false;
-	mIndex = -1;
 	mVisible = true;
 	mDepth = 0;
 	mRenderer = nullptr;
@@ -87,6 +83,7 @@ float render_object::get_depth()
 renderer::renderer()
 {
 	mWindow = nullptr;
+	mRender_target = nullptr;
 	mRequest_resort = false;
 	mTarget_size = ivector(800, 600); // Some arbitrary default
 }
@@ -94,7 +91,7 @@ renderer::renderer()
 renderer::~renderer()
 {
 	for (auto i : mObjects)
-		i->mIndex = -1;
+		i->mRenderer = nullptr;
 }
 
 void renderer::set_target_size(fvector pSize)
@@ -115,12 +112,11 @@ void renderer::request_resort()
 
 int renderer::draw_objects()
 {
-	assert(mWindow);
 	for (auto i : mObjects)
 	{
 		if (i->is_visible())
 		{
-			mWindow->mWindow.setView(mView);
+			// mWindow->mWindow.setView(mView);
 			i->draw(*this);
 		}
 	}
@@ -129,24 +125,22 @@ int renderer::draw_objects()
 
 int renderer::draw()
 {
-	assert(mWindow);
 	mFrame_clock.tick();
 	if (mRequest_resort)
 	{
 		sort_objects();
-		refresh_objects();
 		mRequest_resort = false;
 	}
-	//mWindow->mWindow.clear(mBackground_color);
+	mRender_target->clear(mBackground_color);
+	mRender_target->setView(mView);
 	draw_objects();
 	return 0;
 }
 
 int renderer::draw(render_object& pObject)
 {
-	assert(mWindow);
-
-	mWindow->mWindow.setView(mView);
+	if (mWindow)
+		mWindow->mWindow.setView(mView);
 	return pObject.draw(*this);
 }
 
@@ -175,42 +169,33 @@ bool renderer::is_mouse_within_target() const
 
 void renderer::refresh_view()
 {
-	if (!mWindow)
+	if (!mRender_target)
 		return;
-	const fvector window_size(fvector::cast(vector<unsigned int>(mWindow->mWindow.getSize())));
+	const fvector window_size(vector_cast<float, unsigned int>(mRender_target->getSize()));
 
-	mView = sf::View(sf::FloatRect(0, 0, mTarget_size.x, mTarget_size.y));
+	mView.reset(sf::FloatRect(0, 0, mTarget_size.x, mTarget_size.y));
+
 	sf::FloatRect viewport(0, 0, 0, 0);
 
+	// Fit in window while maintaining aspect ratio
 	viewport.width = std::min(mTarget_size.x*(window_size.y / mTarget_size.y) / window_size.x, 1.f);
 	viewport.height = std::min(mTarget_size.y*(window_size.x / mTarget_size.x) / window_size.y, 1.f);
 
-	// Center view
+	// Center it
 	viewport.left = 0.5f - (viewport.width  / 2);
 	viewport.top  = 0.5f - (viewport.height / 2);
 
 	mView.setViewport(viewport);
 }
 
-
-void renderer::refresh_objects()
-{
-	for (size_t i = 0; i < mObjects.size(); i++)
-		mObjects[i]->mIndex = i;
-}
-
 // Sort items that have a higher depth to be farther behind
 void renderer::sort_objects()
 {
-	struct
-	{
-		bool operator()(render_object* c1, render_object* c2)
+	std::sort(mObjects.begin(), mObjects.end(),
+		[](render_object* c1, render_object* c2)->bool
 		{
 			return c1->mDepth > c2->mDepth;
-		}
-	}client_sort;
-	std::sort(mObjects.begin(), mObjects.end(), client_sort);
-	refresh_objects();
+		});
 }
 
 bool renderer::add_object(render_object& pObject)
@@ -222,10 +207,11 @@ bool renderer::add_object(render_object& pObject)
 	// Remove object from its previous renderer (if there is one)
 	pObject.detach_renderer();
 
-	pObject.mRenderer = this;
-	pObject.mIndex = mObjects.size();
 	mObjects.push_back(&pObject);
+
+	pObject.mRenderer = this;
 	pObject.refresh_renderer(*this);
+
 	sort_objects();
 	return true;
 }
@@ -236,15 +222,19 @@ bool renderer::remove_object(render_object& pObject)
 	if (pObject.mRenderer != this)
 		return false;
 
-	mObjects.erase(mObjects.begin() + pObject.mIndex);
-	refresh_objects();
+	// Find item with the same pointer
+	auto iter = std::find(mObjects.begin(), mObjects.end(), &pObject);
+	if (iter == mObjects.end())
+		return false;
+
+	mObjects.erase(iter);
 	pObject.mRenderer = nullptr;
 	return true;
 }
 
 fvector renderer::get_mouse_position() const
 {
-	return mWindow->mWindow.mapPixelToCoords(mMouse_position, mView);
+	return mRender_target->mapPixelToCoords(mMouse_position, mView);
 }
 
 fvector renderer::get_mouse_position(fvector pRelative) const
@@ -289,6 +279,7 @@ float renderer::get_delta() const
 void renderer::set_window(display_window & pWindow)
 {
 	mWindow = &pWindow;
+	set_target_render(mWindow->mWindow);
 }
 
 display_window * engine::renderer::get_window() const
@@ -296,32 +287,45 @@ display_window * engine::renderer::get_window() const
 	return mWindow;
 }
 
+void renderer::set_target_render(sf::RenderTarget & pTarget)
+{
+	mRender_target = &pTarget;
+}
+
 void renderer::refresh()
 {
 	refresh_view();
 }
 
-void renderer::refresh_pressed()
+void renderer::refresh_input()
 {
 	for (auto &i : mPressed_keys)
+	{
 		if (i == input_state::pressed)
 			i = input_state::hold;
+		else if (i == input_state::released)
+			i = input_state::none;
+	}
 
 	for (auto &i : mPressed_buttons)
+	{
 		if (i == input_state::pressed)
 			i = input_state::hold;
+		else if (i == input_state::released)
+			i = input_state::none;
+	}
 }
 
 bool renderer::is_key_pressed(key_code pKey_type, bool pIgnore_gui)
 {
-	if (!mWindow->mWindow.hasFocus())
+	if (mWindow && !mWindow->mWindow.hasFocus())
 		return false;
 	return mPressed_keys[pKey_type] == input_state::pressed;
 }
 
 bool renderer::is_key_down(key_code pKey_type, bool pIgnore_gui)
 {
-	if (!mWindow->mWindow.hasFocus())
+	if (mWindow && !mWindow->mWindow.hasFocus())
 		return false;
 	return mPressed_keys[pKey_type] == input_state::pressed
 		|| mPressed_keys[pKey_type] == input_state::hold;
@@ -329,14 +333,14 @@ bool renderer::is_key_down(key_code pKey_type, bool pIgnore_gui)
 
 bool renderer::is_mouse_pressed(mouse_button pButton_type, bool pIgnore_gui)
 {
-	if (!mWindow->mWindow.hasFocus() || !is_mouse_within_target())
+	if ((mWindow && !mWindow->mWindow.hasFocus()) || !is_mouse_within_target())
 		return false;
 	return mPressed_buttons[pButton_type] == input_state::pressed;
 }
 
 bool renderer::is_mouse_down(mouse_button pButton_type, bool pIgnore_gui)
 {
-	if (!mWindow->mWindow.hasFocus() || !is_mouse_within_target())
+	if (mWindow && !mWindow->mWindow.hasFocus() || !is_mouse_within_target())
 		return false;
 	return mPressed_buttons[pButton_type] == input_state::pressed
 		|| mPressed_buttons[pButton_type] == input_state::hold;
@@ -344,32 +348,35 @@ bool renderer::is_mouse_down(mouse_button pButton_type, bool pIgnore_gui)
 
 void renderer::update_events()
 {
-	refresh_pressed();
+	assert(mWindow);
+	update_events(*mWindow);
+}
 
-	if (!mWindow->mWindow.isOpen())
+void renderer::update_events(display_window& pWindow)
+{
+	refresh_input();
+
+	if (!pWindow.mWindow.isOpen())
 		return;
 
 	mEntered_text.clear();
 
-	for (const sf::Event& i : mWindow->mEvents)
+	for (const sf::Event& i : pWindow.mEvents)
 	{
-		if (i.type == sf::Event::TextEntered)
-			mEntered_text += static_cast<char32_t>(i.text.unicode);
-
-
 		if (i.type == sf::Event::Resized)
 		{
-			mWindow->mSize = vector<unsigned int>(mWindow->mWindow.getSize()); // Update member
-
+			pWindow.mSize = vector<unsigned int>(pWindow.mWindow.getSize()); // Update member
 			refresh_view();
 		}
+		if (i.type == sf::Event::TextEntered)
+			mEntered_text += static_cast<char32_t>(i.text.unicode);
 
 		// Key events
 		if (i.type == sf::Event::KeyPressed && (size_t)i.key.code < mPressed_keys.size())
 			mPressed_keys[(size_t)i.key.code] = input_state::pressed;
 		else if (i.type == sf::Event::KeyReleased && (size_t)i.key.code < mPressed_keys.size())
-			mPressed_keys[(size_t)i.key.code] = input_state::none;
-		
+			mPressed_keys[(size_t)i.key.code] = input_state::released;
+
 
 		if (i.type == sf::Event::MouseWheelMoved)
 		{
@@ -380,7 +387,7 @@ void renderer::update_events()
 		if (i.type == sf::Event::MouseButtonPressed)
 			mPressed_buttons[(size_t)i.mouseButton.button] = input_state::pressed;
 		else if (i.type == sf::Event::MouseButtonReleased)
-			mPressed_buttons[(size_t)i.mouseButton.button] = input_state::none;
+			mPressed_buttons[(size_t)i.mouseButton.button] = input_state::released;
 
 		if (i.type == sf::Event::MouseMoved)
 			mMouse_position = { i.mouseMove.x, i.mouseMove.y };
@@ -514,6 +521,11 @@ frect rectangle_node::get_render_rect() const
 	return{ get_exact_position() + engine::anchor_offset(get_size(), mAnchor), get_size() };
 }
 
+display_window::display_window(const std::string & pTitle, ivector pSize)
+{
+	initualize(pTitle, pSize);
+}
+
 display_window::~display_window()
 {
 	mWindow.close();
@@ -558,7 +570,7 @@ bool display_window::is_fullscreen() const
 	return mIs_fullscreen;
 }
 
-void engine::display_window::set_title(const std::string & pTitle)
+void display_window::set_title(const std::string & pTitle)
 {
 	mWindow.setTitle(pTitle);
 }
@@ -581,6 +593,11 @@ int display_window::set_icon(const std::vector<char>& pData)
 	return 0;
 }
 
+bool display_window::is_open() const
+{
+	return mWindow.isOpen();
+}
+
 bool display_window::poll_events()
 {
 	mEvents.clear();
@@ -598,7 +615,7 @@ bool display_window::poll_events()
 	return true;
 }
 
-void display_window::update()
+void display_window::display()
 {
 	mWindow.display();
 }
@@ -606,6 +623,17 @@ void display_window::update()
 void display_window::clear()
 {
 	mWindow.clear();
+}
+
+void display_window::push_events_to_imgui() const
+{
+	for (const auto& i : mEvents)
+		ImGui::SFML::ProcessEvent(i);
+}
+
+sf::RenderWindow& display_window::get_sfml_window()
+{
+	return mWindow;
 }
 
 void display_window::fullscreen_mode()

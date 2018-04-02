@@ -15,7 +15,6 @@
 
 #include <rpg/rpg_config.hpp>
 #include <rpg/tilemap_manipulator.hpp>
-
 #include <rpg/script_system.hpp>
 #include <rpg/collision_system.hpp>
 #include <rpg/flag_container.hpp>
@@ -202,6 +201,8 @@ public:
 	const engine::fs::path& get_source_path() const;
 
 	script_system& get_script_system();
+
+	std::vector<std::string> compile_scene_list() const;
 
 protected:
 	void refresh_renderer(engine::renderer& r);

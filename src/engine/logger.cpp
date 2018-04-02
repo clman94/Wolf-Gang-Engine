@@ -11,7 +11,8 @@
 
 namespace logger {
 
-static std::string mLog;
+static std::string mLog_string;
+static std::vector<message> mLog;
 static std::ofstream mLog_file;
 static size_t mSub_routine_level;
 
@@ -29,76 +30,55 @@ void initialize(const std::string & pOutput)
 	mSub_routine_level = 0;
 }
 
-void print(level pType, const std::string& pMessage)
+message print(const message & pMessage)
 {
-	std::string type;
+	mLog.push_back(pMessage);
 
-
-	switch (pType)
-	{
-	case level::error:   type = "ERROR  "; break;
-	case level::info:    type = "INFO   "; break;
-	case level::warning: type = "WARNING"; break;
-	case level::debug:   type = "DEBUG  "; break;
-	}
-
-	// Print time
-	std::time_t time = std::time(nullptr);
-	std::tm timeinfo;
-
-#ifdef __linux__
-	localtime_r(&time, &timeinfo);
-#else
-	localtime_s(&timeinfo, &time);
-#endif
-
-	char time_str[100];
-	std::size_t time_str_length = strftime(time_str, 100, "[%T]", &timeinfo);
-	std::string log_time(time_str, time_str_length);
-
-	std::string message = log_time + " " + type + " : ";
-
-	for (size_t i = 0; i < mSub_routine_level; i++)
-		message += "| ";
-	message += pMessage + "\n";
-
-	mLog += message;
+	std::string stringified_message = pMessage.to_string() + "\n";
+	mLog_string += stringified_message;
 
 	if (mLog_file)
 	{
-		mLog_file << message; // Save to file
+		mLog_file << stringified_message; // Save to file
 		mLog_file.flush();
 	}
 
 	// Printing to the console is disabled to
 	// to remove the overhead and the redundancy.
 #ifndef LOCKED_RELEASE_MODE
-	std::cout << message; // Print to console  
+	std::cout << stringified_message; // Print to console  
 #endif
+
+	return pMessage;
 }
 
-void print(const std::string& pFile, int pLine, level pType, const std::string& pMessage)
+message print(level pType, const std::string& pMessage)
 {
-	std::string message = pFile;
-	message += " (";
-	message += std::to_string(pLine);
-	message += ") : ";
-	message += pMessage;
-
-	print(pType, message);
+	message nmsg;
+	nmsg.is_file = false;
+	nmsg.type = pType;
+	nmsg.msg = pMessage;
+	nmsg.set_to_current_time();
+	return print(nmsg);
 }
 
-void print(const std::string& pFile, int pLine, int pCol, level pType, const std::string& pMessage)
+message print(const std::string& pFile, int pLine, level pType, const std::string& pMessage)
 {
-	std::string message = pFile;
-	message += " (";
-	message += std::to_string(pLine);
-	message += ", ";
-	message += std::to_string(pCol);
-	message += ") : ";
-	message += pMessage;
+	return print(pFile, pLine, -1, pType, pMessage);
+}
 
-	print(pType, message);
+message print(const std::string& pFile, int pLine, int pCol, level pType, const std::string& pMessage)
+{
+	message nmsg;
+
+	nmsg.is_file = true;
+	nmsg.file = pFile;
+	nmsg.row = pLine;
+	nmsg.column = pCol;
+	nmsg.type = pType;
+	nmsg.msg = pMessage;
+	nmsg.set_to_current_time();
+	return print(nmsg);
 }
 
 void error(const std::string& pMessage)
@@ -116,9 +96,14 @@ void info(const std::string& pMessage)
 	print(level::info, pMessage);
 }
 
-const std::string & get_log()
+const std::vector<message>& get_log()
 {
 	return mLog;
+}
+
+const std::string & get_log_string()
+{
+	return mLog_string;
 }
 
 void start_sub_routine()
@@ -146,6 +131,54 @@ sub_routine::~sub_routine()
 void sub_routine::end()
 {
 	end_sub_routine();
+}
+
+std::string message::to_string() const
+{
+	std::string retval;
+
+	std::string stringified_type;
+	switch (type)
+	{
+	case level::error:   stringified_type = "Error  "; break;
+	case level::info:    stringified_type = "Info   "; break;
+	case level::warning: stringified_type = "Warning"; break;
+	case level::debug:   stringified_type = "Debug  "; break;
+	}
+	retval += "[" + stringified_type + "] ";
+
+	if (is_file)
+	{
+		retval += engine::fs::path(file).relative_path().string();
+		if (column >= 0)
+		{
+			retval += "(" + std::to_string(column);
+			if (row >= 0)
+				retval += ", " + std::to_string(row);
+			retval += ")";
+		}
+	}
+
+	for (size_t i = 0; i < mSub_routine_level; i++)
+		retval += "| ";
+	retval += msg;
+	return retval;
+}
+
+void message::set_to_current_time()
+{
+	std::time_t time = std::time(nullptr);
+	std::tm timeinfo;
+
+#ifdef __linux__
+	localtime_r(&time, &timeinfo);
+#else
+	localtime_s(&timeinfo, &time);
+#endif
+
+	char time_str[100];
+	std::size_t time_str_length = strftime(time_str, 100, "%T", &timeinfo);
+	time_stamp = std::string(time_str, time_str_length);
 }
 
 }

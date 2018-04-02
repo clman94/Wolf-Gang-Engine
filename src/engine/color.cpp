@@ -145,6 +145,15 @@ color& color::clamp()
 	return clamp(0, 1);
 }
 
+uint32_t color::to_uint32() const
+{
+	uint32_t val = static_cast<uint32_t>(r*255.f);
+	val |= static_cast<uint32_t>(g*255.f) << 8;
+	val |= static_cast<uint32_t>(b*255.f) << 16;
+	val |= static_cast<uint32_t>(a*255.f) << 24;
+	return val;
+}
+
 void color::default_mask()
 {
 	set_mask(false, false, false, true);

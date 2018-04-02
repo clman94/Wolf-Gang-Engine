@@ -45,12 +45,6 @@ struct vector
 		return{ 0, pVec.y };
 	}
 
-	template<typename Tfrom>
-	static vector cast(const vector<Tfrom>& pOriginal)
-	{
-		return{ static_cast<T>(pOriginal.x), static_cast<T>(pOriginal.y) };
-	}
-
 	vector(T _x = 0, T _y = 0)
 		: x(_x), y(_y)
 	{}
@@ -314,8 +308,11 @@ bool operator!=(const vector<T1>& L, const vector<T2>& R)
 	return (L.x != R.x) || (L.y != R.y);
 }
 
-
-
+template<typename Tto, typename Tfrom>
+vector<Tto> vector_cast(const vector<Tfrom>& pOrig)
+{
+	return{ static_cast<Tto>(pOrig.x), static_cast<Tto>(pOrig.y) };
+}
 
 typedef vector<int>    ivector;
 typedef vector<float>  fvector;

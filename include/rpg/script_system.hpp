@@ -72,13 +72,6 @@ class script_system
 {
 public:
 
-	struct angelscript_message
-	{
-		std::string file, message;
-		size_t row, col;
-		logger::level level;
-	};
-
 	script_system();
 	~script_system();
 
@@ -201,11 +194,6 @@ public:
 		return static_cast<AS_array<T>*>(arr);
 	}
 
-	// Get all messages that angelscript has sent from compilation
-	const std::vector<angelscript_message>& get_messages() const;
-
-	void clear_messages();
-
 private:
 
 	struct thread
@@ -244,8 +232,6 @@ private:
 	std::vector<std::shared_ptr<thread>> mThread_contexts;
 
 	AS::asIScriptEngine* mEngine;
-
-	std::vector<angelscript_message> mMessages;
 
 	void register_vector_type();
 	void register_timer_type();

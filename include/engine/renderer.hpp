@@ -9,7 +9,6 @@
 #include <string>
 #include <cstdint>
 #include <list>
-#include <map>
 #include <unordered_map>
 #include <cassert>
 #include <array>
@@ -30,6 +29,8 @@ namespace engine
 class display_window
 {
 public:
+	display_window() {}
+	display_window(const std::string& pTitle, ivector pSize);
 	~display_window();
 	void initualize(const std::string& pTitle, ivector pSize);
 	void set_size(ivector pSize);
@@ -45,12 +46,20 @@ public:
 	int set_icon(const std::string& pPath);
 	int set_icon(const std::vector<char>& pData);
 
+	bool is_open() const;
+
 	// Returns false when window is closed
 	bool poll_events();
 
-	void update();
+	// Update and display the window
+	void display();
 
+	// Clear all contents for rendering a new frame
 	void clear();
+
+	void push_events_to_imgui() const;
+
+	sf::RenderWindow& get_sfml_window();
 
 private:
 	sf::RenderWindow mWindow;
@@ -80,12 +89,13 @@ public:
 	float get_depth();
 
 	bool is_visible();
+
+	// Sets wether or not this object is renderer. draw() will not be called if false.
 	void set_visible(bool pVisible);
 
 	virtual int draw(renderer &pR) { return 0; }
-	virtual frect get_render_rect() const { return{}; }
 
-	int is_rendered();
+	virtual frect get_render_rect() const { return{}; }
 
 	void set_renderer(renderer& pR, bool pManual_render = false);
 	renderer* get_renderer() const;
@@ -97,7 +107,6 @@ protected:
 
 private:
 	renderer * mRenderer;
-	size_t mIndex;
 	bool mVisible;
 	float mDepth;
 	bool mManual_render;
@@ -126,6 +135,7 @@ public:
 
 	// Call the window's poll_event method first
 	void update_events();
+	void update_events(display_window& pWindow);
 
 	int draw();
 	int draw(render_object& pObject);
@@ -154,13 +164,15 @@ public:
 	void set_window(display_window& pWindow);
 	display_window* get_window() const;
 
+	void set_target_render(sf::RenderTarget& pTarget);
+
 	void refresh();
 
 #ifdef ENGINE_INTERNAL
 	sf::RenderTarget& get_sfml_render()
 	{
-		assert(mWindow);
-		return mWindow->mWindow;
+		assert(mRender_target);
+		return *mRender_target;
 	}
 #endif
 
@@ -181,6 +193,7 @@ private:
 
 	sf::View mView;
 	display_window* mWindow;
+	sf::RenderTarget* mRender_target;
 
 	std::vector<render_object*> mObjects;
 	bool mRequest_resort;
@@ -188,9 +201,10 @@ private:
 
 	enum class input_state
 	{
-		none,     // No input
-		pressed,  // First frame
-		hold,     // Still holding...
+		none,
+		pressed,
+		hold,
+		released,
 	};
 
 	std::array<input_state, 256> mPressed_keys;
@@ -198,11 +212,10 @@ private:
 	
 	ivector mMouse_position;
 
-	void refresh_pressed();
+	void refresh_input();
 
 	int draw_objects();
 	void sort_objects();    // Sorts the mObjects array by depth
-	void refresh_objects(); // Updates the indexs of all objects
 
 	color mBackground_color;
 

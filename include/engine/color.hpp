@@ -49,10 +49,14 @@ public:
 	void set_mask(size_t pIndex, bool pEnabled);
 	void set_mask(bool pR, bool pG, bool pB, bool pA);
 
+	// TODO
 	float get_hue() const;
 
+	color& clamp(); // Clamp all components to [0, 1]
 	color& clamp(float min, float max);
-	color& clamp();
+
+	// Convert to uint32 packed color with values 0 to 255
+	uint32_t to_uint32() const;
 
 private:
 	bool mask[4];

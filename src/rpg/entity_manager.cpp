@@ -51,7 +51,7 @@ bool entity_manager::check_entity(entity_reference & e)
 	{
 		logger::print(mScript_system->get_current_file()
 			, mScript_system->get_current_line()
-			, logger::level::warning
+			, logger::level::error
 			, "Entity object invalid.");
 		return false;
 	}

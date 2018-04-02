@@ -1,10 +1,13 @@
-#include <rpg/rpg.hpp>
 
-#include <engine/logger.hpp>
 
 #include <algorithm>
 #include <fstream>
+
+#include <engine/logger.hpp>
 #include <engine/resource_pack.hpp>
+#include <engine/filesystem.hpp>
+
+#include <rpg/rpg.hpp>
 
 using namespace rpg;
 
@@ -142,8 +145,6 @@ void scene_script_context::call_all_with_tag(const std::string & pTag)
 
 	for (auto& i : funcs)
 	{
-		logger::info("Calling '" + std::string(i->mFunction->GetDeclaration())
-			+ "' in '" + engine::fs::path(i->mFunction->GetScriptSectionName()).relative_path().string() + "'");
 		i->call();
 	}
 }
@@ -436,6 +437,8 @@ void game::load_script_interface()
 
 void game::load_icon()
 {
+	if (!get_renderer()->get_window())
+		return;
 	get_renderer()->get_window()->set_icon((mData_directory / "icon.png").string());
 }
 
@@ -621,6 +624,27 @@ script_system& game::get_script_system()
 	return mScript;
 }
 
+std::vector<std::string> game::compile_scene_list() const
+{
+	std::vector<std::string> ret;
+
+	const engine::encoded_path dir = (mData_directory / defs::DEFAULT_SCENES_PATH).string();
+	for (auto& i : engine::fs::recursive_directory_iterator(mData_directory / defs::DEFAULT_SCENES_PATH))
+	{
+		engine::encoded_path path = i.path().string();
+		if (path.extension() == ".xml")
+		{
+			path.snip_path(dir);
+			path.remove_extension();
+			ret.push_back(path.string());
+		}
+	}
+
+	std::sort(ret.begin(), ret.end());
+
+	return ret;
+}
+
 float game::get_delta()
 {
 	return get_renderer()->get_delta();
@@ -670,8 +694,9 @@ bool game::load(engine::fs::path pData_dir)
 
 	logger::info("Settings loaded");
 
-	get_renderer()->get_window()->set_title(settings.get_title());
-
+	if (get_renderer()->get_window())
+		get_renderer()->get_window()->set_title(settings.get_title());
+	
 	get_renderer()->set_target_size(settings.get_screen_size());
 
 	mControls = settings.get_key_bindings();

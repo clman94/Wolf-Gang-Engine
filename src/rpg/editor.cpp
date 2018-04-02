@@ -264,7 +264,7 @@ void WGE_editor::run()
 		*/
 		mWindow.clear();
 		mRenderer.draw();
-		mWindow.update();
+		mWindow.display();
 	}
 }
 
@@ -1434,8 +1434,6 @@ bool editor_settings_loader::load(const engine::fs::path& pPath)
 	return true;
 }
 
-
-
 std::string editor_settings_loader::generate_open_cmd(const std::string & pFilepath) const
 {
 	std::string modified_param = mOpen_param;
@@ -1515,11 +1513,23 @@ Compile messages
 
 */
 
+
+WGE_imgui_editor::WGE_imgui_editor()
+{
+	mGame_render_target.create(400, 400);
+	mGame_renderer.set_target_render(mGame_render_target);
+	mGame.set_renderer(mGame_renderer);
+
+	mTile_size = 32;
+
+	mSelected_tile = 1;
+	mTile_rotation = 0;
+}
+
 void WGE_imgui_editor::run()
 {
-	mWindow.create(sf::VideoMode(640, 480), "WGE Editor New and improved");
-	mWindow.setVerticalSyncEnabled(true);
-	ImGui::SFML::Init(mWindow);
+	engine::display_window window("WGE Editor New and improved", { 640, 480 });
+	ImGui::SFML::Init(window.get_sfml_window());
 
 	ImGuiStyle& style = ImGui::GetStyle();
 	style.FrameRounding = 2;
@@ -1533,32 +1543,27 @@ void WGE_imgui_editor::run()
 	// Scene Settings
 	size_t selected_scene = 1;
 
-	// Tilemap Settings
-	size_t selected_tile = 1;
-	int rotation = 0;
-
-	
-	std::string game_name_buffer;
-	game_name_buffer.resize(256);
-
-	int tile_size = 32;
-
 	int val = 0;
 
 	std::string data;
 	data.resize(100);
 
+	mGame.load("./data");
+	mGame_renderer.refresh();
+
 	sf::Clock delta_clock;
-	while (mWindow.isOpen())
+	while (window.is_open())
 	{
-		sf::Event event;
-		while (mWindow.pollEvent(event))
-		{
-			ImGui::SFML::ProcessEvent(event);
-			if (event.type == sf::Event::Closed)
-				mWindow.close();
-		}
-		ImGui::SFML::Update(mWindow, delta_clock.restart());
+		if (!window.poll_events())
+			break;
+		window.push_events_to_imgui();
+
+		if (mIs_game_view_window_focused)
+			mGame_renderer.update_events(window);
+
+		mGame.tick();
+
+		ImGui::SFML::Update(window.get_sfml_window(), delta_clock.restart());
 
 		ImGui::BeginMainMenuBar();
 		if (ImGui::BeginMenu("Game"))
@@ -1588,110 +1593,51 @@ void WGE_imgui_editor::run()
 				// TODO: Collapse all windows and arrange them neat
 				//       (don't know exactly how, yet..)
 			}
+			if (ImGui::MenuItem("Do Thing"))
+				ImGui::OpenPopup("testpopup");
 			ImGui::EndMenu();
 		}
 		ImGui::EndMainMenuBar();
-
-		if (ImGui::Begin("Game"))
-		{
-			if (ImGui::Button("Restart game", ImVec2(-0, 0)))
-			{
-				// TODO: Restart game
-			}
-
-			ImGui::PushItemWidth(-100);
-			ImGui::InputText("Name", &game_name_buffer[0], game_name_buffer.size());
-			quick_tooltip("Name of this game.\nThis is displayed in the window title.");
-
-			ImGui::InputInt("Tile Size", &tile_size, 1, 2);
-			quick_tooltip("Represents both the width and height of the tiles.");
-
-			static int target_size[2] = { 384 , 320 }; // Temp
-			ImGui::DragInt2("Target Size", target_size);
-			ImGui::PopItemWidth();
-
-			if (ImGui::CollapsingHeader("Flags"))
-			{
-				// TODO: Add Filtering
-				ImGui::BeginChild("Flag List", ImVec2(0, 100));
-				for (size_t i = 0; i < 5; i++)
-				{
-					ImGui::Selectable(("Flag " + std::to_string(i)).c_str());
-					if (ImGui::BeginPopupContextItem(("##" +std::to_string(i)).c_str()))
-					{
-						ImGui::MenuItem("Unset");
-						ImGui::EndPopup();
-					}
-				}
-				ImGui::EndChild();
-			}
-			if (ImGui::CollapsingHeader("Resource Manager"))
-			{
-				ImGui::BeginChild("Resource List", ImVec2(0, 200));
-
-				ImGui::Columns(3);
-
-				ImGui::SetColumnWidth(0, 100);
-				ImGui::Text("Status");
-				ImGui::NextColumn();
-
-				ImGui::Text("Type");
-				ImGui::NextColumn();
-
-				ImGui::Text("Name");
-				ImGui::NextColumn();
-				ImGui::Separator();
-
-				for (size_t i = 0; i < 5; i++)
-				{
-					ImGui::Selectable("Not Loaded", false, ImGuiSelectableFlags_SpanAllColumns);
-					ImGui::NextColumn();
-
-					ImGui::Text("Image");
-					ImGui::NextColumn();
-
-					ImGui::Text("Item %o", i);
-					ImGui::NextColumn();
-				}
-				ImGui::EndChild();
-				ImGui::Columns(1);
-
-				if (ImGui::Button("Reload All"))
-				{
-					// TODO: Reload all Resources
-				}
-
-			}
-		}
-		ImGui::End();
 
 		if (ImGui::Begin("Scene"))
 		{
 			ImGui::BeginGroup();
 			ImGui::Text("Scene List");
-			ImGui::BeginChild("Scenelist", ImVec2(200, 0), true);
-			for (size_t i = 0; i < 100; i++)
+			ImGui::SameLine();
+			if (ImGui::Button("Refresh"))
 			{
-				std::string label = "pie" + std::to_string(i);
-				if (ImGui::Selectable(label.c_str(), selected_scene == i))
-					selected_scene = i;
+				mScene_list = mGame.compile_scene_list();
+			}
+			ImGui::BeginChild("Scenelist", ImVec2(200, 0), true);
+			for (auto& i : mScene_list)
+			{
+				if (ImGui::Selectable(i.c_str(), i == mGame.get_scene().get_path()))
+				{
+					mGame.get_scene().load_scene(i);
+				}
 			}
 			ImGui::EndChild();
 			ImGui::EndGroup();
 
 			ImGui::SameLine();
 			ImGui::BeginGroup();
+			ImGui::PushItemWidth(-100);
 			ImGui::Button("Restart");
-			ImGui::Text("More Text");
+			ImGui::Text(("Name: " + mGame.get_scene().get_path()).c_str());
+
+			static bool has_boundary = false; // Temp
+			ImGui::Checkbox("Has boundary", &has_boundary);
+
+			static float boundary_values[4] = {0, 0, 0, 0}; // temp
+			ImGui::DragFloat4("Boundary", boundary_values);
+			ImGui::Button("Open Script in Editor");
+			ImGui::PopItemWidth();
 			ImGui::EndGroup();
 		}
 		ImGui::End();
 
-		if (ImGui::Begin("Game View"))
-		{
-			ImGui::Text("TODO: Use ImGui::Image to display scene");
-		}
-		ImGui::End();
+		draw_game_window();
+		draw_game_view_window();
 
 		if (ImGui::Begin("Tilemap Editor"))
 		{
@@ -1705,113 +1651,277 @@ void WGE_imgui_editor::run()
 		}
 		ImGui::End();
 
-		if (ImGui::Begin("Tile"))
+		if (ImGui::Begin("Log"))
 		{
-			ImGui::BeginChild("Tile Preview", ImVec2(100, 100), true);
-				ImGui::Text("Tile Preview");
-				// TODO: Display image scaled to fit this window
-			ImGui::EndChild();
-			quick_tooltip("Preview of tile to place.");
-
-			ImGui::SameLine();
-			ImGui::BeginGroup();
-				ImGui::PushItemWidth(-100);
-
-				ImGui::DragInt("Rotation", &rotation, 1.f,  0, 3, "%d x90");
-
-				ImGui::PopItemWidth();
-			ImGui::EndGroup();
-
-			ImGui::BeginChild("Tile List", ImVec2(0, 0), true);
-			for (size_t i = 0; i < 100; i++)
-			{
-				// Possibly add a preview for each tile in the list
-				if (ImGui::Selectable(("tile " + std::to_string(i)).c_str(), selected_tile == i))
-					selected_tile = i;
-			}
-			ImGui::EndChild();
-		}
-		ImGui::End();
-
-		if (ImGui::Begin("Tilemap Layers"))
-		{
-			ImGui::BeginChild("Layer List", ImVec2(0, -25));
-			static bool layer_visible = false;
 			ImGui::Columns(2, 0, false);
-			ImGui::SetColumnWidth(0, 25);
-			for (size_t i = 0; i < 5; i++)
+			ImGui::SetColumnWidth(0, 60);
+			const auto& log = logger::get_log();
+			const size_t start = log.size() >= 256 ? log.size() - 256 : 0; // Limit to 256
+			for (size_t i = start; i < log.size(); i++)
 			{
-				ImGui::Checkbox("##Tilemap layer Visible", &layer_visible);
+				switch (log[i].type)
+				{
+				case logger::level::info:
+					ImGui::PushStyleColor(ImGuiCol_Text, { 1, 1, 1, 1 });
+					ImGui::TextUnformatted("Info");
+					break;
+				case logger::level::warning:
+					ImGui::PushStyleColor(ImGuiCol_Text, { 1, 1, 0.5f, 1 });
+					ImGui::TextUnformatted("Warning");
+					break;
+				case logger::level::error:
+					ImGui::PushStyleColor(ImGuiCol_Text, { 1, 0.5f, 0.5f, 1 });
+					ImGui::TextUnformatted("Error");
+					break;
+				}
 				ImGui::NextColumn();
 
-				ImGui::Selectable(("Layer " + std::to_string(i)).c_str(), false);
+				ImGui::TextUnformatted(log[i].msg.c_str());
+
+				ImGui::PopStyleColor();
+
+				if (log[i].is_file)
+				{
+					std::string file_info = log[i].file;
+					file_info += " (" + std::to_string(log[i].row) + ", " + std::to_string(log[i].column) + ")";
+					ImGui::TextColored({ 0.7f, 0.7f, 0.7f, 1 }, file_info.c_str());
+
+					ImGui::SameLine();
+					ImGui::ArrowButton("Open file", ImGuiDir_Right);
+					quick_tooltip("Open file in editor.");
+				}
 				ImGui::NextColumn();
 			}
 			ImGui::Columns(1);
-			ImGui::EndChild();
-			ImGui::Separator();
-
-			ImGui::Button("New");
-
-			ImGui::SameLine();
-			ImGui::Button("Delete");
-
-			ImGui::SameLine();
-			ImGui::ArrowButton("Move Up", ImGuiDir_Up);
-			ImGui::SameLine();
-			ImGui::ArrowButton("Move Down", ImGuiDir_Down);
-
 		}
 		ImGui::End();
 
-		if (ImGui::Begin("Collision Settings"))
-		{
-			ImGui::PushItemWidth(-100);
-			static int current_snapping = 0; // Temp
-			const char* snapping_items[] = { "None", "Pixel", "Eighth", "Quarter", "Full" };
-			ImGui::Combo("Snapping", &current_snapping, snapping_items, 5);
+		draw_tile_window();
+		draw_tilemap_layers_window();
+		draw_collision_settings_window();
 
-			if (ImGui::CollapsingHeader("Collision Box"))
-			{
-				static int current_type = 0; // Temp
-				const char* coll_type_items[] = { "Wall", "Trigger", "Button", "Door" };
-				ImGui::Combo("Type", &current_type, coll_type_items, 4);
-				
-				static char group_buf[256]; // Temp
-				ImGui::InputText("Group", group_buf, 256);
-				quick_tooltip("Group to assosiate this collision box with.\nThis is used in scripts to enable/disable boxes or calling functions when collided.");
-
-				static float coll_rect[4] = { 0, 0, 1, 1 }; // Temp
-				ImGui::DragFloat4("Rect", coll_rect, 1);
-			}
-
-			if (ImGui::CollapsingHeader("Door"))
-			{
-				static char door_name_buf[256]; // Temp
-				ImGui::InputText("Name", door_name_buf, 256);
-
-				static float coll_rect[2] = { 0, 0 }; // Temp
-				ImGui::DragFloat2("Offset", coll_rect, 0.2f);
-				quick_tooltip("This will offset the player when they come through this door.\nUsed to prevent player from colliding with the door again and going back.");
-
-				// TODO: Use a combo instead
-				static char door_dest_scene_buf[256]; // Temp
-				ImGui::InputText("Dest. Scene", door_dest_scene_buf, 256);
-				quick_tooltip("The scene to load when the player enters this door.");
-
-				// TODO: Use a combo instead
-				static char door_dest_door_buf[256]; // Temp
-				ImGui::InputText("Dest. Door", door_dest_door_buf, 256);
-				quick_tooltip("The destination door in the new loaded scene.");
-
-			}
-			ImGui::PopItemWidth();
-		}
-		ImGui::End();
-
-		mWindow.clear({ 0, 0, 0, 255 });
-		ImGui::SFML::Render(mWindow);
-		mWindow.display();
+		window.clear();
+		ImGui::SFML::Render(window.get_sfml_window());
+		window.display();
 	}
 	ImGui::SFML::Shutdown();
+}
+
+void WGE_imgui_editor::draw_game_window()
+{
+	if (ImGui::Begin("Game"))
+	{
+		if (ImGui::Button("Restart game", ImVec2(-0, 0)))
+		{
+			// TODO: Restart game
+		}
+
+		ImGui::PushItemWidth(-100);
+
+		static char game_name_buffer[256];
+		ImGui::InputText("Name", &game_name_buffer[0], 256);
+		quick_tooltip("Name of this game.\nThis is displayed in the window title.");
+
+		ImGui::InputInt("Tile Size", &mTile_size, 1, 2);
+		quick_tooltip("Represents both the width and height of the tiles.");
+
+		static int target_size[2] = { 384 , 320 }; // Temp
+		ImGui::DragInt2("Target Size", target_size);
+		ImGui::PopItemWidth();
+
+		if (ImGui::CollapsingHeader("Flags"))
+		{
+			// TODO: Add Filtering
+			ImGui::BeginChild("Flag List", ImVec2(0, 100));
+			for (size_t i = 0; i < 5; i++)
+			{
+				ImGui::Selectable(("Flag " + std::to_string(i)).c_str());
+				if (ImGui::BeginPopupContextItem(("##" + std::to_string(i)).c_str()))
+				{
+					ImGui::MenuItem("Unset");
+					ImGui::EndPopup();
+				}
+			}
+			ImGui::EndChild();
+		}
+		if (ImGui::CollapsingHeader("Resource Manager"))
+		{
+			ImGui::BeginChild("Resource List", ImVec2(0, 200));
+
+			ImGui::Columns(3);
+
+			ImGui::SetColumnWidth(0, 100);
+			ImGui::Text("Status");
+			ImGui::NextColumn();
+
+			ImGui::Text("Type");
+			ImGui::NextColumn();
+
+			ImGui::Text("Name");
+			ImGui::NextColumn();
+			ImGui::Separator();
+
+			for (auto& i : mGame.get_resource_manager().get_resources())
+			{
+				ImGui::Selectable(i->is_loaded() ? "Loaded" : "Not Loaded", false, ImGuiSelectableFlags_SpanAllColumns);
+				ImGui::NextColumn();
+
+				ImGui::Text(i->get_type().c_str());
+				ImGui::NextColumn();
+
+				ImGui::Text(i->get_name().c_str());
+				ImGui::NextColumn();
+			}
+			ImGui::EndChild();
+			ImGui::Columns(1);
+
+			if (ImGui::Button("Reload All"))
+			{
+				// TODO: Reload all Resources
+			}
+
+		}
+	}
+	ImGui::End();
+}
+
+void WGE_imgui_editor::draw_game_view_window()
+{
+	if (ImGui::Begin("Game View"))
+	{
+		// This game will not recieve events if this is false
+		mIs_game_view_window_focused = ImGui::IsWindowFocused();
+
+		// rersize the render texture if window size changes
+		sf::Vector2u window_size = sf::Vector2u(ImGui::GetWindowContentRegionMax()) - sf::Vector2u(0, ImGui::GetFrameHeight() * 2);
+		if (window_size != mGame_render_target.getSize())
+		{
+			mGame_render_target.create(window_size.x, window_size.y);
+			mGame_renderer.refresh();
+		}
+
+		// Render the game
+		mGame_renderer.draw();
+		mGame_render_target.display();
+
+		// Display on imgui window. The entire image has to be flipped because of
+		// the trippy why render textures are stored.
+		ImGui::Image((void*)mGame_render_target.getTexture().getNativeHandle()
+			, mGame_render_target.getSize()
+			, ImVec2(0, 1), ImVec2(1, 0)
+			, sf::Color::White, sf::Color::Transparent);
+	}
+	ImGui::End();
+}
+
+void WGE_imgui_editor::draw_tile_window()
+{
+	if (ImGui::Begin("Tile"))
+	{
+		ImGui::BeginChild("Tile Preview", ImVec2(100, 100), true);
+		ImGui::Text("Tile Preview");
+		// TODO: Display image scaled to fit this window
+		ImGui::EndChild();
+		quick_tooltip("Preview of tile to place.");
+
+		ImGui::SameLine();
+		ImGui::BeginGroup();
+		ImGui::PushItemWidth(-100);
+
+		ImGui::DragInt("Rotation", &mTile_rotation, 1.f, 0, 3, "%d x90");
+
+		ImGui::PopItemWidth();
+		ImGui::EndGroup();
+
+		ImGui::BeginChild("Tile List", ImVec2(0, 0), true);
+		for (size_t i = 0; i < 100; i++)
+		{
+			// Possibly add a preview for each tile in the list
+			if (ImGui::Selectable(("tile " + std::to_string(i)).c_str(), mSelected_tile == i))
+				mSelected_tile = i;
+		}
+		ImGui::EndChild();
+	}
+	ImGui::End();
+}
+
+void WGE_imgui_editor::draw_tilemap_layers_window()
+{
+	if (ImGui::Begin("Tilemap Layers"))
+	{
+		ImGui::BeginChild("Layer List", ImVec2(0, -25));
+		static bool layer_visible = false;
+		ImGui::Columns(2, 0, false);
+		ImGui::SetColumnWidth(0, 25);
+		for (size_t i = 0; i < 5; i++)
+		{
+			ImGui::Checkbox("##Tilemap layer Visible", &layer_visible);
+			ImGui::NextColumn();
+
+			ImGui::Selectable(("Layer " + std::to_string(i)).c_str(), false);
+			ImGui::NextColumn();
+		}
+		ImGui::Columns(1);
+		ImGui::EndChild();
+		ImGui::Separator();
+
+		ImGui::Button("New");
+
+		ImGui::SameLine();
+		ImGui::Button("Delete");
+
+		ImGui::SameLine();
+		ImGui::ArrowButton("Move Up", ImGuiDir_Up);
+		ImGui::SameLine();
+		ImGui::ArrowButton("Move Down", ImGuiDir_Down);
+	}
+	ImGui::End();
+}
+
+void WGE_imgui_editor::draw_collision_settings_window()
+{
+	if (ImGui::Begin("Collision Settings"))
+	{
+		ImGui::PushItemWidth(-100);
+		static int current_snapping = 0; // Temp
+		const char* snapping_items[] = { "None", "Pixel", "Eighth", "Quarter", "Full" };
+		ImGui::Combo("Snapping", &current_snapping, snapping_items, 5);
+
+		if (ImGui::CollapsingHeader("Collision Box"))
+		{
+			static int current_type = 0; // Temp
+			const char* coll_type_items[] = { "Wall", "Trigger", "Button", "Door" };
+			ImGui::Combo("Type", &current_type, coll_type_items, 4);
+
+			static char group_buf[256]; // Temp
+			ImGui::InputText("Group", group_buf, 256);
+			quick_tooltip("Group to assosiate this collision box with.\nThis is used in scripts to enable/disable boxes or calling functions when collided.");
+
+			static float coll_rect[4] = { 0, 0, 1, 1 }; // Temp
+			ImGui::DragFloat4("Rect", coll_rect, 1);
+		}
+
+		if (ImGui::CollapsingHeader("Door"))
+		{
+			static char door_name_buf[256]; // Temp
+			ImGui::InputText("Name", door_name_buf, 256);
+
+			static float coll_rect[2] = { 0, 0 }; // Temp
+			ImGui::DragFloat2("Offset", coll_rect, 0.2f);
+			quick_tooltip("This will offset the player when they come through this door.\nUsed to prevent player from colliding with the door again and going back.");
+
+			// TODO: Use a combo instead
+			static char door_dest_scene_buf[256]; // Temp
+			ImGui::InputText("Dest. Scene", door_dest_scene_buf, 256);
+			quick_tooltip("The scene to load when the player enters this door.");
+
+			// TODO: Use a combo instead
+			static char door_dest_door_buf[256]; // Temp
+			ImGui::InputText("Dest. Door", door_dest_door_buf, 256);
+			quick_tooltip("The destination door in the new loaded scene.");
+
+		}
+		ImGui::PopItemWidth();
+	}
+	ImGui::End();
 }
