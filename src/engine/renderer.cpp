@@ -85,7 +85,7 @@ renderer::renderer()
 	mWindow = nullptr;
 	mRender_target = nullptr;
 	mRequest_resort = false;
-	mTarget_size = ivector(800, 600); // Some arbitrary default
+	mTarget_size = fvector(800, 600); // Some arbitrary default
 }
 
 renderer::~renderer()
@@ -365,7 +365,7 @@ void renderer::update_events(display_window& pWindow)
 	{
 		if (i.type == sf::Event::Resized)
 		{
-			pWindow.mSize = vector<unsigned int>(pWindow.mWindow.getSize()); // Update member
+			pWindow.mSize = vector_cast<int, unsigned int>(pWindow.mWindow.getSize()); // Update member
 			refresh_view();
 		}
 		if (i.type == sf::Event::TextEntered)

@@ -48,7 +48,7 @@ public:
 	bool operator==(const tile& pRight);
 	bool operator!=(const tile& pRight);
 
-	typedef engine::vector<unsigned int> fill_t;
+	typedef engine::uvector fill_t;
 	typedef unsigned int rotation_t;
 
 	void set_position(engine::fvector pPosition);
@@ -90,7 +90,7 @@ public:
 	tile* new_tile(const std::string& pAtlas);
 
 	// Set a tile. Adds automatically and replaces any at the same position.
-	tile* set_tile(engine::fvector pPosition, engine::fvector pFill, const std::string& pAtlas, int pRotation);
+	tile* set_tile(engine::fvector pPosition, engine::uvector pFill, const std::string& pAtlas, int pRotation);
 	
 	// Set a tile. Adds automatically and replaces any at the same position.
 	tile* set_tile(engine::fvector pPosition, const std::string& pAtlas, int pRotation);

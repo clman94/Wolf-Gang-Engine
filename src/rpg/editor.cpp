@@ -193,7 +193,7 @@ private:
 
 WGE_editor::WGE_editor()
 {
-	mWindow.initualize("Editor", rpg::defs::SCREEN_SIZE);
+	mWindow.initualize("Editor", engine::vector_cast<int>(rpg::defs::SCREEN_SIZE));
 	mRenderer.set_target_size(rpg::defs::DISPLAY_SIZE);
 	mRenderer.set_window(mWindow);
 
@@ -1792,8 +1792,9 @@ void WGE_imgui_editor::draw_game_view_window()
 		// This game will not recieve events if this is false
 		mIs_game_view_window_focused = ImGui::IsWindowFocused();
 
-		// rersize the render texture if window size changes
-		sf::Vector2u window_size = sf::Vector2u(ImGui::GetWindowContentRegionMax()) - sf::Vector2u(0, ImGui::GetFrameHeight() * 2);
+		// Rersize the render texture if window size changes
+		sf::Vector2u window_size = sf::Vector2u(ImGui::GetWindowContentRegionMax())
+			- sf::Vector2u(ImGui::GetCursorPos()) * (unsigned int)2;
 		if (window_size != mGame_render_target.getSize())
 		{
 			mGame_render_target.create(window_size.x, window_size.y);
@@ -1804,12 +1805,23 @@ void WGE_imgui_editor::draw_game_view_window()
 		mGame_renderer.draw();
 		mGame_render_target.display();
 
+		ImDrawList* drawlist = ImGui::GetWindowDrawList();
+
 		// Display on imgui window. The entire image has to be flipped because of
-		// the trippy why render textures are stored.
-		ImGui::Image((void*)mGame_render_target.getTexture().getNativeHandle()
+		// the way render textures are stored.
+		engine::frect box(ImGui::GetCursorScreenPos()
+			, engine::fvector(ImGui::GetCursorPos())
+				+ engine::vector_cast<float, unsigned int>(mGame_render_target.getSize()));
+		drawlist->AddImage((void*)mGame_render_target.getTexture().getNativeHandle()
+			, box.get_offset(), box.get_corner()
+			, ImVec2(0, 1), ImVec2(1, 0), ImGui::GetColorU32(sf::Color::White));
+
+		ImGui::Text("pie is great");
+
+		/*ImGui::Image((void*)mGame_render_target.getTexture().getNativeHandle()
 			, mGame_render_target.getSize()
 			, ImVec2(0, 1), ImVec2(1, 0)
-			, sf::Color::White, sf::Color::Transparent);
+			, sf::Color::White, sf::Color::Transparent);*/
 	}
 	ImGui::End();
 }

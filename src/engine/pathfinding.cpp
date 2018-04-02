@@ -43,7 +43,7 @@ fvector path_node::get_position() const
 
 ivector path_node::get_grid_position() const
 {
-	return ivector(fvector(mPosition).floor());
+	return vector_cast<int>(fvector(mPosition).floor());
 }
 
 bool path_node::has_predecessor() const
@@ -207,7 +207,7 @@ std::vector<fvector> grid_set::get_empty_neighbors_positions(path_node& pNode) c
 
 	for (auto i : neighbors)
 	{
-		if (mMap.find((i + position).floor()) == mMap.end())
+		if (mMap.find(vector_cast<int>(i + position).floor()) == mMap.end())
 			retval.push_back(i + position);
 	}
 

@@ -189,7 +189,7 @@ engine::fvector tilemap_manipulator::get_center_point() const
 
 tile::tile()
 {
-	mFill = engine::fvector(1, 1);
+	mFill = { 1, 1 };
 	mRotation = 0;
 }
 
@@ -301,7 +301,7 @@ tile* tilemap_layer::new_tile(const std::string & pAtlas)
 	return &mTiles.back();
 }
 
-tile* tilemap_layer::set_tile(engine::fvector pPosition, engine::fvector pFill, const std::string & pAtlas, int pRotation)
+tile* tilemap_layer::set_tile(engine::fvector pPosition, engine::uvector pFill, const std::string & pAtlas, int pRotation)
 {
 	// Replace Tile
 	if (tile* repl_tile = find_tile(pPosition))

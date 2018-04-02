@@ -49,11 +49,10 @@ struct vector
 		: x(_x), y(_y)
 	{}
 
-	template<typename T1>
-	vector(const vector<T1>& pVector)
+	vector(const vector<T>& pVector)
 	{
-		x = static_cast<T>(pVector.x);
-		y = static_cast<T>(pVector.y);
+		x = pVector.x;
+		y = pVector.y;
 	}
 
 	T distance() const
@@ -265,7 +264,7 @@ struct vector
 		return x == 0 || y == 0;
 	}
 
-#ifdef SFML_VERTEX_HPP
+#ifdef SFML_VECTOR2_HPP
 	vector(const sf::Vector2<T>& A)
 	{
 		x = A.x;
@@ -315,6 +314,7 @@ vector<Tto> vector_cast(const vector<Tfrom>& pOrig)
 }
 
 typedef vector<int>    ivector;
+typedef vector<unsigned int> uvector;
 typedef vector<float>  fvector;
 typedef vector<double> dvector;
 
