@@ -304,28 +304,6 @@ private:
 	std::string mOpento_param;
 };
 
-class WGE_editor
-{
-public:
-	WGE_editor();
-
-	void initualize(const std::string& pCustom_location);
-
-	void run();
-
-private:
-	engine::renderer mRenderer;
-	engine::display_window mWindow;
-
-	game_editor         mGame_editor;
-	tilemap_editor      mTilemap_editor;
-	collisionbox_editor mCollisionbox_editor;
-	atlas_editor        mAtlas_editor;
-
-	editor_settings_loader mSettings;
-};
-
-
 class WGE_imgui_editor
 {
 public:
