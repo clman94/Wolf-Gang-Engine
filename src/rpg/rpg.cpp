@@ -1,5 +1,3 @@
-
-
 #include <algorithm>
 #include <fstream>
 
@@ -138,15 +136,11 @@ void scene_script_context::clean()
 
 void scene_script_context::call_all_with_tag(const std::string & pTag)
 {
-	auto funcs = get_all_with_tag(pTag);
-
 	logger::info("Calling all functions with tag '" + pTag + "'...");
-	logger::sub_routine _srtn;
 
+	auto funcs = get_all_with_tag(pTag);
 	for (auto& i : funcs)
-	{
 		i->call();
-	}
 }
 
 std::vector<std::shared_ptr<script_function>> scene_script_context::get_all_with_tag(const std::string & pTag)
@@ -248,13 +242,15 @@ engine::fs::path game::get_slot_path(size_t pSlot)
 void game::save_game()
 {
 	const std::string path = get_slot_path(mSlot).string();
+
 	logger::info("Saving game...");
-	logger::sub_routine _srtn;
+
 	mSave_system.new_save();
 
 	mSave_system.save_flags(mFlags);
 	mSave_system.save_scene(mScene);
 	mSave_system.save(path);
+
 	logger::info("Game saved to '" + path + "'");
 }
 

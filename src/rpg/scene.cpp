@@ -93,7 +93,6 @@ bool scene::load_scene(std::string pName)
 	mCurrent_scene_name = pName;
 
 	logger::info("Loading scene '" + pName + "'");
-	logger::sub_routine _srtn_loading_scene;
 
 	if (mPack)
 	{
@@ -149,7 +148,6 @@ bool scene::load_scene(std::string pName)
 	else
 	{
 		logger::info("Loading Tilemap...");
-		logger::sub_routine _srtn_loading_tilemap;
 
 		auto tilemap_texture = mResource_manager->get_resource<engine::texture>("texture", mLoader.get_tilemap_texture());
 		if (!tilemap_texture)
@@ -171,13 +169,10 @@ bool scene::load_scene(std::string pName)
 	update_focus();
 
 	logger::info("Cleaning up resources...");
-	logger::start_sub_routine();
 
 	// Ensure resources are ready and unused stuff is put away
 	mResource_manager->ensure_load();
 	mResource_manager->unload_unused();
-
-	logger::end_sub_routine();
 
 	mIs_ready = true;
 	return true;

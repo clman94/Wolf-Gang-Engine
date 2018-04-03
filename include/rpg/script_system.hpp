@@ -257,10 +257,7 @@ private:
 	friend class scene_script_context;
 };
 
-
-
 }
-
 
 namespace logger
 {

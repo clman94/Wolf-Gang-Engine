@@ -14,7 +14,6 @@ namespace logger {
 static std::string mLog_string;
 static std::vector<message> mLog;
 static std::ofstream mLog_file;
-static size_t mSub_routine_level;
 
 void initialize(const std::string & pOutput)
 {
@@ -23,11 +22,9 @@ void initialize(const std::string & pOutput)
 
 	mLog_file.open(pOutput.c_str());
 	if (!mLog_file)
-		std::cout << "Failed to open log output file\n";
+		error("Failed to open log output file");
 	else
-		std::cout << "Log file initialized at '" + pOutput + "'\n";
-
-	mSub_routine_level = 0;
+		info("Log file initialized at '" + pOutput + "'");
 }
 
 message print(const message & pMessage)
@@ -40,6 +37,10 @@ message print(const message & pMessage)
 	if (mLog_file)
 	{
 		mLog_file << stringified_message; // Save to file
+
+		// Ensure the file is updated.
+		// Last thing we want is the application to crash
+		// and there is nothing the log!
 		mLog_file.flush();
 	}
 
@@ -106,46 +107,17 @@ const std::string & get_log_string()
 	return mLog_string;
 }
 
-void start_sub_routine()
-{
-	++mSub_routine_level;
-}
-
-void end_sub_routine()
-{
-	assert(mSub_routine_level > 0);
-	--mSub_routine_level;
-}
-
-
-sub_routine::sub_routine()
-{
-	start_sub_routine();
-}
-
-sub_routine::~sub_routine()
-{
-	end_sub_routine();
-}
-
-void sub_routine::end()
-{
-	end_sub_routine();
-}
-
 std::string message::to_string() const
 {
 	std::string retval;
 
-	std::string stringified_type;
 	switch (type)
 	{
-	case level::error:   stringified_type = "Error  "; break;
-	case level::info:    stringified_type = "Info   "; break;
-	case level::warning: stringified_type = "Warning"; break;
-	case level::debug:   stringified_type = "Debug  "; break;
+	case level::error:   retval += "Error  : "; break;
+	case level::info:    retval += "Info   : "; break;
+	case level::warning: retval += "Warning: "; break;
+	case level::debug:   retval += "Debug  : "; break;
 	}
-	retval += "[" + stringified_type + "] ";
 
 	if (is_file)
 	{
@@ -158,9 +130,6 @@ std::string message::to_string() const
 			retval += ")";
 		}
 	}
-
-	for (size_t i = 0; i < mSub_routine_level; i++)
-		retval += "| ";
 	retval += msg;
 	return retval;
 }
