@@ -10,18 +10,7 @@ struct rect
 {
 	T x, y, w, h;
 
-	template<typename T1>
-	static rect cast(rect<T1> pRect)
-	{
-		return
-		{
-			static_cast<T>(pRect.x),
-			static_cast<T>(pRect.y),
-			static_cast<T>(pRect.w),
-			static_cast<T>(pRect.h)
-		};
-	}
-	
+
 	rect(T pX = 0, T pY = 0, T pW = 0, T pH = 0)
 		: x(pX), y(pY), w(pW), h(pH) {}
 
@@ -56,16 +45,16 @@ struct rect
 		return vector<T>(x, y);
 	}
 
-	vector<T> get_size() const
-	{
-		return vector<T>(w, h);
-	}
-
 	rect& set_offset(vector<T> v)
 	{
 		x = v.x;
 		y = v.y;
 		return *this;
+	}
+
+	vector<T> get_size() const
+	{
+		return vector<T>(w, h);
 	}
 
 	rect& set_size(vector<T> v)
@@ -148,14 +137,27 @@ struct rect
 
 };
 
+template<typename Tto, typename Torig>
+static inline rect<Tto> rect_cast(const rect<Torig>& pRect)
+{
+	return
+	{
+		static_cast<Tto>(pRect.x),
+		static_cast<Tto>(pRect.y),
+		static_cast<Tto>(pRect.w),
+		static_cast<Tto>(pRect.h)
+	};
+}
+
+
 template<typename T1, typename T2>
-static rect<T1> scale(rect<T1> a, T2 b)
+static inline rect<T1> scale(rect<T1> a, T2 b)
 {
 	return{ a.get_offset()*b, a.get_size()*b };
 }
 
 template<typename T1, typename T2>
-static rect<T1> scale(rect<T1> a, vector<T2> b)
+static inline rect<T1> scale(rect<T1> a, vector<T2> b)
 {
 	return{ a.x*b.x,a.y*b.y, a.w*b.x, a.h*b.y };
 }

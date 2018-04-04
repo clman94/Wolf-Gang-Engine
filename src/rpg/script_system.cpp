@@ -1,6 +1,7 @@
 
 #include <engine/logger.hpp>
 #include <engine/utility.hpp>
+#include <engine/filesystem.hpp>
 
 #include <rpg/script_system.hpp>
 
@@ -27,10 +28,10 @@ void script_system::message_callback(const asSMessageInfo * pMsg)
 		type = logger::level::warning;
 
 	logger::message msg;
-	if (util::safe_string(pMsg->section) == "Unknown")
-		msg = logger::print(type, pMsg->message);
-	else
+	if (engine::fs::exists(util::safe_string(pMsg->section)))
 		msg = logger::print(pMsg->section, pMsg->row, pMsg->col, type, pMsg->message);
+	else
+		msg = logger::print(type, pMsg->message);
 }
 
 void script_system::script_abort()
@@ -116,7 +117,7 @@ void script_system::script_debug_print(const std::string &pMessage)
 {
 	if (!is_executing())
 	{
-		logger::print("Unknown", 0, logger::level::debug, pMessage);
+		logger::print(*this, logger::level::debug, pMessage);
 		return;
 	}
 
@@ -130,7 +131,7 @@ void script_system::script_error_print(const std::string & pMessage)
 {
 	if (!is_executing())
 	{
-		logger::print("Unknown", 0, logger::level::error, pMessage);
+		logger::print(*this, logger::level::error, pMessage);
 		return;
 	}
 
@@ -187,6 +188,34 @@ void script_system::register_timer_type()
 	reset_namespace();
 }
 
+void script_system::register_rect_type()
+{
+	add_object<engine::frect>("rect", true);
+	add_constructor<engine::frect, float, float, float, float>("rect");
+	add_constructor<engine::frect, const engine::fvector&, const engine::fvector&>("rect");
+	add_constructor<engine::frect, const engine::frect&>("rect");
+
+	add_method("rect", "get_offset", &engine::frect::get_offset);
+	add_method("rect", "set_offset", &engine::frect::set_offset);
+	add_method("rect", "get_size",   &engine::frect::get_size);
+	add_method("rect", "set_size", &engine::frect::set_size);
+
+	add_method("rect", "get_center", &engine::frect::get_center);
+	add_method("rect", "get_corner", &engine::frect::get_corner);
+
+	add_method("rect", operator_method::assign, &engine::frect::operator=);
+	add_method("rect", operator_method::multiply, &engine::frect::operator*);
+
+	add_method<engine::frect, bool, const engine::frect&>("rect", "is_intersect", &engine::frect::is_intersect);
+	add_method<engine::frect, bool, const engine::fvector&>("rect", "is_intersect", &engine::frect::is_intersect);
+
+	// Members
+	add_member("rect", "x", &engine::frect::x);
+	add_member("rect", "y", &engine::frect::y);
+	add_member("rect", "w", &engine::frect::w);
+	add_member("rect", "h", &engine::frect::h);
+}
+
 script_system::script_system()
 {
 	mEngine = asCreateScriptEngine();
@@ -204,6 +233,7 @@ script_system::script_system()
 
 	register_vector_type();
 	register_timer_type();
+	register_rect_type();
 
 	load_script_interface();
 }

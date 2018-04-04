@@ -6,6 +6,7 @@
 #include <engine/utility.hpp>
 #include <engine/time.hpp>
 #include <engine/vector.hpp>
+#include <engine/rect.hpp>
 #include <engine/logger.hpp>
 
 #include <angelscript.h> // AS_USE_NAMESPACE will need to be defined
@@ -33,6 +34,16 @@ struct AS_type_to_string<engine::fvector> :
 	AS_type_to_string()
 	{
 		mName = "vec";
+	}
+};
+
+template<>
+struct AS_type_to_string<engine::frect> :
+	AS_type_to_string_base
+{
+	AS_type_to_string()
+	{
+		mName = "rect";
 	}
 };
 
@@ -235,6 +246,8 @@ private:
 
 	void register_vector_type();
 	void register_timer_type();
+	void register_rect_type();
+
 	void message_callback(const AS::asSMessageInfo * msg);
 
 	void script_abort();
