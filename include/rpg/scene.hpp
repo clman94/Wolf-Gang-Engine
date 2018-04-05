@@ -156,11 +156,7 @@ public:
 	// Loads global scene settings from game.xml file.
 	bool load_settings(const game_settings_loader& pSettings);
 
-	player_character& get_player();
-
 	void tick(engine::controls &pControls);
-
-	void focus_player(bool pFocus);
 
 	void set_resource_pack(engine::resource_pack* pPack);
 
@@ -188,7 +184,6 @@ private:
 	tilemap_manipulator   mTilemap_manipulator;
 	collision_system      mCollision_system;
 	entity_manager        mEntity_manager;
-	player_character      mPlayer;
 	colored_overlay       mColored_overlay;
 	pathfinding_system    mPathfinding_system;
 
@@ -206,12 +201,12 @@ private:
 
 	bool mFocus_player;
 
+private:
 	void             script_set_tile(const std::string& pAtlas
 		, engine::fvector pPosition, int pLayer, int pRotation);
 	void             script_remove_tile(engine::fvector pPosition, int pLayer);
 	void             script_set_focus(engine::fvector pPosition);
 	engine::fvector  script_get_focus();
-	entity_reference script_get_player();
 	engine::fvector  script_get_boundary_position();
 	engine::fvector  script_get_boundary_size();
 	void             script_set_boundary_position(engine::fvector pPosition);
@@ -222,8 +217,6 @@ private:
 	engine::fvector  script_get_display_size();
 
 	void refresh_renderer(engine::renderer& _r);
-	void update_focus();
-	void update_collision_interaction(engine::controls &pControls);
 
 	friend class scene_visualizer;
 };

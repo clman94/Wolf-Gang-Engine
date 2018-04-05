@@ -157,15 +157,15 @@ public:
 	std::shared_ptr<collision_box> add_collision_box(collision_box::type pType);
 	std::shared_ptr<collision_box> add_collision_box(std::shared_ptr<collision_box> pBox);
 
-	std::vector<std::shared_ptr<collision_box>> collision(engine::frect pRect);
-	std::vector<std::shared_ptr<collision_box>> collision(engine::fvector pPoint);
-	std::vector<std::shared_ptr<collision_box>> collision(collision_box::type pType, engine::frect pRect);
-	std::vector<std::shared_ptr<collision_box>> collision(collision_box::type pType, engine::fvector pPoint);
+	std::vector<std::shared_ptr<collision_box>> collision(const engine::frect& pRect) const;
+	std::vector<std::shared_ptr<collision_box>> collision(const engine::fvector& pPoint) const;
+	std::vector<std::shared_ptr<collision_box>> collision(collision_box::type pType, const engine::frect& pRect) const;
+	std::vector<std::shared_ptr<collision_box>> collision(collision_box::type pType, const engine::fvector& pPoint) const;
 
-	std::shared_ptr<collision_box> first_collision(engine::frect pRect);
-	std::shared_ptr<collision_box> first_collision(engine::fvector pPoint);
-	std::shared_ptr<collision_box> first_collision(collision_box::type pType, engine::frect pRect);
-	std::shared_ptr<collision_box> first_collision(collision_box::type pType, engine::fvector pPoint);
+	std::shared_ptr<collision_box> first_collision(const engine::frect& pRect) const;
+	std::shared_ptr<collision_box> first_collision(const engine::fvector& pPoint) const;
+	std::shared_ptr<collision_box> first_collision(collision_box::type pType, const engine::frect& pRect) const;
+	std::shared_ptr<collision_box> first_collision(collision_box::type pType, const engine::fvector& pPoint) const;
 
 	bool load_xml(tinyxml2::XMLElement* pEle);
 	bool generate_xml(tinyxml2::XMLDocument& pDocument, tinyxml2::XMLElement* pEle) const;

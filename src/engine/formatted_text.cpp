@@ -477,7 +477,7 @@ void formatted_text_node::update()
 			// Create handle for connecting the blocks 
 			// to the verticies. These are then iterated through
 			// and effects are applied.
-			const frect glyph_rect(frect::cast<int>(glyph.textureRect));
+			const frect glyph_rect(rect_cast<float, int>(glyph.textureRect));
 			const fvector bounds_offset = fvector(glyph.bounds.left, glyph.bounds.top) / scale_quality;
 			block_handle handle;
 			handle.mBlock_index = i;

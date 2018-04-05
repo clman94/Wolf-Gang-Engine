@@ -147,20 +147,20 @@ void script_system::register_vector_type()
 	add_constructor<engine::fvector, float, float>("vec");
 	add_constructor<engine::fvector, const engine::fvector&>("vec");
 
-	add_method<engine::fvector, engine::fvector&, const engine::fvector&>("vec", operator_method::assign, &engine::fvector::operator=);
-	add_method<engine::fvector, engine::fvector&, const engine::fvector&>("vec", operator_method::additive_assign, &engine::fvector::operator+=);
-	add_method<engine::fvector, engine::fvector&, const engine::fvector&>("vec", operator_method::subtractive_assign, &engine::fvector::operator-=);
+	add_method<engine::fvector, engine::fvector&, const engine::fvector&>("vec", operator_method::assign,                &engine::fvector::operator=);
+	add_method<engine::fvector, engine::fvector&, const engine::fvector&>("vec", operator_method::additive_assign,       &engine::fvector::operator+=);
+	add_method<engine::fvector, engine::fvector&, const engine::fvector&>("vec", operator_method::subtractive_assign,    &engine::fvector::operator-=);
 	add_method<engine::fvector, engine::fvector&, const engine::fvector&>("vec", operator_method::multiplicative_assign, &engine::fvector::operator*=);
 	add_method<engine::fvector, engine::fvector&, float>                 ("vec", operator_method::multiplicative_assign, &engine::fvector::operator*=);
-	add_method<engine::fvector, engine::fvector&, float>                 ("vec", operator_method::dividing_assign, &engine::fvector::operator/=);
+	add_method<engine::fvector, engine::fvector&, float>                 ("vec", operator_method::dividing_assign,       &engine::fvector::operator/=);
 
-	add_method<engine::fvector, engine::fvector, const engine::fvector&>("vec", operator_method::add, &engine::fvector::operator+);
+	add_method<engine::fvector, engine::fvector, const engine::fvector&>("vec", operator_method::add,      &engine::fvector::operator+);
 	add_method<engine::fvector, engine::fvector, const engine::fvector&>("vec", operator_method::subtract, &engine::fvector::operator-);
 	add_method<engine::fvector, engine::fvector, const engine::fvector&>("vec", operator_method::multiply, &engine::fvector::operator*);
 	add_method<engine::fvector, engine::fvector, float>                 ("vec", operator_method::multiply, &engine::fvector::operator*);
-	add_method<engine::fvector, engine::fvector, float>                 ("vec", operator_method::divide, &engine::fvector::operator/);
+	add_method<engine::fvector, engine::fvector, float>                 ("vec", operator_method::divide,   &engine::fvector::operator/);
 	add_method<engine::fvector, engine::fvector>                        ("vec", operator_method::negative, &engine::fvector::operator-);
-	add_method<engine::fvector>                                         ("vec", operator_method::equals, &engine::fvector::operator==<float>);
+	add_method<engine::fvector>                                         ("vec", operator_method::equals,   &engine::fvector::operator==<float>);
 
 	add_method<engine::fvector, float>                        ("vec", "distance" , &engine::fvector::distance);
 	add_method<engine::fvector, float, const engine::fvector&>("vec", "distance" , &engine::fvector::distance);
@@ -170,7 +170,7 @@ void script_system::register_vector_type()
 	add_method<engine::fvector, engine::fvector&, float> ("vec", "rotate", &engine::fvector::rotate);
 	add_method<engine::fvector, engine::fvector&, const engine::fvector&, float>("vec", "rotate", &engine::fvector::rotate);
 	add_method("vec", "normalize", &engine::fvector::normalize);
-	add_method("vec", "floor"    , &engine::fvector::floor);
+	add_method("vec", "floor",     &engine::fvector::floor);
 	add_method<engine::fvector, float>                        ("vec", "angle", &engine::fvector::angle);
 	add_method<engine::fvector, float, const engine::fvector&>("vec", "angle", &engine::fvector::angle);
 
@@ -197,7 +197,7 @@ void script_system::register_rect_type()
 
 	add_method("rect", "get_offset", &engine::frect::get_offset);
 	add_method("rect", "set_offset", &engine::frect::set_offset);
-	add_method("rect", "get_size",   &engine::frect::get_size);
+	add_method("rect", "get_size", &engine::frect::get_size);
 	add_method("rect", "set_size", &engine::frect::set_size);
 
 	add_method("rect", "get_center", &engine::frect::get_center);
@@ -214,6 +214,29 @@ void script_system::register_rect_type()
 	add_member("rect", "y", &engine::frect::y);
 	add_member("rect", "w", &engine::frect::w);
 	add_member("rect", "h", &engine::frect::h);
+}
+
+void script_system::register_color_type()
+{
+	add_object<engine::color>("color", true);
+	add_constructor<engine::color, float, float, float, float>("color");
+	add_constructor<engine::color, const engine::color&>("color");
+
+	add_method<engine::color, engine::color&, const engine::color&>("color", operator_method::additive_assign,       &engine::color::operator+=);
+	add_method<engine::color, engine::color&, const engine::color&>("color", operator_method::subtractive_assign,    &engine::color::operator-=);
+	add_method<engine::color, engine::color&, const engine::color&>("color", operator_method::multiplicative_assign, &engine::color::operator*=);
+	add_method<engine::color, engine::color&, const engine::color&>("color", operator_method::dividing_assign,       &engine::color::operator/=);
+
+	add_method<engine::color, engine::color, const engine::color&>("color", operator_method::add,      &engine::color::operator+);
+	add_method<engine::color, engine::color, const engine::color&>("color", operator_method::subtract, &engine::color::operator-);
+	add_method<engine::color, engine::color, const engine::color&>("color", operator_method::multiply, &engine::color::operator*);
+	add_method<engine::color, engine::color, const engine::color&>("color", operator_method::divide,   &engine::color::operator/);
+
+	// Members
+	add_member("color", "r", &engine::color::r);
+	add_member("color", "g", &engine::color::g);
+	add_member("color", "b", &engine::color::b);
+	add_member("color", "a", &engine::color::a);
 }
 
 script_system::script_system()
@@ -260,6 +283,16 @@ script_system::add_function(const char * pDeclaration, const asSFuncPtr& pPtr)
 {
 	int r = mEngine->RegisterGlobalFunction(pDeclaration, pPtr, asCALL_CDECL);
 	assert(r >= 0);
+}
+
+void script_system::add_enum(const std::string & pName)
+{
+	mEngine->RegisterEnum(pName.c_str());
+}
+
+void script_system::add_enum_value(const std::string & pName, const std::string & pValue_name, int pValue)
+{
+	mEngine->RegisterEnumValue(pName.c_str(), pValue_name.c_str(), pValue);
 }
 
 void script_system::abort_all()

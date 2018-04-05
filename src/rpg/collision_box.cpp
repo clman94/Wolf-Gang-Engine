@@ -145,7 +145,7 @@ std::shared_ptr<collision_box> collision_box_container::add_collision_box(std::s
 	return pBox;
 }
 
-std::vector<std::shared_ptr<collision_box>> collision_box_container::collision(engine::frect pRect)
+std::vector<std::shared_ptr<collision_box>> collision_box_container::collision(const engine::frect& pRect) const
 {
 	std::vector<std::shared_ptr<collision_box>> hits;
 	for (auto& i : mBoxes)
@@ -155,7 +155,7 @@ std::vector<std::shared_ptr<collision_box>> collision_box_container::collision(e
 	return hits;
 }
 
-std::vector<std::shared_ptr<collision_box>> collision_box_container::collision(engine::fvector pPoint)
+std::vector<std::shared_ptr<collision_box>> collision_box_container::collision(const engine::fvector& pPoint) const
 {
 	std::vector<std::shared_ptr<collision_box>> hits;
 	for (auto& i : mBoxes)
@@ -165,7 +165,7 @@ std::vector<std::shared_ptr<collision_box>> collision_box_container::collision(e
 	return hits;
 }
 
-std::vector<std::shared_ptr<collision_box>> collision_box_container::collision(collision_box::type pType, engine::frect pRect)
+std::vector<std::shared_ptr<collision_box>> collision_box_container::collision(collision_box::type pType, const engine::frect& pRect) const
 {
 	std::vector<std::shared_ptr<collision_box>> hits;
 	for (auto& i : mBoxes)
@@ -176,7 +176,7 @@ std::vector<std::shared_ptr<collision_box>> collision_box_container::collision(c
 	return hits;
 }
 
-std::vector<std::shared_ptr<collision_box>> collision_box_container::collision(collision_box::type pType, engine::fvector pPoint)
+std::vector<std::shared_ptr<collision_box>> collision_box_container::collision(collision_box::type pType, const engine::fvector& pPoint) const
 {
 	std::vector<std::shared_ptr<collision_box>> hits;
 	for (auto& i : mBoxes)
@@ -187,7 +187,7 @@ std::vector<std::shared_ptr<collision_box>> collision_box_container::collision(c
 	return hits;
 }
 
-std::shared_ptr<collision_box> rpg::collision_box_container::first_collision(engine::frect pRect)
+std::shared_ptr<collision_box> rpg::collision_box_container::first_collision(const engine::frect& pRect) const
 {
 	for (auto& i : mBoxes)
 		if (i->is_enabled()
@@ -196,7 +196,7 @@ std::shared_ptr<collision_box> rpg::collision_box_container::first_collision(eng
 	return{};
 }
 
-std::shared_ptr<collision_box> rpg::collision_box_container::first_collision(engine::fvector pPoint)
+std::shared_ptr<collision_box> rpg::collision_box_container::first_collision(const engine::fvector& pPoint) const
 {
 	for (auto& i : mBoxes)
 		if (i->is_enabled()
@@ -205,7 +205,7 @@ std::shared_ptr<collision_box> rpg::collision_box_container::first_collision(eng
 	return{};
 }
 
-std::shared_ptr<collision_box> collision_box_container::first_collision(collision_box::type pType, engine::frect pRect)
+std::shared_ptr<collision_box> collision_box_container::first_collision(collision_box::type pType, const engine::frect& pRect) const
 {
 	for (auto& i : mBoxes)
 		if (i->is_enabled()
@@ -215,7 +215,7 @@ std::shared_ptr<collision_box> collision_box_container::first_collision(collisio
 	return{};
 }
 
-std::shared_ptr<collision_box> rpg::collision_box_container::first_collision(collision_box::type pType, engine::fvector pPoint)
+std::shared_ptr<collision_box> rpg::collision_box_container::first_collision(collision_box::type pType, const engine::fvector& pPoint) const
 {
 	for (auto& i : mBoxes)
 		if (i->is_enabled()

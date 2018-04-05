@@ -7,9 +7,10 @@
 #include <rpg/entity.hpp>
 #include <rpg/sprite_entity.hpp>
 #include <rpg/character_entity.hpp>
-#include <rpg/player_character.hpp>
 
 namespace rpg {
+
+class script_system;
 
 class text_entity :
 	public entity

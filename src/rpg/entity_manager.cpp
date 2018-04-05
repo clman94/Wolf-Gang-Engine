@@ -1,5 +1,7 @@
 #include <rpg/entity_manager.hpp>
 #include <rpg/rpg_config.hpp>
+#include <rpg/script_system.hpp>
+
 #include <engine/logger.hpp>
 
 using namespace rpg;

@@ -6,6 +6,7 @@
 #include <engine/utility.hpp>
 #include <engine/time.hpp>
 #include <engine/vector.hpp>
+#include <engine/color.hpp>
 #include <engine/rect.hpp>
 #include <engine/logger.hpp>
 
@@ -47,6 +48,16 @@ struct AS_type_to_string<engine::frect> :
 	}
 };
 
+template<>
+struct AS_type_to_string<engine::color> :
+	AS_type_to_string_base
+{
+	AS_type_to_string()
+	{
+		mName = "color";
+	}
+};
+
 template<typename T>
 struct AS_type_to_string<AS_array<T>> :
 	AS_type_to_string_base
@@ -77,6 +88,8 @@ const std::string divide = "opDiv";
 const std::string negative = "opNeg";
 
 const std::string equals = "opEquals";
+
+const std::string impl_conv = "opImplConv";
 }
 
 class script_system
@@ -183,6 +196,20 @@ public:
 		assert(r >= 0);
 	}
 
+	// Add an enum
+	void add_enum(const std::string& pName);
+
+	// Register a value for an enum
+	void add_enum_value(const std::string& pName, const std::string& pValue_name, int pValue);
+
+	// This is for those pesky class enums that don't cast to a int automatically
+	template<typename T>
+	void add_enum_class_value(const std::string& pName, const std::string& pValue_name, T pValue)
+	{
+		add_enum_value(pName, pValue_name, static_cast<int>(pValue));
+	}
+
+
 	void abort_all();
 	int tick();
 
@@ -247,6 +274,7 @@ private:
 	void register_vector_type();
 	void register_timer_type();
 	void register_rect_type();
+	void register_color_type();
 
 	void message_callback(const AS::asSMessageInfo * msg);
 

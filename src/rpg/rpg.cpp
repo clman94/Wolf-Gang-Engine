@@ -268,12 +268,10 @@ void game::open_game()
 	if (mScript.is_executing())
 	{
 		mScene_load_request.request_load(mSave_system.get_scene_path());
-		mScene_load_request.set_player_position(mSave_system.get_player_position());
 	}
 	else
 	{
 		mScene.load_scene(mSave_system.get_scene_path());
-		mScene.get_player().set_position(mSave_system.get_player_position());
 	}
 
 	logger::info("Loaded " + std::to_string(mFlags.get_count()) + " flag(s)");
@@ -755,7 +753,9 @@ bool game::tick()
 
 		case scene_load_request::to_position::position:
 			mScene.load_scene(mScene_load_request.get_scene_name());
-			mScene.get_player().set_position(mScene_load_request.get_player_position());
+
+			// TODO: Inform scripts of the new player position
+			//mScene.get_player().set_position(mScene_load_request.get_player_position());
 			break;
 
 		case scene_load_request::to_position::none:
@@ -995,14 +995,6 @@ void save_system::load_flags(flag_container& pFlags)
 	logger::info("Loaded " + std::to_string(pFlags.get_count()) + " flags");
 }
 
-engine::fvector save_system::get_player_position()
-{
-	assert(mEle_root != nullptr);
-	auto ele_player = mEle_root->FirstChildElement("player");
-	return{ ele_player->FloatAttribute("x")
-		, ele_player->FloatAttribute("y") };
-}
-
 std::string save_system::get_scene_path()
 {
 	assert(mEle_root != nullptr);
@@ -1083,20 +1075,8 @@ void save_system::save_scene(scene& pScene)
 	ele_scene->SetAttribute("path", pScene.get_path().c_str());
 
 	logger::info("Saved scene '" + pScene.get_path() + "'");
-
-	save_player(pScene.get_player());
 }
 
-void save_system::save_player(player_character& pPlayer)
-{
-	assert(mEle_root != nullptr);
-	auto ele_scene = mDocument.NewElement("player");
-	mEle_root->InsertFirstChild(ele_scene);
-	ele_scene->SetAttribute("x", pPlayer.get_position().x);
-	ele_scene->SetAttribute("y", pPlayer.get_position().y);
-
-	logger::info("Saved player position at " + pPlayer.get_position().to_string());
-}
 
 void save_system::value_factory(tinyxml2::XMLElement * pEle)
 {

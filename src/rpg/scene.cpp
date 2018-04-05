@@ -15,7 +15,6 @@ scene::scene()
 	mWorld_node.set_parent(mScene_node);
 
 	mWorld_node.add_child(mTilemap_display);
-	mWorld_node.add_child(mPlayer);
 	mFocus_player = true;
 
 	mPathfinding_system.set_collision_system(mCollision_system);
@@ -65,10 +64,6 @@ void scene::clean(bool pFull)
 	mColored_overlay.reset();
 	mSound_FX.stop_all();
 	mBackground_music.pause_music();
-
-	focus_player(true);
-
-	mPlayer.reset();
 
 	if (pFull) // Cleanup everything
 	{
@@ -161,12 +156,8 @@ bool scene::load_scene(std::string pName)
 		mTilemap_display.update(mTilemap_manipulator);
 	}
 
-	mPlayer.set_visible(true);
-
-	// Pre-execute so the scene script can setup things before the render.
+	// Pre-execute so the scene script can setup things before the first render.
 	mScript->tick();
-
-	update_focus();
 
 	logger::info("Cleaning up resources...");
 
@@ -189,8 +180,9 @@ bool scene::load_scene(std::string pName, std::string pDoor)
 		logger::warning("Unable to find door '" + pDoor + "'");
 		return false;
 	}
-	mPlayer.set_direction(character_entity::vector_direction(door->get_offset()));
-	mPlayer.set_position(door->calculate_player_position());
+	// TODO: Use values to inform scripts of door offsets
+	// mPlayer.set_direction(character_entity::vector_direction(door->get_offset()));
+	// mPlayer.set_position(door->calculate_player_position());
 	return true;
 }
 
@@ -261,13 +253,8 @@ void scene::load_script_interface(script_system& pScript)
 	pScript.add_function("_spawn_sound", &scene::script_spawn_sound, this);
 	pScript.add_function("_stop_all", &engine::sound_spawner::stop_all, &mSound_FX);
 
-	pScript.add_function("get_player", &scene::script_get_player, this);
-	pScript.add_function("_set_player_locked", &player_character::set_locked, &mPlayer);
-	pScript.add_function("_get_player_locked", &player_character::is_locked, &mPlayer);
-
 	pScript.add_function("_set_focus", &scene::script_set_focus, this);
 	pScript.add_function("_get_focus", &scene::script_get_focus, this);
-	pScript.add_function("_focus_player", &scene::focus_player, this);
 
 	pScript.add_function("get_boundary_position", &scene::script_get_boundary_position, this);
 	pScript.add_function("get_boundary_size", &scene::script_get_boundary_size, this);
@@ -350,39 +337,16 @@ bool scene::load_settings(const game_settings_loader& pSettings)
 	logger::info("Loading scene system...");
 
 	mScene_node.set_unit(pSettings.get_unit_pixels());
-
 	mWorld_node.set_viewport(pSettings.get_screen_size());
-
-	auto player_texture = mResource_manager->get_resource<engine::texture>("texture", pSettings.get_player_texture());
-	if (!player_texture)
-	{
-		logger::error("Could not load texture '" + pSettings.get_player_texture() + "' for player character");
-		return false;
-	}
-	mPlayer.mSprite.set_texture(player_texture);
-	mPlayer.set_cycle(character_entity::cycle::def);
 
 	logger::info("Scene loaded");
 
 	return true;
 }
 
-player_character& scene::get_player()
-{
-	return mPlayer;
-}
-
 void scene::tick(engine::controls &pControls)
 {
 	assert(get_renderer() != nullptr);
-	mPlayer.movement(pControls, mCollision_system, get_renderer()->get_delta());
-	update_focus();
-	update_collision_interaction(pControls);
-}
-
-void scene::focus_player(bool pFocus)
-{
-	mFocus_player = pFocus;
 }
 
 void scene::set_resource_pack(engine::resource_pack* pPack)
@@ -400,7 +364,7 @@ bool scene::is_ready() const
 	return mIs_ready;
 }
 
-engine::mixer & rpg::scene::get_mixer()
+engine::mixer & scene::get_mixer()
 {
 	return mMixer;
 }
@@ -414,11 +378,6 @@ void scene::script_set_focus(engine::fvector pPosition)
 engine::fvector scene::script_get_focus()
 {
 	return mWorld_node.get_focus();
-}
-
-entity_reference scene::script_get_player()
-{
-	return mPlayer;
 }
 
 engine::fvector scene::script_get_boundary_position()
@@ -476,7 +435,6 @@ void scene::refresh_renderer(engine::renderer& pR)
 {
 	mWorld_node.set_viewport(pR.get_target_size());
 	pR.add_object(mTilemap_display);
-	pR.add_object(mPlayer);
 	mColored_overlay.set_renderer(pR);
 	mEntity_manager.set_renderer(pR);
 
@@ -485,59 +443,6 @@ void scene::refresh_renderer(engine::renderer& pR)
 	mVisualizer.set_scene(*this);
 	mVisualizer.set_renderer(pR);
 #endif
-}
-
-void scene::update_focus()
-{
-	if (mFocus_player)
-		mWorld_node.set_focus(mPlayer.get_position(mWorld_node));
-}
-
-void scene::update_collision_interaction(engine::controls & pControls)
-{
-	collision_box_container& container = mCollision_system.get_container();
-
-	const auto collision_box = mPlayer.get_collision_box();
-
-	// Check collision with triggers
-	{
-		auto triggers = container.collision(collision_box::type::trigger, collision_box);
-		for (auto& i : triggers)
-			std::dynamic_pointer_cast<trigger>(i)->call_function();
-	}
-
-	// Check collision with doors
-	{
-		const auto hit = container.first_collision(collision_box::type::door, collision_box);
-		if (hit)
-		{
-			const auto hit_door = std::dynamic_pointer_cast<door>(hit);
-			if (mEnd_functions.empty()) // No end functions to call
-			{
-				load_scene(hit_door->get_scene(), hit_door->get_destination());
-			}
-			else if (!mEnd_functions[0]->is_running())
-			{
-				mScript->abort_all();
-				for (auto& i : mEnd_functions)
-				{
-					if (i->call())
-					{
-						i->set_arg(0, (void*)&hit_door->get_scene());
-						i->set_arg(1, (void*)&hit_door->get_destination());
-					}
-				}
-			}
-		}
-	}
-
-	// Check collision with buttons on when "activate" is triggered
-	if (pControls.is_triggered("activate"))
-	{
-		auto buttons = container.collision(collision_box::type::button, mPlayer.get_activation_point());
-		for (auto& i : buttons)
-			std::dynamic_pointer_cast<button>(i)->call_function();
-	}
 }
 
 scene_visualizer::scene_visualizer()

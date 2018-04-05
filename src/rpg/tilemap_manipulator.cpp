@@ -1,6 +1,7 @@
 #include <rpg/tilemap_manipulator.hpp>
 #include <rpg/rpg_config.hpp>
 #include <engine/logger.hpp>
+#include <rpg/scene_loader.hpp>
 
 using namespace rpg;
 
@@ -102,7 +103,6 @@ int tilemap_manipulator::load_tilemap_xml(std::string pPath)
 	load_tilemap_xml(root);
 	return 0;
 }
-
 
 void tilemap_manipulator::explode_all()
 {
