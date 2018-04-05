@@ -181,11 +181,11 @@ void script_system::register_vector_type()
 
 void script_system::register_timer_type()
 {
-	set_namespace("util");
+	begin_namespace("util");
 	add_object<engine::timer>("timer");
 	add_method<engine::timer, void, float>("timer", "start", &engine::timer::start);
 	add_method("timer", "is_reached", &engine::timer::is_reached);
-	reset_namespace();
+	end_namespace();
 }
 
 void script_system::register_rect_type()
@@ -361,12 +361,12 @@ std::string script_system::get_current_file() const
 	return mCurrect_thread_context->context->GetFunction()->GetScriptSectionName();
 }
 
-void script_system::set_namespace(const std::string & pName)
+void script_system::begin_namespace(const std::string & pName)
 {
 	mEngine->SetDefaultNamespace(pName.c_str());
 }
 
-void script_system::reset_namespace()
+void script_system::end_namespace()
 {
 	mEngine->SetDefaultNamespace("");
 }

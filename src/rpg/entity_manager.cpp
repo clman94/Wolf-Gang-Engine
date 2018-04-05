@@ -743,7 +743,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("get_z",                             &entity_manager::script_get_z, this);
 	pScript.add_function("set_parallax",                      &entity_manager::script_set_parallax, this);
 
-	pScript.set_namespace("animation");
+	pScript.begin_namespace("animation");
 	pScript.add_function("start",                             &entity_manager::script_start_animation, this);
 	pScript.add_function("stop",                              &entity_manager::script_stop_animation, this);
 	pScript.add_function("pause",                             &entity_manager::script_pause_animation, this);
@@ -751,7 +751,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 	pScript.add_function("set_speed",                         &entity_manager::script_set_animation_speed, this);
 	pScript.add_function("get_speed",                         &entity_manager::script_get_animation_speed, this);
 	pScript.add_function("get_frame",                         &entity_manager::script_get_animation_frame, this);
-	pScript.reset_namespace();
+	pScript.end_namespace();
 
 	pScript.add_function("set_scale",                         &entity_manager::script_set_scale, this);
 	pScript.add_function("get_scale",                         &entity_manager::script_get_scale, this);

@@ -247,6 +247,7 @@ void game::save_game()
 
 	mSave_system.new_save();
 
+	mSave_system.save_values(mValues);
 	mSave_system.save_flags(mFlags);
 	mSave_system.save_scene(mScene);
 	mSave_system.save(path);
@@ -265,6 +266,8 @@ void game::open_game()
 	logger::info("Opening game...");
 	mFlags.clean();
 	mSave_system.load_flags(mFlags);
+	mValues.clear();
+	mSave_system.load_values(mValues);
 	if (mScript.is_executing())
 	{
 		mValues.set_value("_nosave/scene_load/request", true);
@@ -403,7 +406,7 @@ void game::load_script_interface()
 	mScript.add_function("set_slot", &game::set_slot, this);
 	mScript.add_function("is_slot_used", &game::is_slot_used, this);
 
-	mScript.set_namespace("values");
+	mScript.begin_namespace("values");
 	mScript.add_function("get_int", &game::script_get_int_value, this);
 	mScript.add_function("get_float", &game::script_get_float_value, this);
 	mScript.add_function("get_bool", &game::script_get_bool_value, this);
@@ -415,7 +418,7 @@ void game::load_script_interface()
 	mScript.add_function("get_entries", &game::script_get_director_entries, this);
 	mScript.add_function("remove", &game::script_remove_value, this);
 	mScript.add_function("exists", &game::script_has_value, this);
-	mScript.reset_namespace();
+	mScript.end_namespace();
 
 	mScript.add_function("get_tile_size", &game::script_get_tile_size, this);
 

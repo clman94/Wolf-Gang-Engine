@@ -34,7 +34,7 @@ void collision_system::load_script_interface(script_system & pScript)
 	register_collision_type(pScript);
 
 
-	pScript.set_namespace("collision");
+	pScript.begin_namespace("collision");
 
 	pScript.add_enum("type");
 	pScript.add_enum_class_value("type", "wall", collision_box::type::wall);
@@ -59,13 +59,13 @@ void collision_system::load_script_interface(script_system & pScript)
 	pScript.add_function("find_door_by_name", &collision_system::script_find_door_by_name, this);
 	pScript.add_function("get_door_offset", &collision_system::script_get_door_offset, this);
 	pScript.add_function("get_door_absolute_offset", &collision_system::script_get_door_absolute_offset, this);
-	pScript.reset_namespace();
+	pScript.end_namespace();
 
-	pScript.set_namespace("group");
+	pScript.begin_namespace("group");
 	pScript.add_function("enable", &collision_system::script_set_wall_group_enabled, this);
 	pScript.add_function("is_enabled", &collision_system::script_get_wall_group_enabled, this);
 	pScript.add_function("call_bindings", &collision_system::script_call_group_functions, this);
-	pScript.reset_namespace();
+	pScript.end_namespace();
 
 
 	//pScript.add_function("void _bind_box_function(coroutine@+, dictionary @+)", AS::asMETHOD(collision_system, script_bind_group_function), this);
@@ -78,13 +78,13 @@ collision_box_container& collision_system::get_container()
 
 void collision_system::register_collision_type(script_system& pScript)
 {
-	pScript.set_namespace("collision");
+	pScript.begin_namespace("collision");
 
 	pScript.add_object<collision_box::ptr>("box");
 	pScript.add_method<collision_box::ptr, collision_box::ptr&, const collision_box::ptr&>("box", operator_method::assign, &collision_box::ptr::operator=);
 	pScript.add_method<collision_box::ptr, bool>("box", operator_method::impl_conv, &collision_box::ptr::operator bool);
 
-	pScript.reset_namespace();
+	pScript.end_namespace();
 }
 
 void collision_system::script_create_wall_group(const std::string & pName)

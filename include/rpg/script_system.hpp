@@ -216,8 +216,8 @@ public:
 	int get_current_line();
 	std::string get_current_file() const;
 
-	void set_namespace(const std::string& pName);
-	void reset_namespace();
+	void begin_namespace(const std::string& pName);
+	void end_namespace();
 
 	bool is_executing();
 

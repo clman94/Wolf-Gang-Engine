@@ -113,10 +113,10 @@ std::string message::to_string() const
 
 	switch (type)
 	{
-	case level::error:   retval += "Error  : "; break;
-	case level::info:    retval += "Info   : "; break;
-	case level::warning: retval += "Warning: "; break;
-	case level::debug:   retval += "Debug  : "; break;
+	case level::error:   retval += "Error   : "; break;
+	case level::info:    retval += "Info    : "; break;
+	case level::warning: retval += "Warning : "; break;
+	case level::debug:   retval += "Debug   : "; break;
 	}
 
 	if (is_file)
@@ -129,6 +129,7 @@ std::string message::to_string() const
 				retval += ", " + std::to_string(row);
 			retval += ")";
 		}
+		retval += " ";
 	}
 	retval += msg;
 	return retval;

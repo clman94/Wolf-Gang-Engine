@@ -1536,7 +1536,10 @@ void WGE_imgui_editor::run()
 			ImGui::SameLine();
 			ImGui::BeginGroup();
 			ImGui::PushItemWidth(-100);
-			ImGui::Button("Restart");
+			if (ImGui::Button("Restart"))
+			{
+				mGame.get_scene().reload_scene();
+			}
 			ImGui::Text(("Name: " + mGame.get_scene().get_path()).c_str());
 
 			static bool has_boundary = false; // Temp
