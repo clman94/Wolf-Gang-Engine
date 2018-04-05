@@ -133,7 +133,6 @@ public:
 	// Load scene xml file which loads the scene script.
 	// The strings are not references so cleanup doesn't cause issues.
 	bool load_scene(std::string pName);
-	bool load_scene(std::string pName, std::string pDoor);
 
 #ifndef LOCKED_RELEASE_MODE
 	bool create_scene(const std::string& pName);
@@ -155,8 +154,6 @@ public:
 
 	// Loads global scene settings from game.xml file.
 	bool load_settings(const game_settings_loader& pSettings);
-
-	void tick(engine::controls &pControls);
 
 	void set_resource_pack(engine::resource_pack* pPack);
 

@@ -13,7 +13,7 @@ using namespace rpg;
 // script_context
 // #########
 
-static int add_section_from_pack(const engine::encoded_path& pPath, engine::resource_pack& pPack,  AS::CScriptBuilder& pBuilder)
+static int add_section_from_pack(const engine::generic_path& pPath, engine::resource_pack& pPack,  AS::CScriptBuilder& pBuilder)
 {
 	auto data = pPack.read_all(pPath);
 	if (data.empty())
@@ -24,7 +24,7 @@ static int add_section_from_pack(const engine::encoded_path& pPath, engine::reso
 static int pack_include_callback(const char *include, const char *from, AS::CScriptBuilder *pBuilder, void *pUser)
 {
 	engine::resource_pack* pack = reinterpret_cast<engine::resource_pack*>(pUser);
-	auto path = engine::encoded_path(from).parent() / engine::encoded_path(include);
+	auto path = engine::generic_path(from).parent() / engine::generic_path(include);
 	return add_section_from_pack(path, *pack, *pBuilder);
 }
 
@@ -267,7 +267,7 @@ void game::open_game()
 	mSave_system.load_flags(mFlags);
 	if (mScript.is_executing())
 	{
-		mScene_load_request.request_load(mSave_system.get_scene_path());
+		mValues.set_value("_nosave/scene_load/request", true);
 	}
 	else
 	{
@@ -300,29 +300,9 @@ void game::abort_game()
 	mExit = true;
 }
 
-void game::script_load_scene(const std::string & pName)
-{
-	logger::info("Requesting scene load '" + pName + "'");
-	mScene_load_request.request_load(pName);
-}
-
-void game::script_load_scene_to_door(const std::string & pName, const std::string & pDoor)
-{
-	logger::info("Requesting scene load '" + pName + "'");
-	mScene_load_request.request_load(pName);
-	mScene_load_request.set_player_position(pDoor);
-}
-
-void game::script_load_scene_to_position(const std::string & pName, engine::fvector pPosition)
-{
-	logger::info("Requesting scene load '" + pName + "'");
-	mScene_load_request.request_load(pName);
-	mScene_load_request.set_player_position(pPosition);
-}
-
 int game::script_get_int_value(const std::string & pPath) const
 {
-	auto val = mSave_system.get_int_value(pPath);
+	auto val = mValues.get_int_value(pPath);
 	if (!val)
 	{
 		logger::warning("Value '" + pPath + "' does not exist");
@@ -333,7 +313,7 @@ int game::script_get_int_value(const std::string & pPath) const
 
 float game::script_get_float_value(const std::string & pPath) const
 {
-	auto val = mSave_system.get_float_value(pPath);
+	auto val = mValues.get_float_value(pPath);
 	if (!val)
 	{
 		logger::warning("Value '" + pPath + "' does not exist");
@@ -342,9 +322,20 @@ float game::script_get_float_value(const std::string & pPath) const
 	return *val;
 }
 
+bool game::script_get_bool_value(const std::string & pPath) const
+{
+	auto val = mValues.get_bool_value(pPath);
+	if (!val)
+	{
+		logger::warning("Value '" + pPath + "' does not exist");
+		return{};
+	}
+	return *val;
+}
+
 std::string game::script_get_string_value(const std::string & pPath) const
 {
-	auto val = mSave_system.get_string_value(pPath);
+	auto val = mValues.get_string_value(pPath);
 	if (!val)
 	{
 		logger::warning("Value '" + pPath + "' does not exist");
@@ -355,22 +346,27 @@ std::string game::script_get_string_value(const std::string & pPath) const
 
 bool game::script_set_int_value(const std::string & pPath, int pValue)
 {
-	return mSave_system.set_value(pPath, pValue);
+	return mValues.set_value(pPath, pValue);
 }
 
 bool game::script_set_float_value(const std::string & pPath, float pValue)
 {
-	return mSave_system.set_value(pPath, pValue);
+	return mValues.set_value(pPath, pValue);
+}
+
+bool game::script_set_bool_value(const std::string & pPath, bool pValue)
+{
+	return mValues.set_value(pPath, pValue);
 }
 
 bool game::script_set_string_value(const std::string & pPath, const std::string & pValue)
 {
-	return mSave_system.set_value(pPath, pValue);
+	return mValues.set_value(pPath, pValue);
 }
 
 AS_array<std::string>* game::script_get_director_entries(const std::string & pPath)
 {
-	const auto entries = mSave_system.get_directory_entries(pPath);
+	const auto entries = mValues.get_directory_entries(pPath);
 	auto arr = mScript.create_array<std::string>(entries.size());
 	for (size_t i = 0; i < entries.size(); i++)
 		arr->SetValue(i, (void*)&entries[i]);
@@ -380,12 +376,12 @@ AS_array<std::string>* game::script_get_director_entries(const std::string & pPa
 
 bool game::script_remove_value(const std::string & pPath)
 {
-	return mSave_system.remove_value(pPath);
+	return mValues.remove_value(pPath);
 }
 
 bool game::script_has_value(const std::string & pPath)
 {
-	return mSave_system.has_value(pPath);
+	return mValues.has_value(pPath);
 }
 
 float game::script_get_tile_size()
@@ -406,16 +402,15 @@ void game::load_script_interface()
 	mScript.add_function("get_slot", &game::get_slot, this);
 	mScript.add_function("set_slot", &game::set_slot, this);
 	mScript.add_function("is_slot_used", &game::is_slot_used, this);
-	mScript.add_function("load_scene", &game::script_load_scene, this);
-	mScript.add_function("load_scene", &game::script_load_scene_to_door, this);
-	mScript.add_function("load_scene", &game::script_load_scene_to_position, this);
 
 	mScript.set_namespace("values");
 	mScript.add_function("get_int", &game::script_get_int_value, this);
 	mScript.add_function("get_float", &game::script_get_float_value, this);
+	mScript.add_function("get_bool", &game::script_get_bool_value, this);
 	mScript.add_function("get_string", &game::script_get_string_value, this);
 	mScript.add_function("set", &game::script_set_int_value, this);
 	mScript.add_function("set", &game::script_set_float_value, this);
+	mScript.add_function("set", &game::script_set_bool_value, this);
 	mScript.add_function("set", &game::script_set_string_value, this);
 	mScript.add_function("get_entries", &game::script_get_director_entries, this);
 	mScript.add_function("remove", &game::script_remove_value, this);
@@ -622,10 +617,10 @@ std::vector<std::string> game::compile_scene_list() const
 {
 	std::vector<std::string> ret;
 
-	const engine::encoded_path dir = (mData_directory / defs::DEFAULT_SCENES_PATH).string();
+	const engine::generic_path dir = (mData_directory / defs::DEFAULT_SCENES_PATH).string();
 	for (auto& i : engine::fs::recursive_directory_iterator(mData_directory / defs::DEFAULT_SCENES_PATH))
 	{
-		engine::encoded_path path = i.path().string();
+		engine::generic_path path = i.path().string();
 		if (path.extension() == ".xml")
 		{
 			path.snip_path(dir);
@@ -733,37 +728,21 @@ bool game::tick()
 {
 	if (!mIs_ready || !mScene.is_ready())
 		return false;
-
 	mControls.update(*get_renderer());
-
 	engine::renderer& renderer = *get_renderer();
-
-	mScene.tick(mControls);
-
 	mScript.tick();
 
-	if (mScene_load_request.is_requested())
+	auto load_scene_request = mValues.get_bool_value("_nosave/load_scene/request");
+	if (load_scene_request && *load_scene_request)
 	{
-		switch (mScene_load_request.get_player_position_type())
+		auto scene_name = mValues.get_string_value("_nosave/load_scene/scene");
+		if (scene_name && !scene_name->empty())
 		{
-		case scene_load_request::to_position::door:
-			mScene.load_scene(mScene_load_request.get_scene_name()
-				, mScene_load_request.get_player_door());
-			break;
-
-		case scene_load_request::to_position::position:
-			mScene.load_scene(mScene_load_request.get_scene_name());
-
-			// TODO: Inform scripts of the new player position
-			//mScene.get_player().set_position(mScene_load_request.get_player_position());
-			break;
-
-		case scene_load_request::to_position::none:
-			mScene.load_scene(mScene_load_request.get_scene_name());
-			break;
+			mValues.set_value("_nosave/load_scene/request", false);
+			mScene.load_scene(*scene_name);
 		}
-		mScene_load_request.complete();
 	}
+
 	return mExit;
 }
 
@@ -958,10 +937,6 @@ void background_music::script_music_set_second_volume(float pVolume)
 // save_system
 // ##########
 
-const char* int_value_type_name = "int";
-const char* float_value_type_name = "float";
-const char* string_value_type_name = "string";
-
 save_system::save_system()
 {
 	mEle_root = nullptr;
@@ -970,7 +945,6 @@ save_system::save_system()
 void save_system::clean()
 {
 	mDocument.Clear();
-	mValues.clear();
 }
 
 bool save_system::open_save(const std::string& pPath)
@@ -979,7 +953,6 @@ bool save_system::open_save(const std::string& pPath)
 	if (mDocument.LoadFile(pPath.c_str()))
 		return false;
 	mEle_root = mDocument.RootElement();
-	load_values();
 	return true;
 }
 
@@ -1009,7 +982,13 @@ std::string save_system::get_scene_name()
 	return util::safe_string(ele_scene->Attribute("name"));
 }
 
-util::optional<int> save_system::get_int_value(const engine::encoded_path & pPath) const
+void save_system::load_values(value_container & pContainer)
+{
+	auto ele_values = mEle_root->FirstChildElement("values");
+	pContainer.load_xml_values(ele_values);
+}
+
+util::optional<int> value_container::get_int_value(const engine::generic_path& pPath) const
 {
 	value* val = find_value(pPath);
 	auto cast = dynamic_cast<int_value*>(val);
@@ -1018,7 +997,7 @@ util::optional<int> save_system::get_int_value(const engine::encoded_path & pPat
 	return cast->mValue;
 }
 
-util::optional<float> save_system::get_float_value(const engine::encoded_path & pPath) const
+util::optional<float> value_container::get_float_value(const engine::generic_path& pPath) const
 {
 	value* val = find_value(pPath);
 	auto cast = dynamic_cast<float_value*>(val);
@@ -1027,7 +1006,16 @@ util::optional<float> save_system::get_float_value(const engine::encoded_path & 
 	return cast->mValue;
 }
 
-util::optional<std::string> save_system::get_string_value(const engine::encoded_path & pPath) const
+util::optional<boolean> rpg::value_container::get_bool_value(const engine::generic_path & pPath) const
+{
+	value* val = find_value(pPath);
+	auto cast = dynamic_cast<bool_value*>(val);
+	if (!cast)
+		return{};
+	return cast->mValue;
+}
+
+util::optional<std::string> value_container::get_string_value(const engine::generic_path& pPath) const
 {
 	value* val = find_value(pPath);
 	auto cast = dynamic_cast<string_value*>(val);
@@ -1049,8 +1037,7 @@ void save_system::new_save()
 
 void save_system::save(const std::string& pPath)
 {
-	assert(mEle_root != nullptr);
-	save_values();
+	assert(mEle_root);
 	mDocument.SaveFile(pPath.c_str());
 }
 
@@ -1077,8 +1064,18 @@ void save_system::save_scene(scene& pScene)
 	logger::info("Saved scene '" + pScene.get_path() + "'");
 }
 
+void save_system::save_values(const value_container & pContainer)
+{
+	auto ele_values = mDocument.NewElement("values");
+	mEle_root->InsertEndChild(ele_values);
+}
 
-void save_system::value_factory(tinyxml2::XMLElement * pEle)
+const char* int_value_type_name = "int";
+const char* float_value_type_name = "float";
+const char* bool_value_type_name = "boolean";
+const char* string_value_type_name = "string";
+
+void value_container::value_factory(tinyxml2::XMLElement * pEle)
 {
 	std::unique_ptr<value> new_value;
 
@@ -1088,6 +1085,8 @@ void save_system::value_factory(tinyxml2::XMLElement * pEle)
 		new_value.reset(new int_value);
 	else if (type == float_value_type_name)
 		new_value.reset(new float_value);
+	else if (type == bool_value_type_name)
+		new_value.reset(new bool_value);
 	else if (type == string_value_type_name)
 		new_value.reset(new string_value);
 
@@ -1101,13 +1100,10 @@ void save_system::value_factory(tinyxml2::XMLElement * pEle)
 	mValues.push_back(std::move(new_value));
 }
 
-void save_system::load_values()
+void value_container::load_xml_values(tinyxml2::XMLElement * pRoot)
 {
-	assert(mEle_root != nullptr);
-	auto ele_values = mEle_root->FirstChildElement("values");
-	if (!ele_values)
-		return;
-	auto ele_val = ele_values->FirstChildElement();
+	assert(pRoot);
+	auto ele_val = pRoot->FirstChildElement();
 	while (ele_val)
 	{
 		value_factory(ele_val);
@@ -1117,11 +1113,9 @@ void save_system::load_values()
 	logger::info("Loaded " + std::to_string(mValues.size()) + " values");
 }
 
-void save_system::save_values()
+void value_container::save_xml_values(tinyxml2::XMLDocument& pDoc, tinyxml2::XMLElement * pRoot)
 {
-	assert(mEle_root != nullptr);
-	auto ele_values = mDocument.NewElement("values");
-	mEle_root->InsertFirstChild(ele_values);
+	assert(pRoot);
 	for (auto& i : mValues)
 	{
 		if (i->mPath.empty())
@@ -1129,33 +1123,41 @@ void save_system::save_values()
 			logger::warning("There is a value with no path");
 			continue;
 		}
+
+		if (i->mPath[0] == "_nosave")
+			continue;
+
 		// Create the entry
-		auto ele_entry = mDocument.NewElement("entry");
-		ele_values->InsertEndChild(ele_entry);
+		auto ele_entry = pDoc.NewElement("entry");
+		pRoot->InsertEndChild(ele_entry);
 
 		// Add the name
-		auto ele_path = mDocument.NewElement("path");
+		auto ele_path = pDoc.NewElement("path");
 		ele_path->SetText(i->mPath.string().c_str());
 		ele_entry->InsertFirstChild(ele_path);
 
 		// Add the value data
-		auto ele_value = mDocument.NewElement("value");
+		auto ele_value = pDoc.NewElement("value");
 		ele_entry->InsertEndChild(ele_value);
-
 		i->save(ele_entry, ele_value);
 	}
 
 	logger::info("Saved " + std::to_string(mValues.size()) + " values");
 }
 
-std::vector<std::string> save_system::get_directory_entries(const engine::encoded_path & pDirectory) const
+void value_container::clear()
+{
+	mValues.clear();
+}
+
+std::vector<std::string> value_container::get_directory_entries(const engine::generic_path & pDirectory) const
 {
 	std::vector<std::string> ret;
 	for (auto& i : mValues)
 	{
 		if (i->mPath.in_directory(pDirectory))
 		{
-			const std::string entry_path = i->mPath.get_section(pDirectory.get_sub_length());
+			const std::string entry_path = i->mPath[pDirectory.get_sub_length()];
 
 			// Check if this value already exists
 			bool already_has_entry = false;
@@ -1174,7 +1176,7 @@ std::vector<std::string> save_system::get_directory_entries(const engine::encode
 	return ret;
 }
 
-bool save_system::set_value(const engine::encoded_path & pPath, int pValue)
+bool value_container::set_value(const engine::generic_path & pPath, int pValue)
 {
 	auto val = ensure_existence<int_value>(pPath);
 	if (!val)
@@ -1183,7 +1185,7 @@ bool save_system::set_value(const engine::encoded_path & pPath, int pValue)
 	return true;
 }
 
-bool save_system::set_value(const engine::encoded_path & pPath, float pValue)
+bool value_container::set_value(const engine::generic_path & pPath, float pValue)
 {
 	auto val = ensure_existence<float_value>(pPath);
 	if (!val)
@@ -1192,7 +1194,16 @@ bool save_system::set_value(const engine::encoded_path & pPath, float pValue)
 	return true;
 }
 
-bool save_system::set_value(const engine::encoded_path & pPath, const std::string & pValue)
+bool value_container::set_value(const engine::generic_path & pPath, bool pValue)
+{
+	auto val = ensure_existence<bool_value>(pPath);
+	if (!val)
+		return false;
+	val->mValue = pValue;
+	return false;
+}
+
+bool value_container::set_value(const engine::generic_path & pPath, const std::string & pValue)
 {
 	auto val = ensure_existence<string_value>(pPath);
 	if (!val)
@@ -1201,7 +1212,7 @@ bool save_system::set_value(const engine::encoded_path & pPath, const std::strin
 	return true;
 }
 
-bool save_system::remove_value(const engine::encoded_path & pPath)
+bool value_container::remove_value(const engine::generic_path & pPath)
 {
 	for (size_t i = 0; i < mValues.size(); i++)
 	{
@@ -1214,12 +1225,12 @@ bool save_system::remove_value(const engine::encoded_path & pPath)
 	return false;
 }
 
-bool save_system::has_value(const engine::encoded_path & pPath) const
+bool value_container::has_value(const engine::generic_path & pPath) const
 {
 	return find_value(pPath) != nullptr;
 }
 
-save_system::value* save_system::find_value(const engine::encoded_path& pPath) const
+value_container::value* value_container::find_value(const engine::generic_path& pPath) const
 {
 	for (auto& i : mValues)
 		if (i->mPath == pPath)
@@ -1227,35 +1238,47 @@ save_system::value* save_system::find_value(const engine::encoded_path& pPath) c
 	return nullptr;
 }
 
-void save_system::int_value::save(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value) const
+void value_container::int_value::save(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value) const
 {
 	pEle->SetAttribute("type", int_value_type_name);
 	pEle_value->SetText(mValue);
 }
 
-void save_system::int_value::load(tinyxml2::XMLElement * pEle_value)
+void value_container::int_value::load(tinyxml2::XMLElement * pEle_value)
 {
 	mValue = pEle_value->IntText();
 }
 
-void save_system::float_value::save(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value) const
+void value_container::float_value::save(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value) const
 {
 	pEle->SetAttribute("type", float_value_type_name);
 	pEle_value->SetText(mValue);
 }
 
-void save_system::float_value::load(tinyxml2::XMLElement * pEle_value)
+void value_container::float_value::load(tinyxml2::XMLElement * pEle_value)
 {
 	mValue = pEle_value->FloatText();
 }
 
-void save_system::string_value::save(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value) const
+void value_container::bool_value::save(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value) const
+{
+	pEle->SetAttribute("type", bool_value_type_name);
+	pEle_value->SetText(mValue);
+}
+
+void value_container::bool_value::load(tinyxml2::XMLElement * pEle_value)
+{
+	mValue = pEle_value->BoolText();
+}
+
+
+void value_container::string_value::save(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value) const
 {
 	pEle->SetAttribute("type", string_value_type_name);
 	pEle_value->SetText(mValue.c_str());
 }
 
-void save_system::string_value::load(tinyxml2::XMLElement * pEle_value)
+void value_container::string_value::load(tinyxml2::XMLElement * pEle_value)
 {
 	mValue = util::safe_string(pEle_value->GetText());
 }
@@ -1631,62 +1654,6 @@ bool game_settings_loader::parse_binding_attributes(tinyxml2::XMLElement * pEle,
 		++i;
 	}
 	return true;
-}
-
-scene_load_request::scene_load_request()
-{
-	mRequested = false;
-	mTo_position = to_position::none;
-}
-
-void scene_load_request::request_load(const std::string & pScene_name)
-{
-	mRequested = true;
-	mScene_name = pScene_name;
-}
-
-bool scene_load_request::is_requested() const
-{
-	return mRequested;
-}
-
-const std::string & rpg::scene_load_request::get_scene_name() const
-{
-	return mScene_name;
-}
-
-void scene_load_request::complete()
-{
-	mRequested = false;
-	mTo_position = to_position::none;
-	mScene_name.clear();
-}
-
-void scene_load_request::set_player_position(engine::fvector pPosition)
-{
-	mTo_position = to_position::position;
-	mPosition = pPosition;
-}
-
-void scene_load_request::set_player_position(const std::string & pDoor)
-{
-	mTo_position = to_position::door;
-	mDoor = pDoor;
-}
-
-scene_load_request::to_position scene_load_request::get_player_position_type() const
-{
-	return mTo_position;
-}
-
-const std::string & scene_load_request::get_player_door() const
-{
-	return mDoor;
-}
-
-engine::fvector scene_load_request::get_player_position() const
-{
-	return mPosition;
 }
 
 scenes_directory::scenes_directory()

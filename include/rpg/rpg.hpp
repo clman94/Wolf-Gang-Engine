@@ -49,45 +49,37 @@ private:
 	script_system* mScript;
 };
 
-// A basic save system.
-// Saves player position, flags, and current scene path.
-class save_system
+// Container of value types with keys that are file paths.
+// This allows organization of data like a registry.
+// All values in the "_nosave/" directory will not be saved.
+class value_container
 {
 public:
-	save_system();
+	util::optional<int> get_int_value(const engine::generic_path& pPath) const;
+	util::optional<float> get_float_value(const engine::generic_path& pPath) const;
+	util::optional<boolean> get_bool_value(const engine::generic_path& pPath) const;
+	util::optional<std::string> get_string_value(const engine::generic_path& pPath) const;
+	std::vector<std::string> get_directory_entries(const engine::generic_path& pDirectory) const;
 
-	void clean();
+	bool set_value(const engine::generic_path& pPath, int pValue);
+	bool set_value(const engine::generic_path& pPath, float pValue);
+	bool set_value(const engine::generic_path& pPath, bool pValue);
+	bool set_value(const engine::generic_path& pPath, const std::string& pValue);
+	bool remove_value(const engine::generic_path& pPath);
 
-	bool open_save(const std::string& pPath);
-	void load_flags(flag_container& pFlags);
-	std::string get_scene_path();
-	std::string get_scene_name();
+	bool has_value(const engine::generic_path& pPath) const;
 
-	util::optional<int> get_int_value(const engine::encoded_path& pPath) const;
-	util::optional<float> get_float_value(const engine::encoded_path& pPath) const;
-	util::optional<std::string> get_string_value(const engine::encoded_path& pPath) const;
-	std::vector<std::string> get_directory_entries(const engine::encoded_path& pDirectory) const;
+	void load_xml_values(tinyxml2::XMLElement * pRoot);
+	void save_xml_values(tinyxml2::XMLDocument& pDoc, tinyxml2::XMLElement * pRoot);
 
-	bool set_value(const engine::encoded_path& pPath, int pValue);
-	bool set_value(const engine::encoded_path& pPath, float pValue);
-	bool set_value(const engine::encoded_path& pPath, const std::string& pValue);
-	bool remove_value(const engine::encoded_path& pPath);
-
-	bool has_value(const engine::encoded_path& pPath) const;
-
-	void new_save();
-	void save(const std::string& pPath);
-	void save_flags(flag_container& pFlags);
-	void save_scene(scene& pScene);
+	void clear();
 
 private:
 	void value_factory(tinyxml2::XMLElement * pEle);
-	void load_values();
-	void save_values();
 
 	struct value
 	{
-		engine::encoded_path mPath;
+		engine::generic_path mPath;
 		virtual void save(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value) const = 0;
 		virtual void load(tinyxml2::XMLElement * pEle_value) = 0;
 	};
@@ -106,6 +98,13 @@ private:
 		virtual void load(tinyxml2::XMLElement * pEle_value);
 	};
 
+	struct bool_value : public value
+	{
+		bool mValue;
+		virtual void save(tinyxml2::XMLElement * pEle, tinyxml2::XMLElement * pEle_value) const;
+		virtual void load(tinyxml2::XMLElement * pEle_value);
+	};
+
 	struct string_value : public value
 	{
 		std::string mValue;
@@ -114,10 +113,10 @@ private:
 	};
 
 	std::vector<std::unique_ptr<value>> mValues;
-	value* find_value(const engine::encoded_path& pPath) const;
+	value* find_value(const engine::generic_path& pPath) const;
 
 	template<typename T>
-	T* ensure_existence(const engine::encoded_path& pPath)
+	T* ensure_existence(const engine::generic_path& pPath)
 	{
 		value* val = find_value(pPath);
 
@@ -133,46 +132,33 @@ private:
 		// Just cast and go
 		return dynamic_cast<T*>(val);
 	}
+};
 
+// A basic save system.
+// Saves player position, flags, and current scene path.
+class save_system
+{
+public:
+	save_system();
+
+	void clean();
+
+	bool open_save(const std::string& pPath);
+	void load_flags(flag_container& pFlags);
+	std::string get_scene_path();
+	std::string get_scene_name();
+	void load_values(value_container& pContainer);
+
+	void new_save();
+	void save(const std::string& pPath);
+	void save_flags(flag_container& pFlags);
+	void save_scene(scene& pScene);
+	void save_values(const value_container& pContainer);
+
+private:
 	tinyxml2::XMLDocument mDocument;
 	tinyxml2::XMLElement *mEle_root;
 };
-
-class scene_load_request
-{
-public:
-
-	enum class to_position
-	{
-		none,
-		door,
-		position
-	};
-
-	scene_load_request();
-
-	void request_load(const std::string& pScene_name);
-	bool is_requested() const;
-	const std::string& get_scene_name() const;
-	void complete();
-
-	void set_player_position(engine::fvector pPosition);
-	void set_player_position(const std::string& pDoor);
-	
-	to_position get_player_position_type() const;
-
-	const std::string& get_player_door() const;
-	engine::fvector get_player_position() const;
-
-private:
-	bool mRequested;
-	std::string mScene_name;
-
-	to_position mTo_position;
-	std::string mDoor;
-	engine::fvector mPosition;
-};
-
 
 // The main game
 class game :
@@ -216,6 +202,7 @@ private:
 	engine::resource_manager mResource_manager;
 	engine::resource_pack mPack;
 	flag_container   mFlags;
+	value_container  mValues;
 	script_system    mScript;
 	engine::controls mControls;
 
@@ -231,8 +218,6 @@ private:
 	std::shared_ptr<engine::terminal_command_group> mGroup_slot;
 #endif
 
-	scene_load_request mScene_load_request;
-
 	engine::fs::path get_slot_path(size_t pSlot);
 	void save_game();
 	void open_game();
@@ -242,15 +227,13 @@ private:
 
 	void abort_game();
 
-	void script_load_scene(const std::string& pName);
-	void script_load_scene_to_door(const std::string& pName, const std::string& pDoor);
-	void script_load_scene_to_position(const std::string& pName, engine::fvector pPosition);
-
 	int script_get_int_value(const std::string& pPath) const;
 	float script_get_float_value(const std::string& pPath) const;
+	bool script_get_bool_value(const std::string& pPath) const;
 	std::string script_get_string_value(const std::string& pPath) const;
 	bool script_set_int_value(const std::string& pPath, int pValue);
 	bool script_set_float_value(const std::string& pPath, float pValue);
+	bool script_set_bool_value(const std::string& pPath, bool pValue);
 	bool script_set_string_value(const std::string& pPath, const std::string& pValue);
 	AS_array<std::string>* script_get_director_entries(const std::string& pPath);
 	bool script_remove_value(const std::string& pPath);

@@ -6,14 +6,14 @@
 
 using namespace rpg;
 
-std::vector<engine::encoded_path> rpg::get_scene_list()
+std::vector<engine::generic_path> rpg::get_scene_list()
 {
-	std::vector<engine::encoded_path> ret;
+	std::vector<engine::generic_path> ret;
 
-	const engine::encoded_path dir = (defs::DEFAULT_DATA_PATH / defs::DEFAULT_SCENES_PATH).string();
+	const engine::generic_path dir = (defs::DEFAULT_DATA_PATH / defs::DEFAULT_SCENES_PATH).string();
 	for (auto& i : engine::fs::recursive_directory_iterator(defs::DEFAULT_DATA_PATH / defs::DEFAULT_SCENES_PATH))
 	{
-		engine::encoded_path path = i.path().string();
+		engine::generic_path path = i.path().string();
 		if (path.extension() == ".xml")
 		{
 			path.snip_path(dir);
@@ -32,7 +32,7 @@ scene_loader::scene_loader()
 	mEle_map = nullptr;
 }
 
-bool scene_loader::load(const engine::encoded_path& pDir, const std::string & pName)
+bool scene_loader::load(const engine::generic_path& pDir, const std::string & pName)
 {
 	clean();
 	
@@ -49,7 +49,7 @@ bool scene_loader::load(const engine::encoded_path& pDir, const std::string & pN
 	return load_settings();
 }
 
-bool scene_loader::load(const engine::encoded_path& pDir, const std::string & pName, engine::resource_pack& pPack)
+bool scene_loader::load(const engine::generic_path& pDir, const std::string & pName, engine::resource_pack& pPack)
 {
 	clean();
 

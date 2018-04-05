@@ -169,23 +169,6 @@ bool scene::load_scene(std::string pName)
 	return true;
 }
 
-bool scene::load_scene(std::string pName, std::string pDoor)
-{
-	if (!load_scene(pName))
-		return false;
-
-	auto door = mCollision_system.get_door_entry(pDoor);
-	if (!door)
-	{
-		logger::warning("Unable to find door '" + pDoor + "'");
-		return false;
-	}
-	// TODO: Use values to inform scripts of door offsets
-	// mPlayer.set_direction(character_entity::vector_direction(door->get_offset()));
-	// mPlayer.set_position(door->calculate_player_position());
-	return true;
-}
-
 #ifndef LOCKED_RELEASE_MODE
 bool scene::create_scene(const std::string & pName)
 {
@@ -342,11 +325,6 @@ bool scene::load_settings(const game_settings_loader& pSettings)
 	logger::info("Scene loaded");
 
 	return true;
-}
-
-void scene::tick(engine::controls &pControls)
-{
-	assert(get_renderer() != nullptr);
 }
 
 void scene::set_resource_pack(engine::resource_pack* pPack)

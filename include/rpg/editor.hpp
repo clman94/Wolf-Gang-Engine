@@ -226,7 +226,7 @@ public:
 
 private:
 	void get_textures(const std::string& pPath);
-	void setup_for_texture(const engine::encoded_path& pPath);
+	void setup_for_texture(const engine::generic_path& pPath);
 
 	enum class state
 	{
@@ -237,8 +237,8 @@ private:
 	} mState;
 
 	bool mAtlas_changed;
-	engine::encoded_path mLoaded_texture;
-	std::vector<engine::encoded_path> mTexture_list;
+	engine::generic_path mLoaded_texture;
+	std::vector<engine::generic_path> mTexture_list;
 	std::shared_ptr<engine::texture> mTexture;
 
 	engine::texture_atlas mAtlas;

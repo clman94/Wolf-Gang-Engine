@@ -16,7 +16,7 @@
 
 namespace rpg {
 
-std::vector<engine::encoded_path> get_scene_list();
+std::vector<engine::generic_path> get_scene_list();
 
 typedef std::map<std::string, std::vector<size_t>> wall_groups_t;
 
@@ -25,8 +25,8 @@ class scene_loader
 public:
 	scene_loader();
 
-	bool load(const engine::encoded_path& pDir, const std::string& pName);
-	bool load(const engine::encoded_path& pDir, const std::string& pName, engine::resource_pack& pPack);
+	bool load(const engine::generic_path& pDir, const std::string& pName);
+	bool load(const engine::generic_path& pDir, const std::string& pName, engine::resource_pack& pPack);
 	bool save();
 
 	void clean();
@@ -50,9 +50,9 @@ private:
 	void fix();
 	tinyxml2::XMLDocument      mXml_Document;
 	std::string                mScene_name;
-	engine::encoded_path       mScript_path;
-	engine::encoded_path       mTilemap_texture;
-	engine::encoded_path       mScene_path;
+	engine::generic_path       mScript_path;
+	engine::generic_path       mTilemap_texture;
+	engine::generic_path       mScene_path;
 	engine::frect              mBoundary;
 	bool                       mHas_boundary;
 	util::optional_pointer<tinyxml2::XMLElement> mEle_collisionboxes;

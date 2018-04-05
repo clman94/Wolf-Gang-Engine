@@ -42,8 +42,6 @@ namespace rpg {
 class collision_system
 {
 public:
-	std::shared_ptr<const door> get_door_entry(std::string pName);
-
 	void clear();
 
 	int load_collision_boxes(tinyxml2::XMLElement* pEle);
@@ -64,14 +62,17 @@ private:
 	bool script_get_wall_group_enabled(const std::string& pName);
 	void script_bind_group_function(const std::string& pName, AS::asIScriptFunction* func);
 	void script_call_group_functions(const std::string& pName);
+	engine::fvector script_get_door_offset(std::shared_ptr<collision_box> pBox) const;
+	engine::fvector script_get_door_absolute_offset(std::shared_ptr<collision_box> pBox) const;
+	std::shared_ptr<collision_box> script_find_door_by_name(const std::string& pName) const;
 
-	bool script_collision_is_colliding_rect(const engine::frect& pRect) const;
-	bool script_collision_is_colliding_vec(const engine::fvector& pVec) const;
+	bool script_is_colliding_rect(const engine::frect& pRect) const;
+	bool script_is_colliding_vec(const engine::fvector& pVec) const;
 
-	std::shared_ptr<collision_box> script_collision_first_collision_rect(const engine::frect& pRect) const;
-	std::shared_ptr<collision_box> script_collision_first_collision_vec(const engine::fvector& pVec) const;
-	std::shared_ptr<collision_box> script_collision_first_collision_type_rect(collision_box::type pType, const engine::frect& pRect) const;
-	std::shared_ptr<collision_box> script_collision_first_collision_type_vec(collision_box::type pType, const engine::fvector& pVec) const;
+	std::shared_ptr<collision_box> script_first_collision_rect(const engine::frect& pRect) const;
+	std::shared_ptr<collision_box> script_first_collision_vec(const engine::fvector& pVec) const;
+	std::shared_ptr<collision_box> script_first_collision_type_rect(collision_box::type pType, const engine::frect& pRect) const;
+	std::shared_ptr<collision_box> script_first_collision_type_vec(collision_box::type pType, const engine::fvector& pVec) const;
 
 	bool script_activate_triggers(const engine::frect& pRect) const;
 
@@ -80,9 +81,9 @@ private:
 	void script_set_box_position(std::shared_ptr<collision_box>& pBox, const engine::fvector& pPosition);
 	void script_set_box_size(std::shared_ptr<collision_box>& pBox, const engine::fvector& pSize);
 	std::string script_get_box_group(std::shared_ptr<collision_box>& pBox);
-	collision_box::type script_collision_get_type(std::shared_ptr<collision_box>& pBox) const;
-	std::string script_collision_get_door_dest(std::shared_ptr<collision_box>& pBox) const;
-	std::string script_collision_get_door_scene(std::shared_ptr<collision_box>& pBox) const;
+	collision_box::type script_get_type(std::shared_ptr<collision_box>& pBox) const;
+	std::string script_get_door_dest(std::shared_ptr<collision_box>& pBox) const;
+	std::string script_get_door_scene(std::shared_ptr<collision_box>& pBox) const;
 };
 
 }

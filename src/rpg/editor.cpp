@@ -227,7 +227,7 @@ bool scene_editor::open_scene(std::string pName)
 
 	assert(mGame);
 
-	engine::encoded_path path((mGame->get_source_path() / "scenes" / pName).string());
+	engine::generic_path path((mGame->get_source_path() / "scenes" / pName).string());
 	if (!mLoader.load(path.parent(), path.filename()))
 	{
 		logger::error("Unable to open scene '" + pName + "'");
@@ -1177,7 +1177,7 @@ void atlas_editor::get_textures(const std::string & pPath)
 	mTexture_list.clear();
 	for (auto& i : engine::fs::recursive_directory_iterator(pPath))
 	{
-		engine::encoded_path path = i.path().string();
+		engine::generic_path path = i.path().string();
 		if (path.extension() == ".png")
 		{
 			mTexture_list.push_back(path.parent() / path.stem());
@@ -1188,7 +1188,7 @@ void atlas_editor::get_textures(const std::string & pPath)
 	}
 }
 
-void atlas_editor::setup_for_texture(const engine::encoded_path& pPath)
+void atlas_editor::setup_for_texture(const engine::generic_path& pPath)
 {
 	mAtlas_changed = false;
 	mLoaded_texture = pPath;

@@ -3,22 +3,6 @@
 
 using namespace rpg;
 
-std::shared_ptr<const door> collision_system::get_door_entry(std::string pName)
-{
-	for (auto& i : mContainer.get_boxes())
-	{
-		if (i->get_type() == collision_box::type::door)
-		{
-			std::shared_ptr<const door> find = std::dynamic_pointer_cast<const door>(i);
-			if (find->get_name() != pName)
-				continue;
-
-			return find;
-		}
-	}
-	return{};
-}
-
 void collision_system::clear()
 {
 	mContainer.clear();
@@ -62,16 +46,19 @@ void collision_system::load_script_interface(script_system & pScript)
 	pScript.add_function("set_position", &collision_system::script_set_box_position, this);
 	pScript.add_function("set_size", &collision_system::script_set_box_size, this);
 	pScript.add_function("set_group", &collision_system::script_set_box_group, this);
-	pScript.add_function("is_colliding", &collision_system::script_collision_is_colliding_rect, this);
-	pScript.add_function("is_colliding", &collision_system::script_collision_is_colliding_vec, this);
-	pScript.add_function("first_collision", &collision_system::script_collision_first_collision_rect, this);
-	pScript.add_function("first_collision", &collision_system::script_collision_first_collision_vec, this);
-	pScript.add_function("first_collision", &collision_system::script_collision_first_collision_type_rect, this);
-	pScript.add_function("first_collision", &collision_system::script_collision_first_collision_type_vec, this);
+	pScript.add_function("is_colliding", &collision_system::script_is_colliding_rect, this);
+	pScript.add_function("is_colliding", &collision_system::script_is_colliding_vec, this);
+	pScript.add_function("first_collision", &collision_system::script_first_collision_rect, this);
+	pScript.add_function("first_collision", &collision_system::script_first_collision_vec, this);
+	pScript.add_function("first_collision", &collision_system::script_first_collision_type_rect, this);
+	pScript.add_function("first_collision", &collision_system::script_first_collision_type_vec, this);
 	pScript.add_function("get_group", &collision_system::script_get_box_group, this);
-	pScript.add_function("get_dest_door", &collision_system::script_collision_get_door_dest, this);
-	pScript.add_function("get_dest_scene", &collision_system::script_collision_get_door_scene, this);
+	pScript.add_function("get_dest_door", &collision_system::script_get_door_dest, this);
+	pScript.add_function("get_dest_scene", &collision_system::script_get_door_scene, this);
 	pScript.add_function("activate_triggers", &collision_system::script_activate_triggers, this);
+	pScript.add_function("find_door_by_name", &collision_system::script_find_door_by_name, this);
+	pScript.add_function("get_door_offset", &collision_system::script_get_door_offset, this);
+	pScript.add_function("get_door_absolute_offset", &collision_system::script_get_door_absolute_offset, this);
 	pScript.reset_namespace();
 
 	pScript.set_namespace("group");
@@ -158,32 +145,73 @@ void collision_system::script_call_group_functions(const std::string & pName)
 	group->call_function();
 }
 
-bool collision_system::script_collision_is_colliding_rect(const engine::frect & pRect) const
+engine::fvector collision_system::script_get_door_offset(std::shared_ptr<collision_box> pBox) const
+{
+	if (!pBox)
+	{
+		logger::print(*mScript, logger::level::error, "Invalid Box handle");
+		return{};
+	}
+	auto box_door = std::dynamic_pointer_cast<door>(pBox);
+	if (!box_door)
+	{
+		logger::print(*mScript, logger::level::error, "This box is not a door");
+		return{};
+	}
+	return box_door->get_offset();
+}
+
+engine::fvector collision_system::script_get_door_absolute_offset(std::shared_ptr<collision_box> pBox) const
+{
+	if (!pBox)
+	{
+		logger::print(*mScript, logger::level::error, "Invalid Box handle");
+		return{};
+	}
+	auto box_door = std::dynamic_pointer_cast<door>(pBox);
+	if (!box_door)
+	{
+		logger::print(*mScript, logger::level::error, "This box is not a door");
+		return{};
+	}
+	return box_door->calculate_player_position();
+}
+
+std::shared_ptr<collision_box> collision_system::script_find_door_by_name(const std::string & pName) const
+{
+	for (auto& i : mContainer.get_boxes())
+		if (i->get_type() == collision_box::type::door)
+			if (std::dynamic_pointer_cast<door>(i)->get_name() == pName)
+				return i;
+	return{};
+}
+
+bool collision_system::script_is_colliding_rect(const engine::frect & pRect) const
 {
 	return mContainer.first_collision(collision_box::type::wall, pRect) != nullptr;
 }
 
-bool collision_system::script_collision_is_colliding_vec(const engine::fvector & pVec) const
+bool collision_system::script_is_colliding_vec(const engine::fvector & pVec) const
 {
 	return mContainer.first_collision(collision_box::type::wall, pVec) != nullptr;
 }
 
-std::shared_ptr<collision_box> collision_system::script_collision_first_collision_rect(const engine::frect & pRect) const
+std::shared_ptr<collision_box> collision_system::script_first_collision_rect(const engine::frect & pRect) const
 {
 	return mContainer.first_collision(pRect);
 }
 
-std::shared_ptr<collision_box> collision_system::script_collision_first_collision_vec(const engine::fvector & pVec) const
+std::shared_ptr<collision_box> collision_system::script_first_collision_vec(const engine::fvector & pVec) const
 {
 	return mContainer.first_collision(pVec);
 }
 
-std::shared_ptr<collision_box> collision_system::script_collision_first_collision_type_rect(collision_box::type pType, const engine::frect & pRect) const
+std::shared_ptr<collision_box> collision_system::script_first_collision_type_rect(collision_box::type pType, const engine::frect & pRect) const
 {
 	return mContainer.first_collision(pType, pRect);
 }
 
-std::shared_ptr<collision_box> collision_system::script_collision_first_collision_type_vec(collision_box::type pType, const engine::fvector & pVec) const
+std::shared_ptr<collision_box> collision_system::script_first_collision_type_vec(collision_box::type pType, const engine::fvector & pVec) const
 {
 	return mContainer.first_collision(pType, pVec);
 }
@@ -248,7 +276,7 @@ std::string collision_system::script_get_box_group(std::shared_ptr<collision_box
 	return pBox->get_wall_group()->get_name();
 }
 
-collision_box::type collision_system::script_collision_get_type(std::shared_ptr<collision_box>& pBox) const
+collision_box::type collision_system::script_get_type(std::shared_ptr<collision_box>& pBox) const
 {
 	if (!pBox)
 	{
@@ -258,7 +286,7 @@ collision_box::type collision_system::script_collision_get_type(std::shared_ptr<
 	return pBox->get_type();
 }
 
-std::string collision_system::script_collision_get_door_dest(std::shared_ptr<collision_box>& pBox) const
+std::string collision_system::script_get_door_dest(std::shared_ptr<collision_box>& pBox) const
 {
 	if (!pBox)
 	{
@@ -274,7 +302,7 @@ std::string collision_system::script_collision_get_door_dest(std::shared_ptr<col
 	return box_door->get_destination();
 }
 
-std::string collision_system::script_collision_get_door_scene(std::shared_ptr<collision_box>& pBox) const
+std::string collision_system::script_get_door_scene(std::shared_ptr<collision_box>& pBox) const
 {
 	if (!pBox)
 	{

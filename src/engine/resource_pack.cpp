@@ -24,7 +24,7 @@ public:
 		mIs_valid = false;
 	}
 
-	bool open(const encoded_path& pPath, bool pIgnore_self = true)
+	bool open(const generic_path& pPath, bool pIgnore_self = true)
 	{
 		mIs_valid = false;
 		std::ifstream stream(pPath.string().c_str());
@@ -32,10 +32,10 @@ public:
 			return false;
 
 		// Iterate through each line and create an entry for each
-		const encoded_path parent_folder(pPath.parent());
+		const generic_path parent_folder(pPath.parent());
 		for (std::string line; std::getline(stream, line);)
 		{
-			const encoded_path path(parent_folder / line);
+			const generic_path path(parent_folder / line);
 			const std::string path_string = path.string();
 			if (!engine::fs::exists(path_string))
 			{
@@ -62,7 +62,7 @@ public:
 		return true;
 	}
 
-	bool is_file_valid(const encoded_path& pPath) const
+	bool is_file_valid(const generic_path& pPath) const
 	{
 		if (!is_valid())
 			return false;
@@ -90,7 +90,7 @@ private:
 	struct entry
 	{
 		bool is_directory;
-		encoded_path path;
+		generic_path path;
 	};
 	bool mIs_valid;
 	std::vector<entry> mFiles;
@@ -125,7 +125,7 @@ inline bool append_stream(std::ostream& pDest, std::istream& pSrc)
 
 bool engine::create_resource_pack(const std::string& pSrc_directory, const std::string& pDest)
 {
-	const encoded_path root_dir(engine::fs::absolute(pSrc_directory).string());
+	const generic_path root_dir(engine::fs::absolute(pSrc_directory).string());
 
 	packing_ignore ignore_list;
 
@@ -155,7 +155,7 @@ bool engine::create_resource_pack(const std::string& pSrc_directory, const std::
 	uint64_t current_position = 0;
 	for (auto& i : files_to_add)
 	{
-		encoded_path path(i.string());
+		generic_path path(i.string());
 		path.snip_path(root_dir);
 
 		pack_header::file_info file;
@@ -191,23 +191,23 @@ bool engine::create_resource_pack(const std::string& pSrc_directory, const std::
 	return true;
 }
 
-encoded_path::encoded_path(const char * pString)
+generic_path::generic_path(const char * pString)
 {
 	parse(pString);
 }
 
-encoded_path::encoded_path(const std::string & pString)
+generic_path::generic_path(const std::string & pString)
 {
 	parse(pString);
 }
 
-encoded_path::encoded_path(const fs::path & pPath)
+generic_path::generic_path(const fs::path & pPath)
 {
 	for (auto& i : pPath)
 		mHierarchy.push_back(i.string());
 }
 
-bool encoded_path::parse(const std::string & pString, const std::set<char>& pDelimitors)
+bool generic_path::parse(const std::string & pString, const std::set<char>& pDelimitors)
 {
 	if (pString.empty())
 		return false;
@@ -234,7 +234,7 @@ bool encoded_path::parse(const std::string & pString, const std::set<char>& pDel
 }
 
 
-bool encoded_path::in_directory(const encoded_path & pPath) const
+bool generic_path::in_directory(const generic_path & pPath) const
 {
 	if (pPath.mHierarchy.size() >= mHierarchy.size()) // too big
 		return false;
@@ -246,7 +246,7 @@ bool encoded_path::in_directory(const encoded_path & pPath) const
 	return true;
 }
 
-bool encoded_path::snip_path(const encoded_path & pPath)
+bool generic_path::snip_path(const generic_path & pPath)
 {
 	if (!in_directory(pPath))
 		return false;
@@ -255,32 +255,32 @@ bool encoded_path::snip_path(const encoded_path & pPath)
 	return true;
 }
 
-encoded_path encoded_path::subpath(size_t pOffset, size_t pCount) const
+generic_path generic_path::subpath(size_t pOffset, size_t pCount) const
 {
 	if (pOffset >= mHierarchy.size())
 		return{};
 
 	if (pOffset + pCount >= mHierarchy.size() || pCount == 0)
 	{
-		encoded_path new_path;
+		generic_path new_path;
 		new_path.mHierarchy = std::vector<std::string>(mHierarchy.begin() + pOffset, mHierarchy.end());
 		return new_path;
 	}
 
-	encoded_path new_path;
+	generic_path new_path;
 	new_path.mHierarchy 
 		= std::vector<std::string>(mHierarchy.begin() + pOffset
 			, mHierarchy.begin() + pOffset + pCount);
 	return new_path;
 }
 
-std::string encoded_path::string() const
+std::string generic_path::string() const
 {
 	return string('/'); // Supported by windows and linux, however may still not be entirely portable.
 					    // TODO: Add preprocessor directives to check for type of system
 }
 
-std::string encoded_path::string(char pSeperator) const
+std::string generic_path::string(char pSeperator) const
 {
 	if (mHierarchy.empty())
 		return{};
@@ -291,7 +291,7 @@ std::string encoded_path::string(char pSeperator) const
 	return retval;
 }
 
-std::string encoded_path::stem() const
+std::string generic_path::stem() const
 {
 	const std::string name = filename();
 	for (auto i = name.begin(); i != name.end(); i++)
@@ -300,7 +300,7 @@ std::string encoded_path::stem() const
 	return name;
 }
 
-std::string encoded_path::extension() const
+std::string generic_path::extension() const
 {
 	const std::string name = filename();
 	if (name.empty())
@@ -311,17 +311,17 @@ std::string encoded_path::extension() const
 	return{};
 }
 
-bool encoded_path::empty() const
+bool generic_path::empty() const
 {
 	return mHierarchy.empty();
 }
 
-void encoded_path::clear()
+void generic_path::clear()
 {
 	mHierarchy.clear();
 }
 
-bool encoded_path::is_same(const encoded_path & pPath) const
+bool generic_path::is_same(const generic_path & pPath) const
 {
 	if (pPath.mHierarchy.size() != mHierarchy.size())
 		return false;
@@ -333,27 +333,27 @@ bool encoded_path::is_same(const encoded_path & pPath) const
 	return true;
 }
 
-void encoded_path::append(const encoded_path & pRight)
+void generic_path::append(const generic_path & pRight)
 {
 	mHierarchy.insert(mHierarchy.end(), pRight.mHierarchy.begin(), pRight.mHierarchy.end());
 	simplify();
 }
 
-encoded_path encoded_path::parent() const
+generic_path generic_path::parent() const
 {
-	encoded_path retval(*this);
+	generic_path retval(*this);
 	retval.pop_filename();
 	return retval;
 }
 
-std::string encoded_path::filename() const
+std::string generic_path::filename() const
 {
 	if (mHierarchy.empty())
 		return{};
 	return mHierarchy.back();
 }
 
-bool encoded_path::pop_filename()
+bool generic_path::pop_filename()
 {
 	if (mHierarchy.empty())
 		return false;
@@ -361,7 +361,7 @@ bool encoded_path::pop_filename()
 	return true;
 }
 
-bool encoded_path::remove_extension()
+bool generic_path::remove_extension()
 {
 	if (mHierarchy.empty())
 		return false;
@@ -377,30 +377,33 @@ bool encoded_path::remove_extension()
 	return false;
 }
 
-std::string encoded_path::get_section(size_t pAt) const
-{
-	if (pAt >= mHierarchy.size())
-		return{};
-	return mHierarchy[pAt];
-}
-
-size_t encoded_path::get_sub_length() const
+size_t generic_path::get_sub_length() const
 {
 	return mHierarchy.size();
 }
 
-encoded_path& encoded_path::operator=(const std::string& pString)
+generic_path& generic_path::operator=(const std::string& pString)
 {
 	parse(pString);
 	return *this;
 }
 
-bool encoded_path::operator==(const encoded_path& pRight) const
+bool generic_path::operator==(const generic_path& pRight) const
 {
 	return is_same(pRight);
 }
 
-fs::path encoded_path::to_path() const
+std::string & generic_path::operator[](size_t pIndex)
+{
+	return mHierarchy[pIndex];
+}
+
+const std::string & generic_path::operator[](size_t pIndex) const
+{
+	return mHierarchy[pIndex];
+}
+
+fs::path generic_path::to_path() const
 {
 	fs::path path;
 	for (auto i : mHierarchy)
@@ -408,20 +411,40 @@ fs::path encoded_path::to_path() const
 	return path;
 }
 
-encoded_path encoded_path::operator/(const encoded_path& pRight) const
+std::vector<std::string>::iterator generic_path::begin()
 {
-	encoded_path retval(*this);
+	return mHierarchy.begin();
+}
+
+std::vector<std::string>::const_iterator generic_path::begin() const
+{
+	return mHierarchy.begin();
+}
+
+std::vector<std::string>::iterator engine::generic_path::end()
+{
+	return mHierarchy.end();
+}
+
+std::vector<std::string>::const_iterator generic_path::end() const
+{
+	return mHierarchy.end();
+}
+
+generic_path generic_path::operator/(const generic_path& pRight) const
+{
+	generic_path retval(*this);
 	retval.append(pRight);
 	return retval;
 }
 
-encoded_path& encoded_path::operator/=(const encoded_path& pRight)
+generic_path& generic_path::operator/=(const generic_path& pRight)
 {
 	append(pRight);
 	return *this;
 }
 
-int encoded_path::compare(const encoded_path & pCmp) const
+int generic_path::compare(const generic_path & pCmp) const
 {
 	if (mHierarchy.size() == pCmp.mHierarchy.size())
 	{
@@ -436,13 +459,13 @@ int encoded_path::compare(const encoded_path & pCmp) const
 		- static_cast<long long>(pCmp.mHierarchy.size()));
 }
 
-bool encoded_path::operator<(const encoded_path & pRight) const
+bool generic_path::operator<(const generic_path & pRight) const
 {
 	return compare(pRight) < 0;
 }
 
 
-void encoded_path::simplify()
+void generic_path::simplify()
 {
 	for (size_t i = 0; i < mHierarchy.size(); i++)
 	{
@@ -523,7 +546,7 @@ bool pack_header::parse(std::istream & pStream)
 	return true;
 }
 
-util::optional<pack_header::file_info> pack_header::get_file(const encoded_path & pPath) const
+util::optional<pack_header::file_info> pack_header::get_file(const generic_path & pPath) const
 {
 	for (auto& i : mFiles)
 	{
@@ -533,9 +556,9 @@ util::optional<pack_header::file_info> pack_header::get_file(const encoded_path 
 	return{};
 }
 
-std::vector<encoded_path> pack_header::recursive_directory(const encoded_path & pPath) const
+std::vector<generic_path> pack_header::recursive_directory(const generic_path & pPath) const
 {
-	std::vector<encoded_path> retval;
+	std::vector<generic_path> retval;
 	for (auto& i : mFiles)
 	{
 		if (i.path.in_directory(pPath))
@@ -559,7 +582,7 @@ pack_stream::pack_stream(const resource_pack& pPack)
 	mPack = &pPack;
 }
 
-pack_stream::pack_stream(const resource_pack & pPack, const encoded_path & pPath)
+pack_stream::pack_stream(const resource_pack & pPack, const generic_path & pPath)
 {
 	mPack = &pPack;
 	open(pPath);
@@ -581,7 +604,7 @@ void pack_stream::set_pack(const resource_pack & pPack)
 	mPack = &pPack;
 }
 
-bool pack_stream::open(const encoded_path & pPath)
+bool pack_stream::open(const generic_path & pPath)
 {
 	close();
 	mStream.open(mPack->mPath.string().c_str(), std::fstream::binary);
@@ -711,7 +734,7 @@ pack_stream & pack_stream::operator=(const pack_stream & pRight)
 }
 
 
-bool resource_pack::open(const encoded_path& pPath)
+bool resource_pack::open(const generic_path& pPath)
 {
 	std::ifstream stream(pPath.string().c_str(), std::fstream::binary);
 	if (!stream)
@@ -720,14 +743,14 @@ bool resource_pack::open(const encoded_path& pPath)
 	return mHeader.parse(stream);
 }
 
-std::vector<char> resource_pack::read_all(const encoded_path & pPath) const
+std::vector<char> resource_pack::read_all(const generic_path & pPath) const
 {
 	pack_stream stream(*this);
 	stream.open(pPath);
 	return stream.read_all();
 }
 
-std::vector<encoded_path> resource_pack::recursive_directory(const encoded_path & pPath) const
+std::vector<generic_path> resource_pack::recursive_directory(const generic_path & pPath) const
 {
 	return mHeader.recursive_directory(pPath);
 }
