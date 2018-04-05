@@ -97,30 +97,6 @@ protected:
 	rpg::tilemap_display     mTilemap_display;
 };
 
-class game_editor :
-	public editor
-{
-public:
-	game_editor();
-
-	bool save() { return 0; }
-
-	int draw(engine::renderer& pR);
-
-	rpg::game& get_game();
-
-	void load_game(const std::string& pSource);
-
-protected:
-	virtual void refresh_renderer(engine::renderer& pR);
-
-private:
-	engine::renderer mRenderer;
-	rpg::game mGame;
-
-	engine::timer mInfo_update_timer;
-};
-
 class tilemap_editor :
 	public scene_editor
 {
@@ -312,20 +288,14 @@ public:
 
 private:
 
+	// Game Settings
 	int mTile_size;
-	void draw_game_window();
 
 	bool mIs_game_view_window_focused; // Used to determine if game recieves events or not
-	void draw_game_view_window();
 
+	// Tilemap Editor
 	size_t mSelected_tile;
 	int mTile_rotation;
-	void draw_tile_window();
-
-	void draw_tilemap_layers_window();
-
-	void draw_collision_settings_window();
-
 
 	std::vector<std::string> mScene_list;
 
@@ -334,6 +304,25 @@ private:
 	sf::RenderTexture mGame_render_target;
 	rpg::game mGame;
 	engine::renderer mGame_renderer;
+
+	sf::RenderTexture mTilemap_render_target;
+	rpg::tilemap_manipulator mTilemap_manipulator;
+	rpg::tilemap_display mTilemap_display;
+	engine::renderer mTilemap_renderer;
+	std::shared_ptr<engine::texture> mTilemap_texture;
+
+	editor_settings_loader mSettings;
+
+private:
+	void draw_game_window();
+	void draw_game_view_window();
+
+	void draw_tile_window();
+	void draw_tilemap_layers_window();
+
+	void draw_collision_settings_window();
+
+	void draw_log();
 };
 
 }

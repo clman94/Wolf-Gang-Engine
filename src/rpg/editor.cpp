@@ -1298,38 +1298,6 @@ void atlas_editor::update_preview()
 
 }
 
-// ##########
-// scroll_control_node
-// ##########
-
-game_editor::game_editor()
-{
-	mGame.set_renderer(mRenderer);
-}
-
-int game_editor::draw(engine::renderer& pR)
-{
-	mRenderer.update_events();
-	mGame.tick();
-	return mRenderer.draw();
-}
-
-rpg::game& game_editor::get_game()
-{
-	return mGame;
-}
-
-void game_editor::load_game(const std::string & pSource)
-{
-	mGame.load(pSource);
-}
-
-void game_editor::refresh_renderer(engine::renderer & pR)
-{
-	assert(pR.get_window());
-	mRenderer.set_window(*pR.get_window());
-}
-
 static void replace_all_with(std::string& pVal, const std::string& pTarget, const std::string& pNew)
 {
 	if (pTarget.length() > pVal.length()
@@ -1373,30 +1341,7 @@ std::string editor_settings_loader::generate_opento_cmd(const std::string & pFil
 	return "\"" + mPath + "\" " + modified_param;
 }
 
-static void add_help_marker(const char* desc)
-{
-	ImGui::TextDisabled("(?)");
-	if (ImGui::IsItemHovered())
-	{
-		ImGui::BeginTooltip();
-		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 30.f);
-		ImGui::TextUnformatted(desc);
-		ImGui::PopTextWrapPos();
-		ImGui::EndTooltip();
-	}
-}
 
-static void quick_tooltip(const char * pString)
-{
-	if (ImGui::IsItemHovered())
-	{
-		ImGui::BeginTooltip();
-		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 30.f);
-		ImGui::TextUnformatted(pString);
-		ImGui::PopTextWrapPos();
-		ImGui::EndTooltip();
-	}
-}
 
 /* 
 ###Menu
@@ -1436,6 +1381,47 @@ Compile messages
 
 */
 
+namespace ImGui
+{
+static inline void AddBackgroundImage(sf::RenderTexture& pRender)
+{
+	ImDrawList* drawlist = ImGui::GetWindowDrawList();
+	engine::frect box(ImGui::GetCursorScreenPos()
+		, engine::fvector(ImGui::GetCursorPos())
+		+ engine::vector_cast<float, unsigned int>(pRender.getSize()));
+	drawlist->AddImage((void*)pRender.getTexture().getNativeHandle()
+		, box.get_offset(), box.get_corner()
+		, ImVec2(0, 1), ImVec2(1, 0) // Render textures store textures upsidedown so we need to flip it
+		, ImGui::GetColorU32(sf::Color::White));
+}
+}
+
+static inline void quick_tooltip(const char * pString)
+{
+	if (ImGui::IsItemHovered())
+	{
+		ImGui::BeginTooltip();
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 30.f);
+		ImGui::TextUnformatted(pString);
+		ImGui::PopTextWrapPos();
+		ImGui::EndTooltip();
+	}
+}
+
+// Resizes a render texture if the imgui window was changed size.
+// Works best if this is the first thing drawn in the window.
+// Returns true if the texture was actually changed.
+static inline bool resize_to_window(sf::RenderTexture& pRender)
+{
+	sf::Vector2u window_size = sf::Vector2u(ImGui::GetWindowContentRegionMax())
+		- sf::Vector2u(ImGui::GetCursorPos()) * (unsigned int)2;
+	if (window_size != pRender.getSize())
+	{
+		pRender.create(window_size.x, window_size.y);
+		return true;
+	}
+	return false;
+}
 
 WGE_imgui_editor::WGE_imgui_editor()
 {
@@ -1443,10 +1429,15 @@ WGE_imgui_editor::WGE_imgui_editor()
 	mGame_renderer.set_target_render(mGame_render_target);
 	mGame.set_renderer(mGame_renderer);
 
+	mTilemap_renderer.set_target_render(mTilemap_render_target);
+	mTilemap_display.set_renderer(mTilemap_renderer);
+
 	mTile_size = 32;
 
 	mSelected_tile = 1;
 	mTile_rotation = 0;
+
+	mSettings.load("./editor/settings.xml");
 }
 
 void WGE_imgui_editor::run()
@@ -1485,7 +1476,7 @@ void WGE_imgui_editor::run()
 			mGame_renderer.update_events(window);
 
 		mGame.tick();
-
+		
 		ImGui::SFML::Update(window.get_sfml_window(), delta_clock.restart());
 
 		ImGui::BeginMainMenuBar();
@@ -1564,7 +1555,15 @@ void WGE_imgui_editor::run()
 
 		if (ImGui::Begin("Tilemap Editor"))
 		{
-			ImGui::Text("TODO: Use ImGui::Image to display tilemap");
+			if (resize_to_window(mTilemap_render_target))
+				mTilemap_renderer.refresh(); // refresh the engines view
+
+			// Render the tilemap
+			mTilemap_renderer.draw();
+			mTilemap_render_target.display();
+
+			// Display on imgui window. 
+			ImGui::AddBackgroundImage(mTilemap_render_target);
 		}
 		ImGui::End();
 
@@ -1574,51 +1573,7 @@ void WGE_imgui_editor::run()
 		}
 		ImGui::End();
 
-		if (ImGui::Begin("Log"))
-		{
-			ImGui::Columns(2, 0, false);
-			ImGui::SetColumnWidth(0, 60);
-			const auto& log = logger::get_log();
-			const size_t start = log.size() >= 256 ? log.size() - 256 : 0; // Limit to 256
-			for (size_t i = start; i < log.size(); i++)
-			{
-				switch (log[i].type)
-				{
-				case logger::level::info:
-					ImGui::PushStyleColor(ImGuiCol_Text, { 1, 1, 1, 1 });
-					ImGui::TextUnformatted("Info");
-					break;
-				case logger::level::warning:
-					ImGui::PushStyleColor(ImGuiCol_Text, { 1, 1, 0.5f, 1 });
-					ImGui::TextUnformatted("Warning");
-					break;
-				case logger::level::error:
-					ImGui::PushStyleColor(ImGuiCol_Text, { 1, 0.5f, 0.5f, 1 });
-					ImGui::TextUnformatted("Error");
-					break;
-				}
-				ImGui::NextColumn();
-
-				ImGui::TextUnformatted(log[i].msg.c_str());
-
-				ImGui::PopStyleColor();
-
-				if (log[i].is_file)
-				{
-					std::string file_info = log[i].file;
-					file_info += " (" + std::to_string(log[i].row) + ", " + std::to_string(log[i].column) + ")";
-					ImGui::TextColored({ 0.7f, 0.7f, 0.7f, 1 }, file_info.c_str());
-
-					ImGui::SameLine();
-					ImGui::ArrowButton("Open file", ImGuiDir_Right);
-					quick_tooltip("Open file in editor.");
-				}
-				ImGui::NextColumn();
-			}
-			ImGui::Columns(1);
-		}
-		ImGui::End();
-
+		draw_log();
 		draw_tile_window();
 		draw_tilemap_layers_window();
 		draw_collision_settings_window();
@@ -1636,12 +1591,12 @@ void WGE_imgui_editor::draw_game_window()
 	{
 		if (ImGui::Button("Restart game", ImVec2(-0, 0)))
 		{
-			// TODO: Restart game
+			mGame.restart_game();
 		}
 
 		ImGui::PushItemWidth(-100);
 
-		static char game_name_buffer[256];
+		static char game_name_buffer[256]; // Temp
 		ImGui::InputText("Name", &game_name_buffer[0], 256);
 		quick_tooltip("Name of this game.\nThis is displayed in the window title.");
 
@@ -1659,7 +1614,7 @@ void WGE_imgui_editor::draw_game_window()
 			for (size_t i = 0; i < 5; i++)
 			{
 				ImGui::Selectable(("Flag " + std::to_string(i)).c_str());
-				if (ImGui::BeginPopupContextItem(("##" + std::to_string(i)).c_str()))
+				if (ImGui::BeginPopupContextItem(("flagcxt" + std::to_string(i)).c_str()))
 				{
 					ImGui::MenuItem("Unset");
 					ImGui::EndPopup();
@@ -1700,9 +1655,8 @@ void WGE_imgui_editor::draw_game_window()
 
 			if (ImGui::Button("Reload All"))
 			{
-				// TODO: Reload all Resources
+				mGame.get_resource_manager().reload_all();
 			}
-
 		}
 	}
 	ImGui::End();
@@ -1715,36 +1669,18 @@ void WGE_imgui_editor::draw_game_view_window()
 		// This game will not recieve events if this is false
 		mIs_game_view_window_focused = ImGui::IsWindowFocused();
 
-		// Rersize the render texture if window size changes
-		sf::Vector2u window_size = sf::Vector2u(ImGui::GetWindowContentRegionMax())
-			- sf::Vector2u(ImGui::GetCursorPos()) * (unsigned int)2;
-		if (window_size != mGame_render_target.getSize())
-		{
-			mGame_render_target.create(window_size.x, window_size.y);
-			mGame_renderer.refresh();
-		}
+		if (resize_to_window(mGame_render_target))
+			mGame_renderer.refresh(); // refresh the engines view
 
 		// Render the game
 		mGame_renderer.draw();
 		mGame_render_target.display();
 
-		ImDrawList* drawlist = ImGui::GetWindowDrawList();
+		// Display on imgui window. 
+		ImGui::AddBackgroundImage(mGame_render_target);
 
-		// Display on imgui window. The entire image has to be flipped because of
-		// the way render textures are stored.
-		engine::frect box(ImGui::GetCursorScreenPos()
-			, engine::fvector(ImGui::GetCursorPos())
-				+ engine::vector_cast<float, unsigned int>(mGame_render_target.getSize()));
-		drawlist->AddImage((void*)mGame_render_target.getTexture().getNativeHandle()
-			, box.get_offset(), box.get_corner()
-			, ImVec2(0, 1), ImVec2(1, 0), ImGui::GetColorU32(sf::Color::White));
-
-		ImGui::Text("pie is great");
-
-		/*ImGui::Image((void*)mGame_render_target.getTexture().getNativeHandle()
-			, mGame_render_target.getSize()
-			, ImVec2(0, 1), ImVec2(1, 0)
-			, sf::Color::White, sf::Color::Transparent);*/
+		// TODO: Add debug info (FPS, Delta, etc..)
+		// ImGui::Text("this is debug");
 	}
 	ImGui::End();
 }
@@ -1857,6 +1793,83 @@ void WGE_imgui_editor::draw_collision_settings_window()
 
 		}
 		ImGui::PopItemWidth();
+	}
+	ImGui::End();
+}
+
+void WGE_imgui_editor::draw_log()
+{
+	if (ImGui::Begin("Log"))
+	{
+		const auto& log = logger::get_log();
+
+		// Help keep track of changes in the log
+		static size_t last_log_size = 0;
+
+		// If the window is scrolled to the bottom, maintain it at the bottom
+		// To prevent it from locking the users mousewheel input, it will only lock the scroll
+		// when the log actually changes.
+		bool lock_scroll_at_bottom = ImGui::GetScrollY() == ImGui::GetScrollMaxY() && last_log_size != log.size();
+
+		ImGui::Columns(2, 0, false);
+		ImGui::SetColumnWidth(0, 60);
+		const size_t start = log.size() >= 256 ? log.size() - 256 : 0; // Limit to 256
+		for (size_t i = start; i < log.size(); i++)
+		{
+			switch (log[i].type)
+			{
+			case logger::level::info:
+				ImGui::PushStyleColor(ImGuiCol_Text, { 1, 1, 1, 1 });
+				ImGui::TextUnformatted("Info");
+				break;
+			case logger::level::debug:
+				ImGui::PushStyleColor(ImGuiCol_Text, { 0.5f, 1, 1, 1 }); // Cyan-ish
+				ImGui::TextUnformatted("Debug");
+				break;
+			case logger::level::warning:
+				ImGui::PushStyleColor(ImGuiCol_Text, { 1, 1, 0.5f, 1 }); // Yellow-ish
+				ImGui::TextUnformatted("Warning");
+				break;
+			case logger::level::error:
+				ImGui::PushStyleColor(ImGuiCol_Text, { 1, 0.5f, 0.5f, 1 }); // Red
+				ImGui::TextUnformatted("Error");
+				break;
+			}
+			ImGui::NextColumn();
+
+			// The actual message. Has the same color as the message type
+			ImGui::TextUnformatted(log[i].msg.c_str());
+			ImGui::PopStyleColor();
+
+			if (log[i].is_file)
+			{
+				std::string file_info = log[i].file;
+				if (log[i].row >= 0) // Line info
+				{
+					file_info += " (" + std::to_string(log[i].row);
+					if (log[i].column >= 0) // Column info
+						file_info += ", " + std::to_string(log[i].column);
+					file_info += ")";
+				}
+
+				// Filepath. Gray.
+				ImGui::TextColored({ 0.7f, 0.7f, 0.7f, 1 }, file_info.c_str());
+
+				ImGui::SameLine();
+				if (ImGui::ArrowButton(("logfileopen" + std::to_string(i)).c_str(), ImGuiDir_Right))
+				{
+					std::string cmd = mSettings.generate_open_cmd(log[i].file);
+					std::system(("START " + cmd).c_str());
+				}
+				quick_tooltip("Open file in editor.");
+			}
+			ImGui::NextColumn();
+		}
+		ImGui::Columns(1);
+
+		if (lock_scroll_at_bottom)
+			ImGui::SetScrollHere();
+		last_log_size = log.size();
 	}
 	ImGui::End();
 }
