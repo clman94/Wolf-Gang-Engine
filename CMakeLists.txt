@@ -191,6 +191,13 @@ if(SFML_FOUND)
 
 endif()
 
+if (UNIX)
+	set(Boost_USE_STATIC_LIBS ON)
+	find_package(Boost 1.40 COMPONENTS system filesystem REQUIRED)
+	include_directories(${Boost_INCLUDE_DIR})
+	target_link_libraries(WolfGangEngine ${Boost_LIBRARIES})
+endif ()
+
 # Use namespaces in AngelScript
 add_definitions(-DAS_USE_NAMESPACE)
 
