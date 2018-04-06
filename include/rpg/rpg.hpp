@@ -206,7 +206,7 @@ private:
 	script_system    mScript;
 	engine::controls mControls;
 
-	size_t           mSlot;
+	unsigned int           mSlot;
 	save_system      mSave_system;
 
 	engine::fs::path mData_directory;
@@ -218,12 +218,12 @@ private:
 	std::shared_ptr<engine::terminal_command_group> mGroup_slot;
 #endif
 
-	engine::fs::path get_slot_path(size_t pSlot);
+	engine::fs::path get_slot_path(unsigned int pSlot);
 	void save_game();
 	void open_game();
-	bool is_slot_used(size_t pSlot);
-	void set_slot(size_t pSlot);
-	size_t get_slot();
+	bool is_slot_used(unsigned int pSlot);
+	void set_slot(unsigned int pSlot);
+	unsigned int get_slot();
 
 	void abort_game();
 

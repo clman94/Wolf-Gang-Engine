@@ -234,7 +234,7 @@ game::~game()
 	mScene.clean();
 }
 
-engine::fs::path game::get_slot_path(size_t pSlot)
+engine::fs::path game::get_slot_path(unsigned int pSlot)
 {
 	return defs::DEFAULT_SAVES_PATH / ("slot_" + std::to_string(pSlot) + ".xml");
 }
@@ -281,19 +281,19 @@ void game::open_game()
 	logger::info("Game opened from '" + path + "'");
 }
 
-bool game::is_slot_used(size_t pSlot)
+bool game::is_slot_used(unsigned int pSlot)
 {
 	const std::string path = get_slot_path(pSlot).string();
 	std::ifstream stream(path.c_str());
 	return stream.good();
 }
 
-void game::set_slot(size_t pSlot)
+void game::set_slot(unsigned int pSlot)
 {
 	mSlot = pSlot;
 }
 
-size_t game::get_slot()
+unsigned int game::get_slot()
 {
 	return mSlot;
 }
