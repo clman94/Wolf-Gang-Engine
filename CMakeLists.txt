@@ -43,6 +43,11 @@ file(GLOB_RECURSE ENGINE_RPG_SOURCES "${CMAKE_SOURCE_DIR}/src/rpg/*.cpp")
 file(GLOB_RECURSE ENGINE_ENGINE_SOURCES "${CMAKE_SOURCE_DIR}/src/engine/*.cpp")
 set(ENGINE_SOURCES ${ENGINE_RPG_SOURCES} ${ENGINE_ENGINE_SOURCES})
 
+set(EDITOR_SOURCES
+	"${CMAKE_SOURCE_DIR}/src/editor/file_opener.cpp")
+set(EDITOR_HEADERS
+	"${CMAKE_SOURCE_DIR}/include/editor/file_opener.hpp")
+
 file(GLOB_RECURSE ENGINE_HEADERS "${CMAKE_SOURCE_DIR}/include/*.hpp")
 
 # Box2d sources and Headers
@@ -64,6 +69,7 @@ set(IMGUI_HEADERS
 	"${CMAKE_SOURCE_DIR}/3rdparty/imgui-sfml/imconfig-SFML.h"
 	"${CMAKE_SOURCE_DIR}/include/editor/imgui-config.hpp"
 	)
+
 
 # Angelscript Addon sources and Headers
 set(AS_ADDONS "${CMAKE_SOURCE_DIR}/3rdparty/AngelScript/sdk/add_on")
@@ -103,6 +109,9 @@ source_group("Angelscript Addons Headers" FILES ${AS_ADDONS_HEADERS})
 source_group("ImGui Sources" FILES ${IMGUI_SOURCES})
 source_group("ImGui Headers" FILES ${IMGUI_HEADERS})
 
+source_group("Editor Sources" FILES ${EDITOR_SOURCES})
+source_group("Editor Headers" FILES ${EDITOR_HEADERS})
+
 source_group("Main Sources" FILES ${MAIN_SOURCES} ${LOCKED_MAIN_SOURCES} ${TEST_SOURCES})
 
 # TODO: Add subdirectories instead
@@ -120,9 +129,9 @@ set(WGE_ALL_SOURCES
 	)
 
 # Setup executables with appropriate sources and headers
-add_executable(WolfGangEngine        ${MAIN_SOURCES}        ${WGE_ALL_SOURCES})
+add_executable(WolfGangEngine        ${MAIN_SOURCES}        ${WGE_ALL_SOURCES} ${EDITOR_SOURCES} ${EDITOR_HEADERS})
 add_executable(WolfGangEngine_Locked ${LOCKED_MAIN_SOURCES} ${WGE_ALL_SOURCES})
-add_executable(WolfGangEngine_Tests  ${TEST_SOURCES}        ${WGE_ALL_SOURCES})
+add_executable(WolfGangEngine_Tests  ${TEST_SOURCES}        ${WGE_ALL_SOURCES} ${EDITOR_SOURCES} ${EDITOR_HEADERS})
 
 # Set the locked release mode for the WolfGangEngine_Locked target
 target_compile_definitions(WolfGangEngine_Locked PRIVATE LOCKED_RELEASE_MODE=1)

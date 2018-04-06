@@ -5,8 +5,11 @@ using namespace editors;
 #include <vector>
 #include <memory>
 #include <cassert>
+#include <algorithm>
 
 #include <engine/logger.hpp>
+
+#include <editor/file_opener.hpp>
 
 inline engine::fvector read_args_vector(const engine::terminal_arglist& pArgs, float pDefx = 0, float pDefy = 0, size_t pIndex = 0)
 {
@@ -1477,6 +1480,7 @@ void WGE_imgui_editor::run()
 	mGame.load("./data");
 	mGame_renderer.refresh();
 
+
 	sf::Clock delta_clock;
 	while (window.is_open())
 	{
@@ -1519,8 +1523,7 @@ void WGE_imgui_editor::run()
 				// TODO: Collapse all windows and arrange them neat
 				//       (don't know exactly how, yet..)
 			}
-			if (ImGui::MenuItem("Do Thing"))
-				ImGui::OpenPopup("testpopup");
+			ImGui::MenuItem("Do Thing");
 			ImGui::EndMenu();
 		}
 		ImGui::EndMainMenuBar();
@@ -1612,6 +1615,16 @@ void WGE_imgui_editor::draw_game_window()
 		if (ImGui::Button("Restart game", ImVec2(-0, 0)))
 		{
 			mGame.restart_game();
+		}
+
+		if (ImGui::Button("Open game", ImVec2(-0, 0)))
+		{
+			ImGui::OpenPopup("Open Game");
+		}
+		static engine::fs::path game_path;
+		if (ImGui::FileOpenerPopup("Open Game", &game_path, true, true))
+		{
+			logger::info("You opened a file '" + game_path.string() + "'");
 		}
 
 		ImGui::PushItemWidth(-100);

@@ -206,7 +206,7 @@ private:
 	script_system    mScript;
 	engine::controls mControls;
 
-	unsigned int           mSlot;
+	unsigned int     mSlot;
 	save_system      mSave_system;
 
 	engine::fs::path mData_directory;

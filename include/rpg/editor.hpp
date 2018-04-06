@@ -312,7 +312,6 @@ private:
 	std::shared_ptr<engine::texture> mTilemap_texture;
 
 	editor_settings_loader mSettings;
-
 private:
 	void draw_game_window();
 	void draw_game_view_window();
