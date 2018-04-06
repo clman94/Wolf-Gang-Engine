@@ -1387,13 +1387,26 @@ static inline void AddBackgroundImage(sf::RenderTexture& pRender)
 {
 	ImDrawList* drawlist = ImGui::GetWindowDrawList();
 	engine::frect box(ImGui::GetCursorScreenPos()
-		, engine::fvector(ImGui::GetCursorPos())
+		, (engine::fvector)(ImGui::GetCursorPos())
 		+ engine::vector_cast<float, unsigned int>(pRender.getSize()));
 	drawlist->AddImage((void*)pRender.getTexture().getNativeHandle()
 		, box.get_offset(), box.get_corner()
 		, ImVec2(0, 1), ImVec2(1, 0) // Render textures store textures upsidedown so we need to flip it
 		, ImGui::GetColorU32(sf::Color::White));
 }
+
+static inline void VSplitter(const char* str_id, float width, float* val)
+{
+	assert(val);
+	ImVec2 last_item_min = ImGui::GetItemRectMin();
+	ImVec2 last_item_max = ImGui::GetItemRectMax();
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+	ImGui::InvisibleButton(str_id, ImVec2(width, last_item_max.y - last_item_min.y));
+	if (ImGui::IsItemActive())
+		*val += ImGui::GetIO().MouseDelta.x;
+	ImGui::PopStyleVar();
+}
+
 }
 
 static inline void quick_tooltip(const char * pString)
@@ -1515,6 +1528,8 @@ void WGE_imgui_editor::run()
 
 		if (ImGui::Begin("Scene"))
 		{
+			static float w = 200;
+
 			ImGui::BeginGroup();
 			ImGui::Text("Scene List");
 			ImGui::SameLine();
@@ -1522,7 +1537,7 @@ void WGE_imgui_editor::run()
 			{
 				mScene_list = mGame.compile_scene_list();
 			}
-			ImGui::BeginChild("Scenelist", ImVec2(200, 0), true);
+			ImGui::BeginChild("Scenelist", ImVec2(w, 0), true);
 			for (auto& i : mScene_list)
 			{
 				if (ImGui::Selectable(i.c_str(), i == mGame.get_scene().get_path()))
@@ -1532,6 +1547,9 @@ void WGE_imgui_editor::run()
 			}
 			ImGui::EndChild();
 			ImGui::EndGroup();
+
+			//ImGui::SameLine();
+			//ImGui::VSplitter("vsplitter", 8, &w);
 
 			ImGui::SameLine();
 			ImGui::BeginGroup();
