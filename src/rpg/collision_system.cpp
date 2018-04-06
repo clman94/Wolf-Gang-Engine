@@ -82,7 +82,7 @@ void collision_system::register_collision_type(script_system& pScript)
 
 	pScript.add_object<collision_box::ptr>("box");
 	pScript.add_method<collision_box::ptr, collision_box::ptr&, const collision_box::ptr&>("box", operator_method::assign, &collision_box::ptr::operator=);
-	pScript.add_method<collision_box::ptr, bool>("box", operator_method::impl_conv, &collision_box::ptr::operator bool);
+	pScript.add_method("box", operator_method::impl_conv, &collision_box::ptr::operator bool);
 
 	pScript.end_namespace();
 }

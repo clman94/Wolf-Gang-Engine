@@ -1387,8 +1387,7 @@ static inline void AddBackgroundImage(sf::RenderTexture& pRender)
 {
 	ImDrawList* drawlist = ImGui::GetWindowDrawList();
 	engine::frect box(ImGui::GetCursorScreenPos()
-		, (engine::fvector)(ImGui::GetCursorPos())
-		+ engine::vector_cast<float, unsigned int>(pRender.getSize()));
+		, engine::vector_cast<float, unsigned int>(pRender.getSize()) + ImGui::GetCursorPos());
 	drawlist->AddImage((void*)pRender.getTexture().getNativeHandle()
 		, box.get_offset(), box.get_corner()
 		, ImVec2(0, 1), ImVec2(1, 0) // Render textures store textures upsidedown so we need to flip it
