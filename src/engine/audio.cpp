@@ -44,7 +44,7 @@ void sound_spawner::detach_mixer()
 	mMixer = nullptr;
 }
 
-inline sound::sound()
+sound::sound()
 {
 	mReady = false;
 	mMixer = nullptr;

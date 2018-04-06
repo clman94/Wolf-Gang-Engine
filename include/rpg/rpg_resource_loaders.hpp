@@ -36,7 +36,6 @@ class script_loader :
 public:
 	virtual bool load(engine::resource_manager& pResource_manager, const std::string& mData_filepath);
 	virtual bool load_pack(engine::resource_manager& pResource_manager, engine::resource_pack& pPack);
-
 };
 
 }

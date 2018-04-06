@@ -204,3 +204,8 @@ bool script_loader::load(engine::resource_manager & pResource_manager, const std
 {
 	return false;
 }
+
+bool script_loader::load_pack(engine::resource_manager & pResource_manager, engine::resource_pack & pPack)
+{
+	return false;
+}
