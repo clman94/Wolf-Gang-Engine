@@ -1009,7 +1009,7 @@ util::optional<float> value_container::get_float_value(const engine::generic_pat
 	return cast->mValue;
 }
 
-util::optional<boolean> rpg::value_container::get_bool_value(const engine::generic_path & pPath) const
+util::optional<bool> rpg::value_container::get_bool_value(const engine::generic_path & pPath) const
 {
 	value* val = find_value(pPath);
 	auto cast = dynamic_cast<bool_value*>(val);

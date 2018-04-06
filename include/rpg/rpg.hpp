@@ -57,7 +57,7 @@ class value_container
 public:
 	util::optional<int> get_int_value(const engine::generic_path& pPath) const;
 	util::optional<float> get_float_value(const engine::generic_path& pPath) const;
-	util::optional<boolean> get_bool_value(const engine::generic_path& pPath) const;
+	util::optional<bool> get_bool_value(const engine::generic_path& pPath) const;
 	util::optional<std::string> get_string_value(const engine::generic_path& pPath) const;
 	std::vector<std::string> get_directory_entries(const engine::generic_path& pDirectory) const;
 
