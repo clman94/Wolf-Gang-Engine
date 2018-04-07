@@ -130,7 +130,7 @@ struct rect
 
 	inline operator sf::Rect<T>() const
 	{
-		return{ x, y, h, w };
+		return{ x, y, w, h };
 	}
 
 #endif
