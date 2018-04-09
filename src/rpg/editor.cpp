@@ -1616,7 +1616,7 @@ void WGE_imgui_editor::run()
 				engine::fvector new_size = engine::vector_cast<float, unsigned int>(mTilemap_render_target.getSize());
 				mTilemap_renderer.set_target_size(new_size);
 				mTilemap_renderer.refresh(); // refresh the engines view
-				mTilemap_center_node.set_position(new_size / (mTile_size * 2));
+				mTilemap_center_node.set_position(new_size / (mTile_size * 2)); // Center the center node
 			}
 
 
@@ -1633,14 +1633,14 @@ void WGE_imgui_editor::run()
 			// Handle mouse interaction with tilemap window
 			if (ImGui::IsItemHovered())
 			{
-				if (ImGui::IsMouseDown(2))
+				if (ImGui::IsMouseDown(2)) // Middle mouse button is held to pan
 				{
 					mTilemap_display.set_position(mTilemap_display.get_position()
 						+ (engine::fvector(ImGui::GetIO().MouseDelta) / mTile_size) // Delta has to be scaled to ingame coords
 						/ mTilemap_display.get_absolute_scale()); // Then scaled again to fit the zoom
 				}
 
-				if (ImGui::GetIO().MouseWheel != 0)
+				if (ImGui::GetIO().MouseWheel != 0) // Middle mouse wheel zooms
 				{
 					mTilemap_scale += ImGui::GetIO().MouseWheel;
 					mTilemap_scale = util::clamp<float>(mTilemap_scale, -2, 5);
@@ -1790,6 +1790,7 @@ void WGE_imgui_editor::draw_tile_group()
 	ImGui::BeginChild("Tile Preview", ImVec2(100, 100), true);
 	if (mTilemap_texture && mCurrent_tile_atlas)
 	{
+		// Scale the preview image to fit the window while maintaining aspect ratio
 		engine::fvector preview_size = engine::fvector(100, 100)
 			- engine::fvector(ImGui::GetStyle().WindowPadding)*2;
 		engine::fvector size = mCurrent_tile_atlas->get_root_frame().get_size();
@@ -1821,7 +1822,7 @@ void WGE_imgui_editor::draw_tile_group()
 	{
 		for (auto i : mTilemap_texture->get_texture_atlas().get_all())
 		{
-			// Possibly add a preview for each tile in the list
+			// IDEA: Possibly add a preview for each tile in the list
 			if (ImGui::Selectable(i->get_name().c_str(), mCurrent_tile_atlas == i))
 				mCurrent_tile_atlas = i;
 		}
@@ -1844,7 +1845,7 @@ void WGE_imgui_editor::draw_tilemap_layers_group()
 	const size_t layer_count = mTilemap_manipulator.get_layer_count();
 	for (size_t i = 0; i < layer_count; i++)
 	{
-		size_t layer_index = layer_count - i - 1; // top layer is at the top of the list;
+		size_t layer_index = layer_count - i - 1; // Revserse so the top layer is at the top of the list
 		rpg::tilemap_layer& layer = mTilemap_manipulator.get_layer(layer_index);
 
 		bool is_visible = mTilemap_display.is_layer_visible(layer_index);
