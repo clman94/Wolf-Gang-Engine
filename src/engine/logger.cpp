@@ -97,6 +97,11 @@ void info(const std::string& pMessage)
 	print(level::info, pMessage);
 }
 
+void debug(const std::string & pMessage)
+{
+	print(level::debug, pMessage);
+}
+
 const std::vector<message>& get_log()
 {
 	return mLog;

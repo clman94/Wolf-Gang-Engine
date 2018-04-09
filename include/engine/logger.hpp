@@ -37,6 +37,7 @@ message print(const std::string& pFile, int pLine, int pCol, level pType, const 
 void error(const std::string& pMessage);   // Shortcut for print(level::XXX, pMessage);
 void warning(const std::string& pMessage); // "
 void info(const std::string& pMessage);    // "
+void debug(const std::string& pMessage);   // "
 
 const std::vector<message>& get_log();
 const std::string& get_log_string();
