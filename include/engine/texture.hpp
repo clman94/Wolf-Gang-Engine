@@ -70,11 +70,12 @@ private:
 	std::vector<subtexture::ptr> mAtlas;
 };
 
+const std::string texture_restype = "texture";
+
 class texture :
 	public resource
 {
 public:
-	const std::string type = "texture";
 
 	void set_texture_source(const std::string& pFilepath);
 	void set_atlas_source(const std::string& pFilepath);
@@ -84,7 +85,7 @@ public:
 
 	const std::string& get_type() const override
 	{
-		return type;
+		return texture_restype;
 	}
 
 	std::shared_ptr<subtexture> get_entry(const std::string& pName) const;
@@ -93,13 +94,13 @@ public:
 
 	fvector get_size() const;
 
-#ifdef ENGINE_INTERNAL
-	sf::Texture& sfml_get_texture()
+	texture_atlas& get_texture_atlas();
+
+	sf::Texture& get_sfml_texture()
 	{
 		load(); // Ensure load
 		return *mSFML_texture;
 	}
-#endif
 
 private:
 	std::string mTexture_source;

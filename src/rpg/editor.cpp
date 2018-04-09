@@ -8,6 +8,7 @@ using namespace editors;
 #include <algorithm>
 
 #include <engine/logger.hpp>
+#include <engine/utility.hpp>
 
 #include <editor/file_opener.hpp>
 
@@ -1453,6 +1454,9 @@ WGE_imgui_editor::WGE_imgui_editor()
 	mTile_rotation = 0;
 
 	mSettings.load("./editor/settings.xml");
+
+	mTilemap_display.set_parent(mTilemap_center_node);
+	mTilemap_scale = 0;
 }
 
 void WGE_imgui_editor::run()
@@ -1492,6 +1496,20 @@ void WGE_imgui_editor::run()
 			mGame_renderer.update_events(window);
 
 		mGame.tick();
+
+		// Has the current scene changed?
+		if (mScene_loader.get_name() != mGame.get_scene().get_name())
+		{
+			if (mScene_loader.load(mGame.get_source_path()/"scenes", mGame.get_scene().get_name()))
+			{
+				mTilemap_texture = mGame.get_resource_manager().get_resource<engine::texture>("texture"
+					, mScene_loader.get_tilemap_texture());
+				mTilemap_manipulator.load_tilemap_xml(mScene_loader.get_tilemap());
+				mTilemap_display.set_texture(mTilemap_texture);
+				mTilemap_display.set_unit(mTile_size);
+				mTilemap_display.update(mTilemap_manipulator);
+			}
+		}
 		
 		ImGui::SFML::Update(window.get_sfml_window(), delta_clock.restart());
 
@@ -1565,8 +1583,11 @@ void WGE_imgui_editor::run()
 			static bool has_boundary = false; // Temp
 			ImGui::Checkbox("Has boundary", &has_boundary);
 
+			engine::frect boundary = mScene_loader.get_boundary();
 			static float boundary_values[4] = {0, 0, 0, 0}; // temp
-			ImGui::DragFloat4("Boundary", boundary_values);
+			if (ImGui::DragFloat4("Boundary", boundary_values))
+			{
+			}
 			ImGui::Button("Open Script in Editor");
 			ImGui::PopItemWidth();
 			ImGui::EndGroup();
@@ -1578,15 +1599,51 @@ void WGE_imgui_editor::run()
 
 		if (ImGui::Begin("Tilemap Editor"))
 		{
+			ImGui::BeginChild("tilemapeditorwindow", ImVec2(-300, -1));
 			if (resize_to_window(mTilemap_render_target))
+			{
+				engine::fvector new_size = engine::vector_cast<float, unsigned int>(mTilemap_render_target.getSize());
+				mTilemap_renderer.set_target_size(new_size);
 				mTilemap_renderer.refresh(); // refresh the engines view
+				mTilemap_center_node.set_position(new_size / (mTile_size * 2));
+			}
+
 
 			// Render the tilemap
 			mTilemap_renderer.draw();
 			mTilemap_render_target.display();
 
-			// Display on imgui window. 
+			// Display on window. 
 			ImGui::AddBackgroundImage(mTilemap_render_target);
+
+			ImGui::InvisibleButton("tilemaphandler", ImVec2(-1, -1));
+
+
+			// Handle mouse interaction with tilemap window
+			if (ImGui::IsItemHovered())
+			{
+				if (ImGui::IsMouseDown(2))
+				{
+					mTilemap_display.set_position(mTilemap_display.get_position()
+						+ (engine::fvector(ImGui::GetIO().MouseDelta) / mTile_size) // Delta has to be scaled to ingame coords
+						/ mTilemap_display.get_absolute_scale()); // Then scaled again to fit the zoom
+				}
+
+				if (ImGui::GetIO().MouseWheel != 0)
+				{
+					mTilemap_scale += ImGui::GetIO().MouseWheel;
+					mTilemap_scale = util::clamp<float>(mTilemap_scale, -2, 5);
+					logger::debug("Tilemap Editor: Changed zoom to [" + std::to_string(mTilemap_scale) + "]");
+					mTilemap_center_node.set_scale(engine::fvector(1, 1)*std::pow(2, mTilemap_scale));
+				}
+			}
+			ImGui::EndChild();
+
+			ImGui::SameLine();
+			ImGui::BeginGroup();
+			draw_tile_group();
+			draw_tilemap_layers_group();
+			ImGui::EndGroup();
 		}
 		ImGui::End();
 
@@ -1597,8 +1654,7 @@ void WGE_imgui_editor::run()
 		ImGui::End();
 
 		draw_log();
-		draw_tile_window();
-		draw_tilemap_layers_window();
+		draw_tilemap_layers_group();
 		draw_collision_settings_window();
 
 		window.clear();
@@ -1718,68 +1774,98 @@ void WGE_imgui_editor::draw_game_view_window()
 	ImGui::End();
 }
 
-void WGE_imgui_editor::draw_tile_window()
+void WGE_imgui_editor::draw_tile_group()
 {
-	if (ImGui::Begin("Tile"))
+	ImGui::BeginChild("Tilesettingsgroup", ImVec2(0, -300));
+	ImGui::BeginChild("Tile Preview", ImVec2(100, 100), true);
+	if (mTilemap_texture && mCurrent_tile_atlas)
 	{
-		ImGui::BeginChild("Tile Preview", ImVec2(100, 100), true);
-		ImGui::Text("Tile Preview");
-		// TODO: Display image scaled to fit this window
-		ImGui::EndChild();
-		quick_tooltip("Preview of tile to place.");
+		engine::fvector preview_size = engine::fvector(100, 100)
+			- engine::fvector(ImGui::GetStyle().WindowPadding)*2;
+		engine::fvector size = mCurrent_tile_atlas->get_root_frame().get_size();
+		engine::fvector scaled_size =
+		{
+			std::min(size.x*(preview_size.y / size.y), preview_size.x),
+			std::min(size.y*(preview_size.x / size.x), preview_size.y)
+		};
+		ImGui::SetCursorPos(preview_size / 2 - scaled_size / 2 + ImGui::GetStyle().WindowPadding);
+		ImGui::Image(mTilemap_texture->get_sfml_texture(), scaled_size, mCurrent_tile_atlas->get_root_frame());
+	}
+	else
+		ImGui::TextUnformatted("No preview");
+	ImGui::EndChild();
+	quick_tooltip("Preview of tile to place.");
+	//TODO: Add option to change background color
 
-		ImGui::SameLine();
-		ImGui::BeginGroup();
-		ImGui::PushItemWidth(-100);
+	ImGui::SameLine();
+	ImGui::BeginGroup();
+	ImGui::PushItemWidth(-100);
 
-		ImGui::DragInt("Rotation", &mTile_rotation, 1.f, 0, 3, "%d x90");
+	ImGui::DragInt("Rotation", &mTile_rotation, 1.f, 0, 3, "%d x90");
 
-		ImGui::PopItemWidth();
-		ImGui::EndGroup();
+	ImGui::PopItemWidth();
+	ImGui::EndGroup();
 
-		ImGui::BeginChild("Tile List", ImVec2(0, 0), true);
-		for (size_t i = 0; i < 100; i++)
+	ImGui::BeginChild("Tile List", ImVec2(0, 0), true);
+	if (mTilemap_texture)
+	{
+		for (auto i : mTilemap_texture->get_texture_atlas().get_all())
 		{
 			// Possibly add a preview for each tile in the list
-			if (ImGui::Selectable(("tile " + std::to_string(i)).c_str(), mSelected_tile == i))
-				mSelected_tile = i;
+			if (ImGui::Selectable(i->get_name().c_str(), mCurrent_tile_atlas == i))
+				mCurrent_tile_atlas = i;
 		}
-		ImGui::EndChild();
 	}
-	ImGui::End();
+	else
+		ImGui::TextUnformatted("No texture");
+	ImGui::EndChild();
+	ImGui::EndChild();
 }
 
-void WGE_imgui_editor::draw_tilemap_layers_window()
+void WGE_imgui_editor::draw_tilemap_layers_group()
 {
-	if (ImGui::Begin("Tilemap Layers"))
+	ImGui::BeginGroup();
+	ImGui::TextUnformatted("Layers");
+	ImGui::Separator();
+	ImGui::BeginChild("Layer List", ImVec2(0, -25));
+	static bool layer_visible = false;
+	ImGui::Columns(2, 0, false);
+	ImGui::SetColumnWidth(0, 25);
+	const size_t layer_count = mTilemap_manipulator.get_layer_count();
+	for (size_t i = 0; i < layer_count; i++)
 	{
-		ImGui::BeginChild("Layer List", ImVec2(0, -25));
-		static bool layer_visible = false;
-		ImGui::Columns(2, 0, false);
-		ImGui::SetColumnWidth(0, 25);
-		for (size_t i = 0; i < 5; i++)
+		rpg::tilemap_layer& layer = mTilemap_manipulator.get_layer(layer_count - i - 1); // top layer is at the top of the list
+
+		bool is_visible = mTilemap_display.is_layer_visible(i);
+		if (ImGui::Checkbox(("##Tilemaplayer" + std::to_string(i)).c_str(), &is_visible))
+			mTilemap_display.set_layer_visible(i, is_visible);
+		ImGui::NextColumn();
+
+		std::string popup_name = "Rename layer \"" + layer.get_name() + "\"";
+		if (ImGui::Selectable(layer.get_name().c_str(), false))
+			ImGui::OpenPopup(popup_name.c_str());
+
+		if (ImGui::BeginPopup(popup_name.c_str()))
 		{
-			ImGui::Checkbox("##Tilemap layer Visible", &layer_visible);
-			ImGui::NextColumn();
-
-			ImGui::Selectable(("Layer " + std::to_string(i)).c_str(), false);
-			ImGui::NextColumn();
+			ImGui::TextUnformatted("TODO: Implement layer renaming");
+			ImGui::EndPopup();
 		}
-		ImGui::Columns(1);
-		ImGui::EndChild();
-		ImGui::Separator();
-
-		ImGui::Button("New");
-
-		ImGui::SameLine();
-		ImGui::Button("Delete");
-
-		ImGui::SameLine();
-		ImGui::ArrowButton("Move Up", ImGuiDir_Up);
-		ImGui::SameLine();
-		ImGui::ArrowButton("Move Down", ImGuiDir_Down);
+		ImGui::NextColumn();
 	}
-	ImGui::End();
+	ImGui::Columns(1);
+	ImGui::EndChild();
+	ImGui::Separator();
+
+	ImGui::Button("New");
+
+	ImGui::SameLine();
+	ImGui::Button("Delete");
+
+	ImGui::SameLine();
+	ImGui::ArrowButton("Move Up", ImGuiDir_Up);
+	ImGui::SameLine();
+	ImGui::ArrowButton("Move Down", ImGuiDir_Down);
+	ImGui::EndGroup();
 }
 
 void WGE_imgui_editor::draw_collision_settings_window()

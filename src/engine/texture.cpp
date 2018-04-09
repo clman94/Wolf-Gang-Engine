@@ -312,3 +312,8 @@ fvector texture::get_size() const
 {
 	return{ static_cast<float>(mSFML_texture->getSize().x), static_cast<float>(mSFML_texture->getSize().y) };
 }
+
+texture_atlas & engine::texture::get_texture_atlas()
+{
+	return mAtlas;
+}

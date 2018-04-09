@@ -30,8 +30,13 @@ public:
 	bool save();
 
 	void clean();
+
+	void set_has_boundary(bool pHas_it);
 	bool has_boundary() const;
+
+	void set_boundary(const engine::frect& pRect);
 	const engine::frect& get_boundary() const;
+
 	const std::string& get_name();
 	std::string get_script_path() const;
 	std::string get_tilemap_texture() const;

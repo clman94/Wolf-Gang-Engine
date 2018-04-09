@@ -72,6 +72,8 @@ bool scene_loader::load(const engine::generic_path& pDir, const std::string & pN
 
 bool scene_loader::save()
 {
+	auto ele_root = mXml_Document.RootElement();
+
 	return !mXml_Document.SaveFile(mScene_path.string().c_str());
 }
 
@@ -165,9 +167,19 @@ void scene_loader::fix()
 	}
 }
 
+void scene_loader::set_has_boundary(bool pHas_it)
+{
+	mHas_boundary = pHas_it;
+}
+
 bool scene_loader::has_boundary() const
 {
 	return mHas_boundary;
+}
+
+void scene_loader::set_boundary(const engine::frect & pRect)
+{
+	mBoundary = pRect;
 }
 
 const engine::frect& scene_loader::get_boundary() const

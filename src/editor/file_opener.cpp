@@ -17,7 +17,6 @@ struct entry_info
 	std::string name;
 	engine::fs::path path;
 	bool is_directory;
-	std::uintmax_t size;
 };
 
 static struct {
@@ -146,9 +145,6 @@ bool ImGui::FileOpenerPopup(const char * pName, engine::fs::path* pPath, bool pS
 					break;
 				}
 			}
-
-			//quick_tooltip(("File Size: " + std::to_string(i.size) + " bytes").c_str());
-
 			ImGui::NextColumn();
 			ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1), i.is_directory ? "Directory" : "File");
 			ImGui::NextColumn();

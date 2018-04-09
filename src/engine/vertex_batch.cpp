@@ -163,7 +163,7 @@ int vertex_batch::draw(renderer &pR)
 {
 	if (!mTexture)
 		return 1;
-	return draw(pR, mTexture->sfml_get_texture());
+	return draw(pR, mTexture->get_sfml_texture());
 }
 
 void vertex_batch::use_render_texture(bool pEnable)

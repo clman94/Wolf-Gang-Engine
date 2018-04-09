@@ -406,7 +406,7 @@ const std::string & generic_path::operator[](size_t pIndex) const
 fs::path generic_path::to_path() const
 {
 	fs::path path;
-	for (auto i : mHierarchy)
+	for (const auto& i : mHierarchy)
 		path /= i;
 	return path;
 }

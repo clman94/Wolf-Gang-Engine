@@ -14,7 +14,7 @@ int sprite_node::draw(renderer &pR)
 	rs.transform.rotate(get_absolute_rotation(), mCenter);
 	rs.transform.scale(get_absolute_scale(), mCenter);
 
-	rs.texture = &mTexture->sfml_get_texture();
+	rs.texture = &mTexture->get_sfml_texture();
 
 	if (mShader)
 		rs.shader = mShader->get_sfml_shader();

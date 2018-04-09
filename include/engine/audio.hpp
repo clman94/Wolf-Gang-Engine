@@ -14,12 +14,12 @@
 namespace engine
 {
 
+const std::string sound_file_restype = "audio";
+
 class sound_file :
 	public resource
 {
 public:
-	const std::string type = "audio";
-
 	static const size_t streaming_threshold = 1000000;
 
 	bool load();
@@ -27,7 +27,7 @@ public:
 
 	const std::string& get_type() const override
 	{
-		return type;
+		return sound_file_restype;
 	}
 
 	void set_filepath(const std::string& pPath);

@@ -209,7 +209,7 @@ private:
 
 	std::array<input_state, 256> mPressed_keys;
 	std::array<input_state, 16> mPressed_buttons;
-	
+
 	ivector mMouse_position;
 
 	void refresh_input();
@@ -239,12 +239,12 @@ private:
 	renderer* mRenderer;
 };
 
+const std::string shader_restype = "shader";
+
 class shader :
 	public resource
 {
 public:
-	const std::string type = "shader";
-
 	bool load() override;
 	bool unload() override;
 
@@ -253,7 +253,7 @@ public:
 
 	const std::string& get_type() const override
 	{
-		return type;
+		return shader_restype;
 	}
 
 #ifdef ENGINE_INTERNAL
@@ -527,11 +527,11 @@ private:
 	anchor mAnchor;
 };
 
+static const std::string font_restype = "font";
 class font :
 	public resource
 {
 public:
-	const std::string type = "font";
 
 	void set_font_source(const std::string& pFilepath);
 	void set_preferences_source(const std::string& pFilepath);
@@ -540,7 +540,7 @@ public:
 
 	const std::string& get_type() const override
 	{
-		return type;
+		return font_restype;
 	}
 
 private:

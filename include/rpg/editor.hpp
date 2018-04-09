@@ -310,14 +310,20 @@ private:
 	rpg::tilemap_display mTilemap_display;
 	engine::renderer mTilemap_renderer;
 	std::shared_ptr<engine::texture> mTilemap_texture;
+	engine::subtexture::ptr mCurrent_tile_atlas;
+	engine::node mTilemap_center_node; // Never changes position but scaling will cause zooming in and out.
+	float mTilemap_scale;
 
 	editor_settings_loader mSettings;
+
+	rpg::scene_loader mScene_loader;
+
 private:
 	void draw_game_window();
 	void draw_game_view_window();
 
-	void draw_tile_window();
-	void draw_tilemap_layers_window();
+	void draw_tile_group();
+	void draw_tilemap_layers_group();
 
 	void draw_collision_settings_window();
 

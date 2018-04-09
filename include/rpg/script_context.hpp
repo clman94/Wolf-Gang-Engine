@@ -19,11 +19,12 @@ namespace AS = AngelScript;
 namespace rpg{
 
 
+static const std::string scene_script_context_restype = "script";
+
 class scene_script_context :
 	public engine::resource
 {
 public:
-	const std::string type = "script";
 
 	struct wall_group_function
 	{
@@ -47,7 +48,7 @@ public:
 
 	const std::string& get_type() const override
 	{
-		return type;
+		return scene_script_context_restype;
 	}
 
 	std::vector<std::shared_ptr<script_function>> get_all_with_tag(const std::string& pTag);
