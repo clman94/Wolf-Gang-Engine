@@ -1410,6 +1410,17 @@ static inline void VSplitter(const char* str_id, float width, float* val)
 	ImGui::PopStyleVar();
 }
 
+// Construct a string representing the name and id "name##id"
+static inline std::string NameId(const std::string& pName, const std::string& pId)
+{
+	return pName + "##" + pId;
+}
+
+static inline std::string IdOnly(const std::string& pId)
+{
+	return "##" + pId;
+}
+
 }
 
 static inline void quick_tooltip(const char * pString)
@@ -1654,7 +1665,6 @@ void WGE_imgui_editor::run()
 		ImGui::End();
 
 		draw_log();
-		draw_tilemap_layers_group();
 		draw_collision_settings_window();
 
 		window.clear();
@@ -1834,14 +1844,15 @@ void WGE_imgui_editor::draw_tilemap_layers_group()
 	const size_t layer_count = mTilemap_manipulator.get_layer_count();
 	for (size_t i = 0; i < layer_count; i++)
 	{
-		rpg::tilemap_layer& layer = mTilemap_manipulator.get_layer(layer_count - i - 1); // top layer is at the top of the list
+		size_t layer_index = layer_count - i - 1; // top layer is at the top of the list;
+		rpg::tilemap_layer& layer = mTilemap_manipulator.get_layer(layer_index);
 
-		bool is_visible = mTilemap_display.is_layer_visible(i);
-		if (ImGui::Checkbox(("##Tilemaplayer" + std::to_string(i)).c_str(), &is_visible))
-			mTilemap_display.set_layer_visible(i, is_visible);
+		bool is_visible = mTilemap_display.is_layer_visible(layer_index);
+		if (ImGui::Checkbox(ImGui::IdOnly("Tilemaplayer" + std::to_string(layer_index)).c_str(), &is_visible))
+			mTilemap_display.set_layer_visible(layer_index, is_visible);
 		ImGui::NextColumn();
 
-		std::string popup_name = "Rename layer \"" + layer.get_name() + "\"";
+		std::string popup_name = ImGui::NameId("Rename layer \"" + layer.get_name() + "\"", std::to_string(layer_index));
 		if (ImGui::Selectable(layer.get_name().c_str(), false))
 			ImGui::OpenPopup(popup_name.c_str());
 
