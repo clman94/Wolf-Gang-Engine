@@ -417,13 +417,13 @@ float tilemap_layer::condense()
 void tilemap_layer::explode_tile(tile * pTile)
 {
 	assert(pTile);
-	tile cp_tile = *pTile; // Make a copy because mTiles gets modified
+	tile cp_tile = *pTile; // Modifying mTiles invalidates the pointer
 	pTile->set_fill({ 1, 1 });
 	for (int x = 0; x < cp_tile.get_fill().x; x++)
 	{
 		for (int y = 0; y < cp_tile.get_fill().y; y++)
 		{
-			if (x == 0 && y == 0) continue; // This is the main tile. Skip it.
+			if (x == 0 && y == 0) continue; // This is the main tile. Skip it. It's already there.
 			tile ntile = cp_tile;
 			ntile.set_fill({ 1, 1 });
 			ntile.set_position(cp_tile.get_position() + engine::fvector(x, y));
@@ -480,7 +480,7 @@ engine::fvector tilemap_layer::get_center_point() const
 	if (mTiles.empty())
 		return{};
 	engine::fvector sum;
-	for (auto& i : mTiles)
+	for (const auto& i : mTiles)
 		sum += i.get_position();
 	return sum/static_cast<float>(mTiles.size());
 }

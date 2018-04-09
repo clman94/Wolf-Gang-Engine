@@ -154,9 +154,11 @@ public:
 	engine::fvector get_center_point() const;
 
 	// Add a new layer to the bottom.
-	// Returns index of layer.
+	// Returns index of the new layer.
 	size_t new_layer();
 
+	// Insert a layer at an index.
+	// Returns the the index of the new layer.
 	size_t insert_layer(size_t pIndex);
 
 	void remove_layer(size_t pIndex);

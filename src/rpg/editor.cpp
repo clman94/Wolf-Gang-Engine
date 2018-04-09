@@ -1421,9 +1421,8 @@ static inline std::string IdOnly(const std::string& pId)
 	return "##" + pId;
 }
 
-}
-
-static inline void quick_tooltip(const char * pString)
+// Shortcut for adding a text only tooltip to the last item
+static inline void quickTooltip(const char * pString)
 {
 	if (ImGui::IsItemHovered())
 	{
@@ -1435,12 +1434,16 @@ static inline void quick_tooltip(const char * pString)
 	}
 }
 
+}
+
+
+
 // Resizes a render texture if the imgui window was changed size.
 // Works best if this is the first thing drawn in the window.
 // Returns true if the texture was actually changed.
 static inline bool resize_to_window(sf::RenderTexture& pRender)
 {
-	sf::Vector2u window_size = sf::Vector2u(ImGui::GetWindowContentRegionMax())
+	sf::Vector2u window_size = static_cast<sf::Vector2u>(ImGui::GetWindowContentRegionMax())
 		- sf::Vector2u(ImGui::GetCursorPos()) * (unsigned int)2;
 	if (window_size != pRender.getSize())
 	{
@@ -1511,14 +1514,19 @@ void WGE_imgui_editor::run()
 		// Has the current scene changed?
 		if (mScene_loader.get_name() != mGame.get_scene().get_name())
 		{
+			// Load the scene settings
 			if (mScene_loader.load(mGame.get_source_path()/"scenes", mGame.get_scene().get_name()))
 			{
+				// Load up the new tilemap
 				mTilemap_texture = mGame.get_resource_manager().get_resource<engine::texture>("texture"
 					, mScene_loader.get_tilemap_texture());
 				mTilemap_manipulator.load_tilemap_xml(mScene_loader.get_tilemap());
 				mTilemap_display.set_texture(mTilemap_texture);
-				mTilemap_display.set_unit(mTile_size);
+				mTilemap_display.set_unit(static_cast<float>(mTile_size));
 				mTilemap_display.update(mTilemap_manipulator);
+
+				// Center the tilemap view
+				mTilemap_display.set_position(-mTilemap_manipulator.get_center_point());
 			}
 		}
 		
@@ -1616,7 +1624,7 @@ void WGE_imgui_editor::run()
 				engine::fvector new_size = engine::vector_cast<float, unsigned int>(mTilemap_render_target.getSize());
 				mTilemap_renderer.set_target_size(new_size);
 				mTilemap_renderer.refresh(); // refresh the engines view
-				mTilemap_center_node.set_position(new_size / (mTile_size * 2)); // Center the center node
+				mTilemap_center_node.set_position(new_size / (static_cast<float>(mTile_size) * 2.f)); // Center the center node
 			}
 
 
@@ -1629,14 +1637,13 @@ void WGE_imgui_editor::run()
 
 			ImGui::InvisibleButton("tilemaphandler", ImVec2(-1, -1));
 
-
 			// Handle mouse interaction with tilemap window
 			if (ImGui::IsItemHovered())
 			{
 				if (ImGui::IsMouseDown(2)) // Middle mouse button is held to pan
 				{
 					mTilemap_display.set_position(mTilemap_display.get_position()
-						+ (engine::fvector(ImGui::GetIO().MouseDelta) / mTile_size) // Delta has to be scaled to ingame coords
+						+ (engine::fvector(ImGui::GetIO().MouseDelta) / static_cast<float>(mTile_size)) // Delta has to be scaled to ingame coords
 						/ mTilemap_display.get_absolute_scale()); // Then scaled again to fit the zoom
 				}
 
@@ -1645,7 +1652,7 @@ void WGE_imgui_editor::run()
 					mTilemap_scale += ImGui::GetIO().MouseWheel;
 					mTilemap_scale = util::clamp<float>(mTilemap_scale, -2, 5);
 					logger::debug("Tilemap Editor: Changed zoom to [" + std::to_string(mTilemap_scale) + "]");
-					mTilemap_center_node.set_scale(engine::fvector(1, 1)*std::pow(2, mTilemap_scale));
+					mTilemap_center_node.set_scale(engine::fvector(1, 1)*std::pow(2.f, mTilemap_scale));
 				}
 			}
 			ImGui::EndChild();
@@ -1697,10 +1704,10 @@ void WGE_imgui_editor::draw_game_window()
 
 		static char game_name_buffer[256]; // Temp
 		ImGui::InputText("Name", &game_name_buffer[0], 256);
-		quick_tooltip("Name of this game.\nThis is displayed in the window title.");
+		ImGui::quickTooltip("Name of this game.\nThis is displayed in the window title.");
 
 		ImGui::InputInt("Tile Size", &mTile_size, 1, 2);
-		quick_tooltip("Represents both the width and height of the tiles.");
+		ImGui::quickTooltip("Represents both the width and height of the tiles.");
 
 		static int target_size[2] = { 384 , 320 }; // Temp
 		ImGui::DragInt2("Target Size", target_size);
@@ -1799,13 +1806,13 @@ void WGE_imgui_editor::draw_tile_group()
 			std::min(size.x*(preview_size.y / size.y), preview_size.x),
 			std::min(size.y*(preview_size.x / size.x), preview_size.y)
 		};
-		ImGui::SetCursorPos(preview_size / 2 - scaled_size / 2 + ImGui::GetStyle().WindowPadding);
-		ImGui::Image(mTilemap_texture->get_sfml_texture(), scaled_size, mCurrent_tile_atlas->get_root_frame());
+		ImGui::SetCursorPos(preview_size / 2 - scaled_size / 2 + ImGui::GetStyle().WindowPadding); // Center it
+		ImGui::Image(mTilemap_texture->get_sfml_texture(), scaled_size, mCurrent_tile_atlas->get_root_frame()); // Draw it
 	}
 	else
 		ImGui::TextUnformatted("No preview");
 	ImGui::EndChild();
-	quick_tooltip("Preview of tile to place.");
+	ImGui::quickTooltip("Preview of tile to place.");
 	//TODO: Add option to change background color
 
 	ImGui::SameLine();
@@ -1845,9 +1852,10 @@ void WGE_imgui_editor::draw_tilemap_layers_group()
 	const size_t layer_count = mTilemap_manipulator.get_layer_count();
 	for (size_t i = 0; i < layer_count; i++)
 	{
-		size_t layer_index = layer_count - i - 1; // Revserse so the top layer is at the top of the list
+		size_t layer_index = layer_count - i - 1; // Reverse so the top layer is at the top of the list
 		rpg::tilemap_layer& layer = mTilemap_manipulator.get_layer(layer_index);
 
+		// Checkbox on left that enables or disables a layer
 		bool is_visible = mTilemap_display.is_layer_visible(layer_index);
 		if (ImGui::Checkbox(ImGui::IdOnly("Tilemaplayer" + std::to_string(layer_index)).c_str(), &is_visible))
 			mTilemap_display.set_layer_visible(layer_index, is_visible);
@@ -1897,7 +1905,7 @@ void WGE_imgui_editor::draw_collision_settings_window()
 
 			static char group_buf[256]; // Temp
 			ImGui::InputText("Group", group_buf, 256);
-			quick_tooltip("Group to assosiate this collision box with.\nThis is used in scripts to enable/disable boxes or calling functions when collided.");
+			ImGui::quickTooltip("Group to assosiate this collision box with.\nThis is used in scripts to enable/disable boxes or calling functions when collided.");
 
 			static float coll_rect[4] = { 0, 0, 1, 1 }; // Temp
 			ImGui::DragFloat4("Rect", coll_rect, 1);
@@ -1910,17 +1918,17 @@ void WGE_imgui_editor::draw_collision_settings_window()
 
 			static float coll_rect[2] = { 0, 0 }; // Temp
 			ImGui::DragFloat2("Offset", coll_rect, 0.2f);
-			quick_tooltip("This will offset the player when they come through this door.\nUsed to prevent player from colliding with the door again and going back.");
+			ImGui::quickTooltip("This will offset the player when they come through this door.\nUsed to prevent player from colliding with the door again and going back.");
 
 			// TODO: Use a combo instead
 			static char door_dest_scene_buf[256]; // Temp
 			ImGui::InputText("Dest. Scene", door_dest_scene_buf, 256);
-			quick_tooltip("The scene to load when the player enters this door.");
+			ImGui::quickTooltip("The scene to load when the player enters this door.");
 
 			// TODO: Use a combo instead
 			static char door_dest_door_buf[256]; // Temp
 			ImGui::InputText("Dest. Door", door_dest_door_buf, 256);
-			quick_tooltip("The destination door in the new loaded scene.");
+			ImGui::quickTooltip("The destination door in the new loaded scene.");
 
 		}
 		ImGui::PopItemWidth();
@@ -1950,7 +1958,7 @@ void WGE_imgui_editor::draw_log()
 			switch (log[i].type)
 			{
 			case logger::level::info:
-				ImGui::PushStyleColor(ImGuiCol_Text, { 1, 1, 1, 1 });
+				ImGui::PushStyleColor(ImGuiCol_Text, { 1, 1, 1, 1 }); // White
 				ImGui::TextUnformatted("Info");
 				break;
 			case logger::level::debug:
@@ -1968,7 +1976,7 @@ void WGE_imgui_editor::draw_log()
 			}
 			ImGui::NextColumn();
 
-			// The actual message. Has the same color as the message type
+			// The actual message. Has the same color as the message type.
 			ImGui::TextUnformatted(log[i].msg.c_str());
 			ImGui::PopStyleColor();
 
@@ -1990,9 +1998,9 @@ void WGE_imgui_editor::draw_log()
 				if (ImGui::ArrowButton(("logfileopen" + std::to_string(i)).c_str(), ImGuiDir_Right))
 				{
 					std::string cmd = mSettings.generate_open_cmd(log[i].file);
-					std::system(("START " + cmd).c_str());
+					std::system(("START " + cmd).c_str()); // May not be very portable
 				}
-				quick_tooltip("Open file in editor.");
+				ImGui::quickTooltip("Open file in editor.");
 			}
 			ImGui::NextColumn();
 		}

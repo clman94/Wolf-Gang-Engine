@@ -47,7 +47,7 @@ message print(const message & pMessage)
 	// Printing to the console is disabled to
 	// to remove the overhead and the redundancy.
 #ifndef LOCKED_RELEASE_MODE
-	std::cout << stringified_message; // Print to console  
+	std::cout << stringified_message;
 #endif
 
 	return pMessage;
