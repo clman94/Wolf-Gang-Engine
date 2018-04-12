@@ -285,6 +285,12 @@ struct vector
 
 #endif
 
+	template<typename Tto>
+	explicit operator engine::vector<Tto>() const
+	{
+		return{ static_cast<Tto>(px), static_cast<Tto>(y) };
+	}
+
 	template<typename>
 	friend struct vector;
 };

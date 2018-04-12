@@ -161,13 +161,9 @@ bool tilemap_manipulator::move_layer(size_t pFrom, size_t pTo)
 {
 	if (pFrom == pTo)
 		return true;
-
 	tilemap_layer temp = std::move(mMap[pFrom]);
+	mMap.erase(mMap.begin() + pFrom);
 	mMap.insert(mMap.begin() + pTo, std::move(temp));
-	if (pFrom > pTo)
-		mMap.erase(mMap.begin() + pFrom + 1);
-	else
-		mMap.erase(mMap.begin() + pFrom);
 	return true;
 }
 

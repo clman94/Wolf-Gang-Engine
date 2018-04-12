@@ -133,9 +133,9 @@ public:
 	bool is_mouse_pressed(mouse_button pButton_type, bool pIgnore_gui = false);
 	bool is_mouse_down(mouse_button pButton_type, bool pIgnore_gui = false);
 
-	// Call the window's poll_event method first
-	void update_events();
+	void update_events(); // Call the window's poll_event method first
 	void update_events(display_window& pWindow);
+	void update_events(display_window& pWindow, engine::fvector pMouse_position); // Same as above but you can override the mouse position (useful for editor)
 
 	int draw();
 	int draw(render_object& pObject);
@@ -152,6 +152,11 @@ public:
 	fvector get_mouse_position() const;
 	fvector get_mouse_position(fvector pRelative) const;
 	fvector get_mouse_position(const node& pNode) const;
+
+	// Converts vector relative to window to coords relative to the view and its scale.
+	fvector window_to_game_coords(ivector pPixels) const;
+	fvector window_to_game_coords(ivector pPixels, const fvector& pRelative) const;
+	fvector window_to_game_coords(ivector pPixels, const node& pNode) const; // Relative to node
 
 	bool is_focused();
 

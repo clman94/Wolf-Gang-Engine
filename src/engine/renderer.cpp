@@ -251,6 +251,25 @@ fvector renderer::get_mouse_position(const node & pNode) const
 	return (get_mouse_position(pos)).rotate(pos, -pNode.get_absolute_rotation())/scale;
 }
 
+fvector renderer::window_to_game_coords(ivector pPixels) const
+{
+	return mRender_target->mapPixelToCoords(pPixels, mView);
+}
+
+fvector renderer::window_to_game_coords(ivector pPixels, const fvector & pRelative) const
+{
+	return window_to_game_coords(pPixels) - pRelative;
+}
+
+fvector renderer::window_to_game_coords(ivector pPixels, const node & pNode) const
+{
+	const fvector pos = pNode.get_exact_position();
+	const fvector scale = pNode.get_absolute_scale();
+	if (scale.has_zero())
+		return fvector(0, 0); // TODO: Should have some sort of error (possibly an exception)
+	return window_to_game_coords(pPixels, pos).rotate(pos, -pNode.get_absolute_rotation()) / scale;
+}
+
 bool renderer::is_focused()
 {
 	return mWindow->mWindow.hasFocus();
@@ -392,6 +411,12 @@ void renderer::update_events(display_window& pWindow)
 		if (i.type == sf::Event::MouseMoved)
 			mMouse_position = { i.mouseMove.x, i.mouseMove.y };
 	}
+}
+
+void renderer::update_events(display_window & pWindow, engine::fvector pMouse_position)
+{
+	update_events(pWindow);
+	mMouse_position = vector_cast<int>(pMouse_position);
 }
 
 bool shader::load()

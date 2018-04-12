@@ -59,6 +59,7 @@ void command_manager::complete()
 
 bool command_manager::undo()
 {
+	assert(!mCurrent);
 	if (mUndo.size() == 0)
 		return false;
 	auto undo_cmd = mUndo.back();
@@ -1436,14 +1437,48 @@ static inline void quickTooltip(const char * pString)
 
 }
 
+int OSA_distance(const std::string& pStr1, const std::string& pStr2)
+{
+	std::vector<std::vector<int>> d;
+	d.resize(pStr1.length() + 1);
+	for (std::size_t i = 0; i < d.size(); i++)
+		d[i].resize(pStr2.length() + 1);
 
+	for (std::size_t i = 0; i < pStr1.length() + 1; i++)
+		d[i][0] = i;
+	for (std::size_t i = 0; i < pStr2.length() + 1; i++)
+		d[0][i] = i;
+
+	for (std::size_t i = 1; i < pStr1.length() + 1; i++)
+	{
+		for (std::size_t j = 1; j < pStr2.length() + 1; j++)
+		{
+			std::size_t str1_i = i - 1;
+			std::size_t str2_i = j - 1;
+			int cost = (pStr1[str1_i] == pStr2[str2_i]) ? 0 : 1;
+			d[i][j] = std::min({
+					d[i - 1][j] + 1,
+					d[i][j - 1] + 1,
+					d[i - 1][j - 1] + cost
+				});
+			if (i > 1 && j > 1 && pStr1[str1_i] == pStr2[str2_i - 1] && pStr1[str1_i - 1] == pStr2[str2_i])
+				d[i][j] = std::min(d[i][j], d[i - 2][j - 2] + cost);
+		}
+	}
+	return d[pStr1.length()][pStr2.length()];
+}
+
+engine::fvector snap(const engine::fvector& pPos, const engine::fvector& pTo, const engine::fvector& pOffset = {0, 0})
+{
+	return (pPos / pTo - pOffset).floor() * pTo + pOffset;
+}
 
 // Resizes a render texture if the imgui window was changed size.
 // Works best if this is the first thing drawn in the window.
 // Returns true if the texture was actually changed.
 static inline bool resize_to_window(sf::RenderTexture& pRender)
 {
-	sf::Vector2u window_size = static_cast<sf::Vector2u>(ImGui::GetWindowContentRegionMax())
+	sf::Vector2u window_size = static_cast<sf::Vector2u>(static_cast<sf::Vector2f>(ImGui::GetWindowContentRegionMax()))
 		- sf::Vector2u(ImGui::GetCursorPos()) * (unsigned int)2;
 	if (window_size != pRender.getSize())
 	{
@@ -1524,6 +1559,7 @@ void WGE_imgui_editor::run()
 				mTilemap_display.set_texture(mTilemap_texture);
 				mTilemap_display.set_unit(static_cast<float>(mTile_size));
 				mTilemap_display.update(mTilemap_manipulator);
+				mCurrent_layer = 0;
 
 				// Center the tilemap view
 				mTilemap_display.set_position(-mTilemap_manipulator.get_center_point());
@@ -1627,15 +1663,38 @@ void WGE_imgui_editor::run()
 				mTilemap_center_node.set_position(new_size / (static_cast<float>(mTile_size) * 2.f)); // Center the center node
 			}
 
-
 			// Render the tilemap
 			mTilemap_renderer.draw();
+
+			engine::ivector window_mouse_position = static_cast<engine::ivector>(ImGui::GetMousePos()) - static_cast<engine::ivector>(ImGui::GetCursorScreenPos());
+			engine::fvector mouse_position = snap(mTilemap_renderer.window_to_game_coords(window_mouse_position, mTilemap_display) / mTile_size, { 0.5f, 0.5f });
+			
+			// Draw previewed tile
+			if (mTilemap_texture && mCurrent_tile_atlas)
+			{
+				engine::sprite_node sprite;
+				sprite.set_parent(mTilemap_display);
+				sprite.set_texture(mTilemap_texture);
+				sprite.set_texture_rect(mCurrent_tile_atlas->get_root_frame());
+				sprite.set_position(mouse_position);
+				sprite.set_color({ 1, 1, 1, 0.7f });
+				sprite.draw(mTilemap_renderer);
+			}
+
 			mTilemap_render_target.display();
 
 			// Display on window. 
 			ImGui::AddBackgroundImage(mTilemap_render_target);
 
 			ImGui::InvisibleButton("tilemaphandler", ImVec2(-1, -1));
+
+			// Place tile
+			if (mTilemap_texture && mCurrent_tile_atlas && ImGui::IsItemClicked())
+			{
+				mTilemap_manipulator.get_layer(mCurrent_layer).set_tile(mouse_position, mCurrent_tile_atlas->get_name(), 0);
+				mTilemap_manipulator.get_layer(mCurrent_layer).sort();
+				mTilemap_display.update(mTilemap_manipulator);
+			}
 
 			// Handle mouse interaction with tilemap window
 			if (ImGui::IsItemHovered())
@@ -1651,7 +1710,6 @@ void WGE_imgui_editor::run()
 				{
 					mTilemap_scale += ImGui::GetIO().MouseWheel;
 					mTilemap_scale = util::clamp<float>(mTilemap_scale, -2, 5);
-					logger::debug("Tilemap Editor: Changed zoom to [" + std::to_string(mTilemap_scale) + "]");
 					mTilemap_center_node.set_scale(engine::fvector(1, 1)*std::pow(2.f, mTilemap_scale));
 				}
 			}
@@ -1659,6 +1717,13 @@ void WGE_imgui_editor::run()
 
 			ImGui::SameLine();
 			ImGui::BeginGroup();
+
+			ImGui::PushItemWidth(-100);
+			static int current_snapping = 0; // Temp
+			const char* snapping_items[] = { "None", "Pixel", "Eighth", "Quarter", "Full" };
+			ImGui::Combo("Snapping", &current_snapping, snapping_items, 5);
+			ImGui::PopItemWidth();
+
 			draw_tile_group();
 			draw_tilemap_layers_group();
 			ImGui::EndGroup();
@@ -1862,7 +1927,9 @@ void WGE_imgui_editor::draw_tilemap_layers_group()
 		ImGui::NextColumn();
 
 		std::string popup_name = ImGui::NameId("Rename layer \"" + layer.get_name() + "\"", std::to_string(layer_index));
-		if (ImGui::Selectable(layer.get_name().c_str(), false))
+		if (ImGui::Selectable(ImGui::NameId(layer.get_name(), "layer" + std::to_string(layer_index)).c_str(), mCurrent_layer == layer_index))
+			mCurrent_layer = layer_index;
+		if (ImGui::IsItemClicked(1)) // Right click gives some more options
 			ImGui::OpenPopup(popup_name.c_str());
 
 		if (ImGui::BeginPopup(popup_name.c_str()))
@@ -1882,9 +1949,19 @@ void WGE_imgui_editor::draw_tilemap_layers_group()
 	ImGui::Button("Delete");
 
 	ImGui::SameLine();
-	ImGui::ArrowButton("Move Up", ImGuiDir_Up);
+	if (ImGui::ArrowButton("Move Up", ImGuiDir_Up) && mCurrent_layer != mTilemap_manipulator.get_layer_count() - 1)
+	{
+		mTilemap_manipulator.move_layer(mCurrent_layer, mCurrent_layer + 1);
+		++mCurrent_layer;
+		mTilemap_display.update(mTilemap_manipulator);
+	}
 	ImGui::SameLine();
-	ImGui::ArrowButton("Move Down", ImGuiDir_Down);
+	if (ImGui::ArrowButton("Move Down", ImGuiDir_Down) && mCurrent_layer != 0)
+	{
+		mTilemap_manipulator.move_layer(mCurrent_layer, mCurrent_layer - 1);
+		--mCurrent_layer;
+		mTilemap_display.update(mTilemap_manipulator);
+	}
 	ImGui::EndGroup();
 }
 

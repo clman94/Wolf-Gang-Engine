@@ -35,6 +35,7 @@ public:
 	bool execute(std::shared_ptr<command> pCommand);
 	bool add(std::shared_ptr<command> pCommand);
 
+	// Begin a command.
 	void start(std::shared_ptr<command> pCommand);
 	template<typename T>
 	std::shared_ptr<T> current()
@@ -305,6 +306,7 @@ private:
 	rpg::game mGame;
 	engine::renderer mGame_renderer;
 
+	// this all will be refactored soon, simply prototyping
 	sf::RenderTexture mTilemap_render_target;
 	rpg::tilemap_manipulator mTilemap_manipulator;
 	rpg::tilemap_display mTilemap_display;
@@ -313,6 +315,10 @@ private:
 	engine::subtexture::ptr mCurrent_tile_atlas;
 	engine::node mTilemap_center_node; // Never changes position but scaling will cause zooming in and out.
 	float mTilemap_scale;
+	std::size_t mCurrent_layer;
+	//void place_tile(engine::fvector pos);
+	//void remove_tile(engine::fvector pos);
+
 
 	editor_settings_loader mSettings;
 
