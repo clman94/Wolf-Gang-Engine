@@ -288,7 +288,7 @@ struct vector
 	template<typename Tto>
 	explicit operator engine::vector<Tto>() const
 	{
-		return{ static_cast<Tto>(px), static_cast<Tto>(y) };
+		return{ static_cast<Tto>(x), static_cast<Tto>(y) };
 	}
 
 	template<typename>
