@@ -110,7 +110,7 @@ void tilemap_manipulator::explode_all()
 		i.explode();
 }
 
-void tilemap_manipulator::generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode * root)
+void tilemap_manipulator::save_xml(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode * root) const
 {
 	for (size_t i = 0; i < mMap.size(); i++)
 	{
@@ -121,11 +121,11 @@ void tilemap_manipulator::generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode
 	}
 }
 
-void tilemap_manipulator::generate(const std::string& pPath)
+void tilemap_manipulator::save_xml(const std::string& pPath) const
 {
 	tinyxml2::XMLDocument doc;
 	auto root = doc.InsertEndChild(doc.NewElement("map"));
-	generate(doc, root);
+	save_xml(doc, root);
 	doc.SaveFile(pPath.c_str());
 }
 

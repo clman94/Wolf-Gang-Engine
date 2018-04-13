@@ -168,7 +168,7 @@ public:
 	std::shared_ptr<collision_box> first_collision(collision_box::type pType, const engine::fvector& pPoint) const;
 
 	bool load_xml(tinyxml2::XMLElement* pEle);
-	bool generate_xml(tinyxml2::XMLDocument& pDocument, tinyxml2::XMLElement* pEle) const;
+	bool save_xml(tinyxml2::XMLDocument& pDocument, tinyxml2::XMLElement* pEle) const;
 
 	bool remove_box(std::shared_ptr<collision_box> pBox);
 	bool remove_box(size_t pIndex);

@@ -283,7 +283,7 @@ bool collision_box_container::load_xml(tinyxml2::XMLElement * pEle)
 	return true;
 }
 
-bool collision_box_container::generate_xml(tinyxml2::XMLDocument & pDocument, tinyxml2::XMLElement * pEle) const
+bool collision_box_container::save_xml(tinyxml2::XMLDocument & pDocument, tinyxml2::XMLElement * pEle) const
 {
 	pEle->DeleteChildren();
 	for (auto& i : mBoxes)

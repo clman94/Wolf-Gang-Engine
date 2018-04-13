@@ -661,7 +661,7 @@ bool tilemap_editor::save()
 		ele_layer = ele_map->FirstChildElement("layer");
 	}
 	mTilemap_manipulator.condense_map();
-	mTilemap_manipulator.generate(doc, ele_map);
+	mTilemap_manipulator.save_xml(doc, ele_map);
 	doc.SaveFile(mLoader.get_scene_path().c_str());
 
 	logger::info("Tilemap saved");
@@ -1013,7 +1013,7 @@ bool collisionbox_editor::save()
 {
 	logger::info("Saving collision boxes");
 
-	mContainer.generate_xml(mLoader.get_document(), mLoader.get_collisionboxes());
+	mContainer.save_xml(mLoader.get_document(), mLoader.get_collisionboxes());
 	mLoader.save();
 
 	logger::info("Saved " + std::to_string(mContainer.get_count()) +" collision box(es)");
@@ -1423,7 +1423,7 @@ static inline std::string IdOnly(const std::string& pId)
 }
 
 // Shortcut for adding a text only tooltip to the last item
-static inline void quickTooltip(const char * pString)
+static inline void QuickTooltip(const char * pString)
 {
 	if (ImGui::IsItemHovered())
 	{
@@ -1433,6 +1433,27 @@ static inline void quickTooltip(const char * pString)
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
 	}
+}
+
+// Returns true if the user pressed "Yes"
+static inline bool ConfirmPopup(const char * pName, const char* pMessage)
+{
+	bool answer = false;
+	if (ImGui::BeginPopupModal(pName, NULL, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::TextUnformatted(pMessage);
+		if (ImGui::Button("Open", ImVec2(100, 25)))
+		{
+			answer = true;
+			ImGui::CloseCurrentPopup();
+		}
+
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel", ImVec2(100, 25)))
+			ImGui::CloseCurrentPopup();
+		ImGui::EndPopup();
+	}
+	return answer;
 }
 
 }
@@ -1506,6 +1527,8 @@ WGE_imgui_editor::WGE_imgui_editor()
 
 	mTilemap_display.set_parent(mTilemap_center_node);
 	mTilemap_scale = 0;
+
+	mIs_scene_changed = false;
 }
 
 void WGE_imgui_editor::run()
@@ -1514,25 +1537,12 @@ void WGE_imgui_editor::run()
 	ImGui::SFML::Init(window.get_sfml_window());
 
 	ImGuiStyle& style = ImGui::GetStyle();
+	ImGui::StyleColorsDark(&style);
 	style.FrameRounding = 2;
 	style.FramePadding = ImVec2(2, 2);
-	ImGui::StyleColorsDark(&style);
-
-	float colors[3] = { 0, 0, 0 };
-
-	const auto scenes = rpg::get_scene_list();
-
-	// Scene Settings
-	size_t selected_scene = 1;
-
-	int val = 0;
-
-	std::string data;
-	data.resize(100);
 
 	mGame.load("./data");
 	mGame_renderer.refresh();
-
 
 	sf::Clock delta_clock;
 	while (window.is_open())
@@ -1549,22 +1559,12 @@ void WGE_imgui_editor::run()
 		// Has the current scene changed?
 		if (mScene_loader.get_name() != mGame.get_scene().get_name())
 		{
-			// Load the scene settings
-			if (mScene_loader.load(mGame.get_source_path()/"scenes", mGame.get_scene().get_name()))
-			{
-				// Load up the new tilemap
-				mTilemap_texture = mGame.get_resource_manager().get_resource<engine::texture>("texture"
-					, mScene_loader.get_tilemap_texture());
-				mTilemap_manipulator.load_tilemap_xml(mScene_loader.get_tilemap());
-				mTilemap_display.set_texture(mTilemap_texture);
-				mTilemap_display.set_unit(static_cast<float>(mTile_size));
-				mTilemap_display.update(mTilemap_manipulator);
-				mCurrent_layer = 0;
-
-				// Center the tilemap view
-				mTilemap_display.set_position(-mTilemap_manipulator.get_center_point());
-			}
+			prepare_scene(mGame.get_source_path() / "scenes", mGame.get_scene().get_name());
 		}
+
+		/*if (ImGui::ConfirmPopup("Save?##askforsave", "Do you want to save this scene before moving on?"))
+		{
+		}*/
 		
 		ImGui::SFML::Update(window.get_sfml_window(), delta_clock.restart());
 
@@ -1631,17 +1631,23 @@ void WGE_imgui_editor::run()
 			ImGui::PushItemWidth(-100);
 			if (ImGui::Button("Restart"))
 			{
+				// This does not affect the editors
 				mGame.get_scene().reload_scene();
 			}
 			ImGui::Text(("Name: " + mGame.get_scene().get_path()).c_str());
 
-			static bool has_boundary = false; // Temp
-			ImGui::Checkbox("Has boundary", &has_boundary);
+			bool has_boundary = mScene_loader.has_boundary();
+			if (ImGui::Checkbox("Has boundary", &has_boundary))
+			{
+				mIs_scene_changed = true;
+				mScene_loader.set_has_boundary(has_boundary);
+			}
 
 			engine::frect boundary = mScene_loader.get_boundary();
-			static float boundary_values[4] = {0, 0, 0, 0}; // temp
-			if (ImGui::DragFloat4("Boundary", boundary_values))
+			if (ImGui::DragFloat4("Boundary", boundary.components))
 			{
+				mIs_scene_changed = true;
+				mScene_loader.set_boundary(boundary);
 			}
 			ImGui::Button("Open Script in Editor");
 			ImGui::PopItemWidth();
@@ -1689,11 +1695,20 @@ void WGE_imgui_editor::run()
 			ImGui::InvisibleButton("tilemaphandler", ImVec2(-1, -1));
 
 			// Place tile
-			if (mTilemap_texture && mCurrent_tile_atlas && ImGui::IsItemClicked())
+			if (mTilemap_texture && mCurrent_tile_atlas)
 			{
-				mTilemap_manipulator.get_layer(mCurrent_layer).set_tile(mouse_position, mCurrent_tile_atlas->get_name(), 0);
-				mTilemap_manipulator.get_layer(mCurrent_layer).sort();
-				mTilemap_display.update(mTilemap_manipulator);
+				if (ImGui::IsItemClicked())
+				{
+					mTilemap_manipulator.get_layer(mCurrent_layer).set_tile(mouse_position, mCurrent_tile_atlas->get_name(), 0);
+					mTilemap_manipulator.get_layer(mCurrent_layer).sort();
+					mTilemap_display.update(mTilemap_manipulator);
+				}
+				if (ImGui::IsItemClicked(1))
+				{
+					mTilemap_manipulator.get_layer(mCurrent_layer).remove_tile(mouse_position);
+					mTilemap_manipulator.get_layer(mCurrent_layer).sort();
+					mTilemap_display.update(mTilemap_manipulator);
+				}
 			}
 
 			// Handle mouse interaction with tilemap window
@@ -1746,6 +1761,30 @@ void WGE_imgui_editor::run()
 	ImGui::SFML::Shutdown();
 }
 
+void WGE_imgui_editor::prepare_scene(engine::fs::path pPath, const std::string& pName)
+{
+	// Load the scene settings
+	if (mScene_loader.load(pPath, pName))
+	{
+		// Load up the new tilemap
+		mTilemap_texture = mGame.get_resource_manager().get_resource<engine::texture>("texture"
+			, mScene_loader.get_tilemap_texture());
+		mTilemap_manipulator.load_tilemap_xml(mScene_loader.get_tilemap());
+		mTilemap_display.set_texture(mTilemap_texture);
+		mTilemap_display.set_unit(static_cast<float>(mTile_size));
+		mTilemap_display.update(mTilemap_manipulator);
+		mCurrent_layer = 0;
+
+		// Center the tilemap view
+		mTilemap_display.set_position(-mTilemap_manipulator.get_center_point());
+	}
+}
+
+void WGE_imgui_editor::save_scene()
+{
+	mScene_loader.set_tilemap(mTilemap_manipulator);
+}
+
 void WGE_imgui_editor::draw_game_window()
 {
 	if (ImGui::Begin("Game"))
@@ -1769,10 +1808,10 @@ void WGE_imgui_editor::draw_game_window()
 
 		static char game_name_buffer[256]; // Temp
 		ImGui::InputText("Name", &game_name_buffer[0], 256);
-		ImGui::quickTooltip("Name of this game.\nThis is displayed in the window title.");
+		ImGui::QuickTooltip("Name of this game.\nThis is displayed in the window title.");
 
 		ImGui::InputInt("Tile Size", &mTile_size, 1, 2);
-		ImGui::quickTooltip("Represents both the width and height of the tiles.");
+		ImGui::QuickTooltip("Represents both the width and height of the tiles.");
 
 		static int target_size[2] = { 384 , 320 }; // Temp
 		ImGui::DragInt2("Target Size", target_size);
@@ -1851,7 +1890,8 @@ void WGE_imgui_editor::draw_game_view_window()
 		ImGui::AddBackgroundImage(mGame_render_target);
 
 		// TODO: Add debug info (FPS, Delta, etc..)
-		// ImGui::Text("this is debug");
+		ImGui::Text("FPS: %.2f", mGame_renderer.get_fps());
+		ImGui::Text("Frame: %.2fms", mGame_renderer.get_delta()*1000);
 	}
 	ImGui::End();
 }
@@ -1877,14 +1917,14 @@ void WGE_imgui_editor::draw_tile_group()
 	else
 		ImGui::TextUnformatted("No preview");
 	ImGui::EndChild();
-	ImGui::quickTooltip("Preview of tile to place.");
+	ImGui::QuickTooltip("Preview of tile to place.");
 	//TODO: Add option to change background color
 
 	ImGui::SameLine();
 	ImGui::BeginGroup();
 	ImGui::PushItemWidth(-100);
 
-	ImGui::DragInt("Rotation", &mTile_rotation, 1.f, 0, 3, "%d x90");
+	ImGui::DragInt("Rotation", &mTile_rotation, 0.2f, 0, 3, "%.0f x90");
 
 	ImGui::PopItemWidth();
 	ImGui::EndGroup();
@@ -1982,7 +2022,7 @@ void WGE_imgui_editor::draw_collision_settings_window()
 
 			static char group_buf[256]; // Temp
 			ImGui::InputText("Group", group_buf, 256);
-			ImGui::quickTooltip("Group to assosiate this collision box with.\nThis is used in scripts to enable/disable boxes or calling functions when collided.");
+			ImGui::QuickTooltip("Group to assosiate this collision box with.\nThis is used in scripts to enable/disable boxes or calling functions when collided.");
 
 			static float coll_rect[4] = { 0, 0, 1, 1 }; // Temp
 			ImGui::DragFloat4("Rect", coll_rect, 1);
@@ -1995,17 +2035,17 @@ void WGE_imgui_editor::draw_collision_settings_window()
 
 			static float coll_rect[2] = { 0, 0 }; // Temp
 			ImGui::DragFloat2("Offset", coll_rect, 0.2f);
-			ImGui::quickTooltip("This will offset the player when they come through this door.\nUsed to prevent player from colliding with the door again and going back.");
+			ImGui::QuickTooltip("This will offset the player when they come through this door.\nUsed to prevent player from colliding with the door again and going back.");
 
 			// TODO: Use a combo instead
 			static char door_dest_scene_buf[256]; // Temp
 			ImGui::InputText("Dest. Scene", door_dest_scene_buf, 256);
-			ImGui::quickTooltip("The scene to load when the player enters this door.");
+			ImGui::QuickTooltip("The scene to load when the player enters this door.");
 
 			// TODO: Use a combo instead
 			static char door_dest_door_buf[256]; // Temp
 			ImGui::InputText("Dest. Door", door_dest_door_buf, 256);
-			ImGui::quickTooltip("The destination door in the new loaded scene.");
+			ImGui::QuickTooltip("The destination door in the new loaded scene.");
 
 		}
 		ImGui::PopItemWidth();
@@ -2077,7 +2117,7 @@ void WGE_imgui_editor::draw_log()
 					std::string cmd = mSettings.generate_open_cmd(log[i].file);
 					std::system(("START " + cmd).c_str()); // May not be very portable
 				}
-				ImGui::quickTooltip("Open file in editor.");
+				ImGui::QuickTooltip("Open file in editor.");
 			}
 			ImGui::NextColumn();
 		}

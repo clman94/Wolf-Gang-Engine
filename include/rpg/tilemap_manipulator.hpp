@@ -144,8 +144,8 @@ public:
 
 	void explode_all();
 
-	void generate(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode* root);
-	void generate(const std::string& pPath);
+	void save_xml(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode* root) const;
+	void save_xml(const std::string& pPath) const;
 
 	bool move_layer(size_t pFrom, size_t pTo);
 

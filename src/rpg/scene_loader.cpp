@@ -1,40 +1,23 @@
 #include <rpg/scene_loader.hpp>
 #include <rpg/rpg_config.hpp>
+#include <rpg/tilemap_manipulator.hpp>
+#include <rpg/collision_box.hpp>
 
 #include <engine/logger.hpp>
+#include <engine/utility.hpp>
 #include <algorithm>
 
 using namespace rpg;
 
-std::vector<engine::generic_path> rpg::get_scene_list()
-{
-	std::vector<engine::generic_path> ret;
-
-	const engine::generic_path dir = (defs::DEFAULT_DATA_PATH / defs::DEFAULT_SCENES_PATH).string();
-	for (auto& i : engine::fs::recursive_directory_iterator(defs::DEFAULT_DATA_PATH / defs::DEFAULT_SCENES_PATH))
-	{
-		engine::generic_path path = i.path().string();
-		if (path.extension() == ".xml")
-		{
-			path.snip_path(dir);
-			path.remove_extension();
-			ret.push_back(path);
-		}
-	}
-
-	std::sort(ret.begin(), ret.end());
-	return ret;
-}
 
 scene_loader::scene_loader()
 {
-	mEle_collisionboxes = nullptr;
-	mEle_map = nullptr;
+	clear();
 }
 
 bool scene_loader::load(const engine::generic_path& pDir, const std::string & pName)
 {
-	clean();
+	clear();
 	
 	mScene_path = pDir / (pName + ".xml");
 	mScript_path = pDir / (pName + ".as");
@@ -51,7 +34,7 @@ bool scene_loader::load(const engine::generic_path& pDir, const std::string & pN
 
 bool scene_loader::load(const engine::generic_path& pDir, const std::string & pName, engine::resource_pack& pPack)
 {
-	clean();
+	clear();
 
 	mScene_path = pDir / (pName + ".xml");
 	mScript_path = pDir / (pName + ".as");
@@ -72,63 +55,92 @@ bool scene_loader::load(const engine::generic_path& pDir, const std::string & pN
 
 bool scene_loader::save()
 {
-	auto ele_root = mXml_Document.RootElement();
-
+	save_settings();
 	return !mXml_Document.SaveFile(mScene_path.string().c_str());
 }
 
-void scene_loader::clean()
+void scene_loader::clear()
 {
 	mXml_Document.Clear();
 	mScript_path.clear();
 	mScene_name.clear();
-	mTilemap_texture.clear();
 	mScene_path.clear();
-	mBoundary = engine::frect();
-	mHas_boundary = false;
 	mEle_collisionboxes = nullptr;
 	mEle_map = nullptr;
+	mEle_root = nullptr;
 }
 
 bool scene_loader::load_settings()
 {
 	fix();
 
-	auto ele_root = mXml_Document.FirstChildElement("scene");
-	if (!ele_root)
+	mEle_root = mXml_Document.FirstChildElement("scene");
+	if (!mEle_root)
 	{
 		logger::error("Unable to get root element 'scene'.");
 		return false;
 	}
 
-	// Get collision boxes
-	mEle_collisionboxes = ele_root->FirstChildElement("collisionboxes");
+	auto ele_has_boundary = mEle_root->FirstChildElement("has_boundary");
+	assert(ele_has_boundary);
+	mHas_boundary = ele_has_boundary->BoolText(false);
 
-	// Get boundary
-	if (auto ele_boundary = ele_root->FirstChildElement("boundary"))
-	{
-		mBoundary.x = ele_boundary->FloatAttribute("x");
-		mBoundary.y = ele_boundary->FloatAttribute("y");
-		mBoundary.w = ele_boundary->FloatAttribute("w");
-		mBoundary.h = ele_boundary->FloatAttribute("h");
-		mHas_boundary = true;
-	}
-	else
-	{
-		mHas_boundary = false;
-	}
+	auto ele_boundary = mEle_root->FirstChildElement("boundary");
+	assert(ele_boundary);
+	mBoundary.x = ele_boundary->FloatAttribute("x");
+	mBoundary.y = ele_boundary->FloatAttribute("y");
+	mBoundary.w = ele_boundary->FloatAttribute("w");
+	mBoundary.h = ele_boundary->FloatAttribute("h");
 
-	// Get tilemap
-	if (mEle_map = ele_root->FirstChildElement("map"))
-	{
-		// Load tilemap texture
-		if (auto ele_texture = mEle_map->FirstChildElement("texture"))
-			mTilemap_texture = util::safe_string(ele_texture->GetText());
-		else
-			logger::warning("Tilemap texture is not defined");
+	mEle_map = mEle_root->FirstChildElement("map");
 
-	}
+	auto ele_texture = mEle_map->FirstChildElement("texture");
+	assert(ele_texture);
+	mTilemap_texture = util::safe_string(ele_texture->GetText());
+
+	mEle_collisionboxes = mEle_root->FirstChildElement("collisionboxes");
+
 	return true;
+}
+
+void scene_loader::save_settings()
+{
+	fix();
+
+	assert(mEle_root);
+
+	auto ele_boundary = mEle_root->FirstChildElement("boundary");
+	assert(ele_boundary);
+	ele_boundary->SetAttribute("x", mBoundary.x);
+	ele_boundary->SetAttribute("y", mBoundary.y);
+	ele_boundary->SetAttribute("w", mBoundary.w);
+	ele_boundary->SetAttribute("h", mBoundary.h);
+
+	auto ele_has_boundary = mEle_root->FirstChildElement("hasBoundary");
+	assert(ele_has_boundary);
+	ele_has_boundary->SetText(mHas_boundary);
+
+	assert(mEle_map);
+	auto ele_texture = mEle_map->FirstChildElement("texture");
+	assert(ele_texture);
+	ele_texture->SetText(mTilemap_texture.c_str());
+}
+
+// Returns true if element did not exist. pNew_ele remains unchanged if it does exist.
+static inline bool ensure_xml_ele_exists(tinyxml2::XMLDocument& pDoc, tinyxml2::XMLElement* pParent, const char* pName, tinyxml2::XMLElement** pNew_ele = nullptr)
+{
+	assert(pParent);
+	assert(pName);
+	auto ele = pParent->FirstChildElement(pName);
+	if (!ele)
+	{
+		ele = pDoc.NewElement(pName);
+		pParent->InsertEndChild(ele);
+		if (pNew_ele)
+			*pNew_ele = ele;
+		return true;
+	}
+	return false;
 }
 
 void scene_loader::fix()
@@ -136,35 +148,29 @@ void scene_loader::fix()
 	if (mXml_Document.Error())
 		mXml_Document.Clear();
 
-	auto ele_scene = mXml_Document.FirstChildElement("scene");
-	if (!ele_scene)
+	mEle_root = mXml_Document.FirstChildElement("scene");
+	if (!mEle_root)
 	{
-		logger::info("Fixing missing 'scene' element");
-		ele_scene = mXml_Document.NewElement("scene");
-		mXml_Document.InsertFirstChild(ele_scene);
+		mEle_root = mXml_Document.NewElement("scene");
+		mXml_Document.InsertFirstChild(mEle_root);
 	}
 
-	auto ele_map = ele_scene->FirstChildElement("map");
-	if (!ele_map)
+	tinyxml2::XMLElement* ele_has_boundary;
+	if (ensure_xml_ele_exists(mXml_Document, mEle_root, "has_boundary", &ele_has_boundary))
+		ele_has_boundary->SetText(false);
+
+	tinyxml2::XMLElement* ele_boundary;
+	if (ensure_xml_ele_exists(mXml_Document, mEle_root, "boundary", &ele_boundary))
 	{
-		logger::info("Fixing missing 'map' element");
-		ele_map = mXml_Document.NewElement("map");
-		ele_scene->InsertFirstChild(ele_map);
+		ele_boundary->SetAttribute("x", 0);
+		ele_boundary->SetAttribute("y", 0);
+		ele_boundary->SetAttribute("w", 0);
+		ele_boundary->SetAttribute("h", 0);
 	}
 
-	auto ele_texture = ele_map->FirstChildElement("texture");
-	if (!ele_texture)
-	{
-		logger::info("Fixing missing 'texture' element (The texture may need to be specified for tilemaps to work)");
-		ele_map->InsertFirstChild(mXml_Document.NewElement("texture"));
-	}
-
-	auto ele_collisionboxes = ele_scene->FirstChildElement("collisionboxes");
-	if (!ele_collisionboxes)
-	{
-		logger::info("Fixing missing 'collisionboxes' element");
-		ele_scene->InsertFirstChild(mXml_Document.NewElement("collisionboxes"));
-	}
+	ensure_xml_ele_exists(mXml_Document, mEle_root, "map");
+	ensure_xml_ele_exists(mXml_Document, mEle_root->FirstChildElement("map"), "texture");
+	ensure_xml_ele_exists(mXml_Document, mEle_root, "collisionboxes");
 }
 
 void scene_loader::set_has_boundary(bool pHas_it)
@@ -182,7 +188,7 @@ void scene_loader::set_boundary(const engine::frect & pRect)
 	mBoundary = pRect;
 }
 
-const engine::frect& scene_loader::get_boundary() const
+engine::frect scene_loader::get_boundary() const
 {
 	return mBoundary;
 }
@@ -199,7 +205,12 @@ std::string scene_loader::get_script_path() const
 
 std::string scene_loader::get_tilemap_texture() const
 {
-	return mTilemap_texture.string();
+	return mTilemap_texture;
+}
+
+void scene_loader::set_tilemap_texture(const std::string& pName)
+{
+	mTilemap_texture = pName;
 }
 
 std::string scene_loader::get_scene_path() const
@@ -207,17 +218,29 @@ std::string scene_loader::get_scene_path() const
 	return mScene_path.string();
 }
 
-util::optional_pointer<tinyxml2::XMLElement> scene_loader::get_collisionboxes()
+tinyxml2::XMLElement* scene_loader::get_collisionboxes()
 {
 	return mEle_collisionboxes;
 }
 
-util::optional_pointer<tinyxml2::XMLElement> scene_loader::get_tilemap()
+void scene_loader::set_collisionboxes(const collision_box_container & pCBC)
+{
+	mEle_collisionboxes->DeleteChildren();
+	pCBC.save_xml(mXml_Document, mEle_collisionboxes);
+}
+
+tinyxml2::XMLElement* scene_loader::get_tilemap()
 {
 	return mEle_map;
 }
 
-tinyxml2::XMLDocument& rpg::scene_loader::get_document()
+void scene_loader::set_tilemap(const tilemap_manipulator & pTm_m)
+{
+	mEle_map->DeleteChildren();
+	pTm_m.save_xml(mXml_Document, mEle_map);
+}
+
+tinyxml2::XMLDocument& scene_loader::get_document()
 {
 	return mXml_Document;
 }

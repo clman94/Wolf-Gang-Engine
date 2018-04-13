@@ -8,8 +8,12 @@ namespace engine {
 template<typename T>
 struct rect
 {
-	T x, y, w, h;
-
+	union{
+		struct{
+			T x, y, w, h;
+		};
+		T components[4];
+	};
 
 	rect(T pX = 0, T pY = 0, T pW = 0, T pH = 0)
 		: x(pX), y(pY), w(pW), h(pH) {}
@@ -128,7 +132,7 @@ struct rect
 		return *this;
 	}
 
-	inline operator sf::Rect<T>() const
+	operator sf::Rect<T>() const
 	{
 		return{ x, y, w, h };
 	}

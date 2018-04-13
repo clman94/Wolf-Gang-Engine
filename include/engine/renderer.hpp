@@ -227,6 +227,7 @@ private:
 	friend class scoped_clipping;
 };
 
+/*
 class scoped_clipping
 {
 public:
@@ -234,7 +235,7 @@ public:
 	{
 		mOrig_view = pRenderer.mView;
 
-		sf::View new_view(pRect);
+		sf::View new_view(static_cast<sf::Rect<float>>(pRect));
 		frect viewport;
 		//viewport.x = 
 	}
@@ -242,7 +243,7 @@ public:
 private:
 	sf::View mOrig_view;
 	renderer* mRenderer;
-};
+};*/
 
 const std::string shader_restype = "shader";
 

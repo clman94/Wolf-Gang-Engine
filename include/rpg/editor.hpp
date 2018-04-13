@@ -324,7 +324,12 @@ private:
 
 	rpg::scene_loader mScene_loader;
 
+	bool mIs_scene_changed;
+
 private:
+	void prepare_scene(engine::fs::path pPath, const std::string& pName);
+	void save_scene();
+
 	void draw_game_window();
 	void draw_game_view_window();
 
