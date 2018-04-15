@@ -1573,7 +1573,8 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 			if (auto tile = mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(mouse_position))
 			{
 				auto atlas = mTilemap_texture->get_entry(tile->get_atlas());
-				mPrimitives.add_rectangle({ tile->get_position()*mTile_size, atlas->get_root_frame().get_size() }
+				engine::fvector size = atlas->get_root_frame().get_size();
+				mPrimitives.add_rectangle({ tile->get_position()*mTile_size, tile->get_rotation() % 2 ? size.flip() : size }
 				, { 1, 0.5f, 0.5f, 0.5f }, { 1, 0, 0, 0.7f });
 			}
 
