@@ -1525,7 +1525,8 @@ void WGE_imgui_editor::draw_game_view_window()
 		if (mShow_debug_info)
 		{
 			const engine::fvector window_mouse_position = static_cast<engine::fvector>(ImGui::GetMousePos()) - static_cast<engine::fvector>(ImGui::GetCursorScreenPos());
-			const engine::fvector window_tile_mouse_position = window_mouse_position / mTile_size;
+			const engine::fvector view_mouse_position = mGame_renderer.window_to_game_coords(engine::vector_cast<int>(window_mouse_position));
+			const engine::fvector view_tile_mouse_position = view_mouse_position / mTile_size;
 			const engine::fvector tile_mouse_position = mGame_renderer.window_to_game_coords(engine::vector_cast<int>(window_mouse_position), mGame.get_scene().get_world_node());
 
 			ImDrawList * dl = ImGui::GetWindowDrawList();
@@ -1535,8 +1536,8 @@ void WGE_imgui_editor::draw_game_view_window()
 			ImGui::Text("FPS: %.2f", mGame_renderer.get_fps());
 			ImGui::Text("Frame: %.2fms", mGame_renderer.get_delta() * 1000);
 			ImGui::Text("Mouse position:");
-			ImGui::Text("      (Window)  %.2f, %.2f pixels", window_mouse_position.x, window_mouse_position.y);
-			ImGui::Text("                %.2f, %.2f tiles", window_tile_mouse_position.x, window_tile_mouse_position.y);
+			ImGui::Text("        (View)  %.2f, %.2f pixels", view_mouse_position.x, view_mouse_position.y);
+			ImGui::Text("                %.2f, %.2f tiles", view_tile_mouse_position.x, view_tile_mouse_position.y);
 			ImGui::Text("       (World)  %.2f, %.2f tiles", tile_mouse_position.x, tile_mouse_position.y);
 			ImGui::EndGroup();
 			ImGui::QuickTooltip("Basic debug info.\nUse F1 to toggle.");
@@ -1783,7 +1784,7 @@ void WGE_imgui_editor::draw_tilemap_layers_group()
 	if (mTilemap_manipulator.get_layer_count() > 0
 		&& ImGui::ConfirmPopup("Confirm layer removal"
 		, ("Are you sure you want to remove layer \""
-			+ mTilemap_manipulator.get_layer(mCurrent_layer).get_name() + "\"?").c_str()))
+			+ mTilemap_manipulator.get_layer(mCurrent_layer).get_name() + "\"?").c_str()) == 1)
 	{
 		mTilemap_manipulator.remove_layer(mCurrent_layer);
 		mCurrent_layer = std::min(mCurrent_layer, mTilemap_manipulator.get_layer_count() - 1);
