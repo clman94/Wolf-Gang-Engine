@@ -1024,22 +1024,25 @@ static inline void QuickTooltip(const char * pString)
 	}
 }
 
-// Returns true if the user pressed "Yes"
-static inline bool ConfirmPopup(const char * pName, const char* pMessage)
+// Returns 1 if the user pressed "Yes" and 2 if "No"
+static inline int ConfirmPopup(const char * pName, const char* pMessage)
 {
-	bool answer = false;
+	int answer = 0;
 	if (ImGui::BeginPopupModal(pName, NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		ImGui::TextUnformatted(pMessage);
 		if (ImGui::Button("Yes", ImVec2(100, 25)))
 		{
-			answer = true;
+			answer = 1;
 			ImGui::CloseCurrentPopup();
 		}
 
 		ImGui::SameLine();
 		if (ImGui::Button("No", ImVec2(100, 25)))
+		{
+			answer = 2;
 			ImGui::CloseCurrentPopup();
+		}
 		ImGui::EndPopup();
 	}
 	return answer;
@@ -1117,7 +1120,9 @@ WGE_imgui_editor::WGE_imgui_editor()
 	mTilemap_display.set_parent(mTilemap_center_node);
 	mTilemap_scale = 0;
 
-	mIs_scene_changed = false;
+	mIs_scene_modified = false;
+
+	mShow_debug_info = true;
 }
 
 void WGE_imgui_editor::run()
@@ -1145,18 +1150,32 @@ void WGE_imgui_editor::run()
 			mGame_renderer.update_events(window);
 
 		mGame.tick();
+		
+		ImGui::SFML::Update(window.get_sfml_window(), delta_clock.restart());
+
+		handle_undo_redo();
 
 		// Has the current scene changed?
-		if (mScene_loader.get_name() != mGame.get_scene().get_name())
+		if (mScene_loader.get_name() != mGame.get_scene().get_name() && !ImGui::IsPopupOpen("###askforsave"))
 		{
+			if (mIs_scene_modified)
+				ImGui::OpenPopup("###askforsave");
+			else
+				prepare_scene(mGame.get_source_path() / "scenes", mGame.get_scene().get_name());
+		}
+
+		int scene_save_answer = ImGui::ConfirmPopup("Save?###askforsave", "Do you want to save this scene before moving on?");
+		if (scene_save_answer == 1) // yes
+		{
+			save_scene();
+			prepare_scene(mGame.get_source_path() / "scenes", mGame.get_scene().get_name());
+		}
+		else if (scene_save_answer == 2) // no
+		{
+			// No save
 			prepare_scene(mGame.get_source_path() / "scenes", mGame.get_scene().get_name());
 		}
 
-		/*if (ImGui::ConfirmPopup("Save?##askforsave", "Do you want to save this scene before moving on?"))
-		{
-		}*/
-		
-		ImGui::SFML::Update(window.get_sfml_window(), delta_clock.restart());
 
 		ImGui::BeginMainMenuBar();
 		if (ImGui::BeginMenu("Game"))
@@ -1198,20 +1217,19 @@ void WGE_imgui_editor::run()
 			ImGui::Text("Scene List");
 			ImGui::SameLine();
 			if (ImGui::Button("Refresh"))
-			{
 				mScene_list = mGame.compile_scene_list();
-			}
+			ImGui::QuickTooltip("Repopulate the scene list");
+
 			ImGui::BeginChild("Scenelist", ImVec2(200, -25), true);
 			for (auto& i : mScene_list)
-			{
 				if (ImGui::Selectable(i.c_str(), i == mGame.get_scene().get_path()))
-				{
 					mGame.get_scene().load_scene(i);
-				}
-			}
 			ImGui::EndChild();
-			if (ImGui::Button("New##NewScene"))
+
+			if (ImGui::Button("New###NewScene"))
 				ImGui::OpenPopup("Create scene");
+			ImGui::QuickTooltip("Create a new scene for this game");
+
 			if (ImGui::BeginPopupModal("Create scene", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 			{
 				static char name[256];
@@ -1250,21 +1268,29 @@ void WGE_imgui_editor::run()
 				// This does not affect the editors
 				mGame.get_scene().reload_scene();
 			}
+			ImGui::QuickTooltip("Restarts the current scene. This will not affect the editors.");
+
+			ImGui::SameLine();
+			if (ImGui::Button("Save"))
+				save_scene();
+
 			ImGui::Text(("Name: " + mGame.get_scene().get_path()).c_str());
 
 			bool has_boundary = mScene_loader.has_boundary();
 			if (ImGui::Checkbox("Has boundary", &has_boundary))
 			{
-				mIs_scene_changed = true;
+				mIs_scene_modified = true;
 				mScene_loader.set_has_boundary(has_boundary);
 			}
+			ImGui::QuickTooltip("The boundary is the region in which the camera will be contained. The camera cannot move out of the boundary.");
 
 			engine::frect boundary = mScene_loader.get_boundary();
 			if (ImGui::DragFloat4("Boundary", boundary.components))
 			{
-				mIs_scene_changed = true;
+				mIs_scene_modified = true;
 				mScene_loader.set_boundary(boundary);
 			}
+			ImGui::QuickTooltip("Sets the boundary's x, y, width, and height respectively. This is in unit tiles.");
 
 			if (ImGui::Button("Open Script in Editor"))
 			{
@@ -1295,7 +1321,7 @@ void WGE_imgui_editor::run()
 			mTilemap_renderer.draw();
 
 			engine::ivector window_mouse_position = static_cast<engine::ivector>(ImGui::GetMousePos()) - static_cast<engine::ivector>(ImGui::GetCursorScreenPos());
-			engine::fvector mouse_position = snap(mTilemap_renderer.window_to_game_coords(window_mouse_position, mTilemap_display) / mTile_size, { 0.5f, 0.5f });
+			engine::fvector mouse_position = snap(mTilemap_renderer.window_to_game_coords(window_mouse_position, mTilemap_display), { 0.5f, 0.5f });
 			
 			// Draw previewed tile
 			if (mTilemap_texture && mCurrent_tile_atlas)
@@ -1357,25 +1383,7 @@ void WGE_imgui_editor::run()
 					mTilemap_center_node.set_scale(engine::fvector(1, 1)*std::pow(2.f, mTilemap_scale));
 				}
 
-				// Undo
-				if (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(sf::Keyboard::Z))
-				{
-					if (mCommand_manager.undo())
-					{
-						mTilemap_manipulator.get_layer(mCurrent_layer).sort();
-						mTilemap_display.update(mTilemap_manipulator);
-					}
-				}
 
-				// Redo
-				if (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(sf::Keyboard::Y))
-				{
-					if (mCommand_manager.redo())
-					{
-						mTilemap_manipulator.get_layer(mCurrent_layer).sort();
-						mTilemap_display.update(mTilemap_manipulator);
-					}
-				}
 			}
 			ImGui::EndChild();
 
@@ -1412,7 +1420,7 @@ void WGE_imgui_editor::run()
 
 void WGE_imgui_editor::place_tile(engine::fvector pos)
 {
-	mIs_scene_changed = true;
+	mIs_scene_modified = true;
 	rpg::tile tile;
 	tile.set_position(pos);
 	tile.set_atlas(mCurrent_tile_atlas->get_name(), mTilemap_manipulator.get_layer(mCurrent_layer).get_pool());
@@ -1426,7 +1434,7 @@ void WGE_imgui_editor::remove_tile(engine::fvector pos)
 {
 	if (mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(pos)) // Check if a tile will actually be deleted
 	{
-		mIs_scene_changed = true;
+		mIs_scene_modified = true;
 		mCommand_manager.execute<command_remove_tiles>(mCurrent_layer, mTilemap_manipulator, pos);
 		mTilemap_manipulator.get_layer(mCurrent_layer).sort();
 		mTilemap_display.update(mTilemap_manipulator);
@@ -1449,18 +1457,32 @@ void WGE_imgui_editor::prepare_scene(engine::fs::path pPath, const std::string& 
 
 		// Center the tilemap view
 		mTilemap_display.set_position(-mTilemap_manipulator.get_center_point());
+
+		mIs_scene_modified = false;
+		mCommand_manager.clear();
 	}
 }
 
 void WGE_imgui_editor::save_scene()
 {
+	logger::info("Saving scene");
+	mTilemap_manipulator.condense_map();
 	mScene_loader.set_tilemap(mTilemap_manipulator);
+	mTilemap_manipulator.explode_all();
+	if (!mScene_loader.save())
+	{
+		logger::error("Failed saving scene xml file");
+		return;
+	}
+	mIs_scene_modified = false;
+	logger::info("Scene saved");
 }
 
 void WGE_imgui_editor::draw_game_window()
 {
 	if (ImGui::Begin("Game"))
 	{
+
 		if (ImGui::Button("Restart game", ImVec2(-0, 0)))
 		{
 			mGame.restart_game();
@@ -1560,10 +1582,29 @@ void WGE_imgui_editor::draw_game_view_window()
 
 		// Display on imgui window. 
 		ImGui::AddBackgroundImage(mGame_render_target);
+		
+		if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && ImGui::IsKeyPressed(sf::Keyboard::F1))
+			mShow_debug_info = !mShow_debug_info;
 
-		// TODO: Add debug info (FPS, Delta, etc..)
-		ImGui::Text("FPS: %.2f", mGame_renderer.get_fps());
-		ImGui::Text("Frame: %.2fms", mGame_renderer.get_delta()*1000);
+		if (mShow_debug_info)
+		{
+			const engine::fvector window_mouse_position = static_cast<engine::fvector>(ImGui::GetMousePos()) - static_cast<engine::fvector>(ImGui::GetCursorScreenPos());
+			const engine::fvector window_tile_mouse_position = window_mouse_position / mTile_size;
+			const engine::fvector tile_mouse_position = mGame_renderer.window_to_game_coords(engine::vector_cast<int>(window_mouse_position), mGame.get_scene().get_world_node());
+
+			ImDrawList * dl = ImGui::GetWindowDrawList();
+			dl->AddRectFilled(ImGui::GetCursorScreenPos(), static_cast<engine::fvector>(ImGui::GetCursorScreenPos()) + engine::fvector(300, ImGui::GetTextLineHeightWithSpacing() * 6), engine::color(0, 0, 0, 150).to_uint32(), 5);
+
+			ImGui::BeginGroup();
+			ImGui::Text("FPS: %.2f", mGame_renderer.get_fps());
+			ImGui::Text("Frame: %.2fms", mGame_renderer.get_delta() * 1000);
+			ImGui::Text("Mouse position:");
+			ImGui::Text("      (Window)  %.2f, %.2f pixels", window_mouse_position.x, window_mouse_position.y);
+			ImGui::Text("                %.2f, %.2f tiles", window_tile_mouse_position.x, window_tile_mouse_position.y);
+			ImGui::Text("       (World)  %.2f, %.2f tiles", tile_mouse_position.x, tile_mouse_position.y);
+			ImGui::EndGroup();
+			ImGui::QuickTooltip("Basic debug info.\nUse F1 to toggle.");
+		}
 	}
 	ImGui::End();
 }
@@ -1815,4 +1856,29 @@ void WGE_imgui_editor::draw_log()
 		last_log_size = log.size();
 	}
 	ImGui::End();
+}
+
+void WGE_imgui_editor::handle_undo_redo()
+{
+	if (!ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow))
+		return;
+	// Undo
+	if (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(sf::Keyboard::Z))
+	{
+		if (mCommand_manager.undo())
+		{
+			mTilemap_manipulator.get_layer(mCurrent_layer).sort();
+			mTilemap_display.update(mTilemap_manipulator);
+		}
+	}
+
+	// Redo
+	if (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(sf::Keyboard::Y))
+	{
+		if (mCommand_manager.redo())
+		{
+			mTilemap_manipulator.get_layer(mCurrent_layer).sort();
+			mTilemap_display.update(mTilemap_manipulator);
+		}
+	}
 }

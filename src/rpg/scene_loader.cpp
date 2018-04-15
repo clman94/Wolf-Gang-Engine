@@ -119,7 +119,7 @@ void scene_loader::save_settings()
 	ele_boundary->SetAttribute("w", mBoundary.w);
 	ele_boundary->SetAttribute("h", mBoundary.h);
 
-	auto ele_has_boundary = mEle_root->FirstChildElement("hasBoundary");
+	auto ele_has_boundary = mEle_root->FirstChildElement("has_boundary");
 	assert(ele_has_boundary);
 	ele_has_boundary->SetText(mHas_boundary);
 

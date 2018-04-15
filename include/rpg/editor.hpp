@@ -285,7 +285,9 @@ private:
 
 	rpg::scene_loader mScene_loader;
 
-	bool mIs_scene_changed;
+	bool mIs_scene_modified;
+
+	bool mShow_debug_info;
 
 private:
 	void prepare_scene(engine::fs::path pPath, const std::string& pName);
@@ -300,6 +302,8 @@ private:
 	void draw_collision_settings_window();
 
 	void draw_log();
+
+	void handle_undo_redo();
 };
 
 }
