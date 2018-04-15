@@ -315,7 +315,7 @@ private:
 
 	void handle_undo_redo();
 
-	engine::fvector calc_snapping() const;
+	static engine::fvector calc_snapping(int pSnapping, int pTile_size);
 };
 
 }

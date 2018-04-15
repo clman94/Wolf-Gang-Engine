@@ -1003,12 +1003,12 @@ static inline void VSplitter(const char* str_id, float width, float* val)
 // Construct a string representing the name and id "name##id"
 static inline std::string NameId(const std::string& pName, const std::string& pId)
 {
-	return pName + "##" + pId;
+	return pName + "###" + pId;
 }
 
 static inline std::string IdOnly(const std::string& pId)
 {
-	return "##" + pId;
+	return "###" + pId;
 }
 
 // Shortcut for adding a text only tooltip to the last item
@@ -1238,7 +1238,7 @@ void WGE_imgui_editor::run()
 				static char name[256];
 				ImGui::InputText("Name", name, 256);
 
-				if (ImGui::Button("Create", ImVec2(100, 25)) && strnlen(name, sizeof(name)) != 0)
+				if (ImGui::Button("Create", ImVec2(100, 25)) && strnlen(name, sizeof(name) / sizeof(name[0])) != 0)
 				{
 					if (mGame.create_scene(name))
 					{
@@ -1324,7 +1324,7 @@ void WGE_imgui_editor::run()
 			mTilemap_renderer.draw();
 
 			engine::ivector window_mouse_position = static_cast<engine::ivector>(ImGui::GetMousePos()) - static_cast<engine::ivector>(ImGui::GetCursorScreenPos());
-			engine::fvector mouse_position = snap(mTilemap_renderer.window_to_game_coords(window_mouse_position, mTilemap_display), calc_snapping());
+			engine::fvector mouse_position = snap(mTilemap_renderer.window_to_game_coords(window_mouse_position, mTilemap_display), calc_snapping(mTilemap_current_snapping, mTile_size));
 			
 			// Draw previewed tile
 			if (mTilemap_texture && mCurrent_tile_atlas)
@@ -1679,17 +1679,8 @@ void WGE_imgui_editor::draw_tilemap_layers_group()
 			mTilemap_display.set_layer_visible(layer_index, is_visible);
 		ImGui::NextColumn();
 
-		std::string popup_name = ImGui::NameId("Rename layer \"" + layer.get_name() + "\"", std::to_string(layer_index));
 		if (ImGui::Selectable(ImGui::NameId(layer.get_name(), "layer" + std::to_string(layer_index)).c_str(), mCurrent_layer == layer_index))
 			mCurrent_layer = layer_index;
-		if (ImGui::IsItemClicked(1)) // Right click gives some more options
-			ImGui::OpenPopup(popup_name.c_str());
-
-		if (ImGui::BeginPopup(popup_name.c_str()))
-		{
-			ImGui::TextUnformatted("TODO: Implement layer renaming");
-			ImGui::EndPopup();
-		}
 		ImGui::NextColumn();
 	}
 	ImGui::Columns(1);
@@ -1700,6 +1691,24 @@ void WGE_imgui_editor::draw_tilemap_layers_group()
 	{
 		mCurrent_layer = mTilemap_manipulator.insert_layer(mCurrent_layer);
 		mTilemap_display.update(mTilemap_manipulator);
+	}
+
+	ImGui::SameLine();
+	if (ImGui::Button("Rename"))
+		ImGui::OpenPopup("Rename Layer");
+	if (ImGui::BeginPopupModal("Rename Layer", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		static char name[256]; // TODO: default to original name
+		ImGui::InputText("Name", name, 256);
+		if (ImGui::Button("Rename", ImVec2(100, 25)) && strnlen(name, sizeof(name)/sizeof(name[0])) != 0)
+		{
+			mTilemap_manipulator.get_layer(mCurrent_layer).set_name(name);
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel", ImVec2(100, 25)))
+			ImGui::CloseCurrentPopup();
+		ImGui::EndPopup();
 	}
 
 	ImGui::SameLine();
@@ -1883,13 +1892,13 @@ void WGE_imgui_editor::handle_undo_redo()
 	}
 }
 
-engine::fvector WGE_imgui_editor::calc_snapping() const
+engine::fvector WGE_imgui_editor::calc_snapping(int pSnapping, int pTile_size)
 {
-	switch (mTilemap_current_snapping)
+	switch (pSnapping)
 	{
 	default:
 	case snapping_none:    return { 0, 0 };
-	case snapping_pixel:   return engine::fvector(1, 1) / mTile_size;
+	case snapping_pixel:   return engine::fvector(1, 1) / pTile_size;
 	case snapping_eight:   return { 0.25f, 0.25f };
 	case snapping_quarter: return { 0.5f, 0.5f };
 	case snapping_full:    return { 1, 1 };
