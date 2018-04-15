@@ -1111,7 +1111,7 @@ engine::fvector snap(const engine::fvector& pPos, const engine::fvector& pTo, co
 void draw_grid(engine::primitive_builder& pPrimitives, engine::fvector pAlign_to, engine::fvector pScale, engine::fvector pDisplay_size, engine::color pColor)
 {
 	engine::ivector line_count = engine::vector_cast<int>((pDisplay_size / pScale).floor());
-	engine::fvector offset = math::pfmodf(pAlign_to, pScale);
+	engine::fvector offset = math::pfmod(pAlign_to, pScale);
 
 	// Vertical lines
 	for (int i = 0; i < line_count.x; i++)
@@ -1553,8 +1553,6 @@ void WGE_imgui_editor::draw_game_view_window()
 			ImGui::Text("       (World)  %.2f, %.2f tiles", tile_mouse_position.x, tile_mouse_position.y);
 			ImGui::EndGroup();
 			ImGui::QuickTooltip("Basic debug info.\nUse F1 to toggle.");
-
-
 		}
 	}
 	ImGui::End();
@@ -1666,7 +1664,7 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 			ImGui::PopItemWidth();
 			ImGui::TreePop();
 		}
-		static float tilegroup_height = 300;
+		static float tilegroup_height = 300; // TODO: make nonstatic
 		if (ImGui::TreeNodeEx("Tile", ImGuiTreeNodeFlags_DefaultOpen))
 		{
 			draw_tile_group(tilegroup_height);

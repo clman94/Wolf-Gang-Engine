@@ -333,9 +333,9 @@ namespace math
 {
 
 // Returns the always-positive remainder
-inline engine::fvector pfmodf(engine::fvector a, engine::fvector b)
+inline engine::fvector pfmod(engine::fvector a, engine::fvector b)
 {
-	return { math::pfmodf(a.x, b.x), math::pfmodf(a.y, b.y) };
+	return { math::pfmod(a.x, b.x), math::pfmod(a.y, b.y) };
 }
 
 }
