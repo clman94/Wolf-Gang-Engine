@@ -314,7 +314,7 @@ private:
 	void draw_game_view_window();
 
 	void draw_tilemap_editor_window();
-	void draw_tile_group();
+	void draw_tile_group(float from_bottom = 300);
 	void draw_tilemap_layers_group();
 	void center_tilemap();
 

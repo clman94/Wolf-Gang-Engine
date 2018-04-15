@@ -989,6 +989,18 @@ static inline void VSplitter(const char* str_id, float width, float* val)
 	ImGui::PopStyleVar();
 }
 
+static inline void HSplitter(const char* str_id, float pHeight, float* val, bool pInverted = false)
+{
+	assert(val);
+	ImVec2 last_item_min = ImGui::GetItemRectMin();
+	ImVec2 last_item_max = ImGui::GetItemRectMax();
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+	ImGui::InvisibleButton(str_id, ImVec2(last_item_max.x - last_item_min.x, pHeight));
+	if (ImGui::IsItemActive())
+		*val += ImGui::GetIO().MouseDelta.y * (pInverted ? -1 : 1);
+	ImGui::PopStyleVar();
+}
+
 // Construct a string representing the name and id "name##id"
 static inline std::string NameId(const std::string& pName, const std::string& pId)
 {
@@ -1528,7 +1540,7 @@ void WGE_imgui_editor::draw_game_view_window()
 			const engine::fvector view_mouse_position = mGame_renderer.window_to_game_coords(engine::vector_cast<int>(window_mouse_position));
 			const engine::fvector view_tile_mouse_position = view_mouse_position / mTile_size;
 			const engine::fvector tile_mouse_position = mGame_renderer.window_to_game_coords(engine::vector_cast<int>(window_mouse_position), mGame.get_scene().get_world_node());
-
+			
 			ImDrawList * dl = ImGui::GetWindowDrawList();
 			dl->AddRectFilled(ImGui::GetCursorScreenPos(), static_cast<engine::fvector>(ImGui::GetCursorScreenPos()) + engine::fvector(300, ImGui::GetTextLineHeightWithSpacing() * 6), engine::color(0, 0, 0, 150).to_uint32(), 5);
 
@@ -1541,6 +1553,8 @@ void WGE_imgui_editor::draw_game_view_window()
 			ImGui::Text("       (World)  %.2f, %.2f tiles", tile_mouse_position.x, tile_mouse_position.y);
 			ImGui::EndGroup();
 			ImGui::QuickTooltip("Basic debug info.\nUse F1 to toggle.");
+
+
 		}
 	}
 	ImGui::End();
@@ -1582,7 +1596,6 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 			mPrimitives.add_quad_texture(mTilemap_texture, mouse_position*mTile_size
 				, mCurrent_tile_atlas->get_root_frame(), { 1, 1, 1, 0.7f }, mTile_rotation);
 
-
 			mPrimitives.pop_node();
 		}
 		
@@ -1593,8 +1606,6 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 			engine::fvector scale = mTilemap_display.get_absolute_scale()*static_cast<float>(mTile_size);
 			engine::fvector display_size = engine::vector_cast<float, unsigned int>(mTilemap_render_target.getSize());
 			draw_grid(mPrimitives, offset, scale, display_size, { 1, 1, 1, 0.7f });
-			draw_grid(mPrimitives, offset + (engine::fvector(mTile_size, mTile_size) / 2) * scale
-				, scale, display_size, { 1, 1, 1, 0.5f });
 		}
 
 
@@ -1655,10 +1666,11 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 			ImGui::PopItemWidth();
 			ImGui::TreePop();
 		}
-
+		static float tilegroup_height = 300;
 		if (ImGui::TreeNodeEx("Tile", ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			draw_tile_group();
+			draw_tile_group(tilegroup_height);
+			ImGui::HSplitter("tileandlayerssplitter", 3, &tilegroup_height, true);
 			ImGui::TreePop();
 		}
 		if (ImGui::TreeNodeEx("Layers", ImGuiTreeNodeFlags_DefaultOpen))
@@ -1671,9 +1683,9 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 	ImGui::End();
 }
 
-void WGE_imgui_editor::draw_tile_group()
+void WGE_imgui_editor::draw_tile_group(float from_bottom)
 {
-	ImGui::BeginChild("Tilesettingsgroup", ImVec2(0, -300));
+	ImGui::BeginChild("Tilesettingsgroup", ImVec2(0, -from_bottom));
 
 	ImGui::BeginChild("Tile Preview", ImVec2(100, 100), true);
 	if (mTilemap_texture && mCurrent_tile_atlas)
