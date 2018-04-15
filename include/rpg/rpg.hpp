@@ -172,7 +172,10 @@ public:
 	bool load(engine::fs::path pData_dir);
 	bool stop();
 	void clear_scene();
-	bool create_scene(const std::string & pName);
+
+	// All instances of %texture% (in the default xml file) will be replaced by pTexture.
+	// Default files default-xml.xml and default-as.as are loaded from directory ./editor/scene-defaults/
+	bool create_scene(const std::string & pName, const std::string& pTexture);
 
 	bool restart_game();
 

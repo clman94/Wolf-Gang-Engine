@@ -46,7 +46,8 @@ void primitive_builder::add_rectangle(frect pRect, color pFill, color pOutline)
 	std::vector<fvector> points;
 	for (std::size_t i = 0; i < 4; i++)
 		points.push_back(pRect.get_vertex(i));
-	add_poly(points, pFill);
+	if (pFill.a > 0)
+		add_poly(points, pFill);
 	if (pOutline.a > 0)
 		add_poly_lines(points, pOutline);
 }

@@ -727,7 +727,7 @@ void game::clear_scene()
 	mScene.clean(true);
 }
 
-bool game::create_scene(const std::string & pName)
+bool game::create_scene(const std::string & pName, const std::string& pTexture)
 {
 	const auto xml_path = mData_directory / defs::DEFAULT_SCENES_PATH / (pName + ".xml");
 	const auto script_path = mData_directory / defs::DEFAULT_SCENES_PATH / (pName + ".as");
@@ -738,17 +738,33 @@ bool game::create_scene(const std::string & pName)
 		return false;
 	}
 
+	std::string xml_default_str;
+	if (!util::text_file_readall("./editor/scene-defaults/default-xml.xml", xml_default_str))
+	{
+		logger::error("Failed to load default .xml file for new scene");
+		return false;
+	}
+
+	util::replace_all_with(xml_default_str, "%texture%", pTexture);
+
+	std::string as_default_str;
+	if (!util::text_file_readall("./editor/scene-defaults/default-as.as", as_default_str))
+	{
+		logger::error("Failed to load default .as file for new scene");
+		return false;
+	}
+
 	// Ensure the existance of the directories
 	engine::fs::create_directories(xml_path.parent_path());
 
 	// Create xml file
 	std::ofstream xml(xml_path.string().c_str());
-	xml << defs::MINIMAL_XML_SCENE;
+	xml << xml_default_str;
 	xml.close();
 
 	// Create script file
 	std::ofstream script(script_path.string().c_str());
-	script << defs::MINIMAL_SCRIPT_SCENE;
+	script << as_default_str;
 	script.close();
 
 	return true;

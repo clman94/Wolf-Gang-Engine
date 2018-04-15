@@ -4,6 +4,7 @@
 #include <cmath>
 #include <type_traits>
 #include <string>
+#include <engine/math.hpp>
 
 namespace
 {
@@ -324,6 +325,18 @@ typedef vector<unsigned int> uvector;
 typedef vector<float>  fvector;
 typedef vector<double> dvector;
 
+
+
+}
+
+namespace math
+{
+
+// Returns the always-positive remainder
+inline engine::fvector pfmodf(engine::fvector a, engine::fvector b)
+{
+	return { math::pfmodf(a.x, b.x), math::pfmodf(a.y, b.y) };
+}
 
 }
 

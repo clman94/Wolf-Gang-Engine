@@ -67,6 +67,7 @@ private:
 
 namespace color_preset
 {
+static const color transparent(1, 1, 1, 0);
 static const color opaque(1, 1, 1, 1);
 static const color white(1, 1, 1, 1);
 static const color black(0, 0, 0, 1);

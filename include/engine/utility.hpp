@@ -365,6 +365,10 @@ inline T pingpong_index(T v, T end)
 	return ((v / end) % 2) ? end - (v%end) : (v%end);
 }
 
+// Returns true if at least one is replaced
+bool replace_all_with(std::string& pVal, const std::string& pTarget, const std::string& pNew);
+
+bool text_file_readall(const std::string& pPath, std::string& pOut);
 
 }
 

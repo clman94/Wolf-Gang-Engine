@@ -274,7 +274,7 @@ private:
 	rpg::game mGame;
 	engine::renderer mGame_renderer;
 
-	// this all will be refactored soon, simply prototyping
+	// this all will all be refactored soon, simply prototyping
 	sf::RenderTexture mTilemap_render_target;
 	rpg::tilemap_manipulator mTilemap_manipulator;
 	rpg::tilemap_display mTilemap_display;
@@ -285,9 +285,12 @@ private:
 	float mTilemap_scale;
 	std::size_t mCurrent_layer;
 	command_manager mCommand_manager;
+	int mTilemap_current_snapping;
+	bool mShow_grid;
+
+	// Tilemap Commands
 	void place_tile(engine::fvector pos);
 	void remove_tile(engine::fvector pos);
-	int mTilemap_current_snapping;
 
 	engine::primitive_builder mPrimitives;
 
@@ -299,23 +302,31 @@ private:
 
 	bool mShow_debug_info;
 
+	char mNew_scene_name_buf[256];
+	std::string mNew_scene_texture_name;
+
 private:
 	void prepare_scene(engine::fs::path pPath, const std::string& pName);
 	void save_scene();
 
+	void draw_scene_window();
 	void draw_game_window();
 	void draw_game_view_window();
 
+	void draw_tilemap_editor_window();
 	void draw_tile_group();
 	void draw_tilemap_layers_group();
+	void center_tilemap();
 
 	void draw_collision_settings_window();
 
-	void draw_log();
+	void draw_log_window();
 
 	void handle_undo_redo();
+	void handle_scene_change();
 
 	static engine::fvector calc_snapping(int pSnapping, int pTile_size);
+
 };
 
 }

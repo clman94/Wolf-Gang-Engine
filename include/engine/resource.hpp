@@ -86,7 +86,6 @@ public:
 
 	// Get all resources in this manager. Used only for debugging
 	const std::vector<std::shared_ptr<resource>>& get_resources() const;
-
 	std::vector<std::shared_ptr<resource>> get_resources_with_type(const std::string& pType) const;
 
 private:
