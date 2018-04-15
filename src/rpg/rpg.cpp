@@ -727,6 +727,33 @@ void game::clear_scene()
 	mScene.clean(true);
 }
 
+bool game::create_scene(const std::string & pName)
+{
+	const auto xml_path = mData_directory / defs::DEFAULT_SCENES_PATH / (pName + ".xml");
+	const auto script_path = mData_directory / defs::DEFAULT_SCENES_PATH / (pName + ".as");
+
+	if (engine::fs::exists(xml_path) || engine::fs::exists(script_path))
+	{
+		logger::error("Scene '" + pName + "' already exists");
+		return false;
+	}
+
+	// Ensure the existance of the directories
+	engine::fs::create_directories(xml_path.parent_path());
+
+	// Create xml file
+	std::ofstream xml(xml_path.string().c_str());
+	xml << defs::MINIMAL_XML_SCENE;
+	xml.close();
+
+	// Create script file
+	std::ofstream script(script_path.string().c_str());
+	script << defs::MINIMAL_SCRIPT_SCENE;
+	script.close();
+
+	return true;
+}
+
 bool game::tick()
 {
 	if (!mIs_ready || !mScene.is_ready())

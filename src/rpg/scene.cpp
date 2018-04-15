@@ -169,36 +169,6 @@ bool scene::load_scene(std::string pName)
 	return true;
 }
 
-#ifndef LOCKED_RELEASE_MODE
-bool scene::create_scene(const std::string & pName)
-{
-	const auto xml_path = defs::DEFAULT_DATA_PATH / defs::DEFAULT_SCENES_PATH / (pName + ".xml");
-	const auto script_path = defs::DEFAULT_DATA_PATH / defs::DEFAULT_SCENES_PATH / (pName + ".as");
-
-	if (engine::fs::exists(xml_path) || engine::fs::exists(script_path))
-	{
-		logger::error("Scene '" + pName + "' already exists");
-		return false;
-	}
-
-	// Ensure the existance of the directories
-	engine::fs::create_directories(xml_path.parent_path());
-
-	// Create xml file
-	std::ofstream xml(xml_path.string().c_str());
-	xml << defs::MINIMAL_XML_SCENE;
-	xml.close();
-
-	// Create script file
-	std::ofstream script(script_path.string().c_str());
-	script << defs::MINIMAL_SCRIPT_SCENE;
-	script.close();
-
-	return true;
-}
-#endif
-
-
 bool scene::reload_scene()
 {
 	if (mCurrent_scene_name.empty())
@@ -279,22 +249,6 @@ void scene::load_terminal_interface(engine::terminal_system & pTerminal)
 
 		return load_scene(pArgs[0]);
 	}, "<Scene Name> - Load a scene by name");
-
-	mTerminal_cmd_group->add_command("create",
-		[&](const engine::terminal_arglist& pArgs)->bool
-	{
-		if (pArgs.size() <= 0)
-		{
-			logger::error("Not enough arguments");
-			logger::info("scene create <scene_name>");
-			return false;
-		}
-
-		if (!create_scene(pArgs[0]))
-			return false;
-
-		return load_scene(pArgs[0]);
-	}, "<Scene Name> - Create a new scene");
 
 	mTerminal_cmd_group->add_command("resources",
 		[&](const engine::terminal_arglist& pArgs)->bool

@@ -172,6 +172,7 @@ public:
 	bool load(engine::fs::path pData_dir);
 	bool stop();
 	void clear_scene();
+	bool create_scene(const std::string & pName);
 
 	bool restart_game();
 

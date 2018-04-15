@@ -279,7 +279,6 @@ private:
 	void place_tile(engine::fvector pos);
 	void remove_tile(engine::fvector pos);
 
-
 	engine::primitive_builder mPrimitives;
 
 	editor_settings_loader mSettings;

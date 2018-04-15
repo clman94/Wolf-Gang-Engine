@@ -1132,6 +1132,7 @@ void WGE_imgui_editor::run()
 
 	mGame.load("./data");
 	mGame_renderer.refresh();
+	mScene_list = mGame.compile_scene_list();
 
 	sf::Clock delta_clock;
 	while (window.is_open())
@@ -1192,7 +1193,6 @@ void WGE_imgui_editor::run()
 
 		if (ImGui::Begin("Scene"))
 		{
-			static float w = 200;
 
 			ImGui::BeginGroup();
 			ImGui::Text("Scene List");
@@ -1201,7 +1201,7 @@ void WGE_imgui_editor::run()
 			{
 				mScene_list = mGame.compile_scene_list();
 			}
-			ImGui::BeginChild("Scenelist", ImVec2(w, 0), true);
+			ImGui::BeginChild("Scenelist", ImVec2(200, -25), true);
 			for (auto& i : mScene_list)
 			{
 				if (ImGui::Selectable(i.c_str(), i == mGame.get_scene().get_path()))
@@ -1210,6 +1210,33 @@ void WGE_imgui_editor::run()
 				}
 			}
 			ImGui::EndChild();
+			if (ImGui::Button("New##NewScene"))
+				ImGui::OpenPopup("Create scene");
+			if (ImGui::BeginPopupModal("Create scene", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+			{
+				static char name[256];
+				ImGui::InputText("Name", name, 256);
+
+				if (ImGui::Button("Create", ImVec2(100, 25)) && strnlen(name, sizeof(name)) != 0)
+				{
+					if (mGame.create_scene(name))
+					{
+						logger::info("Scene \"" + std::string(name) + "\" created");
+						mGame.get_scene().load_scene(name);
+					}
+					else
+						logger::error("Failed to create scene \"" + std::string(name) + "\"");
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::SameLine();
+				if (ImGui::Button("Cancel", ImVec2(100, 25)))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+				ImGui::EndPopup();
+			}
+
 			ImGui::EndGroup();
 
 			//ImGui::SameLine();
@@ -1385,6 +1412,7 @@ void WGE_imgui_editor::run()
 
 void WGE_imgui_editor::place_tile(engine::fvector pos)
 {
+	mIs_scene_changed = true;
 	rpg::tile tile;
 	tile.set_position(pos);
 	tile.set_atlas(mCurrent_tile_atlas->get_name(), mTilemap_manipulator.get_layer(mCurrent_layer).get_pool());
@@ -1396,11 +1424,13 @@ void WGE_imgui_editor::place_tile(engine::fvector pos)
 
 void WGE_imgui_editor::remove_tile(engine::fvector pos)
 {
-	if (!mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(pos))
-		return;
-	mCommand_manager.execute<command_remove_tiles>(mCurrent_layer, mTilemap_manipulator, pos);
-	mTilemap_manipulator.get_layer(mCurrent_layer).sort();
-	mTilemap_display.update(mTilemap_manipulator);
+	if (mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(pos)) // Check if a tile will actually be deleted
+	{
+		mIs_scene_changed = true;
+		mCommand_manager.execute<command_remove_tiles>(mCurrent_layer, mTilemap_manipulator, pos);
+		mTilemap_manipulator.get_layer(mCurrent_layer).sort();
+		mTilemap_display.update(mTilemap_manipulator);
+	}
 }
 
 void WGE_imgui_editor::prepare_scene(engine::fs::path pPath, const std::string& pName)

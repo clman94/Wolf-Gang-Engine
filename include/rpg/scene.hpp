@@ -134,10 +134,6 @@ public:
 	// The strings are not references so cleanup doesn't cause issues.
 	bool load_scene(std::string pName);
 
-#ifndef LOCKED_RELEASE_MODE
-	bool create_scene(const std::string& pName);
-#endif
-
 	// Reload the currently loaded scene.
 	bool reload_scene();
 
