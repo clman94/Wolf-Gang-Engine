@@ -27,15 +27,6 @@ inline engine::fvector read_args_vector(const engine::terminal_arglist& pArgs, f
 	return ret;
 }
 
-
-bool command_manager::execute(std::shared_ptr<command> pCommand)
-{
-	assert(!mCurrent);
-	mRedo.clear();
-	mUndo.push_back(pCommand);
-	return pCommand->execute();
-}
-
 bool command_manager::add(std::shared_ptr<command> pCommand)
 {
 	assert(!mCurrent);
@@ -44,17 +35,21 @@ bool command_manager::add(std::shared_ptr<command> pCommand)
 	return true;
 }
 
-void command_manager::start(std::shared_ptr<command> pCommand)
-{
-	mCurrent = pCommand;
-}
-
 void command_manager::complete()
 {
 	assert(mCurrent);
 	mRedo.clear();
 	mUndo.push_back(mCurrent);
 	mCurrent.reset();
+}
+
+bool command_manager::execute_and_complete()
+{
+	mRedo.clear();
+	mUndo.push_back(mCurrent);
+	bool r = mCurrent->execute();
+	mCurrent.reset();
+	return r;
 }
 
 bool command_manager::undo()
@@ -70,6 +65,7 @@ bool command_manager::undo()
 
 bool command_manager::redo()
 {
+	assert(!mCurrent);
 	if (mRedo.size() == 0)
 		return false;
 	auto redo_cmd = mRedo.back();
@@ -89,10 +85,17 @@ class command_set_tiles :
 	public command
 {
 public:
-	command_set_tiles(int pLayer, rpg::tilemap_manipulator* pTilemap_manipulator)
+	command_set_tiles(std::size_t pLayer, rpg::tilemap_manipulator& pTilemap_manipulator)
 	{
 		mLayer = pLayer;
-		mTilemap_manipulator = pTilemap_manipulator;
+		mTilemap_manipulator = &pTilemap_manipulator;
+	}
+
+	command_set_tiles(std::size_t pLayer, rpg::tilemap_manipulator& pTilemap_manipulator, rpg::tile& pTile)
+	{
+		mLayer = pLayer;
+		mTilemap_manipulator = &pTilemap_manipulator;
+		add(pTile);
 	}
 
 	bool execute()
@@ -120,15 +123,11 @@ public:
 
 		// Remove all placed tiles
 		for (auto& i : mTiles)
-		{
 			mTilemap_manipulator->get_layer(mLayer).remove_tile(i.get_position());
-		}
 
 		// Place all replaced tiles back
 		for (auto& i : mReplaced_tiles)
-		{
 			mTilemap_manipulator->get_layer(mLayer).set_tile(i);
-		}
 
 		return true;
 	}
@@ -139,7 +138,7 @@ public:
 	}
 
 private:
-	int mLayer;
+	std::size_t mLayer;
 
 	std::vector<rpg::tile> mReplaced_tiles;
 	std::vector<rpg::tile> mTiles;
@@ -151,12 +150,18 @@ class command_remove_tiles :
 	public command
 {
 public:
-	command_remove_tiles(int pLayer, rpg::tilemap_manipulator* pTilemap_manipulator)
+	command_remove_tiles(std::size_t pLayer, rpg::tilemap_manipulator& pTilemap_manipulator)
 	{
 		mLayer = pLayer;
-		mTilemap_manipulator = pTilemap_manipulator;
+		mTilemap_manipulator = &pTilemap_manipulator;
 	}
 
+	command_remove_tiles(std::size_t pLayer, rpg::tilemap_manipulator& pTilemap_manipulator, engine::fvector pTile)
+	{
+		mLayer = pLayer;
+		mTilemap_manipulator = &pTilemap_manipulator;
+		add(pTile);
+	}
 	bool execute()
 	{
 		assert(mTilemap_manipulator);
@@ -188,7 +193,7 @@ public:
 	}
 
 private:
-	int mLayer;
+	std::size_t mLayer;
 
 	std::vector<rpg::tile> mRemoved_tiles;
 	std::vector<engine::fvector> mTiles_to_remove;
@@ -265,421 +270,6 @@ void scene_editor::update_zoom(engine::renderer & pR)
 		mZoom -= 0.5;
 	float factor = std::pow(2.f, mZoom);
 	set_scale({ factor, factor });
-}
-
-// ##########
-// tilemap_editor
-// ##########
-
-tilemap_editor::tilemap_editor()
-{
-	mPreview.set_color({ 1, 1, 1, 0.78f });
-
-	mCurrent_tile = 0;
-	mRotation = 0;
-	mLayer = 0;
-
-	mIs_highlight = false;
-
-	mState = state::none;
-}
-
-bool tilemap_editor::open_editor()
-{
-	clean();
-
-	// Get tilemap texture
-	// The user should be allowed to add a texture when there isn't any.
-	mTexture = mTilemap_display.get_texture();
-	if (mTexture)
-	{
-		mCurrent_texture_name = mLoader.get_tilemap_texture();
-		mTile_list = std::move(mTexture->compile_list());
-		mPreview.set_texture(mTexture);
-	}
-	update_preview();
-	return true;
-}
-
-int tilemap_editor::draw(engine::renderer & pR)
-{
-	// Editing is not allowed as there are no tiles to use.
-	if (mTile_list.empty())
-		return 1;
-	update_zoom(pR);
-
-	const engine::fvector mouse_position = pR.get_mouse_position(*this);
-
-	const engine::fvector tile_position_exact = mouse_position / get_unit();
-	const engine::fvector tile_position
-		= false // Full tile
-		? engine::fvector(tile_position_exact * 2).floor() / 2
-		: engine::fvector(tile_position_exact).floor();
-
-	switch (mState)
-	{
-	case state::none:
-	{
-		if (pR.is_mouse_down(engine::renderer::mouse_button::mouse_left)
-			&& pR.is_key_down(engine::renderer::key_code::LShift))
-		{
-			mState = state::drawing_region;
-			mLast_tile = tile_position;
-		}
-		else if (pR.is_key_down(engine::renderer::key_code::LControl))
-		{
-			if (pR.is_key_pressed(engine::renderer::key_code::Z)) // Undo
-			{
-				mCommand_manager.undo();
-				update_tilemap();
-			}
-			else if (pR.is_key_pressed(engine::renderer::key_code::Y)) // Redo
-			{
-				mCommand_manager.redo();
-				update_tilemap();
-			}
-		}
-		else if (pR.is_mouse_down(engine::renderer::mouse_button::mouse_left))
-		{
-			mState = state::drawing;
-			draw_tile_at(tile_position); // Draw first tile
-			mLast_tile = tile_position;
-		}
-		else if (pR.is_mouse_down(engine::renderer::mouse_button::mouse_right))
-		{
-			mState = state::erasing;
-			erase_tile_at(tile_position); // Erase first tile
-			mLast_tile = tile_position;
-		}
-		else if (pR.is_mouse_down(engine::renderer::mouse_button::mouse_middle))
-		{
-			copy_tile_type_at(tile_position); // Copy tile (no need for a specific state for this)
-		}
-		else if (pR.is_key_pressed(engine::renderer::key_code::Period))
-		{
-			next_tile();
-		}
-		else if (pR.is_key_pressed(engine::renderer::key_code::Comma))
-		{
-			previous_tile();
-		}
-		else if (pR.is_key_pressed(engine::renderer::key_code::R))
-		{
-			rotate_clockwise();
-		}
-		break;
-	}
-	case state::drawing:
-	{
-		if (!pR.is_mouse_down(engine::renderer::mouse_button::mouse_left))
-		{
-			mState = state::none;
-			break;
-		}
-
-		// Don't draw at the same place twice
-		if (mLast_tile == tile_position)
-			break;
-		mLast_tile = tile_position;
-
-		draw_tile_at(tile_position);
-
-		break;
-	}
-	case state::erasing:
-	{
-		if (!pR.is_mouse_down(engine::renderer::mouse_button::mouse_right))
-		{
-			mState = state::none;
-			break;
-		}
-
-		// Don't erase at the same place twice
-		if (mLast_tile == tile_position)
-			break;
-		mLast_tile = tile_position;
-
-		erase_tile_at(tile_position);
-
-		break;
-	}
-	case state::drawing_region:
-	{
-		// Apply the region only after releasing left mouse button
-		if (!pR.is_mouse_down(engine::renderer::mouse_button::mouse_left))
-		{
-			mState = state::none;
-
-			// TODO : Place tiles
-		}
-
-		break;
-	}
-	}
-
-	tick_highlight(pR);
-
-	mTilemap_display.draw(pR);
-
-	mGrid.set_major_size({ get_unit(), get_unit() });
-	mGrid.update_grid(pR);
-	mGrid.draw(pR);
-	if (mState == state::drawing_region)
-	{
-		// TODO : Draw rectangle specifying region
-	}
-	else
-	{
-		mPreview.set_position(tile_position);
-		mPreview.draw(pR);
-	}
-
-	return 0;
-}
-
-void tilemap_editor::load_terminal_interface(engine::terminal_system & pTerminal)
-{
-	mTilemap_group = std::make_shared<engine::terminal_command_group>();
-	mTilemap_group->set_root_command("tilemap");
-
-	mTilemap_group->add_command("clear",
-		[&](const engine::terminal_arglist& pArgs)->bool
-	{
-		mTilemap_manipulator.clear();
-		update_tilemap();
-		return true;
-	}, "- Clear the entire tilemap (Warning: Can't undo)");
-
-	/*mTilemap_group->add_command("shift",
-		[&](const engine::terminal_arglist& pArgs)->bool
-	{
-		if (pArgs.size() < 2)
-		{
-			logger::error("Not enough arguments");
-			return false;
-		}
-
-		engine::fvector shift_amount;
-		try {
-			shift_amount = read_args_vector(pArgs);
-		}
-		catch (...)
-		{
-			logger::error("Invalid offset input");
-			return false;
-		}
-
-		if (pArgs.size() >= 3)
-		{
-			if (pArgs[2].get_raw() == "current")
-			{
-				mTilemap_manipulator.shift(shift_amount, mLayer);
-			}
-			else
-			{
-				int layer;
-				try {
-					layer = util::to_numeral<int>(pArgs[2]);
-				}
-				catch (...)
-				{
-					logger::error("Invalid layer input");
-					return false;
-				}
-
-				mTilemap_manipulator.shift(shift_amount, layer);
-			}
-		}
-		else
-		{
-			mTilemap_manipulator.shift(shift_amount); // Shift entire tilemap
-		}
-		update_tilemap();
-		return true;
-	}, "<X> <Y> [Layer#/current] - Shift the entire/layer of tilemap (Warning: Can't undo)");*/
-
-	mTilemap_group->set_enabled(false);
-	pTerminal.add_group(mTilemap_group);
-}
-
-void tilemap_editor::copy_tile_type_at(engine::fvector pAt)
-{
-	rpg::tile* t = mTilemap_manipulator.get_layer(mLayer).find_tile(pAt);
-	if (!t)
-		return;
-
-	for (size_t i = 0; i < mTile_list.size(); i++) // Find tile in tile_list and set it as current tile
-	{
-		if (mTile_list[i] == t->get_atlas())
-		{
-			mCurrent_tile = i;
-			update_preview();
-			break;
-		}
-	}
-}
-
-void tilemap_editor::draw_tile_at(engine::fvector pAt)
-{
-	assert(!mTile_list.empty());
-	rpg::tile* ntile = mTilemap_manipulator.get_layer(mLayer).set_tile(pAt, mTile_list[mCurrent_tile], mRotation);
-
-	auto command = std::make_shared<command_set_tiles>(mLayer, &mTilemap_manipulator);
-	command->add(*ntile);
-
-	mCommand_manager.execute(command);
-	update_tilemap();
-}
-
-void tilemap_editor::erase_tile_at(engine::fvector pAt)
-{
-	auto command = std::make_shared<command_remove_tiles>(mLayer, &mTilemap_manipulator);
-	command->add(pAt);
-
-	mCommand_manager.execute(command);
-	mTilemap_display.update(mTilemap_manipulator);
-	update_tilemap();
-}
-
-void tilemap_editor::next_tile()
-{
-	++mCurrent_tile %= mTile_list.size();
-	update_preview();
-}
-
-void tilemap_editor::previous_tile()
-{
-	mCurrent_tile = mCurrent_tile == 0 ? (mTile_list.size() - 1) : (mCurrent_tile - 1);
-	update_preview();
-}
-
-
-void tilemap_editor::rotate_clockwise()
-{
-	++mRotation %= 4;
-	update_preview();
-}
-
-void tilemap_editor::update_preview()
-{
-	if (!mTexture)
-		return;
-	mPreview.set_texture_rect(mTexture->get_entry(mTile_list[mCurrent_tile])->get_root_frame());
-
-	mPreview.set_rotation(90.f * mRotation);
-
-	// Align the preview correctly after the rotation
-	// Possibly could just use engine::anchor::center
-	switch (mRotation)
-	{
-	case 0:
-		mPreview.set_anchor(engine::anchor::topleft);
-		break;
-	case 1:
-		mPreview.set_anchor(engine::anchor::bottomleft);
-		break;
-	case 2:
-		mPreview.set_anchor(engine::anchor::bottomright);
-		break;
-	case 3:
-		mPreview.set_anchor(engine::anchor::topright);
-		break;
-	}
-}
-
-void tilemap_editor::update_highlight()
-{
-	if (mIs_highlight)
-		mTilemap_display.highlight_layer(mLayer, { 200, 255, 200, 255 }, { 50, 50, 50, 100 });
-	else
-		mTilemap_display.remove_highlight();
-}
-
-void tilemap_editor::update_tilemap()
-{
-	mTilemap_display.update(mTilemap_manipulator);
-	update_highlight();
-}
-
-void tilemap_editor::tick_highlight(engine::renderer& pR)
-{
-	if (pR.is_key_pressed(engine::renderer::key_code::RShift))
-	{
-		mIs_highlight = !mIs_highlight;
-		update_highlight();
-	}
-}
-
-void tilemap_editor::apply_texture()
-{
-	const std::string tilemap_texture_name = ""; // Texture name to load
-
-	logger::info("Applying tilemap Texture '" + tilemap_texture_name + "'...");
-
-	assert(mGame != nullptr);
-	auto new_texture = mGame->get_resource_manager().get_resource<engine::texture>("texture", tilemap_texture_name);
-	if (!new_texture)
-	{
-		logger::error("Failed to load texture '" + tilemap_texture_name + "'");
-		return;
-	}
-
-	mTexture = new_texture;
-
-	mTilemap_display.set_texture(mTexture);
-	update_tilemap();
-	mTile_list = std::move(mTexture->compile_list());
-	assert(mTile_list.size() != 0);
-
-	mCurrent_tile = 0;
-
-	mPreview.set_texture(mTexture);
-
-	update_preview();
-
-	mCurrent_texture_name = tilemap_texture_name;
-
-	logger::info("Tilemap texture applied");
-}
-
-bool tilemap_editor::save()
-{
-	auto& doc = mLoader.get_document();
-	auto ele_map = mLoader.get_tilemap();
-
-	logger::info("Saving tilemap...");
-
-	// Update tilemap texture name
-	auto ele_texture = ele_map->FirstChildElement("texture");
-	ele_texture->SetText(mCurrent_texture_name.c_str());
-
-	auto ele_layer = ele_map->FirstChildElement("layer");
-	while (ele_layer)
-	{
-		ele_layer->DeleteChildren();
-		doc.DeleteNode(ele_layer);
-		ele_layer = ele_map->FirstChildElement("layer");
-	}
-	mTilemap_manipulator.condense_map();
-	mTilemap_manipulator.save_xml(doc, ele_map);
-	doc.SaveFile(mLoader.get_scene_path().c_str());
-
-	logger::info("Tilemap saved");
-
-	return editor::save();
-}
-
-void tilemap_editor::clean()
-{
-	mTile_list.clear();
-	mLayer = 0;
-	mRotation = 0;
-	mIs_highlight = false;
-	mCurrent_tile = 0;
-	mTexture = nullptr;
-	mCurrent_texture_name.clear();
-	mPreview.set_texture(nullptr);
-	mCommand_manager.clear();
 }
 
 // ##########
@@ -888,7 +478,6 @@ int collisionbox_editor::draw(engine::renderer& pR)
 			// No cycling when removing tile.
 			if (tile_selection(exact_tile_position, false))
 			{
-				mCommand_manager.execute(std::make_shared<command_remove_wall>(mSelection, &mContainer));
 				mSelection = nullptr;
 			}
 		}
@@ -1442,14 +1031,14 @@ static inline bool ConfirmPopup(const char * pName, const char* pMessage)
 	if (ImGui::BeginPopupModal(pName, NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		ImGui::TextUnformatted(pMessage);
-		if (ImGui::Button("Open", ImVec2(100, 25)))
+		if (ImGui::Button("Yes", ImVec2(100, 25)))
 		{
 			answer = true;
 			ImGui::CloseCurrentPopup();
 		}
 
 		ImGui::SameLine();
-		if (ImGui::Button("Cancel", ImVec2(100, 25)))
+		if (ImGui::Button("No", ImVec2(100, 25)))
 			ImGui::CloseCurrentPopup();
 		ImGui::EndPopup();
 	}
@@ -1649,7 +1238,13 @@ void WGE_imgui_editor::run()
 				mIs_scene_changed = true;
 				mScene_loader.set_boundary(boundary);
 			}
-			ImGui::Button("Open Script in Editor");
+
+			if (ImGui::Button("Open Script in Editor"))
+			{
+				std::string cmd = mSettings.generate_open_cmd(mScene_loader.get_script_path());
+				if (std::system(("START " + cmd).c_str())) // May not be very portable
+					logger::error("Failed to launch editor");
+			}
 			ImGui::PopItemWidth();
 			ImGui::EndGroup();
 		}
@@ -1678,14 +1273,25 @@ void WGE_imgui_editor::run()
 			// Draw previewed tile
 			if (mTilemap_texture && mCurrent_tile_atlas)
 			{
-				engine::sprite_node sprite;
-				sprite.set_parent(mTilemap_display);
-				sprite.set_texture(mTilemap_texture);
-				sprite.set_texture_rect(mCurrent_tile_atlas->get_root_frame());
-				sprite.set_position(mouse_position);
-				sprite.set_color({ 1, 1, 1, 0.7f });
-				sprite.draw(mTilemap_renderer);
+				mPrimitives.push_node(mTilemap_display);
+				mPrimitives.add_quad_texture(mTilemap_texture, mouse_position*mTile_size
+					, mCurrent_tile_atlas->get_root_frame(), { 1, 1, 1, 0.7f }, mTile_rotation);
+				mPrimitives.pop_node();
 			}
+
+			/* Draw grid (fixme)
+			engine::fvector display_size = engine::vector_cast<float, unsigned int>(mTilemap_render_target.getSize());
+			engine::fvector scale = mTilemap_display.get_absolute_scale();
+			for (int i = 0; i <= static_cast<int>((display_size.x / mTile_size) / scale.x); i++)
+			{
+				float x = std::fmodf(((float)i*mTile_size)*scale.x + mTilemap_display.get_exact_position().x
+					, display_size.x);
+				if (x < 0)
+					x += display_size.x;
+				mPrimitives.add_line({ x, 0 }, { x, display_size.y }, { 1, 1, 1, 0.7f });
+			}*/
+
+			mPrimitives.draw_and_clear(mTilemap_renderer);
 
 			mTilemap_render_target.display();
 
@@ -1699,15 +1305,11 @@ void WGE_imgui_editor::run()
 			{
 				if (ImGui::IsItemClicked())
 				{
-					mTilemap_manipulator.get_layer(mCurrent_layer).set_tile(mouse_position, mCurrent_tile_atlas->get_name(), 0);
-					mTilemap_manipulator.get_layer(mCurrent_layer).sort();
-					mTilemap_display.update(mTilemap_manipulator);
+					place_tile(mouse_position);
 				}
 				if (ImGui::IsItemClicked(1))
 				{
-					mTilemap_manipulator.get_layer(mCurrent_layer).remove_tile(mouse_position);
-					mTilemap_manipulator.get_layer(mCurrent_layer).sort();
-					mTilemap_display.update(mTilemap_manipulator);
+					remove_tile(mouse_position);
 				}
 			}
 
@@ -1726,6 +1328,26 @@ void WGE_imgui_editor::run()
 					mTilemap_scale += ImGui::GetIO().MouseWheel;
 					mTilemap_scale = util::clamp<float>(mTilemap_scale, -2, 5);
 					mTilemap_center_node.set_scale(engine::fvector(1, 1)*std::pow(2.f, mTilemap_scale));
+				}
+
+				// Undo
+				if (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(sf::Keyboard::Z))
+				{
+					if (mCommand_manager.undo())
+					{
+						mTilemap_manipulator.get_layer(mCurrent_layer).sort();
+						mTilemap_display.update(mTilemap_manipulator);
+					}
+				}
+
+				// Redo
+				if (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(sf::Keyboard::Y))
+				{
+					if (mCommand_manager.redo())
+					{
+						mTilemap_manipulator.get_layer(mCurrent_layer).sort();
+						mTilemap_display.update(mTilemap_manipulator);
+					}
 				}
 			}
 			ImGui::EndChild();
@@ -1759,6 +1381,26 @@ void WGE_imgui_editor::run()
 		window.display();
 	}
 	ImGui::SFML::Shutdown();
+}
+
+void WGE_imgui_editor::place_tile(engine::fvector pos)
+{
+	rpg::tile tile;
+	tile.set_position(pos);
+	tile.set_atlas(mCurrent_tile_atlas->get_name(), mTilemap_manipulator.get_layer(mCurrent_layer).get_pool());
+	tile.set_rotation((unsigned int)mTile_rotation);
+	mCommand_manager.execute<command_set_tiles>(mCurrent_layer, mTilemap_manipulator, tile);
+	mTilemap_manipulator.get_layer(mCurrent_layer).sort();
+	mTilemap_display.update(mTilemap_manipulator);
+}
+
+void WGE_imgui_editor::remove_tile(engine::fvector pos)
+{
+	if (!mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(pos))
+		return;
+	mCommand_manager.execute<command_remove_tiles>(mCurrent_layer, mTilemap_manipulator, pos);
+	mTilemap_manipulator.get_layer(mCurrent_layer).sort();
+	mTilemap_display.update(mTilemap_manipulator);
 }
 
 void WGE_imgui_editor::prepare_scene(engine::fs::path pPath, const std::string& pName)
@@ -1983,10 +1625,25 @@ void WGE_imgui_editor::draw_tilemap_layers_group()
 	ImGui::EndChild();
 	ImGui::Separator();
 
-	ImGui::Button("New");
+	if (ImGui::Button("New"))
+	{
+		mCurrent_layer = mTilemap_manipulator.insert_layer(mCurrent_layer);
+		mTilemap_display.update(mTilemap_manipulator);
+	}
 
 	ImGui::SameLine();
-	ImGui::Button("Delete");
+	if (ImGui::Button("Delete") && mTilemap_manipulator.get_layer_count() > 0)
+		ImGui::OpenPopup("Confirm layer removal");
+
+	if (mTilemap_manipulator.get_layer_count() > 0
+		&& ImGui::ConfirmPopup("Confirm layer removal"
+		, ("Are you sure you want to remove layer \""
+			+ mTilemap_manipulator.get_layer(mCurrent_layer).get_name() + "\"?").c_str()))
+	{
+		mTilemap_manipulator.remove_layer(mCurrent_layer);
+		mCurrent_layer = std::min(mCurrent_layer, mTilemap_manipulator.get_layer_count() - 1);
+		mTilemap_display.update(mTilemap_manipulator);
+	}
 
 	ImGui::SameLine();
 	if (ImGui::ArrowButton("Move Up", ImGuiDir_Up) && mCurrent_layer != mTilemap_manipulator.get_layer_count() - 1)

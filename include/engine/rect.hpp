@@ -73,6 +73,18 @@ struct rect
 		return{ x*a, y*a, w*a, h*a };
 	}
 
+	vector<T> get_vertex(std::size_t pIndex) const
+	{
+		switch (pIndex % 4)
+		{
+		case 0: return { x, y };
+		case 1: return { x + w, y };
+		case 2: return { x + w, y + h };
+		case 3: return { x, y + h };
+		}
+		return {};
+	}
+
 	vector<T> get_corner() const
 	{
 		return get_offset() + get_size();

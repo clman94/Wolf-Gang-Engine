@@ -310,6 +310,7 @@ size_t text_format::line_count() const
 	return lines;
 }
 
+// TODO: Cache length
 size_t text_format::length() const
 {
 	size_t total = 0;

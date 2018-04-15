@@ -17,6 +17,8 @@
 #include <list>
 #include <functional>
 #include <tuple>
+#include <memory>
+#include <utility>
 
 #include <imgui.h>
 #include <imgui-SFML.h>
@@ -32,17 +34,34 @@ public:
 class command_manager
 {
 public:
-	bool execute(std::shared_ptr<command> pCommand);
+
+	template<typename T, typename... Targs>
+	bool execute(Targs&&... pArgs)
+	{
+		assert(!mCurrent);
+		mRedo.clear();
+		auto cmd = std::make_shared<T>(std::forward<Targs>(pArgs)...);
+		mUndo.push_back(cmd);
+		return cmd->execute();
+	}
+
 	bool add(std::shared_ptr<command> pCommand);
 
 	// Begin a command.
-	void start(std::shared_ptr<command> pCommand);
+	template<typename T, typename... Targs>
+	std::shared_ptr<T> start(Targs&&... pArgs)
+	{
+		std::shared_ptr<T> ptr = std::make_shared<T>(std::forward<Targs>(pArgs)...);
+		mCurrent = ptr;
+		return ptr;
+	}
 	template<typename T>
 	std::shared_ptr<T> current()
 	{
 		return std::dynamic_pointer_cast<T>(mCurrent);
 	}
-	void complete();
+	void complete(); // Archives the current command in the undo list without executing
+	bool execute_and_complete();
 
 	bool undo();
 	bool redo();
@@ -96,66 +115,6 @@ protected:
 	rpg::scene_loader mLoader;
 	rpg::tilemap_manipulator mTilemap_manipulator;
 	rpg::tilemap_display     mTilemap_display;
-};
-
-class tilemap_editor :
-	public scene_editor
-{
-public:
-	tilemap_editor();
-	virtual bool open_editor();
-	int draw(engine::renderer& pR);
-	void load_terminal_interface(engine::terminal_system& pTerminal);
-
-	bool save() override;
-
-	void clean();
-
-private:
-	std::shared_ptr<engine::terminal_command_group> mTilemap_group;
-
-	enum class state
-	{
-		none,
-		drawing,
-		drawing_region,
-		erasing,
-	} mState;
-
-	size_t mCurrent_tile; // Index of mTile_list
-	int    mRotation;
-	int    mLayer;
-	bool   mIs_highlight;
-
-	engine::fvector mLast_tile;
-
-	std::vector<std::string> mTile_list;
-
-	std::shared_ptr<engine::texture> mTexture;
-	std::string mCurrent_texture_name;
-
-	engine::sprite_node mPreview;
-
-	engine::grid mGrid;
-
-	command_manager mCommand_manager;
-
-	// User Actions
-
-	void copy_tile_type_at(engine::fvector pAt);
-	void draw_tile_at(engine::fvector pAt);
-	void erase_tile_at(engine::fvector pAt);
-	void next_tile();
-	void previous_tile();
-	void rotate_clockwise();
-
-	void update_preview();
-	void update_highlight();
-	void update_tilemap();
-
-	void tick_highlight(engine::renderer& pR);
-
-	void apply_texture();
 };
 
 class collisionbox_editor :
@@ -316,9 +275,12 @@ private:
 	engine::node mTilemap_center_node; // Never changes position but scaling will cause zooming in and out.
 	float mTilemap_scale;
 	std::size_t mCurrent_layer;
-	//void place_tile(engine::fvector pos);
-	//void remove_tile(engine::fvector pos);
+	command_manager mCommand_manager;
+	void place_tile(engine::fvector pos);
+	void remove_tile(engine::fvector pos);
 
+
+	engine::primitive_builder mPrimitives;
 
 	editor_settings_loader mSettings;
 

@@ -68,6 +68,9 @@ void scene_loader::clear()
 	mEle_collisionboxes = nullptr;
 	mEle_map = nullptr;
 	mEle_root = nullptr;
+	mHas_boundary = false;
+	mBoundary = { 0, 0, 0, 0 };
+	mTilemap_texture.clear();
 }
 
 bool scene_loader::load_settings()

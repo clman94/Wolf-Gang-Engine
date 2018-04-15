@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <cassert>
 #include <array>
+#include <functional>
 
 #include "vector.hpp"
 #include "node.hpp"
@@ -100,16 +101,19 @@ public:
 	void set_renderer(renderer& pR, bool pManual_render = false);
 	renderer* get_renderer() const;
 	void detach_renderer();
-	friend class renderer;
 
 protected:
 	virtual void refresh_renderer(renderer& pR) {}
+
+	sf::RenderStates get_sfml_renderstates() const;
 
 private:
 	renderer * mRenderer;
 	bool mVisible;
 	float mDepth;
 	bool mManual_render;
+
+	friend class renderer;
 };
 
 class renderer :
@@ -173,13 +177,11 @@ public:
 
 	void refresh();
 
-#ifdef ENGINE_INTERNAL
 	sf::RenderTarget& get_sfml_render()
 	{
 		assert(mRender_target);
 		return *mRender_target;
 	}
-#endif
 
 	// Get the ascii text inputted last event handling
 	std::string get_entered_text() const;
@@ -379,6 +381,7 @@ private:
 	sf::RenderTexture mRender;
 };
 
+
 class grid :
 	public render_object
 {
@@ -538,7 +541,6 @@ class font :
 	public resource
 {
 public:
-
 	void set_font_source(const std::string& pFilepath);
 	void set_preferences_source(const std::string& pFilepath);
 	bool load() override;

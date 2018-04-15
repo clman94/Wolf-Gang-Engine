@@ -2,6 +2,7 @@
 #define RPG_TILEMAP_DISPLAY_HPP
 
 #include <engine/renderer.hpp>
+#include <engine/primitive_builder.hpp>
 
 #include <list>
 
@@ -19,16 +20,13 @@ public:
 	int draw(engine::renderer &pR);
 	void clear();
 
-	void highlight_layer(size_t pLayer, engine::color pHighlight, engine::color pOthers);
-	void remove_highlight();
-
 	void update(tilemap_manipulator& pTile_manipulator);
 
 	void set_layer_visible(size_t pIndex, bool pIs_visible);
 	bool is_layer_visible(size_t pIndex);
 
 private:
-	bool add_tile(engine::fvector pPosition, const std::string& pAtlas, int pLayer, int pRotation);
+	bool add_tile(engine::fvector pPosition, const std::string& pAtlas, std::size_t pLayer, int pRotation);
 
 	void update_animations();
 
@@ -37,12 +35,14 @@ private:
 	class animated_tile
 	{
 	public:
-		engine::vertex_reference mRef;
+		std::size_t layer;
+		engine::primitive_builder::handle hnd;
 
 		animated_tile() : mAnimation(nullptr) {}
 
 		void set_animation(std::shared_ptr<const engine::animation> pAnimation);
-		void update_animation();
+		bool update_animation(); // Returns true when frame changes
+		engine::frect get_current_frame() const;
 
 	private:
 		engine::timer mTimer;
@@ -50,10 +50,9 @@ private:
 		std::shared_ptr<const engine::animation> mAnimation;
 	};
 
+
 	std::vector<animated_tile> mAnimated_tiles;
-	std::list<engine::vertex_batch> mLayers;
-
-
+	std::list<engine::primitive_builder> mLayers;
 };
 
 }

@@ -41,6 +41,15 @@ void render_object::detach_renderer()
 	}
 }
 
+sf::RenderStates render_object::get_sfml_renderstates() const
+{
+	sf::RenderStates rs;
+	rs.transform.translate(get_exact_position());
+	rs.transform.rotate(get_absolute_rotation());
+	rs.transform.scale(get_absolute_scale());
+	return rs;
+}
+
 void render_object::set_visible(bool pVisible)
 {
 	mVisible = pVisible;

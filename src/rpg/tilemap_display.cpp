@@ -16,28 +16,28 @@ std::shared_ptr<engine::texture> tilemap_display::get_texture()
 	return mTexture;
 }
 
-bool tilemap_display::add_tile(engine::fvector pPosition, const std::string& pAtlas, int pLayer, int pRotation)
+bool tilemap_display::add_tile(engine::fvector pPosition, const std::string& pAtlas, std::size_t pLayer, int pRotation)
 {
 	assert(mTexture != nullptr);
 
 	auto animation = mTexture->get_entry(pAtlas);
 	if (!animation)
 		return false;
+	engine::frect frame = animation->get_root_frame();
 
 	// Go to the layer
 	auto layer_iter = mLayers.begin();
 	std::advance(layer_iter, pLayer);
 
 	// Add quad to vertex batch
-	auto ntile = layer_iter->add_quad(pPosition*get_unit()
-		, animation->get_frame_at(0)
-		, pRotation);
-
+	auto hnd = layer_iter->add_quad_texture(mTexture, pPosition*get_unit(), frame, {1, 1, 1, 1}, pRotation);
+	
 	// Register animated tile
 	if (animation->get_frame_count() > 1)
 	{
 		animated_tile n_anim_tile;
-		n_anim_tile.mRef = ntile;
+		n_anim_tile.layer = pLayer;
+		n_anim_tile.hnd = hnd;
 		n_anim_tile.set_animation(animation);
 		mAnimated_tiles.push_back(n_anim_tile);
 	}
@@ -59,8 +59,7 @@ int tilemap_display::draw(engine::renderer& pR)
 			i.set_unit(get_unit());
 			i.set_internal_parent(*this);
 		}
-		
-		i.set_texture(mTexture);
+
 		//i.use_render_texture(true);
 
 		i.draw(pR);
@@ -72,7 +71,14 @@ void tilemap_display::update_animations()
 {
 	try {
 		for (auto& i : mAnimated_tiles)
-			i.update_animation();
+		{
+			if (i.update_animation())
+			{
+				auto layer_iter = mLayers.begin();
+				std::advance(layer_iter, i.layer);
+				layer_iter->change_texture_rect(i.hnd, i.get_current_frame());
+			}
+		}
 	}
 	catch (const std::exception& e)
 	{
@@ -86,25 +92,6 @@ void tilemap_display::clear()
 {
 	mLayers.clear();
 	mAnimated_tiles.clear();
-}
-
-void tilemap_display::highlight_layer(size_t pLayer, engine::color pHighlight, engine::color pOthers)
-{
-	size_t index = 0;
-	for (auto& i : mLayers)
-	{
-		if (index == pLayer)
-			i.set_color(pHighlight);
-		else
-			i.set_color(pOthers);
-		++index;
-	}
-}
-
-void tilemap_display::remove_highlight()
-{
-	for (auto& l : mLayers)
-		l.set_color({ 255, 255, 255, 255 });
 }
 
 void tilemap_display::update(tilemap_manipulator& pTile_manipulator)
@@ -144,15 +131,20 @@ void tilemap_display::animated_tile::set_animation(std::shared_ptr<const engine:
 		mTimer.start(pAnimation->get_interval()*0.001f);
 }
 
-void tilemap_display::animated_tile::update_animation()
+bool tilemap_display::animated_tile::update_animation()
 {
-	if (!mAnimation) return;
-	if (!mAnimation->get_frame_count()) return;
+	if (!mAnimation) return false;
+	if (!mAnimation->get_frame_count()) return false;
 	if (mTimer.is_reached())
 	{
 		++mFrame;
-		const size_t rendered_frame = mFrame + mAnimation->get_default_frame();
-		mTimer.start(mAnimation->get_interval(rendered_frame)*0.001f);
-		mRef.set_texture_rect(mAnimation->get_frame_at(rendered_frame));
+		mTimer.start(mAnimation->get_interval(mFrame + mAnimation->get_default_frame())*0.001f);
+		return true;
 	}
+	return false;
+}
+
+engine::frect tilemap_display::animated_tile::get_current_frame() const
+{
+	return mAnimation->get_frame_at(mFrame + mAnimation->get_default_frame());
 }
