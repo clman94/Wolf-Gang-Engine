@@ -153,7 +153,8 @@ primitive_builder::handle primitive_builder::add_quad_texture(std::shared_ptr<te
 
 primitive_builder::handle primitive_builder::add_quad_texture(std::shared_ptr<texture> pTexture, fvector pPosition, frect pTexture_rect, color pTint, int mRotate_corners)
 {
-	push_offset(pPosition*get_unit() + engine::frect({ 0, 0 }, pTexture_rect.get_size()).get_vertex(4 - (mRotate_corners % 4)).flip()); // Maintain top-left corner as positive
+	fvector offset = engine::frect({ 0, 0 }, pTexture_rect.get_size()).get_vertex(4 - (mRotate_corners % 4));
+	push_offset(pPosition*get_unit() + (mRotate_corners % 2 ? offset.flip() : offset)); // Maintain top-left corner as positive
 	push_rotation(mRotate_corners*90.f);
 	auto hnd = add_quad_texture(pTexture, { { 0, 0 }, pTexture_rect.get_size() }, pTexture_rect, pTint);
 	pop_transform(2);
