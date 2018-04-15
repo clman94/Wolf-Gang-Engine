@@ -1927,15 +1927,15 @@ void WGE_imgui_editor::draw_log_window()
 				}
 
 				// Filepath. Gray.
-				ImGui::TextColored({ 0.7f, 0.7f, 0.7f, 1 }, file_info.c_str());
-
-				ImGui::SameLine();
-				if (ImGui::ArrowButton(("logfileopen" + std::to_string(i)).c_str(), ImGuiDir_Right))
+				ImGui::PushStyleColor(ImGuiCol_Text, { 0.7f, 0.7f, 0.7f, 1 });
+				ImGui::PushStyleColor(ImGuiCol_Button, { 0, 0, 0, 0 });
+				if (ImGui::SmallButton(file_info.c_str()))
 				{
-					std::string cmd = mSettings.generate_open_cmd(log[i].file);
-					std::system(("START " + cmd).c_str()); // May not be very portable
+						std::string cmd = mSettings.generate_open_cmd(log[i].file);
+						std::system(("START " + cmd).c_str()); // May not be very portable
 				}
 				ImGui::QuickTooltip("Open file in editor.");
+				ImGui::PopStyleColor(2);
 			}
 			ImGui::NextColumn();
 		}
