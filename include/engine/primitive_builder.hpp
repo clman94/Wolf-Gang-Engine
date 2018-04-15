@@ -68,7 +68,7 @@ private:
 	{
 		std::vector<sf::Vertex> vertices;
 		sf::PrimitiveType type;
-		std::shared_ptr<texture> texture;
+		std::shared_ptr<texture> tex;
 	};
 	std::vector<entry> mEntries;
 	static entry generate_poly_entry(std::vector<fvector> pPoints, color pColor);

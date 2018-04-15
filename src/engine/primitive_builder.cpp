@@ -106,14 +106,14 @@ primitive_builder::handle primitive_builder::add_quad_texture(std::shared_ptr<te
 	add_texture_triangle(nentry.vertices, 0, pRect, pTexture_rect, pTint);
 	add_texture_triangle(nentry.vertices, 2, pRect, pTexture_rect, pTint);
 	nentry.type = sf::PrimitiveType::Triangles;
-	nentry.texture = pTexture;
+	nentry.tex = pTexture;
 
 	apply_transform_stack(nentry.vertices);
 
 	// Combine with the last item if it draws the same texture.
 	// This removes one draw call by simply putting them together.
 	if (!mEntries.empty()
-		&& mEntries.back().texture == pTexture
+		&& mEntries.back().tex == pTexture
 		&& mEntries.back().type == nentry.type)
 		mEntries.back().vertices.insert(mEntries.back().vertices.end(),
 			nentry.vertices.begin(), nentry.vertices.end());
@@ -161,8 +161,8 @@ int primitive_builder::draw(renderer & pR)
 	sf::RenderStates rs = get_sfml_renderstates();
 	for (const auto& i : mEntries)
 	{
-		if (i.texture)
-			rs.texture = &i.texture->get_sfml_texture();
+		if (i.tex)
+			rs.texture = &i.tex->get_sfml_texture();
 		else
 			rs.texture = nullptr;
 		pR.get_sfml_render().draw(&i.vertices[0], i.vertices.size(), i.type, rs);
