@@ -1298,6 +1298,8 @@ void WGE_imgui_editor::prepare_scene(engine::fs::path pPath, const std::string& 
 		mTilemap_display.set_texture(mTilemap_texture);
 		mTilemap_display.set_unit(static_cast<float>(mTile_size));
 		mTilemap_display.update(mTilemap_manipulator);
+
+		mCurrent_tile_atlas.reset();
 		mCurrent_layer = 0;
 
 		center_tilemap();
