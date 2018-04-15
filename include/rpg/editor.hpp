@@ -248,6 +248,15 @@ public:
 
 private:
 
+	enum
+	{
+		snapping_none = 0,
+		snapping_pixel,
+		snapping_eight,
+		snapping_quarter,
+		snapping_full,
+	};
+
 	// Game Settings
 	int mTile_size;
 
@@ -278,6 +287,7 @@ private:
 	command_manager mCommand_manager;
 	void place_tile(engine::fvector pos);
 	void remove_tile(engine::fvector pos);
+	int mTilemap_current_snapping;
 
 	engine::primitive_builder mPrimitives;
 
@@ -304,6 +314,8 @@ private:
 	void draw_log();
 
 	void handle_undo_redo();
+
+	engine::fvector calc_snapping() const;
 };
 
 }

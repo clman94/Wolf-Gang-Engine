@@ -1083,6 +1083,8 @@ int OSA_distance(const std::string& pStr1, const std::string& pStr2)
 
 engine::fvector snap(const engine::fvector& pPos, const engine::fvector& pTo, const engine::fvector& pOffset = {0, 0})
 {
+	if (pTo.has_zero())
+		return pPos;
 	return (pPos / pTo - pOffset).floor() * pTo + pOffset;
 }
 
@@ -1114,6 +1116,7 @@ WGE_imgui_editor::WGE_imgui_editor()
 
 	mSelected_tile = 1;
 	mTile_rotation = 0;
+	mTilemap_current_snapping = snapping_full;
 
 	mSettings.load("./editor/settings.xml");
 
@@ -1321,7 +1324,7 @@ void WGE_imgui_editor::run()
 			mTilemap_renderer.draw();
 
 			engine::ivector window_mouse_position = static_cast<engine::ivector>(ImGui::GetMousePos()) - static_cast<engine::ivector>(ImGui::GetCursorScreenPos());
-			engine::fvector mouse_position = snap(mTilemap_renderer.window_to_game_coords(window_mouse_position, mTilemap_display), { 0.5f, 0.5f });
+			engine::fvector mouse_position = snap(mTilemap_renderer.window_to_game_coords(window_mouse_position, mTilemap_display), calc_snapping());
 			
 			// Draw previewed tile
 			if (mTilemap_texture && mCurrent_tile_atlas)
@@ -1382,8 +1385,6 @@ void WGE_imgui_editor::run()
 					mTilemap_scale = util::clamp<float>(mTilemap_scale, -2, 5);
 					mTilemap_center_node.set_scale(engine::fvector(1, 1)*std::pow(2.f, mTilemap_scale));
 				}
-
-
 			}
 			ImGui::EndChild();
 
@@ -1391,9 +1392,8 @@ void WGE_imgui_editor::run()
 			ImGui::BeginGroup();
 
 			ImGui::PushItemWidth(-100);
-			static int current_snapping = 0; // Temp
 			const char* snapping_items[] = { "None", "Pixel", "Eighth", "Quarter", "Full" };
-			ImGui::Combo("Snapping", &current_snapping, snapping_items, 5);
+			ImGui::Combo("Snapping", &mTilemap_current_snapping, snapping_items, 5);
 			ImGui::PopItemWidth();
 
 			draw_tile_group();
@@ -1880,5 +1880,18 @@ void WGE_imgui_editor::handle_undo_redo()
 			mTilemap_manipulator.get_layer(mCurrent_layer).sort();
 			mTilemap_display.update(mTilemap_manipulator);
 		}
+	}
+}
+
+engine::fvector WGE_imgui_editor::calc_snapping() const
+{
+	switch (mTilemap_current_snapping)
+	{
+	default:
+	case snapping_none:    return { 0, 0 };
+	case snapping_pixel:   return engine::fvector(1, 1) / mTile_size;
+	case snapping_eight:   return { 0.25f, 0.25f };
+	case snapping_quarter: return { 0.5f, 0.5f };
+	case snapping_full:    return { 1, 1 };
 	}
 }

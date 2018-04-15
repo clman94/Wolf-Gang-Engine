@@ -47,17 +47,18 @@ void primitive_builder::add_rectangle(frect pRect, color pFill, color pOutline)
 	for (std::size_t i = 0; i < 4; i++)
 		points.push_back(pRect.get_vertex(i));
 	add_poly(points, pFill);
-	add_poly_ouline(points, pOutline);
+	if (pOutline.a > 0)
+		add_poly_lines(points, pOutline);
 }
 
-void primitive_builder::add_line(fvector pP0, fvector pP1, color pColor)
+void primitive_builder::add_line(fvector p0, fvector p1, color pColor)
 {
 	entry nentry;
 	nentry.vertices.resize(2);
 	nentry.vertices[0].color = pColor;
-	nentry.vertices[0].position = pP0;
+	nentry.vertices[0].position = p0;
 	nentry.vertices[1].color = pColor;
-	nentry.vertices[1].position = pP1;
+	nentry.vertices[1].position = p1;
 	apply_transform_stack(nentry.vertices);
 
 	nentry.type = sf::PrimitiveType::Lines;
@@ -70,19 +71,37 @@ void primitive_builder::add_line(fvector pP0, fvector pP1, color pColor)
 		mEntries.push_back(nentry);
 }
 
-void primitive_builder::add_poly(std::vector<fvector> pPoints, color pFill)
+void primitive_builder::add_triangle(fvector p0, fvector p1, fvector p2, color pColor)
+{
+	entry nentry;
+	nentry.vertices.resize(3);
+	for (auto& i : nentry.vertices)
+		i.color = pColor;
+	nentry.vertices[0].position = p0;
+	nentry.vertices[1].position = p1;
+	nentry.vertices[2].position = p2;
+	nentry.type = sf::PrimitiveType::Triangles;
+	if (!mEntries.empty() && !mEntries.back().tex
+		&& mEntries.back().type == nentry.type)
+		mEntries.back().vertices.insert(mEntries.back().vertices.end(),
+			nentry.vertices.begin(), nentry.vertices.end());
+	else
+		mEntries.push_back(nentry);
+}
+
+void primitive_builder::add_poly(std::vector<fvector> pPoints, color pFill, bool pLoop)
 {
 	assert(!pPoints.empty());
-	entry nentry = generate_poly_entry(pPoints, pFill);
+	entry nentry = generate_poly_entry(pPoints, pFill, pLoop);
 	apply_transform_stack(nentry.vertices);
 	nentry.type = sf::PrimitiveType::TriangleFan;
 	mEntries.push_back(nentry);
 }
 
-void primitive_builder::add_poly_ouline(std::vector<fvector> pPoints, color pOutline)
+void primitive_builder::add_poly_lines(std::vector<fvector> pPoints, color pOutline, bool pLoop)
 {
 	assert(!pPoints.empty());
-	entry nentry = generate_poly_entry(pPoints, pOutline);
+	entry nentry = generate_poly_entry(pPoints, pOutline, pLoop);
 	apply_transform_stack(nentry.vertices);
 	nentry.type = sf::PrimitiveType::LineStrip;
 	mEntries.push_back(nentry);
@@ -197,7 +216,7 @@ void primitive_builder::apply_transform_stack(std::vector<sf::Vertex>& pVertices
 		i.position = apply_transform_stack(i.position);
 }
 
-primitive_builder::entry primitive_builder::generate_poly_entry(std::vector<fvector> pPoints, color pColor)
+primitive_builder::entry primitive_builder::generate_poly_entry(std::vector<fvector> pPoints, color pColor, bool pLoop)
 {
 	assert(!pPoints.empty());
 	entry nentry;
@@ -208,7 +227,8 @@ primitive_builder::entry primitive_builder::generate_poly_entry(std::vector<fvec
 		v.color = pColor;
 		nentry.vertices.push_back(v);
 	}
-	nentry.vertices.push_back(nentry.vertices[0]); // Connect back to start
+	if (pLoop)
+		nentry.vertices.push_back(nentry.vertices[0]); // Connect back to start
 	return nentry;
 }
 
