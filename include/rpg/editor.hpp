@@ -304,6 +304,7 @@ private:
 
 	char mNew_scene_name_buf[256];
 	std::string mNew_scene_texture_name;
+	std::string mChange_scene_texture_name;
 
 private:
 	void prepare_scene(engine::fs::path pPath, const std::string& pName);
@@ -324,6 +325,9 @@ private:
 
 	void handle_undo_redo();
 	void handle_scene_change();
+
+	void new_scene_popup();
+	void change_texture_popup();
 
 	static engine::fvector calc_snapping(int pSnapping, int pTile_size);
 

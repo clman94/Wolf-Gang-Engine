@@ -966,6 +966,25 @@ Compile messages
 
 namespace ImGui
 {
+
+// This button only shows its frame when hovered or clicked
+static inline bool HiddenButton(const char* pName, ImVec2 pSize = ImVec2(0, 0))
+{
+	ImGui::PushStyleColor(ImGuiCol_Button, { 0, 0, 0, 0 });
+	bool pressed = ImGui::Button(pName, pSize);
+	ImGui::PopStyleColor();
+	return pressed;
+}
+
+// This button only shows its frame when hovered or clicked
+static inline bool HiddenSmallButton(const char* pName)
+{
+	ImGui::PushStyleColor(ImGuiCol_Button, { 0, 0, 0, 0 });
+	bool pressed = ImGui::SmallButton(pName);
+	ImGui::PopStyleColor();
+	return pressed;
+}
+
 static inline void AddBackgroundImage(sf::RenderTexture& pRender)
 {
 	ImDrawList* drawlist = ImGui::GetWindowDrawList();
@@ -977,28 +996,28 @@ static inline void AddBackgroundImage(sf::RenderTexture& pRender)
 		, ImGui::GetColorU32(sf::Color::White));
 }
 
-static inline void VSplitter(const char* str_id, float width, float* val)
+// Returns true while the user interacts with it
+static inline bool VSplitter(const char* pId, float pWidth, float* pX, bool pInverted = false)
 {
-	assert(val);
-	ImVec2 last_item_min = ImGui::GetItemRectMin();
-	ImVec2 last_item_max = ImGui::GetItemRectMax();
+	assert(pX);
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-	ImGui::InvisibleButton(str_id, ImVec2(width, last_item_max.y - last_item_min.y));
-	if (ImGui::IsItemActive())
-		*val += ImGui::GetIO().MouseDelta.x;
+	ImGui::HiddenButton(pId, ImVec2(pWidth, ImGui::GetItemRectMax().y - ImGui::GetItemRectMin().y));
 	ImGui::PopStyleVar();
+	if (ImGui::IsItemActive())
+		*pX += ImGui::GetIO().MouseDelta.x * (pInverted ? -1 : 1);
+	return ImGui::IsItemActive();
 }
 
-static inline void HSplitter(const char* str_id, float pHeight, float* val, bool pInverted = false)
+// Returns true while the user interacts with it
+static inline bool HSplitter(const char* pId, float pHeight, float* pY, bool pInverted = false)
 {
-	assert(val);
-	ImVec2 last_item_min = ImGui::GetItemRectMin();
-	ImVec2 last_item_max = ImGui::GetItemRectMax();
+	assert(pY);
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-	ImGui::InvisibleButton(str_id, ImVec2(last_item_max.x - last_item_min.x, pHeight));
-	if (ImGui::IsItemActive())
-		*val += ImGui::GetIO().MouseDelta.y * (pInverted ? -1 : 1);
+	ImGui::HiddenButton(pId, ImVec2(ImGui::GetItemRectMax().x - ImGui::GetItemRectMin().x, pHeight));
 	ImGui::PopStyleVar();
+	if (ImGui::IsItemActive())
+		*pY += ImGui::GetIO().MouseDelta.y * (pInverted ? -1 : 1);
+	return ImGui::IsItemActive();
 }
 
 // Construct a string representing the name and id "name##id"
@@ -1110,7 +1129,7 @@ engine::fvector snap(const engine::fvector& pPos, const engine::fvector& pTo, co
 
 void draw_grid(engine::primitive_builder& pPrimitives, engine::fvector pAlign_to, engine::fvector pScale, engine::fvector pDisplay_size, engine::color pColor)
 {
-	engine::ivector line_count = engine::vector_cast<int>((pDisplay_size / pScale).floor());
+	engine::ivector line_count = engine::vector_cast<int>((pDisplay_size / pScale).floor()) + engine::ivector(1, 1);
 	engine::fvector offset = math::pfmod(pAlign_to, pScale);
 
 	// Vertical lines
@@ -1328,7 +1347,6 @@ void WGE_imgui_editor::draw_scene_window()
 {
 	if (ImGui::Begin("Scene"))
 	{
-
 		ImGui::BeginGroup();
 		ImGui::Text("Scene List");
 		ImGui::SameLine();
@@ -1342,42 +1360,15 @@ void WGE_imgui_editor::draw_scene_window()
 				mGame.get_scene().load_scene(i);
 		ImGui::EndChild();
 
-		const std::size_t scene_name_length = sizeof(mNew_scene_name_buf) / sizeof(mNew_scene_texture_name[0]);
-
 		if (ImGui::Button("New###NewScene"))
 		{
-			std::memset(mNew_scene_name_buf, 0, scene_name_length);
+			std::memset(mNew_scene_name_buf, 0, sizeof(mNew_scene_name_buf) / sizeof(mNew_scene_name_buf[0]));
 			mNew_scene_texture_name.clear();
 			ImGui::OpenPopup("Create scene");
 		}
 		ImGui::QuickTooltip("Create a new scene for this game");
 
-		if (ImGui::BeginPopupModal("Create scene", NULL, ImGuiWindowFlags_AlwaysAutoResize))
-		{
-
-			ImGui::InputText("Name", mNew_scene_name_buf, scene_name_length);
-
-			ImGui::TextureSelectCombo("Tilemap Texture", mGame.get_resource_manager(), &mNew_scene_texture_name);
-
-			if (ImGui::Button("Create", ImVec2(100, 25)) && strnlen(mNew_scene_name_buf, scene_name_length) != 0)
-			{
-				if (mGame.create_scene(mNew_scene_name_buf, mNew_scene_texture_name))
-				{
-					logger::info("Scene \"" + std::string(mNew_scene_name_buf) + "\" created");
-					mGame.get_scene().load_scene(mNew_scene_name_buf);
-				}
-				else
-					logger::error("Failed to create scene \"" + std::string(mNew_scene_name_buf) + "\"");
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::SameLine();
-			if (ImGui::Button("Cancel", ImVec2(100, 25)))
-			{
-				ImGui::CloseCurrentPopup();
-			}
-			ImGui::EndPopup();
-		}
+		new_scene_popup();
 
 		ImGui::EndGroup();
 
@@ -1388,39 +1379,61 @@ void WGE_imgui_editor::draw_scene_window()
 		ImGui::BeginGroup();
 		ImGui::PushItemWidth(-100);
 		if (ImGui::Button("Restart"))
-		{
-			// This does not affect the editors
-			mGame.get_scene().reload_scene();
-		}
+			mGame.get_scene().reload_scene(); // This does not affect the editors
 		ImGui::QuickTooltip("Restarts the current scene. This will not affect the editors.");
 
 		ImGui::SameLine();
 		if (ImGui::Button("Save"))
 			save_scene();
 
-		ImGui::Text(("Name: " + mGame.get_scene().get_path()).c_str());
-
-		bool has_boundary = mScene_loader.has_boundary();
-		if (ImGui::Checkbox("Has boundary", &has_boundary))
-		{
-			mIs_scene_modified = true;
-			mScene_loader.set_has_boundary(has_boundary);
-		}
-		ImGui::QuickTooltip("The boundary is the region in which the camera will be contained. The camera cannot move out of the boundary.");
-
-		engine::frect boundary = mScene_loader.get_boundary();
-		if (ImGui::DragFloat4("Boundary", boundary.components))
-		{
-			mIs_scene_modified = true;
-			mScene_loader.set_boundary(boundary);
-		}
-		ImGui::QuickTooltip("Sets the boundary's x, y, width, and height respectively. This is in unit tiles.");
-
-		if (ImGui::Button("Open Script in Editor"))
+		ImGui::SameLine();
+		if (ImGui::Button("Edit Script"))
 		{
 			std::string cmd = mSettings.generate_open_cmd(mScene_loader.get_script_path());
 			if (std::system(("START " + cmd).c_str())) // May not be very portable
 				logger::error("Failed to launch editor");
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Edit Xml"))
+		{
+			std::string cmd = mSettings.generate_open_cmd(mScene_loader.get_scene_path());
+			if (std::system(("START " + cmd).c_str())) // May not be very portable
+				logger::error("Failed to launch editor");
+		}
+		ImGui::QuickTooltip("Warning: It is not recommended that you actually edit this file.");
+
+		ImGui::Text(("Name: " + mScene_loader.get_name()).c_str());
+
+		if (ImGui::TreeNode("Tilemap"))
+		{
+			ImGui::Text(("Texture: " + mScene_loader.get_tilemap_texture()).c_str());
+			if (ImGui::Button("Change Texture"))
+			{
+				mChange_scene_texture_name = mScene_loader.get_tilemap_texture();
+				ImGui::OpenPopup("Change Scene Texture");
+			}
+			change_texture_popup();
+			ImGui::TreePop();
+		}
+		if (ImGui::TreeNode("Boundary"))
+		{
+			bool has_boundary = mScene_loader.has_boundary();
+			if (ImGui::Checkbox("Enabled", &has_boundary))
+			{
+				mIs_scene_modified = true;
+				mScene_loader.set_has_boundary(has_boundary);
+			}
+			ImGui::QuickTooltip("The boundary is the region in which the camera will be contained. The camera cannot move out of the boundary.");
+
+			engine::frect boundary = mScene_loader.get_boundary();
+			if (ImGui::DragFloat4("Dimensions", boundary.components))
+			{
+				mIs_scene_modified = true;
+				mScene_loader.set_boundary(boundary);
+			}
+			ImGui::QuickTooltip("Sets the boundary's x, y, width, and height respectively. This is in unit tiles.");
+
+			ImGui::TreePop();
 		}
 		ImGui::PopItemWidth();
 		ImGui::EndGroup();
@@ -1437,7 +1450,7 @@ void WGE_imgui_editor::draw_game_window()
 		{
 			mGame.restart_game();
 		}
-
+		ImGui::SameLine();
 		if (ImGui::Button("Open game", ImVec2(-0, 0)))
 		{
 			ImGui::OpenPopup("Open Game");
@@ -1450,21 +1463,34 @@ void WGE_imgui_editor::draw_game_window()
 
 		ImGui::PushItemWidth(-100);
 
-		static char game_name_buffer[256]; // Temp
-		ImGui::InputText("Name", &game_name_buffer[0], 256);
-		ImGui::QuickTooltip("Name of this game.\nThis is displayed in the window title.");
+		if (ImGui::TreeNode("Game"))
+		{
+			static char game_name_buffer[256]; // Temp
+			ImGui::InputText("Name", &game_name_buffer[0], 256);
+			ImGui::QuickTooltip("Name of this game.\nThis is displayed in the window title.");
 
-		ImGui::InputInt("Tile Size", &mTile_size, 1, 2);
-		ImGui::QuickTooltip("Represents both the width and height of the tiles.");
+			ImGui::InputInt("Tile Size", &mTile_size, 1, 2);
+			ImGui::QuickTooltip("Represents both the width and height of the tiles.");
+			ImGui::TreePop();
+		}
 
-		static int target_size[2] = { 384 , 320 }; // Temp
-		ImGui::DragInt2("Target Size", target_size);
+		if (ImGui::TreeNode("Display"))
+		{
+			static int target_size[2] = { 384 , 320 }; // Temp
+			ImGui::DragInt2("Target Size", target_size);
+
+			static int window_size[2] = { 384 , 320 }; // Temp
+			ImGui::DragInt2("Window Size", window_size);
+
+			static bool resizable = true; // temp
+			ImGui::Checkbox("Resizable", &resizable);
+			ImGui::TreePop();
+		}
 		ImGui::PopItemWidth();
-
-		if (ImGui::CollapsingHeader("Flags"))
+		if (ImGui::TreeNode("Flags"))
 		{
 			// TODO: Add Filtering
-			ImGui::BeginChild("Flag List", ImVec2(0, 100));
+			ImGui::BeginChild("Flag List", ImVec2(0, 100), true);
 			for (size_t i = 0; i < 5; i++)
 			{
 				ImGui::Selectable(("Flag " + std::to_string(i)).c_str());
@@ -1475,10 +1501,11 @@ void WGE_imgui_editor::draw_game_window()
 				}
 			}
 			ImGui::EndChild();
+			ImGui::TreePop();
 		}
-		if (ImGui::CollapsingHeader("Resource Manager"))
+		if (ImGui::TreeNode("Resources"))
 		{
-			ImGui::BeginChild("Resource List", ImVec2(0, 200));
+			ImGui::BeginChild("Resource List", ImVec2(0, 200), true);
 
 			ImGui::Columns(3);
 
@@ -1511,6 +1538,7 @@ void WGE_imgui_editor::draw_game_window()
 			{
 				mGame.get_resource_manager().reload_all();
 			}
+			ImGui::TreePop();
 		}
 	}
 	ImGui::End();
@@ -1580,7 +1608,7 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 		engine::fvector mouse_position = snap(mTilemap_renderer.window_to_game_coords(window_mouse_position, mTilemap_display), calc_snapping(mTilemap_current_snapping, mTile_size));
 
 		// Draw previewed tile
-		if (mTilemap_texture && mCurrent_tile_atlas)
+		if (mTilemap_texture && mCurrent_tile_atlas && mTilemap_manipulator.get_layer_count() > 0)
 		{
 			mPrimitives.push_node(mTilemap_display);
 
@@ -1621,11 +1649,19 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 		// Place tile
 		if (mTilemap_texture && mCurrent_tile_atlas)
 		{
-			if (ImGui::IsItemClicked())
+			if (ImGui::GetIO().KeyCtrl && ImGui::IsItemClicked())
+			{
+				if (auto tile = mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(mouse_position))
+				{
+					mCurrent_tile_atlas = mTilemap_texture->get_entry(tile->get_atlas());
+					mTile_rotation = tile->get_rotation();
+				}
+			}
+			else if (ImGui::IsItemClicked())
 			{
 				place_tile(mouse_position);
 			}
-			if (ImGui::IsItemClicked(1))
+			else if (ImGui::IsItemClicked(1))
 			{
 				remove_tile(mouse_position);
 			}
@@ -1930,14 +1966,13 @@ void WGE_imgui_editor::draw_log_window()
 
 				// Filepath. Gray.
 				ImGui::PushStyleColor(ImGuiCol_Text, { 0.7f, 0.7f, 0.7f, 1 });
-				ImGui::PushStyleColor(ImGuiCol_Button, { 0, 0, 0, 0 });
-				if (ImGui::SmallButton(file_info.c_str()))
+				if (ImGui::HiddenSmallButton(file_info.c_str()))
 				{
 						std::string cmd = mSettings.generate_open_cmd(log[i].file);
 						std::system(("START " + cmd).c_str()); // May not be very portable
 				}
 				ImGui::QuickTooltip("Open file in editor.");
-				ImGui::PopStyleColor(2);
+				ImGui::PopStyleColor();
 			}
 			ImGui::NextColumn();
 		}
@@ -1976,7 +2011,8 @@ void WGE_imgui_editor::handle_undo_redo()
 }
 
 void WGE_imgui_editor::handle_scene_change()
-{		// Has the current scene changed?
+{
+	// Has the current scene changed?
 	if (mScene_loader.get_name() != mGame.get_scene().get_name() && !ImGui::IsPopupOpen("###askforsave"))
 	{
 		if (mIs_scene_modified)
@@ -1995,6 +2031,66 @@ void WGE_imgui_editor::handle_scene_change()
 	{
 		// No save
 		prepare_scene(mGame.get_source_path() / "scenes", mGame.get_scene().get_name());
+	}
+}
+
+void WGE_imgui_editor::new_scene_popup()
+{
+	const std::size_t scene_name_length = sizeof(mNew_scene_name_buf) / sizeof(mNew_scene_name_buf[0]);
+	if (ImGui::BeginPopupModal("Create scene", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::InputText("Name", mNew_scene_name_buf, scene_name_length);
+
+		ImGui::TextureSelectCombo("Tilemap Texture", mGame.get_resource_manager(), &mNew_scene_texture_name);
+
+		if (ImGui::Button("Create", ImVec2(100, 25)) && strnlen(mNew_scene_name_buf, scene_name_length) != 0)
+		{
+			if (mGame.create_scene(mNew_scene_name_buf, mNew_scene_texture_name))
+			{
+				logger::info("Scene \"" + std::string(mNew_scene_name_buf) + "\" created");
+				mGame.get_scene().load_scene(mNew_scene_name_buf);
+			}
+			else
+				logger::error("Failed to create scene \"" + std::string(mNew_scene_name_buf) + "\"");
+			ImGui::CloseCurrentPopup();
+		}
+
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel", ImVec2(100, 25)))
+		{
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
+	}
+}
+
+void WGE_imgui_editor::change_texture_popup()
+{
+	if (ImGui::BeginPopupModal("Change Scene Texture", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::TextColored({ 1, 1, 0.5f, 1 }, "Warning: This will delete your current tilemap.");
+		ImGui::TextureSelectCombo("Tilemap Texture", mGame.get_resource_manager(), &mChange_scene_texture_name);
+
+		if (ImGui::Button("Change", ImVec2(100, 25)))
+		{
+			mTilemap_manipulator.clear();
+			mCurrent_tile_atlas.reset();
+			mTilemap_texture = mGame.get_resource_manager().get_resource<engine::texture>(engine::texture_restype, mChange_scene_texture_name);
+			mTilemap_display.set_texture(mTilemap_texture);
+			mTilemap_display.update(mTilemap_manipulator);
+			mCommand_manager.clear();
+			mCurrent_layer = 0;
+			mScene_loader.set_tilemap_texture(mChange_scene_texture_name);
+			mIs_scene_modified = true;
+			ImGui::CloseCurrentPopup();
+		}
+
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel", ImVec2(100, 25)))
+		{
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
 	}
 }
 
