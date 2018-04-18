@@ -1074,6 +1074,8 @@ static inline bool TextureSelectCombo(const char* pName, const engine::resource_
 	bool ret = false;
 	if (ImGui::BeginCombo(pName, pTexture_name->empty() ? "No Texture" : pTexture_name->c_str()))
 	{
+		if (ImGui::Selectable("No Texture", pTexture_name->empty()))
+			pTexture_name->clear();
 		for (auto& i : pRes_mgr.get_resources_with_type(engine::texture_restype))
 		{
 			if (ImGui::Selectable(i->get_name().c_str(), *pTexture_name == i->get_name()))
@@ -1445,7 +1447,6 @@ void WGE_imgui_editor::draw_game_window()
 {
 	if (ImGui::Begin("Game"))
 	{
-
 		if (ImGui::Button("Restart game", ImVec2(-0, 0)))
 		{
 			mGame.restart_game();
@@ -1592,7 +1593,7 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 {
 	if (ImGui::Begin("Tilemap Editor"))
 	{
-		ImGui::BeginChild("tilemapeditorwindow", ImVec2(-300, -1));
+		ImGui::BeginChild("tilemapeditorwindow", ImVec2(-300, -1), true);
 		if (resize_to_window(mTilemap_render_target))
 		{
 			engine::fvector new_size = engine::vector_cast<float, unsigned int>(mTilemap_render_target.getSize());
@@ -1605,7 +1606,7 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 		mTilemap_renderer.draw();
 
 		engine::ivector window_mouse_position = static_cast<engine::ivector>(ImGui::GetMousePos()) - static_cast<engine::ivector>(ImGui::GetCursorScreenPos());
-		engine::fvector mouse_position = snap(mTilemap_renderer.window_to_game_coords(window_mouse_position, mTilemap_display), calc_snapping(mTilemap_current_snapping, mTile_size));
+		engine::fvector tile_position = snap(mTilemap_renderer.window_to_game_coords(window_mouse_position, mTilemap_display), calc_snapping(mTilemap_current_snapping, mTile_size));
 
 		// Draw previewed tile
 		if (mTilemap_texture && mCurrent_tile_atlas && mTilemap_manipulator.get_layer_count() > 0)
@@ -1613,7 +1614,7 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 			mPrimitives.push_node(mTilemap_display);
 
 			// Highlight the tile that may be replaced
-			if (auto tile = mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(mouse_position))
+			if (auto tile = mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(tile_position))
 			{
 				auto atlas = mTilemap_texture->get_entry(tile->get_atlas());
 				engine::fvector size = atlas->get_root_frame().get_size();
@@ -1621,7 +1622,7 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 				, { 1, 0.5f, 0.5f, 0.5f }, { 1, 0, 0, 0.7f });
 			}
 
-			mPrimitives.add_quad_texture(mTilemap_texture, mouse_position*mTile_size
+			mPrimitives.add_quad_texture(mTilemap_texture, tile_position*mTile_size
 				, mCurrent_tile_atlas->get_root_frame(), { 1, 1, 1, 0.7f }, mTile_rotation);
 
 			mPrimitives.pop_node();
@@ -1651,7 +1652,7 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 		{
 			if (ImGui::GetIO().KeyCtrl && ImGui::IsItemClicked())
 			{
-				if (auto tile = mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(mouse_position))
+				if (auto tile = mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(tile_position))
 				{
 					mCurrent_tile_atlas = mTilemap_texture->get_entry(tile->get_atlas());
 					mTile_rotation = tile->get_rotation();
@@ -1659,11 +1660,11 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 			}
 			else if (ImGui::IsItemClicked())
 			{
-				place_tile(mouse_position);
+				place_tile(tile_position);
 			}
 			else if (ImGui::IsItemClicked(1))
 			{
-				remove_tile(mouse_position);
+				remove_tile(tile_position);
 			}
 		}
 
@@ -1931,7 +1932,7 @@ void WGE_imgui_editor::draw_log_window()
 			switch (log[i].type)
 			{
 			case logger::level::info:
-				ImGui::PushStyleColor(ImGuiCol_Text, { 1, 1, 1, 1 }); // White
+				ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_Text]);
 				ImGui::TextUnformatted("Info");
 				break;
 			case logger::level::debug:
