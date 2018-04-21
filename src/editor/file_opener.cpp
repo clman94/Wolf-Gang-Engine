@@ -9,6 +9,9 @@
 #include <cstddef>
 #include <cstdint>
 
+namespace
+{
+
 // Amount of seconds until the file list refreshes
 const float update_frequency = 5;
 
@@ -19,13 +22,13 @@ struct entry_info
 	bool is_directory;
 };
 
-static struct {
+struct {
 	engine::fs::path current_directory;
 	std::vector<entry_info> file_entries;
-	engine::timer update_timer;
+	engine::timer update_timer; // Used to periodically update the file list while idle
 } opener_data;
 
-static inline void update_file_list()
+void update_file_list()
 {
 	opener_data.file_entries.clear();
 	for (auto i : engine::fs::directory_iterator(opener_data.current_directory))
@@ -51,12 +54,13 @@ static inline void update_file_list()
 	});
 }
 
-static inline void change_current_directory(const engine::fs::path& pPath)
+void change_current_directory(const engine::fs::path& pPath)
 {
 	opener_data.current_directory = pPath;
 	update_file_list();
 }
 
+}
 
 bool ImGui::FileOpenerPopup(const char * pName, engine::fs::path* pPath, bool pSel_files, bool pSel_directories)
 {
