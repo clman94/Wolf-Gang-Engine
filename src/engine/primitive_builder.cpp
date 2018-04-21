@@ -108,23 +108,15 @@ void primitive_builder::add_poly_lines(std::vector<fvector> pPoints, color pOutl
 	mEntries.push_back(nentry);
 }
 
-static inline void add_texture_triangle(std::vector<sf::Vertex>& pVertices, std::size_t pStart_index, frect pRect, frect pTexture_rect, color pTint)
-{
-	for (std::size_t i = pStart_index; i < pStart_index + 3; i++)
-	{
-		sf::Vertex v;
-		v.color = pTint;
-		v.position = pRect.get_vertex(i);
-		v.texCoords = pTexture_rect.get_vertex(i);
-		pVertices.push_back(v);
-	}
-}
-
 primitive_builder::handle primitive_builder::add_quad_texture(std::shared_ptr<texture> pTexture, frect pRect, frect pTexture_rect, color pTint)
 {
 	entry nentry;
-	add_texture_triangle(nentry.vertices, 0, pRect, pTexture_rect, pTint);
-	add_texture_triangle(nentry.vertices, 2, pRect, pTexture_rect, pTint);
+	nentry.vertices.resize(6);
+	for (std::size_t i = 0; i < 3; i++)
+	{
+		nentry.vertices[i] = sf::Vertex(pRect.get_vertex(i), pTint, pTexture_rect.get_vertex(i));
+		nentry.vertices[i + 3] = sf::Vertex(pRect.get_vertex(i + 2), pTint, pTexture_rect.get_vertex(i + 2));
+	}
 	nentry.type = sf::PrimitiveType::Triangles;
 	nentry.tex = pTexture;
 
