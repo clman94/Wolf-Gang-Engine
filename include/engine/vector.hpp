@@ -266,10 +266,11 @@ struct vector
 	}
 
 #ifdef SFML_VECTOR2_HPP
-	vector(const sf::Vector2<T>& A)
+	template<typename Tto>
+	vector(const sf::Vector2<Tto>& A)
 	{
-		x = A.x;
-		y = A.y;
+		x = static_cast<T>(A.x);
+		y = static_cast<T>(A.y);
 	}
 
 	/*vector& operator = (const sf::Vector2<T>& A)
@@ -279,9 +280,10 @@ struct vector
 		return *this;
 	}*/
 
-	operator sf::Vector2<T>() const
+	template<typename Tto>
+	operator sf::Vector2<Tto>() const
 	{
-		return{ x, y };
+		return{ static_cast<Tto>(x), static_cast<Tto>(y) };
 	}
 
 #endif

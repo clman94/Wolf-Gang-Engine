@@ -85,9 +85,8 @@ namespace ImGui
                                                                         \
     template <typename T>                                               \
     operator engine::vector<T>() const {                                \
-        return engine::vector<T>(x, y);                                 \
-    }                                                                   \
-                                                                        \
+        return engine::vector<T>(static_cast<T>(x), static_cast<T>(y)); \
+    }                                                                   
 	
 
 #define IM_VEC4_CLASS_EXTRA                                             \

@@ -1,6 +1,9 @@
 #ifndef RPG_EDITOR_HPP
 #define RPG_EDITOR_HPP
 
+#include <imgui.h>
+#include <imgui-SFML.h>
+
 #include <engine/renderer.hpp>
 #include <engine/rect.hpp>
 #include <engine/terminal.hpp>
@@ -20,8 +23,6 @@
 #include <memory>
 #include <utility>
 
-#include <imgui.h>
-#include <imgui-SFML.h>
 
 class command
 {
