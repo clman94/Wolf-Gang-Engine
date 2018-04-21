@@ -17,6 +17,7 @@ subtexture::subtexture(const std::string & pName)
 void subtexture::set_name(const std::string & pName)
 {
 	mName = pName;
+	mHash = hash::FNV1a_32(pName);
 }
 
 const std::string & subtexture::get_name() const
@@ -24,9 +25,19 @@ const std::string & subtexture::get_name() const
 	return mName;
 }
 
+hash::hash32_t subtexture::get_hash() const
+{
+	return mHash;
+}
+
 bool subtexture::load(tinyxml2::XMLElement * pEle)
 {
 	assert(pEle != nullptr);
+
+	const char* name;
+	if (pEle->QueryStringAttribute("name", &name) != tinyxml2::XML_SUCCESS)
+		name = pEle->Name(); // for backwards compatibility
+	set_name(name);
 
 	// Set root frame
 	frect frame = {
@@ -36,20 +47,13 @@ bool subtexture::load(tinyxml2::XMLElement * pEle)
 		pEle->FloatAttribute("h")
 	};
 	set_frame_rect(frame);
-
-	// Set frame count
 	set_frame_count(pEle->IntAttribute("frames", 1));
-
-	// Set starting interval
 	add_interval(0, pEle->FloatAttribute("interval", 0));
-
-	// Set default frame (default : 0)
 	set_default_frame(pEle->IntAttribute("default", 0));
 
 	// Set loop type (default : none)
 	bool att_loop = pEle->BoolAttribute("loop");
 	bool att_pingpong = pEle->BoolAttribute("pingpong");
-
 	engine::animation::loop_type loop_type = engine::animation::loop_type::none;
 	if (att_loop)                loop_type = engine::animation::loop_type::linear;
 	if (att_pingpong)            loop_type = engine::animation::loop_type::pingpong;
@@ -69,6 +73,10 @@ bool subtexture::load(tinyxml2::XMLElement * pEle)
 
 bool subtexture::save(tinyxml2::XMLElement * pEle)
 {
+	assert(pEle != nullptr);
+
+	pEle->SetAttribute("name", mName.c_str());
+
 	auto root_frame = get_root_frame();
 	pEle->SetAttribute("x", root_frame.x);
 	pEle->SetAttribute("y", root_frame.y);
@@ -77,23 +85,24 @@ bool subtexture::save(tinyxml2::XMLElement * pEle)
 
 	if (get_frame_count() > 1)
 		pEle->SetAttribute("frames", static_cast<unsigned int>(get_frame_count()));
+
 	if (get_interval() > 0)
 		pEle->SetAttribute("interval", get_interval());
-	switch (get_loop())
-	{
-	case engine::animation::loop_type::linear:
-		pEle->SetAttribute("loop", 1);
-		break;
-	case engine::animation::loop_type::pingpong:
-		pEle->SetAttribute("pingpong", 1);
-		break;
-	default:
-		break;
-	}
 
 	if (get_default_frame() != 0)
 		pEle->SetAttribute("default", static_cast<unsigned int>(get_default_frame()));
 
+	switch (get_loop())
+	{
+	case animation::loop_type::linear:
+		pEle->SetAttribute("loop", 1);
+		break;
+	case animation::loop_type::pingpong:
+		pEle->SetAttribute("pingpong", 1);
+		break;
+	default: break;
+	}
+	
 	// TODO: Save sequenced interval
 	return true;
 }
@@ -120,7 +129,7 @@ bool texture_atlas::save(const std::string & pPath) const
 	
 	for (auto& i : mAtlas)
 	{
-		auto entry = doc.NewElement(i->get_name().c_str());
+		auto entry = doc.NewElement("subtexture");
 		i->save(entry);
 		root->InsertEndChild(entry);
 	}
@@ -143,11 +152,11 @@ void texture_atlas::clear()
 {
 	mAtlas.clear();
 }
-
 std::shared_ptr<subtexture> texture_atlas::get_entry(const std::string & pName) const
 {
+	hash::hash32_t cmphash = hash::FNV1a_32(pName);
 	for (auto& i : mAtlas)
-		if (i->get_name() == pName)
+		if (i->get_hash() == cmphash)
 			return i;
 	return {};
 }
@@ -155,10 +164,8 @@ std::shared_ptr<subtexture> texture_atlas::get_entry(const std::string & pName) 
 std::shared_ptr<subtexture> texture_atlas::get_entry(const fvector & pVec) const
 {
 	for (auto& i : mAtlas)
-	{
 		if (i->get_root_frame().is_intersect(pVec))
 			return i;
-	}
 	return{};
 }
 
@@ -170,7 +177,7 @@ bool texture_atlas::add_entry(const subtexture & pEntry)
 	return true;
 }
 
-bool engine::texture_atlas::add_entry(subtexture::ptr & pEntry)
+bool texture_atlas::add_entry(subtexture::ptr & pEntry)
 {
 	if (get_entry(pEntry->get_name()))
 		return false;
@@ -245,7 +252,6 @@ bool texture_atlas::load_entries(tinyxml2::XMLDocument& pDoc)
 		// TODO: Check for colliding names
 		subtexture entry;
 		entry.load(ele_entry);
-		entry.set_name(ele_entry->Name());
 		add_entry(entry);
 
 		ele_entry = ele_entry->NextSiblingElement();

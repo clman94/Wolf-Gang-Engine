@@ -1729,28 +1729,6 @@ bool scenes_directory::load(engine::resource_manager & pResource_manager)
 	return true;
 }
 
-/* a doodle:
-some arbitrary string comparison
-
-double rate_string_comparison(const std::string& pStr1, const std::string& pStr2)
-{
-double final_rating = 0;
-
-if (pStr1.length() != pStr2.length())
-final_rating = std::abs(static_cast<double>(pStr1.length()) - static_cast<double>(pStr2.length()));
-
-if (pStr1.length() <= (pStr2.length() / 2))
-{
-for (auto i = pStr2.begin(); i != pStr2.end() - pStr1.length(); i++)
-{
-if (std::string(i, i + pStr1.length()) == pStr1)
-final_rating /= 2;
-}
-}
-
-return final_rating;
-}*/
-
 void scenes_directory::set_path(const std::string & pFilepath)
 {
 	mPath = pFilepath;

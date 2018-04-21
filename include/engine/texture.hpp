@@ -7,6 +7,7 @@
 #include <engine/rect.hpp>
 #include <engine/resource.hpp>
 #include <engine/utility.hpp>
+#include <engine/hash.hpp>
 
 #include "../../3rdparty/tinyxml2/tinyxml2.h"
 
@@ -31,11 +32,14 @@ public:
 	void set_name(const std::string& pName);
 	const std::string& get_name() const;
 
+	hash::hash32_t get_hash() const; // Helps speed up searching
+
 	bool load(tinyxml2::XMLElement* pEle);
 	bool save(tinyxml2::XMLElement* pEle);
 
 private:
 	std::string mName;
+	hash::hash32_t mHash;
 };
 
 class texture_atlas

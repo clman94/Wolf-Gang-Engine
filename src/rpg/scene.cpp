@@ -150,9 +150,10 @@ bool scene::load_scene(std::string pName)
 			logger::error("Invalid tilemap texture");
 			return false;
 		}
-		mTilemap_display.set_texture(tilemap_texture);
+		mTilemap_manipulator.set_texture(tilemap_texture);
+		mTilemap_manipulator.load_xml(mLoader.get_tilemap());
 
-		mTilemap_manipulator.load_tilemap_xml(mLoader.get_tilemap());
+		mTilemap_display.set_texture(tilemap_texture);
 		mTilemap_display.update(mTilemap_manipulator);
 	}
 

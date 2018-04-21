@@ -12,31 +12,6 @@
 
 namespace rpg {
 
-// This saves us some memory by sharing the atlas names of the tiles.
-// It also provides a correction feature to fix old tiles when atlas
-// names change in the texture.
-class tile_atlas_pool
-{
-public:
-	typedef std::shared_ptr<const std::string> handle;
-
-	// Get a shared pointer version of a string from the pool.
-	handle get(const std::string& pAtlas);
-
-	// Replace an entry. All tile atlases are shared so everything changes smoothly.
-	// Returns true if successful.
-	bool replace(const std::string& pOriginal, const std::string& pNew);
-
-	// Compile a list of entries that don't exist in the texture.
-	// This info can be used to replace tiles with atlas names that have been changed.
-	std::vector<std::string> get_invalid_entries(std::shared_ptr<engine::texture> pTexture) const;
-
-	bool has_invalid_entries(std::shared_ptr<engine::texture> pTexture) const;
-
-private:
-	std::vector<std::shared_ptr<std::string>> mStrings;
-};
-
 class tile
 {
 public:
@@ -44,7 +19,7 @@ public:
 	tile(tile&& pMove);
 	tile(const tile& pTile);
 
-	tile& operator=(const tile& pTile);
+	tile& operator=(const tile& pRight);
 	bool operator==(const tile& pRight);
 	bool operator!=(const tile& pRight);
 
@@ -60,12 +35,11 @@ public:
 	void set_rotation(rotation_t pRotation);
 	rotation_t get_rotation() const;
 
-	void set_atlas(const std::string& pAtlas, tile_atlas_pool& pPool);
-	void set_atlas(tile_atlas_pool::handle pHandle);
-	const std::string& get_atlas() const;
+	void set_atlas(engine::subtexture::ptr pAtlas);
+	engine::subtexture::ptr get_atlas() const;
 
-	// Load tile settings from xml. The pool is needed for the atlas names.
-	void load_xml(tinyxml2::XMLElement* pEle, tile_atlas_pool& pPool);
+	bool load_xml(tinyxml2::XMLElement* pEle, std::shared_ptr<engine::texture>& pTexture);
+	void save_xml(tinyxml2::XMLElement* pEle) const;
 
 	bool is_adjacent_above(tile& a);
 	bool is_adjacent_left(tile& a);
@@ -78,7 +52,7 @@ private:
 	engine::fvector mPosition;
 	fill_t mFill;
 	rotation_t mRotation;
-	tile_atlas_pool::handle mAtlas_handle;
+	engine::subtexture::ptr mAtlas;
 };
 
 class tilemap_layer
@@ -89,16 +63,15 @@ public:
 
 	tile* new_tile(const std::string& pAtlas);
 
-	// Set a tile. Adds automatically and replaces any at the same position.
-	tile* set_tile(engine::fvector pPosition, engine::uvector pFill, const std::string& pAtlas, int pRotation);
-	
-	// Set a tile. Adds automatically and replaces any at the same position.
-	tile* set_tile(engine::fvector pPosition, const std::string& pAtlas, int pRotation);
-
+	tile* set_tile(engine::fvector pPosition, engine::uvector pFill, const std::string& pAtlas, int pRotation); // Replaces any tiles at the same position; otherwise it adds it
+	tile* set_tile(engine::fvector pPosition, const std::string& pAtlas, int pRotation);                        // "
 	tile* set_tile(const tile& pTile);
 
-	// Find tile at position
+	// Find tile at the EXACT position
 	tile* find_tile(engine::fvector pPosition);
+
+	//std::vector<tile*> get_intersecting_tiles(engine::fvector pPosition); // Set the texture before calling
+	//std::vector<tile*> get_intersecting_tiles(engine::frect pRect);       // "
 
 	size_t get_tile_count() const;
 	tile* get_tile(size_t pIndex);
@@ -108,7 +81,7 @@ public:
 
 	// Take all adjacent tiles and represent them with only on tile.
 	// Useful to save space when saving the tilemap.
-	// Returns a ratio New:Original size; 1 = No change
+	// Returns a ratio New/Original size; 1 = No change
 	float condense();
 
 	void explode_tile(tile* pTile);
@@ -117,35 +90,38 @@ public:
 	// It is recommended calling this before modifying tiles.
 	void explode();
 
-	// Load this layer from xml settings.
 	bool load_xml(tinyxml2::XMLElement *pRoot);
-
-	void generate_xml(tinyxml2::XMLElement *pRoot, tinyxml2::XMLDocument& doc) const;
-
-	tile_atlas_pool& get_pool();
+	void save_xml(tinyxml2::XMLElement *pRoot, tinyxml2::XMLDocument& doc) const;
 
 	engine::fvector get_center_point() const;
 
 	void sort();
 
+	void set_texture(std::shared_ptr<engine::texture> pTexture); // Call this before doing ANYTHING
+
 private:
-	tile_atlas_pool mAtlas_pool;
 	std::vector<tile> mTiles;
 	std::string mName;
+	std::shared_ptr<engine::texture> mTexture;
+
+	struct invalid_tile_info
+	{
+		std::string requested_atlas; // Name of atlas entry that the tile requests but couldn't find
+		tile incomplete_tile;
+	};
+	std::vector<invalid_tile_info> invalid_tiles;
 };
 
 class tilemap_manipulator
 {
 public:
-	void condense_map();
-
-	int load_tilemap_xml(tinyxml2::XMLElement *root);
-	int load_tilemap_xml(std::string pPath);
-
-	void explode_all();
-
+	int load_xml(tinyxml2::XMLElement *root);
+	int load_xml(std::string pPath);
 	void save_xml(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode* root) const;
 	void save_xml(const std::string& pPath) const;
+
+	void condense_all();
+	void explode_all();
 
 	bool move_layer(size_t pFrom, size_t pTo);
 
@@ -165,9 +141,14 @@ public:
 
 	size_t get_layer_count() const;
 	tilemap_layer& get_layer(size_t pIndex);
+	const tilemap_layer& get_layer(size_t pIndex) const;
+
+	void set_texture(std::shared_ptr<engine::texture> pTexture); // Call this before doing ANYTHING
+	std::shared_ptr<engine::texture> get_texture() const;
 
 private:
 	std::vector<tilemap_layer> mMap;
+	std::shared_ptr<engine::texture> mTexture;
 };
 
 }

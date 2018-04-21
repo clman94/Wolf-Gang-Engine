@@ -203,6 +203,100 @@ private:
 	rpg::tilemap_manipulator* mTilemap_manipulator;
 };
 
+class command_add_layer :
+	public command
+{
+public:
+	command_add_layer(rpg::tilemap_manipulator& pTm_man, size_t pIndex)
+	{
+		mTilemap_manipulator = &pTm_man;
+		mIndex = pIndex;
+	}
+
+	bool execute()
+	{
+		mTilemap_manipulator->insert_layer(mIndex);
+		return true;
+	}
+
+	bool undo()
+	{
+		mLayer = std::move(mTilemap_manipulator->get_layer(mIndex));
+		mTilemap_manipulator->remove_layer(mIndex);
+		return true;
+	}
+
+	bool redo()
+	{
+		mTilemap_manipulator->insert_layer(mIndex);
+		mTilemap_manipulator->get_layer(mIndex) = std::move(mLayer);
+		return true;
+	}
+
+private:
+	size_t mIndex;
+	rpg::tilemap_manipulator* mTilemap_manipulator;
+	rpg::tilemap_layer mLayer;
+};
+
+class command_delete_layer :
+	public command
+{
+public:
+	command_delete_layer(rpg::tilemap_manipulator& pTm_man, size_t pIndex)
+	{
+		mTilemap_manipulator = &pTm_man;
+		mIndex = pIndex;
+	}
+
+	bool execute()
+	{
+		mLayer = std::move(mTilemap_manipulator->get_layer(mIndex));
+		mTilemap_manipulator->remove_layer(mIndex);
+		return true;
+	}
+
+	bool undo()
+	{
+		mTilemap_manipulator->insert_layer(mIndex);
+		mTilemap_manipulator->get_layer(mIndex) = std::move(mLayer);
+		return true;
+	}
+
+private:
+	size_t mIndex;
+	rpg::tilemap_manipulator* mTilemap_manipulator;
+	rpg::tilemap_layer mLayer;
+};
+
+class command_move_layer :
+	public command
+{
+public:
+	command_move_layer(rpg::tilemap_manipulator& pTm_man, size_t pFrom, size_t pTo)
+	{
+		mTilemap_manipulator = &pTm_man;
+		mFrom = pFrom;
+		mTo = pTo;
+	}
+
+	bool execute()
+	{
+		 mTilemap_manipulator->move_layer(mFrom, mTo);
+		 return true;
+	}
+
+	bool undo()
+	{
+		mTilemap_manipulator->move_layer(mTo, mFrom);
+		return true;
+	}
+
+private:
+	size_t mFrom, mTo;
+	rpg::tilemap_manipulator* mTilemap_manipulator;
+};
+
 editor::editor()
 {
 	mIs_changed = false;
@@ -258,7 +352,7 @@ bool scene_editor::open_scene(std::string pName)
 		mTilemap_display.set_texture(texture);
 		//mTilemap_display.set_color({ 100, 100, 255, 150 });
 
-		mTilemap_manipulator.load_tilemap_xml(mLoader.get_tilemap());
+		mTilemap_manipulator.load_xml(mLoader.get_tilemap());
 		mTilemap_display.update(mTilemap_manipulator);
 	}
 	return true;
@@ -1287,7 +1381,7 @@ void WGE_imgui_editor::place_tile(engine::fvector pos)
 		mIs_scene_modified = true;
 		rpg::tile tile;
 		tile.set_position(pos);
-		tile.set_atlas(mCurrent_tile_atlas->get_name(), mTilemap_manipulator.get_layer(mCurrent_layer).get_pool());
+		tile.set_atlas(mCurrent_tile_atlas);
 		tile.set_rotation((unsigned int)mTile_rotation);
 		mCommand_manager.execute<command_set_tiles>(mCurrent_layer, mTilemap_manipulator, tile);
 		mTilemap_manipulator.get_layer(mCurrent_layer).sort();
@@ -1315,7 +1409,8 @@ void WGE_imgui_editor::prepare_scene(engine::fs::path pPath, const std::string& 
 		// Load up the new tilemap
 		mTilemap_texture = mGame.get_resource_manager().get_resource<engine::texture>("texture"
 			, mScene_loader.get_tilemap_texture());
-		mTilemap_manipulator.load_tilemap_xml(mScene_loader.get_tilemap());
+		mTilemap_manipulator.set_texture(mTilemap_texture);
+		mTilemap_manipulator.load_xml(mScene_loader.get_tilemap());
 		mTilemap_display.set_texture(mTilemap_texture);
 		mTilemap_display.set_unit(static_cast<float>(mTile_size));
 		mTilemap_display.update(mTilemap_manipulator);
@@ -1333,7 +1428,7 @@ void WGE_imgui_editor::prepare_scene(engine::fs::path pPath, const std::string& 
 void WGE_imgui_editor::save_scene()
 {
 	logger::info("Saving scene");
-	mTilemap_manipulator.condense_map();
+	mTilemap_manipulator.condense_all();
 	mScene_loader.set_tilemap(mTilemap_manipulator);
 	mTilemap_manipulator.explode_all();
 	if (!mScene_loader.save())
@@ -1616,8 +1711,7 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 			// Highlight the tile that may be replaced
 			if (auto tile = mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(tile_position))
 			{
-				auto atlas = mTilemap_texture->get_entry(tile->get_atlas());
-				engine::fvector size = atlas->get_root_frame().get_size();
+				engine::fvector size = tile->get_atlas()->get_root_frame().get_size();
 				mPrimitives.add_rectangle({ tile->get_position()*mTile_size, tile->get_rotation() % 2 ? size.flip() : size }
 				, { 1, 0.5f, 0.5f, 0.5f }, { 1, 0, 0, 0.7f });
 			}
@@ -1654,7 +1748,7 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 			{
 				if (auto tile = mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(tile_position))
 				{
-					mCurrent_tile_atlas = mTilemap_texture->get_entry(tile->get_atlas());
+					mCurrent_tile_atlas = tile->get_atlas();
 					mTile_rotation = tile->get_rotation();
 				}
 			}
@@ -1720,25 +1814,27 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 	ImGui::End();
 }
 
+inline static void draw_tile_preview(engine::fvector pSize, std::shared_ptr<engine::texture> pTexture, engine::subtexture::ptr pAtlas)
+{
+	// Scale the preview image to fit the window while maintaining aspect ratio
+	engine::fvector preview_size = pSize - engine::fvector(ImGui::GetStyle().WindowPadding) * 2;
+	engine::fvector size = pAtlas->get_root_frame().get_size();
+	engine::fvector scaled_size =
+	{
+		std::min(size.x*(preview_size.y / size.y), preview_size.x),
+		std::min(size.y*(preview_size.x / size.x), preview_size.y)
+	};
+	ImGui::SetCursorPos(preview_size / 2 - scaled_size / 2 + ImGui::GetStyle().WindowPadding); // Center it
+	ImGui::Image(pTexture->get_sfml_texture(), scaled_size, pAtlas->get_root_frame()); // Draw it
+}
+
 void WGE_imgui_editor::draw_tile_group(float from_bottom)
 {
 	ImGui::BeginChild("Tilesettingsgroup", ImVec2(0, -from_bottom));
 
 	ImGui::BeginChild("Tile Preview", ImVec2(100, 100), true);
 	if (mTilemap_texture && mCurrent_tile_atlas)
-	{
-		// Scale the preview image to fit the window while maintaining aspect ratio
-		engine::fvector preview_size = engine::fvector(100, 100)
-			- engine::fvector(ImGui::GetStyle().WindowPadding) * 2;
-		engine::fvector size = mCurrent_tile_atlas->get_root_frame().get_size();
-		engine::fvector scaled_size =
-		{
-			std::min(size.x*(preview_size.y / size.y), preview_size.x),
-			std::min(size.y*(preview_size.x / size.x), preview_size.y)
-		};
-		ImGui::SetCursorPos(preview_size / 2 - scaled_size / 2 + ImGui::GetStyle().WindowPadding); // Center it
-		ImGui::Image(mTilemap_texture->get_sfml_texture(), scaled_size, mCurrent_tile_atlas->get_root_frame()); // Draw it
-	}
+		draw_tile_preview({ 100, 100 }, mTilemap_texture, mCurrent_tile_atlas);
 	else
 		ImGui::TextUnformatted("No preview");
 	ImGui::EndChild();
@@ -1757,7 +1853,7 @@ void WGE_imgui_editor::draw_tile_group(float from_bottom)
 	ImGui::BeginChild("Tile List", ImVec2(0, 0), true);
 	if (mTilemap_texture)
 	{
-		for (auto i : mTilemap_texture->get_texture_atlas().get_all())
+		for (const auto& i : mTilemap_texture->get_texture_atlas().get_all())
 		{
 			// IDEA: Possibly add a preview for each tile in the list
 			if (ImGui::Selectable(i->get_name().c_str(), mCurrent_tile_atlas == i))
@@ -1803,7 +1899,7 @@ void WGE_imgui_editor::draw_tilemap_layers_group()
 
 	if (ImGui::Button("New"))
 	{
-		mCurrent_layer = mTilemap_manipulator.insert_layer(mCurrent_layer);
+		mCommand_manager.execute<command_add_layer>(mTilemap_manipulator, mCurrent_layer);
 		mTilemap_display.update(mTilemap_manipulator);
 	}
 
@@ -1835,7 +1931,7 @@ void WGE_imgui_editor::draw_tilemap_layers_group()
 		, ("Are you sure you want to remove layer \""
 			+ mTilemap_manipulator.get_layer(mCurrent_layer).get_name() + "\"?").c_str()) == 1)
 	{
-		mTilemap_manipulator.remove_layer(mCurrent_layer);
+		mCommand_manager.execute<command_delete_layer>(mTilemap_manipulator, mCurrent_layer);
 		mCurrent_layer = std::min(mCurrent_layer, mTilemap_manipulator.get_layer_count() - 1);
 		mTilemap_display.update(mTilemap_manipulator);
 	}
@@ -1843,14 +1939,14 @@ void WGE_imgui_editor::draw_tilemap_layers_group()
 	ImGui::SameLine();
 	if (ImGui::ArrowButton("Move Up", ImGuiDir_Up) && mCurrent_layer != mTilemap_manipulator.get_layer_count() - 1)
 	{
-		mTilemap_manipulator.move_layer(mCurrent_layer, mCurrent_layer + 1);
+		mCommand_manager.execute<command_move_layer>(mTilemap_manipulator, mCurrent_layer, mCurrent_layer + 1);
 		++mCurrent_layer;
 		mTilemap_display.update(mTilemap_manipulator);
 	}
 	ImGui::SameLine();
 	if (ImGui::ArrowButton("Move Down", ImGuiDir_Down) && mCurrent_layer != 0)
 	{
-		mTilemap_manipulator.move_layer(mCurrent_layer, mCurrent_layer - 1);
+		mCommand_manager.execute<command_move_layer>(mTilemap_manipulator, mCurrent_layer, mCurrent_layer - 1);
 		--mCurrent_layer;
 		mTilemap_display.update(mTilemap_manipulator);
 	}
@@ -2077,6 +2173,7 @@ void WGE_imgui_editor::change_texture_popup()
 			mTilemap_manipulator.clear();
 			mCurrent_tile_atlas.reset();
 			mTilemap_texture = mGame.get_resource_manager().get_resource<engine::texture>(engine::texture_restype, mChange_scene_texture_name);
+			mTilemap_manipulator.set_texture(mTilemap_texture);
 			mTilemap_display.set_texture(mTilemap_texture);
 			mTilemap_display.update(mTilemap_manipulator);
 			mCommand_manager.clear();

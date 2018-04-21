@@ -20,13 +20,13 @@ public:
 	int draw(engine::renderer &pR);
 	void clear();
 
-	void update(tilemap_manipulator& pTile_manipulator);
+	void update(const tilemap_manipulator& pTile_manipulator);
 
 	void set_layer_visible(size_t pIndex, bool pIs_visible);
 	bool is_layer_visible(size_t pIndex);
 
 private:
-	bool add_tile(engine::fvector pPosition, const std::string& pAtlas, std::size_t pLayer, int pRotation);
+	bool add_tile(engine::fvector pPosition, engine::subtexture::ptr pAtlas, std::size_t pLayer, int pRotation);
 
 	void update_animations();
 

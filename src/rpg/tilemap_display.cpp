@@ -16,29 +16,24 @@ std::shared_ptr<engine::texture> tilemap_display::get_texture()
 	return mTexture;
 }
 
-bool tilemap_display::add_tile(engine::fvector pPosition, const std::string& pAtlas, std::size_t pLayer, int pRotation)
+bool tilemap_display::add_tile(engine::fvector pPosition, engine::subtexture::ptr pAtlas, std::size_t pLayer, int pRotation)
 {
 	assert(mTexture != nullptr);
-
-	auto animation = mTexture->get_entry(pAtlas);
-	if (!animation)
-		return false;
-	engine::frect frame = animation->get_root_frame();
 
 	// Go to the layer
 	auto layer_iter = mLayers.begin();
 	std::advance(layer_iter, pLayer);
 
 	// Add quad to vertex batch
-	auto hnd = layer_iter->add_quad_texture(mTexture, pPosition*get_unit(), frame, {1, 1, 1, 1}, pRotation);
+	auto hnd = layer_iter->add_quad_texture(mTexture, pPosition*get_unit(), pAtlas->get_root_frame(), {1, 1, 1, 1}, pRotation);
 	
 	// Register animated tile
-	if (animation->get_frame_count() > 1)
+	if (pAtlas->get_frame_count() > 1)
 	{
 		animated_tile n_anim_tile;
 		n_anim_tile.layer = pLayer;
 		n_anim_tile.hnd = hnd;
-		n_anim_tile.set_animation(animation);
+		n_anim_tile.set_animation(pAtlas);
 		mAnimated_tiles.push_back(n_anim_tile);
 	}
 	return true;
@@ -94,20 +89,24 @@ void tilemap_display::clear()
 	mAnimated_tiles.clear();
 }
 
-void tilemap_display::update(tilemap_manipulator& pTile_manipulator)
+void tilemap_display::update(const tilemap_manipulator& pTile_manipulator)
 {
 	clear();
+
+	mTexture = pTile_manipulator.get_texture();
+
+	engine::clock clock;
 	for (size_t i = 0; i < pTile_manipulator.get_layer_count(); i++)
 	{
 		mLayers.emplace_back();
-		tilemap_layer& layer = pTile_manipulator.get_layer(i);
-		layer.explode();
+		const tilemap_layer& layer = pTile_manipulator.get_layer(i);
 		for (size_t j = 0; j < layer.get_tile_count(); j++)
 		{
-			tile& t = *layer.get_tile(j);
+			const tile& t = *layer.get_tile(j);
 			add_tile(t.get_position(), t.get_atlas(), i, t.get_rotation());
 		}
 	}
+	logger::debug("Tilemap took " + std::to_string(clock.get_elapse().milliseconds()) + "ms to update");
 }
 
 void tilemap_display::set_layer_visible(size_t pIndex, bool pIs_visible)
@@ -126,7 +125,6 @@ void tilemap_display::animated_tile::set_animation(std::shared_ptr<const engine:
 {
 	mAnimation = pAnimation;
 	mFrame = 0;
-
 	if (pAnimation->get_frame_count() > 0) // Start timer if this is an animation
 		mTimer.start(pAnimation->get_interval()*0.001f);
 }

@@ -5,45 +5,53 @@
 
 using namespace rpg;
 
-void tile::load_xml(tinyxml2::XMLElement * pEle, tile_atlas_pool& pPool)
+bool tile::load_xml(tinyxml2::XMLElement * pEle, std::shared_ptr<engine::texture>& pTexture)
 {
 	assert(pEle != nullptr);
 
-	set_atlas(util::safe_string(pEle->Name()), pPool);
+	const char* name;
+	if (pEle->QueryStringAttribute("name", &name) != tinyxml2::XML_SUCCESS)
+		name = pEle->Name(); // for backwards compatibility
 
+	mAtlas = pTexture->get_entry(name);
 	mPosition.x = pEle->FloatAttribute("x");
 	mPosition.y = pEle->FloatAttribute("y");
-
-	mFill.x = pEle->UnsignedAttribute("w");
-	mFill.y = pEle->UnsignedAttribute("h");
-
-	// Default fill to 1 for 1x1 tile
-	mFill.x = (mFill.x == 0 ? 1 : mFill.x);
-	mFill.y = (mFill.y == 0 ? 1 : mFill.y);
-
+	mFill.x = pEle->UnsignedAttribute("w", 1);
+	mFill.y = pEle->UnsignedAttribute("h", 1);
 	mRotation = pEle->UnsignedAttribute("r") % 4;
+	return (bool)mAtlas;
+}
+
+void tile::save_xml(tinyxml2::XMLElement * pEle) const
+{
+	pEle->SetAttribute("name", mAtlas->get_name().c_str());
+	pEle->SetAttribute("x", mPosition.x);
+	pEle->SetAttribute("y", mPosition.y);
+	if (mFill.x > 1) pEle->SetAttribute("w", mFill.x);
+	if (mFill.y > 1) pEle->SetAttribute("h", mFill.y);
+	if (mRotation != 0) pEle->SetAttribute("r", mRotation);
 }
 
 bool tile::is_adjacent_above(tile & a)
 {
-	return (
-		mAtlas_handle == a.mAtlas_handle
+	return{
+		mAtlas == a.mAtlas
 		&& mPosition.x == a.mPosition.x
 		&& mPosition.y + static_cast<float>(mFill.y) == a.mPosition.y
 		&& mFill.x == a.mFill.x
 		&& mRotation == a.mRotation
-		);
+	};
 }
 
 bool tile::is_adjacent_left(tile & a)
 {
-	return (
-		mAtlas_handle == a.mAtlas_handle
+	return{
+		mAtlas == a.mAtlas
 		&& mPosition.y == a.mPosition.y
 		&& mPosition.x + static_cast<float>(mFill.x) == a.mPosition.x
 		&& mFill.y == a.mFill.y
 		&& mRotation == a.mRotation
-		);
+	};
 }
 
 bool tile::is_condensed() const
@@ -56,7 +64,7 @@ bool tile::operator<(const tile & pTile)
 	return mPosition < pTile.mPosition;
 }
 
-void tilemap_manipulator::condense_map()
+void tilemap_manipulator::condense_all()
 {
 	if (mMap.empty())
 		return;
@@ -71,14 +79,12 @@ void tilemap_manipulator::condense_map()
 	logger::info("Tilemap condensed to " + std::to_string(sum / static_cast<float>(mMap.size()) * 100) + "%");
 }
 
-int tilemap_manipulator::load_tilemap_xml(tinyxml2::XMLElement *pRoot)
+int tilemap_manipulator::load_xml(tinyxml2::XMLElement *pRoot)
 {
 	clear();
 
 	if (auto att_path = pRoot->Attribute("path"))
-	{
-		load_tilemap_xml(util::safe_string(att_path));
-	}
+		load_xml(util::safe_string(att_path));
 
 	auto ele_layer = pRoot->FirstChildElement("layer");
 	while (ele_layer)
@@ -88,10 +94,11 @@ int tilemap_manipulator::load_tilemap_xml(tinyxml2::XMLElement *pRoot)
 		nLayer.load_xml(ele_layer);
 		ele_layer = ele_layer->NextSiblingElement("layer");
 	}
+	explode_all();
 	return 0;
 }
 
-int tilemap_manipulator::load_tilemap_xml(std::string pPath)
+int tilemap_manipulator::load_xml(std::string pPath)
 {
 	tinyxml2::XMLDocument doc;
 	if (doc.LoadFile(pPath.c_str()))
@@ -100,7 +107,7 @@ int tilemap_manipulator::load_tilemap_xml(std::string pPath)
 		return 1;
 	}
 	auto root = doc.RootElement();
-	load_tilemap_xml(root);
+	load_xml(root);
 	return 0;
 }
 
@@ -116,7 +123,7 @@ void tilemap_manipulator::save_xml(tinyxml2::XMLDocument& doc, tinyxml2::XMLNode
 	{
 		auto ele_layer = doc.NewElement("layer");
 		ele_layer->SetAttribute("id", static_cast<unsigned int>(i));
-		mMap[i].generate_xml(ele_layer, doc);
+		mMap[i].save_xml(ele_layer, doc);
 		root->InsertEndChild(ele_layer);
 	}
 }
@@ -132,6 +139,7 @@ void tilemap_manipulator::save_xml(const std::string& pPath) const
 size_t tilemap_manipulator::new_layer()
 {
 	mMap.emplace_back();
+	mMap.back().set_texture(mTexture);
 	return mMap.size() - 1;
 }
 
@@ -155,6 +163,21 @@ size_t tilemap_manipulator::get_layer_count() const
 tilemap_layer& tilemap_manipulator::get_layer(size_t pIndex)
 {
 	return mMap[pIndex];
+}
+
+const tilemap_layer& tilemap_manipulator::get_layer(size_t pIndex) const
+{
+	return mMap[pIndex];
+}
+
+void tilemap_manipulator::set_texture(std::shared_ptr<engine::texture> pTexture)
+{
+	mTexture = pTexture;
+}
+
+std::shared_ptr<engine::texture> tilemap_manipulator::get_texture() const
+{
+	return mTexture;
 }
 
 bool tilemap_manipulator::move_layer(size_t pFrom, size_t pTo)
@@ -194,7 +217,7 @@ tile::tile(tile && pMove)
 	mPosition = pMove.mPosition;
 	mFill = pMove.mFill;
 	mRotation = pMove.mRotation;
-	mAtlas_handle = std::move(pMove.mAtlas_handle);
+	mAtlas = std::move(pMove.mAtlas);
 }
 
 tile::tile(const tile & pTile)
@@ -202,34 +225,29 @@ tile::tile(const tile & pTile)
 	mPosition = pTile.mPosition;
 	mFill = pTile.mFill;
 	mRotation = pTile.mRotation;
-	mAtlas_handle = pTile.mAtlas_handle;
+	mAtlas = pTile.mAtlas;
 }
 
-tile & tile::operator=(const tile & pTile)
+tile & tile::operator=(const tile & pRight)
 {
-	mPosition = pTile.mPosition;
-	mFill = pTile.mFill;
-	mRotation = pTile.mRotation;
-	mAtlas_handle = pTile.mAtlas_handle;
+	mPosition = pRight.mPosition;
+	mFill = pRight.mFill;
+	mRotation = pRight.mRotation;
+	mAtlas = pRight.mAtlas;
 	return *this;
 }
 
 bool tile::operator==(const tile & pRight)
 {
-	if (mPosition != pRight.mPosition)
-		return false;
-	if (mFill != pRight.mFill)
-		return false;
-	if (mRotation != pRight.mRotation)
-		return false;
-	if (mAtlas_handle != pRight.mAtlas_handle)
-		return false;
-	return true;
+	return mPosition == pRight.mPosition
+		&& mFill != pRight.mFill
+		&& mRotation != pRight.mRotation
+		&& mAtlas != pRight.mAtlas;
 }
 
 bool tile::operator!=(const tile & pRight)
 {
-	return !(*this == pRight);
+	return !operator==(pRight);
 }
 
 void tile::set_position(engine::fvector pPosition)
@@ -244,8 +262,7 @@ engine::fvector tile::get_position() const
 
 void tile::set_fill(fill_t pFill)
 {
-	assert(pFill.x >= 1);
-	assert(pFill.y >= 1);
+	assert(pFill.x >= 1 && pFill.y >= 1);
 	mFill = pFill;
 }
 
@@ -264,19 +281,14 @@ tile::rotation_t tile::get_rotation() const
 	return mRotation;
 }
 
-void tile::set_atlas(const std::string & pAtlas, tile_atlas_pool & pPool)
+void tile::set_atlas(engine::subtexture::ptr pAtlas)
 {
-	mAtlas_handle = pPool.get(pAtlas);
+	mAtlas = pAtlas;
 }
 
-void tile::set_atlas(tile_atlas_pool::handle pHandle)
+engine::subtexture::ptr tile::get_atlas() const
 {
-	mAtlas_handle = pHandle;
-}
-
-const std::string& tile::get_atlas() const
-{
-	return *mAtlas_handle;
+	return mAtlas;
 }
 
 void tilemap_layer::set_name(const std::string & pName)
@@ -292,28 +304,18 @@ const std::string & tilemap_layer::get_name() const
 tile* tilemap_layer::new_tile(const std::string & pAtlas)
 {
 	tile ntile;
-	ntile.set_atlas(pAtlas, mAtlas_pool);
+	ntile.set_atlas(mTexture->get_entry(pAtlas));
 	mTiles.push_back(ntile);
 	return &mTiles.back();
 }
 
 tile* tilemap_layer::set_tile(engine::fvector pPosition, engine::uvector pFill, const std::string & pAtlas, int pRotation)
 {
-	// Replace Tile
-	if (tile* repl_tile = find_tile(pPosition))
-	{
-		repl_tile->set_fill(pFill);
-		repl_tile->set_atlas(pAtlas, mAtlas_pool);
-		repl_tile->set_rotation(pRotation);
-		return repl_tile;
-	}
-
-	// Add a new one
-	tile* ntile = new_tile(pAtlas);
-	ntile->set_fill(pFill);
-	ntile->set_position(pPosition);
-	ntile->set_rotation(pRotation);
-	return ntile;
+	tile ntile;
+	ntile.set_atlas(mTexture->get_entry(pAtlas));
+	ntile.set_fill(pFill);
+	ntile.set_rotation(pRotation);
+	return set_tile(ntile);
 }
 
 tile* tilemap_layer::set_tile(engine::fvector pPosition, const std::string & pAtlas, int pRotation)
@@ -323,7 +325,13 @@ tile* tilemap_layer::set_tile(engine::fvector pPosition, const std::string & pAt
 
 tile* tilemap_layer::set_tile(const tile & pTile)
 {
-	return set_tile(pTile.get_position(), pTile.get_fill(), pTile.get_atlas(), pTile.get_rotation());
+	if (auto repl_tile = find_tile(pTile.get_position()))
+	{
+		*repl_tile = pTile;
+		return repl_tile;
+	}
+	mTiles.push_back(pTile);
+	return &mTiles.back();
 }
 
 tile* tilemap_layer::find_tile(engine::fvector pPosition)
@@ -433,6 +441,7 @@ void tilemap_layer::explode()
 	for (size_t i = 0; i < mTiles.size(); i++)
 		if (mTiles[i].is_condensed())
 			explode_tile(&mTiles[i]);
+	sort();
 }
 
 bool tilemap_layer::load_xml(tinyxml2::XMLElement * pRoot)
@@ -443,32 +452,24 @@ bool tilemap_layer::load_xml(tinyxml2::XMLElement * pRoot)
 	while (i)
 	{
 		tile ntile;
-		ntile.load_xml(i, mAtlas_pool);
-		mTiles.push_back(ntile);
+		if (ntile.load_xml(i, mTexture))
+			mTiles.push_back(ntile);
+		// TODO: add to invalid_tiles list
 		i = i->NextSiblingElement();
 	}
 	sort();
-	return true;
+	return !invalid_tiles.empty();
 }
 
-void tilemap_layer::generate_xml(tinyxml2::XMLElement * pRoot, tinyxml2::XMLDocument & doc) const
+void tilemap_layer::save_xml(tinyxml2::XMLElement * pRoot, tinyxml2::XMLDocument & doc) const
 {
 	pRoot->SetAttribute("name", mName.c_str());
 	for (auto &i : mTiles)
 	{
-		auto ele = doc.NewElement(i.get_atlas().c_str());
-		ele->SetAttribute("x", i.get_position().x);
-		ele->SetAttribute("y", i.get_position().y);
-		if (i.get_fill().x > 1)    ele->SetAttribute("w", i.get_fill().x);
-		if (i.get_fill().y > 1)    ele->SetAttribute("h", i.get_fill().y);
-		if (i.get_rotation() != 0) ele->SetAttribute("r", i.get_rotation());
+		auto ele = doc.NewElement("tile");
+		i.save_xml(ele);
 		pRoot->InsertEndChild(ele);
 	}
-}
-
-tile_atlas_pool & tilemap_layer::get_pool()
-{
-	return mAtlas_pool;
 }
 
 engine::fvector tilemap_layer::get_center_point() const
@@ -490,48 +491,7 @@ void tilemap_layer::sort()
 		});
 }
 
-tile_atlas_pool::handle tile_atlas_pool::get(const std::string & pAtlas)
+void tilemap_layer::set_texture(std::shared_ptr<engine::texture> pTexture)
 {
-	auto item = std::find_if(mStrings.begin(), mStrings.end(),
-		[&](const std::shared_ptr<std::string>& a)->bool
-	{
-		return *a == pAtlas;
-	});
-
-	// Create a new item if it doesn't exist in this pool
-	if (item == mStrings.end())
-	{
-		auto nitem = std::make_shared<std::string>(pAtlas);
-		mStrings.push_back(nitem);
-		return nitem;
-	}
-	return *item;
-}
-
-bool tile_atlas_pool::replace(const std::string & pOriginal, const std::string & pNew)
-{
-	auto item = std::find_if(mStrings.begin(), mStrings.end(),
-		[&](const std::shared_ptr<std::string>& a)->bool
-		{
-			return *a == pOriginal;
-		});
-	if (item == mStrings.end())
-		return false;
-
-	(*item)->assign(pNew);
-	return true;
-}
-
-std::vector<std::string> tile_atlas_pool::get_invalid_entries(std::shared_ptr<engine::texture> pTexture) const
-{
-	std::vector<std::string> inval_entrs;
-	for (auto& i : mStrings)
-		if (!pTexture->get_entry(*i))
-			inval_entrs.push_back(*i);
-	return inval_entrs;
-}
-
-bool tile_atlas_pool::has_invalid_entries(std::shared_ptr<engine::texture> pTexture) const
-{
-	return !get_invalid_entries(pTexture).empty();
+	mTexture = pTexture;
 }
