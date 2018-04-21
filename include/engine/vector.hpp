@@ -46,9 +46,17 @@ struct vector
 		return{ 0, pVec.y };
 	}
 
-	vector(T _x = 0, T _y = 0)
-		: x(_x), y(_y)
-	{}
+	vector()
+	{
+		x = 0;
+		y = 0;
+	}
+
+	vector(const T& pX, const T& pY)
+	{
+		x = pX;
+		y = pY;
+	}
 
 	vector(const vector<T>& pVector)
 	{
@@ -79,8 +87,9 @@ struct vector
 	vector& rotate(T pDegrees)
 	{
 		const T r = degree_to_radian(pDegrees);
-		T x1 = x*std::cos(r) - y*std::sin(r);
-		T y1 = y*std::cos(r) + x*std::sin(r);
+		T s = std::sin(r); T c = std::cos(r);
+		T x1 = x*c - y*s;
+		T y1 = y*c + x*s;
 		x = x1;
 		y = y1;
 		return *this;
@@ -120,7 +129,7 @@ struct vector
 	}
 	vector operator % (const vector& A) const
 	{
-		return{ std::fmod(x, A.x), std::fmod(y, A.y) };
+		return{ math::mod(x, A.x), math::mod(y, A.y) };
 	}
 
 	vector operator * (T A) const
@@ -154,7 +163,6 @@ struct vector
 		return *this;
 	}
 
-
 	vector& operator += (const vector& A)
 	{
 		x += A.x;
@@ -185,8 +193,8 @@ struct vector
 
 	vector& operator %= (const vector& A)
 	{
-		x = std::fmod(x, A.x);
-		y = std::fmod(y, A.y);
+		x = math::mod(x, A.x);
+		y = math::mod(y, A.y);
 		return *this;
 	}
 
@@ -198,19 +206,21 @@ struct vector
 
 	vector& floor()
 	{
-		if (!std::is_floating_point<T>::value)
-			return *this;
-		x = std::floor(x);
-		y = std::floor(y);
+		if (std::is_floating_point<T>::value)
+		{
+			x = std::floor(x);
+			y = std::floor(y);
+		}
 		return *this;
 	}
 
 	vector& round()
 	{
-		if (!std::is_floating_point<T>::value)
-			return *this;
-		x = std::round(x);
-		y = std::round(y);
+		if (std::is_floating_point<T>::value)
+		{
+			x = std::round(x);
+			y = std::round(y);
+		}
 		return *this;
 	}
 
@@ -234,18 +244,16 @@ struct vector
 	{
 		if (!std::is_floating_point<T>::value)
 			return 0;
-
-		T a = std::atan2(y, x) * static_cast<T>(180 / 3.14159265); // Compiler complains without these casts
-		return std::fmod(a + 360, static_cast<T>(360));
+		T a = std::atan2(y, x) * static_cast<T>(180.f / math::PI); // Compiler complains without these casts
+		return math::pmod(a + 360, static_cast<T>(360));
 	}
 
 	T angle(const vector& A) const
 	{
 		if (!std::is_floating_point<T>::value)
 			return 0;
-
-		T a = std::atan2(y - A.y, x - A.x) * static_cast<T>(180 / 3.14159265); // Compiler complains without these casts
-		return std::fmod(a + 360, static_cast<T>(360));
+		T a = std::atan2(y - A.y, x - A.x) * static_cast<T>(180.f / math::PI); // Compiler complains without these casts
+		return math::pmod(a + 360, static_cast<T>(360));
 	}
 
 	vector& abs()
@@ -255,9 +263,15 @@ struct vector
 		return *this;
 	}
 
+	// Returns "(x, y)"
 	std::string to_string() const
 	{
 		return "(" + std::to_string(x) + ", " + std::to_string(y) + ")";
+	}
+
+	T dot(const vector& pB) const
+	{
+		return x * pB.x + y * pB.y;
 	}
 
 	bool has_zero() const
@@ -335,9 +349,9 @@ namespace math
 {
 
 // Returns the always-positive remainder
-inline engine::fvector pfmod(engine::fvector a, engine::fvector b)
+inline engine::fvector pmod(engine::fvector a, engine::fvector b)
 {
-	return { math::pfmod(a.x, b.x), math::pfmod(a.y, b.y) };
+	return { math::pmod(a.x, b.x), math::pmod(a.y, b.y) };
 }
 
 }

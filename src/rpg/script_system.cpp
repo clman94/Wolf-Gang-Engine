@@ -171,6 +171,7 @@ void script_system::register_vector_type()
 	add_method<engine::fvector, engine::fvector&, const engine::fvector&, float>("vec", "rotate", &engine::fvector::rotate);
 	add_method("vec", "normalize", &engine::fvector::normalize);
 	add_method("vec", "floor",     &engine::fvector::floor);
+	add_method("vec", "dot", &engine::fvector::dot);
 	add_method<engine::fvector, float>                        ("vec", "angle", &engine::fvector::angle);
 	add_method<engine::fvector, float, const engine::fvector&>("vec", "angle", &engine::fvector::angle);
 

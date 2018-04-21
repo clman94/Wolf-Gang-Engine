@@ -168,8 +168,6 @@ private:
 	engine::rectangle_node mWall_display;
 	engine::rectangle_node mResize_display;
 
-	engine::grid mGrid;
-
 	bool tile_selection(engine::fvector pCursor, bool pCycle = true);
 };
 
@@ -283,7 +281,7 @@ private:
 	std::shared_ptr<engine::texture> mTilemap_texture;
 	engine::subtexture::ptr mCurrent_tile_atlas;
 	engine::node mTilemap_center_node; // Never changes position but scaling will cause zooming in and out.
-	float mTilemap_scale;
+	float mTilemap_zoom;
 	std::size_t mCurrent_layer;
 	command_manager mCommand_manager;
 	int mTilemap_current_snapping;

@@ -468,9 +468,6 @@ collisionbox_editor::collisionbox_editor()
 	mWall_display.set_outline_color({ 255, 255, 255, 255 });
 	mWall_display.set_outline_thinkness(1);
 
-	mGrid.set_major_size({ 32, 32 });
-	mGrid.set_sub_grids(2);
-
 	mCurrent_type = rpg::collision_box::type::wall;
 	mGrid_snap = grid_snap::full;
 
@@ -656,10 +653,6 @@ int collisionbox_editor::draw(engine::renderer& pR)
 	}
 
 	mTilemap_display.draw(pR);
-
-	mGrid.update_grid(pR);
-	mGrid.draw(pR);
-
 	for (auto& i : mContainer.get_boxes()) // TODO: Optimize
 	{
 		if (i == mSelection)
@@ -1083,7 +1076,7 @@ static inline void AddBackgroundImage(sf::RenderTexture& pRender)
 {
 	ImDrawList* drawlist = ImGui::GetWindowDrawList();
 	engine::frect box(ImGui::GetCursorScreenPos()
-		, engine::fvector(pRender.getSize()) + engine::fvector(ImGui::GetCursorPos()));
+		, static_cast<engine::fvector>(pRender.getSize()) + static_cast<engine::fvector>(ImGui::GetCursorPos()));
 	drawlist->AddImage((void*)pRender.getTexture().getNativeHandle()
 		, box.get_offset(), box.get_corner()
 		, ImVec2(0, 1), ImVec2(1, 0) // Render textures store textures upsidedown so we need to flip it
@@ -1226,7 +1219,7 @@ engine::fvector snap(const engine::fvector& pPos, const engine::fvector& pTo, co
 void draw_grid(engine::primitive_builder& pPrimitives, engine::fvector pAlign_to, engine::fvector pScale, engine::fvector pDisplay_size, engine::color pColor)
 {
 	engine::ivector line_count = engine::vector_cast<int>((pDisplay_size / pScale).floor()) + engine::ivector(1, 1);
-	engine::fvector offset = math::pfmod(pAlign_to, pScale);
+	engine::fvector offset = math::pmod(pAlign_to, pScale);
 
 	// Vertical lines
 	for (int i = 0; i < line_count.x; i++)
@@ -1280,7 +1273,7 @@ WGE_imgui_editor::WGE_imgui_editor()
 	mSettings.load("./editor/settings.xml");
 
 	mTilemap_display.set_parent(mTilemap_center_node);
-	mTilemap_scale = 0;
+	mTilemap_zoom = 0;
 
 	mIs_scene_modified = false;
 
@@ -1499,11 +1492,11 @@ void WGE_imgui_editor::draw_scene_window()
 		}
 		ImGui::QuickTooltip("Warning: It is not recommended that you actually edit this file.");
 
-		ImGui::Text(("Name: " + mScene_loader.get_name()).c_str());
+		ImGui::TextUnformatted(("Name: " + mScene_loader.get_name()).c_str());
 
 		if (ImGui::TreeNode("Tilemap"))
 		{
-			ImGui::Text(("Texture: " + mScene_loader.get_tilemap_texture()).c_str());
+			ImGui::TextUnformatted(("Texture: " + mScene_loader.get_tilemap_texture()).c_str());
 			if (ImGui::Button("Change Texture"))
 			{
 				mChange_scene_texture_name = mScene_loader.get_tilemap_texture();
@@ -1606,13 +1599,13 @@ void WGE_imgui_editor::draw_game_window()
 			ImGui::Columns(3);
 
 			ImGui::SetColumnWidth(0, 100);
-			ImGui::Text("Status");
+			ImGui::TextUnformatted("Status");
 			ImGui::NextColumn();
 
-			ImGui::Text("Type");
+			ImGui::TextUnformatted("Type");
 			ImGui::NextColumn();
 
-			ImGui::Text("Name");
+			ImGui::TextUnformatted("Name");
 			ImGui::NextColumn();
 			ImGui::Separator();
 
@@ -1621,10 +1614,10 @@ void WGE_imgui_editor::draw_game_window()
 				ImGui::Selectable(i->is_loaded() ? "Loaded" : "Not Loaded", false, ImGuiSelectableFlags_SpanAllColumns);
 				ImGui::NextColumn();
 
-				ImGui::Text(i->get_type().c_str());
+				ImGui::TextUnformatted(i->get_type().c_str());
 				ImGui::NextColumn();
 
-				ImGui::Text(i->get_name().c_str());
+				ImGui::TextUnformatted(i->get_name().c_str());
 				ImGui::NextColumn();
 			}
 			ImGui::EndChild();
@@ -1664,7 +1657,7 @@ void WGE_imgui_editor::draw_game_view_window()
 		{
 			const engine::fvector window_mouse_position = static_cast<engine::fvector>(ImGui::GetMousePos()) - static_cast<engine::fvector>(ImGui::GetCursorScreenPos());
 			const engine::fvector view_mouse_position = mGame_renderer.window_to_game_coords(engine::vector_cast<int>(window_mouse_position));
-			const engine::fvector view_tile_mouse_position = view_mouse_position / mTile_size;
+			const engine::fvector view_tile_mouse_position = view_mouse_position / (float)mTile_size;
 			const engine::fvector tile_mouse_position = mGame_renderer.window_to_game_coords(engine::vector_cast<int>(window_mouse_position), mGame.get_scene().get_world_node());
 			
 			ImDrawList * dl = ImGui::GetWindowDrawList();
@@ -1712,11 +1705,11 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 			if (auto tile = mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(tile_position))
 			{
 				engine::fvector size = tile->get_atlas()->get_root_frame().get_size();
-				mPrimitives.add_rectangle({ tile->get_position()*mTile_size, tile->get_rotation() % 2 ? size.flip() : size }
+				mPrimitives.add_rectangle({ tile->get_position()*(float)mTile_size, tile->get_rotation() % 2 ? size.flip() : size }
 				, { 1, 0.5f, 0.5f, 0.5f }, { 1, 0, 0, 0.7f });
 			}
 
-			mPrimitives.add_quad_texture(mTilemap_texture, tile_position*mTile_size
+			mPrimitives.add_quad_texture(mTilemap_texture, tile_position*(float)mTile_size
 				, mCurrent_tile_atlas->get_root_frame(), { 1, 1, 1, 0.7f }, mTile_rotation);
 
 			mPrimitives.pop_node();
@@ -1774,9 +1767,9 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 
 			if (ImGui::GetIO().MouseWheel != 0) // Middle mouse wheel zooms
 			{
-				mTilemap_scale += ImGui::GetIO().MouseWheel;
-				mTilemap_scale = util::clamp<float>(mTilemap_scale, -2, 5);
-				mTilemap_center_node.set_scale(engine::fvector(1, 1)*std::pow(2.f, mTilemap_scale));
+				mTilemap_zoom += ImGui::GetIO().MouseWheel;
+				mTilemap_zoom = util::clamp<float>(mTilemap_zoom, -2, 5);
+				mTilemap_center_node.set_scale(engine::fvector(1, 1)*std::pow(2.f, mTilemap_zoom));
 			}
 		}
 		ImGui::EndChild();
@@ -2198,7 +2191,7 @@ engine::fvector WGE_imgui_editor::calc_snapping(int pSnapping, int pTile_size)
 	{
 	default:
 	case snapping_none:    return { 0, 0 };
-	case snapping_pixel:   return engine::fvector(1, 1) / pTile_size;
+	case snapping_pixel:   return engine::fvector(1, 1) / (float)pTile_size;
 	case snapping_eight:   return { 0.25f, 0.25f };
 	case snapping_quarter: return { 0.5f, 0.5f };
 	case snapping_full:    return { 1, 1 };

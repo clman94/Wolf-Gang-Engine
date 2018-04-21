@@ -382,29 +382,6 @@ private:
 };
 
 
-class grid :
-	public render_object
-{
-public:
-	grid();
-	~grid();
-	void set_major_size(fvector pSize);
-	void set_sub_grids(int pAmount);
-
-	void update_grid(renderer &pR);
-
-	int draw(renderer &pR);
-private:
-	void add_grid(int x, int y, fvector pCell_size, sf::Color pColor);
-	void add_line(fvector pV0, fvector pV1, sf::Color pColor);
-
-	fvector mMajor_size;
-	int mSub_grids;
-
-	std::vector<sf::Vertex> mVertices;
-};
-
-
 enum struct anchor
 {
 	top = 0,
@@ -418,6 +395,7 @@ enum struct anchor
 	center
 };
 
+// Calculates the position of the center of the object based on its size.
 template<typename T>
 static vector<T> center_offset(const vector<T>& pSize, anchor pType)
 {
@@ -442,11 +420,12 @@ static vector<T> center_offset(const vector<T>& pSize, anchor pType)
 	case anchor::center:
 		return{ pSize.x/2, pSize.y/2 };
 	}
-	return 0;
+	return{};
 }
 
+// Calculates the offset of the object to be renderered
 template<typename T>
-static vector<T> anchor_offset(const vector<T> pSize, anchor pType)
+static vector<T> anchor_offset(const vector<T>& pSize, anchor pType)
 {
 	return -center_offset(pSize, pType);
 }
@@ -589,8 +568,7 @@ public:
 private:
 	std::shared_ptr<font> mFont;
 	std::shared_ptr<shader> mShader;
-
-	rectangle_node testrect;
+	
 	sf::Text mSfml_text;
 	std::string mString; // Avoids reliance on sfml
 	engine::anchor mAnchor;
@@ -618,13 +596,6 @@ public:
 		std::string mMeta;
 		color       mColor;
 		uint32_t    mFormat;
-
-		/*struct format_options // TODO: More customization
-		{
-			float wave_height;
-			float wave_speed;
-			float shake_amount;
-		};*/
 	};
 
 	text_format();

@@ -74,7 +74,7 @@ namespace ImGui
                                                                         \
     template <typename T>                                               \
     operator sf::Vector2<T>() const {                                   \
-        return sf::Vector2<T>(x, y);                                    \
+        return sf::Vector2<T>(static_cast<T>(x), static_cast<T>(y));    \
     }                                                                   \
                                                                         \
     template <typename T>                                               \
@@ -86,8 +86,7 @@ namespace ImGui
     template <typename T>                                               \
     operator engine::vector<T>() const {                                \
         return engine::vector<T>(static_cast<T>(x), static_cast<T>(y)); \
-    }                                                                   
-	
+    }
 
 #define IM_VEC4_CLASS_EXTRA                                             \
     ImVec4(const sf::Color & c)                                         \

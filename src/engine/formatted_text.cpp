@@ -47,8 +47,7 @@ color parse_xml_color(tinyxml2::XMLElement* pEle)
 		const std::string hex_string = util::safe_string(hex);
 		if (hex_string.size() != 8)
 			return color_preset::white;
-		return
-		{
+		return{
 			  static_cast<color_t>(parse_hex(hex_string.substr(0, 2)))/255.f
 			, static_cast<color_t>(parse_hex(hex_string.substr(2, 2)))/255.f
 			, static_cast<color_t>(parse_hex(hex_string.substr(4, 2)))/255.f
@@ -57,14 +56,14 @@ color parse_xml_color(tinyxml2::XMLElement* pEle)
 	}
 
 	return{ 
-		  static_cast<color_t>(pEle->FloatAttribute("r"))
-		, static_cast<color_t>(pEle->FloatAttribute("g"))
-		, static_cast<color_t>(pEle->FloatAttribute("b"))
-		, static_cast<color_t>(!pEle->Attribute("a") ? 1 : pEle->FloatAttribute("a")) // Default 1
+		  static_cast<color_t>(pEle->FloatAttribute("r", 0))
+		, static_cast<color_t>(pEle->FloatAttribute("g", 0))
+		, static_cast<color_t>(pEle->FloatAttribute("b", 0))
+		, static_cast<color_t>(pEle->FloatAttribute("a", 1))
 	};
 }
 
-bool parse_xml_format(tinyxml2::XMLNode* pNode, std::vector<text_format::format>& pFormat_stack
+static inline bool parse_xml_format(tinyxml2::XMLNode* pNode, std::vector<text_format::format>& pFormat_stack
 	, color pColor, std::vector<text_format::block>& pBlocks)
 {
 	while (pNode)
@@ -326,10 +325,10 @@ bool text_format::append_parse(const std::string & pText)
 	const std::string text_rooted = "<__root>" + pText + "</__root>"; // Add a root node so it parses correctly
 	if (doc.Parse(text_rooted.c_str(), text_rooted.size()) != tinyxml2::XML_SUCCESS)
 	{
-		// Create default block with unformmatted text
+		// Create default block with unformatted text
 		block nblock;
 		nblock.mText = pText;
-		nblock.mFormat = text_format::format::none;
+		nblock.mFormat = format::none;
 		nblock.mColor = mDefault_color;
 		mBlocks.push_back(nblock);
 		return false;
