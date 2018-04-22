@@ -162,6 +162,9 @@ public:
 	fvector window_to_game_coords(ivector pPixels, const fvector& pRelative) const;
 	fvector window_to_game_coords(ivector pPixels, const node& pNode) const; // Relative to node
 
+	ivector game_to_window_coords(fvector pPosition) const;
+	ivector game_to_window_coords(fvector pPosition, const node& pNode) const;
+
 	bool is_focused();
 
 	void set_visible(bool pVisible);

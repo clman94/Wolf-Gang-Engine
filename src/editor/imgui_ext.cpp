@@ -31,9 +31,14 @@ bool HiddenSmallButton(const char* pName)
 
 void AddBackgroundImage(sf::RenderTexture& pRender)
 {
+	AddBackgroundImage(pRender, ImGui::GetCursorScreenPos());
+}
+
+void AddBackgroundImage(sf::RenderTexture & pRender, ImVec2 pPosition)
+{
 	ImDrawList* drawlist = ImGui::GetWindowDrawList();
-	engine::frect box(ImGui::GetCursorScreenPos()
-		, static_cast<engine::fvector>(pRender.getSize()) + static_cast<engine::fvector>(ImGui::GetCursorPos()));
+	engine::frect box(pPosition
+		, static_cast<engine::fvector>(pRender.getSize()) /*+ static_cast<engine::fvector>(ImGui::GetCursorPos())*/);
 	drawlist->AddImage((void*)pRender.getTexture().getNativeHandle()
 		, box.get_offset(), box.get_corner()
 		, ImVec2(0, 1), ImVec2(1, 0) // Render textures store textures upsidedown so we need to flip it

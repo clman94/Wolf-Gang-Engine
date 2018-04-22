@@ -235,7 +235,7 @@ private:
 	sf::RenderTexture mTilemap_render_target;
 	rpg::tilemap_manipulator mTilemap_manipulator;
 	rpg::tilemap_display mTilemap_display;
-	engine::renderer mTilemap_renderer;
+	engine::renderer mScene_renderer;
 	std::shared_ptr<engine::texture> mTilemap_texture;
 	engine::subtexture::ptr mCurrent_tile_atlas;
 	engine::node mTilemap_center_node; // Never changes position but scaling will cause it to zooming in and out.
@@ -245,6 +245,7 @@ private:
 	int mTilemap_current_snapping;
 
 	rpg::collision_box_container pColl_container;
+	rpg::collision_box::ptr mSelected_collbox;
 
 	bool mShow_grid;
 	engine::color mGrid_color;
@@ -259,11 +260,13 @@ private:
 
 	rpg::scene_loader mScene_loader;
 
-	bool mIs_scene_modified;
+	bool mIs_scene_modified; // If true, the user will be asked to save the scene
 
+	// This enables the info being displayed on the top left corner.
+	// Toggles with F1.
 	bool mShow_debug_info;
 
-	char mNew_scene_name_buf[256];
+	char mNew_scene_name_buf[256]; // Used by the scene name imgui text box
 	std::string mNew_scene_texture_name;
 	std::string mChange_scene_texture_name;
 
@@ -283,16 +286,14 @@ private:
 
 	void draw_scene_editor_window();
 
-	void collision_editor_draw();
+	void collision_editor_update(const engine::fvector& pView_position, const engine::fvector& pTile_position_no_snap);
+	void draw_collision_editor_settings();
 
-	void tilemap_editor_draw(const engine::fvector & pTile_position);
-	void tilemap_editor_interact(const engine::fvector & pTile_position);
+	void tilemap_editor_update(const engine::fvector& pTile_position_snapped);
 	void draw_tilemap_editor_settings();
 	void draw_tile_group(float from_bottom = 300);
 	void draw_tilemap_layers_group();
 	void center_tilemap();
-
-	void draw_collision_settings_window();
 
 	void draw_log_window();
 

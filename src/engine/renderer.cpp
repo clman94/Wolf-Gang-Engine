@@ -276,7 +276,18 @@ fvector renderer::window_to_game_coords(ivector pPixels, const node & pNode) con
 	const fvector scale = pNode.get_absolute_scale();
 	if (scale.has_zero())
 		return fvector(0, 0); // TODO: Should have some sort of error (possibly an exception)
-	return (window_to_game_coords(pPixels, pos).rotate(pos, -pNode.get_absolute_rotation()) / scale)/pNode.get_unit();
+	return (window_to_game_coords(pPixels, pos).rotate(pos, -pNode.get_absolute_rotation()) / scale) / pNode.get_unit();
+}
+
+ivector renderer::game_to_window_coords(fvector pPosition) const
+{
+	return mRender_target->mapCoordsToPixel(pPosition, mView);
+}
+
+ivector renderer::game_to_window_coords(fvector pPosition, const node & pNode) const
+{
+	return game_to_window_coords(((pPosition*pNode.get_absolute_scale()).rotate(pNode.get_absolute_rotation())
+		+ pNode.get_absolute_position())*pNode.get_unit());
 }
 
 bool renderer::is_focused()

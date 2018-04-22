@@ -24,6 +24,7 @@ bool HiddenSmallButton(const char* pName);
 
 // Displays a texture without moving the imgui cursor
 void AddBackgroundImage(sf::RenderTexture& pRender);
+void AddBackgroundImage(sf::RenderTexture& pRender, ImVec2 pPosition);
 
 // Returns true while the user interacts with it
 bool VSplitter(const char* pId, float pWidth, float* pX, bool pInverted = false);

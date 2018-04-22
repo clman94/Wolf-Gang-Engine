@@ -67,6 +67,9 @@ private:
 	fvector mScale;
 };
 
+// Calculates exact position of point relative to node
+fvector exact_relative_to_node(fvector pPosition, const node & pNode);
+
 }
 
 #endif

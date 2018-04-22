@@ -889,8 +889,8 @@ WGE_imgui_editor::WGE_imgui_editor()
 	mGame_renderer.set_target_render(mGame_render_target);
 	mGame.set_renderer(mGame_renderer);
 
-	mTilemap_renderer.set_target_render(mTilemap_render_target);
-	mTilemap_display.set_renderer(mTilemap_renderer);
+	mScene_renderer.set_target_render(mTilemap_render_target);
+	mTilemap_display.set_renderer(mScene_renderer);
 
 	mTile_size = 32;
 
@@ -987,7 +987,6 @@ void WGE_imgui_editor::run()
 		draw_game_view_window();
 		draw_scene_editor_window();
 		draw_log_window();
-		draw_collision_settings_window();
 
 		if (ImGui::Begin("Collision Editor"))
 		{
@@ -1044,6 +1043,7 @@ void WGE_imgui_editor::prepare_scene(engine::fs::path pPath, const std::string& 
 		mTilemap_display.update(mTilemap_manipulator);
 
 		pColl_container.load_xml(mScene_loader.get_collisionboxes());
+		mSelected_collbox.reset();
 
 		mCurrent_tile_atlas.reset();
 		mCurrent_layer = 0;
@@ -1319,26 +1319,29 @@ void WGE_imgui_editor::draw_scene_editor_window()
 {
 	if (ImGui::Begin("Scene Editor"))
 	{
-		ImGui::BeginChild("view", ImVec2(-300, 0), true);
+		ImGui::BeginChild("view", ImVec2(-300, 0));
 
 		if (resize_to_window(mTilemap_render_target))
 		{
 			engine::fvector new_size = engine::vector_cast<float, unsigned int>(mTilemap_render_target.getSize());
-			mTilemap_renderer.set_target_size(new_size);
-			mTilemap_renderer.refresh(); // refresh the engines view
+			mScene_renderer.set_target_size(new_size);
+			mScene_renderer.refresh(); // refresh the engines view
 			mTilemap_center_node.set_position(new_size / (static_cast<float>(mTile_size) * 2.f)); // Center the center node
 		}
 
-		// Render the tilemap
-		mTilemap_renderer.draw();
-
 		const engine::ivector window_mouse_position = static_cast<engine::ivector>(ImGui::GetMousePos()) - static_cast<engine::ivector>(ImGui::GetCursorScreenPos());
-		const engine::fvector tile_position = snap(mTilemap_renderer.window_to_game_coords(window_mouse_position, mTilemap_display), calc_snapping(mTilemap_current_snapping, mTile_size));
+		const engine::fvector view_position = mScene_renderer.window_to_game_coords(window_mouse_position);
+		const engine::fvector tile_position_no_snap = mScene_renderer.window_to_game_coords(window_mouse_position, mTilemap_display);
+		const engine::fvector tile_position_snapped = snap(tile_position_no_snap, calc_snapping(mTilemap_current_snapping, mTile_size));
 		
+		const ImVec2 window_topleft_corner = ImGui::GetCursorScreenPos(); // Save this before the InvisibleButton below changes it
+
+		ImGui::InvisibleButton("viewinteract", ImVec2(-1, -1));
+
 		if (mCurrent_scene_editor == editor_tilemap)
-			tilemap_editor_draw(tile_position);
+			tilemap_editor_update(tile_position_snapped);
 		else if (mCurrent_scene_editor == editor_collision)
-			collision_editor_draw();
+			collision_editor_update(view_position, tile_position_no_snap);
 		
 		// Draw grid
 		if (mShow_grid)
@@ -1349,17 +1352,12 @@ void WGE_imgui_editor::draw_scene_editor_window()
 			draw_grid(mPrimitives, offset, scale, display_size, mGrid_color);
 		}
 
-		mPrimitives.draw_and_clear(mTilemap_renderer);
 
+		// Render and Display
+		mScene_renderer.draw(); // Render the tilemap
+		mPrimitives.draw_and_clear(mScene_renderer);
 		mTilemap_render_target.display();
-
-		// Display on window. 
-		ImGui::AddBackgroundImage(mTilemap_render_target);
-
-		ImGui::InvisibleButton("viewinteract", ImVec2(-1, -1));
-
-		if (mCurrent_scene_editor == editor_tilemap)
-			tilemap_editor_interact(tile_position);
+		ImGui::AddBackgroundImage(mTilemap_render_target, window_topleft_corner);
 
 		// Handle mouse interaction with view
 		if (ImGui::IsItemHovered())
@@ -1401,9 +1399,9 @@ void WGE_imgui_editor::draw_scene_editor_window()
 
 			ImGui::ColorEdit3("Grid Color", mGrid_color.components);
 
-			engine::color bg = mTilemap_renderer.get_background_color();
+			engine::color bg = mScene_renderer.get_background_color();
 			if (ImGui::ColorEdit3("Bg Color", bg.components))
-				mTilemap_renderer.set_background_color(bg);
+				mScene_renderer.set_background_color(bg);
 
 			ImGui::PopItemWidth();
 			ImGui::TreePop();
@@ -1411,18 +1409,79 @@ void WGE_imgui_editor::draw_scene_editor_window()
 
 		if (mCurrent_scene_editor == editor_tilemap)
 			draw_tilemap_editor_settings();
+		else if (mCurrent_scene_editor = editor_collision)
+			draw_collision_editor_settings();
 		ImGui::EndGroup();
 	}
 	ImGui::End();
 }
 
-void WGE_imgui_editor::collision_editor_draw()
+static hash::hash32_t active_dragger_id = 0;
+static inline bool is_dragging()
 {
+	return active_dragger_id != 0;
+}
+
+static inline bool drag_behavior(hash::hash32_t pId, bool pHovered)
+{
+	const bool dragging = active_dragger_id == pId;
+	if (pHovered && ImGui::IsItemClicked(0))
+	{
+		active_dragger_id = pId; // Start drag
+		return true;
+	}
+	else if (!ImGui::IsMouseDown(0) && dragging)
+	{
+		active_dragger_id = 0; // End drag
+		return false;
+	}
+	return dragging;
+}
+
+static inline bool circle_dragger(const char* pStr_id, engine::primitive_builder& mPrimitives, const engine::fvector& pMouse, const engine::fvector& pPositon, engine::fvector* pChange, bool pMove_X = true, bool pMove_Y = true)
+{
+	const hash::hash32_t id = hash::FNV1a_32(pStr_id);
+	const bool hovered = pPositon.distance(pMouse) < 3.f;
+	const bool dragging = drag_behavior(id, hovered);
+	mPrimitives.add_circle(pPositon, 3.f, { 1, 1, 1, (hovered || dragging ? 1.f : 0.f) }, { 1, 1, 1, 1 });
+	if (dragging)
+	{
+		pChange->x += ImGui::GetIO().MouseDelta.x*(pMove_X ? 1 : 0);
+		pChange->y += ImGui::GetIO().MouseDelta.y*(pMove_Y ? 1 : 0);
+	}
+	return dragging;
+}
+
+static inline bool rect_dragger(const char* pStr_id, const engine::fvector& pMouse, const engine::frect& pRect, engine::fvector* pChange)
+{
+	const hash::hash32_t id = hash::FNV1a_32(pStr_id);
+	const bool hovered = pRect.is_intersect(pMouse);
+	const bool dragging = drag_behavior(id, hovered);
+	if (dragging)
+	{
+		pChange->x += ImGui::GetIO().MouseDelta.x;
+		pChange->y += ImGui::GetIO().MouseDelta.y;
+	}
+	return dragging;
+}
+
+void WGE_imgui_editor::collision_editor_update(const engine::fvector& pView_position, const engine::fvector& pTile_position_no_snap)
+{
+	mPrimitives.add_rectangle({ engine::fvector(0, 0), mTilemap_render_target.getSize() }, { 0, 0, 0, 0.4f });
+
 	mPrimitives.push_node(mTilemap_display);
 	for (auto& i : pColl_container.get_boxes())
 	{
-		mPrimitives.add_rectangle(i->get_region()*(float)mTile_size, { 0.7f, 1, 0.7f, 0.5f }, { 0.7f, 1, 0.7f, 1 });
-		
+		engine::color outline;
+		if (i == mSelected_collbox)
+			outline = { 1, 1, 0.5f, 1 }; // Selected
+		else if (i->get_region().is_intersect(pTile_position_no_snap))
+			outline = { 1, 1, 1, 1 }; // Mouse hover
+		else
+			outline = { 0.4f, 1, 0.4f, 1 }; // Not hovering
+		mPrimitives.add_rectangle(i->get_region()*(float)mTile_size, { 0.7f, 1, 0.7f, 0.7f }, outline);
+
+		// Draw door player offset
 		if (i->get_type() == rpg::collision_box::type::door)
 		{
 			auto door = std::dynamic_pointer_cast<rpg::door>(i);
@@ -1433,34 +1492,112 @@ void WGE_imgui_editor::collision_editor_draw()
 		}
 	}
 	mPrimitives.pop_node();
-}
 
-void WGE_imgui_editor::tilemap_editor_draw(const engine::fvector & pTile_position)
-{
-	// Draw previewed tile
-	if (mTilemap_texture && mCurrent_tile_atlas && mTilemap_manipulator.get_layer_count() > 0)
+	// Draw draggers for resizing selected collisionbox
+	if (mSelected_collbox)
 	{
-		mPrimitives.push_node(mTilemap_display);
+		const float scale = mTilemap_display.get_absolute_scale().x*mTilemap_display.get_unit();
 
-		// Highlight the tile that may be replaced
-		if (auto tile = mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(pTile_position))
+		// TODO: Snapping
+
+		engine::frect box_rect = mSelected_collbox->get_region();
+		engine::fvector bottom_pos = exact_relative_to_node(box_rect.get_offset() + engine::fvector(box_rect.w / 2, box_rect.h), mTilemap_display);
+		engine::fvector bottom_changed;
+		if (circle_dragger("bottom_move", mPrimitives, pView_position, bottom_pos, &bottom_changed, false, true))
 		{
-			engine::fvector size = tile->get_atlas()->get_root_frame().get_size();
-			mPrimitives.add_rectangle({ tile->get_position()*(float)mTile_size, tile->get_rotation() % 2 ? size.flip() : size }
-			, { 1, 0.5f, 0.5f, 0.5f }, { 1, 0, 0, 0.7f });
+			box_rect.h += bottom_changed.y / scale;
 		}
 
-		mPrimitives.add_quad_texture(mTilemap_texture, pTile_position*(float)mTile_size
-			, mCurrent_tile_atlas->get_root_frame(), { 1, 1, 1, 0.7f }, mTile_rotation);
+		engine::fvector top_pos = exact_relative_to_node(box_rect.get_offset() + engine::fvector(box_rect.w / 2, 0), mTilemap_display);
+		engine::fvector top_changed;
+		if (circle_dragger("top_move", mPrimitives, pView_position, top_pos, &top_changed, false, true))
+		{
+			top_changed /= scale;
+			box_rect.y += top_changed.y;
+			box_rect.h -= top_changed.y;
+		}
 
-		mPrimitives.pop_node();
+		engine::fvector left_pos = exact_relative_to_node(box_rect.get_offset() + engine::fvector(0, box_rect.h / 2), mTilemap_display);
+		engine::fvector left_changed;
+		if (circle_dragger("left_move", mPrimitives, pView_position, left_pos, &left_changed, true, false))
+		{
+			left_changed /= scale;
+			box_rect.x += left_changed.x;
+			box_rect.w -= left_changed.x;
+		}
+
+		engine::fvector right_pos = exact_relative_to_node(box_rect.get_offset() + engine::fvector(box_rect.w, box_rect.h / 2), mTilemap_display);
+		engine::fvector right_changed;
+		if (circle_dragger("right_move", mPrimitives, pView_position, right_pos, &right_changed, true, false))
+		{
+			box_rect.w += right_changed.x / scale;
+		}
+
+		// TODO: Use rect_dragger to move entire box
+
+		mSelected_collbox->set_region(box_rect);
+	}
+
+	// Collision box selection
+	// Placed last so the draggers get priority
+	if (!is_dragging() && ImGui::IsItemClicked(0))
+	{
+		if (auto box = pColl_container.first_collision(pTile_position_no_snap))
+			mSelected_collbox = box;
 	}
 }
 
-void WGE_imgui_editor::tilemap_editor_interact(const engine::fvector & pTile_position)
+void WGE_imgui_editor::draw_collision_editor_settings()
 {
-	const bool left_mouse_down = ImGui::IsMouseDown(0) && ImGui::IsItemHovered();
-	const bool right_mouse_down = ImGui::IsMouseDown(1) && ImGui::IsItemHovered();
+	ImGui::PushItemWidth(-100);
+	if (mSelected_collbox && ImGui::CollapsingHeader("Collision Box"))
+	{
+		int current_type = static_cast<int>(mSelected_collbox->get_type());
+		const char* coll_type_items[] = { "Wall", "Trigger", "Button", "Door" };
+		if (ImGui::Combo("Type", &current_type, coll_type_items, 4))
+		{
+
+		}
+
+		static char group_buf[256]; // Temp
+		ImGui::InputText("Group", group_buf, 256);
+		ImGui::QuickTooltip("Group to assosiate this collision box with.\nThis is used in scripts to enable/disable boxes or calling functions when collided.");
+
+		engine::frect coll_rect = mSelected_collbox->get_region();
+		if (ImGui::DragFloat4("Rect", coll_rect.components, 1))
+		{
+			mSelected_collbox->set_region(coll_rect);
+			mIs_scene_modified = true;
+		}
+	}
+
+	if (mSelected_collbox
+		&& mSelected_collbox->get_type() == rpg::collision_box::type::door
+		&& ImGui::CollapsingHeader("Door"))
+	{
+		static char door_name_buf[256]; // Temp
+		ImGui::InputText("Name", door_name_buf, 256);
+
+		static float coll_rect[2] = { 0, 0 }; // Temp
+		ImGui::DragFloat2("Offset", coll_rect, 0.2f);
+		ImGui::QuickTooltip("This will offset the player when they come through this door.\nUsed to prevent player from colliding with the door again and going back.");
+
+		// TODO: Use a combo instead
+		static char door_dest_scene_buf[256]; // Temp
+		ImGui::InputText("Dest. Scene", door_dest_scene_buf, 256);
+		ImGui::QuickTooltip("The scene to load when the player enters this door.");
+
+		// TODO: Use a combo instead
+		static char door_dest_door_buf[256]; // Temp
+		ImGui::InputText("Dest. Door", door_dest_door_buf, 256);
+		ImGui::QuickTooltip("The destination door in the new loaded scene.");
+
+	}
+	ImGui::PopItemWidth();
+}
+
+void WGE_imgui_editor::tilemap_editor_update(const engine::fvector& pTile_position_snapped)
+{
 
 	if (mTilemap_texture && mCurrent_tile_atlas)
 	{
@@ -1468,7 +1605,7 @@ void WGE_imgui_editor::tilemap_editor_interact(const engine::fvector & pTile_pos
 		{
 			if (ImGui::IsItemClicked())
 			{
-				if (auto tile = mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(pTile_position))
+				if (auto tile = mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(pTile_position_snapped))
 				{
 					mCurrent_tile_atlas = tile->get_atlas();
 					mTile_rotation = tile->get_rotation();
@@ -1477,15 +1614,36 @@ void WGE_imgui_editor::tilemap_editor_interact(const engine::fvector & pTile_pos
 		}
 		else
 		{
+			const bool left_mouse_down = ImGui::IsMouseDown(0) && ImGui::IsItemHovered();
+			const bool right_mouse_down = ImGui::IsMouseDown(1) && ImGui::IsItemHovered();
 			if (left_mouse_down || right_mouse_down) // Allows user to "paint" tiles
 			{
-				if (ImGui::IsItemClicked() || (left_mouse_down && mLast_tile_position != pTile_position))
-					place_tile(pTile_position);
-				else if (ImGui::IsItemClicked(1) || (right_mouse_down && mLast_tile_position != pTile_position))
-					remove_tile(pTile_position);
-				mLast_tile_position = pTile_position;
+				if (ImGui::IsItemClicked() || (left_mouse_down && mLast_tile_position != pTile_position_snapped))
+					place_tile(pTile_position_snapped);
+				else if (ImGui::IsItemClicked(1) || (right_mouse_down && mLast_tile_position != pTile_position_snapped))
+					remove_tile(pTile_position_snapped);
+				mLast_tile_position = pTile_position_snapped;
 			}
 		}
+	}
+
+	// Draw previewed tile
+	if (mTilemap_texture && mCurrent_tile_atlas && mTilemap_manipulator.get_layer_count() > 0)
+	{
+		mPrimitives.push_node(mTilemap_display);
+
+		// Highlight the tile that may be replaced
+		if (auto tile = mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(pTile_position_snapped))
+		{
+			engine::fvector size = tile->get_atlas()->get_root_frame().get_size();
+			mPrimitives.add_rectangle({ tile->get_position()*(float)mTile_size, tile->get_rotation() % 2 ? size.flip() : size }
+			, { 1, 0.5f, 0.5f, 0.5f }, { 1, 0, 0, 0.7f });
+		}
+
+		mPrimitives.add_quad_texture(mTilemap_texture, pTile_position_snapped*(float)mTile_size
+			, mCurrent_tile_atlas->get_root_frame(), { 1, 1, 1, 0.7f }, mTile_rotation);
+
+		mPrimitives.pop_node();
 	}
 }
 
@@ -1647,54 +1805,6 @@ void WGE_imgui_editor::draw_tilemap_layers_group()
 void WGE_imgui_editor::center_tilemap()
 {
 	mTilemap_display.set_position(-mTilemap_manipulator.get_center_point());
-}
-
-void WGE_imgui_editor::draw_collision_settings_window()
-{
-	if (ImGui::Begin("Collision Settings"))
-	{
-		ImGui::PushItemWidth(-100);
-		static int current_snapping = 0; // Temp
-		const char* snapping_items[] = { "None", "Pixel", "Eighth", "Quarter", "Full" };
-		ImGui::Combo("Snapping", &current_snapping, snapping_items, 5);
-
-		if (ImGui::CollapsingHeader("Collision Box"))
-		{
-			static int current_type = 0; // Temp
-			const char* coll_type_items[] = { "Wall", "Trigger", "Button", "Door" };
-			ImGui::Combo("Type", &current_type, coll_type_items, 4);
-
-			static char group_buf[256]; // Temp
-			ImGui::InputText("Group", group_buf, 256);
-			ImGui::QuickTooltip("Group to assosiate this collision box with.\nThis is used in scripts to enable/disable boxes or calling functions when collided.");
-
-			static float coll_rect[4] = { 0, 0, 1, 1 }; // Temp
-			ImGui::DragFloat4("Rect", coll_rect, 1);
-		}
-
-		if (ImGui::CollapsingHeader("Door"))
-		{
-			static char door_name_buf[256]; // Temp
-			ImGui::InputText("Name", door_name_buf, 256);
-
-			static float coll_rect[2] = { 0, 0 }; // Temp
-			ImGui::DragFloat2("Offset", coll_rect, 0.2f);
-			ImGui::QuickTooltip("This will offset the player when they come through this door.\nUsed to prevent player from colliding with the door again and going back.");
-
-			// TODO: Use a combo instead
-			static char door_dest_scene_buf[256]; // Temp
-			ImGui::InputText("Dest. Scene", door_dest_scene_buf, 256);
-			ImGui::QuickTooltip("The scene to load when the player enters this door.");
-
-			// TODO: Use a combo instead
-			static char door_dest_door_buf[256]; // Temp
-			ImGui::InputText("Dest. Door", door_dest_door_buf, 256);
-			ImGui::QuickTooltip("The destination door in the new loaded scene.");
-
-		}
-		ImGui::PopItemWidth();
-	}
-	ImGui::End();
 }
 
 void WGE_imgui_editor::draw_log_window()
