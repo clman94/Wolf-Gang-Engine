@@ -43,10 +43,8 @@ file(GLOB_RECURSE ENGINE_RPG_SOURCES "${CMAKE_SOURCE_DIR}/src/rpg/*.cpp")
 file(GLOB_RECURSE ENGINE_ENGINE_SOURCES "${CMAKE_SOURCE_DIR}/src/engine/*.cpp")
 set(ENGINE_SOURCES ${ENGINE_RPG_SOURCES} ${ENGINE_ENGINE_SOURCES})
 
-set(EDITOR_SOURCES
-	"${CMAKE_SOURCE_DIR}/src/editor/file_opener.cpp")
-set(EDITOR_HEADERS
-	"${CMAKE_SOURCE_DIR}/include/editor/file_opener.hpp")
+file(GLOB_RECURSE EDITOR_SOURCES "${CMAKE_SOURCE_DIR}/src/editor/*.cpp")
+file(GLOB_RECURSE EDITOR_HEADERS "${CMAKE_SOURCE_DIR}/include/editor/*.hpp")
 
 file(GLOB_RECURSE ENGINE_HEADERS "${CMAKE_SOURCE_DIR}/include/*.hpp")
 
