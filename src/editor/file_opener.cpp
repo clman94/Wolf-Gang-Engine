@@ -109,7 +109,7 @@ bool ImGui::FileOpenerPopup(const char * pName, engine::fs::path* pPath, bool pS
 		{
 			// Update textbox with current directory
 			std::string path_str = opener_data.current_directory.string();
-			if (path_str.size() + 1 < 512)
+			if (path_str.size() + 1 < sizeof(file_path_buf) / sizeof(file_path_buf[0]))
 				memcpy(file_path_buf, path_str.c_str(), path_str.size() + 1);
 		}
 

@@ -186,7 +186,7 @@ bool engine::create_resource_pack(const std::string& pSrc_directory, const std::
 			continue;
 		}
 		logger::info("Packing file '" + i.string() + "'...");
-		append_stream(stream, file_stream);
+		append_stream(stream, file_stream); // possibly replace with stream << file_stream.rdbuf();
 	}
 	return true;
 }

@@ -294,6 +294,11 @@ void renderer::set_background_color(color pColor)
 	mBackground_color = pColor;
 }
 
+const color & engine::renderer::get_background_color() const
+{
+	return mBackground_color;
+}
+
 float renderer::get_fps() const
 {
 	return mFrame_clock.get_fps();

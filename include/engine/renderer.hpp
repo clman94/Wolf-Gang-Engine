@@ -166,6 +166,7 @@ public:
 
 	void set_visible(bool pVisible);
 	void set_background_color(color pColor);
+	const color& get_background_color() const;
 
 	float get_fps() const;
 	float get_delta() const;

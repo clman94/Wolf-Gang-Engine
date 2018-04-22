@@ -1158,6 +1158,10 @@ WGE_imgui_editor::WGE_imgui_editor()
 	mShow_debug_info = true;
 
 	mShow_grid = true;
+
+	mGrid_color = { 1, 1, 1, 0.7f };
+
+	mCurrent_scene_editor = editor_tilemap;
 }
 
 void WGE_imgui_editor::run()
@@ -1187,6 +1191,8 @@ void WGE_imgui_editor::run()
 		mGame.tick();
 		
 		ImGui::SFML::Update(window.get_sfml_window(), delta_clock.restart());
+
+		mAtlas_editor.update();
 
 		handle_scene_change();
 		handle_undo_redo();
@@ -1227,7 +1233,7 @@ void WGE_imgui_editor::run()
 		draw_scene_window();
 		draw_game_window();
 		draw_game_view_window();
-		draw_tilemap_editor_window();
+		draw_scene_editor_window();
 		draw_log_window();
 		draw_collision_settings_window();
 
@@ -1236,7 +1242,6 @@ void WGE_imgui_editor::run()
 			ImGui::Text("TODO: Use ImGui::Image to display tilemap");
 		}
 		ImGui::End();
-
 
 		window.clear();
 		ImGui::SFML::Render(window.get_sfml_window());
@@ -1555,11 +1560,12 @@ void WGE_imgui_editor::draw_game_view_window()
 	ImGui::End();
 }
 
-void WGE_imgui_editor::draw_tilemap_editor_window()
+void WGE_imgui_editor::draw_scene_editor_window()
 {
-	if (ImGui::Begin("Tilemap Editor"))
+	if (ImGui::Begin("Scene Editor"))
 	{
-		ImGui::BeginChild("tilemapeditorwindow", ImVec2(-300, -1), true);
+		ImGui::BeginChild("view", ImVec2(-300, 0), true);
+
 		if (resize_to_window(mTilemap_render_target))
 		{
 			engine::fvector new_size = engine::vector_cast<float, unsigned int>(mTilemap_render_target.getSize());
@@ -1571,27 +1577,11 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 		// Render the tilemap
 		mTilemap_renderer.draw();
 
-		engine::ivector window_mouse_position = static_cast<engine::ivector>(ImGui::GetMousePos()) - static_cast<engine::ivector>(ImGui::GetCursorScreenPos());
-		engine::fvector tile_position = snap(mTilemap_renderer.window_to_game_coords(window_mouse_position, mTilemap_display), calc_snapping(mTilemap_current_snapping, mTile_size));
-
-		// Draw previewed tile
-		if (mTilemap_texture && mCurrent_tile_atlas && mTilemap_manipulator.get_layer_count() > 0)
-		{
-			mPrimitives.push_node(mTilemap_display);
-
-			// Highlight the tile that may be replaced
-			if (auto tile = mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(tile_position))
-			{
-				engine::fvector size = tile->get_atlas()->get_root_frame().get_size();
-				mPrimitives.add_rectangle({ tile->get_position()*(float)mTile_size, tile->get_rotation() % 2 ? size.flip() : size }
-				, { 1, 0.5f, 0.5f, 0.5f }, { 1, 0, 0, 0.7f });
-			}
-
-			mPrimitives.add_quad_texture(mTilemap_texture, tile_position*(float)mTile_size
-				, mCurrent_tile_atlas->get_root_frame(), { 1, 1, 1, 0.7f }, mTile_rotation);
-
-			mPrimitives.pop_node();
-		}
+		const engine::ivector window_mouse_position = static_cast<engine::ivector>(ImGui::GetMousePos()) - static_cast<engine::ivector>(ImGui::GetCursorScreenPos());
+		const engine::fvector tile_position = snap(mTilemap_renderer.window_to_game_coords(window_mouse_position, mTilemap_display), calc_snapping(mTilemap_current_snapping, mTile_size));
+		
+		if (mCurrent_scene_editor == editor_tilemap)
+			tilemap_editor_draw(tile_position);
 		
 		// Draw grid
 		if (mShow_grid)
@@ -1599,9 +1589,8 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 			engine::fvector offset = mTilemap_display.get_exact_position();
 			engine::fvector scale = mTilemap_display.get_absolute_scale()*static_cast<float>(mTile_size);
 			engine::fvector display_size = engine::vector_cast<float, unsigned int>(mTilemap_render_target.getSize());
-			draw_grid(mPrimitives, offset, scale, display_size, { 1, 1, 1, 0.7f });
+			draw_grid(mPrimitives, offset, scale, display_size, mGrid_color);
 		}
-
 
 		mPrimitives.draw_and_clear(mTilemap_renderer);
 
@@ -1610,30 +1599,12 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 		// Display on window. 
 		ImGui::AddBackgroundImage(mTilemap_render_target);
 
-		ImGui::InvisibleButton("tilemaphandler", ImVec2(-1, -1));
+		ImGui::InvisibleButton("viewinteract", ImVec2(-1, -1));
 
-		// Place tile
-		if (mTilemap_texture && mCurrent_tile_atlas)
-		{
-			if (ImGui::GetIO().KeyCtrl && ImGui::IsItemClicked())
-			{
-				if (auto tile = mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(tile_position))
-				{
-					mCurrent_tile_atlas = tile->get_atlas();
-					mTile_rotation = tile->get_rotation();
-				}
-			}
-			else if (ImGui::IsItemClicked())
-			{
-				place_tile(tile_position);
-			}
-			else if (ImGui::IsItemClicked(1))
-			{
-				remove_tile(tile_position);
-			}
-		}
+		if (mCurrent_scene_editor == editor_tilemap)
+			tilemap_editor_interact(tile_position);
 
-		// Handle mouse interaction with tilemap window
+		// Handle mouse interaction with view
 		if (ImGui::IsItemHovered())
 		{
 			if (ImGui::IsMouseDown(2)) // Middle mouse button is held to pan
@@ -1650,10 +1621,15 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 				mTilemap_center_node.set_scale(engine::fvector(1, 1)*std::pow(2.f, mTilemap_zoom));
 			}
 		}
+
 		ImGui::EndChild();
 
 		ImGui::SameLine();
 		ImGui::BeginGroup();
+
+		ImGui::RadioButton("Tilemap", &mCurrent_scene_editor, editor_tilemap);
+		ImGui::SameLine();
+		ImGui::RadioButton("Collision", &mCurrent_scene_editor, editor_collision);
 
 		if (ImGui::TreeNodeEx("Visual", ImGuiTreeNodeFlags_DefaultOpen))
 		{
@@ -1661,28 +1637,95 @@ void WGE_imgui_editor::draw_tilemap_editor_window()
 			const char* snapping_items[] = { "None", "Pixel", "Eighth", "Quarter", "Full" };
 			ImGui::Combo("Snapping", &mTilemap_current_snapping, snapping_items, 5);
 
-			ImGui::Checkbox("grid", &mShow_grid);
-
 			if (ImGui::Button("Center View"))
 				center_tilemap();
+
+			ImGui::Checkbox("grid", &mShow_grid);
+
+			ImGui::ColorEdit3("Grid Color", mGrid_color.components);
+
+			engine::color bg = mTilemap_renderer.get_background_color();
+			if (ImGui::ColorEdit3("Bg Color", bg.components))
+				mTilemap_renderer.set_background_color(bg);
+
 			ImGui::PopItemWidth();
 			ImGui::TreePop();
 		}
-		static float tilegroup_height = 300; // TODO: make nonstatic
-		if (ImGui::TreeNodeEx("Tile", ImGuiTreeNodeFlags_DefaultOpen))
-		{
-			draw_tile_group(tilegroup_height);
-			ImGui::HSplitter("tileandlayerssplitter", 3, &tilegroup_height, true);
-			ImGui::TreePop();
-		}
-		if (ImGui::TreeNodeEx("Layers", ImGuiTreeNodeFlags_DefaultOpen))
-		{
-			draw_tilemap_layers_group();
-			ImGui::TreePop();
-		}
+
+		if (mCurrent_scene_editor == editor_tilemap)
+			draw_tilemap_editor_settings();
 		ImGui::EndGroup();
 	}
 	ImGui::End();
+}
+
+void editors::WGE_imgui_editor::collision_editor_draw()
+{
+}
+
+void WGE_imgui_editor::tilemap_editor_draw(const engine::fvector & pTile_position)
+{
+	// Draw previewed tile
+	if (mTilemap_texture && mCurrent_tile_atlas && mTilemap_manipulator.get_layer_count() > 0)
+	{
+		mPrimitives.push_node(mTilemap_display);
+
+		// Highlight the tile that may be replaced
+		if (auto tile = mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(pTile_position))
+		{
+			engine::fvector size = tile->get_atlas()->get_root_frame().get_size();
+			mPrimitives.add_rectangle({ tile->get_position()*(float)mTile_size, tile->get_rotation() % 2 ? size.flip() : size }
+			, { 1, 0.5f, 0.5f, 0.5f }, { 1, 0, 0, 0.7f });
+		}
+
+		mPrimitives.add_quad_texture(mTilemap_texture, pTile_position*(float)mTile_size
+			, mCurrent_tile_atlas->get_root_frame(), { 1, 1, 1, 0.7f }, mTile_rotation);
+
+		mPrimitives.pop_node();
+	}
+}
+
+void WGE_imgui_editor::tilemap_editor_interact(const engine::fvector & pTile_position)
+{
+	const bool left_mouse_down = ImGui::IsMouseDown(0) && ImGui::IsItemHovered();
+	const bool right_mouse_down = ImGui::IsMouseDown(1) && ImGui::IsItemHovered();
+
+	// Place tile
+	if (mTilemap_texture && mCurrent_tile_atlas)
+	{
+		if (ImGui::GetIO().KeyCtrl && ImGui::IsItemClicked())
+		{
+			if (auto tile = mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(pTile_position))
+			{
+				mCurrent_tile_atlas = tile->get_atlas();
+				mTile_rotation = tile->get_rotation();
+			}
+		}
+		else if (left_mouse_down || right_mouse_down)
+		{
+			if (ImGui::IsItemClicked() || (left_mouse_down && mLast_tile_position != pTile_position))
+				place_tile(pTile_position);
+			else if (ImGui::IsItemClicked(1) || (right_mouse_down && mLast_tile_position != pTile_position))
+				remove_tile(pTile_position);
+			mLast_tile_position = pTile_position;
+		}
+	}
+}
+
+void WGE_imgui_editor::draw_tilemap_editor_settings()
+{
+	static float tilegroup_height = 300; // TODO: make nonstatic
+	if (ImGui::TreeNodeEx("Tile", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		draw_tile_group(tilegroup_height);
+		ImGui::HSplitter("tileandlayerssplitter", 3, &tilegroup_height, true);
+		ImGui::TreePop();
+	}
+	if (ImGui::TreeNodeEx("Layers", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		draw_tilemap_layers_group();
+		ImGui::TreePop();
+	}
 }
 
 inline static void draw_tile_preview(engine::fvector pSize, std::shared_ptr<engine::texture> pTexture, engine::subtexture::ptr pAtlas)
@@ -2074,4 +2117,51 @@ engine::fvector WGE_imgui_editor::calc_snapping(int pSnapping, int pTile_size)
 	case snapping_quarter: return { 0.5f, 0.5f };
 	case snapping_full:    return { 1, 1 };
 	}
+}
+
+void atlas_imgui_editor::update()
+{
+	ImGui::Begin("Texture Atlas Editor");
+	ImGui::BeginChild("View", ImVec2(-300, 0));
+
+
+	ImGui::InvisibleButton("interactview", ImVec2(0, 0));
+
+	ImGui::EndChild();
+	ImGui::SameLine();
+	ImGui::BeginChild("Settings", ImVec2(0, 0), true);
+
+	if (ImGui::TreeNodeEx("Visual", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+
+		ImGui::TreePop();
+	}
+
+	if (ImGui::TreeNodeEx("List", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		ImGui::BeginChild("Atlas list");
+
+		ImGui::EndChild();
+		ImGui::TreePop();
+	}
+	if (ImGui::TreeNodeEx("Animation", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		/*static int dims[4] = { 0, 0, 10, 10};
+		ImGui::DragInt4("Dimensions", dims);*/
+		ImGui::TreePop();
+	}
+
+	if (ImGui::TreeNodeEx("Animation", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		/*static int frame = 0;
+		ImGui::SliderInt("Frame", &frame, 0, 10);
+		static int defframe = 0;
+		ImGui::SliderInt("Def Frame", &defframe, 0, 10);
+		static float interval = 1;
+		ImGui::DragFloat("Interval", &interval, 0.050f, 0, 60, "%.3fs");*/
+		ImGui::TreePop();
+	}
+
+	ImGui::EndChild();
+	ImGui::End();
 }

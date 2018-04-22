@@ -17,6 +17,7 @@ color::color(const color & pColor)
 {
 	for (int i = 0; i < 4; i++)
 		components[i] = pColor.components[i];
+	default_mask();
 }
 
 color::color(const sf::Color& pColor)
@@ -25,6 +26,7 @@ color::color(const sf::Color& pColor)
 	g = static_cast<float>(pColor.g) / 255.f;
 	b = static_cast<float>(pColor.b) / 255.f;
 	a = static_cast<float>(pColor.a) / 255.f;
+	default_mask();
 }
 
 color::operator sf::Color() const
@@ -156,5 +158,5 @@ uint32_t color::to_uint32() const
 
 void color::default_mask()
 {
-	set_mask(false, false, false, true);
+	set_mask(false, false, false, false);
 }

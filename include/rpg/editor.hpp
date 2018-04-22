@@ -1,9 +1,6 @@
 #ifndef RPG_EDITOR_HPP
 #define RPG_EDITOR_HPP
 
-#include <imgui.h>
-#include <imgui-SFML.h>
-
 #include <engine/renderer.hpp>
 #include <engine/rect.hpp>
 #include <engine/terminal.hpp>
@@ -239,6 +236,16 @@ private:
 	std::string mOpento_param;
 };
 
+class atlas_imgui_editor
+{
+public:
+	void update();
+
+private:
+	std::shared_ptr<engine::texture> mTexture;
+	engine::subtexture::ptr mSubtexture;
+};
+
 class WGE_imgui_editor
 {
 public:
@@ -254,6 +261,12 @@ private:
 		snapping_eight,
 		snapping_quarter,
 		snapping_full,
+	};
+
+	enum
+	{
+		editor_tilemap,
+		editor_collision
 	};
 
 	// Game Settings
@@ -273,19 +286,21 @@ private:
 	rpg::game mGame;
 	engine::renderer mGame_renderer;
 
-	// this all will all be refactored soon, simply prototyping
+	// this will all be refactored soon, simply prototyping
 	sf::RenderTexture mTilemap_render_target;
 	rpg::tilemap_manipulator mTilemap_manipulator;
 	rpg::tilemap_display mTilemap_display;
 	engine::renderer mTilemap_renderer;
 	std::shared_ptr<engine::texture> mTilemap_texture;
 	engine::subtexture::ptr mCurrent_tile_atlas;
-	engine::node mTilemap_center_node; // Never changes position but scaling will cause zooming in and out.
+	engine::node mTilemap_center_node; // Never changes position but scaling will cause it to zooming in and out.
 	float mTilemap_zoom;
 	std::size_t mCurrent_layer;
 	command_manager mCommand_manager;
 	int mTilemap_current_snapping;
+
 	bool mShow_grid;
+	engine::color mGrid_color;
 
 	// Tilemap Commands
 	void place_tile(engine::fvector pos);
@@ -305,6 +320,12 @@ private:
 	std::string mNew_scene_texture_name;
 	std::string mChange_scene_texture_name;
 
+	atlas_imgui_editor mAtlas_editor;
+
+	int mCurrent_scene_editor;
+
+	engine::fvector mLast_tile_position;
+
 private:
 	void prepare_scene(engine::fs::path pPath, const std::string& pName);
 	void save_scene();
@@ -313,7 +334,13 @@ private:
 	void draw_game_window();
 	void draw_game_view_window();
 
-	void draw_tilemap_editor_window();
+	void draw_scene_editor_window();
+
+	void collision_editor_draw();
+
+	void tilemap_editor_draw(const engine::fvector & pTile_position);
+	void tilemap_editor_interact(const engine::fvector & pTile_position);
+	void draw_tilemap_editor_settings();
 	void draw_tile_group(float from_bottom = 300);
 	void draw_tilemap_layers_group();
 	void center_tilemap();
