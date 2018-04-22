@@ -37,6 +37,7 @@ public:
 	void pop_transform(std::size_t pCount = 1);
 	void pop_node();
 
+	void add_circle(fvector pPosition, float pRadius, color pFill, color pOutline = { 0, 0, 0, 0 });
 	void add_rectangle(frect pRect, color pFill, color pOutline = { 0, 0, 0, 0 });
 	void add_line(fvector p0, fvector p1, color pColor);
 	void add_triangle(fvector p0, fvector p1, fvector p2, color pColor);

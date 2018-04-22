@@ -168,60 +168,6 @@ private:
 	bool tile_selection(engine::fvector pCursor, bool pCycle = true);
 };
 
-class atlas_editor :
-	public editor
-{
-public:
-	atlas_editor();
-
-	virtual bool open_editor();
-
-	int draw(engine::renderer& pR);
-
-	bool save();
-
-private:
-	void get_textures(const std::string& pPath);
-	void setup_for_texture(const engine::generic_path& pPath);
-
-	enum class state
-	{
-		normal,
-		size_mode,
-		move_mode,
-		resize_mode,
-	} mState;
-
-	bool mAtlas_changed;
-	engine::generic_path mLoaded_texture;
-	std::vector<engine::generic_path> mTexture_list;
-	std::shared_ptr<engine::texture> mTexture;
-
-	engine::texture_atlas mAtlas;
-	engine::subtexture::ptr mSelection;
-
-	void new_entry();
-	void remove_selected();
-
-	engine::fvector mDrag_offset;
-
-	float mZoom;
-
-	engine::rectangle_node mBackground;
-	engine::sprite_node mSprite;
-	engine::rectangle_node mPreview_bg;
-	engine::animation_node mPreview;
-	engine::rectangle_node mFull_animation;
-	engine::rectangle_node mSelected_firstframe;
-
-	void atlas_selection(engine::fvector pPosition);
-
-	void black_background();
-	void white_background();
-
-	void update_preview();
-};
-
 class editor_settings_loader
 {
 public:
@@ -298,6 +244,8 @@ private:
 	command_manager mCommand_manager;
 	int mTilemap_current_snapping;
 
+	rpg::collision_box_container pColl_container;
+
 	bool mShow_grid;
 	engine::color mGrid_color;
 
@@ -323,7 +271,7 @@ private:
 
 	int mCurrent_scene_editor;
 
-	engine::fvector mLast_tile_position;
+	engine::fvector mLast_tile_position; // Prevents a tile being placed/remove continuously in one spot
 
 private:
 	void prepare_scene(engine::fs::path pPath, const std::string& pName);

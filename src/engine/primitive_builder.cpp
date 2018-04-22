@@ -41,6 +41,17 @@ void primitive_builder::pop_node()
 	pop_transform(3);
 }
 
+void primitive_builder::add_circle(fvector pPosition, float pRadius, color pFill, color pOutline)
+{
+	std::vector<fvector> points;
+	for (std::size_t i = 0; i < 10; i++)
+		points.push_back((pPosition + fvector(pRadius, 0)).rotate(pPosition, (360.f/10.f)*(float)i));
+	if (pFill.a > 0)
+		add_poly(points, pFill);
+	if (pOutline.a > 0)
+		add_poly_lines(points, pOutline);
+}
+
 void primitive_builder::add_rectangle(frect pRect, color pFill, color pOutline)
 {
 	std::vector<fvector> points;

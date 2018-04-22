@@ -737,256 +737,6 @@ bool collisionbox_editor::tile_selection(engine::fvector pCursor, bool pCycle)
 	return true;
 }
 
-// ##########
-// atlas_editor
-// ##########
-
-atlas_editor::atlas_editor()
-{
-	mTexture.reset(new engine::texture);
-
-	mFull_animation.set_color({ 100, 100, 255, 100 });
-	mFull_animation.set_parent(mSprite);
-
-	mSelected_firstframe.set_color({ 0, 0, 0, 0 });
-	mSelected_firstframe.set_outline_color({ 255, 255, 0, 255 });
-	mSelected_firstframe.set_outline_thinkness(1);
-	mSelected_firstframe.set_parent(mSprite);
-	
-	mPreview_bg.set_anchor(engine::anchor::bottom);
-	mPreview_bg.set_color({ 0, 0, 0, 200 });
-	mPreview_bg.set_outline_color({ 255, 255, 255, 200 });
-	mPreview_bg.set_outline_thinkness(1);
-	mPreview_bg.set_parent(mSprite);
-
-	mPreview.set_anchor(engine::anchor::bottom);
-	mPreview.set_parent(mPreview_bg);
-
-	mBackground.set_color({ 0, 0, 0, 255 });
-
-	black_background();
-	mZoom = 1;
-	mPreview.set_visible(false);
-	get_textures("./data/textures");
-	if (!mTexture_list.empty())
-	{
-		setup_for_texture(mTexture_list[0]);
-	}
-}
-
-bool atlas_editor::open_editor()
-{
-
-	return true;
-}
-
-int atlas_editor::draw(engine::renderer & pR)
-{
-	const bool button_left = pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left);
-	const bool button_left_down = pR.is_mouse_down(engine::renderer::mouse_button::mouse_left);
-	const bool button_right = pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_right);
-	const bool button_shift = pR.is_key_down(engine::renderer::key_code::LShift);
-	const bool button_ctrl = pR.is_key_down(engine::renderer::key_code::LControl);
-
-	const engine::fvector mouse_position = pR.get_mouse_position();
-
-	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_right))
-		mDrag_offset = mSprite.get_position() - mouse_position;
-	else if (pR.is_mouse_down(engine::renderer::mouse_button::mouse_right))
-		mSprite.set_position(mouse_position + mDrag_offset);
-
-	if (pR.is_key_pressed(engine::renderer::key_code::Add))
-	{
-		mZoom += 1;
-		mSprite.set_scale({ mZoom, mZoom });
-		update_preview();
-	}
-	
-	if (pR.is_key_pressed(engine::renderer::key_code::Subtract))
-	{
-		mZoom -= 1;
-		mSprite.set_scale({ mZoom, mZoom });
-		update_preview();
-	}
-
-	if (pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left))
-		atlas_selection((mouse_position - mSprite.get_position())/mZoom);
-
-	mSprite.draw(pR);
-
-	for (auto& i : mAtlas.get_all())
-	{
-		auto full_region = i->get_full_region()*mZoom;
-		if (i == mSelection)
-			mFull_animation.set_color({ 1, 1, 0.39f, 0.19f });
-		else
-			mFull_animation.set_color({ 0.39f, 0.39f, 1, 0.39f });
-		mFull_animation.set_position(full_region.get_offset());
-		mFull_animation.set_size(full_region.get_size());
-		mFull_animation.draw(pR);
-
-		if (i == mSelection)
-		{
-			auto rect = i->get_frame_at(i->get_default_frame())*mZoom;
-			mSelected_firstframe.set_position(rect.get_offset());
-			mSelected_firstframe.set_size(rect.get_size());
-			mSelected_firstframe.draw(pR);
-		}
-	}
-
-	// Animation Preview
-	if (mSelection && mSelection->get_frame_count() > 1) // Only display if there is an animation
-	{
-		mPreview_bg.draw(pR);
-		mPreview.draw(pR);
-	}
-
-	return 0;
-}
-
-bool atlas_editor::save()
-{
-	if (mTexture_list.empty())
-		return false;
-	const std::string xml_path = mLoaded_texture.string() + ".xml";
-	logger::info("Saving atlas '" + xml_path + "'...");
-	
-	mAtlas.remove_entry("_name_here_");
-	mAtlas.save(xml_path);
-	mAtlas_changed = false;
-	logger::info("Atlas save");
-
-	return editor::save();
-}
-
-void atlas_editor::get_textures(const std::string & pPath)
-{
-	mTexture_list.clear();
-	for (auto& i : engine::fs::recursive_directory_iterator(pPath))
-	{
-		engine::generic_path path = i.path().string();
-		if (path.extension() == ".png")
-		{
-			mTexture_list.push_back(path.parent() / path.stem());
-
-			if (engine::fs::exists(i.path().parent_path() / (i.path().stem().string() + ".xml")))
-			{ }
-		}
-	}
-}
-
-void atlas_editor::setup_for_texture(const engine::generic_path& pPath)
-{
-	mAtlas_changed = false;
-	mLoaded_texture = pPath;
-
-	const std::string texture_path = pPath.string() + ".png";
-	mTexture->unload();
-	mTexture->set_texture_source(texture_path);
-	mTexture->load();
-	mPreview.set_texture(mTexture);
-	mSprite.set_texture(mTexture);
-	mSprite.set_texture_rect({ engine::fvector(0, 0), mTexture->get_size() });
-
-	mSelection = nullptr;
-	mAtlas.clear();
-
-	const std::string xml_path = pPath.string() + ".xml";
-	if (!engine::fs::exists(xml_path))
-	{
-		logger::info("Starting a new atlas");
-		new_entry();
-		return;
-	}
-
-	mAtlas.load(pPath.string() + ".xml");
-}
-
-void atlas_editor::new_entry()
-{
-	if (auto find = mAtlas.get_entry("_Name_here_"))
-	{
-		logger::warning("A new, unnamed, entry has already been created");
-		mSelection = find;
-		update_preview();
-		return;
-	}
-	mSelection = std::make_shared<engine::subtexture>();
-	mSelection->set_name("_Name_here_");
-	mSelection->set_frame_count(1);
-	mSelection->set_loop(engine::animation::loop_type::none);
-	mAtlas.add_entry(mSelection);
-	update_preview();
-	mAtlas_changed = true;
-}
-
-void atlas_editor::remove_selected()
-{
-	mAtlas.remove_entry(mSelection);
-	if (mAtlas.is_empty())
-		mSelection = nullptr;
-	else
-		mSelection = mAtlas.get_all().back();
-	update_preview();
-	mAtlas_changed = true;
-}
-
-void atlas_editor::atlas_selection(engine::fvector pPosition)
-{
-	std::vector<engine::subtexture::ptr> hits;
-	for (auto& i : mAtlas.get_all())
-		if (i->get_full_region().is_intersect(pPosition))
-			hits.push_back(i);
-
-	if (hits.empty())
-		return;
-
-	// Similar cycling as the collisionbox editor
-	for (size_t i = 1; i < hits.size(); i++)
-	{
-		if (hits[i] == mSelection)
-		{
-			mSelection = hits[i - 1];
-			update_preview();
-			return;
-		}
-	}
-	mSelection = hits.back();
-	update_preview();
-}
-
-void atlas_editor::black_background()
-{
-	mPreview_bg.set_color({ 0, 0, 0, 0.58f });
-	mPreview_bg.set_outline_color({ 1, 1, 1, 0.78f });
-}
-
-void atlas_editor::white_background()
-{
-	mPreview_bg.set_color({ 255, 255, 255, 0.58f });
-	mPreview_bg.set_outline_color({ 0, 0, 0, 0.78f });
-}
-
-void atlas_editor::update_preview()
-{
-	if (!mSelection)
-		return;
-
-	auto position = mSelection->get_frame_at(0).get_offset();
-	position.x += mSelection->get_full_region().w / 2;
-	mPreview_bg.set_position(position);
-
-	mPreview.set_scale({ mZoom, mZoom });
-	mPreview.set_animation(mSelection);
-	mPreview.restart();
-	mPreview.start();
-
-	mPreview_bg.set_size(mPreview.get_size());
-
-}
-
-
-
 bool editor_settings_loader::load(const engine::fs::path& pPath)
 {
 	tinyxml2::XMLDocument doc;
@@ -1293,6 +1043,8 @@ void WGE_imgui_editor::prepare_scene(engine::fs::path pPath, const std::string& 
 		mTilemap_display.set_unit(static_cast<float>(mTile_size));
 		mTilemap_display.update(mTilemap_manipulator);
 
+		pColl_container.load_xml(mScene_loader.get_collisionboxes());
+
 		mCurrent_tile_atlas.reset();
 		mCurrent_layer = 0;
 
@@ -1585,6 +1337,8 @@ void WGE_imgui_editor::draw_scene_editor_window()
 		
 		if (mCurrent_scene_editor == editor_tilemap)
 			tilemap_editor_draw(tile_position);
+		else if (mCurrent_scene_editor == editor_collision)
+			collision_editor_draw();
 		
 		// Draw grid
 		if (mShow_grid)
@@ -1662,8 +1416,23 @@ void WGE_imgui_editor::draw_scene_editor_window()
 	ImGui::End();
 }
 
-void editors::WGE_imgui_editor::collision_editor_draw()
+void WGE_imgui_editor::collision_editor_draw()
 {
+	mPrimitives.push_node(mTilemap_display);
+	for (auto& i : pColl_container.get_boxes())
+	{
+		mPrimitives.add_rectangle(i->get_region()*(float)mTile_size, { 0.7f, 1, 0.7f, 0.5f }, { 0.7f, 1, 0.7f, 1 });
+		
+		if (i->get_type() == rpg::collision_box::type::door)
+		{
+			auto door = std::dynamic_pointer_cast<rpg::door>(i);
+			const engine::fvector center = door->get_region().get_center()*(float)mTile_size;
+			const engine::fvector offset = door->get_offset()*(float)mTile_size + center;
+			mPrimitives.add_line(center, offset, { 1, 0.7f, 0.7f, 1 });
+			mPrimitives.add_circle(offset, 5, { 1, 0.7f, 0.7f, 1 });
+		}
+	}
+	mPrimitives.pop_node();
 }
 
 void WGE_imgui_editor::tilemap_editor_draw(const engine::fvector & pTile_position)
@@ -1693,24 +1462,29 @@ void WGE_imgui_editor::tilemap_editor_interact(const engine::fvector & pTile_pos
 	const bool left_mouse_down = ImGui::IsMouseDown(0) && ImGui::IsItemHovered();
 	const bool right_mouse_down = ImGui::IsMouseDown(1) && ImGui::IsItemHovered();
 
-	// Place tile
 	if (mTilemap_texture && mCurrent_tile_atlas)
 	{
-		if (ImGui::GetIO().KeyCtrl && ImGui::IsItemClicked())
+		if (ImGui::GetIO().KeyCtrl)
 		{
-			if (auto tile = mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(pTile_position))
+			if (ImGui::IsItemClicked())
 			{
-				mCurrent_tile_atlas = tile->get_atlas();
-				mTile_rotation = tile->get_rotation();
+				if (auto tile = mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(pTile_position))
+				{
+					mCurrent_tile_atlas = tile->get_atlas();
+					mTile_rotation = tile->get_rotation();
+				}
 			}
 		}
-		else if (left_mouse_down || right_mouse_down)
+		else
 		{
-			if (ImGui::IsItemClicked() || (left_mouse_down && mLast_tile_position != pTile_position))
-				place_tile(pTile_position);
-			else if (ImGui::IsItemClicked(1) || (right_mouse_down && mLast_tile_position != pTile_position))
-				remove_tile(pTile_position);
-			mLast_tile_position = pTile_position;
+			if (left_mouse_down || right_mouse_down) // Allows user to "paint" tiles
+			{
+				if (ImGui::IsItemClicked() || (left_mouse_down && mLast_tile_position != pTile_position))
+					place_tile(pTile_position);
+				else if (ImGui::IsItemClicked(1) || (right_mouse_down && mLast_tile_position != pTile_position))
+					remove_tile(pTile_position);
+				mLast_tile_position = pTile_position;
+			}
 		}
 	}
 }
