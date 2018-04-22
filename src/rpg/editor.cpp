@@ -1153,6 +1153,8 @@ WGE_imgui_editor::WGE_imgui_editor()
 	mTilemap_display.set_parent(mTilemap_center_node);
 	mTilemap_zoom = 0;
 
+	mCurrent_layer = 0;
+
 	mIs_scene_modified = false;
 
 	mShow_debug_info = true;
@@ -1430,7 +1432,8 @@ void WGE_imgui_editor::draw_game_window()
 		static engine::fs::path game_path;
 		if (ImGui::FileOpenerPopup("Open Game", &game_path, true, true))
 		{
-			logger::info("You opened a file '" + game_path.string() + "'");
+			mGame.clear_scene();
+			mGame.load(game_path);
 		}
 
 		ImGui::PushItemWidth(-100);

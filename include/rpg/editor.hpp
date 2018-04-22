@@ -253,7 +253,6 @@ public:
 	void run();
 
 private:
-
 	enum
 	{
 		snapping_none = 0,
