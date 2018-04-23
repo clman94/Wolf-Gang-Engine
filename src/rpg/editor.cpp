@@ -1338,6 +1338,7 @@ void WGE_imgui_editor::draw_scene_editor_window()
 
 		ImGui::InvisibleButton("viewinteract", ImVec2(-1, -1));
 
+		// Update the editors
 		if (mCurrent_scene_editor == editor_tilemap)
 			tilemap_editor_update(tile_position_snapped);
 		else if (mCurrent_scene_editor == editor_collision)
@@ -1407,6 +1408,7 @@ void WGE_imgui_editor::draw_scene_editor_window()
 			ImGui::TreePop();
 		}
 
+		// Draw the settings for the editors
 		if (mCurrent_scene_editor == editor_tilemap)
 			draw_tilemap_editor_settings();
 		else if (mCurrent_scene_editor = editor_collision)
@@ -1468,15 +1470,8 @@ static inline bool rect_dragger(const char* pStr_id, const engine::fvector& pMou
 static inline bool resize_rect_draggers(engine::primitive_builder& mPrimitives, const engine::fvector& pMouse, const engine::frect& pRect, engine::frect* pChange)
 {
 	bool dragging = false;
-	engine::fvector bottom_pos = pRect.get_offset() + engine::fvector(pRect.w / 2, pRect.h);
-	engine::fvector bottom_changed;
-	if (circle_dragger("bottom_move", mPrimitives, pMouse, bottom_pos, &bottom_changed, false, true))
-	{
-		pChange->h += bottom_changed.y;
-		dragging = true;
-	}
 
-	engine::fvector top_pos = pRect.get_offset() + engine::fvector(pRect.w / 2, 0);
+	const engine::fvector top_pos = pRect.get_offset() + engine::fvector(pRect.w / 2, 0);
 	engine::fvector top_changed;
 	if (circle_dragger("top_move", mPrimitives, pMouse, top_pos, &top_changed, false, true))
 	{
@@ -1485,7 +1480,15 @@ static inline bool resize_rect_draggers(engine::primitive_builder& mPrimitives, 
 		dragging = true;
 	}
 
-	engine::fvector left_pos = pRect.get_offset() + engine::fvector(0, pRect.h / 2);
+	const engine::fvector bottom_pos = pRect.get_offset() + engine::fvector(pRect.w / 2, pRect.h);
+	engine::fvector bottom_changed;
+	if (circle_dragger("bottom_move", mPrimitives, pMouse, bottom_pos, &bottom_changed, false, true))
+	{
+		pChange->h += bottom_changed.y;
+		dragging = true;
+	}
+
+	const engine::fvector left_pos = pRect.get_offset() + engine::fvector(0, pRect.h / 2);
 	engine::fvector left_changed;
 	if (circle_dragger("left_move", mPrimitives, pMouse, left_pos, &left_changed, true, false))
 	{
@@ -1494,7 +1497,7 @@ static inline bool resize_rect_draggers(engine::primitive_builder& mPrimitives, 
 		dragging = true;
 	}
 
-	engine::fvector right_pos = pRect.get_offset() + engine::fvector(pRect.w, pRect.h / 2);
+	const engine::fvector right_pos = pRect.get_offset() + engine::fvector(pRect.w, pRect.h / 2);
 	engine::fvector right_changed;
 	if (circle_dragger("right_move", mPrimitives, pMouse, right_pos, &right_changed, true, false))
 	{
@@ -1506,6 +1509,8 @@ static inline bool resize_rect_draggers(engine::primitive_builder& mPrimitives, 
 
 void WGE_imgui_editor::collision_editor_update(const engine::fvector& pView_position, const engine::fvector& pTile_position_no_snap)
 {
+	// Darken the tilemap and anything else in the background.
+	// This allows the editor-specific objects to stand out more.
 	mPrimitives.add_rectangle({ engine::fvector(0, 0), mTilemap_render_target.getSize() }, { 0, 0, 0, 0.4f });
 
 	mPrimitives.push_node(mTilemap_display);
@@ -1535,8 +1540,7 @@ void WGE_imgui_editor::collision_editor_update(const engine::fvector& pView_posi
 	// Draw draggers for resizing selected collisionbox
 	if (mSelected_collbox)
 	{
-
-		// TODO: Snapping
+		// TODO: Add support for snapping.
 
 		engine::frect box_rect = engine::exact_relative_to_node(mSelected_collbox->get_region(), mTilemap_display);
 		engine::frect box_change;
@@ -1548,16 +1552,14 @@ void WGE_imgui_editor::collision_editor_update(const engine::fvector& pView_posi
 		}
 
 		// TODO: Use rect_dragger to move entire box
-
 	}
 
 	// Collision box selection
 	// Placed last so the draggers get priority
+	// TODO: Add support for selecting boxes BEHIND the currently selected one (similar to how it was done before)
 	if (!is_dragging() && ImGui::IsItemClicked(0))
-	{
 		if (auto box = pColl_container.first_collision(pTile_position_no_snap))
 			mSelected_collbox = box;
-	}
 }
 
 void WGE_imgui_editor::draw_collision_editor_settings()
@@ -1569,7 +1571,7 @@ void WGE_imgui_editor::draw_collision_editor_settings()
 		const char* coll_type_items[] = { "Wall", "Trigger", "Button", "Door" };
 		if (ImGui::Combo("Type", &current_type, coll_type_items, 4))
 		{
-
+			// TODO
 		}
 
 		static char group_buf[256]; // Temp
@@ -1618,6 +1620,7 @@ void WGE_imgui_editor::tilemap_editor_update(const engine::fvector& pTile_positi
 		{
 			if (ImGui::IsItemClicked())
 			{
+				// Copy tile
 				if (auto tile = mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(pTile_position_snapped))
 				{
 					mCurrent_tile_atlas = tile->get_atlas();
@@ -1631,9 +1634,10 @@ void WGE_imgui_editor::tilemap_editor_update(const engine::fvector& pTile_positi
 			const bool right_mouse_down = ImGui::IsMouseDown(1) && ImGui::IsItemHovered();
 			if (left_mouse_down || right_mouse_down) // Allows user to "paint" tiles
 			{
-				if (ImGui::IsItemClicked() || (left_mouse_down && mLast_tile_position != pTile_position_snapped))
+				const bool is_new_position = mLast_tile_position != pTile_position_snapped;
+				if (ImGui::IsItemClicked() || (left_mouse_down && is_new_position))
 					place_tile(pTile_position_snapped);
-				else if (ImGui::IsItemClicked(1) || (right_mouse_down && mLast_tile_position != pTile_position_snapped))
+				else if (ImGui::IsItemClicked(1) || (right_mouse_down && is_new_position))
 					remove_tile(pTile_position_snapped);
 				mLast_tile_position = pTile_position_snapped;
 			}
@@ -1645,7 +1649,7 @@ void WGE_imgui_editor::tilemap_editor_update(const engine::fvector& pTile_positi
 	{
 		mPrimitives.push_node(mTilemap_display);
 
-		// Highlight the tile that may be replaced
+		// Highlight the tile that may be replaced/removed
 		if (auto tile = mTilemap_manipulator.get_layer(mCurrent_layer).find_tile(pTile_position_snapped))
 		{
 			engine::fvector size = tile->get_atlas()->get_root_frame().get_size();
@@ -1653,6 +1657,7 @@ void WGE_imgui_editor::tilemap_editor_update(const engine::fvector& pTile_positi
 			, { 1, 0.5f, 0.5f, 0.5f }, { 1, 0, 0, 0.7f });
 		}
 
+		// Draw the tile texture that the user will place
 		mPrimitives.add_quad_texture(mTilemap_texture, pTile_position_snapped*(float)mTile_size
 			, mCurrent_tile_atlas->get_root_frame(), { 1, 1, 1, 0.7f }, mTile_rotation);
 
@@ -1662,7 +1667,7 @@ void WGE_imgui_editor::tilemap_editor_update(const engine::fvector& pTile_positi
 
 void WGE_imgui_editor::draw_tilemap_editor_settings()
 {
-	static float tilegroup_height = 300; // TODO: make nonstatic
+	static float tilegroup_height = 300; // FIXME: make nonstatic
 	if (ImGui::TreeNodeEx("Tile", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		draw_tile_group(tilegroup_height);
@@ -1701,7 +1706,7 @@ void WGE_imgui_editor::draw_tile_group(float from_bottom)
 		ImGui::TextUnformatted("No preview");
 	ImGui::EndChild();
 	ImGui::QuickTooltip("Preview of tile to place.");
-	//TODO: Add option to change background color
+	//TODO: Add option to change background color of preview in case the texture is hard to see
 
 	ImGui::SameLine();
 	ImGui::BeginGroup();
@@ -1717,7 +1722,7 @@ void WGE_imgui_editor::draw_tile_group(float from_bottom)
 	{
 		for (const auto& i : mTilemap_texture->get_texture_atlas().get_all())
 		{
-			// IDEA: Possibly add a preview for each tile in the list
+			// Possibly add a preview for each tile in the list, but that's for another day
 			if (ImGui::Selectable(i->get_name().c_str(), mCurrent_tile_atlas == i))
 				mCurrent_tile_atlas = i;
 		}
@@ -1738,7 +1743,7 @@ void WGE_imgui_editor::draw_tilemap_layers_group()
 	const size_t layer_count = mTilemap_manipulator.get_layer_count();
 	for (size_t i = 0; i < layer_count; i++)
 	{
-		size_t layer_index = layer_count - i - 1; // Reverse so the top layer is at the top of the list
+		const size_t layer_index = layer_count - i - 1; // Reverse so the top layer is at the top of the list
 		rpg::tilemap_layer& layer = mTilemap_manipulator.get_layer(layer_index);
 
 		// Checkbox on left that enables or disables a layer
@@ -1794,7 +1799,10 @@ void WGE_imgui_editor::draw_tilemap_layers_group()
 			+ mTilemap_manipulator.get_layer(mCurrent_layer).get_name() + "\"?").c_str()) == 1)
 	{
 		mCommand_manager.execute<command_delete_layer>(mTilemap_manipulator, mCurrent_layer);
-		mCurrent_layer = std::min(mCurrent_layer, mTilemap_manipulator.get_layer_count() - 1);
+		if (mTilemap_manipulator.get_layer_count() == 0)
+			mCurrent_layer = 0;
+		else
+			mCurrent_layer = std::min(mCurrent_layer, mTilemap_manipulator.get_layer_count() - 1);
 		mTilemap_display.update(mTilemap_manipulator);
 	}
 
