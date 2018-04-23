@@ -35,6 +35,16 @@ struct rect
 		return *this;
 	}
 
+	rect operator+(const rect& r) const
+	{
+		return{
+			x + r.x,
+			y + r.y,
+			w + r.w,
+			h + r.h,
+		};
+	}
+
 	rect& set_rect(const rect& a)
 	{
 		x = a.x;

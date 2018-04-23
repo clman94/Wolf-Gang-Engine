@@ -1465,6 +1465,40 @@ static inline bool rect_dragger(const char* pStr_id, const engine::fvector& pMou
 	return dragging;
 }
 
+static inline bool resize_rect_draggers(engine::primitive_builder& mPrimitives, const engine::fvector& pMouse, const engine::frect& pRect, engine::frect* pChange)
+{
+	engine::fvector bottom_pos = pRect.get_offset() + engine::fvector(pRect.w / 2, pRect.h);
+	engine::fvector bottom_changed;
+	if (circle_dragger("bottom_move", mPrimitives, pMouse, bottom_pos, &bottom_changed, false, true))
+	{
+		pChange->h += bottom_changed.y;
+	}
+
+	engine::fvector top_pos = pRect.get_offset() + engine::fvector(pRect.w / 2, 0);
+	engine::fvector top_changed;
+	if (circle_dragger("top_move", mPrimitives, pMouse, top_pos, &top_changed, false, true))
+	{
+		pChange->y += top_changed.y;
+		pChange->h -= top_changed.y;
+	}
+
+	engine::fvector left_pos = pRect.get_offset() + engine::fvector(0, pRect.h / 2);
+	engine::fvector left_changed;
+	if (circle_dragger("left_move", mPrimitives, pMouse, left_pos, &left_changed, true, false))
+	{
+		pChange->x += left_changed.x;
+		pChange->w -= left_changed.x;
+	}
+
+	engine::fvector right_pos = pRect.get_offset() + engine::fvector(pRect.w, pRect.h / 2);
+	engine::fvector right_changed;
+	if (circle_dragger("right_move", mPrimitives, pMouse, right_pos, &right_changed, true, false))
+	{
+		pChange->w += right_changed.x;
+	}
+	return is_dragging();
+}
+
 void WGE_imgui_editor::collision_editor_update(const engine::fvector& pView_position, const engine::fvector& pTile_position_no_snap)
 {
 	mPrimitives.add_rectangle({ engine::fvector(0, 0), mTilemap_render_target.getSize() }, { 0, 0, 0, 0.4f });
@@ -1496,46 +1530,20 @@ void WGE_imgui_editor::collision_editor_update(const engine::fvector& pView_posi
 	// Draw draggers for resizing selected collisionbox
 	if (mSelected_collbox)
 	{
-		const float scale = mTilemap_display.get_absolute_scale().x*mTilemap_display.get_unit();
 
 		// TODO: Snapping
 
-		engine::frect box_rect = mSelected_collbox->get_region();
-		engine::fvector bottom_pos = exact_relative_to_node(box_rect.get_offset() + engine::fvector(box_rect.w / 2, box_rect.h), mTilemap_display);
-		engine::fvector bottom_changed;
-		if (circle_dragger("bottom_move", mPrimitives, pView_position, bottom_pos, &bottom_changed, false, true))
+		engine::frect box_rect = engine::exact_relative_to_node(mSelected_collbox->get_region(), mTilemap_display);
+		engine::frect box_change;
+		if (resize_rect_draggers(mPrimitives, pView_position, box_rect, &box_change))
 		{
-			box_rect.h += bottom_changed.y / scale;
-		}
-
-		engine::fvector top_pos = exact_relative_to_node(box_rect.get_offset() + engine::fvector(box_rect.w / 2, 0), mTilemap_display);
-		engine::fvector top_changed;
-		if (circle_dragger("top_move", mPrimitives, pView_position, top_pos, &top_changed, false, true))
-		{
-			top_changed /= scale;
-			box_rect.y += top_changed.y;
-			box_rect.h -= top_changed.y;
-		}
-
-		engine::fvector left_pos = exact_relative_to_node(box_rect.get_offset() + engine::fvector(0, box_rect.h / 2), mTilemap_display);
-		engine::fvector left_changed;
-		if (circle_dragger("left_move", mPrimitives, pView_position, left_pos, &left_changed, true, false))
-		{
-			left_changed /= scale;
-			box_rect.x += left_changed.x;
-			box_rect.w -= left_changed.x;
-		}
-
-		engine::fvector right_pos = exact_relative_to_node(box_rect.get_offset() + engine::fvector(box_rect.w, box_rect.h / 2), mTilemap_display);
-		engine::fvector right_changed;
-		if (circle_dragger("right_move", mPrimitives, pView_position, right_pos, &right_changed, true, false))
-		{
-			box_rect.w += right_changed.x / scale;
+			const float scale = 1/(mTilemap_display.get_absolute_scale().x*mTilemap_display.get_unit());
+			box_change = engine::scale(box_change, scale); // Scale to game units
+			mSelected_collbox->set_region(mSelected_collbox->get_region() + box_change);
 		}
 
 		// TODO: Use rect_dragger to move entire box
 
-		mSelected_collbox->set_region(box_rect);
 	}
 
 	// Collision box selection

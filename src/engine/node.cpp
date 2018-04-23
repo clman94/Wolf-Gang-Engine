@@ -182,3 +182,11 @@ fvector engine::exact_relative_to_node(fvector pPosition, const node & pNode)
 	return ((pPosition*pNode.get_absolute_scale()).rotate(pNode.get_absolute_rotation())
 		+ pNode.get_absolute_position())*pNode.get_unit();
 }
+
+frect engine::exact_relative_to_node(frect pRect, const node & pNode)
+{
+	return{
+		exact_relative_to_node(pRect.get_offset(), pNode),
+		pRect.get_size()*pNode.get_absolute_scale()*pNode.get_unit()
+	};
+}

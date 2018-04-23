@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include "vector.hpp"
+#include "rect.hpp"
 #include "utility.hpp"
 
 namespace engine
@@ -69,6 +70,7 @@ private:
 
 // Calculates exact position of point relative to node
 fvector exact_relative_to_node(fvector pPosition, const node & pNode);
+frect exact_relative_to_node(frect pRect, const node & pNode);
 
 }
 
