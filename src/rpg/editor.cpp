@@ -1467,11 +1467,13 @@ static inline bool rect_dragger(const char* pStr_id, const engine::fvector& pMou
 
 static inline bool resize_rect_draggers(engine::primitive_builder& mPrimitives, const engine::fvector& pMouse, const engine::frect& pRect, engine::frect* pChange)
 {
+	bool dragging = false;
 	engine::fvector bottom_pos = pRect.get_offset() + engine::fvector(pRect.w / 2, pRect.h);
 	engine::fvector bottom_changed;
 	if (circle_dragger("bottom_move", mPrimitives, pMouse, bottom_pos, &bottom_changed, false, true))
 	{
 		pChange->h += bottom_changed.y;
+		dragging = true;
 	}
 
 	engine::fvector top_pos = pRect.get_offset() + engine::fvector(pRect.w / 2, 0);
@@ -1480,6 +1482,7 @@ static inline bool resize_rect_draggers(engine::primitive_builder& mPrimitives, 
 	{
 		pChange->y += top_changed.y;
 		pChange->h -= top_changed.y;
+		dragging = true;
 	}
 
 	engine::fvector left_pos = pRect.get_offset() + engine::fvector(0, pRect.h / 2);
@@ -1488,6 +1491,7 @@ static inline bool resize_rect_draggers(engine::primitive_builder& mPrimitives, 
 	{
 		pChange->x += left_changed.x;
 		pChange->w -= left_changed.x;
+		dragging = true;
 	}
 
 	engine::fvector right_pos = pRect.get_offset() + engine::fvector(pRect.w, pRect.h / 2);
@@ -1495,8 +1499,9 @@ static inline bool resize_rect_draggers(engine::primitive_builder& mPrimitives, 
 	if (circle_dragger("right_move", mPrimitives, pMouse, right_pos, &right_changed, true, false))
 	{
 		pChange->w += right_changed.x;
+		dragging = true;
 	}
-	return is_dragging();
+	return dragging;
 }
 
 void WGE_imgui_editor::collision_editor_update(const engine::fvector& pView_position, const engine::fvector& pTile_position_no_snap)
