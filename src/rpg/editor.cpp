@@ -1440,18 +1440,22 @@ static inline bool drag_behavior(hash::hash32_t pId, bool pHovered)
 	return dragging;
 }
 
-static inline bool circle_dragger(const char* pStr_id, engine::primitive_builder& pPrimitives, const engine::fvector& pMouse, const engine::fvector& pPositon, engine::fvector* pChange, bool pMove_X = true, bool pMove_Y = true)
+static inline bool circle_dragger(hash::hash32_t pId, engine::primitive_builder& pPrimitives, const engine::fvector& pMouse, const engine::fvector& pPosition, engine::fvector* pChange, bool pMove_X = true, bool pMove_Y = true)
 {
-	const hash::hash32_t id = hash::FNV1a_32(pStr_id);
-	const bool hovered = pPositon.distance(pMouse) < 3.f;
-	const bool dragging = drag_behavior(id, hovered);
-	pPrimitives.add_circle(pPositon, 3.f, { 1, 1, 1, (hovered || dragging ? 1.f : 0.f) }, { 1, 1, 1, 1 });
+	const bool hovered = pPosition.distance(pMouse) < 3.f;
+	const bool dragging = drag_behavior(pId, hovered);
+	pPrimitives.add_circle(pPosition, 3.f, { 1, 1, 1, (hovered || dragging ? 1.f : 0.f) }, { 1, 1, 1, 1 });
 	if (dragging)
 	{
 		pChange->x += ImGui::GetIO().MouseDelta.x*(pMove_X ? 1 : 0);
 		pChange->y += ImGui::GetIO().MouseDelta.y*(pMove_Y ? 1 : 0);
 	}
 	return dragging;
+}
+
+static inline bool circle_dragger(const char* pStr_id, engine::primitive_builder& pPrimitives, const engine::fvector& pMouse, const engine::fvector& pPosition, engine::fvector* pChange, bool pMove_X = true, bool pMove_Y = true)
+{
+	return circle_dragger(hash::FNV1a_32(pStr_id), pPrimitives, pMouse, pPosition, pChange, pMove_X, pMove_Y);
 }
 
 static inline bool rect_dragger(const char* pStr_id, const engine::fvector& pMouse, const engine::frect& pRect, engine::frect* pChange)
@@ -1467,13 +1471,14 @@ static inline bool rect_dragger(const char* pStr_id, const engine::fvector& pMou
 	return dragging;
 }
 
-static inline bool resize_rect_draggers(engine::primitive_builder& pPrimitives, const engine::fvector& pMouse, const engine::frect& pRect, engine::frect* pChange)
+static inline bool resize_rect_draggers(const char* pStr_id, engine::primitive_builder& pPrimitives, const engine::fvector& pMouse, const engine::frect& pRect, engine::frect* pChange)
 {
+	const hash::hash32_t id = hash::FNV1a_32(pStr_id);
 	bool dragging = false;
 
 	const engine::fvector top_pos = pRect.get_offset() + engine::fvector(pRect.w / 2, 0);
 	engine::fvector top_changed;
-	if (circle_dragger("top_move", pPrimitives, pMouse, top_pos, &top_changed, false, true))
+	if (circle_dragger(hash::combine(hash::FNV1a_32("top_move"), id), pPrimitives, pMouse, top_pos, &top_changed, false, true))
 	{
 		pChange->y += top_changed.y;
 		pChange->h -= top_changed.y;
@@ -1482,7 +1487,7 @@ static inline bool resize_rect_draggers(engine::primitive_builder& pPrimitives, 
 
 	const engine::fvector bottom_pos = pRect.get_offset() + engine::fvector(pRect.w / 2, pRect.h);
 	engine::fvector bottom_changed;
-	if (circle_dragger("bottom_move", pPrimitives, pMouse, bottom_pos, &bottom_changed, false, true))
+	if (circle_dragger(hash::combine(hash::FNV1a_32("bottom_move"), id), pPrimitives, pMouse, bottom_pos, &bottom_changed, false, true))
 	{
 		pChange->h += bottom_changed.y;
 		dragging = true;
@@ -1490,7 +1495,7 @@ static inline bool resize_rect_draggers(engine::primitive_builder& pPrimitives, 
 
 	const engine::fvector left_pos = pRect.get_offset() + engine::fvector(0, pRect.h / 2);
 	engine::fvector left_changed;
-	if (circle_dragger("left_move", pPrimitives, pMouse, left_pos, &left_changed, true, false))
+	if (circle_dragger(hash::combine(hash::FNV1a_32("left_move"), id), pPrimitives, pMouse, left_pos, &left_changed, true, false))
 	{
 		pChange->x += left_changed.x;
 		pChange->w -= left_changed.x;
@@ -1499,7 +1504,7 @@ static inline bool resize_rect_draggers(engine::primitive_builder& pPrimitives, 
 
 	const engine::fvector right_pos = pRect.get_offset() + engine::fvector(pRect.w, pRect.h / 2);
 	engine::fvector right_changed;
-	if (circle_dragger("right_move", pPrimitives, pMouse, right_pos, &right_changed, true, false))
+	if (circle_dragger(hash::combine(hash::FNV1a_32("right_move"), id), pPrimitives, pMouse, right_pos, &right_changed, true, false))
 	{
 		pChange->w += right_changed.x;
 		dragging = true;
@@ -1548,8 +1553,8 @@ void WGE_imgui_editor::collision_editor_update(const engine::fvector& pView_posi
 		engine::frect box_rect = engine::exact_relative_to_node(mSelected_collbox->get_region(), mTilemap_display);
 		engine::frect box_change(0, 0, 0, 0);
 
-		if (resize_rect_draggers(mPrimitives, pView_position, box_rect, &box_change)
-			|| rect_dragger("collbox_dragger", pView_position, box_rect, &box_change))
+		if (resize_rect_draggers("collbox_resize", mPrimitives, pView_position, box_rect, &box_change)
+			|| rect_dragger("collbox_move", pView_position, box_rect, &box_change))
 		{
 			const float scale = 1/(mTilemap_display.get_absolute_scale().x*mTilemap_display.get_unit());
 			box_change = engine::scale(box_change, scale); // Scale to game units
