@@ -726,13 +726,11 @@ bool collisionbox_editor::tile_selection(engine::fvector pCursor, bool pCycle)
 		// Start at 1 because it does require that there is one wall underneath
 		// and overall works well when looping through.
 		for (size_t i = 1; i < hits.size(); i++)
-		{
 			if (hits[i] == mSelection)
 			{
 				mSelection = hits[i - 1];
 				return true;
 			}
-		}
 	}
 
 	mSelection = hits.back(); // Top hit

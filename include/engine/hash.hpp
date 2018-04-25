@@ -13,4 +13,6 @@ hash32_t FNV1a_32(const std::uint8_t* pData, std::size_t pSize);
 hash32_t FNV1a_32(const char* pData, int pLength = -1); // The string must be null terminated if length < 0
 hash32_t FNV1a_32(const std::string& pString);
 
+hash32_t combine(const hash32_t& pA, const hash32_t& pB);
+
 }

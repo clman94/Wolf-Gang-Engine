@@ -30,4 +30,9 @@ hash32_t FNV1a_32(const std::string& pString)
 	return FNV1a_32(pString.c_str(), pString.size());
 }
 
+hash32_t combine(const hash32_t& pA, const hash32_t& pB)
+{
+	return pA ^ pB;
+}
+
 }
