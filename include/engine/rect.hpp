@@ -29,9 +29,31 @@ struct rect
 		set_size(b);
 	}
 
+	bool operator==(const rect& r)
+	{
+		return x == r.x &&
+			y == r.y &&
+			w == r.w &&
+			h == r.h;
+	}
+
+	bool operator!=(const rect& r)
+	{
+		return !operator==(r);
+	}
+
 	rect& operator=(const rect& r)
 	{
 		set_rect(r);
+		return *this;
+	}
+
+	rect& operator+=(const rect& r)
+	{
+		x += r.x;
+		y += r.y;
+		w += r.w;
+		h += r.h;
 		return *this;
 	}
 
@@ -43,6 +65,11 @@ struct rect
 			w + r.w,
 			h + r.h,
 		};
+	}
+
+	rect operator*(T a) const
+	{
+		return{ x*a, y*a, w*a, h*a };
 	}
 
 	rect& set_rect(const rect& a)
@@ -76,11 +103,6 @@ struct rect
 		w = v.x;
 		h = v.y;
 		return *this;
-	}
-
-	rect operator*(T a) const
-	{
-		return{ x*a, y*a, w*a, h*a };
 	}
 
 	vector<T> get_vertex(std::size_t pIndex) const

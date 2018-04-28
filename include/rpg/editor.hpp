@@ -34,16 +34,19 @@ class command_manager
 public:
 
 	template<typename T, typename... Targs>
+	void add_new(Targs&&... pArgs)
+	{
+		mUndo.push_back(std::make_shared<T>(std::forward<Targs>(pArgs)...));
+	}
+
+	template<typename T, typename... Targs>
 	bool execute(Targs&&... pArgs)
 	{
 		assert(!mCurrent);
 		mRedo.clear();
-		auto cmd = std::make_shared<T>(std::forward<Targs>(pArgs)...);
-		mUndo.push_back(cmd);
-		return cmd->execute();
+		add_new<T>(std::forward<Targs>(pArgs)...);
+		return mUndo.back()->execute();
 	}
-
-	bool add(std::shared_ptr<command> pCommand);
 
 	// Begin a command.
 	template<typename T, typename... Targs>
@@ -58,6 +61,8 @@ public:
 	{
 		return std::dynamic_pointer_cast<T>(mCurrent);
 	}
+
+	void cancel();
 	void complete(); // Archives the current command in the undo list without executing
 	bool execute_and_complete();
 
@@ -73,100 +78,6 @@ private:
 
 namespace editors
 {
-
-const engine::color default_gui_bg_color(30, 30, 30, 255);
-
-class editor :
-	public engine::render_object
-{
-public:
-	editor();
-
-	void set_game(rpg::game& pGame);
-
-	virtual bool open_editor() { return true;  }
-
-	bool is_changed() const;
-
-	virtual bool save() { mIs_changed = false; return true; };
-
-protected:
-	rpg::game* mGame;
-
-	void editor_changed();
-
-private:
-	bool mIs_changed;
-};
-
-class scene_editor :
-	public editor
-{
-public:
-	scene_editor();
-	bool open_scene(std::string pName); // Should be called before open_editor()
-
-protected:
-	float mZoom;
-	void update_zoom(engine::renderer& pR);
-
-	rpg::scene_loader mLoader;
-	rpg::tilemap_manipulator mTilemap_manipulator;
-	rpg::tilemap_display     mTilemap_display;
-};
-
-class collisionbox_editor :
-	public scene_editor
-{
-public:
-	collisionbox_editor();
-
-	virtual bool open_editor();
-
-	int draw(engine::renderer& pR);
-	void load_terminal_interface(engine::terminal_system& pTerminal);
-
-	bool save();
-	
-private:
-	std::shared_ptr<engine::terminal_command_group> mCollision_editor_group;
-
-	command_manager mCommand_manager;
-
-	std::shared_ptr<rpg::collision_box> mSelection;
-
-
-	enum class state
-	{
-		normal,
-		size_mode,
-		move_mode,
-		resize_mode
-	};
-
-	state mState;
-	engine::fvector mDrag_from;
-
-	enum class grid_snap
-	{
-		none,
-		pixel,
-		eighth,
-		quarter,
-		full
-	} mGrid_snap;
-
-	engine::frect mResize_mask;
-	engine::frect mOriginal_rect; // For resize_mode
-
-	rpg::collision_box::type     mCurrent_type;
-	rpg::collision_box_container mContainer;
-
-	engine::rectangle_node mWall_display;
-	engine::rectangle_node mResize_display;
-
-	bool tile_selection(engine::fvector pCursor, bool pCycle = true);
-};
 
 class editor_settings_loader
 {
@@ -244,8 +155,10 @@ private:
 	command_manager mCommand_manager;
 	int mTilemap_current_snapping;
 
-	rpg::collision_box_container pColl_container;
+	rpg::collision_box_container mColl_container;
 	rpg::collision_box::ptr mSelected_collbox;
+	engine::frect mBox_change;
+	engine::frect mOriginal_box;
 
 	bool mShow_grid;
 	engine::color mGrid_color;

@@ -33,12 +33,9 @@ inline engine::fvector read_args_vector(const engine::terminal_arglist& pArgs, f
 	return ret;
 }
 
-bool command_manager::add(std::shared_ptr<command> pCommand)
+void command_manager::cancel()
 {
-	assert(!mCurrent);
-	mRedo.clear();
-	mUndo.push_back(pCommand);
-	return true;
+	mCurrent.reset();
 }
 
 void command_manager::complete()
@@ -301,77 +298,6 @@ private:
 	rpg::tilemap_manipulator* mTilemap_manipulator;
 };
 
-editor::editor()
-{
-	mIs_changed = false;
-}
-
-void editor::set_game(rpg::game & pGame)
-{
-	mGame = &pGame;
-}
-
-bool editor::is_changed() const
-{
-	return mIs_changed;
-}
-
-void editor::editor_changed()
-{
-	mIs_changed = true;
-}
-
-// ##########
-// scene_editor
-// ##########
-
-scene_editor::scene_editor()
-{
-	mZoom = 0;
-}
-
-bool scene_editor::open_scene(std::string pName)
-{
-	mTilemap_manipulator.clear();
-	mTilemap_display.clear();
-
-	assert(mGame);
-
-	engine::generic_path path((mGame->get_source_path() / "scenes" / pName).string());
-	if (!mLoader.load(path.parent(), path.filename()))
-	{
-		logger::error("Unable to open scene '" + pName + "'");
-		return false;
-	}
-
-	assert(mGame != nullptr);
-	auto texture = mGame->get_resource_manager().get_resource<engine::texture>("texture", mLoader.get_tilemap_texture());
-	if (!texture)
-	{
-		logger::warning("Invalid tilemap texture in scene");
-		logger::info("If you have yet to specify a tilemap texture, you can ignore the last warning");
-	}
-	else
-	{
-		mTilemap_display.set_texture(texture);
-		//mTilemap_display.set_color({ 100, 100, 255, 150 });
-
-		mTilemap_manipulator.load_xml(mLoader.get_tilemap());
-		mTilemap_display.update(mTilemap_manipulator);
-	}
-	return true;
-}
-
-void scene_editor::update_zoom(engine::renderer & pR)
-{
-	if (pR.is_key_pressed(engine::renderer::key_code::Add))
-		mZoom += 0.5;
-	if (pR.is_key_pressed(engine::renderer::key_code::Subtract))
-		mZoom -= 0.5;
-	float factor = std::pow(2.f, mZoom);
-	set_scale({ factor, factor });
-}
-
 // ##########
 // collisionbox_editor
 // ##########
@@ -465,277 +391,6 @@ private:
 	std::shared_ptr<rpg::collision_box> mBox;
 	std::shared_ptr<rpg::collision_box> mOpposing;
 };
-
-collisionbox_editor::collisionbox_editor()
-{
-	mWall_display.set_color({ 100, 255, 100, 200 });
-	mWall_display.set_outline_color({ 255, 255, 255, 255 });
-	mWall_display.set_outline_thinkness(1);
-
-	mCurrent_type = rpg::collision_box::type::wall;
-	mGrid_snap = grid_snap::full;
-
-	mState = state::normal;
-}
-
-bool collisionbox_editor::open_editor()
-{
-	mCommand_manager.clear();
-	mContainer.clear();
-	if (mLoader.get_collisionboxes())
-		return mContainer.load_xml(mLoader.get_collisionboxes());
-	return true;
-}
-
-int collisionbox_editor::draw(engine::renderer& pR)
-{
-	update_zoom(pR);
-
-	const bool button_left = pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_left);
-	const bool button_left_down = pR.is_mouse_down(engine::renderer::mouse_button::mouse_left);
-	const bool button_right = pR.is_mouse_pressed(engine::renderer::mouse_button::mouse_right);
-	const bool button_shift = pR.is_key_down(engine::renderer::key_code::LShift);
-	const bool button_ctrl = pR.is_key_down(engine::renderer::key_code::LControl);
-
-	const engine::fvector mouse_position = pR.get_mouse_position(*this);
-	const engine::fvector exact_tile_position = (mouse_position * get_unit()).floor()/std::pow(get_unit(), 2);
-
-	engine::fvector tile_position;
-	engine::fvector selection_size;
-	if (mGrid_snap == grid_snap::none) // No grid
-	{
-		tile_position = exact_tile_position;
-		selection_size = engine::fvector(0, 0);
-	}
-	else
-	{
-		// Snap the tile position and adjust the selection size for the new grid
-		float scale = 1;
-		switch (mGrid_snap)
-		{
-		case grid_snap::pixel:   scale = 1 / get_unit(); break;
-		case grid_snap::eighth:  scale = 0.25f;          break;
-		case grid_snap::quarter: scale = 0.5f;           break;
-		case grid_snap::full:    scale = 1;              break;
-		}
-		tile_position = (exact_tile_position / scale).floor() * scale;
-		selection_size = engine::fvector(scale, scale);
-	}
-
-	switch (mState)
-	{
-	case state::normal:
-	{
-		// Select tile
-		if (button_left)
-		{
-			if (button_ctrl && mSelection) // Resize
-			{
-				const engine::fvector pos = (exact_tile_position - mSelection->get_region().get_center())/**mSelection->get_region().get_size().normalize()*/;
-				if (std::abs(pos.x) > std::abs(pos.y))
-				{
-					if (pos.x > 0)
-						mResize_mask = engine::frect(0, 0, 1, 0); // Right
-					else
-						mResize_mask = engine::frect(1, 0, -1, 0); // Left
-				}
-				else
-				{
-					if (pos.y > 0)
-						mResize_mask = engine::frect(0, 0, 0, 1); // Bottom
-					else
-						mResize_mask = engine::frect(0, 1, 0, -1); // Top
-				}
-				mState = state::resize_mode;
-				mCommand_manager.add(std::make_shared<command_wall_changed>(mSelection));
-				mOriginal_rect = mSelection->get_region();
-				mDrag_from = tile_position;
-			}
-			else if (!tile_selection(exact_tile_position) // Create/Select
-				|| button_shift) // Left shift allows us to place wall on another wall
-			{
-				mSelection = mContainer.add_collision_box(mCurrent_type);
-				mCommand_manager.add(std::make_shared<command_add_wall>(mSelection, &mContainer));
-				mSelection->set_region({ tile_position, selection_size });
-
-				mState = state::size_mode;
-				mDrag_from = tile_position;
-			}
-			else // Move
-			{
-				mCommand_manager.add(std::make_shared<command_wall_changed>(mSelection));
-				mState = state::move_mode;
-				mDrag_from = tile_position - mSelection->get_region().get_offset();
-			}
-		}
-
-		// Remove tile
-		else if (button_right)
-		{
-			// No cycling when removing tile.
-			if (tile_selection(exact_tile_position, false))
-			{
-				mSelection = nullptr;
-			}
-		}
-
-		else if (pR.is_key_down(engine::renderer::key_code::LControl))
-		{
-			if (pR.is_key_pressed(engine::renderer::key_code::Z)) // Undo
-			{
-				mCommand_manager.undo();
-			}
-			else if (pR.is_key_pressed(engine::renderer::key_code::Y)) // Redo
-			{
-				mCommand_manager.redo();
-			}
-		}
-
-		break;
-	}
-	case state::size_mode:
-	{
-		// Size mode only last while user is holding down left-click
-		if (!button_left_down)
-		{
-			mState = state::normal;
-			break;
-		}
-
-		engine::frect   rect = mSelection->get_region();
-		engine::fvector resize_to = tile_position;
-
-		// Cursor moves behind the initial point where the wall is created
-		if (tile_position.x <= mDrag_from.x)
-		{
-			rect.x = tile_position.x;   // Move the wall back
-			resize_to.x = mDrag_from.x; // Resize accordingly
-		}
-		if (tile_position.y <= mDrag_from.y)
-		{
-			rect.y = tile_position.y;
-			resize_to.y = mDrag_from.y;
-		}
-		rect.set_size(resize_to - rect.get_offset() + selection_size);
-
-		// Update wall
-		mSelection->set_region(rect);
-
-		break;
-	}
-	case state::move_mode:
-	{		
-		if (!button_left_down)
-		{
-			mState = state::normal;
-			break;
-		}
-
-		auto rect = mSelection->get_region();
-		rect.set_offset(tile_position - mDrag_from);
-		mSelection->set_region(rect);
-		break;
-	}
-	case state::resize_mode:
-	{
-		if (!button_left_down)
-		{
-			mState = state::normal;
-			break;
-		}
-		auto rect = mSelection->get_region();
-		rect.set_offset(mOriginal_rect.get_offset() + (tile_position - mDrag_from)*mResize_mask.get_offset());
-		rect.set_size(mOriginal_rect.get_size() + (tile_position - mDrag_from)*mResize_mask.get_size());
-
-		// Limit size
-		rect.w = std::max(rect.w, selection_size.x);
-		rect.h = std::max(rect.h, selection_size.y);
-
-		mSelection->set_region(rect);
-		break;
-	}
-	}
-
-	mTilemap_display.draw(pR);
-	for (auto& i : mContainer.get_boxes()) // TODO: Optimize
-	{
-		if (i == mSelection)
-			mWall_display.set_outline_color({ 180, 90, 90, 255 });   // Outline wall red if selected...
-		else
-			mWall_display.set_outline_color({ 255, 255, 255, 255 }); // ...Otherwise it is white
-
-		if (!i->get_wall_group())
-			mWall_display.set_color({ 100, 255, 100, 200 }); // Green wall if not in a wall group...
-		else
-			mWall_display.set_color({ 200, 100, 200, 200 }); // ...Purple-ish otherwise
-
-		// The wall region has to be scaled to pixel coordinates
-		mWall_display.set_position(i->get_region().get_offset());
-		mWall_display.set_size(i->get_region().get_size() * get_unit());
-		mWall_display.draw(pR);
-	}
-	return 0;
-}
-
-void collisionbox_editor::load_terminal_interface(engine::terminal_system & pTerminal)
-{
-	mCollision_editor_group = std::make_shared<engine::terminal_command_group>();
-	mCollision_editor_group->set_root_command("collision");
-	mCollision_editor_group->add_command("clear",
-		[&](const engine::terminal_arglist& pArgs)->bool
-	{
-		mContainer.clear();
-		mSelection.reset();
-		return true;
-	}, "- Clear all collision boxes (Warning: Can't undo)");
-	pTerminal.add_group(mCollision_editor_group);
-}
-
-bool collisionbox_editor::save()
-{
-	logger::info("Saving collision boxes");
-
-	mContainer.save_xml(mLoader.get_document(), mLoader.get_collisionboxes());
-	mLoader.save();
-
-	logger::info("Saved " + std::to_string(mContainer.get_count()) +" collision box(es)");
-
-	return editor::save();
-}
-
-bool collisionbox_editor::tile_selection(engine::fvector pCursor, bool pCycle)
-{
-	const auto hits = mContainer.collision(pCursor);
-	if (hits.empty())
-	{
-		mSelection = nullptr;
-		return false;
-	}
-
-	// Cycle through overlapping walls.
-	// Check if selection is selected again.
-	if (mSelection
-		&& mSelection->get_region().is_intersect(pCursor))
-	{
-		// It will not select the tile underneath by it will retain the current
-		// selection if selected
-		if (!pCycle)
-			return true;
-
-		// Find the hit that is underneath the current selection.
-		// Start at 1 because it does require that there is one wall underneath
-		// and overall works well when looping through.
-		for (size_t i = 1; i < hits.size(); i++)
-			if (hits[i] == mSelection)
-			{
-				mSelection = hits[i - 1];
-				return true;
-			}
-	}
-
-	mSelection = hits.back(); // Top hit
-	return true;
-}
 
 bool editor_settings_loader::load(const engine::fs::path& pPath)
 {
@@ -837,11 +492,26 @@ int OSA_distance(const std::string& pStr1, const std::string& pStr2)
 	return d[pStr1.length()][pStr2.length()];
 }
 
-engine::fvector snap(const engine::fvector& pPos, const engine::fvector& pTo, const engine::fvector& pOffset = {0, 0})
+static inline engine::fvector snap(const engine::fvector& pPos, const engine::fvector& pTo, const engine::fvector& pOffset = {0, 0})
 {
 	if (pTo.has_zero())
 		return pPos;
 	return (pPos / pTo - pOffset).floor() * pTo + pOffset;
+}
+
+static inline engine::fvector snap_closest(const engine::fvector& pPos, const engine::fvector& pTo, const engine::fvector& pOffset = { 0, 0 })
+{
+	if (pTo.has_zero())
+		return pPos;
+	return (pPos / pTo - pOffset).round() * pTo + pOffset;
+}
+
+static inline engine::frect snap_closest(const engine::frect& pRect, const engine::fvector& pTo, const engine::fvector& pOffset = { 0, 0 })
+{
+	return{
+		snap_closest(pRect.get_offset(), pTo, pOffset),
+		snap_closest(pRect.get_size(), pTo, pOffset)
+	};
 }
 
 void draw_grid(engine::primitive_builder& pPrimitives, engine::fvector pAlign_to, engine::fvector pScale, engine::fvector pDisplay_size, engine::color pColor)
@@ -1042,7 +712,7 @@ void WGE_imgui_editor::prepare_scene(engine::fs::path pPath, const std::string& 
 		mTilemap_display.set_unit(static_cast<float>(mTile_size));
 		mTilemap_display.update(mTilemap_manipulator);
 
-		pColl_container.load_xml(mScene_loader.get_collisionboxes());
+		mColl_container.load_xml(mScene_loader.get_collisionboxes());
 		mSelected_collbox.reset();
 
 		mCurrent_tile_atlas.reset();
@@ -1060,6 +730,7 @@ void WGE_imgui_editor::save_scene()
 	logger::info("Saving scene");
 	mTilemap_manipulator.condense_all();
 	mScene_loader.set_tilemap(mTilemap_manipulator);
+	mScene_loader.set_collisionboxes(mColl_container);
 	mTilemap_manipulator.explode_all();
 	if (!mScene_loader.save())
 	{
@@ -1419,6 +1090,7 @@ void WGE_imgui_editor::draw_scene_editor_window()
 }
 
 static hash::hash32_t active_dragger_id = 0;
+
 static inline bool is_dragging()
 {
 	return active_dragger_id != 0;
@@ -1435,7 +1107,7 @@ static inline bool drag_behavior(hash::hash32_t pId, bool pHovered)
 	else if (!ImGui::IsMouseDown(0) && dragging)
 	{
 		active_dragger_id = 0; // End drag
-		return false;
+		return true; // Return true for one more frame after the mouse is released
 	}
 	return dragging;
 }
@@ -1444,7 +1116,7 @@ static inline bool circle_dragger(hash::hash32_t pId, engine::primitive_builder&
 {
 	const bool hovered = pPosition.distance(pMouse) < 3.f;
 	const bool dragging = drag_behavior(pId, hovered);
-	pPrimitives.add_circle(pPosition, 3.f, { 1, 1, 1, (hovered || dragging ? 1.f : 0.f) }, { 1, 1, 1, 1 });
+	pPrimitives.add_circle(pPosition, 3.f, { 1, 1, 1, (hovered || dragging ? 1.f : 0.f) }, { 1, 1, 1, 1});
 	if (dragging)
 	{
 		pChange->x += ImGui::GetIO().MouseDelta.x*(pMove_X ? 1 : 0);
@@ -1471,7 +1143,7 @@ static inline bool rect_dragger(const char* pStr_id, const engine::fvector& pMou
 	return dragging;
 }
 
-static inline bool resize_rect_draggers(const char* pStr_id, engine::primitive_builder& pPrimitives, const engine::fvector& pMouse, const engine::frect& pRect, engine::frect* pChange)
+static inline bool rect_resize_draggers(const char* pStr_id, engine::primitive_builder& pPrimitives, const engine::fvector& pMouse, const engine::frect& pRect, engine::frect* pChange)
 {
 	const hash::hash32_t id = hash::FNV1a_32(pStr_id);
 	bool dragging = false;
@@ -1528,7 +1200,7 @@ void WGE_imgui_editor::collision_editor_update(const engine::fvector& pView_posi
 	mPrimitives.add_rectangle({ engine::fvector(0, 0), mTilemap_render_target.getSize() }, { 0, 0, 0, 0.4f });
 
 	mPrimitives.push_node(mTilemap_display);
-	for (auto& i : pColl_container.get_boxes())
+	for (auto& i : mColl_container.get_boxes())
 	{
 		engine::color outline;
 		if (i == mSelected_collbox)
@@ -1548,17 +1220,35 @@ void WGE_imgui_editor::collision_editor_update(const engine::fvector& pView_posi
 	// Draw draggers for resizing selected collisionbox
 	if (mSelected_collbox)
 	{
-		// TODO: Add support for snapping.
-
 		engine::frect box_rect = engine::exact_relative_to_node(mSelected_collbox->get_region(), mTilemap_display);
 		engine::frect box_change(0, 0, 0, 0);
 
-		if (resize_rect_draggers("collbox_resize", mPrimitives, pView_position, box_rect, &box_change)
+		if (rect_resize_draggers("collbox_resize", mPrimitives, pView_position, box_rect, &box_change)
 			|| rect_dragger("collbox_move", pView_position, box_rect, &box_change))
 		{
+			if (ImGui::IsItemClicked(0)) // Begin some dragging
+			{
+				mBox_change = engine::frect(0, 0, 0, 0);
+				mOriginal_box = mSelected_collbox->get_region();
+				mCommand_manager.start<command_wall_changed>(mSelected_collbox);
+			}
 			const float scale = 1/(mTilemap_display.get_absolute_scale().x*mTilemap_display.get_unit());
-			box_change = engine::scale(box_change, scale); // Scale to game units
-			mSelected_collbox->set_region(mSelected_collbox->get_region() + box_change);
+			mBox_change += engine::scale(box_change, scale); // Scale to game units
+			engine::frect new_box_rect = mOriginal_box + snap_closest(mBox_change, calc_snapping(mTilemap_current_snapping, mTile_size));
+			new_box_rect.w = std::max(new_box_rect.w, 1.f / mTile_size); // Limit the size to one pixel so you can still see and select it
+			new_box_rect.h = std::max(new_box_rect.h, 1.f / mTile_size);
+			mSelected_collbox->set_region(new_box_rect);
+		
+			if (ImGui::IsMouseReleased(0)) // End dragging
+			{
+				if (mBox_change == engine::frect(0, 0, 0, 0))
+					mCommand_manager.cancel(); // There was no change so dont add it the history
+				else
+				{
+					mCommand_manager.complete();
+					mIs_scene_modified = true;
+				}
+			}
 		}
 	}
 
@@ -1566,7 +1256,7 @@ void WGE_imgui_editor::collision_editor_update(const engine::fvector& pView_posi
 	// Placed last so the draggers get priority
 	// TODO: Add support for selecting boxes BEHIND the currently selected one (similar to how it was done before)
 	if (!is_dragging() && ImGui::IsItemClicked(0))
-		if (auto box = pColl_container.first_collision(pTile_position_no_snap))
+		if (auto box = mColl_container.first_collision(pTile_position_no_snap))
 			mSelected_collbox = box;
 }
 
@@ -1581,9 +1271,20 @@ void WGE_imgui_editor::draw_collision_editor_settings()
 		{
 			// TODO
 		}
+		std::string pie;
 
-		static char group_buf[256]; // Temp
-		ImGui::InputText("Group", group_buf, 256);
+		char group_buf[256] = { 0, };
+		if (mSelected_collbox->get_wall_group())
+			std::strncpy(group_buf, mSelected_collbox->get_wall_group()->get_name().c_str(), 256);
+		else
+			group_buf[0] = '\0';
+		if (ImGui::InputText("Group", group_buf, 256, ImGuiInputTextFlags_EnterReturnsTrue))
+		{
+			if (std::strlen(group_buf) == 0)
+				mSelected_collbox->set_wall_group(nullptr);
+			else
+				mSelected_collbox->set_wall_group(mColl_container.create_group(group_buf));
+		}
 		ImGui::QuickTooltip("Group to assosiate this collision box with.\nThis is used in scripts to enable/disable boxes or calling functions when collided.");
 
 		engine::frect coll_rect = mSelected_collbox->get_region();
@@ -1621,7 +1322,6 @@ void WGE_imgui_editor::draw_collision_editor_settings()
 
 void WGE_imgui_editor::tilemap_editor_update(const engine::fvector& pTile_position_snapped)
 {
-
 	if (mTilemap_texture && mCurrent_tile_atlas)
 	{
 		if (ImGui::GetIO().KeyCtrl)

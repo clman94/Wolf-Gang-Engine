@@ -44,6 +44,7 @@ void primitive_builder::pop_node()
 void primitive_builder::add_circle(fvector pPosition, float pRadius, color pFill, color pOutline)
 {
 	std::vector<fvector> points;
+	points.reserve(10);
 	for (std::size_t i = 0; i < 10; i++)
 		points.push_back((pPosition + fvector(pRadius, 0)).rotate(pPosition, (360.f/10.f)*(float)i));
 	if (pFill.a > 0)

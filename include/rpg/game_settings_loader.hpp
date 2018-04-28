@@ -16,10 +16,20 @@ public:
 	bool load_memory(const char* pData, size_t pSize, const std::string& pPrefix_path = std::string());
 
 	const std::string& get_title() const;
+	void set_title(const std::string& pTitle);
+
 	const std::string& get_start_scene() const;
-	const std::string& get_player_texture() const;
-	engine::fvector    get_screen_size() const;
+	void set_start_scene(const std::string& pName);
+
+	engine::fvector get_screen_size() const;
+	void set_target_size(engine::fvector pSize);
+
+	engine::ivector get_window_size() const;
+	void set_window_size(engine::ivector pSize);
+
 	float get_unit_pixels() const;
+	void set_unit_pixels(float pUnit);
+
 	const engine::controls& get_key_bindings() const;
 
 private:
@@ -30,8 +40,8 @@ private:
 
 	std::string mTitle;
 	std::string mStart_scene;
-	std::string mPlayer_texture;
 	engine::fvector mScreen_size;
+	engine::ivector mWindow_size;
 	engine::controls mKey_bindings;
 	float pUnit_pixels;
 };

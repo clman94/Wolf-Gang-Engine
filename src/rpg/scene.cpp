@@ -130,7 +130,7 @@ bool scene::load_scene(std::string pName)
 	// Setup context if still valid
 	if (context.is_valid())
 	{
-		context.clean_globals();
+		context.clear_globals();
 		mCollision_system.setup_script_defined_triggers(context);
 		context.call_all_with_tag("start");
 		mEnd_functions = context.get_all_with_tag("door");

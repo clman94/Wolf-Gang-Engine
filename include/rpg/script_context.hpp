@@ -53,7 +53,7 @@ public:
 
 	std::vector<std::shared_ptr<script_function>> get_all_with_tag(const std::string& pTag);
 
-	void clean_globals();
+	void clear_globals();
 
 	const std::vector<wall_group_function>& get_wall_group_functions() const;
 

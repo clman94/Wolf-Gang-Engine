@@ -45,7 +45,7 @@ void AddBackgroundImage(sf::RenderTexture & pRender, ImVec2 pPosition)
 		, ImGui::GetColorU32(sf::Color::White));
 }
 
-// Returns true while the user interacts with it
+// Returns true while the user is interacting with it
 bool VSplitter(const char* pId, float pWidth, float* pX, bool pInverted)
 {
 	assert(pX);
@@ -57,7 +57,7 @@ bool VSplitter(const char* pId, float pWidth, float* pX, bool pInverted)
 	return ImGui::IsItemActive();
 }
 
-// Returns true while the user interacts with it
+// Returns true while the user is interacting with it
 bool HSplitter(const char* pId, float pHeight, float* pY, bool pInverted)
 {
 	assert(pY);

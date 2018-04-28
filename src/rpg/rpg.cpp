@@ -162,7 +162,7 @@ std::vector<std::shared_ptr<script_function>> scene_script_context::get_all_with
 	return ret;
 }
 
-void scene_script_context::clean_globals()
+void scene_script_context::clear_globals()
 {
 	mScene_module->ResetGlobalVars();
 }
@@ -1573,9 +1573,14 @@ bool game_settings_loader::load_memory(const char * pData, size_t pSize, const s
 	return parse_settings(doc, pPrefix_path);
 }
 
-const std::string & rpg::game_settings_loader::get_title() const
+const std::string & game_settings_loader::get_title() const
 {
 	return mTitle;
+}
+
+void game_settings_loader::set_title(const std::string & pTitle)
+{
+	mTitle = pTitle;
 }
 
 const std::string & game_settings_loader::get_start_scene() const
@@ -1583,9 +1588,9 @@ const std::string & game_settings_loader::get_start_scene() const
 	return mStart_scene;
 }
 
-const std::string & game_settings_loader::get_player_texture() const
+void game_settings_loader::set_start_scene(const std::string & pName)
 {
-	return mPlayer_texture;
+	mStart_scene = pName;
 }
 
 engine::fvector game_settings_loader::get_screen_size() const
@@ -1593,9 +1598,29 @@ engine::fvector game_settings_loader::get_screen_size() const
 	return mScreen_size;
 }
 
+void game_settings_loader::set_target_size(engine::fvector pSize)
+{
+	mScreen_size = pSize;
+}
+
+engine::ivector game_settings_loader::get_window_size() const
+{
+	return mWindow_size;
+}
+
+void game_settings_loader::set_window_size(engine::ivector pSize)
+{
+	mWindow_size = pSize;
+}
+
 float game_settings_loader::get_unit_pixels() const
 {
 	return pUnit_pixels;
+}
+
+void game_settings_loader::set_unit_pixels(float pUnit)
+{
+	pUnit_pixels = pUnit;
 }
 
 const engine::controls& game_settings_loader::get_key_bindings() const
@@ -1631,14 +1656,6 @@ bool game_settings_loader::parse_settings(tinyxml2::XMLDocument & pDoc, const st
 		return false;
 	}
 	mStart_scene = util::safe_string(ele_scene->Attribute("name"));
-
-	auto ele_player = ele_root->FirstChildElement("player");
-	if (!ele_player || !ele_player->Attribute("texture"))
-	{
-		logger::error("Please specify the player texture");
-		return false;
-	}
-	mPlayer_texture = util::safe_string(ele_player->Attribute("texture"));
 
 	auto ele_tile_size = ele_root->FirstChildElement("tile_size");
 	if (!ele_tile_size || !ele_tile_size->Attribute("pixels"))
