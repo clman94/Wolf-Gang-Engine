@@ -1336,6 +1336,8 @@ void WGE_imgui_editor::draw_collision_editor_settings()
 			mSelected_collbox->set_region(coll_rect);
 			mIs_scene_modified = true;
 		}
+
+		ImGui::TreePop();
 	}
 
 	if (mSelected_collbox
@@ -1359,6 +1361,7 @@ void WGE_imgui_editor::draw_collision_editor_settings()
 		ImGui::InputText("Dest. Door", door_dest_door_buf, 256);
 		ImGui::QuickTooltip("The destination door in the new loaded scene.");
 
+		ImGui::TreePop();
 	}
 	ImGui::PopItemWidth();
 }
