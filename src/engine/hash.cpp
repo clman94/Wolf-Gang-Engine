@@ -18,11 +18,11 @@ hash32_t FNV1a_32(const std::uint8_t* pData, std::size_t pSize)
 	return h;
 }
 
-hash32_t FNV1a_32(const char* pData, int pLength)
+hash32_t FNV1a_32(const char* pString, int pLength)
 {
 	if (pLength < 0)
-		pLength = std::strlen(pData);
-	return FNV1a_32((const std::uint8_t*)pData, static_cast<std::size_t>(pLength));
+		pLength = std::strlen(pString);
+	return FNV1a_32((const std::uint8_t*)pString, static_cast<std::size_t>(pLength));
 }
 
 hash32_t FNV1a_32(const std::string& pString)

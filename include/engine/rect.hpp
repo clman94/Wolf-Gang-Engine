@@ -29,7 +29,7 @@ struct rect
 		set_size(b);
 	}
 
-	bool operator==(const rect& r)
+	bool operator==(const rect& r) const
 	{
 		return x == r.x &&
 			y == r.y &&
@@ -37,7 +37,7 @@ struct rect
 			h == r.h;
 	}
 
-	bool operator!=(const rect& r)
+	bool operator!=(const rect& r) const
 	{
 		return !operator==(r);
 	}
@@ -57,6 +57,15 @@ struct rect
 		return *this;
 	}
 
+	rect& operator*=(const T& r)
+	{
+		x *= r;
+		y *= r;
+		w *= r;
+		h *= r;
+		return *this;
+	}
+
 	rect operator+(const rect& r) const
 	{
 		return{
@@ -67,7 +76,7 @@ struct rect
 		};
 	}
 
-	rect operator*(T a) const
+	rect operator*(const T& a) const
 	{
 		return{ x*a, y*a, w*a, h*a };
 	}
@@ -127,34 +136,20 @@ struct rect
 		return get_offset() + (get_size()*0.5f);
 	}
 
-	static bool is_intersect(const rect& a, const rect& b)
-	{
-		if    (a.x < b.x + b.w
-			&& a.y < b.y + b.h
-			&& a.x + a.w > b.x
-			&& a.y + a.h > b.y)
-			return true;
-		return false;
-	}
-
-	static bool is_intersect(const rect& a, const vector<T>& b)
-	{
-		if    (a.x <= b.x
-			&& a.y <= b.y
-			&& a.x + a.w > b.x
-			&& a.y + a.h > b.y)
-			return true;
-		return false;
-	}
-
 	bool is_intersect(const rect& a) const
 	{
-		return is_intersect(*this, a);
+		return x < a.x + a.w
+			&& y < a.y + a.h
+			&& x + w > a.x
+			&& y + h > a.y;
 	}
 
 	bool is_intersect(const vector<T>& a) const
 	{
-		return is_intersect(*this, a);
+		return x <= a.x
+			&& y <= a.y
+			&& x + w > a.x
+			&& y + h > a.y;
 	}
 
 #ifdef SFML_RECT_HPP
@@ -195,19 +190,6 @@ static inline rect<Tto> rect_cast(const rect<Torig>& pRect)
 		static_cast<Tto>(pRect.w),
 		static_cast<Tto>(pRect.h)
 	};
-}
-
-
-template<typename T1, typename T2>
-static inline rect<T1> scale(rect<T1> a, T2 b)
-{
-	return{ a.get_offset()*b, a.get_size()*b };
-}
-
-template<typename T1, typename T2>
-static inline rect<T1> scale(rect<T1> a, vector<T2> b)
-{
-	return{ a.x*b.x,a.y*b.y, a.w*b.x, a.h*b.y };
 }
 
 typedef rect<float> frect;

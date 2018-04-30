@@ -616,7 +616,7 @@ script_system& game::get_script_system()
 	return mScript;
 }
 
-std::vector<std::string> game::compile_scene_list() const
+std::vector<std::string> game::get_scene_list() const
 {
 	std::vector<std::string> ret;
 
@@ -633,7 +633,6 @@ std::vector<std::string> game::compile_scene_list() const
 	}
 
 	std::sort(ret.begin(), ret.end());
-
 	return ret;
 }
 

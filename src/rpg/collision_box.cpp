@@ -196,7 +196,7 @@ std::shared_ptr<collision_box> rpg::collision_box_container::first_collision(con
 	return{};
 }
 
-std::shared_ptr<collision_box> rpg::collision_box_container::first_collision(const engine::fvector& pPoint) const
+std::shared_ptr<collision_box> collision_box_container::first_collision(const engine::fvector& pPoint) const
 {
 	for (auto& i : mBoxes)
 		if (i->is_enabled()

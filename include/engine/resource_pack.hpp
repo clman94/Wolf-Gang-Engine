@@ -48,11 +48,11 @@ public:
 	std::string filename() const;
 	bool pop_filename();
 
-	bool remove_extension();
+	bool remove_extension(); // Returns true if there is an extension
 
 	size_t get_sub_length() const;
 
-	generic_path& operator=(const std::string& pString);
+	generic_path& operator=(const generic_path& pRight);
 	generic_path operator/(const generic_path& pRight) const;
 	generic_path& operator/=(const generic_path& pRight);
 
@@ -106,13 +106,14 @@ public:
 		uint64_t size;
 	};
 
-	void add_file(file_info pFile);
+	void add_file(const file_info& pFile);
+	bool get_file(const generic_path& pPath, file_info* pOut) const; // Returns true is the file is found, pOut is left unchange if false
 
+	// Generates the binary data and outputs in to pStream
 	bool generate(std::ostream& pStream) const;
 
 	bool parse(std::istream& pStream);
 
-	util::optional<file_info> get_file(const generic_path& pPath) const;
 	std::vector<generic_path> recursive_directory(const generic_path& pPath) const;
 
 	uint64_t get_header_size() const;

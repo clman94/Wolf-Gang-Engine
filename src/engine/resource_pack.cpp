@@ -366,15 +366,11 @@ bool generic_path::remove_extension()
 	if (mHierarchy.empty())
 		return false;
 	std::string& fn = mHierarchy.back();
-	for (auto i = fn.begin(); i != fn.end(); i++)
-	{
-		if (*i == '.')
-		{
-			fn = std::string(fn.begin(), i);
-			return true;
-		}
-	}
-	return false;
+	std::size_t dot_index = fn.find_last_of('.');
+	if (dot_index == std::string::npos)
+		return false;
+	fn = fn.substr(0, dot_index);
+	return true;
 }
 
 size_t generic_path::get_sub_length() const
@@ -382,9 +378,9 @@ size_t generic_path::get_sub_length() const
 	return mHierarchy.size();
 }
 
-generic_path& generic_path::operator=(const std::string& pString)
+generic_path& generic_path::operator=(const generic_path& pRight)
 {
-	parse(pString);
+	mHierarchy = pRight.mHierarchy;
 	return *this;
 }
 
@@ -490,7 +486,7 @@ pack_header::pack_header()
 	mHeader_size = 0;
 }
 
-void pack_header::add_file(file_info pFile)
+void pack_header::add_file(const file_info& pFile)
 {
 	mFiles.push_back(pFile);
 }
@@ -546,14 +542,18 @@ bool pack_header::parse(std::istream & pStream)
 	return true;
 }
 
-util::optional<pack_header::file_info> pack_header::get_file(const generic_path & pPath) const
+
+bool pack_header::get_file(const generic_path& pPath, file_info* pOut) const
 {
 	for (auto& i : mFiles)
 	{
 		if (i.path == pPath)
-			return i;
+		{
+			*pOut = i;
+			return true;
+		}
 	}
-	return{};
+	return false;
 }
 
 std::vector<generic_path> pack_header::recursive_directory(const generic_path & pPath) const
@@ -610,14 +610,9 @@ bool pack_stream::open(const generic_path & pPath)
 	mStream.open(mPack->mPath.string().c_str(), std::fstream::binary);
 	if (!mStream)
 		return false;
-
-	auto fi = mPack->mHeader.get_file(pPath);
-	if (!fi)
+	if (!mPack->mHeader.get_file(pPath, &mFile_info))
 		return false;
-	mFile_info = *fi;
-
 	mStream.seekg(mFile_info.position + mPack->mHeader.get_header_size());
-
 	return is_valid();
 }
 

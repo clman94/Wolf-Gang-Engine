@@ -190,7 +190,7 @@ public:
 
 	script_system& get_script_system();
 
-	std::vector<std::string> compile_scene_list() const;
+	std::vector<std::string> get_scene_list() const;
 
 protected:
 	void refresh_renderer(engine::renderer& r);

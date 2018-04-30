@@ -306,10 +306,10 @@ class command_add_wall :
 	public command
 {
 public:
-	command_add_wall(std::shared_ptr<rpg::collision_box> pBox, rpg::collision_box_container* pContainer)
+	command_add_wall(rpg::collision_box_container& pContainer, std::shared_ptr<rpg::collision_box> pBox)
 	{
 		mBox = pBox;
-		mContainer = pContainer;
+		mContainer = &pContainer;
 	}
 
 	bool execute()
@@ -338,8 +338,8 @@ class command_remove_wall :
 	public command
 {
 public:
-	command_remove_wall(std::shared_ptr<rpg::collision_box> pBox, rpg::collision_box_container* pContainer)
-		: pOpposing(pBox, pContainer)
+	command_remove_wall(rpg::collision_box_container& pContainer, std::shared_ptr<rpg::collision_box> pBox)
+		: pOpposing(pContainer, pBox)
 	{}
 
 	bool execute()
@@ -598,7 +598,7 @@ void WGE_imgui_editor::run()
 
 	mGame.load("./data");
 	mGame_renderer.refresh();
-	mScene_list = mGame.compile_scene_list();
+	mScene_list = mGame.get_scene_list();
 
 	sf::Clock delta_clock;
 	while (window.is_open())
@@ -749,7 +749,7 @@ void WGE_imgui_editor::draw_scene_window()
 		ImGui::Text("Scene List");
 		ImGui::SameLine();
 		if (ImGui::Button("Refresh"))
-			mScene_list = mGame.compile_scene_list();
+			mScene_list = mGame.get_scene_list();
 		ImGui::QuickTooltip("Repopulate the scene list");
 
 		ImGui::BeginChild("Scenelist", ImVec2(200, -25), true);
@@ -1233,7 +1233,7 @@ void WGE_imgui_editor::collision_editor_update(const engine::fvector& pView_posi
 				mCommand_manager.start<command_wall_changed>(mSelected_collbox);
 			}
 			const float scale = 1/(mTilemap_display.get_absolute_scale().x*mTilemap_display.get_unit());
-			mBox_change += engine::scale(box_change, scale); // Scale to game units
+			mBox_change += box_change * scale; // Scale to game units
 			engine::frect new_box_rect = mOriginal_box + snap_closest(mBox_change, calc_snapping(mTilemap_current_snapping, mTile_size));
 			new_box_rect.w = std::max(new_box_rect.w, 1.f / mTile_size); // Limit the size to one pixel so you can still see and select it
 			new_box_rect.h = std::max(new_box_rect.h, 1.f / mTile_size);
@@ -1255,23 +1255,66 @@ void WGE_imgui_editor::collision_editor_update(const engine::fvector& pView_posi
 	// Collision box selection
 	// Placed last so the draggers get priority
 	// TODO: Add support for selecting boxes BEHIND the currently selected one (similar to how it was done before)
-	if (!is_dragging() && ImGui::IsItemClicked(0))
+	if (!is_dragging() && (ImGui::IsItemClicked(0) || ImGui::IsItemClicked(1)))
+	{
 		if (auto box = mColl_container.first_collision(pTile_position_no_snap))
 			mSelected_collbox = box;
+		else
+			mSelected_collbox.reset();
+	}
+
+	if (!is_dragging() && ImGui::IsItemClicked(1))
+		ImGui::OpenPopup("coll_box_options");
+
+	if (ImGui::BeginPopup("coll_box_options"))
+	{
+		if (ImGui::MenuItem("Create Box"))
+		{
+			auto nbox = mColl_container.add_collision_box(rpg::collision_box::type::wall);
+			nbox->set_region({ engine::fvector(pTile_position_no_snap).floor(), engine::fvector(1, 1) });
+			mCommand_manager.add_new<command_add_wall>(mColl_container, nbox);
+			mSelected_collbox = nbox;
+			mIs_scene_modified = true;
+		}
+		if (mSelected_collbox)
+		{
+			ImGui::Separator();
+			if (ImGui::MenuItem("Duplicate"))
+			{
+				auto ncopy = mSelected_collbox->copy();
+				mColl_container.add_collision_box(ncopy);
+				mCommand_manager.add_new<command_add_wall>(mColl_container, ncopy);
+				mSelected_collbox = ncopy;
+				mIs_scene_modified = true;
+			}
+			if (ImGui::MenuItem("Delete"))
+			{
+				mColl_container.remove_box(mSelected_collbox);
+				mCommand_manager.add_new<command_remove_wall>(mColl_container, mSelected_collbox);
+				mSelected_collbox.reset();
+				mIs_scene_modified = true;
+			}
+		}
+		ImGui::EndPopup();
+	}
 }
 
 void WGE_imgui_editor::draw_collision_editor_settings()
 {
 	ImGui::PushItemWidth(-100);
-	if (mSelected_collbox && ImGui::CollapsingHeader("Collision Box"))
+	if (mSelected_collbox && ImGui::TreeNodeEx("Collision Box", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		int current_type = static_cast<int>(mSelected_collbox->get_type());
 		const char* coll_type_items[] = { "Wall", "Trigger", "Button", "Door" };
-		if (ImGui::Combo("Type", &current_type, coll_type_items, 4))
+		if (ImGui::Combo("Type", &current_type, coll_type_items, 4)
+			&& current_type != static_cast<int>(mSelected_collbox->get_type()))
 		{
-			// TODO
+			auto nbox = mColl_container.add_collision_box(static_cast<rpg::collision_box::type>(current_type));
+			nbox->set_region(mSelected_collbox->get_region());
+			nbox->set_wall_group(mSelected_collbox->get_wall_group());
+			nbox->set_inverted(mSelected_collbox->is_inverted());
+
 		}
-		std::string pie;
 
 		char group_buf[256] = { 0, };
 		if (mSelected_collbox->get_wall_group())
@@ -1297,7 +1340,7 @@ void WGE_imgui_editor::draw_collision_editor_settings()
 
 	if (mSelected_collbox
 		&& mSelected_collbox->get_type() == rpg::collision_box::type::door
-		&& ImGui::CollapsingHeader("Door"))
+		&& ImGui::TreeNodeEx("Door", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		static char door_name_buf[256]; // Temp
 		ImGui::InputText("Name", door_name_buf, 256);
