@@ -17,7 +17,7 @@ subtexture::subtexture(const std::string & pName)
 void subtexture::set_name(const std::string & pName)
 {
 	mName = pName;
-	mHash = hash::FNV1a_32(pName);
+	mHash = hash::hash32(pName);
 }
 
 const std::string & subtexture::get_name() const
@@ -154,7 +154,7 @@ void texture_atlas::clear()
 }
 std::shared_ptr<subtexture> texture_atlas::get_entry(const std::string & pName) const
 {
-	hash::hash32_t cmphash = hash::FNV1a_32(pName);
+	hash::hash32_t cmphash = hash::hash32(pName);
 	for (auto& i : mAtlas)
 		if (i->get_hash() == cmphash)
 			return i;

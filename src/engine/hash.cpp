@@ -5,7 +5,8 @@
 namespace hash
 {
 
-hash32_t FNV1a_32(const std::uint8_t* pData, std::size_t pSize)
+// FNV1a implementation
+hash32_t hash32(const std::uint8_t* pData, std::size_t pSize)
 {
 	const hash32_t basis = 0x811C9DC5;
 	const hash32_t prime = 0x01000193;
@@ -18,16 +19,16 @@ hash32_t FNV1a_32(const std::uint8_t* pData, std::size_t pSize)
 	return h;
 }
 
-hash32_t FNV1a_32(const char* pString, int pLength)
+hash32_t hash32(const char* pString, int pLength)
 {
 	if (pLength < 0)
 		pLength = std::strlen(pString);
-	return FNV1a_32((const std::uint8_t*)pString, static_cast<std::size_t>(pLength));
+	return hash32((const std::uint8_t*)pString, static_cast<std::size_t>(pLength));
 }
 
-hash32_t FNV1a_32(const std::string& pString)
+hash32_t hash32(const std::string& pString)
 {
-	return FNV1a_32(pString.c_str(), pString.size());
+	return hash32(pString.c_str(), pString.size());
 }
 
 hash32_t combine(const hash32_t& pA, const hash32_t& pB)

@@ -51,7 +51,7 @@ private:
 
 // Container of value types with keys that are file paths.
 // This allows organization of data like a registry.
-// All values in the "_nosave/" directory will not be saved.
+// All values in the "_nosave/" directory will not be saved to xml.
 class value_container
 {
 public:
@@ -230,7 +230,6 @@ private:
 	unsigned int get_slot();
 
 	void abort_game();
-
 	int script_get_int_value(const std::string& pPath) const;
 	float script_get_float_value(const std::string& pPath) const;
 	bool script_get_bool_value(const std::string& pPath) const;
@@ -242,7 +241,6 @@ private:
 	AS_array<std::string>* script_get_director_entries(const std::string& pPath);
 	bool script_remove_value(const std::string& pPath);
 	bool script_has_value(const std::string& pPath);
-
 	float script_get_tile_size();
 
 	void load_script_interface();
