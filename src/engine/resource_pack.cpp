@@ -1,5 +1,6 @@
 #include <istream>
 #include <fstream>
+#include <cassert>
 #include <engine/filesystem.hpp>
 #include <engine/resource_pack.hpp>
 #include <engine/logger.hpp>
@@ -530,8 +531,8 @@ bool pack_header::parse(std::istream & pStream)
 		path.resize(path_size);
 		if (!pStream.read(&path[0], path_size))
 			return false;
-
 		file.path = path;
+
 		file.position = binary_util::read_unsignedint_binary<uint64_t>(pStream);
 		file.size = binary_util::read_unsignedint_binary<uint64_t>(pStream);
 
@@ -606,6 +607,7 @@ void pack_stream::set_pack(const resource_pack & pPack)
 
 bool pack_stream::open(const generic_path & pPath)
 {
+	assert(mPack);
 	close();
 	mStream.open(mPack->mPath.string().c_str(), std::fstream::binary);
 	if (!mStream)
@@ -623,6 +625,7 @@ void pack_stream::close()
 
 std::vector<char> pack_stream::read(uint64_t pCount)
 {
+	assert(mPack);
 	if (!is_valid())
 		return{};
 
@@ -637,6 +640,7 @@ std::vector<char> pack_stream::read(uint64_t pCount)
 
 int64_t pack_stream::read(char * pData, uint64_t pCount)
 {
+	assert(mPack);
 	if (!is_valid() && pCount == 0)
 		return -1;
 
@@ -653,6 +657,7 @@ int64_t pack_stream::read(char * pData, uint64_t pCount)
 
 bool pack_stream::read(std::vector<char>& pData, uint64_t pCount)
 {
+	assert(mPack);
 	if (pData.size() != pCount
 		|| pCount == 0)
 		return false;
@@ -661,34 +666,19 @@ bool pack_stream::read(std::vector<char>& pData, uint64_t pCount)
 
 std::vector<char> pack_stream::read_all()
 {
+	assert(mPack);
 	const uint64_t chuck_size = 1024;
-
 	seek(0);
-
 	std::vector<char> retval;
-	retval.reserve(static_cast<size_t>(mFile_info.size));
-	while (is_valid())
-	{
-		if (tell() + chuck_size < mFile_info.size) // Full chunk
-		{
-			const std::vector<char> data = read(chuck_size);
-			if (data.empty())
-				return{};
-			retval.insert(retval.end(), data.begin(), data.end());
-		}
-		else // Remainder
-		{
-			const std::vector<char> data = read(mFile_info.size - tell());
-			retval.insert(retval.end(), data.begin(), data.end());
-			return retval;
-		}
-	}
+	retval.resize(static_cast<size_t>(mFile_info.size));
+	read(retval, mFile_info.size);
 	return retval;
 }
 
 
 bool pack_stream::seek(uint64_t pPosition)
 {
+	assert(mPack);
 	if (mStream.eof())
 		mStream.clear();
 	else if (!is_valid())
@@ -702,6 +692,7 @@ bool pack_stream::seek(uint64_t pPosition)
 
 uint64_t pack_stream::tell()
 {
+	assert(mPack);
 	if (!is_valid())
 		return 0;
 

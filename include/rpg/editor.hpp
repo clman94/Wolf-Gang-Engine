@@ -167,6 +167,11 @@ private:
 	void place_tile(engine::fvector pos);
 	void remove_tile(engine::fvector pos);
 
+	// Collision editor commands
+	void new_box(rpg::collision_box::ptr pBox, engine::fvector pPos);
+	void duplicate_box();
+	void delete_box();
+
 	engine::primitive_builder mPrimitives;
 
 	editor_settings_loader mSettings;

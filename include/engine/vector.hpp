@@ -26,7 +26,12 @@ struct vector
 {
 	typedef T type;
 
-	T x, y;
+	union {
+		struct{
+		T x, y;
+		};
+		T components[2];
+	};
 
 	static vector as_x(T pVal)
 	{

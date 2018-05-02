@@ -2,6 +2,7 @@
 
 #include <engine/texture.hpp>
 
+#include <imgui_internal.h>
 #include <imgui-SFML.h>
 
 #include <SFML/Graphics/RenderTexture.hpp>

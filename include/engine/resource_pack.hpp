@@ -85,10 +85,10 @@ public:
 	Structure of the header
 
 	[uint64_t] File count
-	file
+	
+	(File headers)
 	[uint16_t] Path size (Is a filepath that is 65536 characters useful?)
 	[char] Character of path
-	...
 	[uint64_t] Position
 	[uint64_t] Size
 	...
@@ -109,7 +109,7 @@ public:
 	void add_file(const file_info& pFile);
 	bool get_file(const generic_path& pPath, file_info* pOut) const; // Returns true is the file is found, pOut is left unchange if false
 
-	// Generates the binary data and outputs in to pStream
+	// Generates the binary data and outputs to a stream
 	bool generate(std::ostream& pStream) const;
 
 	bool parse(std::istream& pStream);

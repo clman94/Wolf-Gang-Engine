@@ -594,7 +594,7 @@ void WGE_imgui_editor::run()
 	ImGuiStyle& style = ImGui::GetStyle();
 	ImGui::StyleColorsDark(&style);
 	style.FrameRounding = 2;
-	style.FramePadding = ImVec2(2, 2);
+	style.FramePadding = ImVec2(3, 2);
 
 	mGame.load("./data");
 	mGame_renderer.refresh();
@@ -696,6 +696,31 @@ void WGE_imgui_editor::remove_tile(engine::fvector pos)
 		mTilemap_manipulator.get_layer(mCurrent_layer).sort();
 		mTilemap_display.update(mTilemap_manipulator);
 	}
+}
+
+void WGE_imgui_editor::new_box(rpg::collision_box::ptr pBox, engine::fvector pPos)
+{
+	mCommand_manager.add_new<command_add_wall>(mColl_container, pBox);
+	pBox->set_region({ engine::fvector(pPos).floor(), engine::fvector(1, 1) });
+	mSelected_collbox = pBox;
+	mIs_scene_modified = true;
+}
+
+void WGE_imgui_editor::duplicate_box()
+{
+	auto ncopy = mSelected_collbox->copy();
+	mColl_container.add_collision_box(ncopy);
+	mCommand_manager.add_new<command_add_wall>(mColl_container, ncopy);
+	mSelected_collbox = ncopy;
+	mIs_scene_modified = true;
+}
+
+void WGE_imgui_editor::delete_box()
+{
+	mColl_container.remove_box(mSelected_collbox);
+	mCommand_manager.add_new<command_remove_wall>(mColl_container, mSelected_collbox);
+	mSelected_collbox.reset();
+	mIs_scene_modified = true;
 }
 
 void WGE_imgui_editor::prepare_scene(engine::fs::path pPath, const std::string& pName)
@@ -1099,6 +1124,7 @@ static inline bool is_dragging()
 static inline bool drag_behavior(hash::hash32_t pId, bool pHovered)
 {
 	const bool dragging = active_dragger_id == pId;
+	const bool moving = engine::fvector(ImGui::GetIO().MouseDelta) != engine::fvector(0, 0);
 	if (pHovered && ImGui::IsItemClicked(0))
 	{
 		active_dragger_id = pId; // Start drag
@@ -1254,46 +1280,35 @@ void WGE_imgui_editor::collision_editor_update(const engine::fvector& pView_posi
 
 	// Collision box selection
 	// Placed last so the draggers get priority
-	// TODO: Add support for selecting boxes BEHIND the currently selected one (similar to how it was done before)
+	// TODO: Some way to select box behind the currently select box
 	if (!is_dragging() && (ImGui::IsItemClicked(0) || ImGui::IsItemClicked(1)))
 	{
-		if (auto box = mColl_container.first_collision(pTile_position_no_snap))
-			mSelected_collbox = box;
-		else
-			mSelected_collbox.reset();
+		auto hits = mColl_container.collision(pTile_position_no_snap);
+		if (!hits.empty())
+			mSelected_collbox = hits.back(); // Select the top
 	}
 
+	// Right click options
 	if (!is_dragging() && ImGui::IsItemClicked(1))
 		ImGui::OpenPopup("coll_box_options");
-
 	if (ImGui::BeginPopup("coll_box_options"))
 	{
-		if (ImGui::MenuItem("Create Box"))
+		if (ImGui::BeginMenu("New..."))
 		{
-			auto nbox = mColl_container.add_collision_box(rpg::collision_box::type::wall);
-			nbox->set_region({ engine::fvector(pTile_position_no_snap).floor(), engine::fvector(1, 1) });
-			mCommand_manager.add_new<command_add_wall>(mColl_container, nbox);
-			mSelected_collbox = nbox;
-			mIs_scene_modified = true;
+			if (ImGui::MenuItem("Wall")) new_box(mColl_container.add_wall(), pTile_position_no_snap);
+			if (ImGui::MenuItem("Button")) new_box(mColl_container.add_button(), pTile_position_no_snap);
+			if (ImGui::MenuItem("Trigger")) new_box(mColl_container.add_trigger(), pTile_position_no_snap);
+			if (ImGui::MenuItem("Door")) new_box(mColl_container.add_door(), pTile_position_no_snap);
+			ImGui::EndMenu();
 		}
+
 		if (mSelected_collbox)
 		{
 			ImGui::Separator();
 			if (ImGui::MenuItem("Duplicate"))
-			{
-				auto ncopy = mSelected_collbox->copy();
-				mColl_container.add_collision_box(ncopy);
-				mCommand_manager.add_new<command_add_wall>(mColl_container, ncopy);
-				mSelected_collbox = ncopy;
-				mIs_scene_modified = true;
-			}
+				duplicate_box();
 			if (ImGui::MenuItem("Delete"))
-			{
-				mColl_container.remove_box(mSelected_collbox);
-				mCommand_manager.add_new<command_remove_wall>(mColl_container, mSelected_collbox);
-				mSelected_collbox.reset();
-				mIs_scene_modified = true;
-			}
+				delete_box();
 		}
 		ImGui::EndPopup();
 	}
@@ -1306,15 +1321,7 @@ void WGE_imgui_editor::draw_collision_editor_settings()
 	{
 		int current_type = static_cast<int>(mSelected_collbox->get_type());
 		const char* coll_type_items[] = { "Wall", "Trigger", "Button", "Door" };
-		if (ImGui::Combo("Type", &current_type, coll_type_items, 4)
-			&& current_type != static_cast<int>(mSelected_collbox->get_type()))
-		{
-			auto nbox = mColl_container.add_collision_box(static_cast<rpg::collision_box::type>(current_type));
-			nbox->set_region(mSelected_collbox->get_region());
-			nbox->set_wall_group(mSelected_collbox->get_wall_group());
-			nbox->set_inverted(mSelected_collbox->is_inverted());
-
-		}
+		ImGui::Combo("Type", &current_type, coll_type_items, 4);
 
 		char group_buf[256] = { 0, };
 		if (mSelected_collbox->get_wall_group())
@@ -1327,7 +1334,9 @@ void WGE_imgui_editor::draw_collision_editor_settings()
 				mSelected_collbox->set_wall_group(nullptr);
 			else
 				mSelected_collbox->set_wall_group(mColl_container.create_group(group_buf));
+			mIs_scene_modified = true;
 		}
+
 		ImGui::QuickTooltip("Group to assosiate this collision box with.\nThis is used in scripts to enable/disable boxes or calling functions when collided.");
 
 		engine::frect coll_rect = mSelected_collbox->get_region();
@@ -1344,21 +1353,48 @@ void WGE_imgui_editor::draw_collision_editor_settings()
 		&& mSelected_collbox->get_type() == rpg::collision_box::type::door
 		&& ImGui::TreeNodeEx("Door", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		static char door_name_buf[256]; // Temp
-		ImGui::InputText("Name", door_name_buf, 256);
+		auto door = std::dynamic_pointer_cast<rpg::door>(mSelected_collbox);
 
-		static float coll_rect[2] = { 0, 0 }; // Temp
-		ImGui::DragFloat2("Offset", coll_rect, 0.2f);
+		std::string door_name_buf(door->get_name());
+		door_name_buf.resize(256);
+		if (ImGui::InputText("Name", &door_name_buf[0], 256))
+		{
+			door->set_name(door_name_buf.c_str());
+			mIs_scene_modified = true;
+		}
+
+		engine::fvector noffset = door->get_offset();
+		if (ImGui::DragFloat2("Offset", noffset.components, 0.1f))
+		{
+			door->set_offset(noffset);
+			mIs_scene_modified = true;
+		}
 		ImGui::QuickTooltip("This will offset the player when they come through this door.\nUsed to prevent player from colliding with the door again and going back.");
 
 		// TODO: Use a combo instead
 		static char door_dest_scene_buf[256]; // Temp
-		ImGui::InputText("Dest. Scene", door_dest_scene_buf, 256);
+		if (ImGui::BeginCombo("Dest. Scene", door->get_scene().empty() ? "No Scene" : door->get_scene().c_str()))
+		{
+			for (auto& i : mScene_list)
+			{
+				if (ImGui::Selectable(i.c_str(), door->get_scene() == i))
+				{
+					door->set_scene(i);
+					mIs_scene_modified = true;
+				}
+			}
+			ImGui::EndCombo();
+		}
 		ImGui::QuickTooltip("The scene to load when the player enters this door.");
 
 		// TODO: Use a combo instead
-		static char door_dest_door_buf[256]; // Temp
-		ImGui::InputText("Dest. Door", door_dest_door_buf, 256);
+		std::string door_dest_door_buf(door->get_destination());
+		door_dest_door_buf.resize(256);
+		if (ImGui::InputText("Dest. Door", &door_dest_door_buf[0], 256))
+		{
+			door->set_destination(door_dest_door_buf.c_str());
+			mIs_scene_modified = true;
+		}
 		ImGui::QuickTooltip("The destination door in the new loaded scene.");
 
 		ImGui::TreePop();
