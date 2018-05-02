@@ -1286,6 +1286,8 @@ void WGE_imgui_editor::collision_editor_update(const engine::fvector& pView_posi
 		auto hits = mColl_container.collision(pTile_position_no_snap);
 		if (!hits.empty())
 			mSelected_collbox = hits.back(); // Select the top
+		else
+			mSelected_collbox.reset();
 	}
 
 	// Right click options
