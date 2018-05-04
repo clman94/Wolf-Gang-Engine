@@ -42,7 +42,7 @@ fvector node::get_absolute_position() const
 {
 	if (!mParent) return mPosition;
 	return (mPosition*get_absolute_scale()).rotate(mParent->get_absolute_rotation())
-		+ mParent->get_absolute_position();
+		+ ((mParent->get_absolute_position()*mParent->mUnit) / mUnit);
 }
 
 fvector node::get_position() const
@@ -165,6 +165,9 @@ bool node::add_child(node& obj)
 void node::set_unit(float pUnit)
 {
 	assert(pUnit > 0);
+	if (mUnit == pUnit)
+		return;
+
 	mUnit = pUnit;
 
 	// Set unit of children

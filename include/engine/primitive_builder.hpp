@@ -43,6 +43,7 @@ public:
 	void add_triangle(fvector p0, fvector p1, fvector p2, color pColor);
 	void add_poly(std::vector<fvector> pPoints, color pFill, bool pLoop = true);           // if pLoop is true, the start and end points will be connected
 	void add_poly_lines(std::vector<fvector> pPoints, color pOutline, bool pLoop = true);  // "
+	handle add_quad_texture(std::shared_ptr<texture> pTexture, fvector pPosition, color pTint = { 1, 1, 1, 1 });
 	handle add_quad_texture(std::shared_ptr<texture> pTexture, frect pRect, frect pTexture_rect, color pTint = { 1, 1, 1, 1 });
 	handle add_quad_texture(std::shared_ptr<texture> pTexture, fvector pPosition, frect pTexture_rect, color pTint = { 1, 1, 1, 1 }); // Uses the texture rect size for the displayed size
 	handle add_quad_texture(std::shared_ptr<texture> pTexture, fvector pPosition, frect pTexture_rect, color pTint, int mRotate_corners); // Rotate 90*mRotate_corners degrees while maintaining the topleft corner position

@@ -56,7 +56,7 @@ public:
 	void display();
 
 	// Clear all contents for rendering a new frame
-	void clear();
+	void clear(color mColor = {0, 0, 0, 1});
 
 	void push_events_to_imgui() const;
 
@@ -141,7 +141,7 @@ public:
 	void update_events(display_window& pWindow);
 	void update_events(display_window& pWindow, engine::fvector pMouse_position); // Same as above but you can override the mouse position (useful for editor)
 
-	int draw();
+	int draw(bool pClear = true);
 	int draw(render_object& pObject);
 	
 	bool add_object(render_object& pObject);

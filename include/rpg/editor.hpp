@@ -20,6 +20,10 @@
 #include <memory>
 #include <utility>
 
+namespace ImGui
+{
+struct RendererData;
+}
 
 class command
 {
@@ -96,17 +100,34 @@ private:
 class atlas_imgui_editor
 {
 public:
+	atlas_imgui_editor();
+	~atlas_imgui_editor();
+
+	void request_open_texture(const std::string pName); // The editor will ask the player to save before opening the new texture
 	void update();
 
+	void set_resource_manager(engine::resource_manager& pRes_mgr);
+
 private:
+	void draw_subtexture_entries();
+	
+	ImGui::RendererData* mFull_texture_renderdata;
+
+	std::string mReq_texture_name;
+
+	engine::node mTexture_node;
+
 	std::shared_ptr<engine::texture> mTexture;
 	engine::subtexture::ptr mSubtexture;
+
+	engine::resource_manager* mResource_manager;
 };
 
 class WGE_imgui_editor
 {
 public:
 	WGE_imgui_editor();
+	~WGE_imgui_editor();
 	void run();
 
 private:
@@ -142,15 +163,10 @@ private:
 	rpg::game mGame;
 	engine::renderer mGame_renderer;
 
-	// this will all be refactored soon, simply prototyping
-	sf::RenderTexture mTilemap_render_target;
 	rpg::tilemap_manipulator mTilemap_manipulator;
 	rpg::tilemap_display mTilemap_display;
-	engine::renderer mScene_renderer;
 	std::shared_ptr<engine::texture> mTilemap_texture;
 	engine::subtexture::ptr mCurrent_tile_atlas;
-	engine::node mTilemap_center_node; // Never changes position but scaling will cause it to zooming in and out.
-	float mTilemap_zoom;
 	std::size_t mCurrent_layer;
 	command_manager mCommand_manager;
 	int mTilemap_current_snapping;
@@ -172,8 +188,6 @@ private:
 	void duplicate_box();
 	void delete_box();
 
-	engine::primitive_builder mPrimitives;
-
 	editor_settings_loader mSettings;
 
 	rpg::scene_loader mScene_loader;
@@ -190,6 +204,8 @@ private:
 
 	atlas_imgui_editor mAtlas_editor;
 
+	ImGui::RendererData* mScene_editor_rendererdata;
+
 	int mCurrent_scene_editor;
 
 	engine::fvector mLast_tile_position; // Prevents a tile being placed/remove continuously in one spot
@@ -204,10 +220,10 @@ private:
 
 	void draw_scene_editor_window();
 
-	void collision_editor_update(const engine::fvector& pView_position, const engine::fvector& pTile_position_no_snap);
+	void collision_editor_update();
 	void draw_collision_editor_settings();
 
-	void tilemap_editor_update(const engine::fvector& pTile_position_snapped);
+	void tilemap_editor_update();
 	void draw_tilemap_editor_settings();
 	void draw_tile_group(float from_bottom = 300);
 	void draw_tilemap_layers_group();

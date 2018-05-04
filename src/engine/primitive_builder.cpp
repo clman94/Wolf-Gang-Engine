@@ -120,6 +120,11 @@ void primitive_builder::add_poly_lines(std::vector<fvector> pPoints, color pOutl
 	mEntries.push_back(nentry);
 }
 
+primitive_builder::handle primitive_builder::add_quad_texture(std::shared_ptr<texture> pTexture, fvector pPosition, color pTint)
+{
+	return add_quad_texture(pTexture, pPosition, {engine::fvector(0, 0), pTexture->get_size()}, pTint);
+}
+
 primitive_builder::handle primitive_builder::add_quad_texture(std::shared_ptr<texture> pTexture, frect pRect, frect pTexture_rect, color pTint)
 {
 	entry nentry;

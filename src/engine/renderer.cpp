@@ -132,7 +132,7 @@ int renderer::draw_objects()
 	return 0;
 }
 
-int renderer::draw()
+int renderer::draw(bool pClear)
 {
 	mFrame_clock.tick();
 	if (mRequest_resort)
@@ -140,7 +140,8 @@ int renderer::draw()
 		sort_objects();
 		mRequest_resort = false;
 	}
-	mRender_target->clear(mBackground_color);
+	if (pClear)
+		mRender_target->clear(mBackground_color);
 	mRender_target->setView(mView);
 	draw_objects();
 	return 0;
@@ -152,6 +153,7 @@ int renderer::draw(render_object& pObject)
 		mWindow->mWindow.setView(mView);
 	return pObject.draw(*this);
 }
+
 
 std::string renderer::get_entered_text() const
 {
@@ -670,9 +672,9 @@ void display_window::display()
 	mWindow.display();
 }
 
-void display_window::clear()
+void display_window::clear(color mColor)
 {
-	mWindow.clear();
+	mWindow.clear(mColor);
 }
 
 void display_window::push_events_to_imgui() const
