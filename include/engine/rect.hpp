@@ -2,6 +2,7 @@
 #define ENGINE_RECT_HPP
 
 #include "vector.hpp"
+#include <cmath>
 
 namespace engine {
 
@@ -150,6 +151,20 @@ struct rect
 			&& y <= a.y
 			&& x + w > a.x
 			&& y + h > a.y;
+	}
+
+	rect& floor()
+	{
+		for (int i = 0; i < 4; i++)
+			components[i] = std::floor(components[i]);
+		return *this;
+	}
+
+	rect& round()
+	{
+		for (int i = 0; i < 4; i++)
+			components[i] = std::round(components[i]);
+		return *this;
 	}
 
 #ifdef SFML_RECT_HPP

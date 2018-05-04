@@ -64,7 +64,7 @@ struct RendererData;
 void OpenRenderer(RendererData** pRendererData); // Creates the RendererData object
 void CloseRenderer(RendererData** pRendererData); // Frees the RendererData object
 void BeginRenderer(const char* pStr_id, RendererData* pRenderData, ImVec2 pSize = { 0.f, 0.f }, ImGuiRendererFlags pFlags = 0); // Always call EndRenderer() regardless of return value. Returns true if it is a first time run.
-void EndRenderer(); // Everything will be renderered here, do all drawing and handle events before calling this.
+void EndRenderer(); // Everything will be rendered here, do all drawing and handle events before calling this.
 void UseRenderer(RendererData* pRenderData); // Technically the same as BeginRenderer() but without the rendering. Remember to call EndRenderer()
 
 engine::renderer&          GetCurrentRenderer();

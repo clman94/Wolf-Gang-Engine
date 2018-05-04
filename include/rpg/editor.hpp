@@ -108,10 +108,13 @@ public:
 
 	void set_resource_manager(engine::resource_manager& pRes_mgr);
 
+	void set_unit(float pPixels);
+
 private:
 	void draw_subtexture_entries();
-	
+
 	ImGui::RendererData* mFull_texture_renderdata;
+	ImGui::RendererData* mSubtexture_renderdata;
 
 	std::string mReq_texture_name;
 
@@ -119,6 +122,7 @@ private:
 
 	std::shared_ptr<engine::texture> mTexture;
 	engine::subtexture::ptr mSubtexture;
+	engine::frect mOriginal_rect, mChange_rect;
 
 	engine::resource_manager* mResource_manager;
 };

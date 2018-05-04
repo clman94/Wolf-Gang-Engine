@@ -558,6 +558,7 @@ WGE_imgui_editor::WGE_imgui_editor()
 	mGame_render_target.create(400, 400);
 	mGame_renderer.set_target_render(mGame_render_target);
 	mGame.set_renderer(mGame_renderer);
+	mAtlas_editor.set_resource_manager(mGame.get_resource_manager());
 
 	mTile_size = 32;
 
@@ -1485,7 +1486,7 @@ void WGE_imgui_editor::draw_log_window()
 	{
 		const auto& log = logger::get_log();
 
-		// Help keep track of changes in the log
+		// Helps keep track of changes in the log
 		static size_t last_log_size = 0;
 
 		// If the window is scrolled to the bottom, maintain it at the bottom
@@ -1681,11 +1682,13 @@ engine::fvector WGE_imgui_editor::calc_snapping(int pSnapping, int pTile_size)
 atlas_imgui_editor::atlas_imgui_editor()
 {
 	ImGui::OpenRenderer(&mFull_texture_renderdata);
+	ImGui::OpenRenderer(&mSubtexture_renderdata);
 }
 
 atlas_imgui_editor::~atlas_imgui_editor()
 {
 	ImGui::CloseRenderer(&mFull_texture_renderdata);
+	ImGui::CloseRenderer(&mSubtexture_renderdata);
 }
 
 void atlas_imgui_editor::request_open_texture(const std::string pName)
@@ -1695,47 +1698,107 @@ void atlas_imgui_editor::request_open_texture(const std::string pName)
 
 void atlas_imgui_editor::update()
 {
+	if (!mReq_texture_name.empty())
+	{
+		mTexture = mResource_manager->get_resource<engine::texture>(engine::texture_restype, mReq_texture_name);
+		mSubtexture.reset();
+		mReq_texture_name.clear();
+	}
+
 	ImGui::Begin("Texture Atlas Editor");
 
-	ImGui::BeginRenderer("Texturerenderer", mFull_texture_renderdata, ImVec2(0, 0), ImGuiRendererFlags_Editor);
-	ImGui::SetRendererUnit(32);
+	ImGui::BeginRenderer("Texturerenderer", mFull_texture_renderdata, ImVec2(-400, 0), ImGuiRendererFlags_Editor);
 
+	if (mTexture)
+	{
+		engine::primitive_builder& primitives = ImGui::GetRendererPrimitives();
 
-	ImGui::RenderWidgets::Grid({ 1, 1, 1, 1 });
+		primitives.push_node(ImGui::GetRendererWorldNode());
+		primitives.add_quad_texture(mTexture, { 0, 0 });
+
+		for (auto& i : mTexture->get_texture_atlas().get_all())
+		{
+			primitives.add_rectangle(i->get_root_frame(), { 0.6f, 1, 0, 0.4f }, { 1, 1, 1, 1 });
+
+			for (std::size_t frame = 1; frame < i->get_frame_count(); frame++)
+				primitives.add_rectangle(i->get_frame_at(frame), { 1, 1, 1, 0.4f }, { 1, 1, 1, 0.5f });
+		}
+		primitives.pop_node();
+	}
+
+	if (mTexture && mSubtexture)
+	{
+		if (ImGui::RenderWidgets::RectDraggerAndResizer("subtextureresizer", mSubtexture->get_root_frame(), &mChange_rect))
+		{
+			if (ImGui::IsItemClicked(0))
+			{
+				mChange_rect = engine::frect(0, 0, 0, 0);
+				mOriginal_rect = mSubtexture->get_root_frame();
+			}
+			mSubtexture->set_frame_rect(mOriginal_rect + engine::frect(mChange_rect).round());
+		}
+	}
+
+	if (mTexture && !ImGui::RenderWidgets::IsDragging() && ImGui::IsItemClicked(0))
+		for (auto& i : mTexture->get_texture_atlas().get_all())
+			if (i->get_root_frame().is_intersect(ImGui::GetRendererWorldMouse()))
+				mSubtexture = i;
+
+	//ImGui::RenderWidgets::Grid({ 1, 1, 1, 1 });
 
 	ImGui::EndRenderer();
 
 	ImGui::SameLine();
 	ImGui::BeginChild("Settings", ImVec2(0, 0), true);
 
-	if (ImGui::TreeNodeEx("Visual", ImGuiTreeNodeFlags_DefaultOpen))
+	ImGui::BeginRenderer("subtexturepreview", mSubtexture_renderdata, ImVec2(0, 300), ImGuiRendererFlags_Editor);
+
+	engine::primitive_builder& primitives = ImGui::GetRendererPrimitives();
+	if (mSubtexture)
+	{
+		primitives.push_node(ImGui::GetRendererWorldNode());
+		primitives.add_quad_texture(mTexture, engine::fvector(0, 0), mSubtexture->get_frame_at(0));
+		primitives.add_rectangle({engine::fvector(0, 0), mSubtexture->get_frame_at(0).get_size()}, { 0, 0, 0, 0 }, { 1, 1, 1, 1 });
+		primitives.pop_node();
+	}
+
+	ImGui::EndRenderer();
+
+	static int frame = 0; //temp
+	ImGui::SliderInt("Frame", &frame, 0, 10);
+
+	static int defframe = 0;
+	ImGui::SliderInt("Default Frame", &defframe, 0, 10);
+
+	static int dims[4] = { 0, 0, 10, 10};
+	ImGui::DragInt4("Dimensions", dims);
+
+	static float interval = 1;
+	ImGui::DragFloat("Interval", &interval, 0.050f, 0, 60, "%.3fs");
+
+	/*if (ImGui::TreeNodeEx("Visual", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 
 		ImGui::TreePop();
-	}
+	}*/
 
-	if (ImGui::TreeNodeEx("List", ImGuiTreeNodeFlags_DefaultOpen))
+	if (ImGui::TreeNodeEx("Textures", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		ImGui::BeginChild("Atlas list");
-
+		ImGui::BeginChild("texturelist", ImVec2(0, 100), true);
+		for (auto& i : mResource_manager->get_resources_with_type(engine::texture_restype))
+			if (ImGui::Selectable(i->get_name().c_str(), mTexture == i))
+				request_open_texture(i->get_name());
 		ImGui::EndChild();
 		ImGui::TreePop();
 	}
-	if (ImGui::TreeNodeEx("Animation", ImGuiTreeNodeFlags_DefaultOpen))
-	{
-		/*static int dims[4] = { 0, 0, 10, 10};
-		ImGui::DragInt4("Dimensions", dims);*/
-		ImGui::TreePop();
-	}
 
-	if (ImGui::TreeNodeEx("Animation", ImGuiTreeNodeFlags_DefaultOpen))
+	if (mTexture && ImGui::TreeNodeEx("Atlas", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		/*static int frame = 0;
-		ImGui::SliderInt("Frame", &frame, 0, 10);
-		static int defframe = 0;
-		ImGui::SliderInt("Def Frame", &defframe, 0, 10);
-		static float interval = 1;
-		ImGui::DragFloat("Interval", &interval, 0.050f, 0, 60, "%.3fs");*/
+		ImGui::BeginChild("Atlas list", ImVec2(0, 0), true);
+		for (auto& i : mTexture->get_texture_atlas().get_all())
+			if (ImGui::Selectable(i->get_name().c_str(), mSubtexture == i))
+				mSubtexture = i;
+		ImGui::EndChild();
 		ImGui::TreePop();
 	}
 
