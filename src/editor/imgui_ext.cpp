@@ -462,7 +462,7 @@ bool RectDraggerAndResizer(const char * pStr_id, const engine::frect& pRect, eng
 	assert(currentRenderData && !usingRenderer);
 	hash::hash32_t id = hash::hash32(pStr_id);
 	return RectResizer(hash::combine(hash::hash32("resizer"), id), pRect, pChange)
-		|| RectDragger(hash::combine(hash::hash32("resizer"), id), pRect, pChange);
+		|| RectDragger(hash::combine(hash::hash32("dragger"), id), pRect, pChange);
 }
 
 void Grid(const engine::color & pColor)
