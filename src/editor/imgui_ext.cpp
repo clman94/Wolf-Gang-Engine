@@ -315,6 +315,12 @@ engine::node & GetRendererWorldNode()
 	return currentRenderData->worldNode;
 }
 
+float GetRendererZoom()
+{
+	assert(currentRenderData);
+	return currentRenderData->zoom;
+}
+
 namespace RenderWidgets
 {
 

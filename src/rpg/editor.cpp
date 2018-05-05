@@ -605,6 +605,11 @@ void WGE_imgui_editor::run()
 	style.FrameRounding = 2;
 	style.FramePadding = ImVec2(3, 2);
 
+	if (!engine::fs::exists("./editor"))
+		engine::fs::create_directories("./editor");
+	ImGui::GetIO().IniFilename = "./editor/imgui.ini";
+	ImGui::GetIO().LogFilename = "./editor/imgui_log.txt";
+
 	mGame.load("./data");
 	mGame_renderer.refresh();
 	mScene_list = mGame.get_scene_list();
@@ -1737,6 +1742,11 @@ void atlas_imgui_editor::update()
 		mTexture = mResource_manager->get_resource<engine::texture>(engine::texture_restype, mReq_texture_name);
 		mSubtexture.reset();
 		mReq_texture_name.clear();
+
+		// Center Texture
+		ImGui::UseRenderer(mFull_texture_renderdata);
+		ImGui::SetRendererPan(mTexture->get_size() / 2);
+		ImGui::EndRenderer();
 	}
 	if (!*mWindow_open)
 		return;
@@ -1780,7 +1790,8 @@ void atlas_imgui_editor::update()
 			if (i->get_root_frame().is_intersect(ImGui::GetRendererWorldMouse()))
 				mSubtexture = i;
 
-	//ImGui::RenderWidgets::Grid({ 1, 1, 1, 1 });
+	if (ImGui::GetRendererZoom() >= 2) // The pizels will be 4 times as big at this zoom
+		ImGui::RenderWidgets::Grid({ 1, 1, 1, 0.4f });
 
 	ImGui::EndRenderer();
 
@@ -1833,7 +1844,14 @@ void atlas_imgui_editor::update()
 		ImGui::BeginChild("Atlas list", ImVec2(0, 0), true);
 		for (auto& i : mTexture->get_texture_atlas().get_all())
 			if (ImGui::Selectable(i->get_name().c_str(), mSubtexture == i))
+			{
 				mSubtexture = i;
+
+				// Center subtexture preview
+				ImGui::UseRenderer(mSubtexture_renderdata);
+				ImGui::SetRendererPan(mSubtexture->get_root_frame().get_size() / 2);
+				ImGui::EndRenderer();
+			}
 		ImGui::EndChild();
 		ImGui::TreePop();
 	}

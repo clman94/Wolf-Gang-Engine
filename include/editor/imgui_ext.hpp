@@ -81,6 +81,7 @@ engine::color              GetRendererBackground();
 void                       SetRendererPan(engine::fvector pPos);
 engine::fvector            GetRendererSize();
 engine::node&              GetRendererWorldNode();
+float                      GetRendererZoom();
 
 namespace RenderWidgets
 {
