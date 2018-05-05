@@ -559,6 +559,9 @@ WGE_imgui_editor::WGE_imgui_editor()
 	mGame_renderer.set_target_render(mGame_render_target);
 	mGame.set_renderer(mGame_renderer);
 	mAtlas_editor.set_resource_manager(mGame.get_resource_manager());
+	mAtlas_editor.set_window_open_handler(&mWindow_open[window_open_atlas_editor]);
+
+	mWindow_open.fill(true);
 
 	mTile_size = 32;
 
@@ -643,6 +646,22 @@ void WGE_imgui_editor::run()
 				ImGui::MenuItem("Tilemap Layers");
 				ImGui::EndMenu();
 			}
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("View"))
+		{
+			const std::array<const char*, window_open_count> names =
+			{
+				"Game",
+				"Scene Properties",
+				"Scene Editor",
+				"Atlas Editor",
+				"log",
+			};
+			for (std::size_t i = 0; i < window_open_count; i++)
+				if (ImGui::MenuItem(names[i], nullptr, mWindow_open[i]))
+					mWindow_open[i] = !mWindow_open[i];
 			ImGui::EndMenu();
 		}
 
@@ -768,7 +787,9 @@ void WGE_imgui_editor::save_scene()
 
 void WGE_imgui_editor::draw_scene_window()
 {
-	if (ImGui::Begin("Scene"))
+	if (!mWindow_open[window_open_scene_properties])
+		return;
+	if (ImGui::Begin("Scene Properties", &mWindow_open[window_open_scene_properties]))
 	{
 		ImGui::BeginGroup();
 		ImGui::Text("Scene List");
@@ -785,7 +806,7 @@ void WGE_imgui_editor::draw_scene_window()
 
 		if (ImGui::Button("New###NewScene"))
 		{
-			std::memset(mNew_scene_name_buf, 0, sizeof(mNew_scene_name_buf) / sizeof(mNew_scene_name_buf[0]));
+			mNew_scene_name.clear();
 			mNew_scene_texture_name.clear();
 			ImGui::OpenPopup("Create scene");
 		}
@@ -866,7 +887,9 @@ void WGE_imgui_editor::draw_scene_window()
 
 void WGE_imgui_editor::draw_game_window()
 {
-	if (ImGui::Begin("Game"))
+	if (!mWindow_open[window_open_game_window])
+		return;
+	if (ImGui::Begin("Game", &mWindow_open[window_open_game_window]))
 	{
 		if (ImGui::Button("Restart game", ImVec2(-0, 0)))
 		{
@@ -1013,7 +1036,9 @@ void WGE_imgui_editor::draw_game_view_window()
 
 void WGE_imgui_editor::draw_scene_editor_window()
 {
-	if (ImGui::Begin("Scene Editor"))
+	if (!mWindow_open[window_open_scene_editor])
+		return;
+	if (ImGui::Begin("Scene Editor", &mWindow_open[window_open_scene_editor]))
 	{
 		ImGui::BeginRenderer("view", mScene_editor_rendererdata, ImVec2(-300, 0), ImGuiRendererFlags_Editor);
 		ImGui::SetRendererUnit(static_cast<float>(mTile_size));
@@ -1193,14 +1218,12 @@ void WGE_imgui_editor::draw_collision_editor_settings()
 		const char* coll_type_items[] = { "Wall", "Trigger", "Button", "Door" };
 		ImGui::Combo("Type", &current_type, coll_type_items, 4);
 
-		char group_buf[256] = { 0, };
+		std::string group_buf;
 		if (mSelected_collbox->get_wall_group())
-			std::strncpy(group_buf, mSelected_collbox->get_wall_group()->get_name().c_str(), 256);
-		else
-			group_buf[0] = '\0';
-		if (ImGui::InputText("Group", group_buf, 256, ImGuiInputTextFlags_EnterReturnsTrue))
+			group_buf = mSelected_collbox->get_wall_group()->get_name();
+		if (ImGui::InputText("Group", &group_buf, ImGuiInputTextFlags_EnterReturnsTrue))
 		{
-			if (std::strlen(group_buf) == 0)
+			if (group_buf.length() == 0)
 				mSelected_collbox->set_wall_group(nullptr);
 			else
 				mSelected_collbox->set_wall_group(mColl_container.create_group(group_buf));
@@ -1226,10 +1249,9 @@ void WGE_imgui_editor::draw_collision_editor_settings()
 		auto door = std::dynamic_pointer_cast<rpg::door>(mSelected_collbox);
 
 		std::string door_name_buf(door->get_name());
-		door_name_buf.resize(256);
-		if (ImGui::InputText("Name", &door_name_buf[0], 256))
+		if (ImGui::InputText("Name", &door_name_buf))
 		{
-			door->set_name(door_name_buf.c_str());
+			door->set_name(door_name_buf);
 			mIs_scene_modified = true;
 		}
 
@@ -1242,7 +1264,6 @@ void WGE_imgui_editor::draw_collision_editor_settings()
 		ImGui::QuickTooltip("This will offset the player when they come through this door.\nUsed to prevent player from colliding with the door again and going back.");
 
 		// TODO: Use a combo instead
-		static char door_dest_scene_buf[256]; // Temp
 		if (ImGui::BeginCombo("Dest. Scene", door->get_scene().empty() ? "No Scene" : door->get_scene().c_str()))
 		{
 			for (auto& i : mScene_list)
@@ -1259,10 +1280,9 @@ void WGE_imgui_editor::draw_collision_editor_settings()
 
 		// TODO: Use a combo instead
 		std::string door_dest_door_buf(door->get_destination());
-		door_dest_door_buf.resize(256);
-		if (ImGui::InputText("Dest. Door", &door_dest_door_buf[0], 256))
+		if (ImGui::InputText("Dest. Door", &door_dest_door_buf))
 		{
-			door->set_destination(door_dest_door_buf.c_str());
+			door->set_destination(door_dest_door_buf);
 			mIs_scene_modified = true;
 		}
 		ImGui::QuickTooltip("The destination door in the new loaded scene.");
@@ -1494,7 +1514,9 @@ void WGE_imgui_editor::center_tilemap()
 
 void WGE_imgui_editor::draw_log_window()
 {
-	if (ImGui::Begin("Log"))
+	if (!mWindow_open[window_open_log])
+		return;
+	if (ImGui::Begin("Log", &mWindow_open[window_open_log]))
 	{
 		const auto& log = logger::get_log();
 
@@ -1619,22 +1641,21 @@ void WGE_imgui_editor::handle_scene_change()
 
 void WGE_imgui_editor::new_scene_popup()
 {
-	const std::size_t scene_name_length = sizeof(mNew_scene_name_buf) / sizeof(mNew_scene_name_buf[0]);
 	if (ImGui::BeginPopupModal("Create scene", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
-		ImGui::InputText("Name", mNew_scene_name_buf, scene_name_length);
+		ImGui::InputText("Name", &mNew_scene_name);
 
 		ImGui::TextureSelectCombo("Tilemap Texture", mGame.get_resource_manager(), &mNew_scene_texture_name);
 
-		if (ImGui::Button("Create", ImVec2(100, 25)) && strnlen(mNew_scene_name_buf, scene_name_length) != 0)
+		if (ImGui::Button("Create", ImVec2(100, 25)) && !mNew_scene_name.empty())
 		{
-			if (mGame.create_scene(mNew_scene_name_buf, mNew_scene_texture_name))
+			if (mGame.create_scene(mNew_scene_name, mNew_scene_texture_name))
 			{
-				logger::info("Scene \"" + std::string(mNew_scene_name_buf) + "\" created");
-				mGame.get_scene().load_scene(mNew_scene_name_buf);
+				logger::info("Scene \"" + mNew_scene_name + "\" created");
+				mGame.get_scene().load_scene(mNew_scene_name);
 			}
 			else
-				logger::error("Failed to create scene \"" + std::string(mNew_scene_name_buf) + "\"");
+				logger::error("Failed to create scene \"" + mNew_scene_name + "\"");
 			ImGui::CloseCurrentPopup();
 		}
 
@@ -1695,6 +1716,7 @@ atlas_imgui_editor::atlas_imgui_editor()
 {
 	ImGui::OpenRenderer(&mFull_texture_renderdata);
 	ImGui::OpenRenderer(&mSubtexture_renderdata);
+	mWindow_open = nullptr;
 }
 
 atlas_imgui_editor::~atlas_imgui_editor()
@@ -1716,8 +1738,10 @@ void atlas_imgui_editor::update()
 		mSubtexture.reset();
 		mReq_texture_name.clear();
 	}
+	if (!*mWindow_open)
+		return;
 
-	ImGui::Begin("Texture Atlas Editor");
+	ImGui::Begin("Texture Atlas Editor", mWindow_open);
 
 	ImGui::BeginRenderer("Texturerenderer", mFull_texture_renderdata, ImVec2(-400, 0), ImGuiRendererFlags_Editor);
 
@@ -1821,6 +1845,11 @@ void atlas_imgui_editor::update()
 void atlas_imgui_editor::set_resource_manager(engine::resource_manager & pRes_mgr)
 {
 	mResource_manager = &pRes_mgr;
+}
+
+void atlas_imgui_editor::set_window_open_handler(bool* mBool)
+{
+	mWindow_open = mBool;
 }
 
 void atlas_imgui_editor::draw_subtexture_entries()

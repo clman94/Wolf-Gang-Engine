@@ -30,6 +30,9 @@ enum ImGuiRendererFlags_
 
 namespace ImGui
 {
+
+bool InputText(const char* pLabel, std::string* pString, ImGuiInputTextFlags pFlags = 0, ImGuiTextEditCallback pCallback = NULL, void* pUser_data = NULL);
+
 // This button only shows its frame when hovered or clicked
 // This contrasts to InvisibleButton where it is always hidden.
 bool HiddenButton(const char* pName, ImVec2 pSize = ImVec2(0, 0));

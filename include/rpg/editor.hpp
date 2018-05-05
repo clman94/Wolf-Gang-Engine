@@ -108,7 +108,12 @@ public:
 
 	void set_resource_manager(engine::resource_manager& pRes_mgr);
 
+	void set_window_open_handler(bool* mBool);
+
 private:
+
+	bool* mWindow_open;
+
 	void draw_subtexture_entries();
 
 	ImGui::RendererData* mFull_texture_renderdata;
@@ -200,7 +205,18 @@ private:
 	// Toggles with F1.
 	bool mShow_debug_info;
 
-	char mNew_scene_name_buf[256]; // Used by the scene name imgui text box
+	enum window_open_
+	{
+		window_open_game_window = 0,
+		window_open_scene_properties,
+		window_open_scene_editor,
+		window_open_atlas_editor,
+		window_open_log,
+		window_open_count,
+	};
+	std::array<bool, window_open_count> mWindow_open;
+
+	std::string mNew_scene_name;
 	std::string mNew_scene_texture_name;
 	std::string mChange_scene_texture_name;
 

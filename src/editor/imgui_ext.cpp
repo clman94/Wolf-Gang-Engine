@@ -13,7 +13,16 @@ void draw_grid(engine::primitive_builder& pPrimitives, engine::fvector pAlign_to
 
 namespace ImGui
 {
-
+bool InputText(const char * pLabel, std::string* pString, ImGuiInputTextFlags pFlags, ImGuiTextEditCallback pCallback, void * pUser_data)
+{
+	static char buf[126] = { '\0', };
+	assert(pString->length() < IM_ARRAYSIZE(buf));
+	std::memcpy(buf, pString->c_str(), pString->length());
+	std::memset(buf + pString->length(), '\0', IM_ARRAYSIZE(buf) - pString->length());
+	bool ret = ImGui::InputText(pLabel, buf, IM_ARRAYSIZE(buf), pFlags, pCallback, pUser_data);
+	*pString = buf;
+	return ret;
+}
 // This button only shows its frame when hovered or clicked
 // This contrasts to InvisibleButton where it is always hidden.
 bool HiddenButton(const char* pName, ImVec2 pSize)
