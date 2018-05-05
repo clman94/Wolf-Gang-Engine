@@ -291,7 +291,7 @@ engine::color GetRendererBackground()
 void SetRendererPan(engine::fvector pPos)
 {
 	assert(currentRenderData);
-	currentRenderData->worldNode.set_position(pPos);
+	currentRenderData->worldNode.set_position(-pPos);
 }
 
 engine::fvector GetRendererSize()

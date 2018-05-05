@@ -302,6 +302,11 @@ engine::mixer & scene::get_mixer()
 	return mMixer;
 }
 
+engine::fvector scene::get_camera_focus() const
+{
+	return mWorld_node.get_focus();
+}
+
 void scene::script_set_focus(engine::fvector pPosition)
 {
 	mFocus_player = false;

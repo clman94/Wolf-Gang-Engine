@@ -1043,8 +1043,20 @@ void WGE_imgui_editor::draw_scene_editor_window()
 			const char* snapping_items[] = { "None", "Pixel", "Eighth", "Quarter", "Full" };
 			ImGui::Combo("Snapping", &mTilemap_current_snapping, snapping_items, 5);
 
-			if (ImGui::Button("Center View"))
-				center_tilemap();
+			if (ImGui::Button("Focus on..."))
+				ImGui::OpenPopup("FocusOnPopup");
+			if (ImGui::BeginPopup("FocusOnPopup"))
+			{
+				if (ImGui::MenuItem("Center of Tilemap"))
+					center_tilemap();
+				if (ImGui::MenuItem("Camera Focus"))
+				{
+					ImGui::UseRenderer(mScene_editor_rendererdata);
+					ImGui::SetRendererPan(mGame.get_scene().get_camera_focus());
+					ImGui::EndRenderer();
+				}
+				ImGui::EndPopup();
+			}
 
 			ImGui::Checkbox("grid", &mShow_grid);
 
@@ -1476,7 +1488,7 @@ void WGE_imgui_editor::draw_tilemap_layers_group()
 void WGE_imgui_editor::center_tilemap()
 {
 	ImGui::UseRenderer(mScene_editor_rendererdata);
-	ImGui::SetRendererPan(-mTilemap_manipulator.get_center_point());
+	ImGui::SetRendererPan(mTilemap_manipulator.get_center_point());
 	ImGui::EndRenderer();
 }
 

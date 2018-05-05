@@ -95,7 +95,6 @@ void tilemap_display::update(const tilemap_manipulator& pTile_manipulator)
 
 	mTexture = pTile_manipulator.get_texture();
 
-	engine::clock clock;
 	for (size_t i = 0; i < pTile_manipulator.get_layer_count(); i++)
 	{
 		mLayers.emplace_back();
@@ -106,7 +105,6 @@ void tilemap_display::update(const tilemap_manipulator& pTile_manipulator)
 			add_tile(t.get_position(), t.get_atlas(), i, t.get_rotation());
 		}
 	}
-	logger::debug("Tilemap took " + std::to_string(clock.get_elapse().milliseconds()) + "ms to update");
 }
 
 void tilemap_display::set_layer_visible(size_t pIndex, bool pIs_visible)

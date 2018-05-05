@@ -16,14 +16,14 @@ public:
 
 	/// Set the region in which the camera will always stay within
 	void set_boundary(engine::frect pBoundary);
-	engine::frect get_boundary();
+	engine::frect get_boundary() const;
 
 	/// Set the camera's resolution
 	void set_viewport(engine::fvector pViewport);
 
 	/// Set the focal point in which the camera will center on
 	void set_focus(engine::fvector pFocus);
-	engine::fvector get_focus();
+	engine::fvector get_focus() const;
 
 	void set_boundary_enable(bool pEnable);
 

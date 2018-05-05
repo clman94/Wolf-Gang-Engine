@@ -50,12 +50,12 @@ panning_node::set_focus(engine::fvector pFocus)
 	set_position(-(offset + mBoundary.get_offset()));
 }
 
-engine::frect panning_node::get_boundary()
+engine::frect panning_node::get_boundary() const
 {
 	return mBoundary;
 }
 
-engine::fvector panning_node::get_focus()
+engine::fvector panning_node::get_focus() const
 {
 	return mFocus;
 }

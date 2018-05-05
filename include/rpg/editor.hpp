@@ -108,8 +108,6 @@ public:
 
 	void set_resource_manager(engine::resource_manager& pRes_mgr);
 
-	void set_unit(float pPixels);
-
 private:
 	void draw_subtexture_entries();
 

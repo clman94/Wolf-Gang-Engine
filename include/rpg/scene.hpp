@@ -159,6 +159,8 @@ public:
 
 	engine::mixer& get_mixer();
 
+	engine::fvector get_camera_focus() const;
+
 private:
 	bool mIs_ready;
 
