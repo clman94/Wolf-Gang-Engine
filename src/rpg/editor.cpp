@@ -408,7 +408,7 @@ std::string editor_settings_loader::generate_open_cmd(const std::string & pFilep
 {
 	std::string modified_param = mOpen_param;
 	util::replace_all_with(modified_param, "%filename%", pFilepath);
-	return "\"" + mPath + "\" " + modified_param;
+	return mPath + " " + modified_param;
 }
 
 std::string editor_settings_loader::generate_opento_cmd(const std::string & pFilepath, size_t pRow, size_t pCol)
@@ -417,7 +417,7 @@ std::string editor_settings_loader::generate_opento_cmd(const std::string & pFil
 	util::replace_all_with(modified_param, "%filename%", pFilepath);
 	util::replace_all_with(modified_param, "%row%", std::to_string(pRow));
 	util::replace_all_with(modified_param, "%col%", std::to_string(pCol));
-	return "\"" + mPath + "\" " + modified_param;
+	return mPath + " " + modified_param;
 }
 
 
