@@ -8,6 +8,8 @@ using namespace editors;
 #include <algorithm>
 #include <cstring>
 
+#include <rpg/rpg_config.hpp>
+
 #include <engine/logger.hpp>
 #include <engine/utility.hpp>
 #include <engine/math.hpp>
@@ -572,15 +574,10 @@ WGE_imgui_editor::WGE_imgui_editor()
 	mSettings.load("./editor/settings.xml");
 
 	mCurrent_layer = 0;
-
 	mIs_scene_modified = false;
-
 	mShow_debug_info = true;
-
 	mShow_grid = true;
-
 	mGrid_color = { 1, 1, 1, 0.7f };
-
 	mCurrent_scene_editor = editor_tilemap;	
 	
 	ImGui::OpenRenderer(&mScene_editor_rendererdata);
@@ -597,8 +594,8 @@ WGE_imgui_editor::~WGE_imgui_editor()
 
 void WGE_imgui_editor::run()
 {
-	engine::display_window window("WGE Editor New and improved", { 640, 480 });
-	ImGui::SFML::Init(window.get_sfml_window());
+	mWindow.initualize("WGE Editor New and improved", { 640, 480 });
+	ImGui::SFML::Init(mWindow.get_sfml_window());
 
 	ImGuiStyle& style = ImGui::GetStyle();
 	ImGui::StyleColorsDark(&style);
@@ -614,23 +611,26 @@ void WGE_imgui_editor::run()
 	mGame_renderer.refresh();
 	mScene_list = mGame.get_scene_list();
 
+	mRunning = true;
+	mIs_closing = false;
+
 	sf::Clock delta_clock;
-	while (window.is_open())
+	while (mRunning)
 	{
-		if (!window.poll_events())
-			break;
-		window.push_events_to_imgui();
+		if (!mWindow.poll_events())
+			mIs_closing = true;
+		mWindow.push_events_to_imgui();
 
 		if (mIs_game_view_window_focused)
-			mGame_renderer.update_events(window);
+			mGame_renderer.update_events(mWindow);
 
 		mGame.tick();
 		
-		ImGui::SFML::Update(window.get_sfml_window(), delta_clock.restart());
+		ImGui::SFML::Update(mWindow.get_sfml_window(), delta_clock.restart());
 
 		mAtlas_editor.update();
 
-		handle_scene_change();
+		handle_save_confirmations();
 		handle_undo_redo();
 
 		ImGui::BeginMainMenuBar();
@@ -688,9 +688,9 @@ void WGE_imgui_editor::run()
 		draw_scene_editor_window();
 		draw_log_window();
 
-		window.clear();
-		ImGui::SFML::Render(window.get_sfml_window());
-		window.display();
+		mWindow.clear();
+		ImGui::SFML::Render(mWindow.get_sfml_window());
+		mWindow.display();
 	}
 	ImGui::SFML::Shutdown();
 }
@@ -1621,7 +1621,7 @@ void WGE_imgui_editor::handle_undo_redo()
 	}
 }
 
-void WGE_imgui_editor::handle_scene_change()
+void WGE_imgui_editor::handle_save_confirmations()
 {
 	// Has the current scene changed?
 	if (mScene_loader.get_name() != mGame.get_scene().get_name() && !ImGui::IsPopupOpen("###askforsave"))
@@ -1629,20 +1629,32 @@ void WGE_imgui_editor::handle_scene_change()
 		if (mIs_scene_modified)
 			ImGui::OpenPopup("###askforsave");
 		else
-			prepare_scene(mGame.get_source_path() / "scenes", mGame.get_scene().get_name());
+			prepare_scene(mGame.get_source_path() / rpg::defs::DEFAULT_SCENES_PATH, mGame.get_scene().get_name());
 	}
 
+	if (mIs_closing && mIs_scene_modified && !ImGui::IsPopupOpen("###askforsave"))
+		ImGui::OpenPopup("###askforsave");
+
+
+	// Ask for scene save
 	int scene_save_answer = ImGui::ConfirmPopup("Save?###askforsave", "Do you want to save this scene before moving on?");
 	if (scene_save_answer == 1) // yes
 	{
 		save_scene();
-		prepare_scene(mGame.get_source_path() / "scenes", mGame.get_scene().get_name());
+		prepare_scene(mGame.get_source_path() / rpg::defs::DEFAULT_SCENES_PATH, mGame.get_scene().get_name());
 	}
 	else if (scene_save_answer == 2) // no
 	{
 		// No save
-		prepare_scene(mGame.get_source_path() / "scenes", mGame.get_scene().get_name());
+		prepare_scene(mGame.get_source_path() / rpg::defs::DEFAULT_SCENES_PATH, mGame.get_scene().get_name());
 	}
+
+	if (mIs_closing && !ImGui::IsPopupOpen("###askforsave"))
+		mAtlas_editor.confirm_save();
+
+	// End program when both confirmations are complete
+	if (mIs_closing && !mAtlas_editor.is_confirming_save() && !ImGui::IsPopupOpen("###askforsave"))
+		mRunning = false;
 }
 
 void WGE_imgui_editor::new_scene_popup()
@@ -1742,16 +1754,17 @@ void atlas_imgui_editor::request_open_texture(const std::string pName)
 void atlas_imgui_editor::update()
 {
 	if (!mReq_texture_name.empty())
-	{
-		if (mModified && !ImGui::IsPopupOpen("###confirmsave"))
-			ImGui::OpenPopup("###confirmsave");
-		int ans = ImGui::ConfirmPopup("Save?###confirmsave", "You want to save before moving on?");
-		if (ans == 1)
-			save();
-		if (!mModified || ans != 0)
-			open_requested();
-	}
-	
+		confirm_save();
+
+	int ans = ImGui::ConfirmPopup("Save atlas?###confirmsave", "You want to save this texture atlas before moving on?");
+	if (ans == 1)
+		save();
+	if (ans == 2 && mReq_texture_name.empty())
+		mModified = false; // Signal the main editor that it is ready to close
+
+	if (!mReq_texture_name.empty() && (!mModified || ans != 0))
+		open_requested();
+
 	if (!*mWindow_open)
 		return;
 	ImGui::Begin("Texture Atlas Editor", mWindow_open);
@@ -2018,6 +2031,11 @@ void atlas_imgui_editor::open_requested()
 	ImGui::EndRenderer();
 }
 
+bool atlas_imgui_editor::is_modified() const
+{
+	return mModified;
+}
+
 void atlas_imgui_editor::save()
 {
 	if (mTexture->get_texture_atlas().save(mTexture->get_atlas_source()))
@@ -2025,6 +2043,17 @@ void atlas_imgui_editor::save()
 	else
 		logger::error("Failed to save atlas to " + mTexture->get_atlas_source());
 	mModified = false;
+}
+
+bool atlas_imgui_editor::is_confirming_save() const
+{
+	return ImGui::IsPopupOpen("###confirmsave");
+}
+
+void atlas_imgui_editor::confirm_save()
+{
+	if (mModified && !ImGui::IsPopupOpen("###confirmsave"))
+		ImGui::OpenPopup("###confirmsave");
 }
 
 void atlas_imgui_editor::center_subtexture_preview()

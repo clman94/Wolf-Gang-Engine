@@ -110,9 +110,13 @@ public:
 
 	void set_window_open_handler(bool* mBool);
 
+	bool is_modified() const;
+	void save();
+	bool is_confirming_save() const;
+	void confirm_save();
+
 private:
 	void open_requested();
-	void save();
 
 	void center_subtexture_preview();
 
@@ -176,7 +180,7 @@ private:
 
 	std::vector<std::string> mScene_list;
 
-	sf::RenderWindow mWindow;
+	engine::display_window mWindow;
 
 	sf::RenderTexture mGame_render_target;
 	rpg::game mGame;
@@ -240,6 +244,8 @@ private:
 
 	engine::fvector mLast_tile_position; // Prevents a tile being placed/remove continuously in one spot
 
+	bool mRunning, mIs_closing;
+
 private:
 	void prepare_scene(engine::fs::path pPath, const std::string& pName);
 	void save_scene();
@@ -262,7 +268,7 @@ private:
 	void draw_log_window();
 
 	void handle_undo_redo();
-	void handle_scene_change();
+	void handle_save_confirmations();
 
 	void new_scene_popup();
 	void change_texture_popup();
