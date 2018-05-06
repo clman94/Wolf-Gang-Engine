@@ -66,7 +66,7 @@ public:
 
 	const std::vector<subtexture::ptr>& get_all() const;
 
-	bool is_empty() const;
+	bool empty() const;
 
 private:
 	bool load_entries(tinyxml2::XMLDocument& pDoc);
@@ -82,7 +82,9 @@ class texture :
 public:
 
 	void set_texture_source(const std::string& pFilepath);
+	std::string get_texture_source();
 	void set_atlas_source(const std::string& pFilepath);
+	std::string get_atlas_source();
 
 	bool load() override;
 	bool unload() override;

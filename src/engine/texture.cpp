@@ -234,7 +234,7 @@ const std::vector<subtexture::ptr>& texture_atlas::get_all() const
 	return mAtlas;
 }
 
-bool texture_atlas::is_empty() const
+bool texture_atlas::empty() const
 {
 	return mAtlas.empty();
 }
@@ -264,9 +264,19 @@ void texture::set_texture_source(const std::string& pFilepath)
 	mTexture_source = pFilepath;
 }
 
+std::string texture::get_texture_source()
+{
+	return mTexture_source;
+}
+
 void texture::set_atlas_source(const std::string & pFilepath)
 {
 	mAtlas_source = pFilepath;
+}
+
+std::string texture::get_atlas_source()
+{
+	return mAtlas_source;
 }
 
 bool texture::load()

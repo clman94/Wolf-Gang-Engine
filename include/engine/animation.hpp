@@ -11,7 +11,7 @@
 namespace engine
 {
 
-typedef size_t frame_t;
+typedef int frame_t;
 
 class texture;
 
@@ -39,19 +39,21 @@ public:
 	void set_frame_count(frame_t pCount);
 	frame_t get_frame_count() const;
 
-	void set_frame_rect(frect pRect);
-	frect get_frame_at(frame_t pAt) const;
-
 	frect get_root_frame() const;
+	void set_frame_rect(frect pRect);
+
+	frect get_frame_at(frame_t pAt) const;
+	frect get_frame_at_time(float pSeconds) const;
 
 	fvector get_size() const;
 
 	void set_default_frame(frame_t pFrame);
 	frame_t get_default_frame() const;
 
-	frect get_full_region() const;
+	frect get_full_rect() const;
 
-	frame_t calculate_frame(frame_t pCount) const;
+	frame_t calc_frame_from_count(frame_t pCount) const;
+	frame_t calc_frame_from_time(float pSeconds) const;
 
 private:
 	struct sequence_frame

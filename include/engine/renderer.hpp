@@ -708,7 +708,7 @@ class animation_node :
 public:
 	animation_node();
 
-	size_t get_frame() const;
+	frame_t get_frame() const;
 	void set_frame(frame_t pFrame);
 	void set_animation(animation::ptr pAnimation, bool pSwap = false);
 	bool set_animation(const std::string& pName, bool pSwap = false);

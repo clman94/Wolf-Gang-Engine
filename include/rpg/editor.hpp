@@ -111,10 +111,20 @@ public:
 	void set_window_open_handler(bool* mBool);
 
 private:
+	void open_requested();
+	void save();
+
+	void center_subtexture_preview();
+
+	int mCurrent_frame;
+	bool mIs_playing;
+	engine::clock mAnim_clock;
+
+	std::string mNew_entry_name;
 
 	bool* mWindow_open;
 
-	void draw_subtexture_entries();
+	void new_entry_popup();
 
 	ImGui::RendererData* mFull_texture_renderdata;
 	ImGui::RendererData* mSubtexture_renderdata;
@@ -126,6 +136,8 @@ private:
 	std::shared_ptr<engine::texture> mTexture;
 	engine::subtexture::ptr mSubtexture;
 	engine::frect mOriginal_rect, mChange_rect;
+
+	bool mModified;
 
 	engine::resource_manager* mResource_manager;
 };

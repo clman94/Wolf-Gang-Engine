@@ -3,6 +3,7 @@
 #include <engine/renderer.hpp>
 #include <engine/utility.hpp>
 #include <engine/logger.hpp>
+#include <engine/math.hpp>
 
 using namespace engine;
 
@@ -10,7 +11,7 @@ using namespace engine;
 animation::animation()
 {
 	mDefault_frame = 0;
-	mFrame_count = 0;
+	mFrame_count = 1;
 	mLoop = loop_type::linear;
 }
 
@@ -47,6 +48,7 @@ float animation::get_interval(frame_t pAt) const
 
 void animation::set_frame_count(frame_t pCount)
 {
+	assert(pCount >= 1);
 	mFrame_count = pCount;
 }
 
@@ -62,12 +64,16 @@ void animation::set_frame_rect(engine::frect pRect)
 
 engine::frect animation::get_frame_at(frame_t pAt) const
 {
-	if (mFrame_count == 0)
+	if (mFrame_count == 1)
 		return mFrame_rect;
-
 	engine::frect ret = mFrame_rect;
-	ret.x += ret.w*calculate_frame(pAt);
+	ret.x += ret.w*calc_frame_from_count(pAt);
 	return ret;
+}
+
+frect animation::get_frame_at_time(float pSeconds) const
+{
+	return get_frame_at(calc_frame_from_time(pSeconds));
 }
 
 frect animation::get_root_frame() const
@@ -90,29 +96,37 @@ frame_t animation::get_default_frame() const
 	return mDefault_frame;
 }
 
-frect animation::get_full_region() const
+frect animation::get_full_rect() const
 {
 	frect retval(mFrame_rect);
 	retval.w *= mFrame_count;
 	return retval;
 }
 
-frame_t animation::calculate_frame(frame_t pCount) const
+frame_t animation::calc_frame_from_count(frame_t pCount) const
 {
-	if (mFrame_count == 0)
+	if (mFrame_count <= 0)
 		return 0;
 	switch (mLoop)
 	{
 	case animation::loop_type::none:
-		return util::clamp<frame_t>(pCount, 0, mFrame_count - 1);
+		return util::clamp(pCount, 0, mFrame_count - 1);
 
 	case animation::loop_type::linear:
-		return pCount%mFrame_count;
+		return math::pmod(pCount, mFrame_count);
 
 	case animation::loop_type::pingpong:
-		return util::pingpong_index(pCount, mFrame_count - 1);
+		frame_t frame = math::pmod(pCount, mFrame_count*2);
+		return frame >= mFrame_count ? mFrame_count - math::pmod(pCount, mFrame_count) - 1 : math::pmod(pCount, mFrame_count);
 	}
 	return 0;
+}
+
+frame_t animation::calc_frame_from_time(float pSeconds) const
+{
+	if (mFrame_count <= 1 || get_interval() == 0)
+		return 0;
+	return calc_frame_from_count(static_cast<int>(pSeconds / get_interval()) + mDefault_frame);
 }
 
 animation_node::animation_node()
@@ -122,13 +136,14 @@ animation_node::animation_node()
 	mAnimation = nullptr;
 	mSpeed = 1.f;
 	mInterval = 1;
+	mFrame = 0;
 }
 
-size_t animation_node::get_frame() const
+frame_t animation_node::get_frame() const
 {
-	if (mAnimation->get_frame_count() == 0)
+	if (mAnimation->get_frame_count() == 1)
 		return 0;
-	return mAnimation->calculate_frame(mFrame);
+	return mAnimation->calc_frame_from_count(mFrame);
 }
 
 void animation_node::set_frame(frame_t pFrame)
