@@ -36,29 +36,30 @@ scene_script_context::~scene_script_context()
 {
 }
 
-void scene_script_context::set_path(const std::string & pFilepath)
-{
-	mScript_path = pFilepath;
-}
+// TO BE IMPLEMENTED AS A RESOURCE
+//void scene_script_context::set_path(const std::string & pFilepath)
+//{
+//	mScript_path = pFilepath;
+//}
 
-bool scene_script_context::load()
-{
-	assert(!mScript_path.empty());
-	return build_script(mScript_path);
-}
+//bool scene_script_context::load()
+//{
+//	assert(!mScript_path.empty());
+//	return build_script(mScript_path);
+//}
 
-bool scene_script_context::unload()
-{
-	clean();
-	return true;
-}
+//bool scene_script_context::unload()
+//{
+//	clean();
+//	return true;
+//}
 
 void scene_script_context::set_script_system(script_system & pScript)
 {
 	mScript = &pScript;
 }
 
-bool scene_script_context::build_script(const std::string & pPath)
+bool scene_script_context::build_script(const std::string & pPath, const engine::fs::path& pData_path)
 {
 	logger::info("Compiling script '" + pPath + "'...");
 
@@ -67,7 +68,10 @@ bool scene_script_context::build_script(const std::string & pPath)
 	mBuilder.SetIncludeCallback(nullptr, nullptr);
 
 	mBuilder.StartNewModule(mScript->mEngine, pPath.c_str());
-	mBuilder.AddSectionFromMemory("scene_commands", defs::INTERNAL_SCRIPTS_INCLUDE.c_str());
+
+	std::string internal_include = "#include \"" + (pData_path / defs::INTERNAL_SCRIPTS_PATH).string() + "\"";
+	mBuilder.AddSectionFromMemory("__Internal__", internal_include.c_str());
+	
 	mBuilder.AddSectionFromFile(pPath.c_str());
 	if (mBuilder.BuildModule())
 	{
@@ -105,7 +109,7 @@ bool scene_script_context::build_script(const std::string & pPath, engine::resou
 	parse_wall_group_functions();
 
 	logger::info("Script compiled");
-	return false;
+	return true;
 }
 
 std::string scene_script_context::get_metadata_type(const std::string & pMetadata)
@@ -431,7 +435,7 @@ void game::load_icon()
 {
 	if (!get_renderer()->get_window())
 		return;
-	get_renderer()->get_window()->set_icon((mData_directory / "icon.png").string());
+	get_renderer()->get_window()->set_icon((mData_path / "icon.png").string());
 }
 
 void game::load_icon_pack()
@@ -504,7 +508,7 @@ void game::load_terminal_interface(engine::terminal_system& pTerminal)
 			logger::error("Path '" + pArgs[0].get_raw() + "' does not exist");
 			return false;
 		}
-		mData_directory = pArgs[0].get_raw();
+		mData_path = pArgs[0].get_raw();
 		return restart_game();
 	}, "<directory> - Load a game data folder (Default: data)");
 
@@ -608,7 +612,7 @@ engine::resource_manager & game::get_resource_manager()
 }
 const engine::fs::path & game::get_source_path() const
 {
-	return mData_directory;
+	return mData_path;
 }
 
 script_system& game::get_script_system()
@@ -620,8 +624,8 @@ std::vector<std::string> game::get_scene_list() const
 {
 	std::vector<std::string> ret;
 
-	const engine::generic_path dir = (mData_directory / defs::DEFAULT_SCENES_PATH).string();
-	for (auto& i : engine::fs::recursive_directory_iterator(mData_directory / defs::DEFAULT_SCENES_PATH))
+	const engine::generic_path dir = (mData_path / defs::DEFAULT_SCENES_PATH).string();
+	for (auto& i : engine::fs::recursive_directory_iterator(mData_path / defs::DEFAULT_SCENES_PATH))
 	{
 		engine::generic_path path = i.path().string();
 		if (path.extension() == ".xml")
@@ -641,46 +645,23 @@ float game::get_delta()
 	return get_renderer()->get_delta();
 }
 
-bool game::load(engine::fs::path pData_dir)
+bool game::load(engine::fs::path pData_path)
 {
 	using namespace tinyxml2;
 	
-	mData_directory = pData_dir;
+	mData_path = pData_path;
+	mScene.set_data_source(mData_path);
 
 	game_settings_loader settings;
-	if (engine::fs::is_directory(pData_dir)) // Data folder 
+	if (engine::fs::is_directory(pData_path)) // Data folder 
 	{
-		logger::info("Loading settings from data folder...");
-
-		std::string settings_path = (pData_dir / "game.xml").string();
-		if (!settings.load(settings_path, pData_dir.string() + "/"))
-			return (mIs_ready = false, false);
-
-		mResource_manager.set_data_folder(pData_dir.string());
-		mResource_manager.set_resource_pack(nullptr);
-		mScene.set_resource_pack(nullptr);
-
-		load_icon();
+		if (!load_directory(settings))
+			return false;
 	}
 	else // This is a package
 	{
-		logger::info("Loading settings from pack...");
-
-		if (!mPack.open(pData_dir.string()))
-		{
-			logger::error("Could not load pack");
-			return (mIs_ready = false, false);
-		}
-
-		const auto settings_data = mPack.read_all("game.xml");
-
-		if (!settings.load_memory(&settings_data[0], settings_data.size()))
-			return (mIs_ready = false, false);
-
-		mResource_manager.set_resource_pack(&mPack);
-		mScene.set_resource_pack(&mPack);
-
-		load_icon_pack();
+		if (!load_pack(settings))
+			return false;
 	}
 
 	logger::info("Settings loaded");
@@ -728,8 +709,8 @@ void game::clear_scene()
 
 bool game::create_scene(const std::string & pName, const std::string& pTexture)
 {
-	const auto xml_path = mData_directory / defs::DEFAULT_SCENES_PATH / (pName + ".xml");
-	const auto script_path = mData_directory / defs::DEFAULT_SCENES_PATH / (pName + ".as");
+	const auto xml_path = mData_path / defs::DEFAULT_SCENES_PATH / (pName + ".xml");
+	const auto script_path = mData_path / defs::DEFAULT_SCENES_PATH / (pName + ".as");
 
 	if (engine::fs::exists(xml_path) || engine::fs::exists(script_path))
 	{
@@ -797,7 +778,7 @@ bool game::restart_game()
 
 	mSave_system.clean();
 
-	bool succ = load(mData_directory);
+	bool succ = load(mData_path);
 
 	logger::info("Game reloaded");
 	return succ;
@@ -806,6 +787,43 @@ bool game::restart_game()
 void game::refresh_renderer(engine::renderer & pR)
 {
 	mScene.set_renderer(pR);
+}
+
+bool game::load_directory(game_settings_loader& pSettings)
+{
+	logger::info("Loading settings from data folder...");
+
+	const engine::fs::path settings_path = mData_path / "game.xml";
+	if (!pSettings.load(settings_path.string(), mData_path.string() + "/"))
+		return mIs_ready = false;
+
+	mResource_manager.set_directory(mData_path.string());
+	mResource_manager.set_resource_pack(nullptr);
+	mScene.set_resource_pack(nullptr);
+
+	load_icon();
+	return true;
+}
+
+bool game::load_pack(game_settings_loader & pSettings)
+{
+	logger::info("Loading settings from pack...");
+
+	if (!mPack.open(mData_path.string()))
+	{
+		logger::error("Could not load pack");
+		return mIs_ready = false;
+	}
+
+	const auto settings_data = mPack.read_all("game.xml");
+	if (!pSettings.load_memory(&settings_data[0], settings_data.size()))
+		return mIs_ready = false;
+
+	mResource_manager.set_resource_pack(&mPack);
+	mScene.set_resource_pack(&mPack);
+
+	load_icon_pack();
+	return false;
 }
 
 // ##########

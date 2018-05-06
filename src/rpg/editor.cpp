@@ -1845,27 +1845,27 @@ void atlas_imgui_editor::update()
 	ImGui::SameLine();
 
 	ImGui::BeginChild("Settings", ImVec2(0, 0), true);
-
-	ImGui::BeginRenderer("subtexturepreview", mSubtexture_renderdata, ImVec2(0, 300), ImGuiRendererFlags_Editor);
-	{
-		engine::primitive_builder& primitives = ImGui::GetRendererPrimitives();
-		if (mSubtexture)
-		{
-			primitives.push_node(ImGui::GetRendererWorldNode());
-
-			engine::frect frame;
-			frame = mSubtexture->get_frame_at(mCurrent_frame);
-			primitives.add_quad_texture(mTexture, engine::fvector(0, 0), mSubtexture->get_frame_at(mCurrent_frame));
-
-			// Subtexture perimeter
-			primitives.add_rectangle({ engine::fvector(0, 0), mSubtexture->get_frame_at(0).get_size() }, { 0, 0, 0, 0 }, { 0, 1, 1, 1 });
-
-			primitives.pop_node();
-		}
-	}
-	ImGui::EndRenderer();
 	if (mSubtexture)
 	{
+		ImGui::BeginRenderer("subtexturepreview", mSubtexture_renderdata, ImVec2(0, 300), ImGuiRendererFlags_Editor);
+		{
+			engine::primitive_builder& primitives = ImGui::GetRendererPrimitives();
+			if (mSubtexture)
+			{
+				primitives.push_node(ImGui::GetRendererWorldNode());
+
+				engine::frect frame;
+				frame = mSubtexture->get_frame_at(mCurrent_frame);
+				primitives.add_quad_texture(mTexture, engine::fvector(0, 0), mSubtexture->get_frame_at(mCurrent_frame));
+
+				// Subtexture perimeter
+				primitives.add_rectangle({ engine::fvector(0, 0), mSubtexture->get_frame_at(0).get_size() }, { 0, 0, 0, 0 }, { 0, 1, 1, 1 });
+
+				primitives.pop_node();
+			}
+		}
+		ImGui::EndRenderer();
+
 		if (mIs_playing)
 		{
 			// Update animation

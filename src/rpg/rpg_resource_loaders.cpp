@@ -17,9 +17,9 @@
 
 using namespace rpg;
 
-bool texture_loader::load(engine::resource_manager& pResource_manager, const std::string& mData_filepath)
+bool texture_loader::load(engine::resource_manager& pResource_manager, const engine::fs::path& mData_filepath)
 {
-	const engine::fs::path folder_path = mData_filepath + "/" + defs::DEFAULT_TEXTURES_PATH.string();
+	const engine::fs::path folder_path = mData_filepath / defs::DEFAULT_TEXTURES_PATH.string();
 
 	if (!engine::fs::exists(folder_path))
 	{
@@ -89,9 +89,9 @@ bool texture_loader::load_pack(engine::resource_manager & pResource_manager, eng
 	return true;
 }
 
-bool font_loader::load(engine::resource_manager& pResource_manager, const std::string& mData_filepath)
+bool font_loader::load(engine::resource_manager& pResource_manager, const engine::fs::path& mData_filepath)
 {
-	const engine::fs::path folder_path = mData_filepath + "/" + defs::DEFAULT_FONTS_PATH.string();
+	const engine::fs::path folder_path = mData_filepath / defs::DEFAULT_FONTS_PATH.string();
 
 	if (!engine::fs::exists(folder_path))
 	{
@@ -160,9 +160,9 @@ static const std::set<std::string> supported_sound_extensions =
 };
 
 
-bool audio_loader::load(engine::resource_manager & pResource_manager, const std::string& mData_filepath)
+bool audio_loader::load(engine::resource_manager & pResource_manager, const engine::fs::path& mData_path)
 {
-	const engine::fs::path folder_path = engine::fs::path(mData_filepath) / defs::DEFAULT_AUDIO_PATH;
+	const engine::fs::path folder_path = engine::fs::path(mData_path) / defs::DEFAULT_AUDIO_PATH;
 
 	if (!engine::fs::exists(folder_path))
 	{
@@ -200,7 +200,7 @@ bool audio_loader::load_pack(engine::resource_manager & pResource_manager, engin
 	return true;
 }
 
-bool script_loader::load(engine::resource_manager & pResource_manager, const std::string & mData_filepath)
+bool script_loader::load(engine::resource_manager & pResource_manager, const engine::fs::path& mData_filepath)
 {
 	return false;
 }

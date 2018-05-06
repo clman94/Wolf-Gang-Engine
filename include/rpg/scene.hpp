@@ -161,12 +161,16 @@ public:
 
 	engine::fvector get_camera_focus() const;
 
+	void set_data_source(const engine::fs::path& pPath);
+
 private:
 	bool mIs_ready;
 
 	std::vector<std::shared_ptr<script_function>> mEnd_functions;
 
 	std::map<std::string, scene_script_context> pScript_contexts;
+
+	engine::fs::path mData_path;
 
 	panning_node mWorld_node;
 	engine::node mScene_node;

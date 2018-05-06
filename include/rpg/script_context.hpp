@@ -35,12 +35,13 @@ public:
 	scene_script_context();
 	~scene_script_context();
 
-	void set_path(const std::string& pFilepath);
-	bool load() override;
-	bool unload() override;
+	// TO BE IMPLEMENTED AS A RESOURCE
+	//void set_path(const std::string& pFilepath);
+	bool load() override { return true; }
+	bool unload() override { return true; }
 
 	void set_script_system(script_system& pScript);
-	bool build_script(const std::string& pPath);
+	bool build_script(const std::string& pPath, const engine::fs::path& pData_path);
 	bool build_script(const std::string& pPath, engine::resource_pack& pPack);
 	bool is_valid() const;
 	void clean();

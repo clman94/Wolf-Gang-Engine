@@ -39,7 +39,7 @@ private:
 class resource_loader
 {
 public:
-	virtual bool load(resource_manager& pResource_manager, const std::string& mData_filepath) = 0;
+	virtual bool load(resource_manager& pResource_manager, const engine::fs::path& mData_filepath) = 0;
 	virtual bool load_pack(resource_manager& pResource_manager, resource_pack& pPack) = 0;
 };
 
@@ -78,18 +78,17 @@ public:
 	void unload_unused();
 	void clear_resources();
 
-	void set_resource_pack(resource_pack* pPack);
-
 	std::string get_resource_log() const;
 
-	void set_data_folder(const std::string& pFilepath);
+	void set_resource_pack(resource_pack* pPack);
+	void set_directory(const engine::fs::path& pPath);
 
 	// Get all resources in this manager. Used only for debugging
 	const std::vector<std::shared_ptr<resource>>& get_resources() const;
 	std::vector<std::shared_ptr<resource>> get_resources_with_type(const std::string& pType) const;
 
 private:
-	std::string mData_filepath;
+	engine::fs::path mData_path;
 
 	resource_pack* mPack;
 

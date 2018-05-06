@@ -197,6 +197,9 @@ protected:
 
 private:
 
+	bool load_directory(game_settings_loader& pSettings);
+	bool load_pack(game_settings_loader& pSettings);
+
 	// Everything is good and settings are loaded
 	bool mIs_ready;
 
@@ -213,7 +216,7 @@ private:
 	unsigned int     mSlot;
 	save_system      mSave_system;
 
-	engine::fs::path mData_directory;
+	engine::fs::path mData_path;
 
 #ifndef LOCKED_RELEASE_MODE
 	std::shared_ptr<engine::terminal_command_group> mGroup_flags;

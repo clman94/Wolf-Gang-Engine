@@ -82,6 +82,7 @@ bool scene::load_scene(std::string pName)
 {
 	assert(mResource_manager != nullptr);
 	assert(mScript != nullptr);
+	assert(!mData_path.empty());
 
 	clean();
 
@@ -99,7 +100,7 @@ bool scene::load_scene(std::string pName)
 	}
 	else
 	{
-		if (!mLoader.load((defs::DEFAULT_DATA_PATH / defs::DEFAULT_SCENES_PATH).string(), pName))
+		if (!mLoader.load((mData_path / defs::DEFAULT_SCENES_PATH).string(), pName))
 		{
 			logger::error("Unable to open scene '" + pName + "'");
 			return false;
@@ -122,7 +123,7 @@ bool scene::load_scene(std::string pName)
 		if (mPack)
 			context.build_script(mLoader.get_script_path(), *mPack);
 		else
-			context.build_script(mLoader.get_script_path());
+			context.build_script(mLoader.get_script_path(), mData_path);
 	}
 	else
 		logger::info("Script is already compiled");
@@ -305,6 +306,11 @@ engine::mixer & scene::get_mixer()
 engine::fvector scene::get_camera_focus() const
 {
 	return mWorld_node.get_focus();
+}
+
+void scene::set_data_source(const engine::fs::path & pPath)
+{
+	mData_path = pPath;
 }
 
 void scene::script_set_focus(engine::fvector pPosition)

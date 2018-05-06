@@ -23,7 +23,6 @@ const engine::fs::path DEFAULT_INTERNALS_PATH = "internal";
 const engine::fs::path DEFAULT_FONTS_PATH     = "fonts";
 
 const engine::fs::path INTERNAL_SCRIPTS_PATH = DEFAULT_INTERNALS_PATH / "scene.as";
-const std::string INTERNAL_SCRIPTS_INCLUDE   = "#include \"" + (defs::DEFAULT_DATA_PATH / INTERNAL_SCRIPTS_PATH).string() + "\"";
 
 const float TILES_DEPTH            = 103;
 const float TILE_DEPTH_RANGE_MIN   = 1;

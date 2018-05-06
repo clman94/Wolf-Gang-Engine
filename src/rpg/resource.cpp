@@ -100,9 +100,9 @@ std::string resource_manager::get_resource_log() const
 	return val;
 }
 
-void resource_manager::set_data_folder(const std::string & pFilepath)
+void resource_manager::set_directory(const engine::fs::path& pPath)
 {
-	mData_filepath = pFilepath;
+	mData_path = pPath;
 }
 
 std::vector<std::shared_ptr<resource>> resource_manager::get_resources_with_type(const std::string & pType) const
@@ -127,13 +127,8 @@ void resource_manager::add_loader(std::shared_ptr<resource_loader> pDirectory)
 void resource_manager::remove_loader(std::shared_ptr<resource_loader> pLoader)
 {
 	for (size_t i = 0; i < mLoaders.size(); i++)
-	{
 		if (mLoaders[i] == pLoader)
-		{
-			mLoaders.erase(mLoaders.begin() + i);
-			--i;
-		}
-	}
+			mLoaders.erase(mLoaders.begin() + i--);
 }
 
 bool resource_manager::reload_all()
@@ -148,7 +143,7 @@ bool resource_manager::reload_all()
 		}
 		else
 		{
-			if (!i->load(*this, mData_filepath))
+			if (!i->load(*this, mData_path))
 				return false;
 		}
 	}
