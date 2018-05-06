@@ -839,14 +839,14 @@ void WGE_imgui_editor::draw_scene_window()
 		if (ImGui::Button("Edit Script"))
 		{
 			std::string cmd = mSettings.generate_open_cmd(mScene_loader.get_script_path());
-			if (std::system(("START " + cmd).c_str())) // May not be very portable
+			if (!util::create_process_cmdline(cmd))
 				logger::error("Failed to launch editor");
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Edit Xml"))
 		{
 			std::string cmd = mSettings.generate_open_cmd(mScene_loader.get_scene_path());
-			if (std::system(("START " + cmd).c_str())) // May not be very portable
+			if (!util::create_process_cmdline(cmd))
 				logger::error("Failed to launch editor");
 		}
 		ImGui::QuickTooltip("Warning: It is not recommended that you actually edit this file.");
@@ -1578,8 +1578,9 @@ void WGE_imgui_editor::draw_log_window()
 				ImGui::PushStyleColor(ImGuiCol_Text, { 0.7f, 0.7f, 0.7f, 1 });
 				if (ImGui::HiddenSmallButton(file_info.c_str()))
 				{
-						std::string cmd = mSettings.generate_open_cmd(log[i].file);
-						std::system(("START " + cmd).c_str()); // May not be very portable
+					std::string cmd = mSettings.generate_open_cmd(log[i].file);
+					if (!util::create_process_cmdline(cmd))
+						logger::error("Failed to launch editor");
 				}
 				ImGui::QuickTooltip("Open file in editor.");
 				ImGui::PopStyleColor();

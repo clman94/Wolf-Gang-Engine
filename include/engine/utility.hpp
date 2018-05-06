@@ -370,6 +370,8 @@ bool replace_all_with(std::string& pVal, const std::string& pTarget, const std::
 
 bool text_file_readall(const std::string& pPath, std::string& pOut);
 
+// Portable-ish
+bool create_process_cmdline(const std::string& pCmd);
 }
 
 #endif

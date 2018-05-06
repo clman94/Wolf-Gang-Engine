@@ -47,3 +47,35 @@ bool util::text_file_readall(const std::string & pPath, std::string & pOut)
 	stream.close();
 	return true;
 }
+
+#ifdef _WIN32
+
+#include <windows.h>
+
+bool util::create_process_cmdline(const std::string & pCmd)
+{
+	std::string cmd = pCmd;
+	cmd.resize(MAX_PATH);
+
+	STARTUPINFO si;
+	PROCESS_INFORMATION pi;
+
+	ZeroMemory(&si, sizeof(si));
+	si.cb = sizeof(si);
+	ZeroMemory(&pi, sizeof(pi));
+
+	return CreateProcess(NULL, &cmd[0], NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi) != 0;
+}
+
+
+#elif _linux_
+
+#include <unistd.h>
+
+
+bool util::create_process_cmdline(const std::string & pCmd)
+{
+	return std::system(pCmd.c_str()) == 0;
+}
+
+#endif
