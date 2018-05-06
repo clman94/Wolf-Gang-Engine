@@ -105,7 +105,7 @@ frect animation::get_full_rect() const
 
 frame_t animation::calc_frame_from_count(frame_t pCount) const
 {
-	if (mFrame_count <= 0)
+	if (mFrame_count <= 1)
 		return 0;
 	switch (mLoop)
 	{
@@ -116,8 +116,8 @@ frame_t animation::calc_frame_from_count(frame_t pCount) const
 		return math::pmod(pCount, mFrame_count);
 
 	case animation::loop_type::pingpong:
-		frame_t frame = math::pmod(pCount, mFrame_count*2);
-		return frame >= mFrame_count ? mFrame_count - math::pmod(pCount, mFrame_count) - 1 : math::pmod(pCount, mFrame_count);
+		frame_t end = mFrame_count - 1;
+		return (pCount / end) % 2 ? end - math::pmod(pCount, end) : math::pmod(pCount, end);
 	}
 	return 0;
 }

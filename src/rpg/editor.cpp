@@ -1755,14 +1755,27 @@ void atlas_imgui_editor::update()
 		return;
 	ImGui::Begin("Texture Atlas Editor", mWindow_open);
 
-	ImGui::BeginGroup();
+	static float tlb_w = 150;
+
+	ImGui::BeginChild("textureprops", ImVec2(tlb_w, 0));
+	if (mTexture)
+	{
+		if (ImGui::Button("Save###savetex", ImVec2(-1, 0)))
+			save();
+		if (ImGui::Button("Reload###reloadtex", ImVec2(-1, 0)))
+			request_open_texture(mTexture->get_name());
+	}
 	ImGui::TextUnformatted("Textures");
-	ImGui::BeginChild("texturelist", ImVec2(150, 0), true);
+	ImGui::BeginChild("texturelist", ImVec2(tlb_w, 0), true);
 	for (auto& i : mResource_manager->get_resources_with_type(engine::texture_restype))
 		if (ImGui::Selectable(i->get_name().c_str(), mTexture && mTexture->get_name() == i->get_name()))
 			request_open_texture(i->get_name());
 	ImGui::EndChild();
-	ImGui::EndGroup();
+	ImGui::EndChild();
+
+	ImGui::SameLine();
+
+	ImGui::VSplitter("texturelbsplitter", 3, &tlb_w);
 
 	ImGui::SameLine();
 
@@ -1829,6 +1842,7 @@ void atlas_imgui_editor::update()
 		center_subtexture_preview();
 
 	ImGui::SameLine();
+
 	ImGui::BeginChild("Settings", ImVec2(0, 0), true);
 
 	ImGui::BeginRenderer("subtexturepreview", mSubtexture_renderdata, ImVec2(0, 300), ImGuiRendererFlags_Editor);
