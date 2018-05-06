@@ -68,7 +68,7 @@ bool util::create_process_cmdline(const std::string & pCmd)
 }
 
 
-#elif _linux_
+#elif __linux__
 
 #include <unistd.h>
 
