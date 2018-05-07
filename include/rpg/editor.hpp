@@ -123,6 +123,9 @@ private:
 	int mCurrent_frame;
 	bool mIs_playing;
 	engine::clock mAnim_clock;
+	void play_animation();
+	void stop_animation();
+	void update_animation();
 
 	std::string mNew_entry_name;
 
@@ -247,6 +250,8 @@ private:
 	bool mRunning, mIs_closing;
 
 private:
+	bool is_ready_to_close();
+
 	void prepare_scene(engine::fs::path pPath, const std::string& pName);
 	void save_scene();
 

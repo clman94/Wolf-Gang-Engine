@@ -92,7 +92,7 @@ bool RectDragger(const char* pStr_id, const engine::frect& pRect, engine::frect*
 bool RectResizer(const char* pStr_id, const engine::frect& pRect, engine::frect* pChange);
 bool RectDraggerAndResizer(const char* pStr_id, const engine::frect& pRect, engine::frect* pChange);
 
-void Grid(const engine::color& pColor);
+void Grid(const engine::color& pColor); // By default, the renderer unit (GetRendererUnit()) is used for the cell size
 
 }
 

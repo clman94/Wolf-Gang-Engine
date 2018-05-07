@@ -747,6 +747,11 @@ void WGE_imgui_editor::delete_box()
 	mIs_scene_modified = true;
 }
 
+bool WGE_imgui_editor::is_ready_to_close()
+{
+	return mIs_closing && !mAtlas_editor.is_confirming_save() && !ImGui::IsPopupOpen("###askforsave");
+}
+
 void WGE_imgui_editor::prepare_scene(engine::fs::path pPath, const std::string& pName)
 {
 	// Load the scene settings
@@ -1635,7 +1640,6 @@ void WGE_imgui_editor::handle_save_confirmations()
 	if (mIs_closing && mIs_scene_modified && !ImGui::IsPopupOpen("###askforsave"))
 		ImGui::OpenPopup("###askforsave");
 
-
 	// Ask for scene save
 	int scene_save_answer = ImGui::ConfirmPopup("Save?###askforsave", "Do you want to save this scene before moving on?");
 	if (scene_save_answer == 1) // yes
@@ -1649,11 +1653,11 @@ void WGE_imgui_editor::handle_save_confirmations()
 		prepare_scene(mGame.get_source_path() / rpg::defs::DEFAULT_SCENES_PATH, mGame.get_scene().get_name());
 	}
 
+	// Run confirmation for atlas editor is the window is closing
 	if (mIs_closing && !ImGui::IsPopupOpen("###askforsave"))
 		mAtlas_editor.confirm_save();
 
-	// End program when both confirmations are complete
-	if (mIs_closing && !mAtlas_editor.is_confirming_save() && !ImGui::IsPopupOpen("###askforsave"))
+	if (is_ready_to_close())
 		mRunning = false;
 }
 
@@ -1793,6 +1797,8 @@ void atlas_imgui_editor::update()
 
 	ImGui::SameLine();
 
+	update_animation();
+
 	bool do_center_subtexture_preview = false;
 	ImGui::BeginRenderer("Texturerenderer", mFull_texture_renderdata, ImVec2(-400, 0), ImGuiRendererFlags_Editor);
 	{
@@ -1879,25 +1885,10 @@ void atlas_imgui_editor::update()
 		}
 		ImGui::EndRenderer();
 
-		if (mIs_playing)
-		{
-			// Update animation
-			mCurrent_frame = mSubtexture->calc_frame_from_time(mAnim_clock.get_elapse().milliseconds());
-			if (mSubtexture->get_loop() == engine::animation::loop_type::none
-				&& mCurrent_frame == mSubtexture->get_frame_count() - 1)
-				mIs_playing = false;
-
-			if (ImGui::Button("Stop"))
-				mIs_playing = false;
-		}
-		else
-		{
-			if (ImGui::Button("Play"))
-			{
-				mAnim_clock.restart();
-				mIs_playing = true;
-			}
-		}
+		if (mIs_playing && ImGui::Button("Stop"))
+				stop_animation();
+		else if (ImGui::Button("Play"))
+			play_animation();
 
 		ImGui::SliderInt("Frame", &mCurrent_frame, 0, mSubtexture->get_frame_count() - 1);
 		if (ImGui::IsItemClicked(1))
@@ -2061,6 +2052,28 @@ void atlas_imgui_editor::center_subtexture_preview()
 	ImGui::UseRenderer(mSubtexture_renderdata);
 	ImGui::SetRendererPan(mSubtexture->get_root_frame().get_size() / 2);
 	ImGui::EndRenderer();
+}
+
+void atlas_imgui_editor::play_animation()
+{
+	mIs_playing = true;
+	mCurrent_frame = mSubtexture->get_default_frame();
+	mAnim_clock.restart();
+}
+
+void atlas_imgui_editor::stop_animation()
+{
+	mIs_playing = false;
+}
+
+void atlas_imgui_editor::update_animation()
+{
+	if (!mIs_playing)
+		return;
+	mCurrent_frame = mSubtexture->calc_frame_from_time(mAnim_clock.get_elapse().milliseconds());
+	if (mSubtexture->get_loop() == engine::animation::loop_type::none
+		&& mCurrent_frame == mSubtexture->get_frame_count() - 1)
+		mIs_playing = false;
 }
 
 void atlas_imgui_editor::new_entry_popup()
