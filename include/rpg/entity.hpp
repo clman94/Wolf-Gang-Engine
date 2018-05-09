@@ -20,6 +20,7 @@ public:
 	enum class type
 	{
 		other,
+		node,
 		sprite,
 		text
 	};

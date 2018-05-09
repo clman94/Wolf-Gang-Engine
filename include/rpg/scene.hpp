@@ -1,6 +1,8 @@
 #ifndef RPG_SCENE_HPP
 #define RPG_SCENE_HPP
 
+#include <array>
+
 #include <engine/renderer.hpp>
 #include <engine/audio.hpp>
 #include <engine/pathfinding.hpp>
@@ -16,6 +18,12 @@
 #include <rpg/tilemap_display.hpp>
 
 namespace rpg {
+
+class scene_component
+{
+public:
+
+};
 
 // The main pathfinding system for tilemap based pathfinding
 class pathfinding_system
@@ -80,6 +88,63 @@ private:
 	int script_music_start_transition_play(const std::string& pName);
 	void script_music_stop_transition_play();
 	void script_music_set_second_volume(float pVolume);
+};
+
+class light_entity
+	: public entity
+{
+public:
+	virtual ~light_entity();
+
+	virtual entity::type get_type() const override
+	{
+		return entity::type::node;
+	}
+
+	void clear();
+
+	virtual int draw(engine::renderer& pR) override;
+
+	int get_light_index() const;
+	void set_light(int pIdx, std::shared_ptr<engine::shader> pShader);
+
+private:
+	int mLight_idx;
+	std::shared_ptr<engine::shader> mShader;
+};
+
+class light_shader_manager
+{
+public:
+	light_shader_manager();
+
+	/*
+	shader::light::initialize();
+	shader::light::set_position(int light_idx, vec pos);
+	shader::light::set_color(int light_idx, color pColor);
+	shader::light::set_radius(int light_idx, float pPixels);
+	shader::light::set_attenuation(int light_idx, float pPixels);
+
+	*/
+	void load_script_interface(script_system& pScript);
+	void set_renderer(engine::renderer& pRenderer);
+	void clear();
+
+private:
+	light_entity * cast_light_entity(entity_reference & pE);
+	std::shared_ptr<engine::shader> mShader;
+	engine::renderer *mRenderer;
+	script_system* mScript_system;
+
+	std::array<light_entity, 16> mLight_entities;
+
+private:
+	entity_reference script_add_light();
+	void script_remove_light(entity_reference& pE);
+	void script_initialize();
+	void script_set_color(entity_reference& pE, const engine::color& pColor);
+	void script_set_radius(entity_reference& pE, float pPixels);
+	void script_set_attenuation(entity_reference& pE, float pPixels);
 };
 
 class scene;
@@ -185,6 +250,7 @@ private:
 	entity_manager        mEntity_manager;
 	colored_overlay       mColored_overlay;
 	pathfinding_system    mPathfinding_system;
+	light_shader_manager  mLight_shader_manager;
 
 	engine::mixer         mMixer;
 	background_music      mBackground_music;

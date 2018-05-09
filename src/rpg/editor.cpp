@@ -569,7 +569,7 @@ WGE_imgui_editor::WGE_imgui_editor()
 
 	mSelected_tile = 1;
 	mTile_rotation = 0;
-	mTilemap_current_snapping = snapping_full;
+	mTilemap_current_snapping = snapping_1x1;
 
 	mSettings.load("./editor/settings.xml");
 
@@ -1075,7 +1075,7 @@ void WGE_imgui_editor::draw_scene_editor_window()
 		if (ImGui::TreeNodeEx("Visual", ImGuiTreeNodeFlags_DefaultOpen))
 		{
 			ImGui::PushItemWidth(-100);
-			const char* snapping_items[] = { "None", "Pixel", "Eighth", "Quarter", "Full" };
+			const char* snapping_items[] = { "None", "Pixel", "4x4", "2x2", "1x1" };
 			ImGui::Combo("Snapping", &mTilemap_current_snapping, snapping_items, 5);
 
 			if (ImGui::Button("Focus on..."))
@@ -1728,9 +1728,9 @@ engine::fvector WGE_imgui_editor::calc_snapping(int pSnapping, int pTile_size)
 	default:
 	case snapping_none:    return { 0, 0 };
 	case snapping_pixel:   return engine::fvector(1, 1) / (float)pTile_size;
-	case snapping_eight:   return { 0.25f, 0.25f };
-	case snapping_quarter: return { 0.5f, 0.5f };
-	case snapping_full:    return { 1, 1 };
+	case snapping_4x4:   return { 0.25f, 0.25f };
+	case snapping_2x2: return { 0.5f, 0.5f };
+	case snapping_1x1:    return { 1, 1 };
 	}
 }
 

@@ -76,6 +76,7 @@ private:
 };
 
 class renderer;
+class shader;
 
 class render_object :
 	public node,
@@ -101,6 +102,7 @@ public:
 	void set_renderer(renderer& pR, bool pManual_render = false);
 	renderer* get_renderer() const;
 	void detach_renderer();
+
 
 protected:
 	virtual void refresh_renderer(renderer& pR) {}
@@ -181,17 +183,15 @@ public:
 
 	void refresh();
 
-	sf::RenderTarget& get_sfml_render()
-	{
-		assert(mRender_target);
-		return *mRender_target;
-	}
+	sf::RenderTarget& get_sfml_render();
 
 	// Get the ascii text inputted last event handling
 	std::string get_entered_text() const;
 
 	// Get the unicode text inputted last event handling
 	std::u32string get_entered_text_unicode() const;
+
+	void set_shader(std::shared_ptr<shader> pShader, float pDepth);
 
 private:
 	std::u32string mEntered_text;
@@ -205,6 +205,10 @@ private:
 	sf::View mView;
 	display_window* mWindow;
 	sf::RenderTarget* mRender_target;
+
+	float mShader_depth;
+	std::shared_ptr<shader> mShader;
+	sf::RenderTexture mTemp_shader_buffer;
 
 	std::vector<render_object*> mObjects;
 	bool mRequest_resort;
@@ -225,6 +229,7 @@ private:
 
 	void refresh_input();
 
+	int draw_object_with_shader();
 	int draw_objects();
 	void sort_objects();    // Sorts the mObjects array by depth
 
@@ -258,6 +263,7 @@ class shader :
 {
 public:
 	bool load() override;
+	bool load(const std::string& pVert, const std::string& pFrag);
 	bool unload() override;
 
 	void set_vertex_path(const std::string& pPath);
@@ -267,6 +273,12 @@ public:
 	{
 		return shader_restype;
 	}
+
+	void set_uniform(const std::string& pName, int pVal);
+	void set_uniform(const std::string& pName, float pVal);
+	void set_uniform(const std::string& pName, ivector pVal);
+	void set_uniform(const std::string& pName, fvector pVal);
+	void set_uniform(const std::string& pName, color pVal); // Only rgb atm
 
 #ifdef ENGINE_INTERNAL
 	sf::Shader* get_sfml_shader()

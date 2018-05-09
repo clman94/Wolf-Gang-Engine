@@ -1010,10 +1010,10 @@ void save_system::clean()
 	mDocument.Clear();
 }
 
-bool save_system::open_save(const std::string& pPath)
+bool save_system::open_save(const engine::fs::path& pPath)
 {
 	clean();
-	if (mDocument.LoadFile(pPath.c_str()))
+	if (mDocument.LoadFile(pPath.string().c_str()))
 		return false;
 	mEle_root = mDocument.RootElement();
 	return true;
@@ -1089,19 +1089,20 @@ util::optional<std::string> value_container::get_string_value(const engine::gene
 
 void save_system::new_save()
 {
-	// Create saves folder if it doesn't exist
-	if (!engine::fs::exists(defs::DEFAULT_SAVES_PATH))
-		engine::fs::create_directory(defs::DEFAULT_SAVES_PATH);
 
 	mDocument.Clear();
 	mEle_root = mDocument.NewElement("save_file");
 	mDocument.InsertEndChild(mEle_root);
 }
 
-void save_system::save(const std::string& pPath)
+void save_system::save(const engine::fs::path& pPath)
 {
 	assert(mEle_root);
-	mDocument.SaveFile(pPath.c_str());
+	// Create saves folder if it doesn't exist
+	const engine::fs::path saves_folder = pPath.parent_path() / defs::DEFAULT_SAVES_PATH;
+	if (!engine::fs::exists(saves_folder))
+		engine::fs::create_directory(saves_folder);
+	mDocument.SaveFile(pPath.string().c_str());
 }
 
 void save_system::save_flags(flag_container& pFlags)

@@ -143,14 +143,14 @@ public:
 
 	void clean();
 
-	bool open_save(const std::string& pPath);
+	bool open_save(const engine::fs::path& pPath);
 	void load_flags(flag_container& pFlags);
 	std::string get_scene_path();
 	std::string get_scene_name();
 	void load_values(value_container& pContainer);
 
 	void new_save();
-	void save(const std::string& pPath);
+	void save(const engine::fs::path& pPath);
 	void save_flags(flag_container& pFlags);
 	void save_scene(scene& pScene);
 	void save_values(const value_container& pContainer);

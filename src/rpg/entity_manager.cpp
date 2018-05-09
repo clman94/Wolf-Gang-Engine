@@ -181,6 +181,12 @@ engine::fvector entity_manager::script_get_position(entity_reference& e)
 	return e->get_position();
 }
 
+engine::fvector entity_manager::script_get_absolute_position(entity_reference & e)
+{
+	if (!check_entity(e)) return{};
+	return e->get_absolute_position();
+}
+
 engine::fvector entity_manager::script_get_size(entity_reference & e)
 {
 	if (!check_entity(e)) return{};
@@ -491,7 +497,7 @@ void entity_manager::script_add_child(entity_reference& e1, entity_reference& e2
 	if (!check_entity(e1)) return;
 	if (!check_entity(e2)) return;
 
-	e2->set_position(e2->get_position(*e1));
+	//e2->set_position(e2->get_position(*e1));
 	e1->add_child(*e2);
 }
 
@@ -500,7 +506,7 @@ void entity_manager::script_set_parent(entity_reference& e1, entity_reference& e
 	if (!check_entity(e1)) return;
 	if (!check_entity(e2)) return;
 
-	e1->set_position(e1->get_position(*e2));
+	//e1->set_position(e1->get_position(*e2));
 	e1->set_parent(*e2);
 }
 
@@ -721,6 +727,7 @@ void entity_manager::load_script_interface(script_system& pScript)
 
 	pScript.add_function("set_position",                      &entity_manager::script_set_position, this);
 	pScript.add_function("get_position",                      &entity_manager::script_get_position, this);
+	pScript.add_function("get_absolute_position",             &entity_manager::script_get_absolute_position, this);
 	pScript.add_function("get_size",                          &entity_manager::script_get_size, this);
 	pScript.add_function("_set_direction",                    &entity_manager::script_set_direction, this);
 	pScript.add_function("_get_direction",                    &entity_manager::script_get_direction, this);

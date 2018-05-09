@@ -112,6 +112,7 @@ private:
 	void             script_remove_entity(entity_reference& e);
 	void             script_set_position(entity_reference& e, const engine::fvector& pos);
 	engine::fvector  script_get_position(entity_reference& e);
+	engine::fvector  script_get_absolute_position(entity_reference& e);
 	void             script_set_depth_direct(entity_reference& e, float pDepth);
 	void             script_set_depth(entity_reference& e, float pDepth);
 	void             script_set_depth_fixed(entity_reference& e, bool pFixed);

@@ -83,6 +83,40 @@ private:
 namespace editors
 {
 
+enum class message_type
+{
+	unknown,
+
+};
+
+struct message
+{
+	message_type type;
+};
+
+struct message_scene_changed
+	: public message
+{
+	rpg::game *game;
+
+};
+
+class editor_tool
+{
+public:
+	virtual void process_message(message* pMessage) = 0;
+	virtual void update() = 0;
+};
+
+class log
+	: public editor_tool
+{
+public:
+	virtual void process_message(message* pMessage) {}
+	virtual void update();
+
+};
+
 class editor_settings_loader
 {
 public:
@@ -161,9 +195,9 @@ private:
 	{
 		snapping_none = 0,
 		snapping_pixel,
-		snapping_eight,
-		snapping_quarter,
-		snapping_full,
+		snapping_4x4,
+		snapping_2x2,
+		snapping_1x1,
 	};
 
 	enum

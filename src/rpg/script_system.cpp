@@ -260,6 +260,7 @@ script_system::script_system()
 	register_vector_type();
 	register_timer_type();
 	register_rect_type();
+	register_color_type();
 
 	load_script_interface();
 }

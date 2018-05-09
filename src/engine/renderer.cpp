@@ -119,6 +119,40 @@ void renderer::request_resort()
 	mRequest_resort = true;
 }
 
+int renderer::draw_object_with_shader()
+{
+	fvector size = fvector(mRender_target->getSize())*fvector(mView.getViewport().width, mView.getViewport().height);
+	if (mTemp_shader_buffer.getSize() != sf::Vector2u(size))
+		mTemp_shader_buffer.create(size.x, size.y);
+	mTemp_shader_buffer.setView(sf::View(sf::FloatRect(0, 0, mTarget_size.x, mTarget_size.y)));
+	mRender_target->setView(mRender_target->getDefaultView());
+	mShader->set_uniform("target_size", vector_cast<int>(mTarget_size));
+
+	// Draw the objects affected by this shader
+	std::size_t i = 0;
+	for (; i < mObjects.size() && mObjects[i]->get_depth() > mShader_depth; i++)
+		if (mObjects[i]->is_visible())
+			mObjects[i]->draw(*this);
+
+	sf::Sprite sprite(mTemp_shader_buffer.getTexture());
+	sprite.setPosition((sf::Vector2f(mRender_target->getSize()) / 2.f) - sf::Vector2f(size / 2.f));
+
+	// Draw the buffer to the window
+	mTemp_shader_buffer.display();
+	mRender_target->draw(sprite, mShader->get_sfml_shader());
+
+	// Draw the unaffected
+	mTemp_shader_buffer.clear({ 0, 0, 0, 0 });
+	for (; i < mObjects.size(); i++)
+		if (mObjects[i]->is_visible())
+			mObjects[i]->draw(*this);
+
+	// Draw the buffer (again) to the window
+	mTemp_shader_buffer.display();
+	mRender_target->draw(sprite);
+	return 0;
+}
+
 int renderer::draw_objects()
 {
 	for (auto i : mObjects)
@@ -141,9 +175,22 @@ int renderer::draw(bool pClear)
 		mRequest_resort = false;
 	}
 	if (pClear)
+	{
 		mRender_target->clear(mBackground_color);
-	mRender_target->setView(mView);
-	draw_objects();
+		if (mShader)
+			mTemp_shader_buffer.clear(mBackground_color);
+	}
+
+	if (mShader)
+	{
+		draw_object_with_shader();
+	}
+	else
+	{
+		mRender_target->setView(mView);
+		draw_objects();
+	}
+
 	return 0;
 }
 
@@ -169,6 +216,12 @@ std::string renderer::get_entered_text() const
 std::u32string renderer::get_entered_text_unicode() const
 {
 	return mEntered_text;
+}
+
+void renderer::set_shader(std::shared_ptr<shader> pShader, float pDepth)
+{
+	mShader = pShader;
+	mShader_depth = pDepth;
 }
 
 bool renderer::is_mouse_within_target() const
@@ -343,6 +396,14 @@ void renderer::refresh()
 	refresh_view();
 }
 
+inline sf::RenderTarget & engine::renderer::get_sfml_render()
+{
+	assert(mRender_target);
+	if (mShader)
+		return mTemp_shader_buffer;
+	return *mRender_target;
+}
+
 void renderer::refresh_input()
 {
 	for (auto &i : mPressed_keys)
@@ -483,6 +544,14 @@ bool shader::load()
 	return false;
 }
 
+bool shader::load(const std::string& pVert, const std::string& pFrag)
+{
+	mSFML_shader.reset(new sf::Shader());
+	bool succ = mSFML_shader->loadFromMemory(pVert, pFrag);
+	mSFML_shader->setUniform("texture", sf::Shader::CurrentTexture);
+	return succ;
+}
+
 bool shader::unload()
 {
 	mSFML_shader.reset();
@@ -497,6 +566,31 @@ void shader::set_vertex_path(const std::string & pPath)
 void shader::set_fragment_path(const std::string & pPath)
 {
 	mFragment_shader_path = pPath;
+}
+
+void shader::set_uniform(const std::string & pName, int pVal)
+{
+	mSFML_shader->setUniform(pName, pVal);
+}
+
+void shader::set_uniform(const std::string & pName, float pVal)
+{
+	mSFML_shader->setUniform(pName, pVal);
+}
+
+void shader::set_uniform(const std::string & pName, ivector pVal)
+{
+	mSFML_shader->setUniform(pName, sf::Glsl::Ivec2(pVal.x, pVal.y));
+}
+
+void shader::set_uniform(const std::string & pName, fvector pVal)
+{
+	mSFML_shader->setUniform(pName, sf::Glsl::Vec2(pVal.x, pVal.y));
+}
+
+void shader::set_uniform(const std::string & pName, color pVal)
+{
+	mSFML_shader->setUniform(pName, sf::Glsl::Vec3(pVal.r, pVal.g, pVal.b));
 }
 
 render_proxy::render_proxy() : mR(nullptr)

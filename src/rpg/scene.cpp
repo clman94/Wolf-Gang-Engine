@@ -64,6 +64,7 @@ void scene::clean(bool pFull)
 	mColored_overlay.reset();
 	mSound_FX.stop_all();
 	mBackground_music.pause_music();
+	mLight_shader_manager.clear();
 
 	if (pFull) // Cleanup everything
 	{
@@ -201,6 +202,7 @@ void scene::load_script_interface(script_system& pScript)
 	mColored_overlay.load_script_interface(pScript);
 	mPathfinding_system.load_script_interface(pScript);
 	mCollision_system.load_script_interface(pScript);
+	mLight_shader_manager.load_script_interface(pScript);
 
 	pScript.add_function("set_tile", &scene::script_set_tile, this);
 	pScript.add_function("remove_tile", &scene::script_remove_tile, this);
@@ -381,6 +383,7 @@ void scene::refresh_renderer(engine::renderer& pR)
 	pR.add_object(mTilemap_display);
 	mColored_overlay.set_renderer(pR);
 	mEntity_manager.set_renderer(pR);
+	mLight_shader_manager.set_renderer(pR);
 
 #ifndef LOCKED_RELEASE_MODE
 	mVisualizer.set_depth(-100);
@@ -488,4 +491,282 @@ void scene_visualizer::visualize_collision(engine::renderer & pR)
 		mBox_visualize.set_size(i->get_region().get_size()*mBox_visualize.get_unit());
 		mBox_visualize.draw(pR);
 	}
+}
+
+#define STRINGIFY(A) #A
+
+const char* lightshader_frag = STRINGIFY(
+
+	precision highp float;
+
+	uniform sampler2D texture;
+
+	uniform ivec2 target_size;
+
+	uniform int brightness_levels;
+
+	struct lightsource
+	{
+		vec2 xy;
+		vec3 color; // This represents both color and brightness
+		float radius;
+		float atten_radius;
+	};
+	const int max_lights = 16;
+	uniform lightsource lights[max_lights];
+
+	vec3 invert(vec3 pColor)
+	{
+		return vec3(1, 1, 1) - pColor;
+	}
+
+	vec3 blend_burn(vec3 pColor, vec3 pBlend)
+	{
+		return invert(invert(pColor) / pBlend);
+	}
+
+	vec3 blend_linear_burn(vec3 pColor, vec3 pBlend)
+	{
+		return pColor + pBlend - vec3(1, 1, 1);
+	}
+
+	vec3 blend_overlay(vec3 pColor, vec3 pBlend)
+	{
+		return invert(invert(pColor) / invert(pBlend));
+	}
+
+	vec2 calc_pixelated_uv()
+	{
+		vec2 p = floor(gl_TexCoord[0].xy*vec2(target_size));
+		p.y = vec2(target_size).y - p.y;
+		return p;
+	}
+
+	vec3 calc_total_light_color()
+	{
+		vec2 pixelated_uv = calc_pixelated_uv();
+
+		vec3 color = vec3(0, 0, 0);
+		for (int i = 0; i < max_lights; i++)
+		{
+			if (lights[i].radius <= 0.0)
+				continue;
+			float d = distance(lights[i].xy, pixelated_uv);
+			if (d <= lights[i].radius)
+				color += lights[i].color;
+			else if (lights[i].atten_radius > 0.0)
+				color += max(1.0 - (d - lights[i].radius) / lights[i].atten_radius, 0.0)*lights[i].color;
+		}
+		return min(color, 1.0);
+	}
+
+	vec3 calc_lights(vec3 pColor)
+	{
+		const vec3 darkBlend = vec3(0, 0, 0.3);
+		const vec3 brightBlend = vec3(1, 1, 1);
+
+		vec3 light_color = calc_total_light_color();
+
+		float stepping_scalar = 1.0 / float(brightness_levels);
+		light_color = floor(light_color / stepping_scalar) * stepping_scalar;
+
+		float brightness = length(light_color);
+
+		vec3 blend = mix(darkBlend, brightBlend, brightness);
+		return mix(blend_linear_burn(pColor, blend), pColor*light_color, 0.8);
+	}
+
+
+	void main(void)
+	{
+		vec3 color = texture2D(texture, gl_TexCoord[0].xy).xyz;
+		gl_FragColor = vec4(calc_lights(color), 1.0);
+	}
+);
+
+const char* lightshader_vert = STRINGIFY(
+	void main()
+	{
+		// transform the vertex position
+		gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+
+		// transform the texture coordinates
+		gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;
+
+		// forward the vertex color
+		gl_FrontColor = gl_Color;
+	}
+);
+
+static inline std::string gen_lights_name(int pIdx)
+{
+	return std::string("lights[") + std::to_string(pIdx) + "]";
+}
+
+static inline void set_light_position(std::shared_ptr<engine::shader> pShader, int pIdx, const engine::fvector & pPos)
+{
+	if (pIdx < 0 || pIdx >= 16)
+		return;
+	pShader->set_uniform(gen_lights_name(pIdx) + ".xy", pPos);
+}
+
+static inline void set_light_color(std::shared_ptr<engine::shader> pShader, int pIdx, const engine::color & pColor)
+{
+	if (pIdx < 0 || pIdx >= 16)
+		return;
+	pShader->set_uniform(gen_lights_name(pIdx) + ".color", pColor);
+}
+
+static inline void set_light_radius(std::shared_ptr<engine::shader> pShader, int pIdx, float pPixels)
+{
+	if (pIdx < 0 || pIdx >= 16)
+		return;
+	pShader->set_uniform(gen_lights_name(pIdx) + ".radius", pPixels);
+}
+
+static inline void set_light_atten_radius(std::shared_ptr<engine::shader> pShader, int pIdx, float pPixels)
+{
+	if (pIdx < 0 || pIdx >= 16)
+		return;
+	pShader->set_uniform(gen_lights_name(pIdx) + ".atten_radius", pPixels);
+}
+
+
+light_shader_manager::light_shader_manager()
+{
+	mRenderer = nullptr;
+}
+
+void light_shader_manager::load_script_interface(script_system & pScript)
+{
+	pScript.begin_namespace("light");
+	pScript.add_function("initialize", &light_shader_manager::script_initialize, this);
+	pScript.add_function("add", &light_shader_manager::script_add_light, this);
+	pScript.add_function("remove", &light_shader_manager::script_remove_light, this);
+	pScript.add_function("set_color", &light_shader_manager::script_set_color, this);
+	pScript.add_function("set_radius", &light_shader_manager::script_set_radius, this);
+	pScript.add_function("set_attenuation", &light_shader_manager::script_set_attenuation, this);
+	pScript.end_namespace();
+}
+
+void light_shader_manager::set_renderer(engine::renderer & pRenderer)
+{
+	mRenderer = &pRenderer;
+	for (auto& i : mLight_entities)
+	{
+		i.set_depth(rpg::defs::TILE_DEPTH_RANGE_MAX);
+		i.set_renderer(pRenderer);
+	}
+}
+
+void light_shader_manager::clear()
+{
+	for (auto& i : mLight_entities)
+		i.clear();
+	mRenderer->set_shader(nullptr, rpg::defs::FX_DEPTH);
+}
+
+light_entity* light_shader_manager::cast_light_entity(entity_reference & pE)
+{
+	auto* l = dynamic_cast<light_entity*>(pE.get());
+	if (!l)
+	{
+		logger::print(*mScript_system, logger::level::error
+			, "This is not a light entity.");
+		return nullptr;
+	}
+	return l;
+}
+
+entity_reference light_shader_manager::script_add_light()
+{
+	for (auto& i : mLight_entities)
+	{
+		if (!i.is_visible())
+		{
+			i.set_visible(true);
+			return i;
+		}
+	}
+	return {};
+}
+
+void light_shader_manager::script_remove_light(entity_reference & pE)
+{
+	light_entity* l = nullptr;
+	if (!(l = cast_light_entity(pE))) return;
+	l->clear();
+}
+
+void light_shader_manager::script_initialize()
+{
+	if (!mShader)
+	{
+		mShader = std::make_shared<engine::shader>();
+		mShader->load(lightshader_vert, lightshader_frag);
+	}
+	mRenderer->set_shader(mShader, rpg::defs::FX_DEPTH);
+	mShader->set_uniform("brightness_levels", 5);
+	for (std::size_t i = 0; i < mLight_entities.size(); i++)
+	{
+		mLight_entities[i].set_light(static_cast<int>(i), mShader);
+		mLight_entities[i].clear();
+	}
+}
+
+void light_shader_manager::script_set_color(entity_reference& pE, const engine::color & pColor)
+{
+	light_entity* l = nullptr;
+	if (!(l = cast_light_entity(pE))) return;
+	set_light_color(mShader, l->get_light_index(), pColor);
+}
+
+void light_shader_manager::script_set_radius(entity_reference& pE, float pPixels)
+{
+	light_entity* l = nullptr;
+	if (!(l = cast_light_entity(pE))) return;
+	set_light_radius(mShader, l->get_light_index(), pPixels);
+}
+
+void light_shader_manager::script_set_attenuation(entity_reference& pE, float pPixels)
+{
+	light_entity* l = nullptr;
+	if (!(l = cast_light_entity(pE))) return;
+	set_light_atten_radius(mShader, l->get_light_index(), pPixels);
+}
+
+
+light_entity::~light_entity()
+{
+	clear();
+}
+
+void light_entity::clear()
+{
+	set_light_position(mShader, mLight_idx, engine::fvector(0, 0));
+	set_light_color(mShader, mLight_idx, engine::color(0, 0, 0, 0));
+	set_light_radius(mShader, mLight_idx, 0);
+	set_light_atten_radius(mShader, mLight_idx, 0);
+	set_position({ 0, 0 });
+	detach_parent();
+	detach_children();
+	set_visible(false);
+}
+
+int light_entity::draw(engine::renderer & pR)
+{
+	engine::fvector pos = get_exact_position();
+	set_light_position(mShader, mLight_idx, pos);
+	return 0;
+}
+
+int light_entity::get_light_index() const
+{
+	return mLight_idx;
+}
+
+void light_entity::set_light(int pIdx, std::shared_ptr<engine::shader> pShader)
+{
+	mLight_idx = pIdx;
+	mShader = pShader;
 }
