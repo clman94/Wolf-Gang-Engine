@@ -396,7 +396,7 @@ void renderer::refresh()
 	refresh_view();
 }
 
-inline sf::RenderTarget & engine::renderer::get_sfml_render()
+sf::RenderTarget & renderer::get_sfml_render()
 {
 	assert(mRender_target);
 	if (mShader)
