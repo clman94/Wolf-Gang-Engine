@@ -743,10 +743,13 @@ light_entity::~light_entity()
 
 void light_entity::clear()
 {
-	set_light_position(mShader, mLight_idx, engine::fvector(0, 0));
-	set_light_color(mShader, mLight_idx, engine::color(0, 0, 0, 0));
-	set_light_radius(mShader, mLight_idx, 0);
-	set_light_atten_radius(mShader, mLight_idx, 0);
+	if (mShader)
+	{
+		set_light_position(mShader, mLight_idx, engine::fvector(0, 0));
+		set_light_color(mShader, mLight_idx, engine::color(0, 0, 0, 0));
+		set_light_radius(mShader, mLight_idx, 0);
+		set_light_atten_radius(mShader, mLight_idx, 0);
+	}
 	set_position({ 0, 0 });
 	detach_parent();
 	detach_children();

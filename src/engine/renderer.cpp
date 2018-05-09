@@ -381,7 +381,7 @@ void renderer::set_window(display_window & pWindow)
 	set_target_render(mWindow->mWindow);
 }
 
-display_window * engine::renderer::get_window() const
+display_window * renderer::get_window() const
 {
 	return mWindow;
 }
