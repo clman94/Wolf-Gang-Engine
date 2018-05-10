@@ -639,6 +639,7 @@ light_shader_manager::light_shader_manager()
 
 void light_shader_manager::load_script_interface(script_system & pScript)
 {
+	mScript_system = &pScript;
 	pScript.begin_namespace("light");
 	pScript.add_function("initialize", &light_shader_manager::script_initialize, this);
 	pScript.add_function("add", &light_shader_manager::script_add_light, this);
