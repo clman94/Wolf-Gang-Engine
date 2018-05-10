@@ -644,8 +644,11 @@ void light_shader_manager::load_script_interface(script_system & pScript)
 	pScript.add_function("add", &light_shader_manager::script_add_light, this);
 	pScript.add_function("remove", &light_shader_manager::script_remove_light, this);
 	pScript.add_function("set_color", &light_shader_manager::script_set_color, this);
+	pScript.add_function("get_color", &light_shader_manager::script_get_color, this);
 	pScript.add_function("set_radius", &light_shader_manager::script_set_radius, this);
+	pScript.add_function("get_radius", &light_shader_manager::script_get_radius, this);
 	pScript.add_function("set_attenuation", &light_shader_manager::script_set_attenuation, this);
+	pScript.add_function("get_attenuation", &light_shader_manager::script_get_attenuation, this);
 	pScript.end_namespace();
 }
 
@@ -718,21 +721,42 @@ void light_shader_manager::script_set_color(entity_reference& pE, const engine::
 {
 	light_entity* l = nullptr;
 	if (!(l = cast_light_entity(pE))) return;
-	set_light_color(mShader, l->get_light_index(), pColor);
+	l->set_color(pColor);
+}
+
+engine::color light_shader_manager::script_get_color(entity_reference & pE)
+{
+	light_entity* l = nullptr;
+	if (!(l = cast_light_entity(pE))) return{};
+	return l->get_color();
 }
 
 void light_shader_manager::script_set_radius(entity_reference& pE, float pPixels)
 {
 	light_entity* l = nullptr;
 	if (!(l = cast_light_entity(pE))) return;
-	set_light_radius(mShader, l->get_light_index(), pPixels);
+	l->set_radius(pPixels);
+}
+
+float light_shader_manager::script_get_radius(entity_reference & pE)
+{
+	light_entity* l = nullptr;
+	if (!(l = cast_light_entity(pE))) return 0;
+	return l->get_radius();
 }
 
 void light_shader_manager::script_set_attenuation(entity_reference& pE, float pPixels)
 {
 	light_entity* l = nullptr;
 	if (!(l = cast_light_entity(pE))) return;
-	set_light_atten_radius(mShader, l->get_light_index(), pPixels);
+	l->set_atten_radius(pPixels);
+}
+
+float light_shader_manager::script_get_attenuation(entity_reference & pE)
+{
+	light_entity* l = nullptr;
+	if (!(l = cast_light_entity(pE))) return 0;
+	return l->get_atten_radius();
 }
 
 
@@ -745,10 +769,10 @@ void light_entity::clear()
 {
 	if (mShader)
 	{
-		set_light_position(mShader, mLight_idx, engine::fvector(0, 0));
-		set_light_color(mShader, mLight_idx, engine::color(0, 0, 0, 0));
-		set_light_radius(mShader, mLight_idx, 0);
-		set_light_atten_radius(mShader, mLight_idx, 0);
+		set_position(engine::fvector(0, 0));
+		set_color(engine::color(0, 0, 0, 0));
+		set_radius(0);
+		set_atten_radius(0);
 	}
 	set_position({ 0, 0 });
 	detach_parent();
@@ -772,4 +796,37 @@ void light_entity::set_light(int pIdx, std::shared_ptr<engine::shader> pShader)
 {
 	mLight_idx = pIdx;
 	mShader = pShader;
+}
+
+void light_entity::set_radius(float pPixels)
+{
+	set_light_radius(mShader, mLight_idx, pPixels);
+	mRadius = pPixels;
+}
+
+float light_entity::get_radius() const
+{
+	return mRadius;
+}
+
+void light_entity::set_atten_radius(float pPixels)
+{
+	set_light_atten_radius(mShader, mLight_idx, pPixels);
+	mAtten_radius = pPixels;
+}
+
+float light_entity::get_atten_radius() const
+{
+	return mAtten_radius;
+}
+
+void light_entity::set_color(const engine::color & pColor)
+{
+	set_light_color(mShader, mLight_idx, pColor);
+	mColor = pColor;
+}
+
+const engine::color& light_entity::get_color() const
+{
+	return mColor;
 }

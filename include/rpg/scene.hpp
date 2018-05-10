@@ -108,7 +108,19 @@ public:
 	int get_light_index() const;
 	void set_light(int pIdx, std::shared_ptr<engine::shader> pShader);
 
+	void set_radius(float pPixels);
+	float get_radius() const;
+
+	void set_atten_radius(float pPixels);
+	float get_atten_radius() const;
+
+	void set_color(const engine::color& pColor);
+	const engine::color& get_color() const;
+
 private:
+	float mRadius;
+	float mAtten_radius;
+	engine::color mColor;
 	int mLight_idx;
 	std::shared_ptr<engine::shader> mShader;
 };
@@ -118,14 +130,6 @@ class light_shader_manager
 public:
 	light_shader_manager();
 
-	/*
-	shader::light::initialize();
-	shader::light::set_position(int light_idx, vec pos);
-	shader::light::set_color(int light_idx, color pColor);
-	shader::light::set_radius(int light_idx, float pPixels);
-	shader::light::set_attenuation(int light_idx, float pPixels);
-
-	*/
 	void load_script_interface(script_system& pScript);
 	void set_renderer(engine::renderer& pRenderer);
 	void clear();
@@ -140,11 +144,14 @@ private:
 
 private:
 	entity_reference script_add_light();
-	void script_remove_light(entity_reference& pE);
-	void script_initialize();
-	void script_set_color(entity_reference& pE, const engine::color& pColor);
-	void script_set_radius(entity_reference& pE, float pPixels);
-	void script_set_attenuation(entity_reference& pE, float pPixels);
+	void          script_remove_light(entity_reference& pE);
+	void          script_initialize();
+	void          script_set_color(entity_reference& pE, const engine::color& pColor);
+	engine::color script_get_color(entity_reference& pE);
+	void          script_set_radius(entity_reference& pE, float pPixels);
+	float         script_get_radius(entity_reference& pE);
+	void          script_set_attenuation(entity_reference& pE, float pPixels);
+	float         script_get_attenuation(entity_reference& pE);
 };
 
 class scene;
