@@ -94,6 +94,7 @@ class light_entity
 	: public entity
 {
 public:
+	light_entity();
 	virtual ~light_entity();
 
 	virtual entity::type get_type() const override
@@ -117,7 +118,11 @@ public:
 	void set_color(const engine::color& pColor);
 	const engine::color& get_color() const;
 
+	void set_enabled(bool pEnabled);
+	bool is_enabled() const;
+
 private:
+	bool mIs_enabled;
 	float mRadius;
 	float mAtten_radius;
 	engine::color mColor;
@@ -135,6 +140,7 @@ public:
 	void clear();
 
 private:
+	bool mIs_shader_enabled;
 	light_entity * cast_light_entity(entity_reference & pE);
 	std::shared_ptr<engine::shader> mShader;
 	engine::renderer *mRenderer;

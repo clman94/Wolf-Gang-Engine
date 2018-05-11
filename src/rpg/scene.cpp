@@ -557,7 +557,7 @@ const char* lightshader_frag = STRINGIFY(
 			else if (lights[i].atten_radius > 0.0)
 				color += max(1.0 - (d - lights[i].radius) / lights[i].atten_radius, 0.0)*lights[i].color;
 		}
-		return min(color, 1.0);
+		return clamp(color, 0.0, 1.0);
 	}
 
 	vec3 calc_lights(vec3 pColor)
@@ -635,6 +635,7 @@ static inline void set_light_atten_radius(std::shared_ptr<engine::shader> pShade
 light_shader_manager::light_shader_manager()
 {
 	mRenderer = nullptr;
+	mIs_shader_enabled = false;
 }
 
 void light_shader_manager::load_script_interface(script_system & pScript)
@@ -668,6 +669,7 @@ void light_shader_manager::clear()
 	for (auto& i : mLight_entities)
 		i.clear();
 	mRenderer->set_shader(nullptr, rpg::defs::FX_DEPTH);
+	mIs_shader_enabled = false;
 }
 
 light_entity* light_shader_manager::cast_light_entity(entity_reference & pE)
@@ -686,8 +688,9 @@ entity_reference light_shader_manager::script_add_light()
 {
 	for (auto& i : mLight_entities)
 	{
-		if (!i.is_visible())
+		if (!i.is_enabled())
 		{
+			i.set_enabled(true);
 			i.set_visible(true);
 			return i;
 		}
@@ -707,7 +710,13 @@ void light_shader_manager::script_initialize()
 	if (!mShader)
 	{
 		mShader = std::make_shared<engine::shader>();
-		mShader->load(lightshader_vert, lightshader_frag);
+		if (mShader->load(lightshader_vert, lightshader_frag))
+			logger::info("Successfully compiled shader");
+		else
+		{
+			logger::error("Shader failed to compile");
+			return;
+		}
 	}
 	mRenderer->set_shader(mShader, rpg::defs::FX_DEPTH);
 	mShader->set_uniform("brightness_levels", 5);
@@ -716,6 +725,7 @@ void light_shader_manager::script_initialize()
 		mLight_entities[i].set_light(static_cast<int>(i), mShader);
 		mLight_entities[i].clear();
 	}
+	mIs_shader_enabled = true;
 }
 
 void light_shader_manager::script_set_color(entity_reference& pE, const engine::color & pColor)
@@ -761,6 +771,14 @@ float light_shader_manager::script_get_attenuation(entity_reference & pE)
 }
 
 
+light_entity::light_entity()
+{
+	mIs_enabled = false;
+	mRadius = 0;
+	mAtten_radius = 0;
+	mLight_idx = -1;
+}
+
 light_entity::~light_entity()
 {
 	clear();
@@ -768,23 +786,27 @@ light_entity::~light_entity()
 
 void light_entity::clear()
 {
-	if (mShader)
-	{
-		set_position(engine::fvector(0, 0));
-		set_color(engine::color(0, 0, 0, 0));
-		set_radius(0);
-		set_atten_radius(0);
-	}
+	set_position(engine::fvector(0, 0));
+	set_color(engine::color(0, 0, 0, 0));
+	set_radius(0);
+	set_atten_radius(0);
 	set_position({ 0, 0 });
 	detach_parent();
 	detach_children();
 	set_visible(false);
+	mIs_enabled = false;
 }
 
 int light_entity::draw(engine::renderer & pR)
 {
-	engine::fvector pos = get_exact_position();
-	set_light_position(mShader, mLight_idx, pos);
+	if (mShader)
+	{
+		engine::fvector pos = get_exact_position();
+		set_light_radius(mShader, mLight_idx, mRadius);
+		set_light_atten_radius(mShader, mLight_idx, mAtten_radius);
+		set_light_color(mShader, mLight_idx, mColor);
+		set_light_position(mShader, mLight_idx, pos);
+	}
 	return 0;
 }
 
@@ -801,7 +823,6 @@ void light_entity::set_light(int pIdx, std::shared_ptr<engine::shader> pShader)
 
 void light_entity::set_radius(float pPixels)
 {
-	set_light_radius(mShader, mLight_idx, pPixels);
 	mRadius = pPixels;
 }
 
@@ -812,7 +833,6 @@ float light_entity::get_radius() const
 
 void light_entity::set_atten_radius(float pPixels)
 {
-	set_light_atten_radius(mShader, mLight_idx, pPixels);
 	mAtten_radius = pPixels;
 }
 
@@ -823,11 +843,20 @@ float light_entity::get_atten_radius() const
 
 void light_entity::set_color(const engine::color & pColor)
 {
-	set_light_color(mShader, mLight_idx, pColor);
 	mColor = pColor;
 }
 
 const engine::color& light_entity::get_color() const
 {
 	return mColor;
+}
+
+void light_entity::set_enabled(bool pEnabled)
+{
+	mIs_enabled = pEnabled;
+}
+
+bool light_entity::is_enabled() const
+{
+	return mIs_enabled;
 }
