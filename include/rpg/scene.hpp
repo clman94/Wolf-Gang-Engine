@@ -140,7 +140,6 @@ public:
 	void clear();
 
 private:
-	bool mIs_shader_enabled;
 	light_entity * cast_light_entity(entity_reference & pE);
 	std::shared_ptr<engine::shader> mShader;
 	engine::renderer *mRenderer;

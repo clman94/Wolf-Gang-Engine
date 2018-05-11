@@ -635,7 +635,6 @@ static inline void set_light_atten_radius(std::shared_ptr<engine::shader> pShade
 light_shader_manager::light_shader_manager()
 {
 	mRenderer = nullptr;
-	mIs_shader_enabled = false;
 }
 
 void light_shader_manager::load_script_interface(script_system & pScript)
@@ -669,11 +668,16 @@ void light_shader_manager::clear()
 	for (auto& i : mLight_entities)
 		i.clear();
 	mRenderer->set_shader(nullptr, rpg::defs::FX_DEPTH);
-	mIs_shader_enabled = false;
 }
 
 light_entity* light_shader_manager::cast_light_entity(entity_reference & pE)
 {
+	if (!pE.is_valid())
+	{
+		logger::print(*mScript_system, logger::level::error
+			, "Entity object invalid.");
+		return nullptr;
+	}
 	auto* l = dynamic_cast<light_entity*>(pE.get());
 	if (!l)
 	{
@@ -725,7 +729,6 @@ void light_shader_manager::script_initialize()
 		mLight_entities[i].set_light(static_cast<int>(i), mShader);
 		mLight_entities[i].clear();
 	}
-	mIs_shader_enabled = true;
 }
 
 void light_shader_manager::script_set_color(entity_reference& pE, const engine::color & pColor)
