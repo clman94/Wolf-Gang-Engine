@@ -156,7 +156,7 @@ private:
 
 	int mCurrent_frame;
 	bool mIs_playing;
-	engine::clock mAnim_clock;
+	engine::elapse_clock mAnim_clock;
 	void play_animation();
 	void stop_animation();
 	void update_animation();

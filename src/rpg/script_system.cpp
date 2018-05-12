@@ -419,14 +419,26 @@ std::vector<script_system::var_info> script_system::get_var_info(size_t pThread,
 {
 	std::vector<var_info> info_list;
 	AS::asIScriptContext* ctx = mThread_contexts[pThread]->context;
-	info_list.resize(ctx->GetVarCount(pStack));
+	if (ctx->GetThisTypeId(pStack))
+	{
+		info_list.reserve(ctx->GetVarCount(pStack) + 1);
+		var_info this_var;
+		this_var.name = "this";
+		this_var.pointer = ctx->GetThisPointer();
+		this_var.type_id = ctx->GetThisTypeId(pStack);
+		this_var.type_decl = mEngine->GetTypeDeclaration(this_var.type_id, true);
+		info_list.push_back(this_var);
+	}
+	else
+		info_list.reserve(ctx->GetVarCount(pStack));
 	for (size_t i = 0; i < ctx->GetVarCount(pStack); i++)
 	{
-		info_list[i].name = ctx->GetVarName(i, pStack);
-		info_list[i].pointer = ctx->GetAddressOfVar(i, pStack);
-		info_list[i].decl = ctx->GetVarDeclaration(i, pStack, true);
-		info_list[i].type_id = ctx->GetVarTypeId(i, pStack);
-		info_list[i].type_decl = mEngine->GetTypeDeclaration(info_list[i].type_id, true);
+		var_info var;
+		var.name = ctx->GetVarName(i, pStack);
+		var.pointer = ctx->GetAddressOfVar(i, pStack);
+		var.type_id = ctx->GetVarTypeId(i, pStack);
+		var.type_decl = mEngine->GetTypeDeclaration(var.type_id, true);
+		info_list.push_back(var);
 	}
 	return info_list;
 }
@@ -439,6 +451,11 @@ size_t script_system::get_thread_count() const
 AS::asIScriptFunction* script_system::get_thread_function(size_t pThread) const
 {
 	return mThread_contexts[pThread]->context->GetFunction();
+}
+
+AS::asITypeInfo* script_system::get_type_info_from_decl(const char * pDecl) const
+{
+	return mEngine->GetTypeInfoByDecl(pDecl);
 }
 
 void script_system::throw_exception(const std::string & pMessage)

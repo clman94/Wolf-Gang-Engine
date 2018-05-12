@@ -132,7 +132,6 @@ frame_t animation::calc_frame_from_time(float pSeconds) const
 animation_node::animation_node()
 {
 	mAnchor = anchor::topleft;
-	mPlaying = false;
 	mAnimation = nullptr;
 	mSpeed = 1.f;
 	mInterval = 1;
@@ -209,7 +208,7 @@ bool animation_node::tick()
 
 bool animation_node::is_playing() const
 {
-	return mPlaying;
+	return !mClock.is_paused();
 }
 
 void animation_node::start()
@@ -220,20 +219,20 @@ void animation_node::start()
 			&&  mFrame >= mAnimation->get_frame_count())
 			restart();
 
-	if (!mPlaying)
+	if (!is_playing())
+	{
 		mClock.restart();
-	mPlaying = true;
+		mClock.resume();
+	}
 }
 
 void animation_node::pause()
 {
 	mClock.pause();
-	mPlaying = false;
 }
 
 void animation_node::stop()
 {
-	mPlaying = false;
 	restart();
 }
 
@@ -249,7 +248,7 @@ void animation_node::restart()
 int animation_node::draw(renderer &pR)
 {
 	if (!mAnimation) return 1;
-	if (mPlaying)
+	if (is_playing())
 		tick();
 	sprite_node::draw(pR);
 	return 0;
@@ -272,6 +271,6 @@ void animation_node::set_speed(float pSpeed)
 
 void animation_node::update_frame()
 {
-	if (!mAnimation) return;
-	set_texture_rect(mAnimation->get_frame_at(mFrame));
+	if (mAnimation)
+		set_texture_rect(mAnimation->get_frame_at(mFrame));
 }

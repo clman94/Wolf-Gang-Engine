@@ -170,6 +170,8 @@ public:
 
 	// Load the xml game settings
 	bool load(engine::fs::path pData_dir);
+	void pause();
+	void resume();
 	bool stop();
 	void clear_scene();
 
@@ -202,7 +204,7 @@ private:
 
 	// Everything is good and settings are loaded
 	bool mIs_ready;
-
+	bool mIs_paused;
 	bool mExit;
 
 	scene            mScene;

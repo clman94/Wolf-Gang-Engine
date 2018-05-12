@@ -739,7 +739,7 @@ public:
 	void set_speed(float pSpeed);
 
 private:
-	engine::clock  mClock;
+	engine::elapse_clock  mClock;
 
 	animation::ptr mAnimation;
 
@@ -749,7 +749,6 @@ private:
 
 	float mInterval;
 	float mSpeed;
-	bool mPlaying;
 
 	void update_frame();
 };

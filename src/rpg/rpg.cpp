@@ -223,6 +223,7 @@ game::game()
 {
 	mExit = false;
 	mIs_ready = false;
+	mIs_paused = false;
 	load_script_interface();
 	mSlot = 0;
 
@@ -695,6 +696,14 @@ bool game::load(engine::fs::path pData_path)
 	return true;
 }
 
+void game::pause()
+{
+}
+
+void game::resume()
+{
+}
+
 bool game::stop()
 {
 	mScene.cleanup();
@@ -754,6 +763,9 @@ bool game::tick()
 {
 	if (!mIs_ready || !mScene.is_ready())
 		return false;
+	if (mIs_paused)
+		return true;
+
 	mControls.update(*get_renderer());
 	mScript.tick();
 
@@ -1473,7 +1485,7 @@ void dialog_text_entity::reveal(const std::string & pText, bool pAppend)
 	if (pText.empty())
 		return;
 
-	mTimer.start();
+	mTimer.restart();
 	mRevealing = true;
 
 	if (pAppend)
@@ -1547,7 +1559,7 @@ void dialog_text_entity::do_reveal()
 
 		mNew_character = true;
 
-		mTimer.start();
+		mTimer.restart();
 	}
 }
 

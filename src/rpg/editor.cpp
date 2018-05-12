@@ -660,55 +660,103 @@ void WGE_imgui_editor::run()
 		draw_game_view_window();
 		draw_scene_editor_window();
 		draw_log_window();
-		/*
+		
 		ImGui::Begin("Debugger");
 
 		rpg::script_system& script = mGame.get_script_system();
-		if (!script.is_executing())
+		if (script.get_thread_count() > 0)
 		{
 			ImGui::BeginGroup();
+			ImGui::TextUnformatted("Threads");
 			ImGui::BeginChild("threadlist", ImVec2(300, 300), true);
+			mDebugger_selected_thread = std::min(mDebugger_selected_thread, script.get_thread_count() - 1);
 			for (size_t i = 0; i < script.get_thread_count(); i++)
 			{
 				if (ImGui::Selectable(script.get_thread_function(i)->GetDeclaration(true, true, true), mDebugger_selected_thread == i))
+				{
 					mDebugger_selected_thread = i;
+					mDebugger_selected_stack = 0;
+				}
 			}
 			ImGui::EndChild();
+			ImGui::TextUnformatted("Call Stack");
 			ImGui::BeginChild("callstack", ImVec2(300, 300), true);
 			auto stack_info = script.get_stack_info(mDebugger_selected_thread);
+			mDebugger_selected_stack = std::min(mDebugger_selected_stack, stack_info.size() - 1);
 			for (size_t i = 0; i < stack_info.size(); i++)
 			{
 				if (ImGui::Selectable(stack_info[i].func->GetDeclaration(true, true, true), mDebugger_selected_stack == i))
 					mDebugger_selected_stack = i;
+				if (ImGui::IsItemHovered())
+				{
+					ImGui::BeginTooltip();
+					ImGui::Text("File: %s", stack_info[i].func->GetScriptSectionName());
+					ImGui::Text("Line: %d", stack_info[i].line);
+					ImGui::EndTooltip();
+				}
 			}
+
 			ImGui::EndChild();
 			ImGui::EndGroup();
+
 			ImGui::SameLine();
+
+			ImGui::BeginGroup();
+			ImGui::TextUnformatted("Variables");
 			ImGui::BeginChild("varlist", ImVec2(0, 0), true);
 			auto var_info = script.get_var_info(mDebugger_selected_thread, mDebugger_selected_stack);
 			for (size_t i = 0; i < var_info.size(); i++)
 			{
 				auto &var = var_info[i];
-				ImGui::Columns(2);
-				ImGui::TextUnformatted(var.decl);
+				ImGui::Columns(2, "colls");
+
+				//ImGui::Selectable(ImGui::IdOnly(std::to_string(i) + "info").c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
+				//ImGui::SameLine();
+				ImGui::Text("%s %s", var.type_decl, var.name);
 				ImGui::NextColumn();
 				if (var.type_id == AS::asTYPEID_INT32)
 					ImGui::Text("%d", *(int*)var.pointer);
-				else if(var.type_id == AS::asTYPEID_FLOAT)
+				else if (var.type_id == AS::asTYPEID_FLOAT)
 					ImGui::Text("%f", *(float*)var.pointer);
+				else if (var.type_id == AS::asTYPEID_BOOL)
+					ImGui::Text("%d", *(bool*)var.pointer);
+				else if (var.type_id == AS::asTYPEID_UINT32)
+					ImGui::Text("%u", *(unsigned int*)var.pointer);
+				else if (var.type_id == script.get_type_info_from_decl("string")->GetTypeId())
+				{
+					if (var.pointer)
+						ImGui::Text("%s", ((std::string*)var.pointer)->c_str());
+					else
+						ImGui::TextUnformatted("<null>");
+				}
+				else if (var.type_id == script.get_type_info_from_decl("vec")->GetTypeId())
+				{
+					if (var.pointer)
+						ImGui::Text(((engine::fvector*)var.pointer)->to_string().c_str());
+					else
+						ImGui::TextUnformatted("<null>");
+				}
+				else if (var.type_id == script.get_type_info_from_decl("entity")->GetTypeId())
+				{
+					if (var.pointer)
+						ImGui::Text("is_valid=%d", ((rpg::entity_reference*)var.pointer)->is_valid());
+					else
+						ImGui::TextUnformatted("<null>");
+				}
 				else
 					ImGui::TextColored({ 1, 0.5f, 0.5f, 1 }, "Cannot display");
 				ImGui::NextColumn();
 			}
 			ImGui::Columns(1);
 			ImGui::EndChild();
+			ImGui::EndGroup();
 		}
 		else
 		{
-			ImGui::Text("Currently executing");
+			ImGui::Text("No script to debug");
 		}
 		ImGui::End();
-		*/
+		
 		mWindow.clear();
 		ImGui::SFML::Render(mWindow.get_sfml_window());
 		mWindow.display();

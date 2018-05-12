@@ -27,7 +27,7 @@ public:
 	int draw(renderer &_r);
 
 private:
-	clock mFrame_clock, mSpawn_clock;
+	elapse_clock mFrame_clock, mSpawn_clock;
 
 	struct particle
 	{

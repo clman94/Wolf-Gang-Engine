@@ -227,12 +227,11 @@ public:
 		AS::asIScriptFunction* func;
 	};
 	std::vector<stack_level_info> get_stack_info(size_t pThread) const;
-	
+
 	struct var_info
 	{
 		int type_id;
 		const char* type_decl;
-		const char* decl;
 		const char* name;
 		void* pointer;
 	};
@@ -240,6 +239,7 @@ public:
 
 	size_t get_thread_count() const;
 	AS::asIScriptFunction* get_thread_function(size_t pThread) const;
+	AS::asITypeInfo* get_type_info_from_decl(const char* pDecl) const;
 
 	void throw_exception(const std::string& pMessage);
 

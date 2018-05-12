@@ -168,7 +168,7 @@ int renderer::draw_objects()
 
 int renderer::draw(bool pClear)
 {
-	mFrame_clock.tick();
+	mFrame_clock.update();
 	if (mRequest_resort)
 	{
 		sort_objects();
