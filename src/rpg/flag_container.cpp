@@ -24,7 +24,7 @@ void flag_container::load_script_interface(script_system & pScript)
 	pScript.add_function("unset_flag", &flag_container::unset_flag, this);
 }
 
-void flag_container::clean()
+void flag_container::clear()
 {
 	mFlags.clear();
 }

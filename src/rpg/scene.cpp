@@ -51,7 +51,7 @@ collision_system& scene::get_collision_system()
 	return mCollision_system;
 }
 
-void scene::clean(bool pFull)
+void scene::cleanup(bool pFull)
 {
 	mScript->abort_all();
 
@@ -85,7 +85,7 @@ bool scene::load_scene(std::string pName)
 	assert(mScript != nullptr);
 	assert(!mData_path.empty());
 
-	clean();
+	cleanup();
 
 	mCurrent_scene_name = pName;
 
@@ -108,8 +108,7 @@ bool scene::load_scene(std::string pName)
 		}
 	}
 
-	auto collision_boxes = mLoader.get_collisionboxes();
-	if (collision_boxes)
+	if (auto collision_boxes = mLoader.get_collisionboxes())
 		mCollision_system.load_collision_boxes(collision_boxes);
 
 	mWorld_node.set_boundary_enable(mLoader.has_boundary());
@@ -150,13 +149,15 @@ bool scene::load_scene(std::string pName)
 		if (!tilemap_texture)
 		{
 			logger::error("Invalid tilemap texture");
-			return false;
 		}
-		mTilemap_manipulator.set_texture(tilemap_texture);
-		mTilemap_manipulator.load_xml(mLoader.get_tilemap());
+		else
+		{
+			mTilemap_manipulator.set_texture(tilemap_texture);
+			mTilemap_manipulator.load_xml(mLoader.get_tilemap());
 
-		mTilemap_display.set_texture(tilemap_texture);
-		mTilemap_display.update(mTilemap_manipulator);
+			mTilemap_display.set_texture(tilemap_texture);
+			mTilemap_display.update(mTilemap_manipulator);
+		}
 	}
 
 	// Pre-execute so the scene script can setup things before the first render.
@@ -180,7 +181,7 @@ bool scene::reload_scene()
 		return false;
 	}
 
-	clean(true);
+	cleanup(true);
 	mResource_manager->reload_all();
 	return load_scene(mCurrent_scene_name);
 }
@@ -495,7 +496,7 @@ void scene_visualizer::visualize_collision(engine::renderer & pR)
 
 #define STRINGIFY(A) #A
 
-const char* lightshader_frag = STRINGIFY(
+const char* const lightshader_frag = STRINGIFY(
 
 	precision highp float;
 
@@ -576,7 +577,6 @@ const char* lightshader_frag = STRINGIFY(
 		return mix(blend_linear_burn(pColor, blend), pColor*light_color, 0.8);
 	}
 
-
 	void main(void)
 	{
 		vec3 color = texture2D(texture, gl_TexCoord[0].xy).xyz;
@@ -584,7 +584,7 @@ const char* lightshader_frag = STRINGIFY(
 	}
 );
 
-const char* lightshader_vert = STRINGIFY(
+const char* const lightshader_vert = STRINGIFY(
 	void main()
 	{
 		// transform the vertex position
@@ -635,6 +635,7 @@ static inline void set_light_atten_radius(std::shared_ptr<engine::shader> pShade
 light_shader_manager::light_shader_manager()
 {
 	mRenderer = nullptr;
+
 }
 
 void light_shader_manager::load_script_interface(script_system & pScript)
@@ -656,17 +657,31 @@ void light_shader_manager::load_script_interface(script_system & pScript)
 void light_shader_manager::set_renderer(engine::renderer & pRenderer)
 {
 	mRenderer = &pRenderer;
-	for (auto& i : mLight_entities)
+	if (!mShader)
 	{
-		i.set_depth(rpg::defs::TILE_DEPTH_RANGE_MAX);
-		i.set_renderer(pRenderer);
+		mShader = std::make_shared<engine::shader>();
+		if (mShader->load(lightshader_vert, lightshader_frag))
+			logger::info("Successfully compiled shader");
+		else
+		{
+			logger::error("Shader failed to compile");
+			return;
+		}
+	}
+	mShader->set_uniform("brightness_levels", 5);
+	for (std::size_t i = 0; i < mLight_entities.size(); i++)
+	{
+		mLight_entities[i].set_depth(rpg::defs::TILE_DEPTH_RANGE_MAX);
+		mLight_entities[i].set_renderer(pRenderer);
+		mLight_entities[i].set_light(static_cast<int>(i), mShader);
+		//mLight_entities[i].reset_light();
 	}
 }
 
 void light_shader_manager::clear()
 {
 	for (auto& i : mLight_entities)
-		i.clear();
+		i.reset_light();
 	mRenderer->set_shader(nullptr, rpg::defs::FX_DEPTH);
 }
 
@@ -706,29 +721,12 @@ void light_shader_manager::script_remove_light(entity_reference & pE)
 {
 	light_entity* l = nullptr;
 	if (!(l = cast_light_entity(pE))) return;
-	l->clear();
+	l->reset_light();
 }
 
 void light_shader_manager::script_initialize()
 {
-	if (!mShader)
-	{
-		mShader = std::make_shared<engine::shader>();
-		if (mShader->load(lightshader_vert, lightshader_frag))
-			logger::info("Successfully compiled shader");
-		else
-		{
-			logger::error("Shader failed to compile");
-			return;
-		}
-	}
 	mRenderer->set_shader(mShader, rpg::defs::FX_DEPTH);
-	mShader->set_uniform("brightness_levels", 5);
-	for (std::size_t i = 0; i < mLight_entities.size(); i++)
-	{
-		mLight_entities[i].set_light(static_cast<int>(i), mShader);
-		mLight_entities[i].clear();
-	}
 }
 
 void light_shader_manager::script_set_color(entity_reference& pE, const engine::color & pColor)
@@ -784,10 +782,10 @@ light_entity::light_entity()
 
 light_entity::~light_entity()
 {
-	clear();
+	reset_light();
 }
 
-void light_entity::clear()
+void light_entity::reset_light()
 {
 	set_position(engine::fvector(0, 0));
 	set_color(engine::color(0, 0, 0, 0));
@@ -827,6 +825,8 @@ void light_entity::set_light(int pIdx, std::shared_ptr<engine::shader> pShader)
 void light_entity::set_radius(float pPixels)
 {
 	mRadius = pPixels;
+	if (mShader)
+		set_light_radius(mShader, mLight_idx, mRadius);
 }
 
 float light_entity::get_radius() const
@@ -837,6 +837,8 @@ float light_entity::get_radius() const
 void light_entity::set_atten_radius(float pPixels)
 {
 	mAtten_radius = pPixels;
+	if (mShader)
+		set_light_atten_radius(mShader, mLight_idx, mAtten_radius);
 }
 
 float light_entity::get_atten_radius() const
@@ -847,6 +849,8 @@ float light_entity::get_atten_radius() const
 void light_entity::set_color(const engine::color & pColor)
 {
 	mColor = pColor;
+	if (mShader)
+		set_light_color(mShader, mLight_idx, mColor);
 }
 
 const engine::color& light_entity::get_color() const

@@ -402,4 +402,48 @@ bool script_system::is_executing()
 	return mCurrect_thread_context != nullptr;
 }
 
+std::vector<script_system::stack_level_info> script_system::get_stack_info(size_t pThread) const
+{
+	std::vector<stack_level_info> info_list;
+	AS::asIScriptContext* ctx = mThread_contexts[pThread]->context;
+	info_list.resize(ctx->GetCallstackSize());
+	for (size_t i = 0; i < ctx->GetCallstackSize(); i++)
+	{
+		info_list[i].func = ctx->GetFunction(i);
+		info_list[i].line = ctx->GetLineNumber(i, &info_list[i].column, &info_list[i].section);
+	}
+	return info_list;
+}
+
+std::vector<script_system::var_info> script_system::get_var_info(size_t pThread, size_t pStack) const
+{
+	std::vector<var_info> info_list;
+	AS::asIScriptContext* ctx = mThread_contexts[pThread]->context;
+	info_list.resize(ctx->GetVarCount(pStack));
+	for (size_t i = 0; i < ctx->GetVarCount(pStack); i++)
+	{
+		info_list[i].name = ctx->GetVarName(i, pStack);
+		info_list[i].pointer = ctx->GetAddressOfVar(i, pStack);
+		info_list[i].decl = ctx->GetVarDeclaration(i, pStack, true);
+		info_list[i].type_id = ctx->GetVarTypeId(i, pStack);
+		info_list[i].type_decl = mEngine->GetTypeDeclaration(info_list[i].type_id, true);
+	}
+	return info_list;
+}
+
+size_t script_system::get_thread_count() const
+{
+	return mThread_contexts.size();
+}
+
+AS::asIScriptFunction* script_system::get_thread_function(size_t pThread) const
+{
+	return mThread_contexts[pThread]->context->GetFunction();
+}
+
+void script_system::throw_exception(const std::string & pMessage)
+{
+	mCurrect_thread_context->context->SetException(pMessage.c_str());
+}
+
 

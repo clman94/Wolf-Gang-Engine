@@ -147,6 +147,7 @@ void scene_script_context::call_all_with_tag(const std::string & pTag)
 		i->call();
 }
 
+
 std::vector<std::shared_ptr<script_function>> scene_script_context::get_all_with_tag(const std::string & pTag)
 {
 	std::vector<std::shared_ptr<script_function>> ret;
@@ -235,7 +236,7 @@ game::game()
 game::~game()
 {
 	logger::info("Destroying game");
-	mScene.clean();
+	mScene.cleanup();
 }
 
 engine::fs::path game::get_slot_path(unsigned int pSlot)
@@ -268,7 +269,7 @@ void game::open_game()
 		return;
 	}
 	logger::info("Opening game...");
-	mFlags.clean();
+	mFlags.clear();
 	mSave_system.load_flags(mFlags);
 	mValues.clear();
 	mSave_system.load_values(mValues);
@@ -433,9 +434,8 @@ void game::load_script_interface()
 
 void game::load_icon()
 {
-	if (!get_renderer()->get_window())
-		return;
-	get_renderer()->get_window()->set_icon((mData_path / "icon.png").string());
+	if (get_renderer()->get_window())
+		get_renderer()->get_window()->set_icon((mData_path / "icon.png").string());
 }
 
 void game::load_icon_pack()
@@ -482,7 +482,7 @@ void game::load_terminal_interface(engine::terminal_system& pTerminal)
 	mGroup_flags->add_command("clear",
 		[&](const engine::terminal_arglist& pArgs)->bool
 	{
-		mFlags.clean();
+		mFlags.clear();
 		logger::info("All flags cleared");
 		return true;
 	}, "- Remove all flags");
@@ -610,7 +610,7 @@ engine::resource_manager & game::get_resource_manager()
 {
 	return mResource_manager;
 }
-const engine::fs::path & game::get_source_path() const
+const engine::fs::path & game::get_data_path() const
 {
 	return mData_path;
 }
@@ -688,23 +688,23 @@ bool game::load(engine::fs::path pData_path)
 
 	mIs_ready = true;
 
-	mFlags.clean();
+	mFlags.clear();
 
-	mScene.clean(true);
+	mScene.cleanup(true);
 	mScene.load_scene(settings.get_start_scene());
 	return true;
 }
 
 bool game::stop()
 {
-	mScene.clean();
-	mFlags.clean();
+	mScene.cleanup();
+	mFlags.clear();
 	return false;
 }
 
 void game::clear_scene()
 {
-	mScene.clean(true);
+	mScene.cleanup(true);
 }
 
 bool game::create_scene(const std::string & pName, const std::string& pTexture)
@@ -755,7 +755,6 @@ bool game::tick()
 	if (!mIs_ready || !mScene.is_ready())
 		return false;
 	mControls.update(*get_renderer());
-	engine::renderer& renderer = *get_renderer();
 	mScript.tick();
 
 	auto load_scene_request = mValues.get_bool_value("_nosave/load_scene/request");

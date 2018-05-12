@@ -186,7 +186,7 @@ public:
 	scene& get_scene();
 	engine::resource_manager& get_resource_manager();
 
-	const engine::fs::path& get_source_path() const;
+	const engine::fs::path& get_data_path() const;
 
 	script_system& get_script_system();
 

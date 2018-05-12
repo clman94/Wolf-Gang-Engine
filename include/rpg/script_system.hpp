@@ -209,7 +209,6 @@ public:
 		add_enum_value(pName, pValue_name, static_cast<int>(pValue));
 	}
 
-
 	void abort_all();
 	int tick();
 
@@ -220,6 +219,27 @@ public:
 	void end_namespace();
 
 	bool is_executing();
+
+	struct stack_level_info
+	{
+		const char* section;
+		int line, column;
+		AS::asIScriptFunction* func;
+	};
+	std::vector<stack_level_info> get_stack_info(size_t pThread) const;
+	
+	struct var_info
+	{
+		int type_id;
+		const char* type_decl;
+		const char* decl;
+		const char* name;
+		void* pointer;
+	};
+	std::vector<var_info> get_var_info(size_t pThread, size_t pStack) const;
+
+	size_t get_thread_count() const;
+	AS::asIScriptFunction* get_thread_function(size_t pThread) const;
 
 	void throw_exception(const std::string& pMessage);
 

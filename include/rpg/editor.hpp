@@ -283,6 +283,9 @@ private:
 
 	bool mRunning, mIs_closing;
 
+	size_t mDebugger_selected_thread;
+	size_t mDebugger_selected_stack;
+
 private:
 	bool is_ready_to_close();
 

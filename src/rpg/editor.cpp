@@ -579,6 +579,9 @@ WGE_imgui_editor::WGE_imgui_editor()
 	mShow_grid = true;
 	mGrid_color = { 1, 1, 1, 0.7f };
 	mCurrent_scene_editor = editor_tilemap;	
+
+	mDebugger_selected_thread = 0;
+	mDebugger_selected_stack = 0;
 	
 	ImGui::OpenRenderer(&mScene_editor_rendererdata);
 	ImGui::UseRenderer(mScene_editor_rendererdata);
@@ -624,7 +627,6 @@ void WGE_imgui_editor::run()
 		if (mIs_game_view_window_focused)
 			mGame_renderer.update_events(mWindow);
 
-		mGame.tick();
 		
 		ImGui::SFML::Update(mWindow.get_sfml_window(), delta_clock.restart());
 
@@ -634,25 +636,6 @@ void WGE_imgui_editor::run()
 		handle_undo_redo();
 
 		ImGui::BeginMainMenuBar();
-		if (ImGui::BeginMenu("Game"))
-		{
-			ImGui::MenuItem("New");
-			ImGui::MenuItem("Open");
-			ImGui::EndMenu();
-		}
-		if (ImGui::BeginMenu("Editors"))
-		{
-			if (ImGui::BeginMenu("Tilemap"))
-			{
-				ImGui::MenuItem("Show");
-				ImGui::Separator();
-				ImGui::MenuItem("Tilemap Display");
-				ImGui::MenuItem("Tile Settings");
-				ImGui::MenuItem("Tilemap Layers");
-				ImGui::EndMenu();
-			}
-			ImGui::EndMenu();
-		}
 
 		if (ImGui::BeginMenu("View"))
 		{
@@ -670,16 +653,6 @@ void WGE_imgui_editor::run()
 			ImGui::EndMenu();
 		}
 
-		if (ImGui::BeginMenu("Windows"))
-		{
-			if (ImGui::MenuItem("Arrange"))
-			{
-				// TODO: Collapse all windows and arrange them neat
-				//       (don't know exactly how, yet..)
-			}
-			ImGui::MenuItem("Do Thing");
-			ImGui::EndMenu();
-		}
 		ImGui::EndMainMenuBar();
 
 		draw_scene_window();
@@ -687,7 +660,55 @@ void WGE_imgui_editor::run()
 		draw_game_view_window();
 		draw_scene_editor_window();
 		draw_log_window();
+		/*
+		ImGui::Begin("Debugger");
 
+		rpg::script_system& script = mGame.get_script_system();
+		if (!script.is_executing())
+		{
+			ImGui::BeginGroup();
+			ImGui::BeginChild("threadlist", ImVec2(300, 300), true);
+			for (size_t i = 0; i < script.get_thread_count(); i++)
+			{
+				if (ImGui::Selectable(script.get_thread_function(i)->GetDeclaration(true, true, true), mDebugger_selected_thread == i))
+					mDebugger_selected_thread = i;
+			}
+			ImGui::EndChild();
+			ImGui::BeginChild("callstack", ImVec2(300, 300), true);
+			auto stack_info = script.get_stack_info(mDebugger_selected_thread);
+			for (size_t i = 0; i < stack_info.size(); i++)
+			{
+				if (ImGui::Selectable(stack_info[i].func->GetDeclaration(true, true, true), mDebugger_selected_stack == i))
+					mDebugger_selected_stack = i;
+			}
+			ImGui::EndChild();
+			ImGui::EndGroup();
+			ImGui::SameLine();
+			ImGui::BeginChild("varlist", ImVec2(0, 0), true);
+			auto var_info = script.get_var_info(mDebugger_selected_thread, mDebugger_selected_stack);
+			for (size_t i = 0; i < var_info.size(); i++)
+			{
+				auto &var = var_info[i];
+				ImGui::Columns(2);
+				ImGui::TextUnformatted(var.decl);
+				ImGui::NextColumn();
+				if (var.type_id == AS::asTYPEID_INT32)
+					ImGui::Text("%d", *(int*)var.pointer);
+				else if(var.type_id == AS::asTYPEID_FLOAT)
+					ImGui::Text("%f", *(float*)var.pointer);
+				else
+					ImGui::TextColored({ 1, 0.5f, 0.5f, 1 }, "Cannot display");
+				ImGui::NextColumn();
+			}
+			ImGui::Columns(1);
+			ImGui::EndChild();
+		}
+		else
+		{
+			ImGui::Text("Currently executing");
+		}
+		ImGui::End();
+		*/
 		mWindow.clear();
 		ImGui::SFML::Render(mWindow.get_sfml_window());
 		mWindow.display();
@@ -760,6 +781,11 @@ void WGE_imgui_editor::prepare_scene(engine::fs::path pPath, const std::string& 
 		// Load up the new tilemap
 		mTilemap_texture = mGame.get_resource_manager().get_resource<engine::texture>("texture"
 			, mScene_loader.get_tilemap_texture());
+		if (!mTilemap_texture)
+		{
+			logger::error("Failed to load tilemap texture for editor");
+			return;
+		}
 		mTilemap_manipulator.set_texture(mTilemap_texture);
 		mTilemap_manipulator.load_xml(mScene_loader.get_tilemap());
 		mTilemap_display.set_texture(mTilemap_texture);
@@ -1008,7 +1034,9 @@ void WGE_imgui_editor::draw_game_view_window()
 		mIs_game_view_window_focused = ImGui::IsWindowFocused();
 
 		if (resize_to_window(mGame_render_target))
-			mGame_renderer.refresh(); // refresh the engines view
+			mGame_renderer.refresh();
+
+		mGame.tick();
 
 		// Render the game
 		mGame_renderer.draw();
@@ -1634,7 +1662,7 @@ void WGE_imgui_editor::handle_save_confirmations()
 		if (mIs_scene_modified)
 			ImGui::OpenPopup("###askforsave");
 		else
-			prepare_scene(mGame.get_source_path() / rpg::defs::DEFAULT_SCENES_PATH, mGame.get_scene().get_name());
+			prepare_scene(mGame.get_data_path() / rpg::defs::DEFAULT_SCENES_PATH, mGame.get_scene().get_name());
 	}
 
 	if (mIs_closing && mIs_scene_modified && !ImGui::IsPopupOpen("###askforsave"))
@@ -1645,12 +1673,12 @@ void WGE_imgui_editor::handle_save_confirmations()
 	if (scene_save_answer == 1) // yes
 	{
 		save_scene();
-		prepare_scene(mGame.get_source_path() / rpg::defs::DEFAULT_SCENES_PATH, mGame.get_scene().get_name());
+		prepare_scene(mGame.get_data_path() / rpg::defs::DEFAULT_SCENES_PATH, mGame.get_scene().get_name());
 	}
 	else if (scene_save_answer == 2) // no
 	{
 		// No save
-		prepare_scene(mGame.get_source_path() / rpg::defs::DEFAULT_SCENES_PATH, mGame.get_scene().get_name());
+		prepare_scene(mGame.get_data_path() / rpg::defs::DEFAULT_SCENES_PATH, mGame.get_scene().get_name());
 	}
 
 	// Run confirmation for atlas editor is the window is closing

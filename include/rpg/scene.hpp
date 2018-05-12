@@ -102,7 +102,7 @@ public:
 		return entity::type::node;
 	}
 
-	void clear();
+	void reset_light();
 
 	virtual int draw(engine::renderer& pR) override;
 
@@ -205,7 +205,7 @@ public:
 	// Cleans up the scene for a new scene.
 	// Does not stop background music by default 
 	// so it can be continued in the next scene.
-	void clean(bool pFull = false);
+	void cleanup(bool pFull = false);
 
 	// Load scene xml file which loads the scene script.
 	// The strings are not references so cleanup doesn't cause issues.

@@ -16,7 +16,7 @@ public:
 	bool unset_flag(const std::string& pName);
 	bool has_flag(const std::string& pName) const;
 	void load_script_interface(script_system& pScript);
-	void clean();
+	void clear();
 
 
 	size_t get_count() const;
