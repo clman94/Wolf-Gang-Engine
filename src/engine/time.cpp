@@ -110,6 +110,7 @@ frame_clock::frame_clock(float pInterval)
 	mFps = 0;
 	mFrames = 0;
 	mInterval = pInterval;
+	mDelta = 0;
 }
 
 void frame_clock::set_interval(float pSeconds)
