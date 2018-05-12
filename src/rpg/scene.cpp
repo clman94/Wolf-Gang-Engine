@@ -509,7 +509,7 @@ const char* const lightshader_frag = STRINGIFY(
 	struct lightsource
 	{
 		vec2 xy;
-		vec3 color; // This represents both color and brightness
+		vec3 color; /* This represents both color and brightness */
 		float radius;
 		float atten_radius;
 	};
@@ -531,7 +531,7 @@ const char* const lightshader_frag = STRINGIFY(
 		return pColor + pBlend - vec3(1, 1, 1);
 	}
 
-	vec3 blend_overlay(vec3 pColor, vec3 pBlend)
+	vec3 blend_screen(vec3 pColor, vec3 pBlend)
 	{
 		return invert(invert(pColor) / invert(pBlend));
 	}
@@ -587,13 +587,8 @@ const char* const lightshader_frag = STRINGIFY(
 const char* const lightshader_vert = STRINGIFY(
 	void main()
 	{
-		// transform the vertex position
 		gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-
-		// transform the texture coordinates
 		gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;
-
-		// forward the vertex color
 		gl_FrontColor = gl_Color;
 	}
 );

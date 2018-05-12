@@ -7,6 +7,10 @@
 
 #include <iostream>
 
+#define STB_RECT_PACK_IMPLEMENTATION
+#define STBRP_STATIC
+#include <stb_rect_pack.h> // This is included with imgui. So, why not use it, right?
+
 using namespace engine;
 
 subtexture::subtexture(const std::string & pName)
@@ -105,6 +109,12 @@ bool subtexture::save(tinyxml2::XMLElement * pEle)
 	
 	// TODO: Save sequenced interval
 	return true;
+}
+
+texture_atlas::texture_atlas(const std::vector<subtexture>& pArray)
+{
+	for (auto& i : pArray)
+		mAtlas.push_back(std::make_shared<subtexture>(i));
 }
 
 bool texture_atlas::load(const std::string & pPath)
@@ -259,6 +269,12 @@ bool texture_atlas::load_entries(tinyxml2::XMLDocument& pDoc)
 	return true;
 }
 
+texture::texture()
+{
+	mIs_using_cache = false;
+}
+
+
 void texture::set_texture_source(const std::string& pFilepath)
 {
 	mTexture_source = pFilepath;
@@ -279,29 +295,131 @@ std::string texture::get_atlas_source()
 	return mAtlas_source;
 }
 
+bool texture::generate_texture(const fs::path& pCache_path) const
+{
+	logger::info("generate_margined_texture: Loading texture...");
+	sf::Image image;
+	if (!image.loadFromFile(mTexture_source))
+	{
+		logger::error("Cannot open image");
+		return false;
+	}
+
+	texture_atlas atlas;
+	if (!atlas.load(mAtlas_source))
+	{
+		logger::error("Cannot open atlas");
+		return false;
+	}
+
+	logger::info("generate_margined_texture: Calculating new atlas...");
+
+	std::vector<stbrp_rect> rects(atlas.get_all().size());
+	for (size_t i = 0; i < rects.size(); i++)
+	{
+		rects[i].id = static_cast<int>(i);
+
+		engine::frect full_rect = atlas.get_all()[i]->get_full_rect();
+		rects[i].w = static_cast<stbrp_coord>(full_rect.w + 2);
+		rects[i].h = static_cast<stbrp_coord>(full_rect.h + 2);
+	}
+
+	// Generate the new positions for the atlas entries
+	stbrp_context ctx;
+	const int node_count = 1024;
+	std::vector<stbrp_node> nodes(node_count);
+	stbrp_init_target(&ctx, 1024, 1024, &nodes[0], node_count);
+	if (stbrp_pack_rects(&ctx, &rects[0], rects.size()) == 0)
+	{
+		logger::error("Unable to pack all entries.");
+		return false;
+	}
+
+	// Create a new atlas for the repositioned subtextures
+	std::vector<subtexture> new_atlas_array(atlas.get_all().size());
+	engine::fvector new_size; // This will be the new size for the texture
+	for (const stbrp_rect& i : rects)
+	{
+		engine::frect packed_rect(i.x + 1, i.y + 1, i.w - 2, i.h - 2);
+		new_size.x = std::max(new_size.x, packed_rect.x + packed_rect.w);
+		new_size.y = std::max(new_size.y, packed_rect.y + packed_rect.h);
+
+		subtexture::ptr orig_atlas = atlas.get_all()[i.id];
+		new_atlas_array[i.id] = *orig_atlas;
+		new_atlas_array[i.id].set_frame_rect({ packed_rect.get_offset(), orig_atlas->get_root_frame().get_size() });
+	}
+	new_size.ceil();
+	const texture_atlas new_atlas(new_atlas_array);
+
+	// Copy the images to the new cached image with the margines
+	logger::info("generate_margined_texture: Copying to new texture...");
+
+	sf::Image new_image;
+	new_image.create(new_size.x, new_size.y, sf::Color(0, 0, 0, 0));
+	for (size_t i = 0; i < atlas.get_all().size(); i++)
+	{
+		engine::frect new_rect = new_atlas.get_all()[i]->get_full_rect();
+		engine::frect old_rect = atlas.get_all()[i]->get_full_rect();
+
+		// Duplicate the margins. This effectively hides floating point errors.
+		new_image.copy(image, new_rect.x - 1, new_rect.y
+			, engine::rect_cast<int>(engine::frect(old_rect.get_offset(), { 1, old_rect.get_size().y})));
+		new_image.copy(image, new_rect.x, new_rect.y - 1
+			, engine::rect_cast<int>(engine::frect(old_rect.get_offset(), { old_rect.get_size().x, 1 })));
+		new_image.copy(image, new_rect.x + new_rect.w, new_rect.y
+			, engine::rect_cast<int>(engine::frect(old_rect.get_offset() + engine::fvector(old_rect.w - 1, 0), { 1, old_rect.get_size().y })));
+		new_image.copy(image, new_rect.x, new_rect.y + new_rect.h
+			, engine::rect_cast<int>(engine::frect(old_rect.get_offset() + engine::fvector(0, old_rect.h - 1), { old_rect.get_size().x, 1 })));
+
+		// Full image
+		new_image.copy(image, new_rect.x, new_rect.y, engine::rect_cast<int>(old_rect));
+	}
+
+	logger::info("generate_margined_texture: Saving to cache...");
+
+	fs::path textures_cache = pCache_path / "textures";
+	fs::create_directories(textures_cache);
+	new_image.saveToFile((textures_cache / (get_name() + ".png")).string());
+	new_atlas.save((textures_cache / (get_name() + ".xml")).string());
+
+	logger::info("generate_margined_texture: Generating margined texture complete.");
+
+	return true;
+}
+
 bool texture::load()
 {
 	if (!is_loaded())
 	{
 		mSFML_texture.reset(new sf::Texture());
+
+		std::string final_texture_source = mTexture_source;
+		std::string final_atlas_source = mAtlas_source;
+		if (!mCache_path.empty() && check_for_cache())
+		{
+			mIs_using_cache = true;
+			final_texture_source = get_cached_texture_path().string();
+			final_atlas_source = get_cached_atlas_path().string();
+		}
+
 		if (mPack)
 		{
 			{ // Texture
-				auto data = mPack->read_all(mTexture_source);
+				auto data = mPack->read_all(final_texture_source);
 				set_loaded(mSFML_texture->loadFromMemory(&data[0], data.size()));
 			}
 			if (!mAtlas_source.empty())
 			{ // Atlas
-				auto data = mPack->read_all(mAtlas_source);
+				auto data = mPack->read_all(final_atlas_source);
 				mAtlas.load_memory(&data[0], data.size());
 			}
 		}
 		else
 		{
-			set_loaded(mSFML_texture->loadFromFile(mTexture_source));
+			set_loaded(mSFML_texture->loadFromFile(final_texture_source));
 			if (!mAtlas_source.empty())
-				if (!mAtlas.load(mAtlas_source))
-					logger::error("Failed to load atlas '" + mAtlas_source + "'");
+				if (!mAtlas.load(final_atlas_source))
+					logger::error("Failed to load atlas '" + final_atlas_source + "'");
 		}
 	}
 	return is_loaded();
@@ -332,4 +450,36 @@ fvector texture::get_size() const
 texture_atlas & engine::texture::get_texture_atlas()
 {
 	return mAtlas;
+}
+
+sf::Texture & texture::get_sfml_texture()
+{
+	load(); // Ensure load
+	return *mSFML_texture;
+}
+
+void texture::set_cache_directory(const fs::path & pPath)
+{
+	mCache_path = pPath;
+}
+
+bool texture::is_using_cache() const
+{
+	return mIs_using_cache;
+}
+
+fs::path texture::get_cached_texture_path() const
+{
+	return mCache_path / fs::path(mTexture_source).filename();
+}
+
+fs::path texture::get_cached_atlas_path() const
+{
+	return mCache_path / fs::path(mAtlas_source).filename();
+}
+
+bool texture::check_for_cache() const
+{
+	return fs::exists(get_cached_texture_path())
+		&& fs::exists(get_cached_texture_path());
 }

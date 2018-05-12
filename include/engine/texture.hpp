@@ -45,6 +45,8 @@ private:
 class texture_atlas
 {
 public:
+	texture_atlas() {}
+	texture_atlas(const std::vector<subtexture>& pArray);
 	bool load(const std::string& pPath);
 	bool load_memory(const char* pData, size_t pSize);
 	bool save(const std::string& pPath) const;
@@ -80,11 +82,14 @@ class texture :
 	public resource
 {
 public:
+	texture();
 
 	void set_texture_source(const std::string& pFilepath);
 	std::string get_texture_source();
 	void set_atlas_source(const std::string& pFilepath);
 	std::string get_atlas_source();
+
+	bool generate_texture(const fs::path& pCache_path = fs::path()) const;
 
 	bool load() override;
 	bool unload() override;
@@ -102,13 +107,18 @@ public:
 
 	texture_atlas& get_texture_atlas();
 
-	sf::Texture& get_sfml_texture()
-	{
-		load(); // Ensure load
-		return *mSFML_texture;
-	}
+	sf::Texture& get_sfml_texture();
+
+	void set_cache_directory(const fs::path& pPath);
+	bool is_using_cache() const;
 
 private:
+	fs::path get_cached_texture_path() const;
+	fs::path get_cached_atlas_path() const;
+	bool check_for_cache() const;
+	fs::path mCache_path;
+	bool mIs_using_cache;
+
 	std::string mTexture_source;
 	std::string mAtlas_source;
 	texture_atlas mAtlas;

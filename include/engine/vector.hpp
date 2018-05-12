@@ -219,6 +219,16 @@ struct vector
 		return *this;
 	}
 
+	vector& ceil()
+	{
+		if (std::is_floating_point<T>::value)
+		{
+			x = std::ceil(x);
+			y = std::ceil(y);
+		}
+		return *this;
+	}
+
 	vector& round()
 	{
 		if (std::is_floating_point<T>::value)

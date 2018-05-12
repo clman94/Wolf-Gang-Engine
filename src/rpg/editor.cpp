@@ -1855,10 +1855,14 @@ void atlas_imgui_editor::update()
 	ImGui::BeginChild("textureprops", ImVec2(tlb_w, 0));
 	if (mTexture)
 	{
-		if (ImGui::Button("Save###savetex", ImVec2(-1, 0)))
+		if (ImGui::Button("Save", ImVec2(-1, 0)))
 			save();
-		if (ImGui::Button("Reload###reloadtex", ImVec2(-1, 0)))
+		if (ImGui::Button("Reload", ImVec2(-1, 0)))
 			request_open_texture(mTexture->get_name());
+		if (ImGui::Button("Generate", ImVec2(-1, 0)))
+		{
+			mTexture->generate_texture(mResource_manager->get_directory() / "cache");
+		}
 	}
 	ImGui::TextUnformatted("Textures");
 	ImGui::BeginChild("texturelist", ImVec2(tlb_w, 0), true);
@@ -1930,8 +1934,8 @@ void atlas_imgui_editor::update()
 			}
 		}
 
-		if (ImGui::GetRendererZoom() >= 2) // The pizels will be 4 times as big at this zoom
-			ImGui::RenderWidgets::Grid({ 1, 1, 1, 0.4f });
+		if (ImGui::GetRendererZoom() >= 2) // The pixels will be 4 times as big at this zoom
+			ImGui::RenderWidgets::Grid({ 1, 1, 1, std::min(0.4f, (ImGui::GetRendererZoom() / 4.f) * 0.4f) }); // Adjust alpha so it doesn't pop in to intrusively
 	}
 	ImGui::EndRenderer();
 

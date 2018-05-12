@@ -82,6 +82,7 @@ public:
 
 	void set_resource_pack(resource_pack* pPack);
 	void set_directory(const engine::fs::path& pPath);
+	const fs::path& get_directory() const;
 
 	// Get all resources in this manager. Used only for debugging
 	const std::vector<std::shared_ptr<resource>>& get_resources() const;

@@ -45,6 +45,7 @@ bool texture_loader::load(engine::resource_manager& pResource_manager, const eng
 			std::shared_ptr<engine::texture> texture(std::make_shared<engine::texture>());
 			texture->set_name(texture_name);
 			texture->set_texture_source(texture_path.string());
+			texture->set_cache_directory(mData_filepath / "cache/textures");
 
 			// Parse atlas (if it exists)
 			auto atlas_path = texture_path.parent_path();

@@ -105,6 +105,11 @@ void resource_manager::set_directory(const engine::fs::path& pPath)
 	mData_path = pPath;
 }
 
+const fs::path & engine::resource_manager::get_directory() const
+{
+	return mData_path;
+}
+
 std::vector<std::shared_ptr<resource>> resource_manager::get_resources_with_type(const std::string & pType) const
 {
 	std::vector<std::shared_ptr<resource>> retval;
