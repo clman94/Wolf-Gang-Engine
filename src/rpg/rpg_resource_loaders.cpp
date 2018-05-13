@@ -51,14 +51,9 @@ bool texture_loader::load(engine::resource_manager& pResource_manager, const eng
 			auto atlas_path = texture_path.parent_path();
 			atlas_path /= texture_name + ".xml";
 			if (engine::fs::exists(atlas_path))
-			{
 				texture->set_atlas_source(atlas_path.string());
-			}
 			else
-			{
-				logger::warning("Atlas of texture '" + texture_name + "' does not exist");
-				continue; // Texture requires atlas
-			}
+				logger::warning("Atlas of texture '" + texture_name + "' does not exist. Using default.");
 
 			pResource_manager.add_resource(texture);
 		}
@@ -80,7 +75,6 @@ bool texture_loader::load_pack(engine::resource_manager & pResource_manager, eng
 			texture->set_name(texture_name);
 			texture->set_texture_source(i.string());
 
-			// Parse atlas xml (if it exists)
 			auto atlas_path = i.parent() / (texture_name + ".xml");
 			texture->set_atlas_source(atlas_path.string());
 

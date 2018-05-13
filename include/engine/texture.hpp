@@ -32,7 +32,7 @@ public:
 	void set_name(const std::string& pName);
 	const std::string& get_name() const;
 
-	hash::hash32_t get_hash() const; // Helps speed up searching
+	hash::hash32_t get_hash() const;
 
 	bool load(tinyxml2::XMLElement* pEle);
 	bool save(tinyxml2::XMLElement* pEle);
@@ -89,6 +89,7 @@ public:
 	void set_atlas_source(const std::string& pFilepath);
 	std::string get_atlas_source();
 
+	// Generates a new texture that is immune to floating point errors.
 	bool generate_texture(const fs::path& pCache_path = fs::path()) const;
 
 	bool load() override;
