@@ -297,7 +297,7 @@ std::string texture::get_atlas_source()
 
 bool texture::generate_texture(const fs::path& pCache_path) const
 {
-	logger::info("generate_margined_texture: Loading texture...");
+	logger::info("generate_texture: Loading texture...");
 	sf::Image image;
 	if (!image.loadFromFile(mTexture_source))
 	{
@@ -312,7 +312,7 @@ bool texture::generate_texture(const fs::path& pCache_path) const
 		return false;
 	}
 
-	logger::info("generate_margined_texture: Calculating new atlas...");
+	logger::info("generate_texture: Calculating new atlas...");
 
 	std::vector<stbrp_rect> rects(atlas.get_all().size());
 	for (size_t i = 0; i < rects.size(); i++)
@@ -352,7 +352,7 @@ bool texture::generate_texture(const fs::path& pCache_path) const
 	const texture_atlas new_atlas(new_atlas_array);
 
 	// Copy the images to the new cached image with the margines
-	logger::info("generate_margined_texture: Copying to new texture...");
+	logger::info("generate_texture: Copying to new texture...");
 
 	sf::Image new_image;
 	new_image.create(new_size.x, new_size.y, sf::Color(0, 0, 0, 0));
@@ -375,14 +375,14 @@ bool texture::generate_texture(const fs::path& pCache_path) const
 		new_image.copy(image, new_rect.x, new_rect.y, engine::rect_cast<int>(old_rect));
 	}
 
-	logger::info("generate_margined_texture: Saving to cache...");
+	logger::info("generate_texture: Saving to cache...");
 
 	fs::path textures_cache = pCache_path / "textures";
 	fs::create_directories(textures_cache);
 	new_image.saveToFile((textures_cache / (get_name() + ".png")).string());
 	new_atlas.save((textures_cache / (get_name() + ".xml")).string());
 
-	logger::info("generate_margined_texture: Generating margined texture complete.");
+	logger::info("generate_texture: Generating margined texture complete.");
 
 	return true;
 }

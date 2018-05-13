@@ -225,6 +225,7 @@ void script_system::register_color_type()
 	add_constructor<engine::color, float, float, float, float>("color");
 	add_constructor<engine::color, const engine::color&>("color");
 
+	add_method<engine::color, engine::color&, const engine::color&>("color", operator_method::assign,                &engine::color::operator=);
 	add_method<engine::color, engine::color&, const engine::color&>("color", operator_method::additive_assign,       &engine::color::operator+=);
 	add_method<engine::color, engine::color&, const engine::color&>("color", operator_method::subtractive_assign,    &engine::color::operator-=);
 	add_method<engine::color, engine::color&, const engine::color&>("color", operator_method::multiplicative_assign, &engine::color::operator*=);
