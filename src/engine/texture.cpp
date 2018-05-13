@@ -457,7 +457,7 @@ std::shared_ptr<subtexture> texture::get_entry(const std::string & pName) const
 	return mAtlas.get_entry(pName);
 }
 
-std::vector<std::string> engine::texture::compile_list() const
+std::vector<std::string> texture::compile_list() const
 {
 	return mAtlas.compile_list();
 }
@@ -467,7 +467,7 @@ fvector texture::get_size() const
 	return{ static_cast<float>(mSFML_texture->getSize().x), static_cast<float>(mSFML_texture->getSize().y) };
 }
 
-texture_atlas & engine::texture::get_texture_atlas()
+texture_atlas & texture::get_texture_atlas()
 {
 	return mAtlas;
 }

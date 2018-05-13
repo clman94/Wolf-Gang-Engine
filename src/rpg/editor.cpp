@@ -990,6 +990,7 @@ void WGE_imgui_editor::draw_game_window()
 		{
 			mGame.clear_scene();
 			mGame.load(game_path);
+			mScene_list = mGame.get_scene_list();
 		}
 
 		ImGui::PushItemWidth(-100);
@@ -1967,8 +1968,8 @@ void atlas_imgui_editor::update()
 		ImGui::EndRenderer();
 
 		if (mIs_playing && ImGui::Button("Stop"))
-				stop_animation();
-		else if (ImGui::Button("Play"))
+			stop_animation();
+		else if (!mIs_playing && ImGui::Button("Play"))
 			play_animation();
 
 		ImGui::SliderInt("Frame", &mCurrent_frame, 0, mSubtexture->get_frame_count() - 1);
@@ -2042,6 +2043,28 @@ void atlas_imgui_editor::update()
 
 		if (mSubtexture)
 		{
+			ImGui::SameLine();
+
+			if (ImGui::Button("Rename"))
+				ImGui::OpenPopup("Rename Atlas Entry");
+			if (ImGui::BeginPopupModal("Rename Atlas Entry", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+			{
+				ImGui::TextColored({ 1, 1, 0.5, 1 }, "Warning: Tilemaps using this entry may break.");
+				if (ImGui::InputText("Name", &mNew_entry_name, ImGuiInputTextFlags_EnterReturnsTrue)
+					|| ImGui::Button("Rename", ImVec2(100, 25)))
+				{
+					mSubtexture->set_name(mNew_entry_name);
+					mModified = true;
+					ImGui::CloseCurrentPopup();
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("Cancel", ImVec2(100, 25)))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+				ImGui::EndPopup();
+			}
+
 			ImGui::SameLine();
 			if (ImGui::Button("Duplicate"))
 			{

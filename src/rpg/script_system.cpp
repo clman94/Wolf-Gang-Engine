@@ -222,6 +222,8 @@ void script_system::register_rect_type()
 void script_system::register_color_type()
 {
 	add_object<engine::color>("color", true);
+	add_constructor<engine::color>("color");
+	add_constructor<engine::color, float, float, float>("color");
 	add_constructor<engine::color, float, float, float, float>("color");
 	add_constructor<engine::color, const engine::color&>("color");
 

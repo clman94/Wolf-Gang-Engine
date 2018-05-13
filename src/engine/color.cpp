@@ -7,6 +7,17 @@
 
 using namespace engine;
 
+color::color()
+	: r(0.f), g(0.f), b(0.f), a(1.f)
+{
+}
+
+color::color(color_t pR, color_t pG, color_t pB)
+	: r(pR), g(pG), b(pB), a(1.f)
+{
+	default_mask();
+}
+
 color::color(color_t pR, color_t pG, color_t pB, color_t pA)
 	: r(pR), g(pG), b(pB), a(pA)
 {
@@ -31,11 +42,11 @@ color::color(const sf::Color& pColor)
 
 color::operator sf::Color() const
 {
-	return{ 
-		static_cast<sf::Uint8>(r * 255),
-		static_cast<sf::Uint8>(g * 255), 
-		static_cast<sf::Uint8>(b * 255), 
-		static_cast<sf::Uint8>(a * 255)
+	return{
+		static_cast<sf::Uint8>(util::clamp(r * 255, 0.f, 255.f)),
+		static_cast<sf::Uint8>(util::clamp(g * 255, 0.f, 255.f)),
+		static_cast<sf::Uint8>(util::clamp(b * 255, 0.f, 255.f)),
+		static_cast<sf::Uint8>(util::clamp(a * 255, 0.f, 255.f))
 	};
 }
 

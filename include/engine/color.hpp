@@ -19,12 +19,18 @@ public:
 		color_t components[4];
 	};
 
+	color();
 
 	color(
-		color_t pR = 0,
-		color_t pG = 0,
-		color_t pB = 0,
-		color_t pA = 1.f);
+		color_t pR,
+		color_t pG,
+		color_t pB);
+
+	color(
+		color_t pR,
+		color_t pG,
+		color_t pB,
+		color_t pA);
 
 	color(const color& pColor);
 
