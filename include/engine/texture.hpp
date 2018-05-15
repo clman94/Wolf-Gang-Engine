@@ -90,7 +90,8 @@ public:
 	std::string get_atlas_source();
 
 	// Generates a new texture that is immune to floating point errors.
-	bool generate_texture(const fs::path& pCache_path = fs::path()) const;
+	// This is done by padding every subtexture.
+	bool generate_padded_texture(const fs::path& pCache_path = fs::path()) const;
 
 	bool load() override;
 	bool unload() override;

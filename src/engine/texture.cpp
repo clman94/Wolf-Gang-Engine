@@ -295,9 +295,13 @@ std::string texture::get_atlas_source()
 	return mAtlas_source;
 }
 
-bool texture::generate_texture(const fs::path& pCache_path) const
+bool texture::generate_padded_texture(const fs::path& pCache_path) const
 {
-	logger::info("generate_texture: Loading texture...");
+	// Maximum size for the new texture.
+	// This may need to be adjusted in the future.
+	const ivector max_size(1024, 2048);
+
+	logger::info("generate_padded_texture: Loading texture...");
 
 	sf::Image image;
 	if (!image.loadFromFile(mTexture_source))
@@ -313,7 +317,13 @@ bool texture::generate_texture(const fs::path& pCache_path) const
 		return false;
 	}
 
-	logger::info("generate_texture: Calculating new atlas...");
+	if (atlas.get_all().empty())
+	{
+		logger::info("generate_padded_texture: No subtextures in this atlas.");
+		return true;
+	}
+
+	logger::info("generate_padded_texture: Calculating new atlas...");
 
 	// Setup all the rects for the stb rect packer to use
 	std::vector<stbrp_rect> rects(atlas.get_all().size());
@@ -328,9 +338,9 @@ bool texture::generate_texture(const fs::path& pCache_path) const
 
 	// Use the stb rect packer to generate the new positions for the atlas entries
 	stbrp_context ctx;
-	const int node_count = 1024;
+	const int node_count = max_size.x;
 	std::vector<stbrp_node> nodes(node_count);
-	stbrp_init_target(&ctx, 1024, 1024, &nodes[0], node_count);
+	stbrp_init_target(&ctx, max_size.x, max_size.y, &nodes[0], node_count);
 	if (stbrp_pack_rects(&ctx, &rects[0], rects.size()) == 0)
 	{
 		logger::error("Unable to pack all entries.");
@@ -339,14 +349,14 @@ bool texture::generate_texture(const fs::path& pCache_path) const
 
 	// Create a new atlas for the repositioned subtextures
 	std::vector<subtexture> new_atlas_array(atlas.get_all().size());
-	engine::fvector new_size; // This will be the new size for the texture
+	engine::fvector new_size; // New size for the texture
 	for (const stbrp_rect& i : rects)
 	{
-		const engine::frect packed_rect(i.x + 1, i.y + 1, i.w - 2, i.h - 2); // New rect excluding the padding
-
 		// Update the size to fit this entry
-		new_size.x = std::max(new_size.x, packed_rect.x + packed_rect.w);
-		new_size.y = std::max(new_size.y, packed_rect.y + packed_rect.h);
+		new_size.x = std::max(new_size.x, static_cast<float>(i.x + i.w));
+		new_size.y = std::max(new_size.y, static_cast<float>(i.y + i.h));
+
+		const engine::frect packed_rect(i.x + 1, i.y + 1, i.w - 2, i.h - 2); // New rect excluding the padding
 
 		// Copy the original and update the position
 		subtexture::ptr orig_atlas = atlas.get_all()[i.id];
@@ -356,7 +366,7 @@ bool texture::generate_texture(const fs::path& pCache_path) const
 	new_size.ceil();
 	const texture_atlas new_atlas(new_atlas_array);
 
-	logger::info("generate_texture: Copying to new texture...");
+	logger::info("generate_padded_texture: Copying to new texture...");
 
 	// Copy the image to the new image
 	sf::Image new_image;
@@ -366,8 +376,8 @@ bool texture::generate_texture(const fs::path& pCache_path) const
 		const engine::frect new_rect = new_atlas.get_all()[i]->get_full_rect();
 		const engine::frect old_rect = atlas.get_all()[i]->get_full_rect();
 
-		// Duplicate the perimiter of the image into the padding of the entries
-		// This effectively hides any floating point errors
+		// Duplicate the perimeter of the image into the padding of the entries.
+		// This effectively hides any floating point errors.
 		new_image.copy(image, new_rect.x - 1, new_rect.y
 			, engine::rect_cast<int>(engine::frect(old_rect.get_offset(), { 1, old_rect.get_size().y})));
 		new_image.copy(image, new_rect.x, new_rect.y - 1
@@ -381,17 +391,17 @@ bool texture::generate_texture(const fs::path& pCache_path) const
 		new_image.copy(image, new_rect.x, new_rect.y, engine::rect_cast<int>(old_rect));
 	}
 
-	logger::info("generate_texture: Saving to cache...");
+	logger::info("generate_padded_texture: Saving to cache...");
 
 	// Make sure the directory exists
-	fs::path textures_cache = pCache_path / "textures";
+	const fs::path textures_cache = pCache_path / "textures";
 	fs::create_directories(textures_cache);
 
 	// Save everything!
 	new_image.saveToFile((textures_cache / (get_name() + ".png")).string());
 	new_atlas.save((textures_cache / (get_name() + ".xml")).string());
 
-	logger::info("generate_texture: Generating margined texture complete.");
+	logger::info("generate_padded_texture: Generating margined texture complete.");
 
 	return true;
 }
@@ -426,7 +436,7 @@ bool texture::load()
 		else
 		{
 			set_loaded(mSFML_texture->loadFromFile(final_texture_source));
-			if (!mAtlas_source.empty())
+			if (fs::exists(mAtlas_source))
 			{
 				if (!mAtlas.load(final_atlas_source))
 					logger::error("Failed to load atlas '" + final_atlas_source + "'");

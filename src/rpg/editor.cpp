@@ -1862,7 +1862,7 @@ void atlas_imgui_editor::update()
 			request_open_texture(mTexture->get_name());
 		if (ImGui::Button("Generate", ImVec2(-1, 0)))
 		{
-			mTexture->generate_texture(mResource_manager->get_directory() / "cache");
+			mTexture->generate_padded_texture(mResource_manager->get_directory() / "cache");
 		}
 	}
 	ImGui::TextUnformatted("Textures");
