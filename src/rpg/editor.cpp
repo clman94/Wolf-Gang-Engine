@@ -516,29 +516,7 @@ static inline engine::frect snap_closest(const engine::frect& pRect, const engin
 	};
 }
 
-void draw_grid(engine::primitive_builder& pPrimitives, engine::fvector pAlign_to, engine::fvector pScale, engine::fvector pDisplay_size, engine::color pColor)
-{
-	engine::ivector line_count = engine::vector_cast<int>((pDisplay_size / pScale).floor()) + engine::ivector(1, 1);
-	engine::fvector offset = math::pmod(pAlign_to, pScale);
 
-	// Vertical lines
-	for (int i = 0; i < line_count.x; i++)
-	{
-		float x = (float)i*pScale.x + offset.x;
-		if (x < 0)
-			x += pDisplay_size.x;
-		pPrimitives.add_line({ x, 0 }, { x, pDisplay_size.y }, pColor);
-	}
-
-	// Horizontal lines
-	for (int i = 0; i < line_count.y; i++)
-	{
-		float y = (float)i*pScale.y + offset.y;
-		if (y < 0)
-			y += pDisplay_size.y;
-		pPrimitives.add_line({ 0, y }, { pDisplay_size.x, y }, pColor);
-	}
-}
 
 // Resizes a render texture if the imgui window was changed size.
 // Works best if this is the first thing drawn in the window.

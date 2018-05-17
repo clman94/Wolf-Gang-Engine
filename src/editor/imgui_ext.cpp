@@ -9,7 +9,6 @@
 
 // See editor.cpp; this is temprary
 bool resize_to_window(sf::RenderTexture& pRender);
-void draw_grid(engine::primitive_builder& pPrimitives, engine::fvector pAlign_to, engine::fvector pScale, engine::fvector pDisplay_size, engine::color pColor);
 
 namespace ImGui
 {
@@ -217,8 +216,7 @@ void BeginRenderer(const char* pStr_id, RendererData* pRenderData, ImVec2 pSize,
 
 		if ((pFlags & ImGuiRendererFlags_MiddleMouseZooming) && ImGui::GetIO().MouseWheel != 0)
 		{
-			pRenderData->zoom += ImGui::GetIO().MouseWheel;
-			pRenderData->zoom = util::clamp<float>(pRenderData->zoom, -2, 5);
+			pRenderData->zoom = util::clamp<float>(pRenderData->zoom + ImGui::GetIO().MouseWheel, -2, 5);
 			pRenderData->centerNode.set_scale(engine::fvector(1, 1)*std::pow(2.f, pRenderData->zoom));
 		}
 	}
@@ -480,13 +478,37 @@ bool RectDraggerAndResizer(const char * pStr_id, const engine::frect& pRect, eng
 		|| RectDragger(hash::combine(hash::hash32("dragger"), id), pRect, pChange);
 }
 
+static inline void DrawGrid(engine::primitive_builder& pPrimitives, engine::fvector pAlign_to, engine::fvector pScale, engine::fvector pDisplay_size, engine::color pColor)
+{
+	engine::ivector line_count = engine::vector_cast<int>((pDisplay_size / pScale).floor()) + engine::ivector(1, 1);
+	engine::fvector offset = math::pmod(pAlign_to, pScale);
+
+	// Vertical lines
+	for (int i = 0; i < line_count.x; i++)
+	{
+		float x = (float)i*pScale.x + offset.x;
+		if (x < 0)
+			x += pDisplay_size.x;
+		pPrimitives.add_line({ x, 0 }, { x, pDisplay_size.y }, pColor);
+	}
+
+	// Horizontal lines
+	for (int i = 0; i < line_count.y; i++)
+	{
+		float y = (float)i*pScale.y + offset.y;
+		if (y < 0)
+			y += pDisplay_size.y;
+		pPrimitives.add_line({ 0, y }, { pDisplay_size.x, y }, pColor);
+	}
+}
+
 void Grid(const engine::color & pColor)
 {
 	assert(currentRenderData && !usingRenderer);
 	engine::fvector offset = currentRenderData->worldNode.get_exact_position();
 	engine::fvector scale = currentRenderData->worldNode.get_absolute_scale()*currentRenderData->worldNode.get_unit();
 	engine::fvector display_size = engine::vector_cast<float, unsigned int>(currentRenderData->renderTexture.getSize());
-	draw_grid(currentRenderData->primitives, offset, scale, display_size, pColor);
+	DrawGrid(currentRenderData->primitives, offset, scale, display_size, pColor);
 }
 
 }
