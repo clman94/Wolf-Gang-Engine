@@ -422,47 +422,6 @@ std::string editor_settings_loader::generate_opento_cmd(const std::string & pFil
 	return mPath + " " + modified_param;
 }
 
-
-
-/* 
-###Menu
-Game
-Button open game - Open a data folder
-Button New game - Create a new data folder with game
-
-Tools
-
-
-###Windows
-
-#Game
-Inputtext Name
-
-
-#Scene
-Vec4 Boundary - set Boundary of scene
-Button Rename - Rename the scene
-Treelist (of file directories) or just a combo box to choose scene
-
-#Tilemap
-
-#Tilemap Display
-
-#Collision
-
-#Collision Display
-
-#Terminal
-Displays
-
-#Script
-Suspend/resume - Suspend or resume scripts
-Callstack - Display callstack if suspended or on some sort of error
-Compile messages
-
-*/
-
-
 int OSA_distance(const std::string& pStr1, const std::string& pStr2)
 {
 	std::vector<std::vector<int>> d;
@@ -575,7 +534,14 @@ WGE_imgui_editor::~WGE_imgui_editor()
 
 void WGE_imgui_editor::run()
 {
-	mWindow.initualize("WGE Editor New and improved", { 640, 480 });
+	ImGui::LoadSettings("./editor/settings_ext.xml");
+
+	{
+		engine::fvector window_size(640, 480);
+		ImGui::UpdateSetting("Window Size", &window_size);
+		mWindow.initualize("WGE Editor New and improved", engine::vector_cast<int>(window_size));
+	}
+
 	ImGui::SFML::Init(mWindow.get_sfml_window());
 
 	ImGuiStyle& style = ImGui::GetStyle();
@@ -602,10 +568,24 @@ void WGE_imgui_editor::run()
 			mIs_closing = true;
 		mWindow.push_events_to_imgui();
 
+		{
+			ImGui::UpdateSetting("Window Size", &engine::vector_cast<float>(mWindow.get_size()));
+
+			engine::fvector position = mWindow.get_position();
+			if (ImGui::UpdateSetting("Window Position", &position))
+				mWindow.set_position(position);
+
+			for (std::size_t i = 0; i < mWindow_open.size(); i++)
+				ImGui::UpdateSetting(std::string("Subwindow open " + std::to_string(i)).c_str(), &mWindow_open[i]);
+			ImGui::UpdateSetting("Show Grid", &mShow_grid);
+			ImGui::UpdateSetting("Grid Color", &mGrid_color);
+			ImGui::UpdateSetting("Scene editor snapping", &mTilemap_current_snapping);
+			ImGui::UpdateSetting("Show game debug info", &mShow_debug_info);
+		}
+
 		if (mIs_game_view_window_focused)
 			mGame_renderer.update_events(mWindow);
 
-		
 		ImGui::SFML::Update(mWindow.get_sfml_window(), delta_clock.restart());
 
 		mAtlas_editor.update();
@@ -623,7 +603,8 @@ void WGE_imgui_editor::run()
 				"Scene Properties",
 				"Scene Editor",
 				"Atlas Editor",
-				"log",
+				"Log",
+				"Settings",
 			};
 			for (std::size_t i = 0; i < window_open_count; i++)
 				if (ImGui::MenuItem(names[i], nullptr, mWindow_open[i]))
@@ -638,6 +619,7 @@ void WGE_imgui_editor::run()
 		draw_game_view_window();
 		draw_scene_editor_window();
 		draw_log_window();
+		draw_settings_window();
 		
 		if (ImGui::Begin("Debugger"))
 		{
@@ -741,6 +723,7 @@ void WGE_imgui_editor::run()
 		mWindow.display();
 	}
 	ImGui::SFML::Shutdown();
+	ImGui::SaveSettings("./editor/settings_ext.xml");
 }
 
 void WGE_imgui_editor::place_tile(engine::fvector pos)
@@ -1578,6 +1561,23 @@ void WGE_imgui_editor::center_tilemap()
 	ImGui::EndRenderer();
 }
 
+void WGE_imgui_editor::draw_settings_window()
+{
+	if (!mWindow_open[window_open_settings])
+		return;
+	if (ImGui::Begin("Settings", &mWindow_open[window_open_settings]))
+	{
+		if (ImGui::CollapsingHeader("Scene Editor"))
+		{
+			float cdsize = 3;
+			ImGui::GetSetting("Circle Dragger Radius", &cdsize);
+			ImGui::DragFloat("Circle Dragger Radius", &cdsize);
+			ImGui::UpdateSetting("Circle Dragger Radius", &cdsize);
+		}
+	}
+	ImGui::End();
+}
+
 void WGE_imgui_editor::draw_log_window()
 {
 	if (!mWindow_open[window_open_log])
@@ -1914,7 +1914,7 @@ void atlas_imgui_editor::update()
 		}
 
 		if (ImGui::GetRendererZoom() >= 2) // The pixels will be 4 times as big at this zoom
-			ImGui::RenderWidgets::Grid({ 1, 1, 1, std::min(0.4f, (ImGui::GetRendererZoom() / 4.f) * 0.4f) }); // Adjust alpha so it doesn't pop in to intrusively
+			ImGui::RenderWidgets::Grid({ 1, 1, 1, std::min(0.4f, (ImGui::GetRendererZoom() / 4.f) * 0.4f) }); // Adjust alpha so it doesn't pop in too intrusively
 	}
 	ImGui::EndRenderer();
 
@@ -1995,7 +1995,6 @@ void atlas_imgui_editor::update()
 			mSubtexture->set_frame_rect(framerect.floor());
 			mModified = true;
 		}
-
 	}
 
 	if (mTexture)

@@ -670,6 +670,7 @@ frect rectangle_node::get_render_rect() const
 display_window::display_window(const std::string & pTitle, ivector pSize)
 {
 	initualize(pTitle, pSize);
+	mIs_resizing = false;
 }
 
 display_window::~display_window()
@@ -697,6 +698,16 @@ ivector display_window::get_size() const
 	return mSize;
 }
 
+void display_window::set_position(engine::fvector pPosition)
+{
+	mWindow.setPosition(pPosition);
+}
+
+fvector display_window::get_position() const
+{
+	return mWindow.getPosition();
+}
+
 void display_window::windowed_mode()
 {
 	mWindow.create(sf::VideoMode(mSize.x, mSize.y), mTitle, sf::Style::Titlebar | sf::Style::Close | sf::Style::Resize);
@@ -715,6 +726,7 @@ bool display_window::is_fullscreen() const
 {
 	return mIs_fullscreen;
 }
+
 
 void display_window::set_title(const std::string & pTitle)
 {
@@ -748,10 +760,16 @@ bool display_window::poll_events()
 {
 	mEvents.clear();
 	sf::Event event;
+	mIs_resizing = false;
 	while (mWindow.pollEvent(event))
 	{
 		if (event.type == sf::Event::Closed)
 			return false;
+		if (event.type == sf::Event::Resized)
+		{
+			mSize = mWindow.getSize();
+			mIs_resizing = true;
+		}
 		if (event.type == sf::Event::LostFocus)
 			mWindow.setFramerateLimit(15);
 		if (event.type == sf::Event::GainedFocus)
@@ -780,6 +798,11 @@ void display_window::push_events_to_imgui() const
 sf::RenderWindow& display_window::get_sfml_window()
 {
 	return mWindow;
+}
+
+bool display_window::is_resizing() const
+{
+	return mIs_resizing;
 }
 
 void display_window::fullscreen_mode()

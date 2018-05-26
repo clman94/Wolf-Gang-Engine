@@ -265,6 +265,7 @@ private:
 		window_open_scene_editor,
 		window_open_atlas_editor,
 		window_open_log,
+		window_open_settings,
 		window_open_count,
 	};
 	std::array<bool, window_open_count> mWindow_open;
@@ -306,6 +307,8 @@ private:
 	void draw_tile_group(float from_bottom = 300);
 	void draw_tilemap_layers_group();
 	void center_tilemap();
+
+	void draw_settings_window();
 
 	void draw_log_window();
 

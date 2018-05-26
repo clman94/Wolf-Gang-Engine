@@ -7,6 +7,8 @@
 
 #include <SFML/Graphics/RenderTexture.hpp>
 
+#include "../../3rdparty/tinyxml2/tinyxml2.h"
+
 // See editor.cpp; this is temprary
 bool resize_to_window(sf::RenderTexture& pRender);
 
@@ -134,7 +136,7 @@ int ConfirmPopup(const char * pName, const char* pMessage)
 bool TextureSelectCombo(const char* pName, const engine::resource_manager& pRes_mgr, std::string* pTexture_name)
 {
 	assert(pTexture_name);
-	bool ret = false;
+	bool pressed = false;
 	if (ImGui::BeginCombo(pName, pTexture_name->empty() ? "No Texture" : pTexture_name->c_str()))
 	{
 		if (ImGui::Selectable("No Texture", pTexture_name->empty()))
@@ -144,13 +146,267 @@ bool TextureSelectCombo(const char* pName, const engine::resource_manager& pRes_
 			if (ImGui::Selectable(i->get_name().c_str(), *pTexture_name == i->get_name()))
 			{
 				*pTexture_name = i->get_name();
-				ret = true;
+				pressed = true;
 			}
 		}
 		ImGui::EndCombo();
 	}
-	return ret;
+	return pressed;
 }
+
+typedef int SettingsValueType;
+enum SettingsValueType_
+{
+	SettingsValueType_Bool,
+	SettingsValueType_UInt,
+	SettingsValueType_Int,
+	SettingsValueType_Float,
+	SettingsValueType_FVec2,
+	SettingsValueType_String,
+	SettingsValueType_Color,
+};
+
+struct SettingsValue
+{
+	SettingsValue(SettingsValueType pType) : firstTime(true), type(pType) {}
+
+	bool firstTime;
+	SettingsValueType type;
+	union {
+		bool value_Bool;
+		unsigned int value_UInt;
+		int value_Int;
+		float value_Float;
+	};
+	engine::color value_Color;
+	engine::fvector value_FVec2;
+	std::string value_String;
+
+	void setName(const std::string& pName)
+	{
+		mName = pName;
+		mHash = hash::hash32(pName);
+	}
+
+	const std::string& getName() const
+	{
+		return mName;
+	}
+
+	hash::hash32_t getHash() const
+	{
+		return mHash;
+	}
+
+private:
+	std::string mName;
+	hash::hash32_t mHash;
+};
+
+static std::vector<SettingsValue> settings;
+
+void LoadSettings(const engine::fs::path & pPath)
+{
+	settings.clear();
+
+	tinyxml2::XMLDocument doc;
+	if (doc.LoadFile(pPath.string().c_str()) != tinyxml2::XML_SUCCESS)
+		return; // Do nothing. New settings will be saved later.
+
+	tinyxml2::XMLElement* ele_root = doc.RootElement();
+	for (tinyxml2::XMLElement* i = ele_root->FirstChildElement();
+		i != nullptr; i = i->NextSiblingElement())
+	{
+		tinyxml2::XMLElement* ele_type = i->FirstChildElement("Type");
+		SettingsValue nValue(ele_type->IntText());
+
+		tinyxml2::XMLElement* ele_name = i->FirstChildElement("Name");
+		nValue.setName(ele_name->GetText());
+
+		tinyxml2::XMLElement* ele_value = i->FirstChildElement("Value");
+		switch (nValue.type)
+		{
+		case SettingsValueType_Bool: nValue.value_Bool = ele_value->BoolText(); break;
+		case SettingsValueType_UInt: nValue.value_UInt = ele_value->UnsignedText(); break;
+		case SettingsValueType_Int: nValue.value_Int = ele_value->IntText(); break;
+		case SettingsValueType_Float: nValue.value_Float = ele_value->FloatText(); break;
+		case SettingsValueType_FVec2: nValue.value_FVec2 = engine::fvector(ele_value->FloatAttribute("x"), ele_value->FloatAttribute("y")); break;
+		case SettingsValueType_String: nValue.value_String = ele_value->GetText(); break;
+		case SettingsValueType_Color:
+			nValue.value_Color = engine::color(ele_value->FloatAttribute("r"),
+			                                   ele_value->FloatAttribute("b"),
+			                                   ele_value->FloatAttribute("g"),
+			                                   ele_value->FloatAttribute("a"));
+			break;
+		}
+		settings.push_back(nValue);
+	}
+}
+
+void SaveSettings(const engine::fs::path & pPath)
+{
+	tinyxml2::XMLDocument doc;
+	tinyxml2::XMLElement* ele_root = doc.NewElement("Settings");
+	doc.InsertEndChild(ele_root);
+	for (auto& i : settings)
+	{
+		tinyxml2::XMLElement* ele_entry = doc.NewElement("Entry");
+		ele_root->InsertEndChild(ele_entry);
+
+		tinyxml2::XMLElement* ele_name = doc.NewElement("Name");
+		ele_name->SetText(i.getName().c_str());
+		ele_entry->InsertEndChild(ele_name);
+
+		tinyxml2::XMLElement* ele_type = doc.NewElement("Type");
+		ele_type->SetText(i.type);
+		ele_entry->InsertEndChild(ele_type);
+
+		tinyxml2::XMLElement* ele_value = doc.NewElement("Value");
+		ele_entry->InsertEndChild(ele_value);
+		switch (i.type)
+		{
+		case SettingsValueType_Bool:  ele_value->SetText(i.value_Bool); break;
+		case SettingsValueType_UInt: ele_value->SetText(i.value_UInt); break;
+		case SettingsValueType_Int: ele_value->SetText(i.value_Int); break;
+		case SettingsValueType_Float: ele_value->SetText(i.value_Float); break;
+		case SettingsValueType_FVec2: ele_value->SetAttribute("x", i.value_FVec2.x); ele_value->SetAttribute("y", i.value_FVec2.y); break;
+		case SettingsValueType_String: ele_value->SetText(i.value_String.c_str()); break;
+		case SettingsValueType_Color:
+			ele_value->SetAttribute("r", i.value_Color.r);
+			ele_value->SetAttribute("g", i.value_Color.g);
+			ele_value->SetAttribute("b", i.value_Color.b);
+			ele_value->SetAttribute("a", i.value_Color.a);
+			break;
+		}
+	}
+	doc.SaveFile(pPath.string().c_str());
+}
+
+// Returns true if a new setting is created
+static inline bool GetOrCreateSetting(const char * pId, SettingsValue** pValue, SettingsValueType pType)
+{
+	const hash::hash32_t hashId = hash::hash32(pId);
+	for (auto& i : settings)
+		if (i.getHash() == hashId)
+		{
+			assert(i.type == pType);
+			*pValue = &i;
+			return false;
+		}
+
+	// Create a new value
+	SettingsValue nValue(pType);
+	nValue.setName(pId);
+	settings.push_back(nValue);
+	*pValue = &settings.back();
+	return true;
+}
+
+template<typename T, typename Tmem>
+static inline bool UpdateSetting(const char* pId, T pVal, Tmem SettingsValue:: *pSettingVal, SettingsValueType pType)
+{
+	SettingsValue* val = nullptr;
+	if (GetOrCreateSetting(pId, &val, pType))
+	{
+		val->*pSettingVal = *pVal;
+		val->firstTime = false;
+		return false;
+	}
+
+	if (val->firstTime)
+	{
+		*pVal = val->*pSettingVal;
+		val->firstTime = false;
+		return true;
+	}
+	val->*pSettingVal = *pVal;
+	return false;
+}
+
+bool UpdateSetting(const char * pId, bool * pVal)
+{
+	return UpdateSetting(pId, pVal, &SettingsValue::value_Bool, SettingsValueType_Bool);
+}
+
+bool UpdateSetting(const char* pId, unsigned int * pVal)
+{
+	return UpdateSetting(pId, pVal, &SettingsValue::value_UInt, SettingsValueType_UInt);
+}
+
+bool UpdateSetting(const char* pId, int * pVal)
+{
+	return UpdateSetting(pId, pVal, &SettingsValue::value_Int, SettingsValueType_Int);
+}
+
+bool UpdateSetting(const char* pId, float * pVal)
+{
+	return UpdateSetting(pId, pVal, &SettingsValue::value_Float, SettingsValueType_Float);
+}
+
+bool UpdateSetting(const char* pId, engine::fvector * pVal)
+{
+	return UpdateSetting(pId, pVal, &SettingsValue::value_FVec2, SettingsValueType_FVec2);
+}
+
+bool UpdateSetting(const char* pId, std::string * pVal)
+{
+	return UpdateSetting(pId, pVal, &SettingsValue::value_String, SettingsValueType_String);
+}
+
+bool UpdateSetting(const char * pId, engine::color * pVal)
+{
+	return UpdateSetting(pId, pVal, &SettingsValue::value_Color, SettingsValueType_Color);
+}
+
+template<typename T, typename Tmem>
+static inline bool GetSetting(const char* pId, T pVal, Tmem SettingsValue:: *pSettingVal, SettingsValueType pType)
+{
+	SettingsValue* val = nullptr;
+	if (GetOrCreateSetting(pId, &val, pType))
+	{
+		val->*pSettingVal = *pVal;
+		val->firstTime = false;
+		return true;
+	}
+	*pVal = val->*pSettingVal;
+	return false;
+}
+
+bool GetSetting(const char * pId, bool * pVal)
+{
+	return GetSetting(pId, pVal, &SettingsValue::value_Bool, SettingsValueType_Bool);
+}
+
+bool GetSetting(const char* pId, unsigned int * pVal)
+{
+	return GetSetting(pId, pVal, &SettingsValue::value_UInt, SettingsValueType_UInt);
+}
+
+bool GetSetting(const char* pId, int * pVal)
+{
+	return GetSetting(pId, pVal, &SettingsValue::value_Int, SettingsValueType_Int);
+}
+
+bool GetSetting(const char* pId, float * pVal)
+{
+	return GetSetting(pId, pVal, &SettingsValue::value_Float, SettingsValueType_Float);
+}
+
+bool GetSetting(const char* pId, engine::fvector * pVal)
+{
+	return GetSetting(pId, pVal, &SettingsValue::value_FVec2, SettingsValueType_FVec2);
+}
+
+bool GetSetting(const char* pId, std::string * pVal)
+{
+	return GetSetting(pId, pVal, &SettingsValue::value_String, SettingsValueType_String);
+}
+
+bool GetSetting(const char * pId, engine::color * pVal)
+{
+	return GetSetting(pId, pVal, &SettingsValue::value_Color, SettingsValueType_Color);
+}
+
 struct RendererData
 {
 	RendererData()
@@ -171,6 +427,7 @@ struct RendererData
 
 static RendererData* currentRenderData = nullptr;
 static bool usingRenderer = false;
+static bool nextRendererEnabled = true;
 
 void OpenRenderer(RendererData** pRendererData)
 {
@@ -191,7 +448,7 @@ void BeginRenderer(const char* pStr_id, RendererData* pRenderData, ImVec2 pSize,
 
 	ImGui::BeginChild(pStr_id, pSize);
 
-	if (resize_to_window(pRenderData->renderTexture))
+	if (nextRendererEnabled && resize_to_window(pRenderData->renderTexture))
 	{
 		engine::fvector new_size = engine::vector_cast<float, unsigned int>(pRenderData->renderTexture.getSize());
 		if (pFlags & ImGuiRendererFlags_ResizeTarget)
@@ -232,11 +489,11 @@ void EndRenderer()
 		currentRenderData->primitives.draw_and_clear(currentRenderData->renderer);
 		currentRenderData->renderTexture.display();
 		ImGui::AddBackgroundImage(currentRenderData->renderTexture, currentRenderData->windowTopLeft);
-
 		ImGui::EndChild();
 	}
 	currentRenderData = nullptr;
 	usingRenderer = false;
+	nextRendererEnabled = true;
 }
 
 void UseRenderer(RendererData * pRenderData)
@@ -319,6 +576,11 @@ float GetRendererZoom()
 	return currentRenderData->zoom;
 }
 
+void SetNextRendererEnabled(bool pEnabled)
+{
+	nextRendererEnabled = pEnabled;
+}
+
 namespace RenderWidgets
 {
 
@@ -350,9 +612,12 @@ static inline bool DragBehavior(hash::hash32_t pId, bool pHovered)
 bool CircleDragger(hash::hash32_t pId, const engine::fvector& pPosition, engine::fvector* pChange, bool pMove_X, bool pMove_Y)
 {
 	assert(currentRenderData && !usingRenderer);
-	const bool hovered = pPosition.distance(ImGui::GetRendererWorldMouse()) < 3.f / (GetRendererUnit()*currentRenderData->centerNode.get_scale().x);
+	float radius = 3.f;
+	ImGui::GetSetting("Circle Dragger Radius", &radius);
+
+	const bool hovered = pPosition.distance(ImGui::GetRendererWorldMouse()) < radius / (GetRendererUnit()*currentRenderData->centerNode.get_scale().x);
 	const bool dragging = DragBehavior(pId, hovered);
-	currentRenderData->primitives.add_circle(engine::exact_relative_to_node(pPosition, currentRenderData->worldNode), 3.f, { 1, 1, 1, (hovered || dragging ? 1.f : 0.f) }, { 1, 1, 1, 1 });
+	currentRenderData->primitives.add_circle(engine::exact_relative_to_node(pPosition, currentRenderData->worldNode), radius, { 1, 1, 1, (hovered || dragging ? 1.f : 0.f) }, { 1, 1, 1, 1 });
 	if (dragging)
 	{
 		pChange->x += ImGui::GetIO().MouseDelta.x*(pMove_X ? 1 : 0) / (GetRendererUnit()*currentRenderData->centerNode.get_scale().x);

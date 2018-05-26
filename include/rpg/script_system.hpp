@@ -95,7 +95,6 @@ const std::string impl_conv = "opImplConv";
 class script_system
 {
 public:
-
 	script_system();
 	~script_system();
 

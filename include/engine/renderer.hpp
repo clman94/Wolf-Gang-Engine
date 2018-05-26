@@ -37,6 +37,9 @@ public:
 	void set_size(ivector pSize);
 	ivector get_size() const;
 
+	void set_position(fvector pPosition);
+	fvector get_position() const;
+
 	void fullscreen_mode();
 	void windowed_mode();
 	void toggle_mode();
@@ -62,11 +65,14 @@ public:
 
 	sf::RenderWindow& get_sfml_window();
 
+	bool is_resizing() const;
+
 private:
 	sf::RenderWindow mWindow;
 	bool mIs_fullscreen;
 	ivector mSize;
 	std::string mTitle;
+	bool mIs_resizing;
 
 	// Storing the events allows multiple renderers per window.
 	// This feature is mostly meant for the editors.
