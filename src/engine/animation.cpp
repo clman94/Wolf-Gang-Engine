@@ -233,6 +233,7 @@ void animation_node::pause()
 
 void animation_node::stop()
 {
+	pause();
 	restart();
 }
 

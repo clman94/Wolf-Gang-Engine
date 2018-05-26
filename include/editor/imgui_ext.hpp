@@ -76,7 +76,7 @@ bool UpdateSetting(const char* pId, engine::fvector* pVal);
 bool UpdateSetting(const char* pId, std::string* pVal);
 bool UpdateSetting(const char* pId, engine::color* pVal);
 
-// Returns true if value is created
+// Returns true if the value is created
 // pVal will be used as default value if the setting does not already exist.
 bool GetSetting(const char* pId, bool* pVal);
 bool GetSetting(const char* pId, unsigned int* pVal);
