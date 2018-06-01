@@ -367,6 +367,14 @@ std::string script_system::get_current_file() const
 	return mCurrect_thread_context->context->GetFunction()->GetScriptSectionName();
 }
 
+size_t script_system::get_current_thread()
+{
+	for (std::size_t i = 0; i < mThread_contexts.size(); i++)
+		if (mThread_contexts[i] == mCurrect_thread_context)
+			return i;
+	return 0;
+}
+
 void script_system::begin_namespace(const std::string & pName)
 {
 	mEngine->SetDefaultNamespace(pName.c_str());
@@ -406,6 +414,8 @@ bool script_system::is_executing()
 
 std::vector<script_system::stack_level_info> script_system::get_stack_info(size_t pThread) const
 {
+	if (mThread_contexts.empty())
+		return{};
 	std::vector<stack_level_info> info_list;
 	AS::asIScriptContext* ctx = mThread_contexts[pThread]->context;
 	info_list.resize(ctx->GetCallstackSize());
@@ -465,4 +475,17 @@ void script_system::throw_exception(const std::string & pMessage)
 	mCurrect_thread_context->context->SetException(pMessage.c_str());
 }
 
+logger::message logger::print(script_system & pScript_system, level pType, const std::string & pMessage)
+{
+	logger::message msg(pType);
+	msg.row = pScript_system.get_current_line();
+	msg.file = pScript_system.get_current_file();
+	msg.is_file = true;
+	msg.msg = pMessage;
 
+	auto message_data = std::make_shared<script_message_data>();
+	message_data->stack_info = pScript_system.get_stack_info(pScript_system.get_current_thread());
+	msg.ext = message_data;
+
+	return print(msg);
+}

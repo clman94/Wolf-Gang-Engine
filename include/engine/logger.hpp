@@ -14,13 +14,25 @@ enum class level
 	error,
 };
 
+// Extra data to include with message
+class message_ext
+{
+public:
+	virtual ~message_ext() {}
+};
+
 struct message
 {
 public:
+	message() : is_file(false), column(-1), row(-1){}
+	message(level pType) : is_file(false), column(-1), row(-1), type(pType){}
+
 	bool is_file;
 	std::string file, msg, time_stamp;
 	level type;
 	int column, row; // <0 will mean there is no column or row
+
+	std::shared_ptr<message_ext> ext;
 
 	std::string to_string() const;
 	void set_to_current_time();

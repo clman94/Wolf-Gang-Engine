@@ -536,7 +536,7 @@ void WGE_imgui_editor::run()
 {
 	ImGui::LoadSettings("./editor/settings_ext.xml");
 
-	{
+	{ // Setup window
 		engine::fvector window_size(640, 480);
 		ImGui::UpdateSetting("Window Size", &window_size);
 		mWindow.initualize("WGE Editor New and improved", engine::vector_cast<int>(window_size));
@@ -1278,7 +1278,6 @@ void WGE_imgui_editor::draw_collision_editor_settings()
 				mSelected_collbox->set_wall_group(mColl_container.create_group(group_buf));
 			mIs_scene_modified = true;
 		}
-
 		ImGui::QuickTooltip("Group to assosiate this collision box with.\nThis is used in scripts to enable/disable boxes or calling functions when collided.");
 
 		engine::frect coll_rect = mSelected_collbox->get_region();
@@ -1398,11 +1397,13 @@ void WGE_imgui_editor::tilemap_editor_update()
 
 void WGE_imgui_editor::draw_tilemap_editor_settings()
 {
-	static float tilegroup_height = 300; // FIXME: make nonstatic
+	float tilegroup_height = 300;
+	ImGui::GetSetting("Tile and layers splitter", &tilegroup_height);
 	if (ImGui::TreeNodeEx("Tile", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		draw_tile_group(tilegroup_height);
 		ImGui::HSplitter("tileandlayerssplitter", 3, &tilegroup_height, true);
+		ImGui::UpdateSetting("Tile and layers splitter", &tilegroup_height);
 		ImGui::TreePop();
 	}
 	if (ImGui::TreeNodeEx("Layers", ImGuiTreeNodeFlags_DefaultOpen))
@@ -1571,8 +1572,8 @@ void WGE_imgui_editor::draw_settings_window()
 		{
 			float cdsize = 3;
 			ImGui::GetSetting("Circle Dragger Radius", &cdsize);
-			ImGui::DragFloat("Circle Dragger Radius", &cdsize);
-			ImGui::UpdateSetting("Circle Dragger Radius", &cdsize);
+			if (ImGui::DragFloat("Circle Dragger Radius", &cdsize))
+				ImGui::UpdateSetting("Circle Dragger Radius", &cdsize);
 		}
 	}
 	ImGui::End();
@@ -1582,7 +1583,7 @@ void WGE_imgui_editor::draw_log_window()
 {
 	if (!mWindow_open[window_open_log])
 		return;
-	if (ImGui::Begin("Log", &mWindow_open[window_open_log]))
+	if (ImGui::Begin("Log", &mWindow_open[window_open_log], ImGuiWindowFlags_HorizontalScrollbar))
 	{
 		const auto& log = logger::get_log();
 
@@ -1624,6 +1625,8 @@ void WGE_imgui_editor::draw_log_window()
 			ImGui::TextUnformatted(log[i].msg.c_str());
 			ImGui::PopStyleColor();
 
+			ImGui::PushStyleColor(ImGuiCol_Text, { 0.7f, 0.7f, 0.7f, 1 });
+
 			if (log[i].is_file)
 			{
 				std::string file_info = log[i].file;
@@ -1636,7 +1639,6 @@ void WGE_imgui_editor::draw_log_window()
 				}
 
 				// Filepath. Gray.
-				ImGui::PushStyleColor(ImGuiCol_Text, { 0.7f, 0.7f, 0.7f, 1 });
 				if (ImGui::HiddenSmallButton(file_info.c_str()))
 				{
 					std::string cmd = mSettings.generate_open_cmd(log[i].file);
@@ -1644,10 +1646,38 @@ void WGE_imgui_editor::draw_log_window()
 						logger::error("Failed to launch editor");
 				}
 				ImGui::QuickTooltip("Open file in editor.");
-				ImGui::PopStyleColor();
 			}
+
+			if (log[i].ext)
+			{
+				ImGui::PushID(i);
+				if (auto script_msg = std::dynamic_pointer_cast<rpg::script_message_data>(log[i].ext))
+				{
+					if (ImGui::TreeNode("Stack Info"))
+					{
+						if (script_msg->stack_info.empty())
+							ImGui::Text("Not available");
+						for (auto& i : script_msg->stack_info)
+						{
+							ImGui::TextUnformatted(i.func->GetDeclaration(true, true, true));
+							if (ImGui::IsItemHovered())
+							{
+								ImGui::BeginTooltip();
+								ImGui::Text("File: %s", i.section);
+								ImGui::EndTooltip();
+							}
+						}
+						ImGui::TreePop();
+					}
+				}
+				ImGui::PopID();
+			}
+
+			ImGui::PopStyleColor();
+
 			ImGui::NextColumn();
 		}
+
 		ImGui::Columns(1);
 
 		if (lock_scroll_at_bottom)
@@ -1827,9 +1857,35 @@ void atlas_imgui_editor::update()
 
 	if (!*mWindow_open)
 		return;
-	ImGui::Begin("Texture Atlas Editor", mWindow_open);
+	ImGui::Begin("Texture Atlas Editor", mWindow_open, ImGuiWindowFlags_MenuBar);
 
-	static float tlb_w = 150;
+	if (ImGui::BeginMenuBar())
+	{
+		if (ImGui::BeginMenu("File..."))
+		{
+			if (ImGui::MenuItem("Save", nullptr, false, static_cast<bool>(mTexture)))
+				save();
+			if (ImGui::MenuItem("Reload", nullptr, false, static_cast<bool>(mTexture)))
+				request_open_texture(mTexture->get_name());
+
+			// For future consideration
+			//ImGui::Separator();
+			//if (ImGui::MenuItem("Import")) {}
+
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu("Tools..."))
+		{
+			if (ImGui::MenuItem("Generate Padded Cache", nullptr, false, static_cast<bool>(mTexture)))
+				mTexture->generate_padded_texture(mResource_manager->get_directory() / "cache");
+
+			ImGui::EndMenu();
+		}
+		ImGui::EndMenuBar();
+	}
+
+	float tlb_w = 150;
+	ImGui::GetSetting("Atlas Editor left vsplitter", &tlb_w);
 
 	ImGui::BeginChild("textureprops", ImVec2(tlb_w, 0));
 	if (mTexture)
@@ -1838,10 +1894,6 @@ void atlas_imgui_editor::update()
 			save();
 		if (ImGui::Button("Reload", ImVec2(-1, 0)))
 			request_open_texture(mTexture->get_name());
-		if (ImGui::Button("Generate", ImVec2(-1, 0)))
-		{
-			mTexture->generate_padded_texture(mResource_manager->get_directory() / "cache");
-		}
 	}
 	ImGui::TextUnformatted("Textures");
 	ImGui::BeginChild("texturelist", ImVec2(tlb_w, 0), true);
@@ -1854,6 +1906,7 @@ void atlas_imgui_editor::update()
 	ImGui::SameLine();
 
 	ImGui::VSplitter("texturelbsplitter", 3, &tlb_w);
+	ImGui::UpdateSetting("Atlas Editor left vsplitter", &tlb_w);
 
 	ImGui::SameLine();
 
@@ -1929,19 +1982,15 @@ void atlas_imgui_editor::update()
 		ImGui::BeginRenderer("subtexturepreview", mSubtexture_renderdata, ImVec2(0, 300), ImGuiRendererFlags_Editor);
 		{
 			engine::primitive_builder& primitives = ImGui::GetRendererPrimitives();
-			if (mSubtexture)
-			{
-				primitives.push_node(ImGui::GetRendererWorldNode());
 
-				engine::frect frame;
-				frame = mSubtexture->get_frame_at(mCurrent_frame);
-				primitives.add_quad_texture(mTexture, engine::fvector(0, 0), mSubtexture->get_frame_at(mCurrent_frame));
+			primitives.push_node(ImGui::GetRendererWorldNode());
 
-				// Subtexture perimeter
-				primitives.add_rectangle({ engine::fvector(0, 0), mSubtexture->get_frame_at(0).get_size() }, { 0, 0, 0, 0 }, { 0, 1, 1, 1 });
+			primitives.add_quad_texture(mTexture, engine::fvector(0, 0), mSubtexture->get_frame_at(mCurrent_frame));
 
-				primitives.pop_node();
-			}
+			// Subtexture perimeter
+			primitives.add_rectangle({ engine::fvector(0, 0), mSubtexture->get_frame_at(0).get_size() }, { 0, 0, 0, 0 }, { 0, 1, 1, 1 });
+
+			primitives.pop_node();
 		}
 		ImGui::EndRenderer();
 

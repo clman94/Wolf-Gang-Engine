@@ -72,6 +72,7 @@ struct AS_type_to_string<AS_array<T>> :
 namespace rpg
 {
 
+
 namespace operator_method
 {
 const std::string assign = "opAssign";
@@ -213,6 +214,7 @@ public:
 
 	int get_current_line();
 	std::string get_current_file() const;
+	size_t get_current_thread();
 
 	void begin_namespace(const std::string& pName);
 	void end_namespace();
@@ -317,17 +319,19 @@ private:
 	friend class scene_script_context;
 };
 
+struct script_message_data :
+	public logger::message_ext
+{
+	std::vector<script_system::stack_level_info> stack_info;
+};
+
 }
+
 
 namespace logger
 {
-	static inline message print(rpg::script_system& pScript_system
-		, level pType, const std::string& pMessage)
-	{
-		return print(pScript_system.get_current_file()
-			, pScript_system.get_current_line()
-			, pType, pMessage);
-	}
+	message print(rpg::script_system& pScript_system
+		, level pType, const std::string& pMessage);
 }
 
 

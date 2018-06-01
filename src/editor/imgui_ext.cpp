@@ -218,12 +218,18 @@ void LoadSettings(const engine::fs::path & pPath)
 		i != nullptr; i = i->NextSiblingElement())
 	{
 		tinyxml2::XMLElement* ele_type = i->FirstChildElement("Type");
+		if (!ele_type)
+			return;
 		SettingsValue nValue(ele_type->IntText());
 
 		tinyxml2::XMLElement* ele_name = i->FirstChildElement("Name");
+		if (!ele_name)
+			return;
 		nValue.setName(ele_name->GetText());
 
 		tinyxml2::XMLElement* ele_value = i->FirstChildElement("Value");
+		if (!ele_value)
+			return;
 		switch (nValue.type)
 		{
 		case SettingsValueType_Bool: nValue.value_Bool = ele_value->BoolText(); break;
