@@ -690,6 +690,7 @@ bool game::load(engine::fs::path pData_path)
 	mIs_ready = true;
 
 	mFlags.clear();
+	mValues.clear();
 
 	mScene.cleanup(true);
 	mScene.load_scene(settings.get_start_scene());
