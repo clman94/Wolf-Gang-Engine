@@ -1,6 +1,6 @@
-prefix=C:/Program Files (x86)/GLFWTest
+prefix=C:/Program Files (x86)/WolfGangEngine
 exec_prefix=${prefix}
-libdir=C:/Program Files (x86)/GLFWTest/lib
+libdir=C:/Program Files (x86)/WolfGangEngine/lib
 includedir=${prefix}/include
 
 Name: glew
