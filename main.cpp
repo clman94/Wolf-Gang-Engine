@@ -83,6 +83,9 @@ using json = nlohmann::json;
 #include <wge/util/clock.hpp>
 #include <wge/util/ref.hpp>
 #include <wge/filesystem/path.hpp>
+#include <wge/physics/box_collider_component.hpp>
+#include <wge/physics/physics_component.hpp>
+#include <wge/physics/physics_world_component.hpp>
 using namespace wge;
 
 #include <Box2D/Box2D.h>
@@ -173,182 +176,6 @@ class asset_manager
 {
 public:
 	// TODO: Load and cache all configuration files.
-};
-
-
-/*
-
-Events sent:
-	void on_physics_update_bodies(physics_world_component*);
-	  - Used by physics_component's to update their bodies to
-	    the current world.
-
-Events recieved:
-	void on_preupdate(float);
-*/
-class physics_world_component :
-	public core::component
-{
-	WGE_COMPONENT("Physics World", 3)
-public:
-
-	physics_world_component(core::object_node* pObj) :
-		component(pObj)
-	{
-		mWorld = new b2World(b2Vec2(0, 1));
-		mWorld->SetContactListener(&mContact_listener);
-		subscribe_to(pObj, "on_preupdate", &physics_world_component::on_preupdate);
-	}
-
-	virtual ~physics_world_component()
-	{
-		delete mWorld;
-	}
-
-
-	void on_add_node(core::object_node* pObj)
-	{
-		if (pObj->has_component<physics_component>())
-		{
-			physics_component * phys = pObj->get_component<physics_component>();
-			// Take ownership of the body if it hasn't been claimed already
-			if (!phys->mBody)
-				phys->mBody = mWorld->CreateBody(&phys->mBody_def);
-		}
-	}
-
-	void on_remove_node(core::object_node* pObj)
-	{
-		if (pObj->has_component<physics_component>())
-		{
-			physics_component * phys = pObj->get_component<physics_component>();
-			//assert(phys && phys->mBody);
-			mWorld->DestroyBody(phys->mBody);
-			phys->mBody = nullptr;
-		}
-	};
-
-	void set_gravity(math::vec2 pVec)
-	{
-		mWorld->SetGravity({ pVec.x, pVec.y });
-	}
-
-	math::vec2 get_gravity() const
-	{
-		b2Vec2 gravity = mWorld->GetGravity();
-		return{ gravity.x, gravity.y };
-	}
-
-	b2Body* create_body(const b2BodyDef& pDef)
-	{
-		return mWorld->CreateBody(&pDef);
-	}
-
-private:
-	struct contact
-	{
-		enum {
-			state_begin,
-			state_continued,
-			state_end
-		};
-		int state;
-	};
-
-	struct contact_listener :
-		b2ContactListener
-	{
-		virtual void BeginContact(b2Contact* pContact)
-		{
-			b2Fixture* f1 = pContact->GetFixtureA();
-			b2Fixture* f2 = pContact->GetFixtureB();
-			b2Body* b1 = f1->GetBody();
-			b2Body* b2 = f2->GetBody();
-			if (physics_component* component =
-				static_cast<physics_component*>(b1->GetUserData()))
-				component->get_object()->send("on_collision_begin");
-			if (physics_component* component =
-				static_cast<physics_component*>(b2->GetUserData()))
-				component->get_object()->send("on_collision_begin");
-		}
-	};
-
-	void on_preupdate(float pDelta)
-	{
-		// Update the bodies
-		get_object()->send_down("on_physics_update_bodies", this);
-
-		// Calculate physics
-		mWorld->Step(pDelta, 1, 1);
-	}
-
-private:
-	b2World* mWorld;
-	contact_listener mContact_listener;
-
-	friend class physics_component;
-};
-
-class physics_component :
-	public core::component
-{
-	WGE_COMPONENT("Physics", 5431);
-public:
-	physics_component(core::object_node* pObj) :
-		component(pObj)
-	{
-		mBody = nullptr;
-		mBody_def.userData = get_object();
-		mBody_def.type = b2BodyType::b2_dynamicBody;
-		subscribe_to(pObj, "on_physics_update_bodies", &physics_component::on_physics_update_bodies);
-	}
-
-
-private:
-	void on_physics_update_bodies(physics_world_component* pComponent)
-	{
-		if (!mBody)
-		{
-			auto transform = get_object()->get_component<core::transform_component>();
-			assert(transform);
-			mBody_def.position.x = transform->get_absolute_position().x;
-			mBody_def.position.y = transform->get_absolute_position().y;
-			mBody_def.angle = transform->get_absolute_rotation();
-			mBody = pComponent->create_body(mBody_def);
-		}
-	}
-
-private:
-	std::vector<std::weak_ptr<core::object_node>> mObjects_with_collision;
-	b2Body* mBody;
-	b2BodyDef mBody_def;
-	friend class physics_world_component;
-};
-
-class physics_box_collider :
-	public core::component
-{
-	WGE_COMPONENT("Box Collider", 268);
-public:
-	physics_box_collider(core::object_node* pObj) :
-		component(pObj)
-	{
-		mShape.SetAsBox(50, 50);
-		mFixture_def.shape = &mShape;
-		subscribe_to(pObj, "on_physics_update_colliders", &physics_box_collider::on_physics_update_colliders);
-	}
-
-private:
-
-	void on_physics_update_colliders()
-	{
-
-	}
-
-private:
-	b2Fixture* mFixture;
-	b2FixtureDef mFixture_def;
-	b2PolygonShape mShape;
 };
 
 std::string load_file_as_string(const std::string& pPath)
@@ -495,7 +322,7 @@ public:
 		}
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glBindTexture(GL_TEXTURE_2D, 0);
+		//glBindTexture(GL_TEXTURE_2D, 0);
 
 		mWidth = pWidth;
 		mHeight = pHeight;
@@ -786,7 +613,7 @@ public:
 		subscribe_to(pNode, "on_render", &sprite_component::on_render, this);
 	}
 
-	void on_render(renderer& pRenderer)
+	void on_render(renderer* pRenderer)
 	{
 		core::transform_component* transform = get_object()->get_component<core::transform_component>();
 
@@ -808,7 +635,7 @@ public:
 		for (int i = 0; i < 4; i++)
 			verts[i].position = transform->get_absolute_transform() * (verts[i].position + mOffset);
 
-		pRenderer.push_batch(*batch.get_batch());
+		pRenderer->push_batch(*batch.get_batch());
 	}
 
 	math::vec2 get_offset() const
@@ -1397,12 +1224,20 @@ namespace ImGui
 // A cool little idea for later
 void BeginChildWithHeader(const char* pTitle, const ImVec2& pSize = ImVec2(0, 0))
 {
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 	ImGui::BeginChild(pTitle, pSize, true);
-	ImDrawList* dl = ImGui::GetOverlayDrawList();
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImGui::GetStyle().WindowPadding);
+
+
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+
+	// Pop the clip rect so we can draw the header correctly
+	ImVec4 cliprect = dl->_ClipRectStack.back();
+	dl->PopClipRect();
 
 	// Draw the background
 	dl->AddRectFilled(ImGui::GetWindowPos(),
-		ImVec2(ImGui::GetWindowWidth() + ImGui::GetWindowPos().x, 20.f + ImGui::GetWindowPos().y),
+		ImVec2(ImGui::GetWindowWidth() + ImGui::GetWindowPos().x, 25.f + ImGui::GetWindowPos().y),
 		ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive]),
 		ImGui::GetStyle().ChildRounding, ImDrawCornerFlags_Top);
 
@@ -1410,6 +1245,25 @@ void BeginChildWithHeader(const char* pTitle, const ImVec2& pSize = ImVec2(0, 0)
 	dl->AddText(ImVec2(ImGui::GetWindowPos().x + 10, ImGui::GetWindowPos().y + 4),
 		ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]),
 		pTitle);
+
+	// put the clip rect back
+	dl->PushClipRect(ImVec2(cliprect.x, cliprect.y), ImVec2(cliprect.z, cliprect.w));
+
+	ImGui::Dummy(ImVec2(0, 25));
+
+	ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0, 0, 0, 0));
+	ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 0);
+	ImGui::BeginChild(pTitle);
+	ImGui::PopStyleVar();
+	ImGui::PopStyleColor();
+}
+
+void EndChildWithHeader()
+{
+	ImGui::EndChild();
+	ImGui::PopStyleVar();
+	ImGui::EndChild();
+	ImGui::PopStyleVar();
 }
 
 }
@@ -1575,22 +1429,34 @@ int main()
 	});
 
 	// Inspector for physics_world_component
-	inspector_guis.add_inspector(physics_world_component::COMPONENT_ID,
+	inspector_guis.add_inspector(physics::physics_world_component::COMPONENT_ID,
 		[](core::component* pComponent)
 	{
-		auto physicsworld = dynamic_cast<physics_world_component*>(pComponent);
+		auto physicsworld = dynamic_cast<physics::physics_world_component*>(pComponent);
 		math::vec2 gravity = physicsworld->get_gravity();
 		if (ImGui::DragFloat2("Gravity", gravity.components))
 			physicsworld->set_gravity(gravity);
 	});
 
+	// Inspector for physics_box_collider
+	inspector_guis.add_inspector(physics::box_collider_component::COMPONENT_ID,
+		[](core::component* pComponent)
+	{
+		auto collider = dynamic_cast<physics::box_collider_component*>(pComponent);
+		math::vec2 size = collider->get_size();
+		if (ImGui::DragFloat2("Gravity", size.components))
+			collider->set_size(size);
+	});
+
 	auto root_node = core::object_node::create();
 	root_node->set_name("Game");
+	root_node->add_component<physics::physics_world_component>();
 	{
 		auto node1 = core::object_node::create();
 		node1->set_name("Scene node 1");
 		node1->add_component<core::transform_component>();
 		node1->add_component<sprite_component>();
+		node1->add_component<physics::physics_component>();
 		root_node->add_child(node1);
 
 		{
@@ -1598,8 +1464,23 @@ int main()
 			node2->set_name("Scene node 2");
 			node2->add_component<core::transform_component>();
 			node2->add_component<sprite_component>();
+			node2->add_component<physics::box_collider_component>();
 			node1->add_child(node2);
 		}
+
+		{
+			auto node3 = core::object_node::create();
+			node3->set_name("Scene node 3");
+			auto transform = node3->add_component<core::transform_component>();
+			transform->set_position(math::vec2(0, 100));
+			node3->add_component<sprite_component>();
+			auto physics = node3->add_component<physics::physics_component>();
+			physics->set_type(physics::physics_component::type_static);
+			auto collider = node3->add_component<physics::box_collider_component>();
+			collider->set_size(math::vec2(200, 10));
+			root_node->add_child(node3);
+		}
+
 	}
 
 	renderer myrenderer;
@@ -1619,10 +1500,6 @@ int main()
 		root_node->send_down("on_update", delta);
 		root_node->send_down("on_postupdate", delta);
 
-		// Send renderer events
-		root_node->send_down("on_render", myrenderer);
-		myrenderer.render();
-
 		// Start a new frame for ImGui
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
@@ -1630,20 +1507,33 @@ int main()
 
 		ImGui::Begin("Object Inspector");
 
-		ImGui::BeginChild("eeeyy", ImVec2(0, 0), true);
+		ImGui::BeginChildWithHeader("Objects", ImVec2(0, 500));
 
 		show_node_tree(root_node, inspector_guis);
 
-		ImGui::EndChild();
+		ImGui::EndChildWithHeader();
+
+		ImGui::BeginChildWithHeader("Components");
+		ImGui::Text("asdfasdf");
+		ImGui::EndChildWithHeader();
 
 		ImGui::End();
 
+
 		ImGui::Begin("Viewport");
-		if (myrenderer.get_framebuffer().get_width() != ImGui::GetWindowWidth()
-			|| myrenderer.get_framebuffer().get_height() != ImGui::GetWindowHeight())
-			myrenderer.set_framebuffer_size(ImGui::GetWindowWidth(), ImGui::GetWindowHeight());
-		ImGui::Image(myrenderer.get_framebuffer(), ImVec2(
-			ImGui::GetWindowWidth(), ImGui::GetWindowHeight()));
+		float width = ImGui::GetWindowWidth();
+		float height = ImGui::GetWindowHeight() - 30;
+
+		if (myrenderer.get_framebuffer().get_width() != width
+			|| myrenderer.get_framebuffer().get_height() != height)
+			myrenderer.set_framebuffer_size(width, height);
+
+		// Send renderer events
+		root_node->send_down("on_render", &myrenderer);
+		myrenderer.render();
+
+		ImGui::Image(myrenderer.get_framebuffer(), ImVec2(width, height));
+
 		ImGui::End();
 
 		ImGui::Begin("Hello, world!");
