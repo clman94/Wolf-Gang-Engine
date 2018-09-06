@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <functional>
+#include <cassert>
 
 namespace wge::core
 {
@@ -98,7 +99,7 @@ public:
 
 	// Broadcast an event
 	template<class...Targs>
-	void send(const std::string& pEvent_name, Targs&&...pArgs)
+	void send(const std::string& pEvent_name, Targs...pArgs)
 	{
 		cleanup();
 		for (std::weak_ptr<subscription_base>& i : mSubscriptions)
@@ -108,7 +109,7 @@ public:
 			{
 				auto casted = std::dynamic_pointer_cast<subscription<void(Targs...)>>(shared);
 				if (casted)
-					casted->invoke(std::forward<Targs>(pArgs)...);
+					casted->invoke(pArgs...);
 			}
 		}
 	}
@@ -152,12 +153,6 @@ public:
 		};
 
 		return subscribe_to(pPublisher, subscription<void(Targs...)>::create(pEvent_name, wrapper));
-	}
-
-	template<class Tclass, class...Targs>
-	std::shared_ptr<subscription_base> subscribe_to(publisher* pPublisher, const std::string& pEvent_name, void (Tclass::*pFunc)(Targs...))
-	{
-		return subscribe_to(pPublisher, pFunc, dynamic_cast<Tclass*>(this));
 	}
 
 	template<class...Targs>

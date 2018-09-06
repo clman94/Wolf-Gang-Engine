@@ -96,31 +96,31 @@ public:
 
 	// Broadcast an event from this object and up through each parent
 	template<class...Targs>
-	void send_up(const std::string& pEvent_name, Targs&&...pArgs)
+	void send_up(const std::string& pEvent_name, Targs...pArgs)
 	{
-		send(pEvent_name, std::forward<Targs>(pArgs)...);
+		send(pEvent_name, pArgs...);
 		if (auto parent = mParent.lock())
-			parent->send_up(pEvent_name, std::forward<Targs>(pArgs)...);
+			parent->send_up(pEvent_name, pArgs...);
 	}
 
 	// Broadcast an event from the top-most parent to the current node.
 	// This is useful in situations where the top-most parent node needs
 	// to take precedence over its children nodes e.g. the physics components.
 	template<class...Targs>
-	void send_from_top(const std::string& pEvent_name, Targs&&...pArgs)
+	void send_from_top(const std::string& pEvent_name, Targs...pArgs)
 	{
 		if (auto parent = mParent.lock())
-			parent->send_from_top(pEvent_name, std::forward<Targs>(pArgs)...);
-		send(pEvent_name, std::forward<Targs>(pArgs)...);
+			parent->send_from_top(pEvent_name, pArgs...);
+		send(pEvent_name, pArgs...);
 	}
 
 	// Sends a message to this object and to all its children/sub-children
 	template<class...Targs>
-	void send_down(const std::string& pEvent_name, Targs&&...pArgs)
+	void send_down(const std::string& pEvent_name, Targs...pArgs)
 	{
-		send(pEvent_name, std::forward<Targs>(pArgs)...);
+		send(pEvent_name, pArgs...);
 		for (auto& i : mChildren)
-			i->send_down(pEvent_name, std::forward<Targs>(pArgs)...);
+			i->send_down(pEvent_name, pArgs...);
 	}
 
 private:
