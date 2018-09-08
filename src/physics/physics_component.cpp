@@ -22,8 +22,14 @@ physics_component::physics_component(core::object_node * pObj) :
 
 physics_component::~physics_component()
 {
-	get_object()->send("on_physics_reset");
-	mPhysics_world->destroy_body(mBody);
+	if (mBody)
+	{
+		mPhysics_world->destroy_body(mBody);
+
+		// Because this body exists, there may still be fixtures connected
+		// to it. Tell the colliders to clean up.
+		get_object()->send_down("on_physics_reset");
+	}
 }
 
 json physics_component::serialize() const
@@ -71,6 +77,7 @@ void physics_component::on_physics_update_bodies(physics_world_component * pComp
 		mBody = pComponent->create_body(body_def);
 		get_object()->send_down("on_physics_update_colliders", this);
 		mBody->ResetMassData();
+		mPhysics_world = pComponent;
 		std::cout << "Body updated\n";
 	}
 }
@@ -102,14 +109,12 @@ void physics_component::on_postupdate(float)
 
 b2BodyType physics_component::get_b2Body_type() const
 {
-	b2BodyType body_type;
 	switch (mType)
 	{
-	case type_rigidbody: body_type = b2BodyType::b2_dynamicBody; break;
-	case type_static: body_type = b2BodyType::b2_staticBody; break;
-	default: body_type = b2BodyType::b2_staticBody;
+	case type_rigidbody: return b2BodyType::b2_dynamicBody; break;
+	case type_static: return b2BodyType::b2_staticBody; break;
+	default: return b2BodyType::b2_staticBody;
 	}
-	return body_type;
 }
 
 void physics_component::destroy_queued_fixtures()

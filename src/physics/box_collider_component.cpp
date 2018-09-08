@@ -48,7 +48,9 @@ math::vec2 box_collider_component::get_size() const
 void box_collider_component::update_shape(b2PolygonShape * pShape)
 {
 	assert(pShape);
-	pShape->SetAsBox(mSize.x, mSize.y, b2Vec2(-mSize.x / 2, -mSize.y / 2), 0);
+	auto* transform = get_object()->get_component<core::transform_component>();
+	assert(transform);
+	pShape->SetAsBox(mSize.x, mSize.y, b2Vec2(-mSize.x / 2, -mSize.y / 2), transform->get_rotation());
 }
 
 void box_collider_component::on_physics_update_colliders(physics_component * pComponent)

@@ -30,7 +30,6 @@ class physics_world_component :
 {
 	WGE_COMPONENT("Physics World", 3)
 public:
-
 	physics_world_component(core::object_node* pObj);
 	virtual ~physics_world_component();
 
