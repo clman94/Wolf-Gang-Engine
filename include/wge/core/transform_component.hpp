@@ -15,6 +15,9 @@ class transform_component :
 public:
 	transform_component(object_node* pObj);
 
+	virtual json serialize() const override;
+	virtual void deserialize(const json& pJson) override;
+
 	// Set the position of this transform
 	void set_position(const math::vec2& pVec);
 	math::vec2 get_position() const;

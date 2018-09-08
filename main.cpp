@@ -766,6 +766,18 @@ public:
 		subscribe_to(pNode, "on_render", &sprite_component::on_render, this);
 	}
 
+	virtual json serialize() const override
+	{
+		json result;
+		result["offset"] = { mOffset.x, mOffset.y };
+		return result;
+	}
+
+	virtual void deserialize(const json& pJson) override
+	{
+		mOffset = math::vec2(pJson["offset"][0], pJson["offset"][1]);
+	}
+
 	void on_render(renderer* pRenderer)
 	{
 		core::transform_component* transform = get_object()->get_component<core::transform_component>();
@@ -1069,6 +1081,7 @@ void Image(const framebuffer& mFramebuffer, const ImVec2& pSize = ImVec2(0, 0))
 #include <scriptstdstring/scriptstdstring.h>
 #include <scriptarray/scriptarray.h>
 #include <contextmgr/contextmgr.h>
+#include "main.h"
 
 // The goal behind this test was to implement coroutine functionality
 // with more convenience. The previous version of the engine used something
@@ -1570,8 +1583,18 @@ int main()
 
 	}
 
+	core::component_factory factory;
+	factory.add<core::transform_component>();
+	factory.add<physics::physics_world_component>();
+	factory.add<physics::physics_component>();
+	factory.add<physics::box_collider_component>();
+	factory.add<sprite_component>();
+
+
 	renderer myrenderer;
 	myrenderer.initialize(200, 200);
+
+	bool updates_enabled = false;
 
 	util::clock clock;
 	while (!glfwWindowShouldClose(window))
@@ -1582,10 +1605,14 @@ int main()
 		// Get window events
 		glfwPollEvents();
 
-		// Send update events
-		root_node->send_down("on_preupdate", delta);
-		root_node->send_down("on_update", delta);
-		root_node->send_down("on_postupdate", delta);
+		if (updates_enabled)
+		{
+			// Send update events
+			root_node->send_down("on_preupdate", delta);
+			root_node->send_down("on_update", delta);
+			root_node->send_down("on_postupdate", delta);
+		}
+
 
 		// Start a new frame for ImGui
 		ImGui_ImplOpenGL3_NewFrame();
@@ -1593,6 +1620,21 @@ int main()
 		ImGui::NewFrame();
 
 		ImGui::Begin("Object Inspector");
+		if (ImGui::Button("Serialize"))
+		{
+			json j = root_node->serialize();
+			std::ofstream{ "./serialization_data.json" } << j.dump(2);
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Deserialize"))
+		{
+			json deserial;
+			std::ifstream{ "./serialization_data.json" } >> deserial;
+			root_node->remove_children();
+			root_node->remove_components();
+			root_node->deserialize(deserial, factory);
+		}
+		ImGui::Checkbox("Run", &updates_enabled);
 		show_node_tree(root_node, inspector_guis);
 		ImGui::End();
 

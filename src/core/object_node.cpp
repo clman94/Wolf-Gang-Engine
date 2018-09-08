@@ -31,6 +31,62 @@ component* object_node::get_component(int pId) const
 	return nullptr;
 }
 
+void object_node::remove_components()
+{
+	mComponents.clear();
+}
+
+json object_node::serialize() const
+{
+	using nlohmann::json;
+	json result;
+	result["name"] = mName;
+
+	// Serialize the components
+	{
+		std::vector<json> components_json;
+		for (const auto& i : mComponents)
+		{
+			json c;
+			c["id"] = i->get_id();
+			c["data"] = i->serialize();
+			components_json.push_back(c);
+		}
+		result["components"] = components_json;
+	}
+
+	// Serialize the children
+	{
+		std::vector<json> children_json;
+		for (const auto& i : mChildren)
+			children_json.push_back(i->serialize());
+		result["children"] = children_json;
+	}
+
+	return result;
+}
+
+void object_node::deserialize(const json& pJson, const component_factory& pFactory)
+{
+	mName = pJson["name"];
+
+	const json& components = pJson["components"];
+	for (const json& i : components)
+	{
+		component* c = pFactory.create(i["id"], this);
+		c->deserialize(i["data"]);
+		mComponents.emplace_back(c);
+	}
+
+	const json& children = pJson["children"];
+	for (const json& i : children)
+	{
+		auto obj = object_node::create();
+		obj->deserialize(i, pFactory);
+		add_child(obj);
+	}
+}
+
 component* object_node::get_component_index(std::size_t pIndex) const
 {
 	return mComponents[pIndex].get();

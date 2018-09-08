@@ -44,7 +44,7 @@ public:
 	virtual void load(const json&) {}
 
 	// Save the current state of this component
-	virtual json serialize() { return {}; }
+	virtual json serialize() const { return {}; }
 	// Load the current state of this component
 	virtual void deserialize(const json&) {}
 

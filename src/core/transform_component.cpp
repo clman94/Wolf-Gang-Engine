@@ -15,6 +15,24 @@ transform_component::transform_component(object_node * pObj) :
 	subscribe_to(pObj, "on_transform_changed", &transform_component::on_transform_changed, this);
 }
 
+json transform_component::serialize() const
+{
+	json result;
+	result["position"] = { mPosition.x, mPosition.y };
+	result["rotation"] = mRotation.value();
+	result["scale"] = { mScale.x, mScale.y };
+	return result;
+}
+
+void transform_component::deserialize(const json & pJson)
+{
+	mPosition = math::vec2(pJson["position"][0], pJson["position"][1]);
+	mRotation = static_cast<float>(pJson["rotation"]);
+	mScale = math::vec2(pJson["scale"][0], pJson["scale"][1]);
+	mTransform_needs_update = true;
+	notify_transform_changed();
+}
+
 void transform_component::set_position(const math::vec2 & pVec)
 {
 	mPosition = pVec;

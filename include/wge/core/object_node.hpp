@@ -7,6 +7,9 @@
 #include <wge/util/ref.hpp>
 #include <wge/core/messaging.hpp>
 
+#include <nlohmann/json.hpp>
+using nlohmann::json;
+
 namespace wge::core
 {
 
@@ -17,7 +20,34 @@ template <typename T>
 struct has_component_id_member <T, decltype((void)T::COMPONENT_ID, 0)> : std::true_type {};
 
 class component;
+class object_node;
 
+class component_factory
+{
+public:
+	component* create(int pId, object_node* pNode) const
+	{
+		if (mFactories.find(pId) == mFactories.end())
+			return nullptr;
+		return (*mFactories.find(pId)).second(pNode);
+	}
+
+	template <class T>
+	void add()
+	{
+		mFactories[T::COMPONENT_ID] = [](object_node* pNode)->component*
+		{
+			return new T(pNode);
+		};
+	}
+
+private:
+	std::map<int, std::function<component*(object_node*)>> mFactories;
+};
+
+// Object nodes are game objects that relay
+// messages between components and to other 
+// game objects.
 class object_node :
 	public util::ref_counted,
 	public publisher
@@ -62,6 +92,13 @@ public:
 	{
 		return static_cast<T*>(get_component(T::COMPONENT_ID));
 	}
+
+	void remove_components();
+	
+	// Serialize this node. This will include all children nodes.
+	json serialize() const;
+
+	void deserialize(const json& pJson, const component_factory& pFactory);
 
 	// Get component by index
 	component* get_component_index(std::size_t pIndex) const;
