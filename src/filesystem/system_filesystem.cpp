@@ -22,7 +22,7 @@ path system_filesystem::get_absolute_path(const path & pPath)
 	return system_fs::absolute(pPath.to_path());
 }
 
-std::shared_ptr<input_stream> system_filesystem::open(const path & pPath)
+input_stream::ptr system_filesystem::open(const path & pPath)
 {
 	std::shared_ptr<file_input_stream> stream = find_or_create_stream();
 	if (stream->open(pPath))

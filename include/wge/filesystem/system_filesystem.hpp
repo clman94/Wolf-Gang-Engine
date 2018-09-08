@@ -27,7 +27,7 @@ public:
 	virtual path get_absolute_path(const path& pPath) override;
 
 	// Open a new input stream
-	virtual std::shared_ptr<input_stream> open(const path& pPath) override;
+	virtual input_stream::ptr open(const path& pPath) override;
 
 private:
 	std::shared_ptr<file_input_stream> find_or_create_stream();

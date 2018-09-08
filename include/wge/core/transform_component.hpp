@@ -60,7 +60,6 @@ private:
 	math::radians mRotation;
 	math::vec2 mScale;
 
-
 	bool mTransform_needs_update;
 	math::mat33 mTransform;
 

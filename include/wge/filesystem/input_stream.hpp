@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 
 #include <wge/filesystem/path.hpp>
 
@@ -10,6 +11,8 @@ namespace wge::filesystem
 class input_stream
 {
 public:
+	typedef std::shared_ptr<input_stream> ptr;
+
 	virtual ~input_stream() {}
 
 	// Close this stream
@@ -39,5 +42,6 @@ public:
 
 	virtual path get_path() = 0;
 };
+
 
 }

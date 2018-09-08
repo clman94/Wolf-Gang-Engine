@@ -83,6 +83,7 @@ using json = nlohmann::json;
 #include <wge/util/clock.hpp>
 #include <wge/util/ref.hpp>
 #include <wge/filesystem/path.hpp>
+#include <wge/filesystem/input_stream.hpp>
 #include <wge/physics/box_collider_component.hpp>
 #include <wge/physics/physics_component.hpp>
 #include <wge/physics/physics_world_component.hpp>
@@ -176,6 +177,41 @@ class asset_manager
 {
 public:
 	// TODO: Load and cache all configuration files.
+};
+
+class color
+{
+public:
+	union {
+		struct {
+			float r, g, b, a;
+		};
+		float components[4];
+	};
+
+	color() :
+		r(0), g(0), b(0), a(1)
+	{}
+	color(const color& pColor) :
+		r(pColor.r), g(pColor.g), b(pColor.b), a(pColor.a)
+	{}
+	color(float pR, float pG, float pB) :
+		r(pR), g(pG), b(pB), a(1)
+	{}
+	color(float pR, float pG, float pB, float pA) :
+		r(pR), g(pG), b(pB), a(pA)
+	{}
+
+	color operator+(const color& pColor) const;
+	color operator-(const color& pColor) const;
+	color operator*(const color& pColor) const;
+	color operator/(const color& pColor) const;
+
+	color& operator=(const color& pColor);
+	color& operator+=(const color& pColor);
+	color& operator-=(const color& pColor);
+	color& operator*=(const color& pColor);
+	color& operator/=(const color& pColor);
 };
 
 std::string load_file_as_string(const std::string& pPath)
@@ -274,25 +310,33 @@ void show_info(stb_vorbis *v)
 	}
 }
 
+// This class manages an opengl framebuffer object
+// for easy render to texture functionality.
 class framebuffer
 {
 public:
-
 	framebuffer()
 	{
 		mWidth = 0;
 		mHeight = 0;
+		mTexture = 0;
 	}
 
 	~framebuffer()
 	{
+		glDeleteTextures(1, &mTexture);
 		glDeleteFramebuffers(1, &mFramebuffer);
 	}
 
+	// Create the framebuffer and texture.
+	// Use resize() to adjust the framebuffer size.
 	void create(int pWidth, int pHeight)
 	{
-		glGenFramebuffers(1, &mFramebuffer);
+		if (pWidth <= 0 || pHeight <= 0 || mTexture != 0)
+			return;
 
+		// Create the framebuffer object
+		glGenFramebuffers(1, &mFramebuffer);
 		glBindFramebuffer(GL_FRAMEBUFFER, mFramebuffer);
 
 		// Create the texture
@@ -304,8 +348,8 @@ public:
 
 		// GL_NEAREST will tell the sampler to get the nearest pixel when
 		// rendering rather than lerping the pixels together.
-		// It may be better to use a GL_LINEAR filter so then upscaling/downscaling
-		// isn't so jaring.
+		// It may be better to use a GL_LINEAR filter so then upscaling and downscaling
+		// arn't so jaring.
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
@@ -322,46 +366,54 @@ public:
 		}
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		//glBindTexture(GL_TEXTURE_2D, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
 
 		mWidth = pWidth;
 		mHeight = pHeight;
 	}
 
+	// Resize the framebuffer
 	void resize(int pWidth, int pHeight)
 	{
-		glBindTexture(GL_TEXTURE_2D, mTexture);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, pWidth, pHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-		glBindTexture(GL_TEXTURE_2D, 0);
-		mWidth = pWidth;
-		mHeight = pHeight;
+		if (pWidth > 0 && pHeight > 0)
+		{
+			// Re-allocate the texture but with the new size
+			glBindTexture(GL_TEXTURE_2D, mTexture);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, pWidth, pHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+			glBindTexture(GL_TEXTURE_2D, 0);
+
+			mWidth = pWidth;
+			mHeight = pHeight;
+		}
 	}
 
 	// This sets the frame buffer for opengl.
-	// Call first if you want to draw to this framebuffer.
+	// Call this first if you want to draw to this framebuffer.
 	// Call end_framebuffer() when you are done.
 	void begin_framebuffer() const
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, mFramebuffer);
 	}
 
-	// Resets back to the default framebuffer
+	// Resets opengl back to the default framebuffer
 	void end_framebuffer() const
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 
-	// Get the raw gl buffer for rendering
+	// Get the raw gl texture id
 	GLuint get_gl_texture() const
 	{
 		return mTexture;
 	}
 
+	// Get width of framebuffer texture in pixels
 	int get_width() const
 	{
 		return mWidth;
 	}
 
+	// Get height of framebuffer texture in pixels
 	int get_height() const
 	{
 		return mHeight;
@@ -375,7 +427,19 @@ private:
 class texture
 {
 public:
-	void open(const std::string& pFilepath)
+	texture()
+	{
+		mGL_texture = 0;
+		mSmooth = false;
+		mPixels = nullptr;
+	}
+	~texture()
+	{
+		stbi_image_free(mPixels);
+	}
+
+	// Load a texture from a file
+	void load(const std::string& pFilepath)
 	{
 		stbi_uc* pixels = stbi_load(pFilepath.c_str(), &mWidth, &mHeight, &mChannels, 4);
 		if (!pixels)
@@ -383,38 +447,112 @@ public:
 			std::cout << "Failed to open image\n";
 			return;
 		}
-
-		// Create the texture object
-		glGenTextures(1, &mGL_texture);
-		glBindTexture(GL_TEXTURE_2D, mGL_texture);
-
-		// Give the image to OpenGL
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWidth, mHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		create_from_pixels(pixels);
+		stbi_image_free(mPixels);
+		mPixels = pixels;
 	}
 
-	GLuint get_gl_texture()
+	// Load texture from a stream. If pSize = 0, the rest of the stream will be used.
+	void load(filesystem::input_stream::ptr pStream, std::size_t pSize = 0)
+	{
+		pSize = (pSize == 0 ? pStream->length() - pStream->tell() : pSize);
+		std::vector<unsigned char> data;
+		data.resize(pSize);
+		std::size_t bytes_read = pStream->read(&data[0], pSize);
+		stbi_uc* pixels = stbi_load_from_memory(&data[0], bytes_read, &mWidth, &mHeight, &mChannels, 4);
+		if (!pixels)
+		{
+			std::cout << "Failed to open image\n";
+			return;
+		}
+		create_from_pixels(pixels);
+		stbi_image_free(mPixels);
+		mPixels = pixels;
+	}
+
+	// Get the raw gl texture id
+	GLuint get_gl_texture() const
 	{
 		return mGL_texture;
 	}
 
+	// Get width of texture in pixels
+	int get_width() const
+	{
+		return mWidth;
+	}
+
+	// Get height of texture in pixels
+	int get_height() const
+	{
+		return mHeight;
+	}
+
+	// Set the smooth filtering. If enabled,
+	// the image will get smoothed when stretched or rotated
+	// making it more pleasing to the eye. However, it may be
+	// a good idea to disable this if your doing pixel art as it
+	// tends to "blur" tiny images.
+	void set_smooth(bool pEnabled)
+	{
+		mSmooth = pEnabled;
+		update_filtering();
+	}
+
+	bool is_smooth() const
+	{
+		return mSmooth;
+	}
 
 private:
-	int mChannels;
-	int mWidth, mHeight;
+	void create_from_pixels(unsigned char* pBuffer)
+	{
+		if (!mGL_texture)
+		{
+			// Create the texture object
+			glGenTextures(1, &mGL_texture);
+		}
+
+		// Give the image to OpenGL
+		glBindTexture(GL_TEXTURE_2D, mGL_texture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWidth, mHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pBuffer);
+		//glBindTexture(GL_TEXTURE_2D, 0);
+
+		update_filtering();
+	}
+
+	void update_filtering()
+	{
+		GLint filtering = mSmooth ? GL_LINEAR : GL_NEAREST;
+
+		glBindTexture(GL_TEXTURE_2D, mGL_texture);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filtering);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filtering);
+		//glBindTexture(GL_TEXTURE_2D, 0);
+	}
+
+private:
+	int mChannels, mWidth, mHeight;
 	GLuint mGL_texture;
+	bool mSmooth;
+	unsigned char* mPixels;
 };
 
 struct vertex_2d
 {
 	math::vec2 position;
 	math::vec2 uv;
+	color thiscolor;
+	vertex_2d() :
+		thiscolor(1, 1, 1, 1)
+	{}
 };
 
 struct render_batch_2d
 {
+	// Texture associated with this batch.
+	// If nullptr, the primitives will be drawn with
+	// a flat color.
 	texture* rendertexture;
 
 	std::vector<unsigned int> indexes;
@@ -475,7 +613,10 @@ public:
 	void initialize(int pFramebuffer_width, int pFramebuffer_height)
 	{
 		mFramebuffer.create(pFramebuffer_width, pFramebuffer_height);
-		mShader = load_shaders("./vert.glsl", "./frag.glsl");
+		mShader = load_shaders("./editor/shaders/vert.glsl", "./editor/shaders/frag_textured.glsl");
+
+		glGenVertexArrays(1, &mVAO_id);
+		glBindVertexArray(mVAO_id);
 
 		// Create the needed vertex buffer
 		glGenBuffers(1, &mVertex_buffer);
@@ -500,20 +641,56 @@ public:
 		mBatches.push_back(pBatch);
 	}
 
+	void render()
+	{
+		mFramebuffer.begin_framebuffer();
+
+		glClearColor(0, 0, 0, 1);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glViewport(0, 0, mFramebuffer.get_width(), mFramebuffer.get_height());
+
+		glUseProgram(mShader);
+
+		// Create the projection matrix
+		math::mat44 proj_mat = 
+			math::ortho(0, static_cast<float>(mFramebuffer.get_width()), 
+				0, static_cast<float>(mFramebuffer.get_height()));
+
+		// Set the matrix uniforms
+		GLuint proj_id = glGetUniformLocation(mShader, "projection");
+		glUniformMatrix4fv(proj_id, 1, GL_FALSE, &proj_mat.m[0][0]);
+
+		// Render the batches
+		for (const render_batch_2d& i : mBatches)
+			render_batch(i);
+
+		// Cleanup
+		glUseProgram(0);
+		mFramebuffer.end_framebuffer();
+		mBatches.clear();
+	}
+
+	const framebuffer& get_framebuffer() const
+	{
+		return mFramebuffer;
+	}
+
+private:
 	void render_batch(const render_batch_2d& pBatch)
 	{
+		glBindVertexArray(mVAO_id);
+
 		// Populate the vertex buffer
 		glBindBuffer(GL_ARRAY_BUFFER, mVertex_buffer);
-		glBufferData(GL_ARRAY_BUFFER, pBatch.vertices.size()*sizeof(vertex_2d), &pBatch.vertices[0], GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, pBatch.vertices.size() * sizeof(vertex_2d), &pBatch.vertices[0], GL_STATIC_DRAW);
 
 		// Populate the element buffer with index data
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mElement_buffer);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, pBatch.indexes.size() * sizeof(unsigned int), &pBatch.indexes[0], GL_STATIC_DRAW);
 
-
+		// Setup the texture
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, pBatch.rendertexture->get_gl_texture());
-
 		GLuint tex_id = glGetUniformLocation(mShader, "tex");
 		glUniform1i(tex_id, 0);
 
@@ -541,6 +718,18 @@ public:
 			(void*)sizeof(math::vec2) // Offset to the uv components in vertex_2d
 		);
 
+		// Setup the color attribute
+		glEnableVertexAttribArray(2);
+		glBindBuffer(GL_ARRAY_BUFFER, mVertex_buffer);
+		glVertexAttribPointer(
+			2,
+			4,
+			GL_FLOAT,
+			GL_FALSE,
+			sizeof(vertex_2d),
+			(void*)(sizeof(math::vec2)*2) // Offset to the color components in vertex_2d
+		);
+
 		// Bind the element buffer
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mElement_buffer);
 
@@ -552,51 +741,15 @@ public:
 		);
 
 		// Disable all the attributes
+		glDisableVertexAttribArray(2);
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(0);
-	}
-
-	void render()
-	{
-		mFramebuffer.begin_framebuffer();
-
-		glClearColor(0, 0, 0, 1);
-		glClear(GL_COLOR_BUFFER_BIT);
-		glViewport(0, 0, mFramebuffer.get_width(), mFramebuffer.get_height());
-
-		glUseProgram(mShader);
-
-		// Create the projection matrix
-		math::mat44 proj_mat = math::ortho(0, mFramebuffer.get_width(), 0, mFramebuffer.get_height());
-
-		// This matrix transforms the object itself
-		math::mat44 model_mat{ 1 };
-
-		// Set the matrix uniforms
-		GLuint proj_id = glGetUniformLocation(mShader, "projection");
-		glUniformMatrix4fv(proj_id, 1, GL_FALSE, &proj_mat.m[0][0]);
-		GLuint model_id = glGetUniformLocation(mShader, "model");
-		glUniformMatrix4fv(model_id, 1, GL_FALSE, &model_mat.m[0][0]);
-
-		// Render the batches
-		for (const auto& i : mBatches)
-			render_batch(i);
-
-		// cleanup
-		glUseProgram(0);
-		mFramebuffer.end_framebuffer();
-		mBatches.clear();
-	}
-
-	const framebuffer& get_framebuffer() const
-	{
-		return mFramebuffer;
 	}
 
 private:
 	framebuffer mFramebuffer;
 	GLuint mShader;
-	GLuint mVertex_buffer, mElement_buffer;
+	GLuint mVertex_buffer, mElement_buffer, mVAO_id;
 
 	std::vector<render_batch_2d> mBatches;
 };
@@ -609,7 +762,7 @@ public:
 	sprite_component(core::object_node* pNode) :
 		component(pNode)
 	{
-		mTexture.open("./mytex.png");
+		mTexture.load("./mytex.png");
 		subscribe_to(pNode, "on_render", &sprite_component::on_render, this);
 	}
 
@@ -661,7 +814,7 @@ private:
 // in the other api.
 //
 // This library should opt for a callback system like what was used in stb_image
-// instead of hard coding in stdio.
+// instead of hard coding in stdio. Or provide actually complete examples.
 //
 // When I get to implementing the .pack file format once again, stb_vorbis may be
 // modified to use callbacks so it would be possible to compress the pack file.
@@ -777,6 +930,8 @@ void test_stream_al2()
 
 	const int max_buffer_size = vorb.get_sample_rate();
 
+	// We will use 3 buffers so there is plenty of time
+	// for reading the file.
 	ALuint buffer[3];
 	alGenBuffers(3, &buffer[0]);
 
@@ -825,11 +980,8 @@ void test_stream_al2()
 			{
 				if (looped)
 				{
-					// Seek the stream to the beginning for looping
-					// Possible issue: There could be chance there will only
-					// be a few samples left and when the source gets to processing
-					// that buffer, we wont have enough time to actually process the 
-					// next one.
+					// Seek the stream to the beginning
+					// for a seamless loop.
 					std::cout << "Resetting stream for loop\n";
 					vorb.seek_beginning();
 
@@ -946,7 +1098,7 @@ void Image(const framebuffer& mFramebuffer, const ImVec2& pSize = ImVec2(0, 0))
 // void start_coroutine(const ref&in class_ref, const string&in declar, ?&in) // Method
 //
 // The only caveat is that you can't use &inout references so you'll have to settle with passing handles.
-// Note: When you want to pass a argument as a handle, remember to put a @ in front it. e.g. "coroutine::start("void func(clazz@)", @myclazz)"
+// Note: When you want to pass an argument as a handle, remember to put a @ in front it. e.g. "coroutine::start("void func(clazz@)", @myclazz)"
 //   If you forget to, the object will be copied.
 //
 
@@ -1013,7 +1165,7 @@ void test_as_varfunc()
 
 	void(*varfunc)(asIScriptGeneric*) = [](asIScriptGeneric* pGen)
 	{
-		asIScriptEngine* engine = reinterpret_cast<asIScriptEngine*>(pGen->GetAuxiliary());
+		asIScriptEngine* engine = pGen->GetEngine();
 		CScriptHandle* handle = reinterpret_cast<CScriptHandle*>(pGen->GetArgObject(0));
 		std::string* declar = reinterpret_cast<std::string*>(pGen->GetArgObject(1));
 
@@ -1066,10 +1218,10 @@ void test_as_varfunc()
 	};
 
 	// This can handle as many variable parameters as needed
-	engine->RegisterGlobalFunction("void varfunc(const ref&in, const string&in)", asFUNCTION(varfunc), asCALL_GENERIC, engine);
-	engine->RegisterGlobalFunction("void varfunc(const ref&in, const string&in, ?&in)", asFUNCTION(varfunc), asCALL_GENERIC, engine);
-	engine->RegisterGlobalFunction("void varfunc(const ref&in, const string&in, ?&in, ?&in)", asFUNCTION(varfunc), asCALL_GENERIC, engine);
-	engine->RegisterGlobalFunction("void varfunc(const ref&in, const string&in, ?&in, ?&in, ?&in)", asFUNCTION(varfunc), asCALL_GENERIC, engine);
+	engine->RegisterGlobalFunction("void varfunc(const ref&in, const string&in)", asFUNCTION(varfunc), asCALL_GENERIC);
+	engine->RegisterGlobalFunction("void varfunc(const ref&in, const string&in, ?&in)", asFUNCTION(varfunc), asCALL_GENERIC);
+	engine->RegisterGlobalFunction("void varfunc(const ref&in, const string&in, ?&in, ?&in)", asFUNCTION(varfunc), asCALL_GENERIC);
+	engine->RegisterGlobalFunction("void varfunc(const ref&in, const string&in, ?&in, ?&in, ?&in)", asFUNCTION(varfunc), asCALL_GENERIC);
 
 	// Build the script
 	CScriptBuilder builder;
@@ -1301,6 +1453,7 @@ int main()
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 150");
 
+	use_default_style();
 
 	glEnable(GL_DEBUG_OUTPUT);
 	glDebugMessageCallback(MessageCallback, 0);
@@ -1308,72 +1461,6 @@ int main()
 	// Enable blending
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	use_default_style();
-
-	// A random cursor test
-	unsigned char pixels[16 * 16 * 4];
-	memset(pixels, 0xff, sizeof(pixels));
-	GLFWimage image;
-	image.width = 16;
-	image.height = 16;
-	image.pixels = pixels;
-	GLFWcursor* cursor = glfwCreateCursor(&image, 0, 0);
-	glfwSetCursor(window, cursor);
-
-	math::mat44 proj_mat = math::ortho(0, 200, 0, 200);
-	//proj_mat.rotate(math::pi*0.4);
-	std::cout << proj_mat.to_string();
-
-	math::mat44 model_mat{ 1 };
-	model_mat.translate(3, 3);
-	model_mat.rotate(math::degrees(3));
-
-	GLuint shader_program = load_shaders("./vert.glsl", "./frag.glsl");
-
-	texture testtexture;
-	testtexture.open("./mytex.png");
-
-	glUseProgram(shader_program);
-	GLuint proj_id = glGetUniformLocation(shader_program, "projection");
-	glUniformMatrix4fv(proj_id, 1, GL_FALSE, &proj_mat.m[0][0]);
-	GLuint model_id = glGetUniformLocation(shader_program, "model");
-	glUniformMatrix4fv(model_id, 1, GL_FALSE, &model_mat.m[0][0]);
-
-	GLuint vertex_array_id;
-	glGenVertexArrays(1, &vertex_array_id);
-	glBindVertexArray(vertex_array_id);
-
-	const GLfloat g_vertex_buffer_data[] = {
-		0, 0, 0.0f,
-		100, 105, 0.0f,
-		100,  0, 0.0f,
-	};
-
-	GLuint vertex_buffer;
-	glGenBuffers(1, &vertex_buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
-
-	framebuffer myframebuffer;
-	myframebuffer.create(200, 200);
-
-	myframebuffer.begin_framebuffer();
-
-	glClearColor(0, 0, 0.4f, 1);
-	glClear(GL_COLOR_BUFFER_BIT);
-	glViewport(0, 0, 200, 200);
-
-	glUseProgram(shader_program);
-
-	glEnableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-
-	glDrawArrays(GL_TRIANGLES, 0, 3);
-	glDisableVertexAttribArray(0);
-
-	myframebuffer.end_framebuffer();
 
 	std::thread al_test_thread;
 
@@ -1444,7 +1531,7 @@ int main()
 	{
 		auto collider = dynamic_cast<physics::box_collider_component*>(pComponent);
 		math::vec2 size = collider->get_size();
-		if (ImGui::DragFloat2("Gravity", size.components))
+		if (ImGui::DragFloat2("Size", size.components))
 			collider->set_size(size);
 	});
 
@@ -1506,23 +1593,15 @@ int main()
 		ImGui::NewFrame();
 
 		ImGui::Begin("Object Inspector");
-
-		ImGui::BeginChildWithHeader("Objects", ImVec2(0, 500));
-
 		show_node_tree(root_node, inspector_guis);
-
-		ImGui::EndChildWithHeader();
-
-		ImGui::BeginChildWithHeader("Components");
-		ImGui::Text("asdfasdf");
-		ImGui::EndChildWithHeader();
-
 		ImGui::End();
 
 
 		ImGui::Begin("Viewport");
+		//float y_offset = ImGui::GetCursorPos().y - ImGui::GetWindowPos().y;
+
 		float width = ImGui::GetWindowWidth();
-		float height = ImGui::GetWindowHeight() - 30;
+		float height = ImGui::GetWindowHeight() - 37;
 
 		if (myrenderer.get_framebuffer().get_width() != width
 			|| myrenderer.get_framebuffer().get_height() != height)
@@ -1531,6 +1610,7 @@ int main()
 		// Send renderer events
 		root_node->send_down("on_render", &myrenderer);
 		myrenderer.render();
+
 
 		ImGui::Image(myrenderer.get_framebuffer(), ImVec2(width, height));
 

@@ -3,11 +3,10 @@
 #include <memory>
 
 #include <wge/filesystem/path.hpp>
+#include <wge/filesystem/input_stream.hpp>
 
 namespace wge::filesystem
 {
-
-class input_stream;
 
 class filesystem_interface
 {
@@ -24,7 +23,7 @@ public:
 	virtual path get_absolute_path(const path& pPath) = 0;
 
 	// Open a new input stream
-	virtual std::shared_ptr<input_stream> open(const path& pPath) = 0;
+	virtual input_stream::ptr open(const path& pPath) = 0;
 };
 
 }
