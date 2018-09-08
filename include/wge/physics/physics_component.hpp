@@ -42,11 +42,12 @@ public:
 
 private:
 	void on_physics_update_bodies(physics_world_component* pComponent);
+	void on_physics_reset();
 	void on_preupdate(float);
 	void on_postupdate(float);
 
 	// Get the box2d body type
-	b2BodyType get_b2_type() const;
+	b2BodyType get_b2Body_type() const;
 
 	void destroy_queued_fixtures();
 	
@@ -58,13 +59,11 @@ private:
 	void update_body_transform();
 
 private:
-	std::vector<std::weak_ptr<core::object_node>> mObjects_with_collision;
+	int mType;
 	b2Body* mBody;
 	physics_world_component* mPhysics_world;
-
 	std::queue<b2Fixture*> mFixture_destruction_queue;
 
-	int mType;
 	friend class physics_world_component;
 };
 

@@ -17,10 +17,12 @@ physics_component::physics_component(core::object_node * pObj) :
 	subscribe_to(pObj, "on_preupdate", &physics_component::on_preupdate, this);
 	subscribe_to(pObj, "on_postupdate", &physics_component::on_postupdate, this);
 	subscribe_to(pObj, "on_physics_update_bodies", &physics_component::on_physics_update_bodies, this);
+	subscribe_to(pObj, "on_physics_reset", &physics_component::on_physics_reset, this);
 }
 
 physics_component::~physics_component()
 {
+	get_object()->send("on_physics_reset");
 	mPhysics_world->destroy_body(mBody);
 }
 
@@ -40,7 +42,7 @@ void physics_component::set_type(int pType)
 {
 	mType = pType;
 	if (mBody)
-		mBody->SetType(get_b2_type());
+		mBody->SetType(get_b2Body_type());
 }
 
 b2Fixture* physics_component::create_fixture(const b2FixtureDef & pDef)
@@ -64,13 +66,23 @@ void physics_component::on_physics_update_bodies(physics_world_component * pComp
 		body_def.position.x = transform->get_absolute_position().x;
 		body_def.position.y = transform->get_absolute_position().y;
 		body_def.angle = transform->get_absolute_rotation();
-		body_def.type = get_b2_type();
+		body_def.type = get_b2Body_type();
 		body_def.userData = get_object();
 		mBody = pComponent->create_body(body_def);
 		get_object()->send_down("on_physics_update_colliders", this);
 		mBody->ResetMassData();
 		std::cout << "Body updated\n";
 	}
+}
+
+void physics_component::on_physics_reset()
+{
+	// Just clear everything.
+	// The bodies and fixtures are expected to be cleaned
+	// up by the world.
+	mBody = nullptr;
+	mPhysics_world = nullptr;
+	std::queue<b2Fixture*>{}.swap(mFixture_destruction_queue);
 }
 
 void physics_component::on_preupdate(float)
@@ -88,9 +100,8 @@ void physics_component::on_postupdate(float)
 	update_body_transform();
 }
 
-b2BodyType physics_component::get_b2_type() const
+b2BodyType physics_component::get_b2Body_type() const
 {
-
 	b2BodyType body_type;
 	switch (mType)
 	{
@@ -117,14 +128,17 @@ void physics_component::destroy_queued_fixtures()
 
 void physics_component::update_object_transform()
 {
-	auto transform = get_object()->get_component<core::transform_component>();
-	assert(transform);
+	if (mBody)
+	{
+		auto transform = get_object()->get_component<core::transform_component>();
+		assert(transform);
 
-	const b2Vec2& pos = mBody->GetPosition();
-	transform->set_position(math::vec2(pos.x, pos.y));
+		const b2Vec2& pos = mBody->GetPosition();
+		transform->set_position(math::vec2(pos.x, pos.y));
 
-	const float rot = mBody->GetAngle();
-	transform->set_rotaton(rot);
+		const float rot = mBody->GetAngle();
+		transform->set_rotaton(rot);
+	}
 }
 
 void physics_component::update_body_transform()

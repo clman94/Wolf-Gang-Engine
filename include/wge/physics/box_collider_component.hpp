@@ -22,13 +22,13 @@ public:
 	virtual ~box_collider_component();
 
 	void set_size(const math::vec2& pSize);
-
 	math::vec2 get_size() const;
 
 private:
-	void update_shape(b2PolygonShape* pShape);
-
 	void on_physics_update_colliders(physics_component* pComponent);
+	void on_physics_reset();
+
+	void update_shape(b2PolygonShape* pShape);
 
 private:
 	b2Fixture* mFixture;

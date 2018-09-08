@@ -9,11 +9,12 @@
 using namespace wge;
 using namespace wge::physics;
 
-box_collider_component::box_collider_component(core::object_node * pObj) :
+box_collider_component::box_collider_component(core::object_node* pObj) :
 	component(pObj)
 {
 	mFixture = nullptr;
 	subscribe_to(pObj, "on_physics_update_colliders", &box_collider_component::on_physics_update_colliders, this);
+	subscribe_to(pObj, "on_physics_reset", &box_collider_component::on_physics_reset, this);
 	mSize = math::vec2(1, 1);
 }
 
@@ -68,4 +69,12 @@ void box_collider_component::on_physics_update_colliders(physics_component * pCo
 
 		std::cout << "Collider updated\n";
 	}
+}
+
+void box_collider_component::on_physics_reset()
+{
+	// Clear everything.
+	// Fixture is expected to be cleaned up my the body or world.
+	mFixture = nullptr;
+	mPhysics_component = nullptr;
 }

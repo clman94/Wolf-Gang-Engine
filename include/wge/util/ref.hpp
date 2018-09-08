@@ -167,7 +167,7 @@ private:
 	void release_ref()
 	{
 		if (mPtr)
-			mPtr->add_ref();
+			mPtr->release_ref();
 	}
 
 private:

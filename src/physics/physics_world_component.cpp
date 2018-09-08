@@ -16,6 +16,7 @@ physics_world_component::physics_world_component(core::object_node* pObj) :
 
 physics_world_component::~physics_world_component()
 {
+	get_object()->send("on_physics_remove_world");
 	delete mWorld;
 }
 

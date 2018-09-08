@@ -32,7 +32,6 @@ class physics_world_component :
 public:
 
 	physics_world_component(core::object_node* pObj);
-
 	virtual ~physics_world_component();
 
 	void set_gravity(math::vec2 pVec);
