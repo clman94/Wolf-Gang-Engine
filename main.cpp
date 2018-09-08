@@ -1285,6 +1285,14 @@ void show_node_tree(util::ref<core::object_node> pNode, editor_component_inspect
 			if (ImGui::CollapsingHeader(comp->get_name().c_str()))
 				pInspector.on_gui(comp);
 		}
+		if (ImGui::BeginCombo("###Add Component", "Add Component"))
+		{
+			if (ImGui::Selectable("Transform"))
+			{
+
+			}
+			ImGui::EndCombo();
+		}
 
 		// Show the children nodes and their components
 		for (std::size_t i = 0; i < pNode->get_child_count(); i++)
@@ -1590,7 +1598,6 @@ int main()
 	factory.add<physics::box_collider_component>();
 	factory.add<sprite_component>();
 
-
 	renderer myrenderer;
 	myrenderer.initialize(200, 200);
 
@@ -1610,7 +1617,6 @@ int main()
 			// Send update events
 			root_node->send_down("on_preupdate", delta);
 			root_node->send_down("on_update", delta);
-			root_node->send_down("on_postupdate", delta);
 		}
 
 
@@ -1649,11 +1655,6 @@ int main()
 			|| myrenderer.get_framebuffer().get_height() != height)
 			myrenderer.set_framebuffer_size(width, height);
 
-		// Send renderer events
-		root_node->send_down("on_render", &myrenderer);
-		myrenderer.render();
-
-
 		ImGui::Image(myrenderer.get_framebuffer(), ImVec2(width, height));
 
 		ImGui::End();
@@ -1681,6 +1682,13 @@ int main()
 		}
 
 		ImGui::End();
+
+		if (updates_enabled)
+			root_node->send_down("on_postupdate", delta);
+
+		// Send renderer events
+		root_node->send_down("on_render", &myrenderer);
+		myrenderer.render();
 
 		// Single master window test
 		/*ImGui::SetNextWindowPos(ImVec2(0, 0));

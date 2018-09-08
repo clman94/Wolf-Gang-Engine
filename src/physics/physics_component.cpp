@@ -24,6 +24,18 @@ physics_component::~physics_component()
 	mPhysics_world->destroy_body(mBody);
 }
 
+json physics_component::serialize() const
+{
+	json result;
+	result["type"] = mType;
+	return result;
+}
+
+void physics_component::deserialize(const json& pJson)
+{
+	set_type(pJson["type"]);
+}
+
 void physics_component::set_type(int pType)
 {
 	mType = pType;
@@ -63,19 +75,17 @@ void physics_component::on_physics_update_bodies(physics_world_component * pComp
 
 void physics_component::on_preupdate(float)
 {
-	auto transform = get_object()->get_component<core::transform_component>();
-	assert(transform);
-
-	const b2Vec2& pos = mBody->GetPosition();
-	transform->set_position(math::vec2(pos.x, pos.y));
-
-	const float rot = mBody->GetAngle();
-	transform->set_rotaton(rot);
+	update_object_transform();
 }
 
 void physics_component::on_postupdate(float)
 {
 	destroy_queued_fixtures();
+
+	// Set the position of the body to the position of the transform.
+	// This is done after the on_update event so if any scripts or such
+	// modify the position of the object, the body will update as well.
+	update_body_transform();
 }
 
 b2BodyType physics_component::get_b2_type() const
@@ -102,5 +112,29 @@ void physics_component::destroy_queued_fixtures()
 	{
 		mBody->DestroyFixture(mFixture_destruction_queue.front());
 		mFixture_destruction_queue.pop();
+	}
+}
+
+void physics_component::update_object_transform()
+{
+	auto transform = get_object()->get_component<core::transform_component>();
+	assert(transform);
+
+	const b2Vec2& pos = mBody->GetPosition();
+	transform->set_position(math::vec2(pos.x, pos.y));
+
+	const float rot = mBody->GetAngle();
+	transform->set_rotaton(rot);
+}
+
+void physics_component::update_body_transform()
+{
+	if (mBody)
+	{
+		auto transform = get_object()->get_component<core::transform_component>();
+		assert(transform);
+		b2Vec2 body_position{ transform->get_position().x, transform->get_position().y };
+		float body_rotation{ transform->get_rotation() };
+		mBody->SetTransform(body_position, body_rotation);
 	}
 }

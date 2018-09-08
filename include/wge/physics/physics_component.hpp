@@ -30,6 +30,9 @@ public:
 	physics_component(core::object_node* pObj);
 	virtual ~physics_component();
 
+	virtual json serialize() const override;
+	virtual void deserialize(const json& pJson) override;
+
 	void set_type(int pType);
 
 	b2Fixture* create_fixture(const b2FixtureDef& pDef);
@@ -46,6 +49,13 @@ private:
 	b2BodyType get_b2_type() const;
 
 	void destroy_queued_fixtures();
+	
+	// Update the transform component to the
+	// transform of the body.
+	void update_object_transform();
+	// Update the body transform with the transform of
+	// the transform component.
+	void update_body_transform();
 
 private:
 	std::vector<std::weak_ptr<core::object_node>> mObjects_with_collision;
