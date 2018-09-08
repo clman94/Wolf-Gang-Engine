@@ -1,5 +1,7 @@
 #pragma once
 
+#include <queue>
+
 #include <wge/core/component.hpp>
 #include <wge/core/object_node.hpp>
 #include <wge/math/vector.hpp>
@@ -37,6 +39,7 @@ public:
 	math::vec2 get_gravity() const;
 
 	b2Body* create_body(const b2BodyDef& pDef);
+	void destroy_body(b2Body* pBody);
 
 private:
 	struct contact
@@ -68,10 +71,14 @@ private:
 	};
 
 	void on_preupdate(float pDelta);
+	void on_postupdate(float pDelta);
+
+	void destroy_queued_bodies();
 
 private:
 	b2World* mWorld;
 	contact_listener mContact_listener;
+	std::queue<b2Body*> mBody_destruction_queue;
 
 	friend class physics_component;
 };

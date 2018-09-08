@@ -19,6 +19,7 @@ class box_collider_component :
 	WGE_COMPONENT("Box Collider", 268);
 public:
 	box_collider_component(core::object_node* pObj);
+	virtual ~box_collider_component();
 
 	void set_size(const math::vec2& pSize);
 
@@ -32,6 +33,7 @@ private:
 private:
 	b2Fixture* mFixture;
 	math::vec2 mSize;
+	physics_component* mPhysics_component;
 };
 
 }

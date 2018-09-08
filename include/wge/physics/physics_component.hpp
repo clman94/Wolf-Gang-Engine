@@ -1,5 +1,7 @@
 #pragma once
 
+#include <queue>
+
 #include <wge/core/component.hpp>
 #include <wge/core/object_node.hpp>
 #include <wge/math/vector.hpp>
@@ -26,21 +28,31 @@ public:
 	};
 
 	physics_component(core::object_node* pObj);
+	virtual ~physics_component();
 
 	void set_type(int pType);
 
 	b2Fixture* create_fixture(const b2FixtureDef& pDef);
 
+	// Queues the fixture to be destroyed
+	void destroy_fixture(b2Fixture* pFixture);
+
 private:
 	void on_physics_update_bodies(physics_world_component* pComponent);
-
 	void on_preupdate(float);
+	void on_postupdate(float);
 
+	// Get the box2d body type
 	b2BodyType get_b2_type() const;
+
+	void destroy_queued_fixtures();
 
 private:
 	std::vector<std::weak_ptr<core::object_node>> mObjects_with_collision;
 	b2Body* mBody;
+	physics_world_component* mPhysics_world;
+
+	std::queue<b2Fixture*> mFixture_destruction_queue;
 
 	int mType;
 	friend class physics_world_component;

@@ -17,6 +17,15 @@ box_collider_component::box_collider_component(core::object_node * pObj) :
 	mSize = math::vec2(1, 1);
 }
 
+box_collider_component::~box_collider_component()
+{
+	if (mFixture)
+	{
+		assert(mPhysics_component);
+		mPhysics_component->destroy_fixture(mFixture);
+	}
+}
+
 void box_collider_component::set_size(const math::vec2 & pSize)
 {
 	if (pSize.x > 0 && pSize.y > 0)
@@ -45,6 +54,7 @@ void box_collider_component::on_physics_update_colliders(physics_component * pCo
 {
 	if (!mFixture)
 	{
+		mPhysics_component = pComponent;
 
 		b2FixtureDef fixture_def;
 

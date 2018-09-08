@@ -15,7 +15,13 @@ physics_component::physics_component(core::object_node * pObj) :
 	mBody = nullptr;
 	mType = type_rigidbody;
 	subscribe_to(pObj, "on_preupdate", &physics_component::on_preupdate, this);
+	subscribe_to(pObj, "on_postupdate", &physics_component::on_postupdate, this);
 	subscribe_to(pObj, "on_physics_update_bodies", &physics_component::on_physics_update_bodies, this);
+}
+
+physics_component::~physics_component()
+{
+	mPhysics_world->destroy_body(mBody);
 }
 
 void physics_component::set_type(int pType)
@@ -29,6 +35,11 @@ b2Fixture* physics_component::create_fixture(const b2FixtureDef & pDef)
 {
 	assert(mBody);
 	return mBody->CreateFixture(&pDef);
+}
+
+void physics_component::destroy_fixture(b2Fixture * pFixture)
+{
+	mFixture_destruction_queue.push(pFixture);
 }
 
 void physics_component::on_physics_update_bodies(physics_world_component * pComponent)
@@ -62,6 +73,11 @@ void physics_component::on_preupdate(float)
 	transform->set_rotaton(rot);
 }
 
+void physics_component::on_postupdate(float)
+{
+	destroy_queued_fixtures();
+}
+
 b2BodyType physics_component::get_b2_type() const
 {
 
@@ -73,4 +89,18 @@ b2BodyType physics_component::get_b2_type() const
 	default: body_type = b2BodyType::b2_staticBody;
 	}
 	return body_type;
+}
+
+void physics_component::destroy_queued_fixtures()
+{
+	// Has no body
+	if (!mBody)
+		std::queue<b2Fixture*>().swap(mFixture_destruction_queue); // Clear queue
+
+	// Destroy all fixtures queued to be destroyed
+	while (!mFixture_destruction_queue.empty())
+	{
+		mBody->DestroyFixture(mFixture_destruction_queue.front());
+		mFixture_destruction_queue.pop();
+	}
 }
