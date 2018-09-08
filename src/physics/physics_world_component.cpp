@@ -16,7 +16,7 @@ physics_world_component::physics_world_component(core::object_node* pObj) :
 
 physics_world_component::~physics_world_component()
 {
-	get_object()->send("on_physics_remove_world");
+	get_object()->send("on_physics_reset");
 	delete mWorld;
 }
 
@@ -36,8 +36,9 @@ b2Body* physics_world_component::create_body(const b2BodyDef & pDef)
 	return mWorld->CreateBody(&pDef);
 }
 
-void wge::physics::physics_world_component::destroy_body(b2Body * pBody)
+void physics_world_component::destroy_body(b2Body * pBody)
 {
+	mBody_destruction_queue.push(pBody);
 }
 
 void physics_world_component::on_preupdate(float pDelta)
