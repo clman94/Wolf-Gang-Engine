@@ -1441,6 +1441,7 @@ void EndChildWithHeader()
 
 }
 
+
 int main()
 {
 	std::cout << filesystem::path("pie/int.exe").string();
@@ -1609,6 +1610,7 @@ int main()
 		// Calculate delta
 		float delta = clock.restart();
 
+
 		// Get window events
 		glfwPollEvents();
 
@@ -1626,6 +1628,8 @@ int main()
 		ImGui::NewFrame();
 
 		ImGui::Begin("Object Inspector");
+
+		ImGui::Text("FPS: %f", 1.f / delta);
 		if (ImGui::Button("Serialize"))
 		{
 			json j = root_node->serialize();
