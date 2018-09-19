@@ -1,6 +1,8 @@
 #include <wge/math/math.hpp>
 #include <wge/math/vector.hpp>
+#include <limits>
 
+using namespace wge;
 using namespace wge::math;
 
 float vec2::magnitude() const
@@ -167,19 +169,84 @@ std::string vec2::to_string() const
 	return "(" + std::to_string(x) + ", " + std::to_string(y) + ")";
 }
 
-// TODO: Create a lookup table
+// This generates a lookup table for binomial coefficients at compile-time
+// TODO: Test
+template<std::size_t Tmax_rows>
+class binomial_coeff_lookup_table
+{
+private:
+	static constexpr std::size_t total_elements = Tmax_rows*Tmax_rows;
+
+	template <typename T, std::size_t Tsize>
+	class const_array
+	{
+	public:
+		constexpr T& operator[](size_t i)
+		{
+			return values[i];
+		}
+
+		constexpr const T& operator[](size_t i) const
+		{
+			return values[i];
+		}
+
+	private:
+		T values[Tsize];
+	};
+
+	typedef const_array<unsigned long, total_elements> lookup_table_t;
+
+	static constexpr unsigned long const_binomial_coefficient(unsigned long n, unsigned long k)
+	{
+		k = math::min(k, n - k);
+
+		unsigned long c = 1;
+		for (unsigned long i = 1; i <= k; i++, n--)
+		{
+			// Seems to struggle at this part
+			//if (c / i > UINT_MAX / n)
+			//	return 0;
+			c = c / i * n + c % i * n / i;
+		}
+		return c;
+	}
+
+	static constexpr lookup_table_t generate()
+	{
+		lookup_table_t result = {};
+		for (std::size_t r = 0; r < Tmax_rows; r++)
+			for (std::size_t c = 0; c < r * 2 + 1; c++)
+				result[r * r + c] = const_binomial_coefficient(r + 1, c);
+		return result;
+	}
+
+	static constexpr lookup_table_t table = generate();
+public:
+	static constexpr std::size_t rows = Tmax_rows;
+	static constexpr unsigned long get(unsigned long n, unsigned long k)
+	{
+		return table[(n - 1) * (n - 1) + k];
+	}
+};
+
 // Reference: https://en.wikipedia.org/wiki/Binomial_coefficient
 unsigned long wge::math::binomial_coeff(unsigned long n, unsigned long k)
 {
+	typedef binomial_coeff_lookup_table<6> lookup_table;
+
+	// Use lookup table
+	if (lookup_table::rows <= n)
+		return lookup_table::get(n, k);
+
 	// Symmetry
-	if (k > n - k)
-		k = n - k;
+	k = math::min(k, n - k);
 
 	unsigned long c = 1;
 	for (unsigned long i = 1; i <= k; i++, n--)
 	{
 		// Return 0 on overflow
-		if (c / i > UINT_MAX / n)
+		if (c / i > std::numeric_limits<unsigned long>::max() / n)
 			return 0;
 		c = c / i * n + c % i * n / i;
 	}

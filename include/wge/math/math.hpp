@@ -61,6 +61,19 @@ inline T round(const T& a)
 	return std::round(a);
 }
 
+template <typename T>
+inline constexpr const T& max(const T& pL, const T& pR)
+{
+	return pL > pR ? pL : pR;
+}
+
+template <typename T>
+inline constexpr const T& min(const T& pL, const T& pR)
+{
+	return pL < pR ? pL : pR;
+}
+
+
 // Template for normalizing a value.
 // Sepcialization is required.
 template<class T>
