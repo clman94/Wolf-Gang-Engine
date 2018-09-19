@@ -18,6 +18,10 @@ physics_component::physics_component(core::object_node * pObj) :
 	subscribe_to(pObj, "on_postupdate", &physics_component::on_postupdate, this);
 	subscribe_to(pObj, "on_physics_update_bodies", &physics_component::on_physics_update_bodies, this);
 	subscribe_to(pObj, "on_physics_reset", &physics_component::on_physics_reset, this);
+	subscribe_to(pObj, "on_parent_removed", &physics_component::on_parent_removed, this);
+
+	// Requirements
+	pObj->add_component<core::transform_component>();
 }
 
 physics_component::~physics_component()
@@ -36,12 +40,24 @@ json physics_component::serialize() const
 {
 	json result;
 	result["type"] = mType;
+
+	// deserialize() and then serialize() called in the same frame?
+	// Just use the cached properties.
+	if (!mBody_instance_cache.empty())
+		result["body-instance"] = mBody_instance_cache;
+	else if (mBody)
+		result["body-instance"] = serialize_body();
+
 	return result;
 }
 
 void physics_component::deserialize(const json& pJson)
 {
 	set_type(pJson["type"]);
+	if (pJson.find("body-instance") != pJson.end())
+		mBody_instance_cache = pJson["body-instance"];
+	else
+		mBody_instance_cache.clear();
 }
 
 void physics_component::set_type(int pType)
@@ -49,6 +65,29 @@ void physics_component::set_type(int pType)
 	mType = pType;
 	if (mBody)
 		mBody->SetType(get_b2Body_type());
+}
+
+void physics_component::set_linear_velocity(const math::vec2 & pVec)
+{
+	if (mBody)
+		mBody->SetLinearVelocity({ pVec.x, pVec.y });
+}
+
+math::vec2 physics_component::get_linear_velocity() const
+{
+	const b2Vec2& vel = mBody->GetLinearVelocity();
+	return{ vel.x, vel.y };
+}
+
+void physics_component::set_angular_velocity(math::radians pRads)
+{
+	if (mBody)
+		mBody->SetAngularVelocity(pRads);
+}
+
+math::radians physics_component::get_angular_velocity() const
+{
+	return mBody->GetAngularVelocity();
 }
 
 b2Fixture* physics_component::create_fixture(const b2FixtureDef & pDef)
@@ -75,11 +114,13 @@ void physics_component::on_physics_update_bodies(physics_world_component * pComp
 		body_def.type = get_b2Body_type();
 		body_def.userData = get_object();
 		mBody = pComponent->create_body(body_def);
-		get_object()->send_down("on_physics_update_colliders", this);
+		if (!mBody_instance_cache.empty())
+			deserialize_body(); // Finally deserialize if it was waiting for the body to be created
 		mBody->ResetMassData();
 		mPhysics_world = pComponent;
 		std::cout << "Body updated\n";
 	}
+	get_object()->send_down("on_physics_update_colliders", this);
 }
 
 void physics_component::on_physics_reset()
@@ -102,9 +143,21 @@ void physics_component::on_postupdate(float)
 	destroy_queued_fixtures();
 
 	// Set the position of the body to the position of the transform.
-	// This is done after the on_update event so if any scripts or such
-	// modify the position of the object, the body will update as well.
+	// This is done after the on_update event so if any scripts or the editor
+	// modify the transform of the object, the body will update as well.
 	update_body_transform();
+}
+
+void physics_component::on_parent_removed()
+{
+	// Cache the body so when a new parent comes in, we can reload the same body
+	if (mBody)
+	{
+		mBody_instance_cache = serialize_body();
+		mPhysics_world->destroy_body(mBody);
+		mBody = nullptr;
+		mPhysics_world = nullptr;
+	}
 }
 
 b2BodyType physics_component::get_b2Body_type() const
@@ -155,5 +208,34 @@ void physics_component::update_body_transform()
 		b2Vec2 body_position{ transform->get_position().x, transform->get_position().y };
 		float body_rotation{ transform->get_rotation() };
 		mBody->SetTransform(body_position, body_rotation);
+	}
+}
+
+json physics_component::serialize_body() const
+{
+	json result;
+	result["linear-velocity"] = json::array({
+		mBody->GetLinearVelocity().x,
+		mBody->GetLinearVelocity().y,
+		});
+	result["linear-dampening"] = mBody->GetLinearDamping();
+	result["angular-velocity"] = mBody->GetAngularVelocity();
+	result["angular-dampening"] = mBody->GetAngularDamping();
+	return result;
+}
+
+void physics_component::deserialize_body()
+{
+	assert(mBody);
+	if (!mBody_instance_cache.empty())
+	{
+		json linear_vel_j = mBody_instance_cache["linear-velocity"];
+		mBody->SetLinearVelocity(b2Vec2(linear_vel_j[0], linear_vel_j[1]));
+		mBody->SetLinearDamping(mBody_instance_cache["linear-dampening"]);
+		mBody->SetAngularVelocity(mBody_instance_cache["angular-velocity"]);
+		mBody->SetLinearDamping(mBody_instance_cache["angular-dampening"]);
+
+		// We don't need this anymore
+		mBody_instance_cache.clear();
 	}
 }

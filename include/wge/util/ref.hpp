@@ -88,6 +88,12 @@ public:
 		add_ref();
 	}
 
+	ref(ref&& pMove)
+	{
+		mPtr = pMove.mPtr;
+		pMove.mPtr = nullptr;
+	}
+
 	~ref()
 	{
 		release_ref();
@@ -218,6 +224,11 @@ public:
 	bool expired() const
 	{
 		return !valid();
+	}
+
+	operator bool() const
+	{
+		return valid();
 	}
 
 	ref<T> lock() const

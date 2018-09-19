@@ -92,7 +92,48 @@ using namespace wge;
 #include <Box2D/Box2D.h>
 
 
+class flag_container
+{
+public:
+	// Returns true if flag was successfully set
+	bool set(const std::string& pName)
+	{
+		return mFlags.insert(pName).second;
+	}
+
+	// Returns true if flag was successfully unset
+	bool unset(const std::string& pName)
+	{
+		return mFlags.erase(pName) > 0;
+	}
+
+	// Returns true if this container contains this value
+	bool is_set(const std::string& pName) const
+	{
+		return mFlags.find(pName) != mFlags.end();
+	}
+
+	std::size_t matches(const flag_container& pOther)
+	{
+		
+	}
+
+	bool empty() const
+	{
+		return mFlags.empty();
+	}
+
+private:
+	std::set<std::string> mFlags;
+};
+
 std::string load_file_as_string(const std::string& pPath);
+
+class asset_handle
+{
+	int id;
+	filesystem::path path;
+};
 
 // Loadable assets are extra files that
 // need to be loaded before they can be
@@ -207,7 +248,14 @@ public:
 	color operator*(const color& pColor) const;
 	color operator/(const color& pColor) const;
 
-	color& operator=(const color& pColor);
+	color& operator=(const color& pColor)
+	{
+		r = pColor.r;
+		g = pColor.g;
+		b = pColor.b;
+		a = pColor.a;
+		return *this;
+	}
 	color& operator+=(const color& pColor);
 	color& operator-=(const color& pColor);
 	color& operator*=(const color& pColor);
@@ -555,11 +603,22 @@ struct render_batch_2d
 	// a flat color.
 	texture* rendertexture;
 
+	int layer;
+
+	enum {
+		type_triangles = GL_TRIANGLES,
+		type_linestrip = GL_LINE_STRIP,
+		type_triangle_fan = GL_TRIANGLE_FAN,
+	};
+	int type;
+
 	std::vector<unsigned int> indexes;
 	std::vector<vertex_2d> vertices;
 
 	render_batch_2d() :
-		rendertexture(nullptr)
+		rendertexture(nullptr),
+		type(type_triangles),
+		layer(0)
 	{}
 };
 
@@ -613,7 +672,14 @@ public:
 	void initialize(int pFramebuffer_width, int pFramebuffer_height)
 	{
 		mFramebuffer.create(pFramebuffer_width, pFramebuffer_height);
-		mShader = load_shaders("./editor/shaders/vert.glsl", "./editor/shaders/frag_textured.glsl");
+		mShader_texture = load_shaders(
+			"./editor/shaders/vert_texture.glsl",
+			"./editor/shaders/frag_texture.glsl"
+			);
+		mShader_color = load_shaders(
+			"./editor/shaders/vert_color.glsl",
+			"./editor/shaders/frag_color.glsl"
+			);
 
 		glGenVertexArrays(1, &mVAO_id);
 		glBindVertexArray(mVAO_id);
@@ -643,29 +709,24 @@ public:
 
 	void render()
 	{
+
 		mFramebuffer.begin_framebuffer();
 
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT);
 		glViewport(0, 0, mFramebuffer.get_width(), mFramebuffer.get_height());
 
-		glUseProgram(mShader);
-
 		// Create the projection matrix
-		math::mat44 proj_mat = 
-			math::ortho(0, static_cast<float>(mFramebuffer.get_width()), 
+		mProjection_matrix =
+			math::ortho(0, static_cast<float>(mFramebuffer.get_width()),
 				0, static_cast<float>(mFramebuffer.get_height()));
 
-		// Set the matrix uniforms
-		GLuint proj_id = glGetUniformLocation(mShader, "projection");
-		glUniformMatrix4fv(proj_id, 1, GL_FALSE, &proj_mat.m[0][0]);
-
 		// Render the batches
+		sort_batches();
 		for (const render_batch_2d& i : mBatches)
 			render_batch(i);
 
 		// Cleanup
-		glUseProgram(0);
 		mFramebuffer.end_framebuffer();
 		mBatches.clear();
 	}
@@ -676,6 +737,15 @@ public:
 	}
 
 private:
+	void sort_batches()
+	{
+		std::sort(mBatches.begin(), mBatches.end(),
+			[](const render_batch_2d& l, const render_batch_2d& r)->bool
+		{
+			return l.layer > r.layer;
+		});
+	}
+
 	void render_batch(const render_batch_2d& pBatch)
 	{
 		glBindVertexArray(mVAO_id);
@@ -688,53 +758,45 @@ private:
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mElement_buffer);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, pBatch.indexes.size() * sizeof(unsigned int), &pBatch.indexes[0], GL_STATIC_DRAW);
 
-		// Setup the texture
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, pBatch.rendertexture->get_gl_texture());
-		GLuint tex_id = glGetUniformLocation(mShader, "tex");
-		glUniform1i(tex_id, 0);
+		GLuint current_shader = pBatch.rendertexture ? mShader_texture : mShader_color;
+		glUseProgram(current_shader);
+
+		// Set the matrix uniforms
+		GLuint proj_id = glGetUniformLocation(current_shader, "projection");
+		glUniformMatrix4fv(proj_id, 1, GL_FALSE, &mProjection_matrix.m[0][0]);
+
+		if (pBatch.rendertexture)
+		{
+			// Setup the texture
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, pBatch.rendertexture->get_gl_texture());
+			GLuint tex_id = glGetUniformLocation(mShader_texture, "tex");
+			glUniform1i(tex_id, 0);
+		}
 
 		// Setup the 2d position attribute
 		glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, mVertex_buffer);
-		glVertexAttribPointer(
-			0,
-			2,
-			GL_FLOAT,
-			GL_FALSE,
-			sizeof(vertex_2d),
-			(void*)0
-		);
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_2d), (void*)0);
 
-		// Setup the UV attribute
-		glEnableVertexAttribArray(1);
-		glBindBuffer(GL_ARRAY_BUFFER, mVertex_buffer);
-		glVertexAttribPointer(
-			1,
-			2,
-			GL_FLOAT,
-			GL_FALSE,
-			sizeof(vertex_2d),
-			(void*)sizeof(math::vec2) // Offset to the uv components in vertex_2d
-		);
+		if (pBatch.rendertexture)
+		{
+			// Setup the UV attribute
+			glEnableVertexAttribArray(1);
+			glBindBuffer(GL_ARRAY_BUFFER, mVertex_buffer);
+			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_2d), (void*)sizeof(math::vec2));
+		}
 
 		// Setup the color attribute
 		glEnableVertexAttribArray(2);
 		glBindBuffer(GL_ARRAY_BUFFER, mVertex_buffer);
-		glVertexAttribPointer(
-			2,
-			4,
-			GL_FLOAT,
-			GL_FALSE,
-			sizeof(vertex_2d),
-			(void*)(sizeof(math::vec2)*2) // Offset to the color components in vertex_2d
-		);
+		glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex_2d), (void*)(sizeof(math::vec2)*2));
 
 		// Bind the element buffer
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mElement_buffer);
 
 		glDrawElements(
-			GL_TRIANGLES,
+			pBatch.type,
 			pBatch.indexes.size(),
 			GL_UNSIGNED_INT,
 			(void*)0
@@ -744,12 +806,15 @@ private:
 		glDisableVertexAttribArray(2);
 		glDisableVertexAttribArray(1);
 		glDisableVertexAttribArray(0);
+
+		glUseProgram(0);
 	}
 
 private:
 	framebuffer mFramebuffer;
-	GLuint mShader;
+	GLuint mShader_texture, mShader_color;
 	GLuint mVertex_buffer, mElement_buffer, mVAO_id;
+	math::mat44 mProjection_matrix;
 
 	std::vector<render_batch_2d> mBatches;
 };
@@ -778,9 +843,12 @@ public:
 		mOffset = math::vec2(pJson["offset"][0], pJson["offset"][1]);
 	}
 
+
 	void on_render(renderer* pRenderer)
 	{
 		core::transform_component* transform = get_object()->get_component<core::transform_component>();
+		if (!transform)
+			return;
 
 		batch_builder batch;
 
@@ -816,6 +884,114 @@ public:
 private:
 	texture mTexture;
 	math::vec2 mOffset;
+};
+
+class physics_debug_component :
+	public core::component
+{
+	WGE_COMPONENT("Physics Debug", 31234)
+public:
+	physics_debug_component(core::object_node* pNode) :
+		component(pNode)
+	{
+		mWorld = nullptr;
+		subscribe_to(pNode, "on_render", &physics_debug_component::on_render, this);
+		subscribe_to(pNode, "on_physics_update_bodies", &physics_debug_component::on_physics_update_bodies, this);
+		mDebug_draw.SetFlags(b2Draw::e_shapeBit);
+	}
+
+	void on_render(renderer* pRenderer)
+	{
+		if (mWorld)
+		{
+			mWorld->DrawDebugData();
+			for (auto& i : mDebug_draw.batches)
+				pRenderer->push_batch(i);
+			mDebug_draw.batches.clear();
+		}
+	}
+
+	void on_physics_update_bodies(physics::physics_world_component * pComponent)
+	{
+		mWorld = pComponent->get_world();
+		mWorld->SetDebugDraw(&mDebug_draw);
+	}
+
+private:
+	b2World* mWorld;
+	struct debug_draw :
+		b2Draw
+	{
+		std::list<render_batch_2d> batches;
+
+		void create_polygon_batch(const b2Vec2* vertices, int32 vertexCount, const b2Color& pColor, int type, bool connect_end = true)
+		{
+			render_batch_2d batch;
+			batch.type = type;
+			batch.layer = -1;
+			for (int i = 0; i < vertexCount; i++)
+			{
+				batch.indexes.push_back(batch.vertices.size());
+				vertex_2d vert;
+				vert.position = math::vec2(vertices[i].x, vertices[i].y);
+				vert.thiscolor = color(pColor.r, pColor.g, pColor.b, pColor.a);
+				batch.vertices.push_back(vert);
+			}
+			if (connect_end)
+				batch.indexes.emplace_back(0);
+			batches.push_back(batch);
+		}
+
+		void create_circle_batch(const b2Vec2& center, float32 radius, const b2Color& pColor, int type)
+		{
+			b2Vec2 verts[10];
+			for (int i = 0; i < sizeof(verts); i++)
+			{
+				auto vert = math::vec2(center.x + radius, center.y).rotate(math::degrees(360.f / sizeof(verts)));
+				verts[i] = b2Vec2(vert.x, vert.y);
+			}
+			create_polygon_batch(verts, sizeof(verts), pColor, type);
+		}
+
+		virtual void DrawPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& pColor)
+		{
+			create_polygon_batch(vertices, vertexCount, pColor, render_batch_2d::type_linestrip);
+		}
+
+		virtual void DrawSolidPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& pColor)
+		{
+			create_polygon_batch(vertices, vertexCount, pColor, render_batch_2d::type_triangle_fan);
+		}
+
+		virtual void DrawCircle(const b2Vec2& center, float32 radius, const b2Color& pColor)
+		{
+			create_circle_batch(center, radius, pColor, render_batch_2d::type_linestrip);
+		}
+
+		virtual void DrawSolidCircle(const b2Vec2& center, float32 radius, const b2Vec2& axis, const b2Color& pColor)
+		{
+			create_circle_batch(center, radius, pColor, render_batch_2d::type_triangle_fan);
+		}
+
+		virtual void DrawSegment(const b2Vec2& p1, const b2Vec2& p2, const b2Color& pColor)
+		{
+			b2Vec2 verts[2];
+			verts[0] = p1;
+			verts[1] = p2;
+			create_polygon_batch(verts, 2, pColor, render_batch_2d::type_linestrip, false);
+		}
+
+		virtual void DrawTransform(const b2Transform& xf)
+		{
+
+		}
+
+		virtual void DrawPoint(const b2Vec2& p, float32 size, const b2Color& pColor)
+		{
+			create_circle_batch(p, size, pColor, render_batch_2d::type_triangle_fan);
+		}
+
+	} mDebug_draw;
 };
 
 // Failed attempt at using the stb_vorbis pushdata api.
@@ -1274,32 +1450,91 @@ private:
 	std::map<int, std::function<void(core::component*)>> mInspector_guis;
 };
 
-void show_node_tree(util::ref<core::object_node> pNode, editor_component_inspector& pInspector)
+void show_node_tree(util::ref<core::object_node> pNode, editor_component_inspector& pInspector, util::ref<core::object_node>& pSelected)
 {
-	if (ImGui::TreeNode(pNode->get_name().c_str()))
+	ImGui::PushID(pNode->get_name().c_str());
+
+	bool* open = ImGui::GetStateStorage()->GetBoolRef(ImGui::GetID(pNode->get_name().c_str()));
+
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+
+	// Don't show the arrow if there are no children nodes
+	if (pNode->get_child_count() > 0)
 	{
-		// List out the components
-		for (std::size_t i = 0; i < pNode->get_component_count(); i++)
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+		ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
+		ImGui::PushStyleColor(ImGuiCol_BorderShadow, ImVec4(0, 0, 0, 0));
+		if (ImGui::ArrowButton("__NodeUnfold", *open ? ImGuiDir_Down : ImGuiDir_Right))
+			*open = !*open; // Toggle open flag
+		ImGui::PopStyleColor(3);
+		ImGui::SameLine();
+	}
+
+	if (ImGui::Selectable(pNode->get_name().c_str(), pSelected == pNode))
+		pSelected = pNode;
+	if (ImGui::IsItemActive() && ImGui::IsMouseDoubleClicked(0))
+		*open = !*open; // Toggle open flag
+	if (ImGui::BeginDragDropSource())
+	{
+		core::object_node* ptr = pNode.get();
+		ImGui::SetDragDropPayload("MoveNodeInTree", &ptr, sizeof(void*));
+		ImGui::EndDragDropSource();
+	}
+	if (ImGui::BeginDragDropTarget())
+	{
+		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MoveNodeInTree"))
 		{
-			core::component* comp = pNode->get_component_index(i);
-			if (ImGui::CollapsingHeader(comp->get_name().c_str()))
-				pInspector.on_gui(comp);
+			util::ref<core::object_node> node = *static_cast<core::object_node**>(payload->Data);
+			if (!pNode->is_child_of(node)) // Do not move parent into its own child!
+				pNode->add_child(node);
 		}
-		if (ImGui::BeginCombo("###Add Component", "Add Component"))
+		ImGui::EndDragDropTarget();
+	}
+
+	ImGui::InvisibleButton("__DragBetween", ImVec2(-1, 4));
+	if (ImGui::BeginDragDropTarget())
+	{
+		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MoveNodeInTree"))
 		{
-			if (ImGui::Selectable("Transform"))
+			util::ref<core::object_node> node = *static_cast<core::object_node**>(payload->Data);
+			if (!pNode->is_child_of(node)) // Do not move parent into its own child!
 			{
-
+				if (pNode->get_child_count() && *open)
+					pNode->add_child(node, 0);
+				else if (auto parent = pNode->get_parent())
+					parent->add_child(node, parent->get_child_index(pNode));
 			}
-			ImGui::EndCombo();
 		}
+		ImGui::EndDragDropTarget();
+	}
 
+	ImGui::PopStyleVar(); // ImGuiStyleVar_ItemSpacing
+
+	if (*open)
+	{
+		ImGui::TreePush();
 		// Show the children nodes and their components
 		for (std::size_t i = 0; i < pNode->get_child_count(); i++)
-			show_node_tree(pNode->get_child(i), pInspector);
-
+			show_node_tree(pNode->get_child(i), pInspector, pSelected);
 		ImGui::TreePop();
+		if (pNode->get_child_count() > 0 && *open)
+		{
+			ImGui::InvisibleButton("__DragAfterChildrenInParent", ImVec2(-1, 4));
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MoveNodeInTree"))
+				{
+					util::ref<core::object_node> node = *static_cast<core::object_node**>(payload->Data);
+					if (!pNode->is_child_of(node)) // Do not move parent into its own child!
+						if (auto parent = pNode->get_parent())
+							parent->add_child(node, parent->get_child_index(pNode) + 1);
+				}
+				ImGui::EndDragDropTarget();
+			}
+		}
 	}
+
+	ImGui::PopID();
 }
 
 // A theme I made up for imgui. I wanted it to not be
@@ -1397,9 +1632,10 @@ namespace ImGui
 // A cool little idea for later
 void BeginChildWithHeader(const char* pTitle, const ImVec2& pSize = ImVec2(0, 0))
 {
+	ImVec2 backup_padding = ImGui::GetStyle().WindowPadding;
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 	ImGui::BeginChild(pTitle, pSize, true);
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImGui::GetStyle().WindowPadding);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, backup_padding);
 
 
 	ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -1419,7 +1655,7 @@ void BeginChildWithHeader(const char* pTitle, const ImVec2& pSize = ImVec2(0, 0)
 		ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]),
 		pTitle);
 
-	// put the clip rect back
+	// Put the clip rect back
 	dl->PushClipRect(ImVec2(cliprect.x, cliprect.y), ImVec2(cliprect.z, cliprect.w));
 
 	ImGui::Dummy(ImVec2(0, 25));
@@ -1441,11 +1677,8 @@ void EndChildWithHeader()
 
 }
 
-
 int main()
 {
-	std::cout << filesystem::path("pie/int.exe").string();
-
 	glfwInit();
 
 	// OpenGL 3.3 minimum
@@ -1560,6 +1793,7 @@ int main()
 	auto root_node = core::object_node::create();
 	root_node->set_name("Game");
 	root_node->add_component<physics::physics_world_component>();
+	root_node->add_component<physics_debug_component>();
 	{
 		auto node1 = core::object_node::create();
 		node1->set_name("Scene node 1");
@@ -1598,18 +1832,20 @@ int main()
 	factory.add<physics::physics_component>();
 	factory.add<physics::box_collider_component>();
 	factory.add<sprite_component>();
+	factory.add<physics_debug_component>();
 
 	renderer myrenderer;
 	myrenderer.initialize(200, 200);
 
 	bool updates_enabled = false;
 
+	util::ref<core::object_node> selected_object;
+
 	util::clock clock;
 	while (!glfwWindowShouldClose(window))
 	{
 		// Calculate delta
 		float delta = clock.restart();
-
 
 		// Get window events
 		glfwPollEvents();
@@ -1621,39 +1857,84 @@ int main()
 			root_node->send_down("on_update", delta);
 		}
 
-
 		// Start a new frame for ImGui
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-		ImGui::Begin("Object Inspector");
+		if (ImGui::Begin("Object Inspector", NULL, ImGuiWindowFlags_MenuBar))
+		{
+			if (ImGui::BeginMenuBar())
+			{
+				if (ImGui::BeginMenu("Add"))
+				{
+					if (ImGui::MenuItem("Object 2D"))
+					{
+						auto node = core::object_node::create();
+						node->set_name("New 2D Object");
+						node->add_component<core::transform_component>();
+						root_node->add_child(node);
+					}
+					ImGui::EndMenu();
+				}
+				ImGui::EndMenuBar();
+			}
+			ImGui::Text("FPS: %f", 1.f / delta);
 
-		ImGui::Text("FPS: %f", 1.f / delta);
-		if (ImGui::Button("Serialize"))
-		{
-			json j = root_node->serialize();
-			std::ofstream{ "./serialization_data.json" } << j.dump(2);
+			if (ImGui::Button("Serialize"))
+			{
+				json j = root_node->serialize();
+				std::ofstream{ "./serialization_data.json" } << j.dump(2);
+				selected_object.reset();
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Deserialize"))
+			{
+				json deserial;
+				std::ifstream{ "./serialization_data.json" } >> deserial;
+				root_node->remove_children();
+				root_node->remove_components();
+				root_node->deserialize(deserial, factory);
+			}
+			ImGui::Checkbox("Run", &updates_enabled);
+			show_node_tree(root_node, inspector_guis, selected_object);
 		}
-		ImGui::SameLine();
-		if (ImGui::Button("Deserialize"))
+		ImGui::End();
+
+		ImGui::Begin("Component Inspector");
+		if (selected_object)
 		{
-			json deserial;
-			std::ifstream{ "./serialization_data.json" } >> deserial;
-			root_node->remove_children();
-			root_node->remove_components();
-			root_node->deserialize(deserial, factory);
+			for (std::size_t i = 0; i < selected_object->get_component_count(); i++)
+			{
+				core::component* comp = selected_object->get_component_index(i);
+				if (ImGui::CollapsingHeader(comp->get_name().c_str()))
+					inspector_guis.on_gui(comp);
+			}
+
+			if (ImGui::BeginCombo("###Add Component", "Add Component"))
+			{
+				if (ImGui::Selectable("Transform 2D"))
+					selected_object->add_component<core::transform_component>();
+				if (ImGui::Selectable("Physics World"))
+					selected_object->add_component<physics::physics_world_component>();
+				if (ImGui::Selectable("Physics"))
+					selected_object->add_component<physics::physics_component>();
+				if (ImGui::Selectable("Box Collider"))
+					selected_object->add_component<physics::box_collider_component>();
+				if (ImGui::Selectable("Sprite"))
+					selected_object->add_component<sprite_component>();
+				ImGui::EndCombo();
+			}
 		}
-		ImGui::Checkbox("Run", &updates_enabled);
-		show_node_tree(root_node, inspector_guis);
 		ImGui::End();
 
 
 		ImGui::Begin("Viewport");
 		//float y_offset = ImGui::GetCursorPos().y - ImGui::GetWindowPos().y;
 
-		float width = ImGui::GetWindowWidth();
-		float height = ImGui::GetWindowHeight() - 37;
+
+		float width = ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x*2;
+		float height = ImGui::GetWindowHeight() - ImGui::GetCursorPos().y - ImGui::GetStyle().WindowPadding.y;
 
 		if (myrenderer.get_framebuffer().get_width() != width
 			|| myrenderer.get_framebuffer().get_height() != height)
@@ -1673,10 +1954,6 @@ int main()
 		{
 			if (ImGui::Button("Test"))
 				test_as_varfunc();
-		}
-
-		if (ImGui::CollapsingHeader("GL Test"))
-		{
 		}
 
 		if (ImGui::CollapsingHeader("AL Test"))

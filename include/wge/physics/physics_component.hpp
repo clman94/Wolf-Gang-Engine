@@ -35,6 +35,12 @@ public:
 
 	void set_type(int pType);
 
+	void set_linear_velocity(const math::vec2& pVec);
+	math::vec2 get_linear_velocity() const;
+
+	void set_angular_velocity(math::radians pRads);
+	math::radians get_angular_velocity() const;
+
 	b2Fixture* create_fixture(const b2FixtureDef& pDef);
 
 	// Queues the fixture to be destroyed
@@ -45,6 +51,7 @@ private:
 	void on_physics_reset();
 	void on_preupdate(float);
 	void on_postupdate(float);
+	void on_parent_removed();
 
 	// Get the box2d body type
 	b2BodyType get_b2Body_type() const;
@@ -58,11 +65,18 @@ private:
 	// the transform component.
 	void update_body_transform();
 
+	json serialize_body() const;
+	void deserialize_body();
+
 private:
 	int mType;
 	b2Body* mBody;
 	physics_world_component* mPhysics_world;
 	std::queue<b2Fixture*> mFixture_destruction_queue;
+
+	// Since we can't create a body whenever we want to, we need store
+	// the serialized data for when it is created.
+	json mBody_instance_cache;
 
 	friend class physics_world_component;
 };

@@ -126,12 +126,28 @@ util::ref<object_node> object_node::create_child()
 
 void object_node::add_child(util::ref<object_node> pNode)
 {
-	if (pNode->mParent != this)
-	{
-		pNode->remove_parent();
-		pNode->mParent = this;
-		mChildren.push_back(pNode);
-	}
+	if (pNode == this)
+		return;
+	pNode->remove_parent();
+	pNode->mParent = this;
+	mChildren.push_back(pNode);
+}
+
+void object_node::add_child(util::ref<object_node> pNode, std::size_t pIndex)
+{
+	if (pNode == this)
+		return;
+	pNode->remove_parent();
+	pNode->mParent = this;
+	mChildren.insert(mChildren.begin() + std::min(pIndex, mChildren.size()), pNode);
+}
+
+std::size_t object_node::get_child_index(util::ref<object_node> pNode) const
+{
+	for (std::size_t i = 0; i < mChildren.size(); i++)
+		if (pNode == mChildren[i])
+			return i;
+	return 0;
 }
 
 bool object_node::remove_child(util::ref<object_node> pNode)
@@ -157,11 +173,23 @@ bool object_node::remove_child(std::size_t pIndex)
 void object_node::remove_children()
 {
 	for (util::ref<object_node> i : mChildren)
+	{
 		i->mParent.reset();
+		i->send_down("on_parent_removed");
+	}
 	mChildren.clear();
 }
 
-util::ref<object_node> object_node::get_parent()
+bool object_node::is_child_of(util::ref<object_node> pNode) const
+{
+	if (pNode == get_parent())
+		return true;
+	if (mParent)
+		return get_parent()->is_child_of(pNode);
+	return false;
+}
+
+util::ref<object_node> object_node::get_parent() const
 {
 	return mParent.lock();
 }
@@ -179,6 +207,7 @@ void object_node::remove_parent()
 			}
 		}
 		mParent.reset();
+		send_down("on_parent_removed");
 	}
 }
 

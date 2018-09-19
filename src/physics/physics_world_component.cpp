@@ -41,6 +41,11 @@ void physics_world_component::destroy_body(b2Body * pBody)
 	mBody_destruction_queue.push(pBody);
 }
 
+b2World* physics_world_component::get_world() const
+{
+	return mWorld;
+}
+
 void physics_world_component::on_preupdate(float pDelta)
 {
 	// Update the bodies

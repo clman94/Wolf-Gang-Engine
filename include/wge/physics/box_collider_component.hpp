@@ -21,12 +21,16 @@ public:
 	box_collider_component(core::object_node* pObj);
 	virtual ~box_collider_component();
 
+	virtual json serialize() const override;
+	virtual void deserialize(const json&) override;
+
 	void set_size(const math::vec2& pSize);
 	math::vec2 get_size() const;
 
 private:
 	void on_physics_update_colliders(physics_component* pComponent);
 	void on_physics_reset();
+	void on_parent_removed();
 
 	void update_shape(b2PolygonShape* pShape);
 

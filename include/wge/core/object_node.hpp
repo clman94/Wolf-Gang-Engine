@@ -32,7 +32,9 @@ public:
 		return (*mFactories.find(pId)).second(pNode);
 	}
 
-	template <class T>
+	template <class T,
+		// Requires the "int COMPONENT_ID" member
+		typename = std::enable_if<has_component_id_member<T>::value>::type>
 	void add()
 	{
 		mFactories[T::COMPONENT_ID] = [](object_node* pNode)->component*
@@ -119,6 +121,9 @@ public:
 
 	// Add a child object
 	void add_child(util::ref<object_node> pNode);
+	// Insert a child at a position
+	void add_child(util::ref<object_node> pNode, std::size_t pIndex);
+	std::size_t get_child_index(util::ref<object_node> pNode) const;
 	// Remove a child object by reference. Returns true if successful.
 	bool remove_child(util::ref<object_node> pNode);
 	// Remove a child object by index. Returns true if successful.
@@ -126,8 +131,10 @@ public:
 	// Remove all children
 	void remove_children();
 
+	bool is_child_of(util::ref<object_node> pNode) const;
+
 	// Get parent object
-	util::ref<object_node> get_parent();
+	util::ref<object_node> get_parent() const;
 	// Detach the parent object
 	void remove_parent();
 
@@ -142,7 +149,7 @@ public:
 
 	// Broadcast an event from the top-most parent to the current node.
 	// This is useful in situations where the top-most parent node needs
-	// to take precedence over its children nodes e.g. the physics components.
+	// to take precedence over its children nodes.
 	template<class...Targs>
 	void send_from_top(const std::string& pEvent_name, Targs...pArgs)
 	{

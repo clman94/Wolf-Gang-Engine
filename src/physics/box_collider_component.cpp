@@ -10,12 +10,16 @@ using namespace wge;
 using namespace wge::physics;
 
 box_collider_component::box_collider_component(core::object_node* pObj) :
-	component(pObj)
+	component(pObj),
+	mSize(1, 1)
 {
 	mFixture = nullptr;
 	subscribe_to(pObj, "on_physics_update_colliders", &box_collider_component::on_physics_update_colliders, this);
 	subscribe_to(pObj, "on_physics_reset", &box_collider_component::on_physics_reset, this);
-	mSize = math::vec2(1, 1);
+	subscribe_to(pObj, "on_parent_removed", &box_collider_component::on_parent_removed, this);
+
+	// Requirements
+	pObj->add_component<core::transform_component>();
 }
 
 box_collider_component::~box_collider_component()
@@ -25,6 +29,19 @@ box_collider_component::~box_collider_component()
 		assert(mPhysics_component);
 		mPhysics_component->destroy_fixture(mFixture);
 	}
+}
+
+json box_collider_component::serialize() const
+{
+	json result;
+	result["size"] = { mSize.x, mSize.y };
+	return result;
+}
+
+void box_collider_component::deserialize(const json & pJson)
+{
+	set_size(math::vec2(pJson["size"][0], pJson["size"][1]));
+
 }
 
 void box_collider_component::set_size(const math::vec2 & pSize)
@@ -79,4 +96,14 @@ void box_collider_component::on_physics_reset()
 	// Fixture is expected to be cleaned up my the body or world.
 	mFixture = nullptr;
 	mPhysics_component = nullptr;
+}
+
+void box_collider_component::on_parent_removed()
+{
+	if (mFixture)
+	{
+		mPhysics_component->destroy_fixture(mFixture);
+		mFixture = nullptr;
+		mPhysics_component = nullptr;
+	}
 }

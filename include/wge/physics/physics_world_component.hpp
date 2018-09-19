@@ -12,6 +12,8 @@ class b2World;
 class b2Body;
 struct b2BodyDef;
 
+class renderer;
+
 namespace wge::physics
 {
 
@@ -38,6 +40,8 @@ public:
 
 	b2Body* create_body(const b2BodyDef& pDef);
 	void destroy_body(b2Body* pBody);
+
+	b2World* get_world() const;
 
 private:
 	struct contact
