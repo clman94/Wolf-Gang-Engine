@@ -19,6 +19,7 @@ using json = nlohmann::json;
 #define WGE_COMPONENT(name__, id__) \
 	public: \
 	static constexpr int COMPONENT_ID = id__; \
+	static constexpr const char* COMPONENT_NAME = name__; \
 	virtual int get_id() const override { return id__; } \
 	virtual std::string get_name() const override { return name__; }
 
