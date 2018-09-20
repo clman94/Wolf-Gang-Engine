@@ -11,7 +11,6 @@ class b2Fixture;
 struct b2FixtureDef;
 enum b2BodyType;
 
-
 namespace wge::physics
 {
 
@@ -66,7 +65,8 @@ private:
 	void update_body_transform();
 
 	json serialize_body() const;
-	void deserialize_body();
+	void deserialize_body_from_cache();
+	void serialize_and_cache_body();
 
 private:
 	int mType;

@@ -31,6 +31,11 @@ component* object_node::get_component(int pId) const
 	return nullptr;
 }
 
+void object_node::remove_component(std::size_t pIndex)
+{
+	mComponents.erase(mComponents.begin() + pIndex);
+}
+
 void object_node::remove_components()
 {
 	mComponents.clear();

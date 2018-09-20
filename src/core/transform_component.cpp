@@ -45,7 +45,7 @@ math::vec2 transform_component::get_position() const
 	return mPosition;
 }
 
-void wge::core::transform_component::set_rotaton(const math::radians& pRad)
+void transform_component::set_rotaton(const math::radians& pRad)
 {
 	mRotation = pRad;
 	mTransform_needs_update = true;

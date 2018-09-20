@@ -17,9 +17,10 @@ box_collider_component::box_collider_component(core::object_node* pObj) :
 	subscribe_to(pObj, "on_physics_update_colliders", &box_collider_component::on_physics_update_colliders, this);
 	subscribe_to(pObj, "on_physics_reset", &box_collider_component::on_physics_reset, this);
 	subscribe_to(pObj, "on_parent_removed", &box_collider_component::on_parent_removed, this);
+	subscribe_to(pObj, "on_transform_changed", &box_collider_component::on_transform_changed, this);
 
 	// Requirements
-	pObj->add_component<core::transform_component>();
+	require<core::transform_component>();
 }
 
 box_collider_component::~box_collider_component()
@@ -34,14 +35,29 @@ box_collider_component::~box_collider_component()
 json box_collider_component::serialize() const
 {
 	json result;
-	result["size"] = { mSize.x, mSize.y };
+	result["offset"] = mOffset;
+	result["size"] = mSize;
+	result["rotation"] = mRotation;
 	return result;
 }
 
 void box_collider_component::deserialize(const json & pJson)
 {
-	set_size(math::vec2(pJson["size"][0], pJson["size"][1]));
+	mOffset = pJson["offset"];
+	mSize = pJson["size"];
+	mRotation = pJson["rotation"];
+	update_current_shape();
+}
 
+void box_collider_component::set_offset(const math::vec2 & pOffset)
+{
+	mOffset = pOffset;
+	update_current_shape();
+}
+
+math::vec2 box_collider_component::get_offset() const
+{
+	return mOffset;
 }
 
 void box_collider_component::set_size(const math::vec2 & pSize)
@@ -49,11 +65,7 @@ void box_collider_component::set_size(const math::vec2 & pSize)
 	if (pSize.x > 0 && pSize.y > 0)
 	{
 		mSize = pSize;
-		if (mFixture)
-		{
-			update_shape(dynamic_cast<b2PolygonShape*>(mFixture->GetShape()));
-			mFixture->GetBody()->ResetMassData();
-		}
+		update_current_shape();
 	}
 }
 
@@ -62,12 +74,32 @@ math::vec2 box_collider_component::get_size() const
 	return mSize;
 }
 
+void box_collider_component::set_rotation(math::radians pRads)
+{
+	mRotation = pRads;
+	update_current_shape();
+}
+
+math::radians box_collider_component::get_rotation() const
+{
+	return mRotation;
+}
+
 void box_collider_component::update_shape(b2PolygonShape * pShape)
 {
 	assert(pShape);
-	auto* transform = get_object()->get_component<core::transform_component>();
-	assert(transform);
-	pShape->SetAsBox(mSize.x, mSize.y, b2Vec2(-mSize.x / 2, -mSize.y / 2), transform->get_rotation());
+
+	math::vec2 offset = mSize / 2 + mOffset;
+	pShape->SetAsBox(mSize.x / 2, mSize.y / 2, b2Vec2(offset.x, offset.y), mRotation);
+}
+
+void box_collider_component::update_current_shape()
+{
+	if (mFixture)
+	{
+		update_shape(dynamic_cast<b2PolygonShape*>(mFixture->GetShape()));
+		mFixture->GetBody()->ResetMassData();
+	}
 }
 
 void box_collider_component::on_physics_update_colliders(physics_component * pComponent)
@@ -106,4 +138,9 @@ void box_collider_component::on_parent_removed()
 		mFixture = nullptr;
 		mPhysics_component = nullptr;
 	}
+}
+
+void box_collider_component::on_transform_changed()
+{
+	update_current_shape();
 }

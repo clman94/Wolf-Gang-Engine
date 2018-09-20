@@ -3,6 +3,7 @@
 #include <wge/core/messaging.hpp>
 
 #include <nlohmann/json.hpp>
+#include <wge/util/json_helpers.hpp>
 using json = nlohmann::json;
 
 // Use this in your class to define the needed information the engine
@@ -20,6 +21,14 @@ using json = nlohmann::json;
 	public: \
 	static constexpr int COMPONENT_ID = id__; \
 	static constexpr const char* COMPONENT_NAME = name__; \
+	static constexpr bool COMPONENT_SINGLE_INSTANCE = false; \
+	virtual int get_id() const override { return id__; } \
+	virtual std::string get_name() const override { return name__; }
+#define WGE_COMPONENT_SINGLE_INSTANCE(name__, id__) \
+	public: \
+	static constexpr int COMPONENT_ID = id__; \
+	static constexpr const char* COMPONENT_NAME = name__; \
+	static constexpr bool COMPONENT_SINGLE_INSTANCE = true; \
 	virtual int get_id() const override { return id__; } \
 	virtual std::string get_name() const override { return name__; }
 
@@ -53,9 +62,19 @@ public:
 	virtual int get_id() const = 0;
 
 	// Get the object this component is apart of 
-	object_node* get_object()
+	object_node* get_object() const
 	{
 		return mObject;
+	}
+
+protected:
+	template <typename T>
+	T* require() const
+	{
+		assert(mObject);
+		if (!mObject->has_component<T>())
+			return mObject->add_component<T>();
+		return mObject->get_component<T>();
 	}
 
 private:

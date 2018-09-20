@@ -71,6 +71,13 @@ void physics_component::set_linear_velocity(const math::vec2 & pVec)
 {
 	if (mBody)
 		mBody->SetLinearVelocity({ pVec.x, pVec.y });
+	else
+	{
+		// Create defaults
+		serialize_and_cache_body();
+		mBody_instance_cache["linear-velocity"] = pVec;
+	}
+
 }
 
 math::vec2 physics_component::get_linear_velocity() const
@@ -115,7 +122,7 @@ void physics_component::on_physics_update_bodies(physics_world_component * pComp
 		body_def.userData = get_object();
 		mBody = pComponent->create_body(body_def);
 		if (!mBody_instance_cache.empty())
-			deserialize_body(); // Finally deserialize if it was waiting for the body to be created
+			deserialize_body_from_cache(); // Finally deserialize if it was waiting for the body to be created
 		mBody->ResetMassData();
 		mPhysics_world = pComponent;
 		std::cout << "Body updated\n";
@@ -214,23 +221,30 @@ void physics_component::update_body_transform()
 json physics_component::serialize_body() const
 {
 	json result;
-	result["linear-velocity"] = json::array({
-		mBody->GetLinearVelocity().x,
-		mBody->GetLinearVelocity().y,
-		});
-	result["linear-dampening"] = mBody->GetLinearDamping();
-	result["angular-velocity"] = mBody->GetAngularVelocity();
-	result["angular-dampening"] = mBody->GetAngularDamping();
+	if (mBody)
+	{
+		result["linear-velocity"] = mBody->GetLinearVelocity();
+		result["linear-dampening"] = mBody->GetLinearDamping();
+		result["angular-velocity"] = mBody->GetAngularVelocity();
+		result["angular-dampening"] = mBody->GetAngularDamping();
+	}
+	else
+	{
+		// Create defaults
+		result["linear-velocity"] = { 0.f, 0.f };
+		result["linear-dampening"] = 0.f;
+		result["angular-velocity"] = 0.f;
+		result["angular-dampening"] = 0.f;
+	}
 	return result;
 }
 
-void physics_component::deserialize_body()
+void physics_component::deserialize_body_from_cache()
 {
 	assert(mBody);
 	if (!mBody_instance_cache.empty())
 	{
-		json linear_vel_j = mBody_instance_cache["linear-velocity"];
-		mBody->SetLinearVelocity(b2Vec2(linear_vel_j[0], linear_vel_j[1]));
+		mBody->SetLinearVelocity(mBody_instance_cache["linear-velocity"]);
 		mBody->SetLinearDamping(mBody_instance_cache["linear-dampening"]);
 		mBody->SetAngularVelocity(mBody_instance_cache["angular-velocity"]);
 		mBody->SetLinearDamping(mBody_instance_cache["angular-dampening"]);
@@ -238,4 +252,10 @@ void physics_component::deserialize_body()
 		// We don't need this anymore
 		mBody_instance_cache.clear();
 	}
+}
+
+void physics_component::serialize_and_cache_body()
+{
+	if (mBody_instance_cache.empty())
+		mBody_instance_cache = serialize_body();
 }

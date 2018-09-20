@@ -70,6 +70,7 @@ using json = nlohmann::json;
 #include <imgui/imgui.h>
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
+#include <imgui/imgui_stl.h>
 
 // WGE
 #include <wge/core/object_node.hpp>
@@ -822,13 +823,16 @@ private:
 class sprite_component :
 	public core::component
 {
-	WGE_COMPONENT("Sprite", 12409);
+	WGE_COMPONENT_SINGLE_INSTANCE("Sprite", 12409);
 public:
 	sprite_component(core::object_node* pNode) :
 		component(pNode)
 	{
 		mTexture.load("./mytex.png");
 		subscribe_to(pNode, "on_render", &sprite_component::on_render, this);
+
+		// Requirements
+		require<core::transform_component>();
 	}
 
 	virtual json serialize() const override
@@ -842,7 +846,6 @@ public:
 	{
 		mOffset = math::vec2(pJson["offset"][0], pJson["offset"][1]);
 	}
-
 
 	void on_render(renderer* pRenderer)
 	{
@@ -1452,9 +1455,9 @@ private:
 
 void show_node_tree(util::ref<core::object_node> pNode, editor_component_inspector& pInspector, util::ref<core::object_node>& pSelected)
 {
-	ImGui::PushID(pNode->get_name().c_str());
+	ImGui::PushID(pNode.get());
 
-	bool* open = ImGui::GetStateStorage()->GetBoolRef(ImGui::GetID(pNode->get_name().c_str()));
+	bool* open = ImGui::GetStateStorage()->GetBoolRef(ImGui::GetID(pNode.get()));
 
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
 
@@ -1464,8 +1467,10 @@ void show_node_tree(util::ref<core::object_node> pNode, editor_component_inspect
 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
 		ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
 		ImGui::PushStyleColor(ImGuiCol_BorderShadow, ImVec4(0, 0, 0, 0));
+		ImGui::PushStyleVar(ImGuiStyleVar_::ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 		if (ImGui::ArrowButton("__NodeUnfold", *open ? ImGuiDir_Down : ImGuiDir_Right))
 			*open = !*open; // Toggle open flag
+		ImGui::PopStyleVar();
 		ImGui::PopStyleColor(3);
 		ImGui::SameLine();
 	}
@@ -1478,6 +1483,9 @@ void show_node_tree(util::ref<core::object_node> pNode, editor_component_inspect
 	{
 		core::object_node* ptr = pNode.get();
 		ImGui::SetDragDropPayload("MoveNodeInTree", &ptr, sizeof(void*));
+
+		ImGui::Text(pNode->get_name().c_str());
+
 		ImGui::EndDragDropSource();
 	}
 	if (ImGui::BeginDragDropTarget())
@@ -1491,7 +1499,7 @@ void show_node_tree(util::ref<core::object_node> pNode, editor_component_inspect
 		ImGui::EndDragDropTarget();
 	}
 
-	ImGui::InvisibleButton("__DragBetween", ImVec2(-1, 4));
+	ImGui::InvisibleButton("__DragBetween", ImVec2(-1, 3));
 	if (ImGui::BeginDragDropTarget())
 	{
 		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MoveNodeInTree"))
@@ -1507,8 +1515,8 @@ void show_node_tree(util::ref<core::object_node> pNode, editor_component_inspect
 		}
 		ImGui::EndDragDropTarget();
 	}
+	ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 3);
 
-	ImGui::PopStyleVar(); // ImGuiStyleVar_ItemSpacing
 
 	if (*open)
 	{
@@ -1519,7 +1527,7 @@ void show_node_tree(util::ref<core::object_node> pNode, editor_component_inspect
 		ImGui::TreePop();
 		if (pNode->get_child_count() > 0 && *open)
 		{
-			ImGui::InvisibleButton("__DragAfterChildrenInParent", ImVec2(-1, 4));
+			ImGui::InvisibleButton("__DragAfterChildrenInParent", ImVec2(-1, 3));
 			if (ImGui::BeginDragDropTarget())
 			{
 				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MoveNodeInTree"))
@@ -1531,8 +1539,11 @@ void show_node_tree(util::ref<core::object_node> pNode, editor_component_inspect
 				}
 				ImGui::EndDragDropTarget();
 			}
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 3);
 		}
 	}
+
+	ImGui::PopStyleVar(); // ImGuiStyleVar_ItemSpacing
 
 	ImGui::PopID();
 }
@@ -1862,7 +1873,31 @@ int main()
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-		if (ImGui::Begin("Object Inspector", NULL, ImGuiWindowFlags_MenuBar))
+		if (ImGui::Begin("Game"))
+		{
+			ImGui::Text("FPS: %f", 1.f / delta);
+
+			if (ImGui::Button("Serialize"))
+			{
+				json j = root_node->serialize();
+				std::ofstream{ "./serialization_data.json" } << j.dump(2);
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Deserialize"))
+			{
+				json deserial;
+				std::ifstream{ "./serialization_data.json" } >> deserial;
+				root_node->remove_children();
+				root_node->remove_components();
+				root_node->deserialize(deserial, factory);
+				selected_object.reset();
+			}
+			ImGui::Checkbox("Run", &updates_enabled);
+		}
+		ImGui::End();
+
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, ImGui::GetStyle().WindowPadding.y));
+		if (ImGui::Begin("Objects", NULL, ImGuiWindowFlags_MenuBar))
 		{
 			if (ImGui::BeginMenuBar())
 			{
@@ -1873,42 +1908,58 @@ int main()
 						auto node = core::object_node::create();
 						node->set_name("New 2D Object");
 						node->add_component<core::transform_component>();
-						root_node->add_child(node);
+						if (selected_object)
+							selected_object->add_child(node);
+						else
+							root_node->add_child(node);
 					}
 					ImGui::EndMenu();
 				}
 				ImGui::EndMenuBar();
 			}
-			ImGui::Text("FPS: %f", 1.f / delta);
-
-			if (ImGui::Button("Serialize"))
-			{
-				json j = root_node->serialize();
-				std::ofstream{ "./serialization_data.json" } << j.dump(2);
-				selected_object.reset();
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Deserialize"))
-			{
-				json deserial;
-				std::ifstream{ "./serialization_data.json" } >> deserial;
-				root_node->remove_children();
-				root_node->remove_components();
-				root_node->deserialize(deserial, factory);
-			}
-			ImGui::Checkbox("Run", &updates_enabled);
 			show_node_tree(root_node, inspector_guis, selected_object);
 		}
 		ImGui::End();
+		ImGui::PopStyleVar();
 
 		ImGui::Begin("Component Inspector");
 		if (selected_object)
 		{
+			std::string name = selected_object->get_name();
+			if (ImGui::InputText("Name", &name))
+				selected_object->set_name(name);
+
 			for (std::size_t i = 0; i < selected_object->get_component_count(); i++)
 			{
+				bool delete_component = false;
 				core::component* comp = selected_object->get_component_index(i);
+				ImGui::PushID(comp);
 				if (ImGui::CollapsingHeader(comp->get_name().c_str()))
+				{
+					ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4, 4));
+					ImGui::BeginChild(ImGui::GetID("__Actions"),
+						ImVec2(0, ImGui::GetStyle().WindowPadding.y * 2
+							+ ImGui::GetStyle().FramePadding.y * 2
+							+ ImGui::GetFontSize()), true);
+
+					ImGui::Dummy(ImVec2(ImGui::GetWindowContentRegionWidth()
+						- (ImGui::CalcTextSize("Delete ").x
+						+ ImGui::GetStyle().WindowPadding.x * 2
+						+ ImGui::GetStyle().FramePadding.x * 2), 1));
+					ImGui::SameLine();
+					if (ImGui::Button("Delete"))
+					{
+						delete_component = true;
+					}
+
+					ImGui::EndChild();
+					ImGui::PopStyleVar();
+
 					inspector_guis.on_gui(comp);
+				}
+				ImGui::PopID();
+				if (delete_component)
+					selected_object->remove_component(i--);
 			}
 
 			if (ImGui::BeginCombo("###Add Component", "Add Component"))

@@ -66,7 +66,7 @@ public:
 		typename = std::enable_if<std::is_base_of<component, T>::value && has_component_id_member<T>::value>::type>
 	T* add_component()
 	{
-		if (has_component<T>())
+		if (T::COMPONENT_SINGLE_INSTANCE && has_component<T>())
 			return nullptr;
 		T* ptr = new T(this);
 		mComponents.push_back(std::unique_ptr<component>(static_cast<component*>(ptr)));
@@ -95,6 +95,7 @@ public:
 		return static_cast<T*>(get_component(T::COMPONENT_ID));
 	}
 
+	void remove_component(std::size_t pIndex);
 	void remove_components();
 	
 	// Serialize this node. This will include all children nodes.

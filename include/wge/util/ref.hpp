@@ -180,6 +180,18 @@ private:
 	T* mPtr;
 };
 
+template <typename T>
+bool operator ==(const T * pPtr, const ref<T>& pRef)
+{
+	return pRef == pPtr;
+}
+
+template <typename T>
+bool operator !=(const T * pPtr, const ref<T>& pRef)
+{
+	return pRef != pPtr;
+}
+
 template<class Tto, class Tfrom>
 ref<Tto> cast_ref(ref<Tfrom> pRef)
 {
