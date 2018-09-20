@@ -83,11 +83,13 @@ set(IMGUI_INCLUDE_DIR "3rdparty/imgui/include")
 include_directories(${IMGUI_INCLUDE_DIR})
 set(IMGUI_HEADERS
 	"${IMGUI_INCLUDE_DIR}/imgui/imgui.h"
+	"${IMGUI_INCLUDE_DIR}/imgui/imgui_stl.h"
 	"${IMGUI_INCLUDE_DIR}/imgui/imgui_impl_glfw.h"
 	"${IMGUI_INCLUDE_DIR}/imgui/imgui_impl_opengl3.h"
 	)
 set(IMGUI_SOURCES
 	"${IMGUI_INCLUDE_DIR}/imgui/imgui.cpp"
+	"${IMGUI_INCLUDE_DIR}/imgui/imgui_stl.cpp"
 	"${IMGUI_INCLUDE_DIR}/imgui/imgui_draw.cpp"
 	"${IMGUI_INCLUDE_DIR}/imgui/imgui_style_editor.cpp"
 	"${IMGUI_INCLUDE_DIR}/imgui/imgui_impl_glfw.cpp"
