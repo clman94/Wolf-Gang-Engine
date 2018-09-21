@@ -22,6 +22,8 @@ struct has_component_id_member <T, decltype((void)T::COMPONENT_ID, 0)> : std::tr
 class component;
 class object_node;
 
+// Registers factories for components of different types. This is used
+// by the object_node class to create components in the deserializing process.
 class component_factory
 {
 public:
@@ -89,6 +91,8 @@ public:
 	component* get_component(const std::string& pName);
 	// Get first component by id
 	component* get_component(int pId) const;
+	// Get component by index
+	component* get_component_index(std::size_t pIndex) const;
 	// Get first component by type
 	template<class T,
 		// Requires the "int COMPONENT_ID" COMPONENT_ID member
@@ -97,19 +101,19 @@ public:
 	{
 		return static_cast<T*>(get_component(T::COMPONENT_ID));
 	}
-
+	// Remove component at index
 	void remove_component(std::size_t pIndex);
+	// Remove all components
 	void remove_components();
+	// Get total count of components connected to this object
+	std::size_t get_component_count() const;
 	
 	// Serialize this node. This will include all children nodes.
 	json serialize() const;
-
+	// Deserialize to this node. This will create all children nodes needed.
+	// Since objects don't know about other components, you have to pass in a factory
+	// to create those components for it.
 	void deserialize(const json& pJson, const component_factory& pFactory);
-
-	// Get component by index
-	component* get_component_index(std::size_t pIndex) const;
-	// Get total count of components connected to this object
-	std::size_t get_component_count() const;
 
 	// Set the name of this object
 	void set_name(const std::string& pName);

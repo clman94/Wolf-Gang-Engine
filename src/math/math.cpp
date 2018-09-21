@@ -64,7 +64,7 @@ vec2& vec2::ceil()
 	return *this;
 }
 
-vec2& vec2::ciel_magnitude()
+vec2& vec2::ceil_magnitude()
 {
 	float mag = magnitude();
 	*this *= math::ceil(mag) / mag;

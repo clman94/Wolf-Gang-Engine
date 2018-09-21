@@ -1712,6 +1712,251 @@ void EndChildWithHeader()
 
 }
 
+namespace wge::math
+{
+class rect
+{
+public:
+	union {
+		struct {
+			union{
+				vec2 position;
+				struct {
+					float x, y;
+				};
+			};
+			union {
+				vec2 size;
+				struct {
+					float width, height;
+				};
+			};
+		};
+		float components[4];
+	};
+
+	rect() :
+		position(0, 0), size(0, 0)
+	{}
+
+	rect(float pX, float pY, float pWidth, float pHeight) :
+		position(pX, pY), size(pWidth, pHeight)
+	{}
+
+	math::vec2 get_corner(unsigned int pIndex) const
+	{
+		switch (pIndex % 4)
+		{
+		default:
+		case 0: return position;
+		case 1: return position + math::vec2(width, 0);
+		case 2: return position + size;
+		case 3: return position + math::vec2(0, height);
+		}
+	}
+
+	bool intersects(const math::vec2& pVec) const
+	{
+		return pVec.x >= x && pVec.x < x + width
+			&& pVec.y >= y && pVec.y < y + height;
+	}
+};
+
+}
+struct editor_state
+{
+	math::vec2 offset;
+	math::vec2 scale;
+	math::vec2 mouse_position; // In pixels
+	math::vec2 mouse_editor_position; // Scaled and offsetted
+	ImGuiID active_dragger_id{ 0 };
+
+	math::vec2 calc_absolute_position(math::vec2 pPos) const
+	{
+		return pPos * scale + offset;
+	}
+};
+
+std::vector<editor_state> gEditor_states;
+editor_state* gCurrent_editor_state = nullptr;
+
+void begin_editor(const char* pStr_id, math::vec2 pCursor_offset, math::vec2 pScale)
+{
+	ImGui::PushID(pStr_id);
+
+	// First time
+	if (ImGui::GetStateStorage()->GetInt(ImGui::GetID("StateIndex"), -1) == -1)
+	{
+		ImGui::GetStateStorage()->SetInt(ImGui::GetID("StateIndex"), gEditor_states.size());
+		editor_state state;
+		gEditor_states.emplace_back();
+	}
+	
+	// Update the state
+	int* index = ImGui::GetStateStorage()->GetIntRef(ImGui::GetID("StateIndex"), gEditor_states.size());
+	gCurrent_editor_state = &gEditor_states[*index];
+	gCurrent_editor_state->offset = pCursor_offset;
+	gCurrent_editor_state->scale = pScale;
+	gCurrent_editor_state->mouse_position = { ImGui::GetMousePos().x, ImGui::GetMousePos().y };
+	gCurrent_editor_state->mouse_editor_position = (gCurrent_editor_state->mouse_position - pCursor_offset) / pScale;
+}
+
+void end_editor()
+{
+	assert(gCurrent_editor_state);
+	gCurrent_editor_state = nullptr;
+	ImGui::PopID();
+}
+
+bool drag_behavior(ImGuiID pID, bool pHovered)
+{
+	assert(gCurrent_editor_state);
+	bool dragging = gCurrent_editor_state->active_dragger_id == pID;
+	if (pHovered && ImGui::IsItemClicked(0) && gCurrent_editor_state->active_dragger_id == 0)
+	{
+		gCurrent_editor_state->active_dragger_id = pID; // Start drag
+		dragging = true;
+	}
+	else if (!ImGui::IsMouseDown(0) && dragging)
+	{
+		gCurrent_editor_state->active_dragger_id = 0; // End drag
+		dragging = true; // Return true for one more frame after the mouse is released
+		                 // so the user can handle mouse-released events.
+	}
+	return dragging;
+}
+
+bool drag_behavior(ImGuiID pID, bool pHovered, float* pX, float* pY)
+{
+	bool dragging = drag_behavior(pID, pHovered);
+	if (dragging)
+	{
+		if (pX)
+			*pX += ImGui::GetIO().MouseDelta.x / gCurrent_editor_state->scale.x;
+		if (pY)
+			*pY += ImGui::GetIO().MouseDelta.y / gCurrent_editor_state->scale.y;
+	}
+	return dragging;
+}
+
+bool drag_behavior(ImGuiID pID, bool pHovered, math::vec2* pVec)
+{
+	return drag_behavior(pID, pHovered, &pVec->x, &pVec->y);
+}
+
+bool drag_circle(const char* pStr_id, math::vec2 pPos, math::vec2* pDelta, float pRadius)
+{
+	assert(gCurrent_editor_state);
+	const ImGuiID id = ImGui::GetID(pStr_id);
+	const math::vec2 center = gCurrent_editor_state->calc_absolute_position(pPos);
+	const bool hovered = gCurrent_editor_state->mouse_position.distance(center) <= pRadius;
+	const bool dragging = drag_behavior(id, hovered, pDelta);
+
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	dl->AddCircle({ center.x, center.y }, pRadius, ImGui::GetColorU32({ 1, 1, 0, 0.5f }));
+
+	return dragging;
+}
+
+bool drag_circle(const char* pStr_id, math::vec2* pDelta, float pRadius)
+{
+	return drag_circle(pStr_id, *pDelta, pDelta, pRadius);
+}
+
+bool drag_rect(const char* pStr_id, math::rect* pRect)
+{
+	const ImGuiID id = ImGui::GetID(pStr_id);
+	const bool hovered = pRect->intersects(gCurrent_editor_state->mouse_editor_position);
+	const bool dragging = drag_behavior(id, hovered, &pRect->position);
+
+	const math::vec2 min = gCurrent_editor_state->calc_absolute_position(pRect->position);
+	const math::vec2 max = gCurrent_editor_state->calc_absolute_position(pRect->position + pRect->size);
+
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	dl->AddRect({ min.x, min.y }, { max.x, max.y }, ImGui::GetColorU32({ 1, 1, 0, 0.5f }));
+
+	return dragging;
+}
+
+bool drag_resizable_rect(const char* pStr_id, math::rect* pRect)
+{
+	bool dragging = false;
+
+	ImGui::PushID(pStr_id);
+
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	dl->ChannelsSplit(2);
+	dl->ChannelsSetCurrent(1);
+
+	math::vec2 topleft;
+	if (drag_circle("TopLeft", pRect->position, &topleft, 6))
+	{
+		dragging = true;
+		pRect->position += topleft;
+		pRect->size -= topleft;
+	}
+
+	dragging |= drag_circle("BottomRight", pRect->get_corner(2), &pRect->size, 6);
+
+	math::vec2 topright;
+	if (drag_circle("TopRight", pRect->get_corner(1),  &topright, 6))
+	{
+		dragging = true;
+		pRect->y += topright.y;
+		pRect->width += topright.x;
+		pRect->height -= topright.y;
+	}
+
+	math::vec2 bottomleft;
+	if (drag_circle("BottomLeft", pRect->get_corner(3), &bottomleft, 6))
+	{
+		dragging = true;
+		pRect->x += bottomleft.x;
+		pRect->width -= bottomleft.x;
+		pRect->height += bottomleft.y;
+	}
+
+	math::vec2 top;
+	if (drag_circle("Top", pRect->position + math::vec2(pRect->width / 2, 0), &top, 6))
+	{
+		dragging = true;
+		pRect->y += top.y;
+		pRect->height -= top.y;
+	}
+
+	math::vec2 bottom;
+	if (drag_circle("Bottom", pRect->position + math::vec2(pRect->width / 2, pRect->height), &bottom, 6))
+	{
+		dragging = true;
+		pRect->height += bottom.y;
+	}
+
+	math::vec2 left;
+	if (drag_circle("Left", pRect->position + math::vec2(0, pRect->height / 2), &left, 6))
+	{
+		dragging = true;
+		pRect->x += left.x;
+		pRect->width -= left.x;
+	}
+
+	math::vec2 right;
+	if (drag_circle("Right", pRect->position + math::vec2(pRect->width, pRect->height / 2), &right, 6))
+	{
+		dragging = true;
+		pRect->width += right.x;
+	}
+
+	dl->ChannelsSetCurrent(0);
+
+	dragging |= drag_rect("RectMove", pRect);
+
+	dl->ChannelsMerge();
+
+	ImGui::PopID();
+
+	return dragging;
+}
+
 int main()
 {
 	glfwInit();
@@ -1867,7 +2112,6 @@ int main()
 			collider->set_size(math::vec2(200, 10));
 			root_node->add_child(node3);
 		}
-
 	}
 
 	core::component_factory factory;
@@ -2029,7 +2273,6 @@ int main()
 		}
 		ImGui::End();
 
-
 		ImGui::Begin("Viewport");
 		//float y_offset = ImGui::GetCursorPos().y - ImGui::GetWindowPos().y;
 
@@ -2049,7 +2292,6 @@ int main()
 
 		if (ImGui::CollapsingHeader("Style Editor"))
 			ImGui::ShowStyleEditor();
-
 
 		if (ImGui::CollapsingHeader("AngelScript Test"))
 		{
@@ -2071,6 +2313,91 @@ int main()
 		// Send renderer events
 		root_node->send_down("on_render", &myrenderer);
 		myrenderer.render();
+		
+
+		if (ImGui::Begin("Test Bars", nullptr, ImGuiWindowFlags_HorizontalScrollbar))
+		{
+			float* zoom = ImGui::GetStateStorage()->GetFloatRef(ImGui::GetID("_Zoom"), 0);
+
+			const ImVec2 last_cursor = ImGui::GetCursorPos();
+			ImGui::BeginGroup();
+
+			const float scale = std::powf(2, (*zoom));
+			const ImVec2 image_size((float)myframebuffer.get_width()*scale, (float)myframebuffer.get_height()*scale);
+
+			// Top and left padding
+			ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
+			ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
+			ImGui::SameLine();
+
+			const ImVec2 image_position = ImGui::GetCursorScreenPos();
+			ImGui::Image(myframebuffer, image_size);
+
+			// Right and bottom padding
+			ImGui::SameLine();
+			ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
+			ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
+			ImGui::EndGroup();
+
+			// Draw grid
+			if (*zoom > 2)
+			{
+				// Horizontal lines
+				ImDrawList* dl = ImGui::GetWindowDrawList();
+				for (float i = 0; i < myframebuffer.get_width(); i++)
+				{
+					const float x = image_position.x + i * scale;
+					if (x > ImGui::GetWindowPos().x && x < ImGui::GetWindowPos().x + ImGui::GetWindowWidth())
+						dl->AddLine(ImVec2(x, image_position.y),
+							ImVec2(x, image_position.y + image_size.y),
+							ImGui::GetColorU32(ImVec4(0, 1, 1, 0.2f)));
+				}
+
+				// Vertical lines
+				for (float i = 0; i < myframebuffer.get_height(); i++)
+				{
+					const float y = image_position.y + i * scale;
+					if (y > ImGui::GetWindowPos().y && y < ImGui::GetWindowPos().y + ImGui::GetWindowHeight())
+						dl->AddLine(ImVec2(image_position.x, y),
+							ImVec2(image_position.x + image_size.x, y),
+							ImGui::GetColorU32(ImVec4(0, 1, 1, 0.2f)));
+				}
+			}
+
+			// Overlap with an invisible button to recieve input
+			ImGui::SetCursorPos(last_cursor);
+			ImGui::InvisibleButton("_Input", ImVec2(image_size.x + ImGui::GetWindowWidth(), image_size.y + ImGui::GetWindowHeight()));
+			begin_editor("_SomeEditor", { image_position.x, image_position.y }, { scale, scale });
+			static math::rect rect_drag_test(0, 0, 100, 100);
+
+			drag_resizable_rect("RectDrag", &rect_drag_test);
+
+			end_editor();
+			
+			if (ImGui::IsItemHovered())
+			{
+				// Zoom with ctrl and mousewheel
+				if (ImGui::GetIO().KeyCtrl && ImGui::GetIO().MouseWheel != 0)
+				{
+					*zoom += ImGui::GetIO().MouseWheel;
+
+					const float scale = std::powf(2, (*zoom)) * (ImGui::GetIO().MouseWheel > 0 ? 1 : -1);
+					ImGui::SetScrollX(ImGui::GetScrollX() + (ImGui::GetScrollX() * scale) / *zoom);
+					ImGui::SetScrollY(ImGui::GetScrollY() + (ImGui::GetScrollY() * scale) / *zoom);
+				}
+				// Hold middle mouse button to scroll
+				else if (ImGui::IsMouseDown(2))
+				{
+					ImGui::SetScrollX(ImGui::GetScrollX() - ImGui::GetIO().MouseDelta.x);
+					ImGui::SetScrollY(ImGui::GetScrollY() - ImGui::GetIO().MouseDelta.y);
+				}
+				else if (ImGui::IsMouseDown(0))
+				{
+					
+				}
+			}
+		}
+		ImGui::End();
 
 		// Single master window test
 		/*ImGui::SetNextWindowPos(ImVec2(0, 0));

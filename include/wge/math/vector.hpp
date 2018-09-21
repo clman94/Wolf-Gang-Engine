@@ -19,6 +19,7 @@ public:
 		};
 		float components[2];
 	};
+
 public:
 	constexpr vec2() :
 		x(0),
@@ -46,7 +47,7 @@ public:
 	vec2& floor();
 	vec2& floor_magnitude();
 	vec2& ceil();
-	vec2& ciel_magnitude();
+	vec2& ceil_magnitude();
 	vec2& round();
 	vec2& round_magnitude();
 
