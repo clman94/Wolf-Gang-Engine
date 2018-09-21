@@ -105,6 +105,11 @@ vec2 vec2::operator / (const vec2& pR) const
 	return { x / pR.x, y / pR.y };
 }
 
+vec2 vec2::operator-() const
+{
+	return { -x, -y };
+}
+
 vec2 vec2::operator * (const float& pR) const
 {
 	return { x * pR, y * pR };

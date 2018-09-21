@@ -6,6 +6,9 @@ namespace wge
 {
 namespace math
 {
+// Placeholders for swizzling
+constexpr struct _x_t {} _x;
+constexpr struct _y_t {} _y;
 
 class vec2
 {
@@ -17,15 +20,15 @@ public:
 		float components[2];
 	};
 public:
-	vec2() :
+	constexpr vec2() :
 		x(0),
 		y(0)
 	{}
-	vec2(float pX, float pY) :
+	constexpr vec2(float pX, float pY) :
 		x(pX),
 		y(pY)
 	{}
-	vec2(const vec2& pCopy) :
+	constexpr vec2(const vec2& pCopy) :
 		x(pCopy.x),
 		y(pCopy.y)
 	{}
@@ -53,6 +56,8 @@ public:
 	vec2 operator * (const vec2& pR) const;
 	vec2 operator / (const vec2& pR) const;
 
+	vec2 operator - () const;
+
 	// Scalar operations
 	vec2 operator * (const float& pR) const;
 	vec2 operator / (const float& pR) const;
@@ -68,8 +73,37 @@ public:
 	vec2& operator *= (const float& pR);
 	vec2& operator /= (const float& pR);
 
+	// Returns format "([x], [y])"
 	std::string to_string() const;
+
+	template <typename Tx, typename Ty>
+	constexpr vec2 swizzle(Tx pX, Ty pY) const
+	{
+		return math::swizzle(*this, pX, pY);
+	}
 };
+
+template <typename Tx, typename Ty>
+constexpr vec2 swizzle(const vec2& pVec, Tx pX, Ty pY)
+{
+	vec2 result;
+
+	if constexpr (std::is_same<Tx, _x_t>::value)
+		result.x = pVec.x;
+	else if constexpr (std::is_same<Tx, _y_t>::value)
+		result.x = pVec.y;
+	else
+		result.x = static_cast<float>(pX);
+
+	if constexpr (std::is_same<Ty, _x_t>::value)
+		result.y = pVec.x;
+	else if constexpr (std::is_same<Ty, _y_t>::value)
+		result.y = pVec.y;
+	else
+		result.y = static_cast<float>(pY);
+
+	return result;
+}
 
 template<>
 inline vec2 normalize<vec2>(const vec2& a)

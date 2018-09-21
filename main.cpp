@@ -88,6 +88,7 @@ using json = nlohmann::json;
 #include <wge/physics/box_collider_component.hpp>
 #include <wge/physics/physics_component.hpp>
 #include <wge/physics/physics_world_component.hpp>
+#include <wge/math/anchor.hpp>
 using namespace wge;
 
 #include <Box2D/Box2D.h>
@@ -857,19 +858,20 @@ public:
 
 		batch.set_texture(&mTexture);
 
-		vertex_2d* verts = batch.push_quad();
+		const math::vec2 texture_size(mTexture.get_width(), mTexture.get_height());
 
+		vertex_2d* verts = batch.push_quad();
 		verts[0].position = math::vec2(0, 0);
 		verts[0].uv = math::vec2(0, 0);
-		verts[1].position = math::vec2(100, 0);
+		verts[1].position = texture_size.swizzle(math::_x, 0);
 		verts[1].uv = math::vec2(1, 0);
-		verts[2].position = math::vec2(100, 100);
+		verts[2].position = texture_size;
 		verts[2].uv = math::vec2(1, 1);
-		verts[3].position = math::vec2(0, 100);
+		verts[3].position = texture_size.swizzle(0, math::_y);
 		verts[3].uv = math::vec2(0, 1);
 
 		for (int i = 0; i < 4; i++)
-			verts[i].position = transform->get_absolute_transform() * (verts[i].position + mOffset);
+			verts[i].position = transform->get_absolute_transform() * (verts[i].position + (mAnchor * texture_size) + mOffset);
 
 		pRenderer->push_batch(*batch.get_batch());
 	}
@@ -884,9 +886,19 @@ public:
 		mOffset = pOffset;
 	}
 
+	math::vec2 get_anchor() const
+	{
+		return mAnchor;
+	}
+
+	void set_anchor(const math::vec2& pRatio)
+	{
+		mAnchor = pRatio;
+	}
+
 private:
 	texture mTexture;
-	math::vec2 mOffset;
+	math::vec2 mOffset, mAnchor{ math::anchor::topleft };
 };
 
 class physics_debug_component :
