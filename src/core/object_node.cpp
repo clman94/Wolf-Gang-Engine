@@ -126,8 +126,7 @@ void object_node::deserialize(const json& pJson, const component_factory& pFacto
 {
 	mName = pJson["name"];
 
-	const json& components = pJson["components"];
-	for (const json& i : components)
+	for (const json& i : pJson["components"])
 	{
 		component* c = pFactory.create(i["id"], this);
 		c->set_name(i["name"]);
@@ -135,8 +134,7 @@ void object_node::deserialize(const json& pJson, const component_factory& pFacto
 		mComponents.emplace_back(c);
 	}
 
-	const json& children = pJson["children"];
-	for (const json& i : children)
+	for (const json& i : pJson["children"])
 	{
 		auto obj = object_node::create();
 		obj->deserialize(i, pFactory);

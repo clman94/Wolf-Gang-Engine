@@ -671,9 +671,8 @@ private:
 class renderer
 {
 public:
-	void initialize(int pFramebuffer_width, int pFramebuffer_height)
+	void initialize()
 	{
-		mFramebuffer.create(pFramebuffer_width, pFramebuffer_height);
 		mShader_texture = load_shaders(
 			"./editor/shaders/vert_texture.glsl",
 			"./editor/shaders/frag_texture.glsl"
@@ -699,11 +698,6 @@ public:
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6, NULL, GL_STATIC_DRAW);
 	}
 
-	void set_framebuffer_size(int pWidth, int pHeight)
-	{
-		mFramebuffer.resize(pWidth, pHeight);
-	}
-
 	void push_batch(const render_batch_2d& pBatch)
 	{
 		mBatches.push_back(pBatch);
@@ -711,17 +705,16 @@ public:
 
 	void render()
 	{
-
-		mFramebuffer.begin_framebuffer();
+		mFramebuffer->begin_framebuffer();
 
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT);
-		glViewport(0, 0, mFramebuffer.get_width(), mFramebuffer.get_height());
+		glViewport(0, 0, mFramebuffer->get_width(), mFramebuffer->get_height());
 
 		// Create the projection matrix
 		mProjection_matrix =
-			math::ortho(0, static_cast<float>(mFramebuffer.get_width()),
-				0, static_cast<float>(mFramebuffer.get_height()));
+			math::ortho(0, static_cast<float>(mFramebuffer->get_width()),
+				0, static_cast<float>(mFramebuffer->get_height()));
 
 		// Render the batches
 		sort_batches();
@@ -729,11 +722,16 @@ public:
 			render_batch(i);
 
 		// Cleanup
-		mFramebuffer.end_framebuffer();
+		mFramebuffer->end_framebuffer();
 		mBatches.clear();
 	}
 
-	const framebuffer& get_framebuffer() const
+	void set_framebuffer(framebuffer* pFramebuffer)
+	{
+		mFramebuffer = pFramebuffer;
+	}
+
+	framebuffer* get_framebuffer() const
 	{
 		return mFramebuffer;
 	}
@@ -813,7 +811,7 @@ private:
 	}
 
 private:
-	framebuffer mFramebuffer;
+	framebuffer* mFramebuffer;
 	GLuint mShader_texture, mShader_color;
 	GLuint mVertex_buffer, mElement_buffer, mVAO_id;
 	math::mat44 mProjection_matrix;
@@ -1544,7 +1542,6 @@ void show_node_tree(util::ref<core::object_node> pNode, editor_component_inspect
 	}
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 3);
 
-
 	if (*open)
 	{
 		ImGui::TreePush();
@@ -1881,8 +1878,11 @@ int main()
 	factory.add<sprite_component>();
 	factory.add<physics_debug_component>();
 
+	framebuffer myframebuffer;
+	myframebuffer.create(200, 200);
 	renderer myrenderer;
-	myrenderer.initialize(200, 200);
+	myrenderer.initialize();
+	myrenderer.set_framebuffer(&myframebuffer);
 
 	bool updates_enabled = false;
 
@@ -1978,6 +1978,7 @@ int main()
 					ImVec2(0, (ImGui::GetStyle().WindowPadding.y * 2
 						+ ImGui::GetStyle().FramePadding.y * 2
 						+ ImGui::GetFontSize()) * 2), true);
+
 				bool open = collapsing_arrow("CollapsingArrow");
 
 				ImGui::SameLine();
@@ -2036,11 +2037,11 @@ int main()
 		float width = ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x*2;
 		float height = ImGui::GetWindowHeight() - ImGui::GetCursorPos().y - ImGui::GetStyle().WindowPadding.y;
 
-		if (myrenderer.get_framebuffer().get_width() != width
-			|| myrenderer.get_framebuffer().get_height() != height)
-			myrenderer.set_framebuffer_size(width, height);
+		if (myframebuffer.get_width() != width
+			|| myframebuffer.get_height() != height)
+			myframebuffer.resize(width, height);
 
-		ImGui::Image(myrenderer.get_framebuffer(), ImVec2(width, height));
+		ImGui::Image(myframebuffer, ImVec2(width, height));
 
 		ImGui::End();
 
