@@ -603,25 +603,24 @@ struct render_batch_2d
 	// Texture associated with this batch.
 	// If nullptr, the primitives will be drawn with
 	// a flat color.
-	texture* rendertexture;
+	texture* rendertexture{ nullptr };
 
-	int layer;
+	// This is the layer in which this batch will be drawn.
+	// Batches with lower values are closer to the forground
+	// and higher values are closer to the background.
+	int layer{ 0 };
 
-	enum {
+	enum primitive_type
+	{
 		type_triangles = GL_TRIANGLES,
 		type_linestrip = GL_LINE_STRIP,
 		type_triangle_fan = GL_TRIANGLE_FAN,
 	};
-	int type;
+	// Primitive type to be drawn
+	primitive_type type{ type_triangles };
 
 	std::vector<unsigned int> indexes;
 	std::vector<vertex_2d> vertices;
-
-	render_batch_2d() :
-		rendertexture(nullptr),
-		type(type_triangles),
-		layer(0)
-	{}
 };
 
 class batch_builder
@@ -636,8 +635,8 @@ public:
 		mBatch.rendertexture = pTexture;
 	}
 
-	// Returns a pointer to 4 vertices
-	vertex_2d* push_quad()
+	// Add 4 vertices as a quad
+	void add_quad(const vertex_2d const* pBuffer)
 	{
 		std::size_t start_index = mBatch.vertices.size();
 
@@ -654,9 +653,10 @@ public:
 		mBatch.indexes.push_back(start_index + 3);
 		mBatch.indexes.push_back(start_index);
 
-		// Create the new vertices and return the pointer to the first one
+		// Create the new vertices and set them
 		mBatch.vertices.resize(mBatch.vertices.size() + 4);
-		return &mBatch.vertices[start_index];
+		for (std::size_t i = 0; i < 4; i++)
+			mBatch.vertices[start_index + i] = pBuffer[i];
 	}
 
 	render_batch_2d* get_batch()
@@ -855,12 +855,11 @@ public:
 			return;
 
 		batch_builder batch;
-
 		batch.set_texture(&mTexture);
 
 		const math::vec2 texture_size(mTexture.get_width(), mTexture.get_height());
 
-		vertex_2d* verts = batch.push_quad();
+		vertex_2d verts[4];
 		verts[0].position = math::vec2(0, 0);
 		verts[0].uv = math::vec2(0, 0);
 		verts[1].position = texture_size.swizzle(math::_x, 0);
@@ -870,8 +869,11 @@ public:
 		verts[3].position = texture_size.swizzle(0, math::_y);
 		verts[3].uv = math::vec2(0, 1);
 
+		// Transform them
 		for (int i = 0; i < 4; i++)
-			verts[i].position = transform->get_absolute_transform() * (verts[i].position + (mAnchor * texture_size) + mOffset);
+			verts[i].position = transform->get_absolute_transform() * (verts[i].position + (-mAnchor * texture_size) + mOffset);
+
+		batch.add_quad(verts);
 
 		pRenderer->push_batch(*batch.get_batch());
 	}
@@ -939,7 +941,7 @@ private:
 	{
 		std::list<render_batch_2d> batches;
 
-		void create_polygon_batch(const b2Vec2* vertices, int32 vertexCount, const b2Color& pColor, int type, bool connect_end = true)
+		void create_polygon_batch(const b2Vec2* vertices, int32 vertexCount, const b2Color& pColor, render_batch_2d::primitive_type type, bool connect_end = true)
 		{
 			render_batch_2d batch;
 			batch.type = type;
@@ -957,7 +959,7 @@ private:
 			batches.push_back(batch);
 		}
 
-		void create_circle_batch(const b2Vec2& center, float32 radius, const b2Color& pColor, int type)
+		void create_circle_batch(const b2Vec2& center, float32 radius, const b2Color& pColor, render_batch_2d::primitive_type type)
 		{
 			b2Vec2 verts[10];
 			for (int i = 0; i < sizeof(verts); i++)
@@ -998,7 +1000,7 @@ private:
 
 		virtual void DrawTransform(const b2Transform& xf)
 		{
-
+			// TODO
 		}
 
 		virtual void DrawPoint(const b2Vec2& p, float32 size, const b2Color& pColor)
