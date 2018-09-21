@@ -5,6 +5,51 @@
 using namespace wge;
 using namespace wge::core;
 
+inline bool starts_with(const std::string& pStr, const std::string& pPrefix)
+{
+	if (pStr.length() < pPrefix.length())
+		return false;
+	return std::string_view(pStr).substr(0, pPrefix.length()) == pPrefix;
+}
+
+// Generates a uniquely numbered name from a list
+template <typename Titer, typename Tgetter>
+inline std::string create_unique_name(std::string pPrefix, Titer pBegin, Titer pEnd, Tgetter&& pGetter)
+{
+	// This is the largest value found
+	int max = 0;
+
+	// True if we found an exact match to pPrefix
+	bool found_exact = false;
+
+	const std::string prefix_numbered = pPrefix + "_";
+	for (; pBegin != pEnd; pBegin++)
+	{
+		const std::string& str = pGetter(*pBegin);
+
+		// This hasn't found any numbered matches yet,
+		// but it found an exact match to the pPrefix.
+		if (pPrefix == str && max == 0)
+			found_exact = true;
+
+		// Found a match to a numbered value
+		else if (starts_with(str, prefix_numbered)
+			&& str.length() > prefix_numbered.length())
+		{
+			// Parse number
+			int val = std::atoi(str.substr(prefix_numbered.length()).c_str());
+
+			// Record it if it is larger
+			max = val > max ? val : max;
+		}
+	}
+
+	if (!found_exact)
+		return pPrefix;
+	else
+		return pPrefix + "_" + std::to_string(max + 1);
+}
+
 util::ref<object_node> object_node::create()
 {
 	return util::ref<object_node>::create();
@@ -18,15 +63,20 @@ object_node::~object_node()
 bool object_node::has_component(int pId) const
 {
 	for (auto& i : mComponents)
-		if (i->get_id() == pId)
+		if (i->get_component_id() == pId)
 			return true;
 	return false;
+}
+
+component* object_node::get_component(const std::string & pName)
+{
+	return nullptr;
 }
 
 component* object_node::get_component(int pId) const
 {
 	for (auto& i : mComponents)
-		if (i->get_id() == pId)
+		if (i->get_component_id() == pId)
 			return i.get();
 	return nullptr;
 }
@@ -53,7 +103,8 @@ json object_node::serialize() const
 		for (const auto& i : mComponents)
 		{
 			json c;
-			c["id"] = i->get_id();
+			c["id"] = i->get_component_id();
+			c["name"] = i->get_name();
 			c["data"] = i->serialize();
 			components_json.push_back(c);
 		}
@@ -79,6 +130,7 @@ void object_node::deserialize(const json& pJson, const component_factory& pFacto
 	for (const json& i : components)
 	{
 		component* c = pFactory.create(i["id"], this);
+		c->set_name(i["name"]);
 		c->deserialize(i["data"]);
 		mComponents.emplace_back(c);
 	}
@@ -214,6 +266,13 @@ void object_node::remove_parent()
 		mParent.reset();
 		send_down("on_parent_removed");
 	}
+}
+
+std::string object_node::get_unique_component_name(std::string pPrefix)
+{
+	return create_unique_name(pPrefix,
+		mComponents.begin(), mComponents.end(),
+		[](const auto& i) { return i->get_name(); });
 }
 
 util::ref<object_node> wge::core::find_first_parent_with_component(int pId, util::ref<object_node> pNode)

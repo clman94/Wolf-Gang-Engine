@@ -1445,7 +1445,7 @@ public:
 	// Show the inspector's gui for this component
 	void on_gui(core::component* pComponent)
 	{
-		if (auto func = mInspector_guis[pComponent->get_id()])
+		if (auto func = mInspector_guis[pComponent->get_component_id()])
 			func(pComponent);
 	}
 
@@ -1453,25 +1453,38 @@ private:
 	std::map<int, std::function<void(core::component*)>> mInspector_guis;
 };
 
+bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr , bool pDefault_open = false)
+{
+	ImGui::PushID(pStr_id);
+
+	// Use internal instead
+	if (!pOpen)
+		pOpen = ImGui::GetStateStorage()->GetBoolRef(ImGui::GetID("IsOpen"), pDefault_open);;
+
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
+	ImGui::PushStyleColor(ImGuiCol_BorderShadow, ImVec4(0, 0, 0, 0));
+	if (ImGui::ArrowButton("Arrow", *pOpen ? ImGuiDir_Down : ImGuiDir_Right))
+		*pOpen = !*pOpen; // Toggle open flag
+	ImGui::PopStyleColor(3);
+	ImGui::PopID();
+	return *pOpen;
+}
+
 void show_node_tree(util::ref<core::object_node> pNode, editor_component_inspector& pInspector, util::ref<core::object_node>& pSelected)
 {
 	ImGui::PushID(pNode.get());
 
-	bool* open = ImGui::GetStateStorage()->GetBoolRef(ImGui::GetID(pNode.get()));
+	bool* open = ImGui::GetStateStorage()->GetBoolRef(ImGui::GetID("IsOpen"));
 
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
 
 	// Don't show the arrow if there are no children nodes
 	if (pNode->get_child_count() > 0)
 	{
-		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-		ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
-		ImGui::PushStyleColor(ImGuiCol_BorderShadow, ImVec4(0, 0, 0, 0));
 		ImGui::PushStyleVar(ImGuiStyleVar_::ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-		if (ImGui::ArrowButton("__NodeUnfold", *open ? ImGuiDir_Down : ImGuiDir_Right))
-			*open = !*open; // Toggle open flag
+		collapsing_arrow("NodeUnfold", open);
 		ImGui::PopStyleVar();
-		ImGui::PopStyleColor(3);
 		ImGui::SameLine();
 	}
 
@@ -1796,9 +1809,18 @@ int main()
 		[](core::component* pComponent)
 	{
 		auto collider = dynamic_cast<physics::box_collider_component*>(pComponent);
+
+		math::vec2 offset = collider->get_offset();
+		if (ImGui::DragFloat2("Offset", offset.components))
+			collider->set_offset(offset);
+
 		math::vec2 size = collider->get_size();
 		if (ImGui::DragFloat2("Size", size.components))
 			collider->set_size(size);
+
+		float rotation = math::degrees(collider->get_rotation());
+		if (ImGui::DragFloat("Rotation", &rotation))
+			collider->set_rotation(rotation);
 	});
 
 	auto root_node = core::object_node::create();
@@ -1931,37 +1953,50 @@ int main()
 
 			for (std::size_t i = 0; i < selected_object->get_component_count(); i++)
 			{
+				// If set to true, the component will be deleted at the end of this loop
 				bool delete_component = false;
+
 				core::component* comp = selected_object->get_component_index(i);
 				ImGui::PushID(comp);
-				if (ImGui::CollapsingHeader(comp->get_name().c_str()))
-				{
-					ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4, 4));
-					ImGui::BeginChild(ImGui::GetID("__Actions"),
-						ImVec2(0, ImGui::GetStyle().WindowPadding.y * 2
-							+ ImGui::GetStyle().FramePadding.y * 2
-							+ ImGui::GetFontSize()), true);
 
-					ImGui::Dummy(ImVec2(ImGui::GetWindowContentRegionWidth()
-						- (ImGui::CalcTextSize("Delete ").x
+				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4, 4));
+				ImGui::BeginChild(ImGui::GetID("Actions"),
+					ImVec2(0, (ImGui::GetStyle().WindowPadding.y * 2
+						+ ImGui::GetStyle().FramePadding.y * 2
+						+ ImGui::GetFontSize()) * 2), true);
+				bool open = collapsing_arrow("CollapsingArrow");
+
+				ImGui::SameLine();
+				{
+					ImGui::PushItemWidth(150);
+					std::string name = comp->get_name();
+					if (ImGui::InputText("##NameInput", &name))
+						comp->set_name(name);
+					ImGui::PopItemWidth();
+				}
+				
+				ImGui::SameLine();
+				ImGui::Text(comp->get_component_name().c_str());
+
+				ImGui::Dummy(ImVec2(ImGui::GetWindowContentRegionWidth()
+					- (ImGui::CalcTextSize("Delete ").x
 						+ ImGui::GetStyle().WindowPadding.x * 2
 						+ ImGui::GetStyle().FramePadding.x * 2), 1));
-					ImGui::SameLine();
-					if (ImGui::Button("Delete"))
-					{
-						delete_component = true;
-					}
+				ImGui::SameLine();;
+				delete_component = ImGui::Button("Delete");
 
-					ImGui::EndChild();
-					ImGui::PopStyleVar();
+				ImGui::EndChild();
+				ImGui::PopStyleVar();
 
+				if (open)
 					inspector_guis.on_gui(comp);
-				}
+
 				ImGui::PopID();
 				if (delete_component)
 					selected_object->remove_component(i--);
 			}
 
+			ImGui::Separator();
 			if (ImGui::BeginCombo("###Add Component", "Add Component"))
 			{
 				if (ImGui::Selectable("Transform 2D"))

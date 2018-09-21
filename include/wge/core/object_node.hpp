@@ -69,6 +69,7 @@ public:
 		if (T::COMPONENT_SINGLE_INSTANCE && has_component<T>())
 			return nullptr;
 		T* ptr = new T(this);
+		ptr->set_name(get_unique_component_name(ptr->get_component_name()));
 		mComponents.push_back(std::unique_ptr<component>(static_cast<component*>(ptr)));
 		return ptr;
 	}
@@ -84,9 +85,11 @@ public:
 		return has_component(T::COMPONENT_ID);
 	}
 
-	// Get component by id
+	// Get component by name
+	component* get_component(const std::string& pName);
+	// Get first component by id
 	component* get_component(int pId) const;
-	// Get component by type
+	// Get first component by type
 	template<class T,
 		// Requires the "int COMPONENT_ID" COMPONENT_ID member
 		typename = std::enable_if<has_component_id_member<T>::value>::type>
@@ -167,6 +170,9 @@ public:
 		for (auto& i : mChildren)
 			i->send_down(pEvent_name, pArgs...);
 	}
+
+private:
+	std::string get_unique_component_name(std::string pPrefix);
 
 private:
 	std::vector<std::unique_ptr<component>> mComponents;

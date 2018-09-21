@@ -33,6 +33,9 @@ public:
 	void set_rotation(math::radians pRads);
 	math::radians get_rotation() const;
 
+	void set_sensor(bool pIs_sensor);
+	bool is_sensor() const;
+
 private:
 	void on_physics_update_colliders(physics_component* pComponent);
 	void on_physics_reset();
@@ -49,6 +52,7 @@ private:
 	math::vec2 mOffset;
 	math::vec2 mSize;
 	math::radians mRotation;
+	bool mIs_sensor;
 	physics_component* mPhysics_component;
 };
 

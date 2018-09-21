@@ -11,7 +11,9 @@ using namespace wge::physics;
 
 box_collider_component::box_collider_component(core::object_node* pObj) :
 	component(pObj),
-	mSize(1, 1)
+	mFixture(nullptr),
+	mSize(1, 1),
+	mIs_sensor(false)
 {
 	mFixture = nullptr;
 	subscribe_to(pObj, "on_physics_update_colliders", &box_collider_component::on_physics_update_colliders, this);
@@ -38,6 +40,7 @@ json box_collider_component::serialize() const
 	result["offset"] = mOffset;
 	result["size"] = mSize;
 	result["rotation"] = mRotation;
+	result["sensor"] = mIs_sensor;
 	return result;
 }
 
@@ -47,6 +50,8 @@ void box_collider_component::deserialize(const json & pJson)
 	mSize = pJson["size"];
 	mRotation = pJson["rotation"];
 	update_current_shape();
+
+	set_sensor(pJson["sensor"]);
 }
 
 void box_collider_component::set_offset(const math::vec2 & pOffset)
@@ -85,6 +90,18 @@ math::radians box_collider_component::get_rotation() const
 	return mRotation;
 }
 
+void box_collider_component::set_sensor(bool pIs_sensor)
+{
+	mIs_sensor = pIs_sensor;
+	if (mFixture)
+		mFixture->SetSensor(pIs_sensor);
+}
+
+bool box_collider_component::is_sensor() const
+{
+	return mIs_sensor;
+}
+
 void box_collider_component::update_shape(b2PolygonShape * pShape)
 {
 	assert(pShape);
@@ -114,6 +131,7 @@ void box_collider_component::on_physics_update_colliders(physics_component * pCo
 		update_shape(&shape);
 		fixture_def.shape = &shape;
 		fixture_def.density = 2;
+		fixture_def.isSensor = mIs_sensor;
 		fixture_def.userData = get_object();
 
 		mFixture = pComponent->create_fixture(fixture_def);

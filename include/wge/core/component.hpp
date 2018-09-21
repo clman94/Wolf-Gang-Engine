@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+
+
 #include <wge/core/messaging.hpp>
 
 #include <nlohmann/json.hpp>
@@ -22,15 +25,15 @@ using json = nlohmann::json;
 	static constexpr int COMPONENT_ID = id__; \
 	static constexpr const char* COMPONENT_NAME = name__; \
 	static constexpr bool COMPONENT_SINGLE_INSTANCE = false; \
-	virtual int get_id() const override { return id__; } \
-	virtual std::string get_name() const override { return name__; }
+	virtual int get_component_id() const override { return id__; } \
+	virtual std::string get_component_name() const override { return name__; }
 #define WGE_COMPONENT_SINGLE_INSTANCE(name__, id__) \
 	public: \
 	static constexpr int COMPONENT_ID = id__; \
 	static constexpr const char* COMPONENT_NAME = name__; \
 	static constexpr bool COMPONENT_SINGLE_INSTANCE = true; \
-	virtual int get_id() const override { return id__; } \
-	virtual std::string get_name() const override { return name__; }
+	virtual int get_component_id() const override { return id__; } \
+	virtual std::string get_component_name() const override { return name__; }
 
 namespace wge::core
 {
@@ -58,8 +61,11 @@ public:
 	// Load the current state of this component
 	virtual void deserialize(const json&) {}
 
-	virtual std::string get_name() const = 0;
-	virtual int get_id() const = 0;
+	virtual std::string get_component_name() const = 0;
+	virtual int get_component_id() const = 0;
+
+	const void set_name(const std::string& pName);
+	const std::string& get_name() const;
 
 	// Get the object this component is apart of 
 	object_node* get_object() const
@@ -78,6 +84,7 @@ protected:
 	}
 
 private:
+	std::string mName;
 	object_node* mObject;
 	int mInstance_id;
 };
