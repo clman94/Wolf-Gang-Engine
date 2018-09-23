@@ -7,21 +7,12 @@ namespace wge::math
 class rect
 {
 public:
-	// A very crude but convenient structure
 	union {
 		struct {
-			union {
-				vec2 position;
-				struct {
-					float x, y;
-				};
-			};
-			union {
-				vec2 size;
-				struct {
-					float width, height;
-				};
-			};
+			vec2 position, size;
+		};
+		struct {
+			float x, y, width, height;
 		};
 		float components[4];
 	};
