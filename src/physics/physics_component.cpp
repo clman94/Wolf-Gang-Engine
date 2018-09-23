@@ -28,7 +28,9 @@ physics_component::~physics_component()
 {
 	if (mBody)
 	{
-		mPhysics_world->destroy_body(mBody);
+		// Destroy body before the on_physics_reset event
+		// otherwise it turns null.
+		mBody->GetWorld()->DestroyBody(mBody);
 
 		// Because this body exists, there may still be fixtures connected
 		// to it. Tell the colliders to clean up.
@@ -103,11 +105,6 @@ b2Fixture* physics_component::create_fixture(const b2FixtureDef & pDef)
 	return mBody->CreateFixture(&pDef);
 }
 
-void physics_component::destroy_fixture(b2Fixture * pFixture)
-{
-	mFixture_destruction_queue.push(pFixture);
-}
-
 void physics_component::on_physics_update_bodies(physics_world_component * pComponent)
 {
 	if (!mBody)
@@ -137,18 +134,17 @@ void physics_component::on_physics_reset()
 	// up by the world.
 	mBody = nullptr;
 	mPhysics_world = nullptr;
-	std::queue<b2Fixture*>{}.swap(mFixture_destruction_queue);
 }
 
 void physics_component::on_preupdate(float)
 {
+	// Update to the transform of the object to the body.
+	// This is executed after physics have been calculated.
 	update_object_transform();
 }
 
 void physics_component::on_postupdate(float)
 {
-	destroy_queued_fixtures();
-
 	// Set the position of the body to the position of the transform.
 	// This is done after the on_update event so if any scripts or the editor
 	// modify the transform of the object, the body will update as well.
@@ -157,13 +153,17 @@ void physics_component::on_postupdate(float)
 
 void physics_component::on_parent_removed()
 {
-	// Cache the body so when a new parent comes in, we can reload the same body
 	if (mBody)
 	{
+		// Cache the body so when a new parent comes in, we can reload the same body
 		mBody_instance_cache = serialize_body();
-		mPhysics_world->destroy_body(mBody);
+		mBody->GetWorld()->DestroyBody(mBody);
 		mBody = nullptr;
 		mPhysics_world = nullptr;
+
+		// Tell all possible colliders that this body was removed and
+		// they need to reset.
+		get_object()->send_down("on_physics_reset");
 	}
 }
 
@@ -174,20 +174,6 @@ b2BodyType physics_component::get_b2Body_type() const
 	case type_rigidbody: return b2BodyType::b2_dynamicBody; break;
 	case type_static: return b2BodyType::b2_staticBody; break;
 	default: return b2BodyType::b2_staticBody;
-	}
-}
-
-void physics_component::destroy_queued_fixtures()
-{
-	// Has no body
-	if (!mBody)
-		std::queue<b2Fixture*>().swap(mFixture_destruction_queue); // Clear queue
-
-	// Destroy all fixtures queued to be destroyed
-	while (!mFixture_destruction_queue.empty())
-	{
-		mBody->DestroyFixture(mFixture_destruction_queue.front());
-		mFixture_destruction_queue.pop();
 	}
 }
 

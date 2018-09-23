@@ -20,6 +20,10 @@ void from_json(const nlohmann::json&, radians&);
 class degrees;
 void to_json(nlohmann::json&, const degrees&);
 void from_json(const nlohmann::json&, degrees&);
+
+class rect;
+void to_json(nlohmann::json&, const rect&);
+void from_json(const nlohmann::json&, rect&);
 }
 
 struct b2Vec2;

@@ -36,6 +36,9 @@ public:
 	void set_sensor(bool pIs_sensor);
 	bool is_sensor() const;
 
+	void set_anchor(math::vec2 pRatio);
+	math::vec2 get_anchor() const;
+
 private:
 	void on_physics_update_colliders(physics_component* pComponent);
 	void on_physics_reset();
@@ -54,6 +57,7 @@ private:
 	math::radians mRotation;
 	bool mIs_sensor;
 	physics_component* mPhysics_component;
+	math::vec2 mAnchor;
 };
 
 }

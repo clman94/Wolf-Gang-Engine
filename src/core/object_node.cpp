@@ -40,7 +40,8 @@ inline std::string create_unique_name(std::string pPrefix, Titer pBegin, Titer p
 			int val = std::atoi(str.substr(prefix_numbered.length()).c_str());
 
 			// Record it if it is larger
-			max = val > max ? val : max;
+			if (val > max)
+				max = val;
 		}
 	}
 
@@ -57,7 +58,6 @@ util::ref<object_node> object_node::create()
 
 object_node::~object_node()
 {
-	remove_children();
 }
 
 bool object_node::has_component(int pId) const
@@ -229,8 +229,8 @@ void object_node::remove_children()
 {
 	for (util::ref<object_node> i : mChildren)
 	{
-		i->mParent.reset();
 		i->send_down("on_parent_removed");
+		i->mParent.reset();
 	}
 	mChildren.clear();
 }

@@ -28,10 +28,7 @@ box_collider_component::box_collider_component(core::object_node* pObj) :
 box_collider_component::~box_collider_component()
 {
 	if (mFixture)
-	{
-		assert(mPhysics_component);
-		mPhysics_component->destroy_fixture(mFixture);
-	}
+		mFixture->GetBody()->DestroyFixture(mFixture);
 }
 
 json box_collider_component::serialize() const
@@ -50,7 +47,6 @@ void box_collider_component::deserialize(const json & pJson)
 	mSize = pJson["size"];
 	mRotation = pJson["rotation"];
 	update_current_shape();
-
 	set_sensor(pJson["sensor"]);
 }
 
@@ -102,12 +98,25 @@ bool box_collider_component::is_sensor() const
 	return mIs_sensor;
 }
 
+void box_collider_component::set_anchor(math::vec2 pRatio)
+{
+	mAnchor = pRatio;
+	update_current_shape();
+}
+
+math::vec2 box_collider_component::get_anchor() const
+{
+	return mAnchor;
+}
+
 void box_collider_component::update_shape(b2PolygonShape * pShape)
 {
 	assert(pShape);
 
-	math::vec2 offset = mSize / 2 + mOffset;
-	pShape->SetAsBox(mSize.x / 2, mSize.y / 2, b2Vec2(offset.x, offset.y), mRotation);
+	math::vec2 skin_size(pShape->m_radius, pShape->m_radius);
+	math::vec2 offset = mSize / 2 + mOffset + skin_size + mSize * mAnchor;
+	math::vec2 h_size = (mSize - skin_size * 2) / 2;
+	pShape->SetAsBox(h_size.x, h_size.y, b2Vec2(offset.x, offset.y), mRotation);
 }
 
 void box_collider_component::update_current_shape()
@@ -151,11 +160,9 @@ void box_collider_component::on_physics_reset()
 void box_collider_component::on_parent_removed()
 {
 	if (mFixture)
-	{
-		mPhysics_component->destroy_fixture(mFixture);
-		mFixture = nullptr;
-		mPhysics_component = nullptr;
-	}
+		mFixture->GetBody()->DestroyFixture(mFixture);
+	mFixture = nullptr;
+	mPhysics_component = nullptr;
 }
 
 void box_collider_component::on_transform_changed()

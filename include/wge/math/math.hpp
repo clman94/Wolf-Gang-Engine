@@ -75,7 +75,7 @@ inline constexpr const T& min(const T& pL, const T& pR)
 
 
 // Template for normalizing a value.
-// Sepcialization is required.
+// Specialization is required.
 template<class T>
 inline T normalize(const T& a)
 {

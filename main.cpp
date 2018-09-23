@@ -89,6 +89,8 @@ using json = nlohmann::json;
 #include <wge/physics/physics_component.hpp>
 #include <wge/physics/physics_world_component.hpp>
 #include <wge/math/anchor.hpp>
+#include <wge/math/rect.hpp>
+#include <wge/filesystem/filesystem_interface.hpp>
 using namespace wge;
 
 #include <Box2D/Box2D.h>
@@ -131,11 +133,7 @@ private:
 
 std::string load_file_as_string(const std::string& pPath);
 
-class asset_handle
-{
-	int id;
-	filesystem::path path;
-};
+typedef uint64_t asset_uid;
 
 // Loadable assets are extra files that
 // need to be loaded before they can be
@@ -158,7 +156,7 @@ public:
 	virtual const std::string& get_name() const = 0;
 };
 
-typedef uint64_t asset_id_t;
+typedef uint64_t asset_uid;
 
 // Asset files contain configuration.
 //
@@ -169,57 +167,104 @@ typedef uint64_t asset_id_t;
 class asset
 {
 public:
-	void set_name(const std::string& pName)
+	typedef std::shared_ptr<asset> ptr;
+
+	const std::string& get_type() const
 	{
-		mName = pName;
+		return mType;
 	}
 
-	const std::string& get_name() const
+	asset_uid get_id() const
 	{
-		return mName;
+		return mID;
 	}
 
-	void load(const std::string& pName)
+	// Load the json file for this asset
+	void load_config(const filesystem::path& pPath)
 	{
-		json j(load_file_as_string(pName));
+		mPath = pPath;
+		json j(load_file_as_string(pPath.string().c_str()));
 
-		mName = j["name"].get<std::string>();
+		mType = j["type"];
 		mID = j["id"];
-		mDescription = j["description"].get<std::string>();
+		mDescription = j["description"];
 
-		for (const json& i : j["resources"])
-			mLinked_resources.push_back(i);
+		for (const json& i : j["files"])
+			mFiles.push_back(i);
 
-		on_load(j["data"]);
+		on_load_metadata(j["metadata"]);
 	}
 
-	void save(const std::string& pPath)
+	// Save any modified configuration for this asset
+	void save_config()
 	{
+		std::ofstream out(mPath.string().c_str());
+		json result;
+		result["type"] = mType;
+		result["id"] = mID;
+		result["files"] = mFiles;
+		result["metadata"] = on_save_metadata();
+		out << result.dump(2);
+	}
 
+	// Load this asset's data
+	virtual void load() {}
+
+	// Unload any data
+	virtual void unload() {}
+
+	// Returns true when this asset is ready to be used
+	virtual bool is_loaded() const
+	{
+		return true;
 	}
 
 protected:
-	virtual void on_load(const json& pData) {}
-	virtual json on_save() { return {}; }
+	virtual void on_load_metadata(const json& pData) {}
+	virtual json on_save_metadata() { return {}; }
 
 private:
-	std::string mName;
+	filesystem::path mPath;
+	std::string mType;
 	std::string mDescription;
-	std::vector<std::string> mLinked_resources;
-	asset_id_t mID;
+	std::vector<std::string> mFiles;
+	asset_uid mID;
 };
 
-// Loads non-config file as an asset_loadable
+
 class asset_loader
 {
 public:
+};
+
+class context
+{
 
 };
 
 class asset_manager
 {
 public:
-	// TODO: Load and cache all configuration files.
+
+	void set_filesystem(filesystem::filesystem_interface* pFilesystem)
+	{
+		mFilesystem = pFilesystem;
+	}
+
+	void add_asset(asset::ptr pAsset)
+	{
+		for (auto& i : mAsset_list)
+			if (i->get_id() == pAsset->get_id())
+				return; // Already exists
+		mAsset_list.push_back(pAsset);
+	}
+
+	asset::ptr get_asset(const filesystem::path& pPath);
+	asset::ptr get_asset(asset_uid pUID);
+
+private:
+	std::vector<asset::ptr> mAsset_list;
+	filesystem::filesystem_interface* mFilesystem;
 };
 
 class color
@@ -469,13 +514,58 @@ public:
 		return mHeight;
 	}
 
+	float get_brightness() const
+	{
+
+	}
+
 private:
 	GLuint mTexture, mFramebuffer;
 	int mWidth, mHeight;
 };
 
-class texture
+struct subtexture
 {
+public:
+	typedef std::shared_ptr<subtexture> ptr;
+	
+	std::string name;
+	std::size_t frames{ 1 };
+	float interval{ 0 };
+	math::rect frame_rect;
+
+	subtexture() = default;
+	subtexture(const json& pJson)
+	{
+		load(pJson);
+	}
+
+	// Parse json
+	void load(const json& pJson)
+	{
+		name = pJson["name"];
+		frames = pJson["frames"];
+		interval = pJson["interval"];
+		frame_rect = pJson["frame-rect"];
+	}
+
+	json save() const
+	{
+		json result;
+		result["name"] = name;
+		result["frames"] = frames;
+		result["interval"] = interval;
+		result["frame-rect"] = frame_rect;
+		return result;
+	}
+};
+
+class texture :
+	public asset
+{
+public:
+	typedef std::vector<subtexture::ptr> atlas_container;
+
 public:
 	texture()
 	{
@@ -483,6 +573,10 @@ public:
 		mSmooth = false;
 		mPixels = nullptr;
 	}
+	texture(texture&&) = default;
+	texture(const texture&) = delete;
+	texture& operator=(const texture&) = delete;
+
 	~texture()
 	{
 		stbi_image_free(mPixels);
@@ -554,6 +648,23 @@ public:
 		return mSmooth;
 	}
 
+	subtexture::ptr get_subtexture(const std::string& pName) const
+	{
+		for (const auto& i : mAtlas)
+			if (i->name == pName)
+				return i;
+	}
+
+	atlas_container& get_raw_atlas()
+	{
+		return mAtlas;
+	}
+
+	const atlas_container& get_raw_atlas() const
+	{
+		return mAtlas;
+	}
+
 private:
 	void create_from_pixels(unsigned char* pBuffer)
 	{
@@ -581,21 +692,33 @@ private:
 		//glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
+	virtual void on_load_metadata(const json& pData) override 
+	{
+		const json& atlas = pData["atlas"];
+		for (const json& i : atlas)
+			mAtlas.push_back(std::make_shared<subtexture>(i));
+	}
+	virtual json on_save_metadata() override
+	{
+		json result;
+		for (const auto& i : mAtlas)
+			result.push_back(i->save());
+		return result;
+	}
+
 private:
 	int mChannels, mWidth, mHeight;
 	GLuint mGL_texture;
 	bool mSmooth;
 	unsigned char* mPixels;
+	atlas_container mAtlas;
 };
 
 struct vertex_2d
 {
 	math::vec2 position;
 	math::vec2 uv;
-	color thiscolor;
-	vertex_2d() :
-		thiscolor(1, 1, 1, 1)
-	{}
+	color thiscolor{ 1, 1, 1, 1 };
 };
 
 struct render_batch_2d
@@ -635,8 +758,9 @@ public:
 		mBatch.rendertexture = pTexture;
 	}
 
-	// Add 4 vertices as a quad
-	void add_quad(const vertex_2d const* pBuffer)
+	// Add 4 vertices as a quad. Returns the starting index in the vertices
+	// member of the batch.
+	std::size_t add_quad(const vertex_2d const* pBuffer)
 	{
 		std::size_t start_index = mBatch.vertices.size();
 
@@ -653,10 +777,12 @@ public:
 		mBatch.indexes.push_back(start_index + 3);
 		mBatch.indexes.push_back(start_index);
 
-		// Create the new vertices and set them
-		mBatch.vertices.resize(mBatch.vertices.size() + 4);
+		// Add them
+		mBatch.vertices.reserve(mBatch.vertices.size() + 4);
 		for (std::size_t i = 0; i < 4; i++)
-			mBatch.vertices[start_index + i] = pBuffer[i];
+			mBatch.vertices.push_back(pBuffer[i]);
+
+		return start_index;
 	}
 
 	render_batch_2d* get_batch()
@@ -666,6 +792,31 @@ public:
 
 private:
 	render_batch_2d mBatch;
+};
+
+class camera
+{
+public:
+	void set_position(const math::vec2& pUnits)
+	{
+		mPosition = pUnits;
+	}
+	math::vec2 get_position() const
+	{
+		return mPosition;
+	}
+	
+	void set_size(const math::vec2& pUnits)
+	{
+		mSize = pUnits;
+	}
+	math::vec2 get_size() const
+	{
+		return mSize;
+	}
+
+private:
+	math::vec2 mPosition, mSize;
 };
 
 class renderer
@@ -713,8 +864,8 @@ public:
 
 		// Create the projection matrix
 		mProjection_matrix =
-			math::ortho(0, static_cast<float>(mFramebuffer->get_width()),
-				0, static_cast<float>(mFramebuffer->get_height()));
+			math::ortho(0, static_cast<float>(mFramebuffer->get_width())*0.01f,
+				0, static_cast<float>(mFramebuffer->get_height())*0.01f);
 
 		// Render the batches
 		sort_batches();
@@ -726,14 +877,27 @@ public:
 		mBatches.clear();
 	}
 
+	// Set the current frame buffer to render to
 	void set_framebuffer(framebuffer* pFramebuffer)
 	{
 		mFramebuffer = pFramebuffer;
 	}
-
 	framebuffer* get_framebuffer() const
 	{
 		return mFramebuffer;
+	}
+
+	// Setting the pixel size allows you to adjust sprites
+	// to any unit system you want. This is very helpful 
+	// when you want to use physics which works with meters
+	// per unit. Default: 1
+	void set_pixel_size(float pSize)
+	{
+		mPixel_size = pSize;
+	}
+	float get_pixel_size() const
+	{
+		return mPixel_size;
 	}
 
 private:
@@ -815,6 +979,7 @@ private:
 	GLuint mShader_texture, mShader_color;
 	GLuint mVertex_buffer, mElement_buffer, mVAO_id;
 	math::mat44 mProjection_matrix;
+	float mPixel_size{ 1 };
 
 	std::vector<render_batch_2d> mBatches;
 };
@@ -867,9 +1032,13 @@ public:
 		verts[3].position = texture_size.swizzle(0, math::_y);
 		verts[3].uv = math::vec2(0, 1);
 
-		// Transform them
+		// Get transform and scale it by the pixel size
+		math::mat33 transform_mat = transform->get_absolute_transform();
+		transform_mat.scale(math::vec2(pRenderer->get_pixel_size(), pRenderer->get_pixel_size()));
+
+		// Transform the vertices
 		for (int i = 0; i < 4; i++)
-			verts[i].position = transform->get_absolute_transform() * (verts[i].position + (-mAnchor * texture_size) + mOffset);
+			verts[i].position = transform_mat * (verts[i].position + (-mAnchor * texture_size) + mOffset);
 
 		batch.add_quad(verts);
 
@@ -949,7 +1118,7 @@ private:
 				batch.indexes.push_back(batch.vertices.size());
 				vertex_2d vert;
 				vert.position = math::vec2(vertices[i].x, vertices[i].y);
-				vert.thiscolor = color(pColor.r, pColor.g, pColor.b, pColor.a);
+				vert.thiscolor = color(pColor.r, pColor.g, pColor.b, pColor.a * 0.5f);
 				batch.vertices.push_back(vert);
 			}
 			if (connect_end)
@@ -1712,57 +1881,7 @@ void EndChildWithHeader()
 
 }
 
-namespace wge::math
-{
-class rect
-{
-public:
-	union {
-		struct {
-			union{
-				vec2 position;
-				struct {
-					float x, y;
-				};
-			};
-			union {
-				vec2 size;
-				struct {
-					float width, height;
-				};
-			};
-		};
-		float components[4];
-	};
 
-	rect() :
-		position(0, 0), size(0, 0)
-	{}
-
-	rect(float pX, float pY, float pWidth, float pHeight) :
-		position(pX, pY), size(pWidth, pHeight)
-	{}
-
-	math::vec2 get_corner(unsigned int pIndex) const
-	{
-		switch (pIndex % 4)
-		{
-		default:
-		case 0: return position;
-		case 1: return position + math::vec2(width, 0);
-		case 2: return position + size;
-		case 3: return position + math::vec2(0, height);
-		}
-	}
-
-	bool intersects(const math::vec2& pVec) const
-	{
-		return pVec.x >= x && pVec.x < x + width
-			&& pVec.y >= y && pVec.y < y + height;
-	}
-};
-
-}
 struct editor_state
 {
 	math::vec2 offset;
@@ -2076,7 +2195,7 @@ int main()
 
 		float rotation = math::degrees(collider->get_rotation());
 		if (ImGui::DragFloat("Rotation", &rotation))
-			collider->set_rotation(rotation);
+			collider->set_rotation(math::degrees(rotation));
 	});
 
 	auto root_node = core::object_node::create();
@@ -2127,6 +2246,7 @@ int main()
 	renderer myrenderer;
 	myrenderer.initialize();
 	myrenderer.set_framebuffer(&myframebuffer);
+	myrenderer.set_pixel_size(0.01f);
 
 	bool updates_enabled = false;
 
@@ -2274,9 +2394,6 @@ int main()
 		ImGui::End();
 
 		ImGui::Begin("Viewport");
-		//float y_offset = ImGui::GetCursorPos().y - ImGui::GetWindowPos().y;
-
-
 		float width = ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x*2;
 		float height = ImGui::GetWindowHeight() - ImGui::GetCursorPos().y - ImGui::GetStyle().WindowPadding.y;
 
@@ -2304,16 +2421,7 @@ int main()
 			if (ImGui::Button("Test"))
 				al_test_thread = std::thread(&test_stream_al2);
 		}
-
 		ImGui::End();
-
-		if (updates_enabled)
-			root_node->send_down("on_postupdate", delta);
-
-		// Send renderer events
-		root_node->send_down("on_render", &myrenderer);
-		myrenderer.render();
-		
 
 		if (ImGui::Begin("Test Bars", nullptr, ImGuiWindowFlags_HorizontalScrollbar))
 		{
@@ -2367,10 +2475,13 @@ int main()
 			// Overlap with an invisible button to recieve input
 			ImGui::SetCursorPos(last_cursor);
 			ImGui::InvisibleButton("_Input", ImVec2(image_size.x + ImGui::GetWindowWidth(), image_size.y + ImGui::GetWindowHeight()));
-			begin_editor("_SomeEditor", { image_position.x, image_position.y }, { scale, scale });
-			static math::rect rect_drag_test(0, 0, 100, 100);
 
+			begin_editor("_SomeEditor", { image_position.x, image_position.y }, { scale, scale });
+
+			static math::rect rect_drag_test(0, 0, 100, 100);
+			static math::rect rect_drag_test2(100, 0, 100, 100);
 			drag_resizable_rect("RectDrag", &rect_drag_test);
+			drag_resizable_rect("RectDrag1", &rect_drag_test2);
 
 			end_editor();
 			
@@ -2390,10 +2501,6 @@ int main()
 				{
 					ImGui::SetScrollX(ImGui::GetScrollX() - ImGui::GetIO().MouseDelta.x);
 					ImGui::SetScrollY(ImGui::GetScrollY() - ImGui::GetIO().MouseDelta.y);
-				}
-				else if (ImGui::IsMouseDown(0))
-				{
-					
 				}
 			}
 		}
@@ -2422,6 +2529,13 @@ int main()
 		ImGui::EndChild();
 
 		ImGui::End();*/
+
+		if (updates_enabled)
+			root_node->send_down("on_postupdate", delta);
+
+		// Send renderer events
+		root_node->send_down("on_render", &myrenderer);
+		myrenderer.render();
 
 		// Render ImGui
 		ImGui::Render();

@@ -42,9 +42,6 @@ public:
 
 	b2Fixture* create_fixture(const b2FixtureDef& pDef);
 
-	// Queues the fixture to be destroyed
-	void destroy_fixture(b2Fixture* pFixture);
-
 private:
 	void on_physics_update_bodies(physics_world_component* pComponent);
 	void on_physics_reset();
@@ -55,8 +52,6 @@ private:
 	// Get the box2d body type
 	b2BodyType get_b2Body_type() const;
 
-	void destroy_queued_fixtures();
-	
 	// Update the transform component to the
 	// transform of the body.
 	void update_object_transform();
@@ -72,7 +67,6 @@ private:
 	int mType;
 	b2Body* mBody;
 	physics_world_component* mPhysics_world;
-	std::queue<b2Fixture*> mFixture_destruction_queue;
 
 	// Since we can't create a body whenever we want to, we need store
 	// the serialized data for when it is created.
