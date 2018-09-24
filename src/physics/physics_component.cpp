@@ -29,7 +29,7 @@ physics_component::~physics_component()
 	if (mBody)
 	{
 		// Destroy body before the on_physics_reset event
-		// otherwise it turns null.
+		// otherwise mBody turns null.
 		mBody->GetWorld()->DestroyBody(mBody);
 
 		// Because this body exists, there may still be fixtures connected

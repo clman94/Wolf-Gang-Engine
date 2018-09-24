@@ -16,6 +16,7 @@ path::path(const system_fs::path & pPath)
 {
 	for (auto& i : pPath)
 		mPath.push_back(i.string());
+	simplify();
 }
 
 bool path::parse(const std::string & pString, const std::set<char>& pSeparators)
@@ -23,7 +24,7 @@ bool path::parse(const std::string & pString, const std::set<char>& pSeparators)
 	if (pString.empty())
 		return false;
 
-	const auto separator_checker = [&](const char& l)->bool
+	const auto separator_checker = [&pSeparators](const char& l)->bool
 	{
 		return pSeparators.find(l) != pSeparators.end();
 	};
@@ -73,9 +74,9 @@ path path::subpath(std::size_t pOffset, std::size_t pCount) const
 
 	path result;
 	if (pOffset + pCount >= mPath.size() || pCount == 0)
-		result.mPath = std::vector<std::string>(mPath.begin() + pOffset, mPath.end());
+		result.mPath = container(mPath.begin() + pOffset, mPath.end());
 	else
-		result.mPath = std::vector<std::string>(mPath.begin() + pOffset, mPath.begin() + pOffset + pCount);
+		result.mPath = container(mPath.begin() + pOffset, mPath.begin() + pOffset + pCount);
 	return result;
 }
 
@@ -146,7 +147,7 @@ void path::append(const path & pRight)
 path path::parent() const
 {
 	path retval(*this);
-	retval.pop();
+	retval.pop_filepath();
 	return retval;
 }
 
@@ -157,7 +158,7 @@ std::string path::filename() const
 	return mPath.back();
 }
 
-std::string path::pop()
+std::string path::pop_filepath()
 {
 	if (mPath.empty())
 		return false;
@@ -204,7 +205,7 @@ const std::string & path::operator[](size_t pIndex) const
 	return mPath[pIndex];
 }
 
-system_fs::path path::to_path() const
+system_fs::path path::to_system_path() const
 {
 	system_fs::path path;
 	for (const auto& i : mPath)
@@ -212,22 +213,27 @@ system_fs::path path::to_path() const
 	return path;
 }
 
-std::vector<std::string>::iterator path::begin()
+path::operator system_fs::path() const
+{
+	return to_system_path();
+}
+
+path::iterator path::begin()
 {
 	return mPath.begin();
 }
 
-std::vector<std::string>::const_iterator path::begin() const
+path::const_iterator path::begin() const
 {
 	return mPath.begin();
 }
 
-std::vector<std::string>::iterator path::end()
+path::iterator path::end()
 {
 	return mPath.end();
 }
 
-std::vector<std::string>::const_iterator path::end() const
+path::const_iterator path::end() const
 {
 	return mPath.end();
 }
@@ -270,7 +276,7 @@ bool path::operator<(const path & pRight) const
 
 void path::simplify()
 {
-	for (size_t i = 0; i < mPath.size(); i++)
+	for (size_t i = 1; i < mPath.size(); i++)
 	{
 		if (mPath[i].empty() ||
 			mPath[i] == ".") // These are redundant
@@ -280,7 +286,7 @@ void path::simplify()
 		}
 		else if (mPath[i] == "..")
 		{
-			if (i != 0 && mPath[i - 1] != "..") // Keep these stacked at the beginning
+			if (mPath[i - 1] != "..") // Keep these stacked at the beginning
 			{
 				// ...otherwise, remove this item and the one before it.
 				mPath.erase(mPath.begin() + i - 1, mPath.begin() + i + 1);
@@ -288,6 +294,11 @@ void path::simplify()
 			}
 		}
 	}
+}
+
+void path::push_front(const std::string & pStr)
+{
+	mPath.push_front(pStr);
 }
 
 void path::erase(iterator pBegin, iterator pEnd)

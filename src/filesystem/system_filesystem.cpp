@@ -9,7 +9,7 @@ using namespace wge::filesystem;
 
 bool system_filesystem::exists(const path & pPath)
 {
-	return system_fs::exists(pPath.to_path());
+	return system_fs::exists(pPath.to_system_path());
 }
 
 path system_filesystem::get_working_directory()
@@ -19,7 +19,7 @@ path system_filesystem::get_working_directory()
 
 path system_filesystem::get_absolute_path(const path & pPath)
 {
-	return system_fs::absolute(pPath.to_path());
+	return system_fs::absolute(pPath.to_system_path());
 }
 
 input_stream::ptr system_filesystem::open(const path & pPath)

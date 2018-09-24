@@ -51,9 +51,14 @@ inline std::string create_unique_name(std::string pPrefix, Titer pBegin, Titer p
 		return pPrefix + "_" + std::to_string(max + 1);
 }
 
-util::ref<object_node> object_node::create()
+util::ref<object_node> object_node::create(context* pContext)
 {
-	return util::ref<object_node>::create();
+	return util::ref<object_node>::create(pContext);
+}
+
+object_node::object_node(context * pContext)
+{
+	mContext = pContext;
 }
 
 object_node::~object_node()
@@ -136,7 +141,7 @@ void object_node::deserialize(const json& pJson, const component_factory& pFacto
 
 	for (const json& i : pJson["children"])
 	{
-		auto obj = object_node::create();
+		auto obj = object_node::create(mContext);
 		obj->deserialize(i, pFactory);
 		add_child(obj);
 	}
@@ -174,7 +179,7 @@ util::ref<object_node> object_node::get_child(std::size_t pIndex) const
 
 util::ref<object_node> object_node::create_child()
 {
-	auto node = object_node::create();
+	auto node = object_node::create(mContext);
 	add_child(node);
 	return node;
 }
@@ -264,6 +269,11 @@ void object_node::remove_parent()
 		mParent.reset();
 		send_down("on_parent_removed");
 	}
+}
+
+context* object_node::get_context() const
+{
+	return mContext;
 }
 
 std::string object_node::get_unique_component_name(std::string pPrefix)

@@ -19,6 +19,7 @@ struct has_component_id_member : std::false_type {};
 template <typename T>
 struct has_component_id_member <T, decltype((void)T::COMPONENT_ID, 0)> : std::true_type {};
 
+class context;
 class component;
 class object_node;
 
@@ -57,9 +58,10 @@ class object_node :
 	public publisher
 {
 public:
-	static util::ref<object_node> create();
+	static util::ref<object_node> create(context*);
 
 public:
+	object_node(context*);
 	~object_node();
 
 	// Creates a component and adds it to this object
@@ -175,6 +177,8 @@ public:
 			i->send_down(pEvent_name, pArgs...);
 	}
 
+	context* get_context() const;
+
 private:
 	std::string get_unique_component_name(std::string pPrefix);
 
@@ -185,6 +189,8 @@ private:
 	std::vector<util::ref<object_node>> mChildren;
 
 	std::string mName;
+
+	context* mContext;
 };
 
 util::ref<object_node> find_first_parent_with_component(int pId, util::ref<object_node> pNode);

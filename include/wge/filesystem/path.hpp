@@ -2,10 +2,12 @@
 
 #include <string>
 #include <set>
-#include <vector>
+#include <deque>
 
 #include <filesystem>
 namespace system_fs = std::experimental::filesystem;
+
+#include <wge/util/hash.hpp>
 
 namespace wge::filesystem
 {
@@ -16,8 +18,9 @@ namespace wge::filesystem
 class path
 {
 public:
-	typedef std::vector<std::string>::iterator iterator;
-	typedef std::vector<std::string>::const_iterator const_iterator;
+	typedef std::deque<std::string> container;
+	typedef container::iterator iterator;
+	typedef container::const_iterator const_iterator;
 
 	path() {}
 	path(const char* pString);
@@ -30,8 +33,7 @@ public:
 	// Check if first part of this path is the same.
 	// E.g. "dir/file.exe" in_directory "dir" => True
 	bool in_directory(const path& pPath) const;
-
-
+	
 	path subpath(std::size_t pOffset, std::size_t pCount = 0) const;
 
 	// Convert to string using the '/' separator
@@ -62,7 +64,7 @@ public:
 	std::string filename() const;
 
 	// Pop the top item. E.g  "dir/file.exe" => "dir"
-	std::string pop();
+	std::string pop_filepath();
 
 	// Removed the extension.
 	// Returns true if an extension was removed.
@@ -85,7 +87,8 @@ public:
 	std::string& operator[](std::size_t pIndex);
 	const std::string& operator[](std::size_t pIndex) const;
 
-	system_fs::path to_path() const;
+	system_fs::path to_system_path() const;
+	operator system_fs::path() const;
 
 	// Get the begin iterator of the underlying array
 	iterator begin();
@@ -95,13 +98,14 @@ public:
 	iterator end();
 	const_iterator end() const;
 
+	void push_front(const std::string& pStr);
 	void erase(iterator pBegin, iterator pEnd);
 
 private:
 	void simplify();
 
 private:
-	std::vector<std::string> mPath;
+	container mPath;
 };
 
 // Make a relative path from a parent directory to this file.

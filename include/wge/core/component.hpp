@@ -38,7 +38,9 @@ using json = nlohmann::json;
 namespace wge::core
 {
 
+class context;
 class object_node;
+class asset_manager;
 
 class component :
 	protected subscriber
@@ -73,6 +75,8 @@ public:
 		return mObject;
 	}
 
+	context* get_context() const;
+
 protected:
 	template <typename T>
 	T* require() const
@@ -82,6 +86,8 @@ protected:
 			return mObject->add_component<T>();
 		return mObject->get_component<T>();
 	}
+
+	asset_manager* get_asset_manager() const;
 
 private:
 	std::string mName;

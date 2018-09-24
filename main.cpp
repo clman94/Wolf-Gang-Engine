@@ -91,10 +91,11 @@ using json = nlohmann::json;
 #include <wge/math/anchor.hpp>
 #include <wge/math/rect.hpp>
 #include <wge/filesystem/filesystem_interface.hpp>
+#include <wge/core/context.hpp>
+#include <wge/core/asset_manager.hpp>
 using namespace wge;
 
 #include <Box2D/Box2D.h>
-
 
 class flag_container
 {
@@ -133,139 +134,6 @@ private:
 
 std::string load_file_as_string(const std::string& pPath);
 
-typedef uint64_t asset_uid;
-
-// Loadable assets are extra files that
-// need to be loaded before they can be
-// used. E.g. images, sounds, etc...
-//
-// These assets need to be referenced by an asset
-// configuration file before they are useful.
-class asset_loadable
-{
-public:
-	virtual ~asset_loadable(){}
-
-	// Load the resource to memory
-	virtual void load() = 0;
-	// Unload this resource and free memory
-	virtual void unload() = 0;
-	// Returns true if the resource is loaded
-	virtual bool is_ready() const = 0;
-
-	virtual const std::string& get_name() const = 0;
-};
-
-typedef uint64_t asset_uid;
-
-// Asset files contain configuration.
-//
-// All asset files are parsed and cached
-// for quick access during the engines runtime.
-// If you modify an asset file outside the editor
-// you may need to refresh the cache.
-class asset
-{
-public:
-	typedef std::shared_ptr<asset> ptr;
-
-	const std::string& get_type() const
-	{
-		return mType;
-	}
-
-	asset_uid get_id() const
-	{
-		return mID;
-	}
-
-	// Load the json file for this asset
-	void load_config(const filesystem::path& pPath)
-	{
-		mPath = pPath;
-		json j(load_file_as_string(pPath.string().c_str()));
-
-		mType = j["type"];
-		mID = j["id"];
-		mDescription = j["description"];
-
-		for (const json& i : j["files"])
-			mFiles.push_back(i);
-
-		on_load_metadata(j["metadata"]);
-	}
-
-	// Save any modified configuration for this asset
-	void save_config()
-	{
-		std::ofstream out(mPath.string().c_str());
-		json result;
-		result["type"] = mType;
-		result["id"] = mID;
-		result["files"] = mFiles;
-		result["metadata"] = on_save_metadata();
-		out << result.dump(2);
-	}
-
-	// Load this asset's data
-	virtual void load() {}
-
-	// Unload any data
-	virtual void unload() {}
-
-	// Returns true when this asset is ready to be used
-	virtual bool is_loaded() const
-	{
-		return true;
-	}
-
-protected:
-	virtual void on_load_metadata(const json& pData) {}
-	virtual json on_save_metadata() { return {}; }
-
-private:
-	filesystem::path mPath;
-	std::string mType;
-	std::string mDescription;
-	std::vector<std::string> mFiles;
-	asset_uid mID;
-};
-
-
-class asset_loader
-{
-public:
-};
-
-class context
-{
-
-};
-
-class asset_manager
-{
-public:
-
-	void set_filesystem(filesystem::filesystem_interface* pFilesystem)
-	{
-		mFilesystem = pFilesystem;
-	}
-
-	void add_asset(asset::ptr pAsset)
-	{
-		for (auto& i : mAsset_list)
-			if (i->get_id() == pAsset->get_id())
-				return; // Already exists
-		mAsset_list.push_back(pAsset);
-	}
-
-	asset::ptr get_asset(const filesystem::path& pPath);
-	asset::ptr get_asset(asset_uid pUID);
-
-private:
-	std::vector<asset::ptr> mAsset_list;
-	filesystem::filesystem_interface* mFilesystem;
-};
 
 class color
 {
@@ -561,13 +429,16 @@ public:
 };
 
 class texture :
-	public asset
+	public core::asset
 {
 public:
 	typedef std::vector<subtexture::ptr> atlas_container;
 
 public:
-	texture()
+	typedef tptr<texture> ptr;
+
+	texture(core::asset_config::ptr pConfig) :
+		asset(pConfig)
 	{
 		mGL_texture = 0;
 		mSmooth = false;
@@ -677,33 +548,37 @@ private:
 		// Give the image to OpenGL
 		glBindTexture(GL_TEXTURE_2D, mGL_texture);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWidth, mHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pBuffer);
-		//glBindTexture(GL_TEXTURE_2D, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
 
 		update_filtering();
 	}
 
 	void update_filtering()
 	{
-		GLint filtering = mSmooth ? GL_LINEAR : GL_NEAREST;
-
 		glBindTexture(GL_TEXTURE_2D, mGL_texture);
+
+		GLint filtering = mSmooth ? GL_LINEAR : GL_NEAREST;
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filtering);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filtering);
-		//glBindTexture(GL_TEXTURE_2D, 0);
+
+		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
-	virtual void on_load_metadata(const json& pData) override 
-	{
-		const json& atlas = pData["atlas"];
-		for (const json& i : atlas)
-			mAtlas.push_back(std::make_shared<subtexture>(i));
-	}
-	virtual json on_save_metadata() override
+	// Update the configuration with the current atlas
+	void update_metadata() const
 	{
 		json result;
 		for (const auto& i : mAtlas)
-			result.push_back(i->save());
-		return result;
+			result["atlas"].push_back(i->save());
+		get_config()->set_metadata(result);
+	}
+
+private:
+	void load_metadata()
+	{
+		const json& atlas = get_config()->get_metadata()["atlas"];
+		for (const json& i : atlas)
+			mAtlas.push_back(std::make_shared<subtexture>(i));
 	}
 
 private:
@@ -712,6 +587,48 @@ private:
 	bool mSmooth;
 	unsigned char* mPixels;
 	atlas_container mAtlas;
+};
+
+class texture_asset_loader :
+	public core::asset_loader
+{
+public:
+	virtual core::asset::ptr create_asset(core::asset_config::ptr pConfig, const filesystem::path& mRoot_path) override
+	{
+		filesystem::path tex_path = pConfig->get_path();
+		tex_path.remove_extension(); // "file.png.asset" -> "file.png"
+
+		texture::ptr tex = std::make_shared<texture>(pConfig);
+		tex->set_path(make_path_relative(tex_path, mRoot_path));
+		tex->load(tex_path.string());
+		return tex;
+	}
+
+	virtual bool can_import(const filesystem::path & pPath) override
+	{
+		return pPath.extension() == ".png";
+	}
+
+	virtual core::asset::ptr import(const filesystem::path & pPath, const filesystem::path& mRoot_path) override
+	{
+		core::asset_config::ptr config = std::make_shared<core::asset_config>();
+		config->set_type("texture");
+
+		// Generate an id from a hash of the file path
+		// TODO: Replace this with something that can generate a more "unique" id.
+		config->set_id(util::hash::hash64(pPath.string()));
+
+		filesystem::path config_path(pPath);
+		config_path.pop_filepath();
+		config_path /= pPath.filename() + ".asset";
+		config->set_path(config_path);
+
+		// Save the configuration
+		std::ofstream out_config_stream(config_path.string().c_str());
+		out_config_stream << config->save().dump(2);
+
+		return create_asset(config, mRoot_path);
+	}
 };
 
 struct vertex_2d
@@ -728,10 +645,10 @@ struct render_batch_2d
 	// a flat color.
 	texture* rendertexture{ nullptr };
 
-	// This is the layer in which this batch will be drawn.
+	// This is the depth in which this batch will be drawn.
 	// Batches with lower values are closer to the forground
 	// and higher values are closer to the background.
-	int layer{ 0 };
+	float depth{ 0 };
 
 	enum primitive_type
 	{
@@ -906,7 +823,7 @@ private:
 		std::sort(mBatches.begin(), mBatches.end(),
 			[](const render_batch_2d& l, const render_batch_2d& r)->bool
 		{
-			return l.layer > r.layer;
+			return l.depth > r.depth;
 		});
 	}
 
@@ -992,7 +909,6 @@ public:
 	sprite_component(core::object_node* pNode) :
 		component(pNode)
 	{
-		mTexture.load("./mytex.png");
 		subscribe_to(pNode, "on_render", &sprite_component::on_render, this);
 
 		// Requirements
@@ -1003,24 +919,33 @@ public:
 	{
 		json result;
 		result["offset"] = { mOffset.x, mOffset.y };
+		result["texture"] = mTexture ? json(mTexture->get_id()) : json();
 		return result;
 	}
 
 	virtual void deserialize(const json& pJson) override
 	{
 		mOffset = math::vec2(pJson["offset"][0], pJson["offset"][1]);
+		const json& texture_j = pJson["texture"];
+		if (!texture_j.is_null())
+			mTexture = get_asset_manager()->get_asset<texture>(static_cast<core::asset_uid>(texture_j));
 	}
 
 	void on_render(renderer* pRenderer)
 	{
+		// No texture
+		if (!mTexture)
+			return;
+
 		core::transform_component* transform = get_object()->get_component<core::transform_component>();
+		// No transform component
 		if (!transform)
 			return;
 
 		batch_builder batch;
-		batch.set_texture(&mTexture);
+		batch.set_texture(&(*mTexture));
 
-		const math::vec2 texture_size(mTexture.get_width(), mTexture.get_height());
+		const math::vec2 texture_size(mTexture->get_width(), mTexture->get_height());
 
 		vertex_2d verts[4];
 		verts[0].position = math::vec2(0, 0);
@@ -1065,8 +990,23 @@ public:
 		mAnchor = pRatio;
 	}
 
+	void set_texture(core::asset::tptr<texture> pAsset)
+	{
+		mTexture = pAsset;
+	}
+
+	void set_texture(core::asset_uid pID)
+	{
+		mTexture = get_asset_manager()->get_asset<texture>(pID);
+	}
+
+	void set_texture(const std::string& pPath)
+	{
+		mTexture = get_asset_manager()->get_asset<texture>(pPath);
+	}
+
 private:
-	texture mTexture;
+	core::asset::tptr<texture> mTexture;
 	math::vec2 mOffset, mAnchor{ math::anchor::topleft };
 };
 
@@ -1112,7 +1052,7 @@ private:
 		{
 			render_batch_2d batch;
 			batch.type = type;
-			batch.layer = -1;
+			batch.depth = -1;
 			for (int i = 0; i < vertexCount; i++)
 			{
 				batch.indexes.push_back(batch.vertices.size());
@@ -2198,29 +2138,45 @@ int main()
 			collider->set_rotation(math::degrees(rotation));
 	});
 
-	auto root_node = core::object_node::create();
+	core::context mycontext;
+	core::component_factory& factory = mycontext.get_component_factory();
+	factory.add<core::transform_component>();
+	factory.add<physics::physics_world_component>();
+	factory.add<physics::physics_component>();
+	factory.add<physics::box_collider_component>();
+	factory.add<sprite_component>();
+	factory.add<physics_debug_component>();
+
+	texture_asset_loader mytexture_loader;
+	core::asset_manager myassetmanager;
+	myassetmanager.add_loader("texture", &mytexture_loader);
+	myassetmanager.set_root_directory(".");
+	myassetmanager.import("./mytex.png");
+
+	mycontext.add_system(&myassetmanager);
+
+	auto root_node = core::object_node::create(&mycontext);
 	root_node->set_name("Game");
 	root_node->add_component<physics::physics_world_component>();
 	root_node->add_component<physics_debug_component>();
 	{
-		auto node1 = core::object_node::create();
+		auto node1 = root_node->create_child();
 		node1->set_name("Scene node 1");
 		node1->add_component<core::transform_component>();
-		node1->add_component<sprite_component>();
+		auto sprite = node1->add_component<sprite_component>();
+		sprite->set_texture("mytex.png");
 		node1->add_component<physics::physics_component>();
-		root_node->add_child(node1);
 
 		{
-			auto node2 = core::object_node::create();
+			auto node2 = node1->create_child();
 			node2->set_name("Scene node 2");
 			node2->add_component<core::transform_component>();
 			node2->add_component<sprite_component>();
 			node2->add_component<physics::box_collider_component>();
-			node1->add_child(node2);
 		}
 
 		{
-			auto node3 = core::object_node::create();
+			auto node3 = root_node->create_child();
 			node3->set_name("Scene node 3");
 			auto transform = node3->add_component<core::transform_component>();
 			transform->set_position(math::vec2(0, 100));
@@ -2229,17 +2185,9 @@ int main()
 			physics->set_type(physics::physics_component::type_static);
 			auto collider = node3->add_component<physics::box_collider_component>();
 			collider->set_size(math::vec2(200, 10));
-			root_node->add_child(node3);
 		}
 	}
 
-	core::component_factory factory;
-	factory.add<core::transform_component>();
-	factory.add<physics::physics_world_component>();
-	factory.add<physics::physics_component>();
-	factory.add<physics::box_collider_component>();
-	factory.add<sprite_component>();
-	factory.add<physics_debug_component>();
 
 	framebuffer myframebuffer;
 	myframebuffer.create(200, 200);
@@ -2305,7 +2253,7 @@ int main()
 				{
 					if (ImGui::MenuItem("Object 2D"))
 					{
-						auto node = core::object_node::create();
+						auto node = core::object_node::create(&mycontext);
 						node->set_name("New 2D Object");
 						node->add_component<core::transform_component>();
 						if (selected_object)
