@@ -35,6 +35,8 @@ class asset_manager :
 {
 	WGE_SYSTEM("Asset Manager", 0);
 public:
+	using asset_container = std::vector<asset::ptr>;
+
 	// TODO: Implement the filesystem_interface as the only means of
 	//   loading assets.
 	void set_filesystem(filesystem::filesystem_interface* pFilesystem);
@@ -78,6 +80,8 @@ public:
 
 	// Load all assets in the root directory
 	void load_assets();
+
+	const asset_container& get_asset_list() const;
 
 private:
 	// Iterates through all the files in the directory and returns a list of

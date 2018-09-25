@@ -13,7 +13,6 @@ namespace wge::core
 // you don't have to override it.
 class asset
 {
-
 public:
 	template<typename T = asset>
 	using tptr = std::shared_ptr<T>;
@@ -42,10 +41,7 @@ public:
 		return true;
 	}
 
-	asset_config::ptr get_config() const
-	{
-		return mConfig;
-	}
+	asset_config::ptr get_config() const;
 
 private:
 	filesystem::path mPath;

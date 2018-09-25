@@ -96,6 +96,11 @@ void asset_manager::load_assets()
 	}
 }
 
+const asset_manager::asset_container& asset_manager::get_asset_list() const
+{
+	return mAsset_list;
+}
+
 std::vector<filesystem::path> asset_manager::get_absolute_path_list(const filesystem::path & pPath)
 {
 	std::vector<filesystem::path> result;

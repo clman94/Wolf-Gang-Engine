@@ -11,10 +11,32 @@ using json = nlohmann::json;
 namespace wge::core
 {
 
-typedef std::uint64_t asset_uid;
+// A type that holds an asset's unique identification number
+using asset_uid = std::uint64_t;
 
 // Loads and saves the asset configuration
 // file.
+//
+// The format is as follows:
+//
+// type :
+//   A string that represents the type of the asset.
+//   This will dictate the loader that will
+//   be called to load the asset.
+//
+// id :
+//   A unique id for quick and decoupled access to an asset.
+//   This id will never change for an asset after it
+//   is generated so you can access the same asset even
+//   if its path changes.
+//
+// description :
+//   A user defined piece of text to help document this asset
+//
+// metadata :
+//   This is the configuration the asset stores. E.g. texture atlas,
+//   serialized data, etc...
+//
 class asset_config
 {
 public:
