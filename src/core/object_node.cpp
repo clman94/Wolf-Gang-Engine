@@ -1,6 +1,7 @@
 
 #include <wge/core/object_node.hpp>
 #include <wge/core/component.hpp>
+#include <wge/core/context.hpp>
 
 using namespace wge;
 using namespace wge::core;
@@ -127,13 +128,13 @@ json object_node::serialize() const
 	return result;
 }
 
-void object_node::deserialize(const json& pJson, const component_factory& pFactory)
+void object_node::deserialize(const json& pJson)
 {
 	mName = pJson["name"];
 
 	for (const json& i : pJson["components"])
 	{
-		component* c = pFactory.create(i["id"], this);
+		component* c = mContext->get_component_factory().create(i["id"], this);
 		c->set_name(i["name"]);
 		c->deserialize(i["data"]);
 		mComponents.emplace_back(c);
@@ -142,7 +143,7 @@ void object_node::deserialize(const json& pJson, const component_factory& pFacto
 	for (const json& i : pJson["children"])
 	{
 		auto obj = object_node::create(mContext);
-		obj->deserialize(i, pFactory);
+		obj->deserialize(i);
 		add_child(obj);
 	}
 }

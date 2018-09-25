@@ -45,6 +45,8 @@
 #include <cassert>
 #include <type_traits>
 #include <set>
+#include <any>
+#include <variant>
 
 // GL
 #include <GL/glew.h>
@@ -174,6 +176,57 @@ public:
 	color& operator-=(const color& pColor);
 	color& operator*=(const color& pColor);
 	color& operator/=(const color& pColor);
+};
+
+
+class collection
+{
+public:
+	// Json will act as our map because it provides a lot of convenience
+	// with is implicit convertions and easy serialization.
+	using option_map = json;
+
+	void set_name(const std::string& pName)
+	{
+		mName = pName;
+	}
+
+	json serialize() const
+	{
+		json result;
+		result["name"] = mName;
+
+		for (const auto& i : mMaps)
+			result["maps"][i.first] = i.second;
+
+		result["node"] = mRoot_node->serialize();
+	}
+
+	void deserialize(const json& pJson)
+	{
+		mName = pJson["name"];
+		const json& maps = pJson["maps"];
+		mMaps.clear();
+		for (json::const_iterator i = maps.begin(); i != maps.end(); i++)
+			mMaps[i.key()] = i.value();
+		mRoot_node->deserialize(pJson["node"]);
+	}
+
+	option_map& operator[](const std::string& pString)
+	{
+		return mMaps[pString];
+	}
+
+	// Root node for this collection
+	util::ref<core::object_node> get_node() const
+	{
+		return mRoot_node;
+	}
+
+private:
+	util::ref<core::object_node> mRoot_node;
+	std::map<std::string, option_map> mMaps;
+	std::string mName;
 };
 
 std::string load_file_as_string(const std::string& pPath)
@@ -2253,7 +2306,7 @@ int main()
 				std::ifstream{ "./serialization_data.json" } >> deserial;
 				root_node->remove_children();
 				root_node->remove_components();
-				root_node->deserialize(deserial, factory);
+				root_node->deserialize(deserial);
 				selected_object.reset();
 			}
 			ImGui::Checkbox("Run", &updates_enabled);

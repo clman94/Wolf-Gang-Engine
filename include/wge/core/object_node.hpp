@@ -115,7 +115,7 @@ public:
 	// Deserialize to this node. This will create all children nodes needed.
 	// Since objects don't know about other components, you have to pass in a factory
 	// to create those components for it.
-	void deserialize(const json& pJson, const component_factory& pFactory);
+	void deserialize(const json& pJson);
 
 	// Set the name of this object
 	void set_name(const std::string& pName);
