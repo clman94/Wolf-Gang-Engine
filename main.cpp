@@ -134,7 +134,6 @@ private:
 
 std::string load_file_as_string(const std::string& pPath);
 
-
 class color
 {
 public:
@@ -609,7 +608,7 @@ public:
 		return pPath.extension() == ".png";
 	}
 
-	virtual core::asset::ptr import(const filesystem::path & pPath, const filesystem::path& mRoot_path) override
+	virtual core::asset::ptr import_asset(const filesystem::path & pPath, const filesystem::path& mRoot_path) override
 	{
 		core::asset_config::ptr config = std::make_shared<core::asset_config>();
 		config->set_type("texture");
@@ -2151,7 +2150,8 @@ int main()
 	core::asset_manager myassetmanager;
 	myassetmanager.add_loader("texture", &mytexture_loader);
 	myassetmanager.set_root_directory(".");
-	myassetmanager.import("./mytex.png");
+	//myassetmanager.import_asset("./mytex.png");
+	myassetmanager.load_assets();
 
 	mycontext.add_system(&myassetmanager);
 

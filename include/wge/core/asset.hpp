@@ -19,30 +19,15 @@ public:
 	using tptr = std::shared_ptr<T>;
 	using ptr = std::shared_ptr<asset>;
 
-	asset(asset_config::ptr pConfig)
-	{
-		mConfig = pConfig;
-	}
+	asset(asset_config::ptr pConfig);
 
 	// This path will be used to locate this asset
-	const filesystem::path& get_path() const
-	{
-		return mPath;
-	}
-	void set_path(const filesystem::path& pPath)
-	{
-		mPath = pPath;
-	}
+	const filesystem::path& get_path() const;
+	void set_path(const filesystem::path& pPath);
 
-	asset_uid get_id() const
-	{
-		return mConfig->get_id();
-	}
+	asset_uid get_id() const;
 
-	const std::string& get_type() const
-	{
-		return mConfig->get_type();
-	}
+	const std::string& get_type() const;
 
 	// Load this asset's data
 	virtual void load() {}
