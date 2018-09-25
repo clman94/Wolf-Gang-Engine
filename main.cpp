@@ -391,18 +391,18 @@ private:
 	int mWidth, mHeight;
 };
 
-struct subtexture
+struct animation
 {
 public:
-	typedef std::shared_ptr<subtexture> ptr;
+	using ptr = std::shared_ptr<animation>;
 	
 	std::string name;
 	std::size_t frames{ 1 };
 	float interval{ 0 };
 	math::rect frame_rect;
 
-	subtexture() = default;
-	subtexture(const json& pJson)
+	animation() = default;
+	animation(const json& pJson)
 	{
 		load(pJson);
 	}
@@ -431,10 +431,10 @@ class texture :
 	public core::asset
 {
 public:
-	typedef std::vector<subtexture::ptr> atlas_container;
+	typedef std::vector<animation::ptr> atlas_container;
 
 public:
-	typedef tptr<texture> ptr;
+	using ptr = tptr<texture>;
 
 	texture(core::asset_config::ptr pConfig) :
 		asset(pConfig)
@@ -518,7 +518,7 @@ public:
 		return mSmooth;
 	}
 
-	subtexture::ptr get_subtexture(const std::string& pName) const
+	animation::ptr get_animation(const std::string& pName) const
 	{
 		for (const auto& i : mAtlas)
 			if (i->name == pName)
@@ -577,7 +577,7 @@ private:
 	{
 		const json& atlas = get_config()->get_metadata()["atlas"];
 		for (const json& i : atlas)
-			mAtlas.push_back(std::make_shared<subtexture>(i));
+			mAtlas.push_back(std::make_shared<animation>(i));
 	}
 
 private:
@@ -2338,6 +2338,31 @@ int main()
 					selected_object->add_component<sprite_component>();
 				ImGui::EndCombo();
 			}
+		}
+		ImGui::End();
+
+		if (ImGui::Begin("Asset Manager"))
+		{
+			ImGui::Columns(3, "_AssetColumns");
+			ImGui::SetColumnWidth(0, 100);
+
+			ImGui::TextUnformatted("Type:");
+			ImGui::NextColumn();
+			ImGui::TextUnformatted("Path:");
+			ImGui::NextColumn();
+			ImGui::TextUnformatted("UID:");
+			ImGui::NextColumn();
+
+			for (auto& i : myassetmanager.get_asset_list())
+			{
+				ImGui::TextUnformatted(i->get_type().c_str());
+				ImGui::NextColumn();
+				ImGui::TextUnformatted(i->get_path().string().c_str());
+				ImGui::NextColumn();
+				ImGui::TextUnformatted(std::to_string(i->get_id()).c_str());
+				ImGui::NextColumn();
+			}
+			ImGui::Columns();
 		}
 		ImGui::End();
 
