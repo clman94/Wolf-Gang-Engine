@@ -989,7 +989,7 @@ public:
 		mAnchor = pRatio;
 	}
 
-	void set_texture(core::asset::tptr<texture> pAsset)
+	void set_texture(texture::ptr pAsset)
 	{
 		mTexture = pAsset;
 	}
@@ -998,14 +998,18 @@ public:
 	{
 		mTexture = get_asset_manager()->get_asset<texture>(pID);
 	}
-
 	void set_texture(const std::string& pPath)
 	{
 		mTexture = get_asset_manager()->get_asset<texture>(pPath);
 	}
 
+	texture::ptr get_texture() const
+	{
+		return mTexture;
+	}
+
 private:
-	core::asset::tptr<texture> mTexture;
+	texture::ptr mTexture;
 	math::vec2 mOffset, mAnchor{ math::anchor::topleft };
 };
 
@@ -2106,6 +2110,19 @@ int main()
 		math::vec2 offset = sprite->get_offset();
 		if (ImGui::DragFloat2("Offset", offset.components))
 			sprite->set_offset(offset);
+
+		texture::ptr tex = sprite->get_texture();
+		std::string inputtext = tex ? tex->get_path().string().c_str() : "None";
+		ImGui::InputText("Texture", &inputtext, ImGuiInputTextFlags_ReadOnly);
+		if (ImGui::BeginDragDropTarget())
+		{
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("textureAsset"))
+			{
+				core::asset_uid id = *(core::asset_uid*)payload->Data;
+				sprite->set_texture(id);
+			}
+			ImGui::EndDragDropTarget();
+		}
 	});
 
 	// Inspector for physics_world_component
@@ -2187,7 +2204,6 @@ int main()
 			collider->set_size(math::vec2(200, 10));
 		}
 	}
-
 
 	framebuffer myframebuffer;
 	myframebuffer.create(200, 200);
@@ -2355,18 +2371,28 @@ int main()
 
 			for (auto& i : myassetmanager.get_asset_list())
 			{
-				ImGui::TextUnformatted(i->get_type().c_str());
+				ImGui::PushID(i->get_id());
+				ImGui::Selectable(i->get_type().c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
+				if (ImGui::BeginDragDropSource())
+				{
+					core::asset_uid id = i->get_id();
+					ImGui::SetDragDropPayload((i->get_type() + "Asset").c_str(), &id, sizeof(core::asset_uid));
+					ImGui::Text("Asset");
+					ImGui::EndDragDropSource();
+				}
 				ImGui::NextColumn();
 				ImGui::TextUnformatted(i->get_path().string().c_str());
 				ImGui::NextColumn();
 				ImGui::TextUnformatted(std::to_string(i->get_id()).c_str());
 				ImGui::NextColumn();
+				ImGui::PopID();
 			}
 			ImGui::Columns();
 		}
 		ImGui::End();
 
 		ImGui::Begin("Viewport");
+
 		float width = ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x*2;
 		float height = ImGui::GetWindowHeight() - ImGui::GetCursorPos().y - ImGui::GetStyle().WindowPadding.y;
 
