@@ -53,9 +53,6 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
-// Angelscript
-#include <angelscript.h>
-
 // JSON
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;

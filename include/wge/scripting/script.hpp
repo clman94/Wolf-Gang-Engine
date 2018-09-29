@@ -263,33 +263,33 @@ generic_function_binding make_object_proxy(Tfunc&& pFunc, function_signature<Tre
 template <typename T>
 detail::generic_function_binding function(T&& pFunc)
 {
-	using traits = function_signature_traits<typename decltype(&std::decay_t<T>::operator())>;
-	using sig = function_signature<traits::type::return_type, traits::type::param_types>;
-	return make_object_proxy(std::forward<T>(pFunc), sig{});
+	using traits = detail::function_signature_traits<typename decltype(&std::decay_t<T>::operator())>;
+	using sig = detail::function_signature<traits::type::return_type, traits::type::param_types>;
+	return detail::make_object_proxy(std::forward<T>(pFunc), sig{});
 }
 
 template <typename Tret, typename...Tparams>
 detail::generic_function_binding function(Tret(*pFunc)(Tparams...))
 {
-	return make_callable(std::move(pFunc), function_signature<Tret, function_params<Tparams...>>{});
+	return detail::make_object_proxy(std::move(pFunc), detail::function_signature<Tret, detail::function_params<Tparams...>>{});
 }
 
 template <typename Tret, typename Tclass, typename...Tparams>
 detail::generic_function_binding function(Tret(Tclass::*pFunc)(Tparams...))
 {
-	return make_callable(std::move(pFunc), function_signature<Tret, function_params<Tclass, Tparams...>, true>{});
+	return detail::make_object_proxy(std::move(pFunc), detail::function_signature<Tret, detail::function_params<Tclass, Tparams...>, true>{});
 }
 
 template <typename Tret, typename Tclass, typename...Tparams>
 detail::generic_function_binding function(Tret(Tclass::*pFunc)(Tparams...) const)
 {
-	return make_callable(std::move(pFunc), function_signature<Tret, function_params<Tclass, Tparams...>, true, true>{});
+	return detail::make_object_proxy(std::move(pFunc), detail::function_signature<Tret, detail::function_params<Tclass, Tparams...>, true, true>{});
 }
 // Bind a member function
 template <typename T, typename Tinstance>
 detail::generic_function_binding function(T&& pFunc, Tinstance&& pInstance)
 {
-	return function(bind_mem_fn(pFunc, std::forward<Tinstance>(pInstance)));
+	return detail::make_object_proxy(bind_mem_fn(pFunc, std::forward<Tinstance>(pInstance)));
 }
 
 namespace detail
@@ -427,8 +427,8 @@ public:
 	script_function<Tdeclar> get_function(const std::string& pName)
 	{
 		using namespace AngelScript;
-		using traits = function_signature_traits<Tdeclar*>;
-		const auto types = function_signature_types::create(traits::type{});
+		using traits = detail::function_signature_traits<Tdeclar*>;
+		const auto types = detail::function_signature_types::create(traits::type{});
 		const std::string declaration = get_function_declaration(pName, types);
 		//mEngine->GetGlobalFunctionByDecl
 		auto mod = mEngine->GetModule("default");
@@ -477,7 +477,7 @@ public:
 	template <typename T>
 	void global(const std::string& pIdentifier, const std::reference_wrapper<T>& pReference)
 	{
-		int r = mEngine->RegisterGlobalProperty(get_variable_declaration(pIdentifier, type_info::create<T>()).c_str(),
+		int r = mEngine->RegisterGlobalProperty(get_variable_declaration(pIdentifier, detail::type_info::create<T>()).c_str(),
 			const_cast<std::remove_const_t<T*>>(&pReference.get()));
 		assert(r >= 0);
 	}
@@ -527,7 +527,8 @@ public:
 		using namespace AngelScript;
 		mInclude_callback_info.pFunc = pFunc;
 		mInclude_callback_info.pScript = this;
-		INCLUDECALLBACK_t callback_delegate = [](const char *include, const char *from, CScriptBuilder *builder, void *userParam)->int
+		INCLUDECALLBACK_t callback_delegate =
+			[](const char *include, const char *from, CScriptBuilder *builder, void *userParam)->int
 		{
 			include_callback_info* info = static_cast<include_callback_info*>(userParam);
 			return info->pFunc(include, from, *info->pScript) ? 0 : -1;
@@ -555,7 +556,8 @@ private:
 private:
 
 	template <typename...Tparams, std::size_t...I>
-	static void set_context_args_impl(AngelScript::asIScriptContext* pCtx, std::index_sequence<I...>, Tparams&&... pParams)
+	static void set_context_args_impl(AngelScript::asIScriptContext* pCtx,
+		std::index_sequence<I...>, Tparams&&... pParams)
 	{
 		// A fold expression will help set all the arguments
 		([&]()
