@@ -47,6 +47,7 @@
 #include <set>
 #include <any>
 #include <variant>
+#include <typeindex>
 
 // GL
 #include <GL/glew.h>
@@ -95,6 +96,7 @@ using json = nlohmann::json;
 #include <wge/filesystem/filesystem_interface.hpp>
 #include <wge/core/context.hpp>
 #include <wge/core/asset_manager.hpp>
+#include <wge/scripting/script.hpp>
 using namespace wge;
 
 #include <Box2D/Box2D.h>
@@ -729,7 +731,7 @@ public:
 
 	// Add 4 vertices as a quad. Returns the starting index in the vertices
 	// member of the batch.
-	std::size_t add_quad(const vertex_2d const* pBuffer)
+	std::size_t add_quad(const vertex_2d* pBuffer)
 	{
 		std::size_t start_index = mBatch.vertices.size();
 
@@ -1432,12 +1434,54 @@ void Image(const framebuffer& mFramebuffer, const ImVec2& pSize = ImVec2(0, 0))
 
 }
 
-#include <scriptbuilder/scriptbuilder.h>
-#include <scripthandle/scripthandle.h>
-#include <scriptstdstring/scriptstdstring.h>
-#include <scriptarray/scriptarray.h>
-#include <contextmgr/contextmgr.h>
-#include "main.h"
+struct pieclass
+{
+	int x;
+	void func(int i)
+	{
+	}
+};
+
+void thing()
+{
+	using namespace wge::scripting;
+
+	script myscript;
+
+	// Register a lambda/anonymous function. AngelScript can't do this
+	// with its own api.
+	// Defines a global function: "void print(string)"
+	myscript.global("print",
+		function([](std::string pStr, int)
+		{
+			std::cout << "Print: " << pStr << "\n";
+		}));
+
+	// Get the function
+	auto print_func = myscript.get_function<void(std::string, int)>("print");
+
+	// Call it directly
+	print_func("yey", 34);
+
+	// Start a new module
+	myscript.module();
+	// Add a file
+	myscript.file("./astest.as");
+	// Compile it
+	myscript.build();
+
+
+	// Register the pie class
+	//myscript.value<pieclass>("pie");
+	//myscript.object("pie", "x", member(&pieclass::x));
+	//myscript.object("pie", "func", function(&pieclass::func));
+
+	// Register a global variable
+	//pieclass mypie;
+	//myscript.global("mypie", std::ref(mypie));
+
+	// Register a lambda function
+}
 
 // The goal behind this test was to implement coroutine functionality
 // with more convenience. The previous version of the engine used something
@@ -1472,8 +1516,9 @@ void Image(const framebuffer& mFramebuffer, const ImVec2& pSize = ImVec2(0, 0))
 //
 
 // This copies an argument to another parameter in angelscript. May still need some work as it hasn't been fully tested in all situations.
-void copy_argument(asIScriptEngine* engine, void* dest, int dest_typeid, void* src, int src_typeid)
+void copy_argument(AngelScript::asIScriptEngine* engine, void* dest, int dest_typeid, void* src, int src_typeid)
 {
+	using namespace AngelScript;
 	if (dest_typeid & asTYPEID_OBJHANDLE)
 	{
 		// Dereference the handle if the input is also a reference
@@ -1500,7 +1545,7 @@ void copy_argument(asIScriptEngine* engine, void* dest, int dest_typeid, void* s
 
 void test_as_varfunc()
 {
-	CContextMgr manager;
+	using namespace AngelScript;
 
 	asIScriptEngine* engine = asCreateScriptEngine();
 
@@ -2074,6 +2119,8 @@ bool drag_resizable_rect(const char* pStr_id, math::rect* pRect)
 
 int main()
 {
+
+	thing();
 	glfwInit();
 
 	// OpenGL 3.3 minimum

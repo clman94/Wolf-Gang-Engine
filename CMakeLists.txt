@@ -11,6 +11,8 @@ if (MSVC_VERSION GREATER_EQUAL "1900")
 	endif()
 endif()
 
+# Use the angelscript namespace
+add_definitions(-DAS_USE_NAMESPACE)
 
 include_directories("include")
 
@@ -28,6 +30,9 @@ source_group("Graphics" FILES ${WGE_GRAPHICS_HEADERS})
 file(GLOB WGE_PHYSICS_HEADERS "${CMAKE_SOURCE_DIR}/include/wge/physics/*.hpp")
 source_group("Physics" FILES ${WGE_PHYSICS_HEADERS})
 
+file(GLOB WGE_SCRIPTING_HEADERS "${CMAKE_SOURCE_DIR}/include/wge/scripting/*.hpp")
+source_group("Scripting" FILES ${WGE_SCRIPTING_HEADERS})
+
 file(GLOB WGE_CORE_HEADERS "${CMAKE_SOURCE_DIR}/include/wge/core/*.hpp")
 source_group("Core" FILES ${WGE_CORE_HEADERS})
 
@@ -42,6 +47,7 @@ set(WGE_ALL_HEADERS
 	${WGE_MATH_HEADERS}
 	${WGE_GRAPHICS_HEADERS}
 	${WGE_PHYSICS_HEADERS}
+	${WGE_SCRIPTING_HEADERS}
 	${WGE_CORE_HEADERS}
 	${WGE_FILESYSTEM_HEADERS}
 	${WGE_UTIL_HEADERS}
@@ -59,6 +65,9 @@ source_group("Graphics" FILES ${WGE_GRAPHICS_SOURCES})
 file(GLOB WGE_PHYSICS_SOURCES "${CMAKE_SOURCE_DIR}/src/physics/*.cpp")
 source_group("Physics" FILES ${WGE_PHYSICS_SOURCES})
 
+file(GLOB WGE_SCRIPTING_SOURCES "${CMAKE_SOURCE_DIR}/src/scripting/*.cpp")
+source_group("Scripting" FILES ${WGE_SCRIPTING_SOURCES})
+
 file(GLOB WGE_CORE_SOURCES "${CMAKE_SOURCE_DIR}/src/core/*.cpp")
 source_group("Core" FILES ${WGE_CORE_SOURCES})
 
@@ -73,6 +82,7 @@ set(WGE_ALL_SOURCES
 	${WGE_MATH_SOURCES}
 	${WGE_GRAPHICS_SOURCES}
 	${WGE_PHYSICS_SOURCES}
+	${WGE_SCRIPTING_SOURCES}
 	${WGE_CORE_SOURCES}
 	${WGE_FILESYSTEM_SOURCES}
 	${WGE_UTIL_SOURCES}
