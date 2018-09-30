@@ -36,6 +36,9 @@ source_group("Scripting" FILES ${WGE_SCRIPTING_HEADERS})
 file(GLOB WGE_CORE_HEADERS "${CMAKE_SOURCE_DIR}/include/wge/core/*.hpp")
 source_group("Core" FILES ${WGE_CORE_HEADERS})
 
+file(GLOB WGE_LOGGING_HEADERS "${CMAKE_SOURCE_DIR}/include/wge/logging/*.hpp")
+source_group("Logging" FILES ${WGE_LOGGING_HEADERS})
+
 file(GLOB WGE_FILESYSTEM_HEADERS "${CMAKE_SOURCE_DIR}/include/wge/filesystem/*.hpp")
 source_group("Filesystem" FILES ${WGE_FILESYSTEM_HEADERS})
 
@@ -49,6 +52,7 @@ set(WGE_ALL_HEADERS
 	${WGE_PHYSICS_HEADERS}
 	${WGE_SCRIPTING_HEADERS}
 	${WGE_CORE_HEADERS}
+	${WGE_LOGGING_HEADERS}
 	${WGE_FILESYSTEM_HEADERS}
 	${WGE_UTIL_HEADERS}
 	)
@@ -71,6 +75,9 @@ source_group("Scripting" FILES ${WGE_SCRIPTING_SOURCES})
 file(GLOB WGE_CORE_SOURCES "${CMAKE_SOURCE_DIR}/src/core/*.cpp")
 source_group("Core" FILES ${WGE_CORE_SOURCES})
 
+file(GLOB WGE_LOGGING_SOURCES "${CMAKE_SOURCE_DIR}/src/logging/*.cpp")
+source_group("Logging" FILES ${WGE_LOGGING_SOURCES})
+
 file(GLOB WGE_FILESYSTEM_SOURCES "${CMAKE_SOURCE_DIR}/src/filesystem/*.cpp")
 source_group("Filesystem" FILES ${WGE_FILESYSTEM_SOURCES})
 
@@ -84,6 +91,7 @@ set(WGE_ALL_SOURCES
 	${WGE_PHYSICS_SOURCES}
 	${WGE_SCRIPTING_SOURCES}
 	${WGE_CORE_SOURCES}
+	${WGE_LOGGING_SOURCES}
 	${WGE_FILESYSTEM_SOURCES}
 	${WGE_UTIL_SOURCES}
 	)

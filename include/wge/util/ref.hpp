@@ -49,12 +49,13 @@ private:
 	std::size_t mRefs;
 	std::shared_ptr<bool> mWeak_valid;
 };
+
 template<class T, class Enable = void>
 class ref
 {};
 
 template <class T>
-class ref<T, typename std::enable_if<std::is_base_of<ref_counted, T>::value>::type>
+class ref<T, std::enable_if_t<std::is_base_of<ref_counted, T>::value>>
 {
 public:
 	// ref_counted objects are constructed with one reference

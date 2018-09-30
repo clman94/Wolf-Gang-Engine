@@ -73,6 +73,7 @@ using json = nlohmann::json;
 #include <imgui/imgui_stl.h>
 
 // WGE
+#include <wge/logging/log.hpp>
 #include <wge/core/object_node.hpp>
 #include <wge/core/component.hpp>
 #include <wge/core/transform_component.hpp>
@@ -1278,8 +1279,8 @@ bool drag_resizable_rect(const char* pStr_id, math::rect* pRect)
 
 int main()
 {
+	log::open_file("./editor/log.txt");
 
-	thing();
 	glfwInit();
 
 	// OpenGL 3.3 minimum
@@ -1321,6 +1322,14 @@ int main()
 	std::thread al_test_thread;
 
 	editor_component_inspector inspector_guis;
+
+	log::out << log::level::error << WGE_LI << "puit" << log::endm;
+
+	log::error() << WGE_LI << "my error is great" << log::endm;
+	log::debug() << WGE_LI << "eeeyyy" << log::endm;
+
+	WGE_SASSERT(false);
+	WGE_SASSERT_MSG(false, "eeeeey");
 
 	// Inspector for transform_component
 	inspector_guis.add_inspector(core::transform_component::COMPONENT_ID,
@@ -1463,6 +1472,7 @@ int main()
 			collider->set_size(math::vec2(200, 10));
 		}
 	}
+
 
 	graphics::framebuffer myframebuffer;
 	myframebuffer.create(200, 200);

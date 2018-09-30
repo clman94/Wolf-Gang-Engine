@@ -417,11 +417,14 @@ public:
 		// String type
 		type<std::string>("string");
 	}
-
+	script(const script&) = delete;
+	script(script&&) = delete; // Disabled for now
 	~script()
 	{
 		mEngine->ShutDownAndRelease();
 	}
+
+	script& operator=(const script&) = delete;
 
 	template <typename Tdeclar>
 	script_function<Tdeclar> get_function(const std::string& pName)
