@@ -138,10 +138,6 @@ private:
 	std::set<std::string> mFlags;
 };
 
-std::string load_file_as_string(const std::string& pPath);
-
-
-
 class collection
 {
 public:
@@ -191,20 +187,6 @@ private:
 	std::map<std::string, option_map> mMaps;
 	std::string mName;
 };
-
-std::string load_file_as_string(const std::string& pPath)
-{
-	std::ifstream stream(pPath.c_str());
-	if (!stream.good())
-	{
-		std::cout << "Could not load file \"" << pPath << "\"\n";
-		std::getchar();
-		return{};
-	}
-	std::stringstream sstr;
-	sstr << stream.rdbuf();
-	return sstr.str();
-}
 
 void show_info(stb_vorbis *v)
 {
