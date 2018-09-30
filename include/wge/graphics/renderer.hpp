@@ -15,9 +15,12 @@ class framebuffer;
 
 struct vertex_2d
 {
+	// Represents the 2d coordinates of this vertex
 	math::vec2 position;
+	// UV position in the texture
 	math::vec2 uv;
-	color thiscolor{ 1, 1, 1, 1 };
+	// Color of vertex
+	graphics::color color{ 1, 1, 1, 1 };
 };
 
 struct render_batch_2d

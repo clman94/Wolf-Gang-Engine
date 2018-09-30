@@ -274,7 +274,7 @@ private:
 				batch.indexes.push_back(batch.vertices.size());
 				graphics::vertex_2d vert;
 				vert.position = math::vec2(vertices[i].x, vertices[i].y);
-				vert.thiscolor = color(pColor.r, pColor.g, pColor.b, pColor.a * 0.5f);
+				vert.color = graphics::color(pColor.r, pColor.g, pColor.b, pColor.a * 0.5f);
 				batch.vertices.push_back(vert);
 			}
 			if (connect_end)
