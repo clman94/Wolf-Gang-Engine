@@ -1,3 +1,7 @@
+#pragma once
+
+namespace wge::graphics
+{
 
 class color
 {
@@ -22,14 +26,18 @@ public:
 		r(pR), g(pG), b(pB), a(pA)
 	{}
 
-	color operator+(const color& pColor) const;
-	color operator-(const color& pColor) const;
-	color operator*(const color& pColor) const;
-	color operator/(const color& pColor) const;
+	// To be implemented
+	//color operator+(const color& pColor) const;
+	//color operator-(const color& pColor) const;
+	//color operator*(const color& pColor) const;
+	//color operator/(const color& pColor) const;
 
 	color& operator=(const color& pColor) = default;
-	color& operator+=(const color& pColor);
-	color& operator-=(const color& pColor);
-	color& operator*=(const color& pColor);
-	color& operator/=(const color& pColor);
+	// To be implemented
+	//color& operator+=(const color& pColor);
+	//color& operator-=(const color& pColor);
+	//color& operator*=(const color& pColor);
+	//color& operator/=(const color& pColor);
 };
+
+}
