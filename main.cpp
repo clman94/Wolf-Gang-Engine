@@ -94,6 +94,11 @@ using json = nlohmann::json;
 #include <wge/core/context.hpp>
 #include <wge/core/asset_manager.hpp>
 #include <wge/scripting/script.hpp>
+#include <wge/graphics/framebuffer.hpp>
+#include <wge/graphics/renderer.hpp>
+#include <wge/graphics/sprite_component.hpp>
+#include <wge/graphics/texture_asset_loader.hpp>
+#include <wge/graphics/texture.hpp>
 using namespace wge;
 
 #include <Box2D/Box2D.h>
@@ -135,47 +140,6 @@ private:
 
 std::string load_file_as_string(const std::string& pPath);
 
-class color
-{
-public:
-	union {
-		struct {
-			float r, g, b, a;
-		};
-		float components[4];
-	};
-
-	color() :
-		r(0), g(0), b(0), a(1)
-	{}
-	color(const color& pColor) :
-		r(pColor.r), g(pColor.g), b(pColor.b), a(pColor.a)
-	{}
-	color(float pR, float pG, float pB) :
-		r(pR), g(pG), b(pB), a(1)
-	{}
-	color(float pR, float pG, float pB, float pA) :
-		r(pR), g(pG), b(pB), a(pA)
-	{}
-
-	color operator+(const color& pColor) const;
-	color operator-(const color& pColor) const;
-	color operator*(const color& pColor) const;
-	color operator/(const color& pColor) const;
-
-	color& operator=(const color& pColor)
-	{
-		r = pColor.r;
-		g = pColor.g;
-		b = pColor.b;
-		a = pColor.a;
-		return *this;
-	}
-	color& operator+=(const color& pColor);
-	color& operator-=(const color& pColor);
-	color& operator*=(const color& pColor);
-	color& operator/=(const color& pColor);
-};
 
 
 class collection
@@ -242,78 +206,6 @@ std::string load_file_as_string(const std::string& pPath)
 	return sstr.str();
 }
 
-bool compile_shader(GLuint pGL_shader, const std::string& pSource)
-{
-	// Compile Shader
-	const char * source_ptr = pSource.c_str();
-	glShaderSource(pGL_shader, 1, &source_ptr, NULL);
-	glCompileShader(pGL_shader);
-
-	// Get log info
-	GLint result =  GL_FALSE;
-	int log_length = 0;
-	glGetShaderiv(pGL_shader, GL_COMPILE_STATUS, &result);
-	glGetShaderiv(pGL_shader, GL_INFO_LOG_LENGTH, &log_length);
-	if (log_length > 0)
-	{
-		// A compilation error occured. Print the message.
-		std::vector<char> message(log_length + 1);
-		glGetShaderInfoLog(pGL_shader, log_length, NULL, &message[0]);
-		printf("%s\n", &message[0]);
-		return false;
-	}
-
-	return true;
-}
-
-GLuint load_shaders(const std::string& pVertex_path, const std::string& pFragment_path)
-{
-	// Load sources
-	std::string vertex_str = load_file_as_string(pVertex_path);
-	std::string fragment_str = load_file_as_string(pFragment_path);
-
-	if (vertex_str.empty() || fragment_str.empty())
-		return 0;
-
-	// Create the shader objects
-	GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-	GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-
-	// Compile the shaders
-	compile_shader(vertex_shader, vertex_str);
-	compile_shader(fragment_shader, fragment_str);
-
-	// Link the shaders to a program
-	GLuint program_id = glCreateProgram();
-	glAttachShader(program_id, vertex_shader);
-	glAttachShader(program_id, fragment_shader);
-	glLinkProgram(program_id);
-
-	// Check for errors
-	GLint result = GL_FALSE;
-	int log_length = 0;
-	glGetProgramiv(program_id, GL_LINK_STATUS, &result);
-	glGetProgramiv(program_id, GL_INFO_LOG_LENGTH, &log_length);
-	if (log_length > 0)
-	{
-		// An error occured
-		std::vector<char> message(log_length + 1);
-		glGetProgramInfoLog(program_id, log_length, NULL, &message[0]);
-		printf("%s\n", &message[0]);
-		return 0;
-	}
-
-	// Cleanup
-
-	glDetachShader(program_id, vertex_shader);
-	glDetachShader(program_id, fragment_shader);
-
-	glDeleteShader(vertex_shader);
-	glDeleteShader(fragment_shader);
-
-	return program_id;
-}
-
 void show_info(stb_vorbis *v)
 {
 	if (v) {
@@ -323,444 +215,6 @@ void show_info(stb_vorbis *v)
 			info.setup_memory_required, info.temp_memory_required);
 	}
 }
-
-// This class manages an opengl framebuffer object
-// for easy render to texture functionality.
-class framebuffer
-{
-public:
-	framebuffer()
-	{
-		mWidth = 0;
-		mHeight = 0;
-		mTexture = 0;
-	}
-
-	~framebuffer()
-	{
-		glDeleteTextures(1, &mTexture);
-		glDeleteFramebuffers(1, &mFramebuffer);
-	}
-
-	// Create the framebuffer and texture.
-	// Use resize() to adjust the framebuffer size.
-	void create(int pWidth, int pHeight)
-	{
-		if (pWidth <= 0 || pHeight <= 0 || mTexture != 0)
-			return;
-
-		// Create the framebuffer object
-		glGenFramebuffers(1, &mFramebuffer);
-		glBindFramebuffer(GL_FRAMEBUFFER, mFramebuffer);
-
-		// Create the texture
-		glGenTextures(1, &mTexture);
-		glBindTexture(GL_TEXTURE_2D, mTexture);
-
-		// Create the texture
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, pWidth, pHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-
-		// GL_NEAREST will tell the sampler to get the nearest pixel when
-		// rendering rather than lerping the pixels together.
-		// It may be better to use a GL_LINEAR filter so then upscaling and downscaling
-		// arn't so jaring.
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-		// Attach the texture to #0
-		glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, mTexture, 0);
-
-		// Set the draw buffer
-		glDrawBuffer(GL_COLOR_ATTACHMENT0);
-
-		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		{
-			std::cout << "Incomplete framebuffer\n";
-			return;
-		}
-
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glBindTexture(GL_TEXTURE_2D, 0);
-
-		mWidth = pWidth;
-		mHeight = pHeight;
-	}
-
-	// Resize the framebuffer
-	void resize(int pWidth, int pHeight)
-	{
-		if (pWidth > 0 && pHeight > 0)
-		{
-			// Re-allocate the texture but with the new size
-			glBindTexture(GL_TEXTURE_2D, mTexture);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, pWidth, pHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-			glBindTexture(GL_TEXTURE_2D, 0);
-
-			mWidth = pWidth;
-			mHeight = pHeight;
-		}
-	}
-
-	// This sets the frame buffer for opengl.
-	// Call this first if you want to draw to this framebuffer.
-	// Call end_framebuffer() when you are done.
-	void begin_framebuffer() const
-	{
-		glBindFramebuffer(GL_FRAMEBUFFER, mFramebuffer);
-	}
-
-	// Resets opengl back to the default framebuffer
-	void end_framebuffer() const
-	{
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	}
-
-	// Get the raw gl texture id
-	GLuint get_gl_texture() const
-	{
-		return mTexture;
-	}
-
-	// Get width of framebuffer texture in pixels
-	int get_width() const
-	{
-		return mWidth;
-	}
-
-	// Get height of framebuffer texture in pixels
-	int get_height() const
-	{
-		return mHeight;
-	}
-
-	float get_brightness() const
-	{
-
-	}
-
-private:
-	GLuint mTexture, mFramebuffer;
-	int mWidth, mHeight;
-};
-
-struct animation
-{
-public:
-	using ptr = std::shared_ptr<animation>;
-	
-	std::string name;
-	std::size_t frames{ 1 };
-	float interval{ 0 };
-	math::rect frame_rect;
-
-	animation() = default;
-	animation(const json& pJson)
-	{
-		load(pJson);
-	}
-
-	// Parse json
-	void load(const json& pJson)
-	{
-		name = pJson["name"];
-		frames = pJson["frames"];
-		interval = pJson["interval"];
-		frame_rect = pJson["frame-rect"];
-	}
-
-	json save() const
-	{
-		json result;
-		result["name"] = name;
-		result["frames"] = frames;
-		result["interval"] = interval;
-		result["frame-rect"] = frame_rect;
-		return result;
-	}
-};
-
-class texture :
-	public core::asset
-{
-public:
-	typedef std::vector<animation::ptr> atlas_container;
-
-public:
-	using ptr = tptr<texture>;
-
-	texture(core::asset_config::ptr pConfig) :
-		asset(pConfig)
-	{
-		mGL_texture = 0;
-		mSmooth = false;
-		mPixels = nullptr;
-	}
-	texture(texture&&) = default;
-	texture(const texture&) = delete;
-	texture& operator=(const texture&) = delete;
-
-	~texture()
-	{
-		stbi_image_free(mPixels);
-	}
-
-	// Load a texture from a file
-	void load(const std::string& pFilepath)
-	{
-		stbi_uc* pixels = stbi_load(pFilepath.c_str(), &mWidth, &mHeight, &mChannels, 4);
-		if (!pixels)
-		{
-			std::cout << "Failed to open image\n";
-			return;
-		}
-		create_from_pixels(pixels);
-		stbi_image_free(mPixels);
-		mPixels = pixels;
-	}
-
-	// Load texture from a stream. If pSize = 0, the rest of the stream will be used.
-	void load(filesystem::input_stream::ptr pStream, std::size_t pSize = 0)
-	{
-		pSize = (pSize == 0 ? pStream->length() - pStream->tell() : pSize);
-		std::vector<unsigned char> data;
-		data.resize(pSize);
-		std::size_t bytes_read = pStream->read(&data[0], pSize);
-		stbi_uc* pixels = stbi_load_from_memory(&data[0], bytes_read, &mWidth, &mHeight, &mChannels, 4);
-		if (!pixels)
-		{
-			std::cout << "Failed to open image\n";
-			return;
-		}
-		create_from_pixels(pixels);
-		stbi_image_free(mPixels);
-		mPixels = pixels;
-	}
-
-	// Get the raw gl texture id
-	GLuint get_gl_texture() const
-	{
-		return mGL_texture;
-	}
-
-	// Get width of texture in pixels
-	int get_width() const
-	{
-		return mWidth;
-	}
-
-	// Get height of texture in pixels
-	int get_height() const
-	{
-		return mHeight;
-	}
-
-	// Set the smooth filtering. If enabled,
-	// the image will get smoothed when stretched or rotated
-	// making it more pleasing to the eye. However, it may be
-	// a good idea to disable this if your doing pixel art as it
-	// tends to "blur" tiny images.
-	void set_smooth(bool pEnabled)
-	{
-		mSmooth = pEnabled;
-		update_filtering();
-	}
-
-	bool is_smooth() const
-	{
-		return mSmooth;
-	}
-
-	animation::ptr get_animation(const std::string& pName) const
-	{
-		for (const auto& i : mAtlas)
-			if (i->name == pName)
-				return i;
-	}
-
-	atlas_container& get_raw_atlas()
-	{
-		return mAtlas;
-	}
-
-	const atlas_container& get_raw_atlas() const
-	{
-		return mAtlas;
-	}
-
-private:
-	void create_from_pixels(unsigned char* pBuffer)
-	{
-		if (!mGL_texture)
-		{
-			// Create the texture object
-			glGenTextures(1, &mGL_texture);
-		}
-
-		// Give the image to OpenGL
-		glBindTexture(GL_TEXTURE_2D, mGL_texture);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWidth, mHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pBuffer);
-		glBindTexture(GL_TEXTURE_2D, 0);
-
-		update_filtering();
-	}
-
-	void update_filtering()
-	{
-		glBindTexture(GL_TEXTURE_2D, mGL_texture);
-
-		GLint filtering = mSmooth ? GL_LINEAR : GL_NEAREST;
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filtering);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filtering);
-
-		glBindTexture(GL_TEXTURE_2D, 0);
-	}
-
-	// Update the configuration with the current atlas
-	void update_metadata() const
-	{
-		json result;
-		for (const auto& i : mAtlas)
-			result["atlas"].push_back(i->save());
-		get_config()->set_metadata(result);
-	}
-
-private:
-	void load_metadata()
-	{
-		const json& atlas = get_config()->get_metadata()["atlas"];
-		for (const json& i : atlas)
-			mAtlas.push_back(std::make_shared<animation>(i));
-	}
-
-private:
-	int mChannels, mWidth, mHeight;
-	GLuint mGL_texture;
-	bool mSmooth;
-	unsigned char* mPixels;
-	atlas_container mAtlas;
-};
-
-class texture_asset_loader :
-	public core::asset_loader
-{
-public:
-	virtual core::asset::ptr create_asset(core::asset_config::ptr pConfig, const filesystem::path& mRoot_path) override
-	{
-		filesystem::path tex_path = pConfig->get_path();
-		tex_path.remove_extension(); // "file.png.asset" -> "file.png"
-
-		texture::ptr tex = std::make_shared<texture>(pConfig);
-		tex->set_path(make_path_relative(tex_path, mRoot_path));
-		tex->load(tex_path.string());
-		return tex;
-	}
-
-	virtual bool can_import(const filesystem::path & pPath) override
-	{
-		return pPath.extension() == ".png";
-	}
-
-	virtual core::asset::ptr import_asset(const filesystem::path & pPath, const filesystem::path& mRoot_path) override
-	{
-		core::asset_config::ptr config = std::make_shared<core::asset_config>();
-		config->set_type("texture");
-
-		// Generate an id from a hash of the file path
-		// TODO: Replace this with something that can generate a more "unique" id.
-		config->set_id(util::hash::hash64(pPath.string()));
-
-		filesystem::path config_path(pPath);
-		config_path.pop_filepath();
-		config_path /= pPath.filename() + ".asset";
-		config->set_path(config_path);
-
-		// Save the configuration
-		std::ofstream out_config_stream(config_path.string().c_str());
-		out_config_stream << config->save().dump(2);
-
-		return create_asset(config, mRoot_path);
-	}
-};
-
-struct vertex_2d
-{
-	math::vec2 position;
-	math::vec2 uv;
-	color thiscolor{ 1, 1, 1, 1 };
-};
-
-struct render_batch_2d
-{
-	// Texture associated with this batch.
-	// If nullptr, the primitives will be drawn with
-	// a flat color.
-	texture* rendertexture{ nullptr };
-
-	// This is the depth in which this batch will be drawn.
-	// Batches with lower values are closer to the forground
-	// and higher values are closer to the background.
-	float depth{ 0 };
-
-	enum primitive_type
-	{
-		type_triangles = GL_TRIANGLES,
-		type_linestrip = GL_LINE_STRIP,
-		type_triangle_fan = GL_TRIANGLE_FAN,
-	};
-	// Primitive type to be drawn
-	primitive_type type{ type_triangles };
-
-	std::vector<unsigned int> indexes;
-	std::vector<vertex_2d> vertices;
-};
-
-class batch_builder
-{
-public:
-
-	// TODO: Add ability to draw to several framebuffers for post-processing
-	//void set_framebuffer(const std::string& pName);
-
-	void set_texture(texture* pTexture)
-	{
-		mBatch.rendertexture = pTexture;
-	}
-
-	// Add 4 vertices as a quad. Returns the starting index in the vertices
-	// member of the batch.
-	std::size_t add_quad(const vertex_2d* pBuffer)
-	{
-		std::size_t start_index = mBatch.vertices.size();
-
-		// Make sure there is enough space
-		mBatch.indexes.reserve(mBatch.indexes.size() + 6);
-
-		// Triangle 1
-		mBatch.indexes.push_back(start_index);
-		mBatch.indexes.push_back(start_index + 1);
-		mBatch.indexes.push_back(start_index + 2);
-
-		// Triangle 2
-		mBatch.indexes.push_back(start_index + 2);
-		mBatch.indexes.push_back(start_index + 3);
-		mBatch.indexes.push_back(start_index);
-
-		// Add them
-		mBatch.vertices.reserve(mBatch.vertices.size() + 4);
-		for (std::size_t i = 0; i < 4; i++)
-			mBatch.vertices.push_back(pBuffer[i]);
-
-		return start_index;
-	}
-
-	render_batch_2d* get_batch()
-	{
-		return &mBatch;
-	}
-
-private:
-	render_batch_2d mBatch;
-};
 
 class camera
 {
@@ -787,283 +241,7 @@ private:
 	math::vec2 mPosition, mSize;
 };
 
-class renderer
-{
-public:
-	void initialize()
-	{
-		mShader_texture = load_shaders(
-			"./editor/shaders/vert_texture.glsl",
-			"./editor/shaders/frag_texture.glsl"
-			);
-		mShader_color = load_shaders(
-			"./editor/shaders/vert_color.glsl",
-			"./editor/shaders/frag_color.glsl"
-			);
 
-		glGenVertexArrays(1, &mVAO_id);
-		glBindVertexArray(mVAO_id);
-
-		// Create the needed vertex buffer
-		glGenBuffers(1, &mVertex_buffer);
-
-		// Allocate ahead of time
-		glBindBuffer(GL_ARRAY_BUFFER, mVertex_buffer);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_2d) * 4, NULL, GL_STATIC_DRAW);
-
-		// Create the element buffer to hold our indexes
-		glGenBuffers(1, &mElement_buffer);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mElement_buffer);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6, NULL, GL_STATIC_DRAW);
-	}
-
-	void push_batch(const render_batch_2d& pBatch)
-	{
-		mBatches.push_back(pBatch);
-	}
-
-	void render()
-	{
-		mFramebuffer->begin_framebuffer();
-
-		glClearColor(0, 0, 0, 1);
-		glClear(GL_COLOR_BUFFER_BIT);
-		glViewport(0, 0, mFramebuffer->get_width(), mFramebuffer->get_height());
-
-		// Create the projection matrix
-		mProjection_matrix =
-			math::ortho(0, static_cast<float>(mFramebuffer->get_width())*0.01f,
-				0, static_cast<float>(mFramebuffer->get_height())*0.01f);
-
-		// Render the batches
-		sort_batches();
-		for (const render_batch_2d& i : mBatches)
-			render_batch(i);
-
-		// Cleanup
-		mFramebuffer->end_framebuffer();
-		mBatches.clear();
-	}
-
-	// Set the current frame buffer to render to
-	void set_framebuffer(framebuffer* pFramebuffer)
-	{
-		mFramebuffer = pFramebuffer;
-	}
-	framebuffer* get_framebuffer() const
-	{
-		return mFramebuffer;
-	}
-
-	// Setting the pixel size allows you to adjust sprites
-	// to any unit system you want. This is very helpful 
-	// when you want to use physics which works with meters
-	// per unit. Default: 1
-	void set_pixel_size(float pSize)
-	{
-		mPixel_size = pSize;
-	}
-	float get_pixel_size() const
-	{
-		return mPixel_size;
-	}
-
-private:
-	void sort_batches()
-	{
-		std::sort(mBatches.begin(), mBatches.end(),
-			[](const render_batch_2d& l, const render_batch_2d& r)->bool
-		{
-			return l.depth > r.depth;
-		});
-	}
-
-	void render_batch(const render_batch_2d& pBatch)
-	{
-		glBindVertexArray(mVAO_id);
-
-		// Populate the vertex buffer
-		glBindBuffer(GL_ARRAY_BUFFER, mVertex_buffer);
-		glBufferData(GL_ARRAY_BUFFER, pBatch.vertices.size() * sizeof(vertex_2d), &pBatch.vertices[0], GL_STATIC_DRAW);
-
-		// Populate the element buffer with index data
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mElement_buffer);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, pBatch.indexes.size() * sizeof(unsigned int), &pBatch.indexes[0], GL_STATIC_DRAW);
-
-		GLuint current_shader = pBatch.rendertexture ? mShader_texture : mShader_color;
-		glUseProgram(current_shader);
-
-		// Set the matrix uniforms
-		GLuint proj_id = glGetUniformLocation(current_shader, "projection");
-		glUniformMatrix4fv(proj_id, 1, GL_FALSE, &mProjection_matrix.m[0][0]);
-
-		if (pBatch.rendertexture)
-		{
-			// Setup the texture
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, pBatch.rendertexture->get_gl_texture());
-			GLuint tex_id = glGetUniformLocation(mShader_texture, "tex");
-			glUniform1i(tex_id, 0);
-		}
-
-		// Setup the 2d position attribute
-		glEnableVertexAttribArray(0);
-		glBindBuffer(GL_ARRAY_BUFFER, mVertex_buffer);
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_2d), (void*)0);
-
-		if (pBatch.rendertexture)
-		{
-			// Setup the UV attribute
-			glEnableVertexAttribArray(1);
-			glBindBuffer(GL_ARRAY_BUFFER, mVertex_buffer);
-			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_2d), (void*)sizeof(math::vec2));
-		}
-
-		// Setup the color attribute
-		glEnableVertexAttribArray(2);
-		glBindBuffer(GL_ARRAY_BUFFER, mVertex_buffer);
-		glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex_2d), (void*)(sizeof(math::vec2)*2));
-
-		// Bind the element buffer
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mElement_buffer);
-
-		glDrawElements(
-			pBatch.type,
-			pBatch.indexes.size(),
-			GL_UNSIGNED_INT,
-			(void*)0
-		);
-
-		// Disable all the attributes
-		glDisableVertexAttribArray(2);
-		glDisableVertexAttribArray(1);
-		glDisableVertexAttribArray(0);
-
-		glUseProgram(0);
-	}
-
-private:
-	framebuffer* mFramebuffer;
-	GLuint mShader_texture, mShader_color;
-	GLuint mVertex_buffer, mElement_buffer, mVAO_id;
-	math::mat44 mProjection_matrix;
-	float mPixel_size{ 1 };
-
-	std::vector<render_batch_2d> mBatches;
-};
-
-class sprite_component :
-	public core::component
-{
-	WGE_COMPONENT_SINGLE_INSTANCE("Sprite", 12409);
-public:
-	sprite_component(core::object_node* pNode) :
-		component(pNode)
-	{
-		subscribe_to(pNode, "on_render", &sprite_component::on_render, this);
-
-		// Requirements
-		require<core::transform_component>();
-	}
-
-	virtual json serialize() const override
-	{
-		json result;
-		result["offset"] = { mOffset.x, mOffset.y };
-		result["texture"] = mTexture ? json(mTexture->get_id()) : json();
-		return result;
-	}
-
-	virtual void deserialize(const json& pJson) override
-	{
-		mOffset = math::vec2(pJson["offset"][0], pJson["offset"][1]);
-		const json& texture_j = pJson["texture"];
-		if (!texture_j.is_null())
-			mTexture = get_asset_manager()->get_asset<texture>(static_cast<core::asset_uid>(texture_j));
-	}
-
-	void on_render(renderer* pRenderer)
-	{
-		// No texture
-		if (!mTexture)
-			return;
-
-		core::transform_component* transform = get_object()->get_component<core::transform_component>();
-		// No transform component
-		if (!transform)
-			return;
-
-		batch_builder batch;
-		batch.set_texture(&(*mTexture));
-
-		const math::vec2 texture_size(mTexture->get_width(), mTexture->get_height());
-
-		vertex_2d verts[4];
-		verts[0].position = math::vec2(0, 0);
-		verts[0].uv = math::vec2(0, 0);
-		verts[1].position = texture_size.swizzle(math::_x, 0);
-		verts[1].uv = math::vec2(1, 0);
-		verts[2].position = texture_size;
-		verts[2].uv = math::vec2(1, 1);
-		verts[3].position = texture_size.swizzle(0, math::_y);
-		verts[3].uv = math::vec2(0, 1);
-
-		// Get transform and scale it by the pixel size
-		math::mat33 transform_mat = transform->get_absolute_transform();
-		transform_mat.scale(math::vec2(pRenderer->get_pixel_size(), pRenderer->get_pixel_size()));
-
-		// Transform the vertices
-		for (int i = 0; i < 4; i++)
-			verts[i].position = transform_mat * (verts[i].position + (-mAnchor * texture_size) + mOffset);
-
-		batch.add_quad(verts);
-
-		pRenderer->push_batch(*batch.get_batch());
-	}
-
-	math::vec2 get_offset() const
-	{
-		return mOffset;
-	}
-
-	void set_offset(const math::vec2& pOffset)
-	{
-		mOffset = pOffset;
-	}
-
-	math::vec2 get_anchor() const
-	{
-		return mAnchor;
-	}
-
-	void set_anchor(const math::vec2& pRatio)
-	{
-		mAnchor = pRatio;
-	}
-
-	void set_texture(texture::ptr pAsset)
-	{
-		mTexture = pAsset;
-	}
-
-	void set_texture(core::asset_uid pID)
-	{
-		mTexture = get_asset_manager()->get_asset<texture>(pID);
-	}
-	void set_texture(const std::string& pPath)
-	{
-		mTexture = get_asset_manager()->get_asset<texture>(pPath);
-	}
-
-	texture::ptr get_texture() const
-	{
-		return mTexture;
-	}
-
-private:
-	texture::ptr mTexture;
-	math::vec2 mOffset, mAnchor{ math::anchor::topleft };
-};
 
 class physics_debug_component :
 	public core::component
@@ -1079,7 +257,7 @@ public:
 		mDebug_draw.SetFlags(b2Draw::e_shapeBit);
 	}
 
-	void on_render(renderer* pRenderer)
+	void on_render(graphics::renderer* pRenderer)
 	{
 		if (mWorld)
 		{
@@ -1101,17 +279,18 @@ private:
 	struct debug_draw :
 		b2Draw
 	{
-		std::list<render_batch_2d> batches;
+		std::list<graphics::render_batch_2d> batches;
 
-		void create_polygon_batch(const b2Vec2* vertices, int32 vertexCount, const b2Color& pColor, render_batch_2d::primitive_type type, bool connect_end = true)
+		void create_polygon_batch(const b2Vec2* vertices, int32 vertexCount, const b2Color& pColor,
+			graphics::render_batch_2d::primitive_type type, bool connect_end = true)
 		{
-			render_batch_2d batch;
+			graphics::render_batch_2d batch;
 			batch.type = type;
 			batch.depth = -1;
 			for (int i = 0; i < vertexCount; i++)
 			{
 				batch.indexes.push_back(batch.vertices.size());
-				vertex_2d vert;
+				graphics::vertex_2d vert;
 				vert.position = math::vec2(vertices[i].x, vertices[i].y);
 				vert.thiscolor = color(pColor.r, pColor.g, pColor.b, pColor.a * 0.5f);
 				batch.vertices.push_back(vert);
@@ -1121,7 +300,8 @@ private:
 			batches.push_back(batch);
 		}
 
-		void create_circle_batch(const b2Vec2& center, float32 radius, const b2Color& pColor, render_batch_2d::primitive_type type)
+		void create_circle_batch(const b2Vec2& center, float32 radius, const b2Color& pColor,
+			graphics::render_batch_2d::primitive_type type)
 		{
 			b2Vec2 verts[10];
 			for (int i = 0; i < sizeof(verts); i++)
@@ -1134,22 +314,22 @@ private:
 
 		virtual void DrawPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& pColor)
 		{
-			create_polygon_batch(vertices, vertexCount, pColor, render_batch_2d::type_linestrip);
+			create_polygon_batch(vertices, vertexCount, pColor, graphics::render_batch_2d::type_linestrip);
 		}
 
 		virtual void DrawSolidPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& pColor)
 		{
-			create_polygon_batch(vertices, vertexCount, pColor, render_batch_2d::type_triangle_fan);
+			create_polygon_batch(vertices, vertexCount, pColor, graphics::render_batch_2d::type_triangle_fan);
 		}
 
 		virtual void DrawCircle(const b2Vec2& center, float32 radius, const b2Color& pColor)
 		{
-			create_circle_batch(center, radius, pColor, render_batch_2d::type_linestrip);
+			create_circle_batch(center, radius, pColor, graphics::render_batch_2d::type_linestrip);
 		}
 
 		virtual void DrawSolidCircle(const b2Vec2& center, float32 radius, const b2Vec2& axis, const b2Color& pColor)
 		{
-			create_circle_batch(center, radius, pColor, render_batch_2d::type_triangle_fan);
+			create_circle_batch(center, radius, pColor, graphics::render_batch_2d::type_triangle_fan);
 		}
 
 		virtual void DrawSegment(const b2Vec2& p1, const b2Vec2& p2, const b2Color& pColor)
@@ -1157,7 +337,7 @@ private:
 			b2Vec2 verts[2];
 			verts[0] = p1;
 			verts[1] = p2;
-			create_polygon_batch(verts, 2, pColor, render_batch_2d::type_linestrip, false);
+			create_polygon_batch(verts, 2, pColor, graphics::render_batch_2d::type_linestrip, false);
 		}
 
 		virtual void DrawTransform(const b2Transform& xf)
@@ -1167,7 +347,7 @@ private:
 
 		virtual void DrawPoint(const b2Vec2& p, float32 size, const b2Color& pColor)
 		{
-			create_circle_batch(p, size, pColor, render_batch_2d::type_triangle_fan);
+			create_circle_batch(p, size, pColor, graphics::render_batch_2d::type_triangle_fan);
 		}
 
 	} mDebug_draw;
@@ -1423,7 +603,7 @@ namespace ImGui
 {
 
 // Draws a framebuffer as a regular image
-void Image(const framebuffer& mFramebuffer, const ImVec2& pSize = ImVec2(0, 0))
+void Image(const graphics::framebuffer& mFramebuffer, const ImVec2& pSize = ImVec2(0, 0))
 {
 	ImGui::Image((void*)mFramebuffer.get_gl_texture(), pSize,
 		ImVec2(0, 1), ImVec2(1, 0)); // Y-axis needs to be flipped
@@ -2200,15 +1380,15 @@ int main()
 	});
 
 	// Inspector for sprite_component
-	inspector_guis.add_inspector(sprite_component::COMPONENT_ID,
+	inspector_guis.add_inspector(graphics::sprite_component::COMPONENT_ID,
 		[](core::component* pComponent)
 	{
-		auto sprite = dynamic_cast<sprite_component*>(pComponent);
+		auto sprite = dynamic_cast<graphics::sprite_component*>(pComponent);
 		math::vec2 offset = sprite->get_offset();
 		if (ImGui::DragFloat2("Offset", offset.components))
 			sprite->set_offset(offset);
 
-		texture::ptr tex = sprite->get_texture();
+		graphics::texture::ptr tex = sprite->get_texture();
 		std::string inputtext = tex ? tex->get_path().string().c_str() : "None";
 		ImGui::InputText("Texture", &inputtext, ImGuiInputTextFlags_ReadOnly);
 		if (ImGui::BeginDragDropTarget())
@@ -2257,10 +1437,10 @@ int main()
 	factory.add<physics::physics_world_component>();
 	factory.add<physics::physics_component>();
 	factory.add<physics::box_collider_component>();
-	factory.add<sprite_component>();
+	factory.add<graphics::sprite_component>();
 	factory.add<physics_debug_component>();
 
-	texture_asset_loader mytexture_loader;
+	graphics::texture_asset_loader mytexture_loader;
 	core::asset_manager myassetmanager;
 	myassetmanager.add_loader("texture", &mytexture_loader);
 	myassetmanager.set_root_directory(".");
@@ -2277,7 +1457,7 @@ int main()
 		auto node1 = root_node->create_child();
 		node1->set_name("Scene node 1");
 		node1->add_component<core::transform_component>();
-		auto sprite = node1->add_component<sprite_component>();
+		auto sprite = node1->add_component<graphics::sprite_component>();
 		sprite->set_texture("mytex.png");
 		node1->add_component<physics::physics_component>();
 
@@ -2285,7 +1465,7 @@ int main()
 			auto node2 = node1->create_child();
 			node2->set_name("Scene node 2");
 			node2->add_component<core::transform_component>();
-			node2->add_component<sprite_component>();
+			node2->add_component<graphics::sprite_component>();
 			node2->add_component<physics::box_collider_component>();
 		}
 
@@ -2294,7 +1474,7 @@ int main()
 			node3->set_name("Scene node 3");
 			auto transform = node3->add_component<core::transform_component>();
 			transform->set_position(math::vec2(0, 100));
-			node3->add_component<sprite_component>();
+			node3->add_component<graphics::sprite_component>();
 			auto physics = node3->add_component<physics::physics_component>();
 			physics->set_type(physics::physics_component::type_static);
 			auto collider = node3->add_component<physics::box_collider_component>();
@@ -2302,9 +1482,9 @@ int main()
 		}
 	}
 
-	framebuffer myframebuffer;
+	graphics::framebuffer myframebuffer;
 	myframebuffer.create(200, 200);
-	renderer myrenderer;
+	graphics::renderer myrenderer;
 	myrenderer.initialize();
 	myrenderer.set_framebuffer(&myframebuffer);
 	myrenderer.set_pixel_size(0.01f);
@@ -2448,7 +1628,7 @@ int main()
 				if (ImGui::Selectable("Box Collider"))
 					selected_object->add_component<physics::box_collider_component>();
 				if (ImGui::Selectable("Sprite"))
-					selected_object->add_component<sprite_component>();
+					selected_object->add_component<graphics::sprite_component>();
 				ImGui::EndCombo();
 			}
 		}

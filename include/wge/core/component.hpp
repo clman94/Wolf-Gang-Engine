@@ -2,7 +2,6 @@
 
 #include <string>
 
-
 #include <wge/core/messaging.hpp>
 
 #include <nlohmann/json.hpp>
@@ -46,8 +45,8 @@ class component :
 	protected subscriber
 {
 protected:
-	component(object_node* pObj) :
-		mObject(pObj)
+	component(object_node* pNode) :
+		mObject(pNode)
 	{}
 
 public:
@@ -78,6 +77,9 @@ public:
 	context* get_context() const;
 
 protected:
+	// Tells the object that this component requires another to function
+	// correctly eg a sprite requires a transform.
+	// If the object does not have the component, it will be create automatically.
 	template <typename T>
 	T* require() const
 	{
@@ -87,6 +89,7 @@ protected:
 		return mObject->get_component<T>();
 	}
 
+	// Helper method to get the asset manager from the current context.
 	asset_manager* get_asset_manager() const;
 
 private:

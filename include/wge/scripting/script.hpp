@@ -340,8 +340,8 @@ private:
 };
 
 // A simple callable object that, when called,
-// will create a new context and and execute the requested
-// function.
+// will create a new context and execute the requested
+// anglescript function.
 template <typename T>
 using script_function = std::function<T>;
 

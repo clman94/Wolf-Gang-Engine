@@ -8,6 +8,7 @@
 #include <wge/core/messaging.hpp>
 
 #include <nlohmann/json.hpp>
+#include <wge/util/json_helpers.hpp>
 using nlohmann::json;
 
 namespace wge::core
