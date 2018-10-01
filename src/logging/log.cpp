@@ -111,7 +111,7 @@ bool wge::log::open_file(const char * pFile)
 {
 	gLog_output_file.open(pFile);
 	if (gLog_output_file)
-		info() << "Log: Succussfully opened log file \"" << pFile << "\"" << endm;
+		info() << "Log: Successfully opened log file \"" << pFile << "\"" << endm;
 	else
 		error() << "Log: Failed to open log file \"" << pFile << "\"" << endm;
 	return gLog_output_file.good();
