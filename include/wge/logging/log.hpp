@@ -3,7 +3,7 @@
 #include <ostream>
 #include <cassert>
 #include <vector>
-
+#include <any>
 #include <ctime>
 
 namespace wge::log
@@ -32,12 +32,35 @@ struct line_info
 	bool system_filesystem{ true };
 };
 
+using userdata_t = std::any;
+
+namespace detail
+{
+// Stores the userdata until it is consumed by a
+// stream.
+struct userdata_carrier
+{
+	userdata_t userdata;
+};
+log_ostream& operator<<(log_ostream&, userdata_carrier&);
+
+} // namespace detail
+
+// Adds "something" as userdata in your message.
+// This is primarily meant for a custom log UI that
+// can display extra information about a message eg
+// stack info in a script.
+// Usage: log::out << log::userdata(234) << "my message" << log::endm;
+detail::userdata_carrier userdata(userdata_t pAny);
+
 struct message
 {
 	std::string string;
 	level severity_level{ level::unknown };
 	line_info line_info;
 	std::time_t time_stamp;
+
+	userdata_t userdata;
 
 	std::string to_string(bool pAnsi_color = false) const;
 };
@@ -70,8 +93,7 @@ log_ostream& error();
 } // namespace wge::log
 
 // Generates a line_info struct containing the current line and file.
-// Use this is your message streams to define the message source
-// eg log::out << WGE_LI << "My message";
+// Usage: log::out << WGE_LI << "My message";
 #define WGE_LI wge::log::line_info{ __LINE__, -1, __FILE__, true }
 // Strict assert macro.
 #define WGE_ASSERT(A) assert(A)

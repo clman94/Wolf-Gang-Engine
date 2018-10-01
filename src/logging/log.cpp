@@ -42,10 +42,15 @@ std::string message::to_string(bool pAnsi_color) const
 {
 	std::ostringstream stream;
 
-	// Generate the time string based on the message's time stamp
+	std::tm timeinfo;
+#ifdef __linux__
+	localtime_r(&time, &timeinfo);
+#else
+	localtime_s(&timeinfo, &time_stamp);
+#endif
 	const char* time_format = "%m-%d-%y %T";
 	char time_str[18];
-	std::strftime(time_str, sizeof(time_str), time_format, std::localtime(&time_stamp));
+	std::strftime(time_str, sizeof(time_str), time_format, &timeinfo);
 	stream << '[' << time_str << "] ";
 
 	if (pAnsi_color)
@@ -85,6 +90,17 @@ std::string message::to_string(bool pAnsi_color) const
 }
 
 } // namespace wge::log
+
+log_ostream& wge::log::detail::operator<<(log_ostream& pOs, userdata_carrier& pUserdata)
+{
+	gMessage.userdata = std::move(pUserdata);
+	return pOs;
+}
+
+detail::userdata_carrier wge::log::userdata(userdata_t pAny)
+{
+	return detail::userdata_carrier{ std::move(pAny) };
+}
 
 const std::vector<message>& wge::log::get_log()
 {
@@ -142,7 +158,7 @@ void wge::log::flush()
 	std::swap(gLog.emplace_back(), gMessage);
 }
 
-log_ostream & wge::log::endm(std::ostream & os)
+log_ostream & wge::log::endm(log_ostream & os)
 {
 	flush();
 	return os;
