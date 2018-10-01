@@ -602,7 +602,7 @@ struct pieclass
 	}
 };
 
-void thing()
+void test_scripting_wrapper()
 {
 	using namespace wge::scripting;
 
@@ -1280,6 +1280,8 @@ bool drag_resizable_rect(const char* pStr_id, math::rect* pRect)
 int main()
 {
 	log::open_file("./editor/log.txt");
+
+	test_scripting_wrapper();
 
 	glfwInit();
 

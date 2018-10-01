@@ -6,6 +6,7 @@
 
 #include <filesystem>
 
+
 using namespace wge;
 using namespace wge::log;
 
@@ -28,6 +29,7 @@ static const char* get_ansi_color_for_level(log::level pSeverity_level)
 	case level::debug:   return "\033[96m"; break;
 	case level::warning: return "\033[93m"; break;
 	case level::error:   return "\033[91m"; break;
+	default:             return get_ansi_color_reset();
 	}
 }
 
@@ -39,6 +41,12 @@ extern log_ostream& out = gOut_stream;
 std::string message::to_string(bool pAnsi_color) const
 {
 	std::ostringstream stream;
+
+	// Generate the time string based on the message's time stamp
+	const char* time_format = "%m-%d-%y %T";
+	char time_str[18];
+	std::strftime(time_str, sizeof(time_str), time_format, std::localtime(&time_stamp));
+	stream << '[' << time_str << "] ";
 
 	if (pAnsi_color)
 		stream << get_ansi_color_for_level(severity_level);
@@ -52,37 +60,24 @@ std::string message::to_string(bool pAnsi_color) const
 	case level::error:   stream << "Error: "; break;
 	}
 
-	stream << string;
-
-	if (line_info.file)
-	{
-		// If the file path is pointing to a system file,
-		// generate a relative path so it doesn't take too much space.
-		if (line_info.system_filesystem &&
-			std::filesystem::exists(line_info.file))
-		{
-			std::filesystem::path relate_path = std::filesystem::relative(line_info.file);
-			stream << ": " << relate_path.string();
-		}
-		else
-		{
-			stream << ": " << line_info.file;
-		}
-	}
+	if (!line_info.file.empty())
+		stream << line_info.file;
 
 	const bool has_line = line_info.line >= 0;
 	const bool has_column = line_info.column >= 0;
 	if (has_line || has_column)
 	{
 		stream << " (";
-		if (has_line)
-			stream << line_info.line;
-		if (has_line && has_column)
-			stream << ", ";
+		stream << (has_line ? line_info.line : '?');
 		if (has_column)
-			stream << line_info;
+			stream << ", " << line_info.column;
 		stream << ')';
 	}
+
+	if (!line_info.file.empty() || has_line || has_column)
+		stream << ": ";
+
+	stream << string;
 
 	if (pAnsi_color)
 		stream << get_ansi_color_reset();
@@ -116,11 +111,26 @@ bool wge::log::soft_assert(bool pExpression, const char * pMessage, line_info pL
 void wge::log::flush()
 {
 	gOut_stream.flush();
-	// Update the message
+	// Update the message string
 	gMessage.string = gOut_stream.str();
 	// Clear the stream
 	gOut_stream.str({});
 	gOut_stream.clear();
+
+	// Record the time this message was created
+	gMessage.time_stamp = std::time(nullptr);		
+
+	// If the file path is pointing to a system file,
+	// generate a relative path so it doesn't take too much space.
+	if (!gMessage.line_info.file.empty() && 
+		gMessage.line_info.system_filesystem &&
+		std::filesystem::exists(gMessage.line_info.file))
+	{
+		std::filesystem::path relate_path = std::filesystem::relative(gMessage.line_info.file);
+		std::string path_str = relate_path.string();
+		if (gMessage.line_info.file.length() > path_str.length())
+			gMessage.line_info.file = path_str;
+	}
 
 	// Get the final message string to print out to
 	// the terminal and log file.

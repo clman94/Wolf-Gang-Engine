@@ -5,6 +5,7 @@
 #include <scripthandle/scripthandle.h>
 #include <scriptstdstring/scriptstdstring.h>
 #include <scriptarray/scriptarray.h>
+#include <wge/logging/log.hpp>
 
 #include <functional>
 #include <cassert>
@@ -382,12 +383,12 @@ public:
 		void(*MessageCallback)(const asSMessageInfo *msg, void *param) =
 			[](const asSMessageInfo *msg, void *param)
 		{
-			const char *type = "ERR ";
+			log::level level = log::level::error;
 			if (msg->type == asMSGTYPE_WARNING)
-				type = "WARN";
+				level = log::level::warning;
 			else if (msg->type == asMSGTYPE_INFORMATION)
-				type = "INFO";
-			std::printf("%s (%d, %d) : %s : %s\n", msg->section, msg->row, msg->col, type, msg->message);
+				level = log::level::info;
+			log::out << level << log::line_info{ msg->row, msg->col, msg->section } << msg->message << log::endm;
 		};
 		mEngine->SetMessageCallback(asFUNCTION(MessageCallback), 0, asCALL_CDECL);
 
@@ -441,7 +442,7 @@ public:
 		else
 			// Get global function from engine by default if there is no module yet
 			func = mEngine->GetGlobalFunctionByDecl(declaration.c_str());
-		assert(func);
+		WGE_ASSERT(func);
 
 		return make_script_function(func, traits::type{});
 	}
@@ -452,14 +453,14 @@ public:
 	{
 		type<T>(pIdentifier);
 		int r = mEngine->RegisterObjectType(pIdentifier.c_str(), sizeof(T), AngelScript::asOBJ_VALUE);
-		assert(r >= 0);
+		WGE_ASSERT(r >= 0);
 	}
 
 	void object(const std::string& pIdentifier, const std::string& pMember_name, const detail::member_binding& pMember)
 	{
 		int r = mEngine->RegisterObjectProperty(pIdentifier.c_str(),
 			get_variable_declaration(pMember_name, pMember.type).c_str(), pMember.offset);
-		assert(r >= 0);
+		WGE_ASSERT(r >= 0);
 	}
 
 	void object(const std::string& pIdentifier, const std::string& pFunction_name, const detail::generic_function_binding& pFunction)
@@ -473,7 +474,7 @@ public:
 		// through the generic's auxilary.
 		int r = mEngine->RegisterObjectMethod(pIdentifier.c_str(), declaration.c_str(),
 			AngelScript::asFUNCTION(&script::generic_function_caller), AngelScript::asCALL_GENERIC, &func);
-		assert(r >= 0);
+		WGE_ASSERT(r >= 0);
 	}
 
 	// Register a global property
@@ -482,7 +483,7 @@ public:
 	{
 		int r = mEngine->RegisterGlobalProperty(get_variable_declaration(pIdentifier, detail::type_info::create<T>()).c_str(),
 			const_cast<std::remove_const_t<T*>>(&pReference.get()));
-		assert(r >= 0);
+		WGE_ASSERT(r >= 0);
 	}
 
 	// Register a global function
@@ -495,7 +496,7 @@ public:
 
 		int r = mEngine->RegisterGlobalFunction(declaration.c_str(),
 			AngelScript::asFUNCTION(&script::generic_function_caller), AngelScript::asCALL_GENERIC, &func);
-		assert(r >= 0);
+		WGE_ASSERT(r >= 0);
 	}
 
 	void user_namespace(const char* pNamespace)
@@ -514,7 +515,7 @@ public:
 	template <typename T>
 	void type(const std::string_view& pIdentifier)
 	{
-		assert(mTypenames.find(typeid(T)) == mTypenames.end());
+		WGE_ASSERT(mTypenames.find(typeid(T)) == mTypenames.end());
 		mTypenames[typeid(T)] = pIdentifier;
 	}
 

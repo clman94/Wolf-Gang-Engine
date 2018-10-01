@@ -4,6 +4,8 @@
 #include <cassert>
 #include <vector>
 
+#include <ctime>
+
 namespace wge::log
 {
 
@@ -26,7 +28,7 @@ struct line_info
 {
 	int line{ -1 };
 	int column{ -1 };
-	const char* file{ nullptr };
+	std::string file;
 	bool system_filesystem{ true };
 };
 
@@ -35,6 +37,7 @@ struct message
 	std::string string;
 	level severity_level{ level::unknown };
 	line_info line_info;
+	std::time_t time_stamp;
 
 	std::string to_string(bool pAnsi_color = false) const;
 };
@@ -54,7 +57,7 @@ extern log_ostream& out;
 // for a new message.
 void flush();
 // Similar to std::endl, instead this just calls flush()
-log_ostream& endm(std::ostream& os);
+log_ostream& endm(log_ostream& os);
 log_ostream& operator<<(log_ostream&, line_info);
 log_ostream& operator<<(log_ostream&, level);
 
