@@ -614,7 +614,7 @@ void test_scripting_wrapper()
 	myscript.global("print",
 		function([](std::string pStr, int)
 		{
-			std::cout << "Print: " << pStr << "\n";
+			log::debug() << pStr << log::endm;
 		}));
 
 	// Get the function
@@ -1303,8 +1303,10 @@ int main()
 	// to test its functionality.
 	glfwSetDropCallback(window, [](GLFWwindow* pWindow, int pCount, const char** pPaths)
 	{
+		log::out << log::level::debug << "Recieved dropped files:\n";
 		for (int i = 0; i < pCount; i++)
-			std::cout << pPaths[i] << "\n";
+			log::out << pPaths[i] << "\n";
+		log::flush();
 	});
 
 	// Setup ImGui
@@ -1324,11 +1326,6 @@ int main()
 	std::thread al_test_thread;
 
 	editor_component_inspector inspector_guis;
-
-	log::out << log::level::error << WGE_LI << "puit" << log::endm;
-
-	log::error() << WGE_LI << "my error is great" << log::endm;
-	log::debug() << WGE_LI << "eeeyyy" << log::endm;
 
 	WGE_SASSERT(false);
 	WGE_SASSERT_MSG(false, "eeeeey");
