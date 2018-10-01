@@ -14,6 +14,9 @@ endif()
 # Use the angelscript namespace
 add_definitions(-DAS_USE_NAMESPACE)
 
+# Tell ImGui that we are using GLEW
+add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLEW)
+
 include_directories("include")
 
 # GLOBing for now
@@ -107,6 +110,7 @@ set(IMGUI_HEADERS
 	)
 set(IMGUI_SOURCES
 	"${IMGUI_INCLUDE_DIR}/imgui/imgui.cpp"
+	"${IMGUI_INCLUDE_DIR}/imgui/imgui_widgets.cpp"
 	"${IMGUI_INCLUDE_DIR}/imgui/imgui_stl.cpp"
 	"${IMGUI_INCLUDE_DIR}/imgui/imgui_draw.cpp"
 	"${IMGUI_INCLUDE_DIR}/imgui/imgui_style_editor.cpp"

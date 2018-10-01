@@ -1309,10 +1309,17 @@ int main()
 		log::out << log::level::debug << log::endm;
 	});
 
+
 	// Setup ImGui
 	ImGui::CreateContext();
+	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports;
+	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts;
+	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_ViewportsNoMerge;
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 150");
+
 
 	use_default_style();
 
@@ -1813,6 +1820,13 @@ int main()
 		glClearColor(0.15f, 0.15f, 0.15f, 1);
 		glClear(GL_COLOR_BUFFER_BIT);
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		
+		// Update and Render additional Platform Windows
+		if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+		{
+			ImGui::UpdatePlatformWindows();
+			ImGui::RenderPlatformWindowsDefault();
+		}
 
 		glfwMakeContextCurrent(window);
 		glfwSwapBuffers(window);
