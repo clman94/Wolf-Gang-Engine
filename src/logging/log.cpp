@@ -148,8 +148,6 @@ void wge::log::flush()
 			gMessage.line_info.file = path_str;
 	}
 
-	// Get the final message string to print out to
-	// the terminal and log file.
 	if (gLog_output_file)
 		gLog_output_file << gMessage.to_string() << std::endl;
 	std::cout << gMessage.to_string(true) << std::endl;

@@ -358,8 +358,8 @@ using script_function = std::function<T>;
 //     engine->RegisterGlobalFunction("void myglobalfunc(int)", AngelScript::asFUNCTION(&myglobalfunc), AngelScript::AS);
 //     ...into this:
 //     myscript.global("myglobalfunc", scripting::function(&myglobalfunc));
-//     As you might observe, there is no declaration, just the functino identifier. With a simple
-//     in the script class, C++ types can be converted to angelscript types easily.
+//     As you might observe, there is no declaration, just the function identifier. With a simple
+//     lookup, C++ types can be converted to angelscript types easily.
 //     To register a type simply call the type<>() method.
 //   - Register callable objects as functions.
 //     This will allow the use of lambdas and anything else with

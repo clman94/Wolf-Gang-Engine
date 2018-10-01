@@ -1303,10 +1303,10 @@ int main()
 	// to test its functionality.
 	glfwSetDropCallback(window, [](GLFWwindow* pWindow, int pCount, const char** pPaths)
 	{
-		log::out << log::level::debug << "Recieved dropped files:\n";
+		log::out << "Recieved dropped files:\n";
 		for (int i = 0; i < pCount; i++)
 			log::out << pPaths[i] << "\n";
-		log::flush();
+		log::out << log::level::debug << log::endm;
 	});
 
 	// Setup ImGui
