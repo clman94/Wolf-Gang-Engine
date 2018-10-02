@@ -5,12 +5,14 @@
 #include <vector>
 #include <any>
 #include <ctime>
+#include <string_view>
+#include <sstream>
 
 namespace wge::log
 {
 
-// Stream used by this log for message building operations
-using log_ostream = std::ostream;
+// Type used to store userdata
+using userdata_t = std::any;
 
 // Represents the severity level of a message
 enum class level
@@ -32,26 +34,6 @@ struct line_info
 	bool system_filesystem{ true };
 };
 
-using userdata_t = std::any;
-
-namespace detail
-{
-// Stores the userdata until it is consumed by a
-// stream.
-struct userdata_carrier
-{
-	userdata_t userdata;
-};
-log_ostream& operator<<(log_ostream&, userdata_carrier&);
-
-} // namespace detail
-
-// Adds "something" as userdata in your message.
-// This is primarily meant for a custom log UI that
-// can display extra information about a message eg
-// stack info in a script.
-// Usage: log::out << log::userdata(234) << "my message" << log::endm;
-detail::userdata_carrier userdata(userdata_t pAny);
 
 struct message
 {
@@ -65,6 +47,47 @@ struct message
 	std::string to_string(bool pAnsi_color = false) const;
 };
 
+// Adds "something" as userdata in your message.
+// This is primarily meant for a custom log UI that
+// can display extra information about a message eg
+// stack info in a script.
+// Usage: log::out << log::userdata(234) << "my message" << log::endm;
+struct userdata
+{
+	template <typename T>
+	userdata(T&& pAny) :
+		data(std::forward<T>(pAny))
+	{}
+	userdata_t data;
+};
+
+class message_builder
+{
+public:
+
+	template <typename T>
+	message_builder& operator<<(T&& pIn)
+	{
+		using dtype = std::decay_t<T>;
+		if constexpr (std::is_same_v<dtype, userdata>)
+			mMessage.userdata = std::move(pUserdata.data);
+		else if constexpr (std::is_same_v<dtype, level>)
+			mMessage.severity_level = pIn;
+		else if constexpr (std::is_same_v<dtype, line_info>)
+			mMessage.line_info = pIn;
+		else
+			mStream << pIn;
+		return *this;
+	}
+
+	// Return the final message and prepare for a new message
+	message finalize();
+
+private:
+	std::ostringstream mStream;
+	log::message mMessage;
+};
+
 using log_container = std::vector<message>;
 const log_container& get_log();
 
@@ -75,20 +98,18 @@ bool open_file(const char* pFile);
 bool soft_assert(bool pExpression, const char* pMessage, line_info);
 
 // Get output stream for constructing a messsage. Remember to call flush() or endm when complete!
-extern log_ostream& out;
+extern message_builder& out;
 // Outputs the entire stream in a single message and then clears the stream
 // for a new message.
 void flush();
 // Similar to std::endl, instead this just calls flush()
-log_ostream& endm(log_ostream& os);
-log_ostream& operator<<(log_ostream&, line_info);
-log_ostream& operator<<(log_ostream&, level);
+std::ostream& endm(std::ostream& os);
 
 // Sets the severity and returns the out stream
-log_ostream& info();
-log_ostream& debug();
-log_ostream& warning();
-log_ostream& error();
+message_builder& info();
+message_builder& debug();
+message_builder& warning();
+message_builder& error();
 
 } // namespace wge::log
 

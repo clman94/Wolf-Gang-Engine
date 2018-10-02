@@ -1,7 +1,6 @@
 #include <wge/logging/log.hpp>
 
 #include <iostream>
-#include <sstream>
 #include <fstream>
 
 #include <filesystem>
@@ -10,8 +9,7 @@
 using namespace wge;
 using namespace wge::log;
 
-static log::message gMessage;
-static std::ostringstream gOut_stream;
+static message_builder gMessage_builder;
 static log_container gLog;
 static std::ofstream gLog_output_file;
 
@@ -36,7 +34,7 @@ static const char* get_ansi_color_for_level(log::level pSeverity_level)
 namespace wge::log
 {
 
-extern log_ostream& out = gOut_stream;
+extern message_builder& out = gMessage_builder;
 
 std::string message::to_string(bool pAnsi_color) const
 {
@@ -89,25 +87,40 @@ std::string message::to_string(bool pAnsi_color) const
 	return stream.str();
 }
 
-} // namespace wge::log
-
-log_ostream& wge::log::detail::operator<<(log_ostream& pOs, userdata_carrier& pUserdata)
+message message_builder::finalize()
 {
-	gMessage.userdata = std::move(pUserdata);
-	return pOs;
+	mStream.flush();
+	// Update the message string
+	mMessage.string = mStream.str();
+	// Clear the stream
+	mStream.str({});
+	mStream.clear();
+
+	// Record the time this message was created
+	mMessage.time_stamp = std::time(nullptr);
+
+	// If the file path is pointing to a system file,
+	// generate a relative path so it doesn't take too much space.
+	if (!mMessage.line_info.file.empty() &&
+		mMessage.line_info.system_filesystem &&
+		std::filesystem::exists(mMessage.line_info.file))
+	{
+		std::filesystem::path relate_path = std::filesystem::relative(mMessage.line_info.file);
+		std::string path_str = relate_path.string();
+		if (mMessage.line_info.file.length() > path_str.length())
+			mMessage.line_info.file = path_str;
+	}
+
+	return std::move(mMessage);
 }
 
-detail::userdata_carrier wge::log::userdata(userdata_t pAny)
-{
-	return detail::userdata_carrier{ std::move(pAny) };
-}
 
-const std::vector<message>& wge::log::get_log()
+const std::vector<message>& get_log()
 {
 	return gLog;
 }
 
-bool wge::log::open_file(const char * pFile)
+bool open_file(const char * pFile)
 {
 	gLog_output_file.open(pFile);
 	if (gLog_output_file)
@@ -117,79 +130,45 @@ bool wge::log::open_file(const char * pFile)
 	return gLog_output_file.good();
 }
 
-bool wge::log::soft_assert(bool pExpression, const char * pMessage, line_info pLine_info)
+bool soft_assert(bool pExpression, const char * pMessage, line_info pLine_info)
 {
 	if (!pExpression)
 		warning() << pLine_info << "Assertion Failure: " << pMessage << endm;
 	return pExpression;
 }
 
-void wge::log::flush()
+void flush()
 {
-	gOut_stream.flush();
-	// Update the message string
-	gMessage.string = gOut_stream.str();
-	// Clear the stream
-	gOut_stream.str({});
-	gOut_stream.clear();
-
-	// Record the time this message was created
-	gMessage.time_stamp = std::time(nullptr);		
-
-	// If the file path is pointing to a system file,
-	// generate a relative path so it doesn't take too much space.
-	if (!gMessage.line_info.file.empty() && 
-		gMessage.line_info.system_filesystem &&
-		std::filesystem::exists(gMessage.line_info.file))
-	{
-		std::filesystem::path relate_path = std::filesystem::relative(gMessage.line_info.file);
-		std::string path_str = relate_path.string();
-		if (gMessage.line_info.file.length() > path_str.length())
-			gMessage.line_info.file = path_str;
-	}
-
+	const auto& msg = gLog.emplace_back(gMessage_builder.finalize());
 	if (gLog_output_file)
-		gLog_output_file << gMessage.to_string() << std::endl;
-	std::cout << gMessage.to_string(true) << std::endl;
-	// Move the message into the container clearing gMessage
-	// at the same time.
-	std::swap(gLog.emplace_back(), gMessage);
+		gLog_output_file << msg.to_string() << std::endl;
+	std::cout << msg.to_string(true) << std::endl;
 }
 
-log_ostream & wge::log::endm(log_ostream & os)
+std::ostream& endm(std::ostream& pO)
 {
 	flush();
-	return os;
+	return pO;
 }
 
-log_ostream& wge::log::operator << (log_ostream& pOs, line_info pLine_info)
+message_builder& info()
 {
-	gMessage.line_info = pLine_info;
-	return pOs;
+	return gMessage_builder << level::info;
 }
 
-log_ostream& wge::log::operator << (log_ostream& pOs, level pLevel)
+message_builder& debug()
 {
-	gMessage.severity_level = pLevel;
-	return pOs;
+	return gMessage_builder << level::debug;
 }
 
-log_ostream & wge::log::info()
+message_builder& warning()
 {
-	return gOut_stream << level::info;
+	return gMessage_builder << level::warning;
 }
 
-log_ostream & wge::log::debug()
+message_builder& error()
 {
-	return gOut_stream << level::debug;
+	return gMessage_builder << level::error;
 }
 
-log_ostream & wge::log::warning()
-{
-	return gOut_stream << level::warning;
-}
-
-log_ostream & wge::log::error()
-{
-	return gOut_stream << level::error;
-}
+} // namespace wge::log
