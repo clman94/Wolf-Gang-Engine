@@ -89,6 +89,12 @@ protected:
 		return mObject->get_component<T>();
 	}
 
+	template <typename T>
+	T* get_system() const
+	{
+		return get_object()->get_context()->get_system<T>();
+	}
+
 	// Helper method to get the asset manager from the current context.
 	asset_manager* get_asset_manager() const;
 

@@ -1,6 +1,7 @@
 #include <wge/physics/physics_component.hpp>
 #include <wge/physics/physics_world_component.hpp>
 #include <wge/core/transform_component.hpp>
+#include <wge/logging/log.hpp>
 
 #include <Box2D/Box2D.h>
 
@@ -122,7 +123,7 @@ void physics_component::on_physics_update_bodies(physics_world_component * pComp
 			deserialize_body_from_cache(); // Finally deserialize if it was waiting for the body to be created
 		mBody->ResetMassData();
 		mPhysics_world = pComponent;
-		std::cout << "Body updated\n";
+		log::debug() << WGE_LI << get_object()->get_name() << ": New Physics Body" << log::endm;
 	}
 	get_object()->send_down("on_physics_update_colliders", this);
 }

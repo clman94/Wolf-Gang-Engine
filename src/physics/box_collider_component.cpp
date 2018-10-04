@@ -1,6 +1,7 @@
 #include <wge/physics/box_collider_component.hpp>
 #include <wge/physics/physics_component.hpp>
 #include <wge/core/transform_component.hpp>
+#include <wge/logging/log.hpp>
 
 #include <Box2D/Box2D.h>
 
@@ -145,7 +146,7 @@ void box_collider_component::on_physics_update_colliders(physics_component * pCo
 
 		mFixture = pComponent->create_fixture(fixture_def);
 
-		std::cout << "Collider updated\n";
+		log::debug() << WGE_LI << get_object()->get_name() << ": Collider Updated" << log::endm;
 	}
 }
 
@@ -159,8 +160,13 @@ void box_collider_component::on_physics_reset()
 
 void box_collider_component::on_parent_removed()
 {
+	log::debug() << WGE_LI << get_object()->get_name() << ": Box collider responding to removed parent" << log::endm;
+
 	if (mFixture)
+	{
 		mFixture->GetBody()->DestroyFixture(mFixture);
+		log::debug() << WGE_LI << get_object()->get_name() << ": Removed Fixture" << log::endm;
+	}
 	mFixture = nullptr;
 	mPhysics_component = nullptr;
 }

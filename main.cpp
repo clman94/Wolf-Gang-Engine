@@ -104,6 +104,8 @@ using namespace wge;
 
 #include <Box2D/Box2D.h>
 
+#include <imgui/imgui_internal.h>
+
 class flag_container
 {
 public:
@@ -223,8 +225,6 @@ public:
 private:
 	math::vec2 mPosition, mSize;
 };
-
-
 
 class physics_debug_component :
 	public core::component
@@ -624,7 +624,7 @@ void test_scripting_wrapper()
 	print_func("yey", 34);
 
 	// Start a new module
-	myscript.module();
+	myscript.new_module("default");
 	// Add a file
 	myscript.file("./astest.as");
 	// Compile it
@@ -1026,9 +1026,16 @@ void GLAPIENTRY MessageCallback(GLenum source,
 	const GLchar* message,
 	const void* userParam)
 {
-	fprintf(stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
-		(type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""),
-		type, severity, message);
+	switch (severity)
+	{
+	case GL_DEBUG_SEVERITY_HIGH: log::out << log::level::error; break;
+	case GL_DEBUG_SEVERITY_MEDIUM: log::out << log::level::warning; break;
+	case GL_DEBUG_SEVERITY_LOW: log::out << log::level::warning; break;
+	case GL_DEBUG_SEVERITY_NOTIFICATION: log::out << log::level::info; break;
+	default: log::out << log::level::unknown;
+	}
+
+	log::out << "OpenGL: " << message << log::endm;
 }
 
 namespace ImGui
@@ -1277,6 +1284,287 @@ bool drag_resizable_rect(const char* pStr_id, math::rect* pRect)
 	return dragging;
 }
 
+class script_asset :
+	public core::asset
+{
+public:
+	using ptr = tptr<script_asset>;
+
+	script_asset(core::asset_config::ptr pConfig) :
+		core::asset(pConfig)
+	{}
+};
+
+class script_asset_loader :
+	public core::asset_loader
+{
+public:
+	virtual core::asset::ptr create_asset(core::asset_config::ptr pConfig, const filesystem::path & mRoot_path) override
+	{
+		filesystem::path as_path = pConfig->get_path();
+		as_path.remove_extension(); // "file.as.asset" -> "file.as"
+
+		script_asset::ptr as = std::make_shared<script_asset>(pConfig);
+		as->set_path(make_path_relative(as_path, mRoot_path));
+		return as;
+	}
+
+	virtual bool can_import(const filesystem::path & pPath) override
+	{
+		return pPath.extension() == ".as";
+	}
+
+	virtual core::asset::ptr import_asset(const filesystem::path & pPath, const filesystem::path & mRoot_path) override
+	{
+		core::asset_config::ptr config = std::make_shared<core::asset_config>();
+		config->set_type("texture");
+		config->set_id(util::hash::hash64(pPath.string()));
+
+		// Generate the path
+		filesystem::path config_path(pPath);
+		config_path.pop_filepath();
+		config_path /= pPath.filename() + ".asset";
+		config->set_path(config_path);
+
+		// Save the configuration
+		std::ofstream out_config_stream(config_path.string().c_str());
+		out_config_stream << config->save().dump(2);
+
+		return create_asset(config, mRoot_path);
+	}
+};
+
+class script_component :
+	public core::component
+{
+	WGE_COMPONENT("Script", 9483);
+public:
+	script_component(core::object_node* pNode) :
+		core::component(pNode)
+	{
+		subscribe_to(pNode, "on_update", &script_component::on_update, this);
+
+		mScript = get_system<scripting::script>();
+		WGE_ASSERT(mScript);
+
+		mScript->new_module(std::to_string((std::size_t)this));
+		mScript->file("./astestthing.as");
+		mScript->build();
+		mOn_update_func = mScript->get_function<void(float)>("on_update");
+	}
+
+private:
+	void on_update(float pDelta)
+	{
+		mOn_update_func(pDelta);
+	}
+
+private:
+	script_asset::ptr mScript_asset;
+	scripting::script* mScript;
+	scripting::script_function<void(float)> mOn_update_func;
+};
+
+enum class key : std::size_t
+{
+	num0 = 0,
+	num1,
+	num2,
+	num3,
+	num4,
+	num5,
+	num6,
+	num7,
+	num8,
+	num9,
+	left,
+	right,
+	up,
+	down,
+	space,
+	lshift,
+	rshift,
+	lcontrol,
+	rcontrol,
+	lalt,
+	ralt,
+	a,
+	b,
+	c,
+	d,
+	e,
+	f,
+	g,
+	h,
+	i,
+	j,
+	k,
+	l,
+	m,
+	n,
+	o,
+	p,
+	q,
+	r,
+	s,
+	t,
+	u,
+	v,
+	w,
+	x,
+	y,
+	z,
+	count,
+};
+
+enum class mousebutton : std::size_t
+{
+	left,
+	right,
+	middle,
+};
+
+// Table for mapping enum key to glfw keys
+constexpr const int glfw_keymap[static_cast<std::size_t>(key::count)] =
+{
+	GLFW_KEY_0,
+	GLFW_KEY_1,
+	GLFW_KEY_2,
+	GLFW_KEY_3,
+	GLFW_KEY_4,
+	GLFW_KEY_5,
+	GLFW_KEY_6,
+	GLFW_KEY_7,
+	GLFW_KEY_8,
+	GLFW_KEY_9,
+	GLFW_KEY_LEFT,
+	GLFW_KEY_RIGHT,
+	GLFW_KEY_UP,
+	GLFW_KEY_DOWN,
+	GLFW_KEY_SPACE,
+	GLFW_KEY_LEFT_SHIFT,
+	GLFW_KEY_RIGHT_SHIFT,
+	GLFW_KEY_LEFT_CONTROL,
+	GLFW_KEY_RIGHT_CONTROL,
+	GLFW_KEY_LEFT_ALT,
+	GLFW_KEY_RIGHT_ALT,
+	GLFW_KEY_A,
+	GLFW_KEY_B,
+	GLFW_KEY_C,
+	GLFW_KEY_D,
+	GLFW_KEY_E,
+	GLFW_KEY_F,
+	GLFW_KEY_G,
+	GLFW_KEY_H,
+	GLFW_KEY_I,
+	GLFW_KEY_J,
+	GLFW_KEY_K,
+	GLFW_KEY_L,
+	GLFW_KEY_M,
+	GLFW_KEY_N,
+	GLFW_KEY_O,
+	GLFW_KEY_P,
+	GLFW_KEY_Q,
+	GLFW_KEY_R,
+	GLFW_KEY_S,
+	GLFW_KEY_T,
+	GLFW_KEY_U,
+	GLFW_KEY_V,
+	GLFW_KEY_W,
+	GLFW_KEY_X,
+	GLFW_KEY_Y,
+	GLFW_KEY_Z,
+};
+
+
+class input :
+	public core::system
+{
+	WGE_SYSTEM("Input", 2843);
+public:
+	virtual ~input() {}
+
+	virtual bool pressed(key) const = 0;
+	virtual bool released(key) const = 0;
+	virtual bool down(key) const = 0;
+
+	virtual bool pressed(mousebutton) const = 0;
+	virtual bool released(mousebutton) const = 0;
+	virtual bool down(mousebutton) const = 0;
+
+	// Get mouse position in world coordinates
+	math::vec2 get_mouse_position() const
+	{
+		return mMouse_position;
+	}
+	void update_mouse_position(const math::vec2& pWorld_coords)
+	{
+		mMouse_position = pWorld_coords;
+	}
+
+private:
+	math::vec2 mMouse_position;
+};
+
+// Input through imgui
+class imgui_input :
+	public input
+{
+public:
+
+	bool is_enabled() const
+	{
+		return mIs_enabled;
+	}
+	void set_enabled(bool pIs_enabled)
+	{
+		mIs_enabled = pIs_enabled;
+	}
+
+	// Keyboard
+	bool pressed(key pKey) const
+	{
+		if (!mIs_enabled)
+			return false;
+		return ImGui::IsKeyPressed(glfw_keymap[static_cast<std::size_t>(pKey)], false);
+	}
+	bool released(key pKey) const
+	{
+		if (!mIs_enabled)
+			return false;
+		return ImGui::IsKeyReleased(glfw_keymap[static_cast<std::size_t>(pKey)]);
+	}
+	bool down(key pKey) const
+	{
+		if (!mIs_enabled)
+			return false;
+		return ImGui::IsKeyDown(glfw_keymap[static_cast<std::size_t>(pKey)]);
+	}
+
+	// Mouse
+	bool pressed(mousebutton pMouse) const
+	{
+		if (!mIs_enabled)
+			return false;
+		return ImGui::IsMouseClicked(static_cast<std::size_t>(pMouse));
+	}
+	bool released(mousebutton pMouse) const
+	{
+		if (!mIs_enabled)
+			return false;
+		return ImGui::IsMouseReleased(glfw_keymap[static_cast<std::size_t>(pMouse)]);
+	}
+	bool down(mousebutton pMouse) const
+	{
+		if (!mIs_enabled)
+			return false;
+		return ImGui::IsMouseDown(glfw_keymap[static_cast<std::size_t>(pMouse)]);
+	}
+
+private:
+	bool mIs_enabled{ true };
+};
+
 int main()
 {
 	log::open_file("./editor/log.txt");
@@ -1309,21 +1597,19 @@ int main()
 		log::out << log::level::debug << log::endm;
 	});
 
-
 	// Setup ImGui
 	ImGui::CreateContext();
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports;
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts;
-	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_ViewportsNoMerge;
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 150");
-
 
 	use_default_style();
 
 	glEnable(GL_DEBUG_OUTPUT);
+	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 	glDebugMessageCallback(MessageCallback, 0);
 
 	// Enable blending
@@ -1436,6 +1722,7 @@ int main()
 	factory.add<physics::box_collider_component>();
 	factory.add<graphics::sprite_component>();
 	factory.add<physics_debug_component>();
+	factory.add<script_component>();
 
 	graphics::texture_asset_loader mytexture_loader;
 	core::asset_manager myassetmanager;
@@ -1443,8 +1730,77 @@ int main()
 	myassetmanager.set_root_directory(".");
 	//myassetmanager.import_asset("./mytex.png");
 	myassetmanager.load_assets();
-
 	mycontext.add_system(&myassetmanager);
+
+	imgui_input mygameinput;
+	mycontext.add_system(&mygameinput);
+
+	scripting::script myscript;
+	mycontext.add_system(&myscript);
+
+	myscript.enumerator<key>("key");
+	myscript.enumerator("a", key::a);
+	myscript.enumerator("b", key::b);
+	myscript.enumerator("c", key::c);
+	myscript.enumerator("d", key::d);
+	myscript.enumerator("e", key::e);
+	myscript.enumerator("f", key::f);
+	myscript.enumerator("g", key::g);
+	myscript.enumerator("h", key::h);
+	myscript.enumerator("i", key::i);
+	myscript.enumerator("j", key::j);
+	myscript.enumerator("k", key::k);
+	myscript.enumerator("l", key::l);
+	myscript.enumerator("m", key::m);
+	myscript.enumerator("n", key::n);
+	myscript.enumerator("o", key::o);
+	myscript.enumerator("p", key::p);
+	myscript.enumerator("q", key::q);
+	myscript.enumerator("r", key::r);
+	myscript.enumerator("s", key::s);
+	myscript.enumerator("t", key::t);
+	myscript.enumerator("u", key::u);
+	myscript.enumerator("v", key::v);
+	myscript.enumerator("w", key::w);
+	myscript.enumerator("x", key::x);
+	myscript.enumerator("y", key::y);
+	myscript.enumerator("z", key::z);
+	myscript.enumerator("space", key::space);
+
+	myscript.enumerator<mousebutton>("mousebutton");
+	myscript.enumerator("left", mousebutton::left);
+	myscript.enumerator("right", mousebutton::right);
+	myscript.enumerator("middle", mousebutton::middle);
+
+	myscript.user_namespace("math");
+	myscript.value<math::vec2>("vec2");
+	myscript.object("vec2", scripting::constructor<math::vec2>());
+	myscript.object("vec2", scripting::constructor<math::vec2, const math::vec2&>());
+	myscript.object("vec2", scripting::constructor<math::vec2, float, float>());
+	myscript.object("vec2", scripting::destructor<math::vec2>());
+	myscript.object("vec2", "x", scripting::member(&math::vec2::x));
+	myscript.object("vec2", "y", scripting::member(&math::vec2::y));
+	myscript.default_namespace();
+
+	myscript.reference<input>("input");
+	myscript.type<imgui_input>("input");
+	myscript.object("input", "pressed", scripting::function<bool, input, key>(&input::pressed));
+	myscript.object("input", "released", scripting::function<bool, input, key>(&input::released));
+	myscript.object("input", "down", scripting::function<bool, input, key>(&input::down));
+	myscript.object("input", "pressed", scripting::function<bool, input, mousebutton>(&input::pressed));
+	myscript.object("input", "released", scripting::function<bool, input, mousebutton>(&input::released));
+	myscript.object("input", "down", scripting::function<bool, input, mousebutton>(&input::down));
+	
+	myscript.reference<core::transform_component>("transform");
+	myscript.object("transform", "get_position", scripting::function(&core::transform_component::get_position));
+	myscript.object("transform", "set_position", scripting::function(&core::transform_component::set_position));
+
+	myscript.global("gameInput", std::cref(mygameinput));
+	myscript.global("dprint", scripting::function(
+		[](const std::string& pString)
+	{
+		log::debug() << pString << log::endm;
+	}));
 
 	auto root_node = core::object_node::create(&mycontext);
 	root_node->set_name("Game");
@@ -1511,6 +1867,28 @@ int main()
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
+		
+		ImGuiViewport* viewport = ImGui::GetMainViewport();
+		ImGui::SetNextWindowPos(viewport->Pos);
+		ImGui::SetNextWindowSize(viewport->Size);
+		ImGui::SetNextWindowViewport(viewport->ID);
+		ImGui::SetNextWindowBgAlpha(0.0f);
+
+		ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+		window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+		window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+		ImGui::Begin("DockSpace Demo", nullptr, window_flags);
+		ImGui::PopStyleVar(3);
+
+		ImGuiID dockspace_id = ImGui::GetID("MyDockspace");
+		ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;//ImGuiDockNodeFlags_PassthruDockspace;
+		ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+
+		ImGui::End();
 
 		if (ImGui::Begin("Game"))
 		{
@@ -1627,6 +2005,8 @@ int main()
 					selected_object->add_component<physics::box_collider_component>();
 				if (ImGui::Selectable("Sprite"))
 					selected_object->add_component<graphics::sprite_component>();
+				if (ImGui::Selectable("Script"))
+					selected_object->add_component<script_component>();
 				ImGui::EndCombo();
 			}
 		}
@@ -1667,6 +2047,8 @@ int main()
 		ImGui::End();
 
 		ImGui::Begin("Viewport");
+
+		mygameinput.set_enabled(ImGui::IsWindowFocused());
 
 		float width = ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x*2;
 		float height = ImGui::GetWindowHeight() - ImGui::GetCursorPos().y - ImGui::GetStyle().WindowPadding.y;
@@ -1779,30 +2161,6 @@ int main()
 			}
 		}
 		ImGui::End();
-
-		// Single master window test
-		/*ImGui::SetNextWindowPos(ImVec2(0, 0));
-		ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
-		ImGui::Begin("Hello, world!", 0,
-			ImGuiWindowFlags_NoTitleBar |
-			ImGuiWindowFlags_NoResize |
-			ImGuiWindowFlags_NoMove |
-			ImGuiWindowFlags_NoScrollbar |
-			ImGuiWindowFlags_NoScrollWithMouse |
-			ImGuiWindowFlags_NoCollapse |
-			ImGuiWindowFlags_NoSavedSettings
-			);
-
-		ImGui::BeginChild("somechild", ImVec2(400, 0), true);
-
-		ImGui::EndChild();
-		ImGui::SameLine();
-		ImGui::BeginChild("somechild2", ImVec2(0, 0), true);
-
-		ImGui::Text("Hello.");
-		ImGui::EndChild();
-
-		ImGui::End();*/
 
 		if (updates_enabled)
 			root_node->send_down("on_postupdate", delta);

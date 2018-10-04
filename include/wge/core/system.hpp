@@ -15,6 +15,7 @@ namespace wge::core
 class system
 {
 public:
+	virtual ~system() {}
 	virtual int get_system_id() const = 0;
 	virtual std::string get_system_name() const = 0;
 };

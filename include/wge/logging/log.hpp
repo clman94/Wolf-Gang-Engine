@@ -68,12 +68,12 @@ public:
 	template <typename T>
 	message_builder& operator<<(T&& pIn)
 	{
-		using dtype = std::decay_t<T>;
-		if constexpr (std::is_same_v<dtype, userdata>)
+		using type = std::decay_t<T>;
+		if constexpr (std::is_same_v<type, userdata>)
 			mMessage.userdata = std::move(pUserdata.data);
-		else if constexpr (std::is_same_v<dtype, level>)
+		else if constexpr (std::is_same_v<type, level>)
 			mMessage.severity_level = pIn;
-		else if constexpr (std::is_same_v<dtype, line_info>)
+		else if constexpr (std::is_same_v<type, line_info>)
 			mMessage.line_info = pIn;
 		else
 			mStream << pIn;
