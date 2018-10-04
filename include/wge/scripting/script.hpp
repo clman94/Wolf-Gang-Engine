@@ -1,3 +1,4 @@
+#pragma once
 
 // Angelscript
 #include <angelscript.h>
@@ -5,7 +6,9 @@
 #include <scripthandle/scripthandle.h>
 #include <scriptstdstring/scriptstdstring.h>
 #include <scriptarray/scriptarray.h>
+
 #include <wge/logging/log.hpp>
+#include <wge/core/system.hpp>
 
 #include <functional>
 #include <cassert>
@@ -20,11 +23,11 @@
 namespace wge::scripting
 {
 
-
 namespace detail
 {
 
 using generic_function = std::function<void(AngelScript::asIScriptGeneric*)>;
+
 
 template <typename Tret, typename Tclass, typename...Tparams, typename Tinstance>
 auto bind_mem_fn(Tret(Tclass::* pFunc)(Tparams...), Tinstance&& pInstance)
@@ -40,15 +43,18 @@ struct generic_getter
 {
 	static T& get(AngelScript::asIScriptGeneric* pGen, std::size_t pIndex)
 	{
-		// For some odd reason, angelscript only dereferences object values
-		// and nothing else.
-		if (auto obj = pGen->GetArgObject(pIndex))
+		using namespace AngelScript;
+		asDWORD typeid_flags = 0;
+		pGen->GetArgTypeId(pIndex, &typeid_flags);
+		if (typeid_flags & asTM_INREF || typeid_flags & asTM_OUTREF ||
+			typeid_flags & asTM_INOUTREF)
 		{
-			return *static_cast<T*>(obj);
+			T* ptr = *static_cast<T**>(pGen->GetAddressOfArg(pIndex));
+			return *ptr;
 		}
 		else
 		{
-			auto ptr = *static_cast<T**>(pGen->GetAddressOfArg(pIndex));
+			T* ptr = static_cast<T*>(pGen->GetAddressOfArg(pIndex));
 			return *ptr;
 		}
 	}
@@ -59,14 +65,7 @@ struct generic_getter<T*>
 {
 	static T* get(AngelScript::asIScriptGeneric* pGen, std::size_t pIndex)
 	{
-		if (auto obj = pGen->GetArgObject(pIndex))
-		{
-			return static_cast<T*>(obj);
-		}
-		else
-		{
-			return *static_cast<T**>(pGen->GetAddressOfArg(pIndex));
-		}
+		return &generic_getter<T>::get(pGen, pIndex);
 	}
 };
 
@@ -75,31 +74,16 @@ struct generic_getter<T&>
 {
 	static T& get(AngelScript::asIScriptGeneric* pGen, std::size_t pIndex)
 	{
-		return *(*static_cast<T**>(pGen->GetAddressOfArg(pIndex)));
-	}
-};
-
-template <typename T>
-struct generic_returner
-{
-	static auto set(AngelScript::asIScriptGeneric* pGen, std::size_t pIndex)
-	{
-		return std::forward<T*>(static_cast<T*>(pGen->GetAddressOfArg(pIndex)));
-	}
-};
-
-template <typename T>
-struct generic_returner<T*>
-{
-	static auto set(AngelScript::asIScriptGeneric* pGen, T* pVal)
-	{
-		pGen->SetReturnAddress(pVal);
-		return std::forward<T*>(static_cast<T*>(pGen->GetAddressOfArg(pIndex)));
+		return generic_getter<T>::get(pGen, pIndex);
 	}
 };
 
 template <typename...Tparams>
-struct function_params {};
+struct function_params
+{
+	constexpr static const std::size_t size = sizeof...(Tparams);
+};
+
 
 template <typename Tret, typename Tparams, bool Tis_member = false, bool Tis_const = false>
 struct function_signature
@@ -108,6 +92,20 @@ struct function_signature
 	using param_types = Tparams;
 	constexpr static const bool is_member = Tis_member;
 	constexpr static const bool is_const = Tis_const;
+};
+
+template <typename T, typename...Trest>
+struct first_param
+{
+	using type = T;
+	using rest = function_params<Trest...>;
+};
+
+template <typename T, typename...Trest>
+struct first_param<function_params<T, Trest...>>
+{
+	using type = T;
+	using rest = function_params<Trest...>;
 };
 
 template <typename T>
@@ -122,7 +120,7 @@ struct function_signature_traits<Tret(*)(Tparams...)>
 template <typename Tret, typename Tclass, typename...Tparams>
 struct function_signature_traits<Tret(Tclass::*)(Tparams...)>
 {
-	using type_class = Tclass;
+	using class_type = Tclass;
 	using type = function_signature<Tret, function_params<Tparams...>, true>;
 };
 
@@ -130,7 +128,7 @@ struct function_signature_traits<Tret(Tclass::*)(Tparams...)>
 template <typename Tret, typename Tclass, typename...Tparams>
 struct function_signature_traits<Tret(Tclass::*)(Tparams...) const>
 {
-	using type_class = Tclass;
+	using class_type = std::add_const_t<Tclass>;
 	using type = function_signature<Tret, function_params<Tparams...>, true, true>;
 };
 
@@ -204,12 +202,38 @@ struct generic_function_binding
 		return binding;
 	}
 };
+struct generic_constructor_binding :
+	generic_function_binding
+{
+	generic_constructor_binding() = default;
+	generic_constructor_binding(const generic_constructor_binding&) = default;
+	generic_constructor_binding(generic_constructor_binding&&) = default;
+	generic_constructor_binding(const generic_function_binding& pB) :
+		generic_function_binding(pB)
+	{}
+	generic_constructor_binding(generic_function_binding&& pB) :
+		generic_function_binding(pB)
+	{}
+};
+struct generic_destructor_binding :
+	generic_function_binding
+{
+	generic_destructor_binding() = default;
+	generic_destructor_binding(const generic_destructor_binding&) = default;
+	generic_destructor_binding(generic_destructor_binding&&) = default;
+	generic_destructor_binding(const generic_function_binding& pB) :
+		generic_function_binding(pB)
+	{}
+	generic_destructor_binding(generic_function_binding&& pB) :
+		generic_function_binding(pB)
+	{}
+};
 
 // Handles the return value
 template <typename Tfunc, bool pIs_member, bool pIs_const, typename Tret, typename...Tparams>
 auto wrap_return(Tfunc&& pFunc, function_signature<Tret, function_params<Tparams...>, pIs_member, pIs_const>)
 {
-	return[pFunc = std::forward<Tfunc>(pFunc)](AngelScript::asIScriptGeneric* pGen, Tparams&&... pParams)
+	return [pFunc = std::forward<Tfunc>(pFunc)](AngelScript::asIScriptGeneric* pGen, Tparams&&... pParams)
 	{
 		if constexpr (std::is_same<void, Tret>::value)
 		{
@@ -230,28 +254,29 @@ generic_function_binding make_generic_callable(Tfunc&& pFunc,
 {
 	auto wrapper = [pFunc = std::forward<Tfunc>(pFunc), pSig](AngelScript::asIScriptGeneric* pGen)
 	{
-		std::invoke(wrap_return(pFunc, pSig), pGen, std::forward<Tparams>(generic_getter<Tparams>::get(pGen, pParams_index))...);
+		std::invoke(wrap_return(pFunc, pSig), pGen,
+			std::forward<Tparams>(generic_getter<std::remove_reference_t<Tparams>>::get(pGen, pParams_index))...);
 	};
 	return generic_function_binding::create(std::move(wrapper), pSig);
 }
 
-// If this is a class method, we need to use the GetObject() method to get the instance
 template <typename Tfunc, bool pIs_const, typename Tret, typename Tobject, typename...Tparams>
 generic_function_binding make_object_proxy(Tfunc&& pFunc, function_signature<Tret, function_params<Tobject, Tparams...>, true, pIs_const>)
 {
-	auto object_wrapper = [pFunc = std::forward<Tfunc>(pFunc)](AngelScript::asIScriptGeneric* pGen, Tparams&&... pParams) ->auto
+	auto object_wrapper = [pFunc = std::forward<Tfunc>(pFunc)](AngelScript::asIScriptGeneric* pGen, Tparams&&... pParams)
 	{
 		assert(pGen->GetObject());
-		return std::invoke(pFunc, std::forward<Tobject>(*static_cast<Tobject*>(pGen->GetObject())), std::forward<Tparams>(pParams)...);
+		return std::invoke(pFunc, static_cast<Tobject>(pGen->GetObject()), std::forward<Tparams>(pParams)...);
 	};
-	return make_generic_callable(std::move(object_wrapper), function_signature<Tret, function_params<Tparams...>, true, pIs_const>{}, std::index_sequence_for<Tparams...>{});
+	return make_generic_callable(std::move(object_wrapper),
+		function_signature<Tret, function_params<Tparams...>, true, pIs_const>{},
+		std::index_sequence_for<Tparams...>{});
 }
 
 // Pretty much do nothing since it is not a class object
 template <typename Tfunc, typename Tret, typename...Tparams>
 generic_function_binding make_object_proxy(Tfunc&& pFunc, function_signature<Tret, function_params<Tparams...>, false, false> pSig)
 {
-	// We still have to create a wrapper function that takes a generic parameter for the next step
 	auto object_wrapper = [pFunc = std::forward<Tfunc>(pFunc)](AngelScript::asIScriptGeneric*, Tparams&&... pParams)
 	{
 		return std::invoke(pFunc, std::forward<Tparams>(pParams)...);
@@ -261,12 +286,37 @@ generic_function_binding make_object_proxy(Tfunc&& pFunc, function_signature<Tre
 
 } // namespace detail
 
+// The first parameter will recieve the "this" pointer.
+// First parameter must be pointer. If the first parameter
+// is const, the function will be registered as a "const" method.
+struct this_first_t {};
+constexpr const this_first_t this_first;
+
 template <typename T>
-detail::generic_function_binding function(T&& pFunc)
+detail::generic_function_binding function(this_first_t, T&& pFunc)
 {
 	using traits = detail::function_signature_traits<typename decltype(&std::decay_t<T>::operator())>;
-	using sig = detail::function_signature<traits::type::return_type, traits::type::param_types>;
+	using class_type = detail::first_param<traits::type::param_types>::type;
+
+	static_assert(traits::type::param_types::size > 0, "You need to provide at least one parameter for method function");
+	static_assert(std::is_pointer_v<class_type>, "First parameter of method function needs to be a pointer");
+
+	using sig = detail::function_signature<traits::type::return_type, traits::type::param_types, true, std::is_const_v<class_type>>;
+
 	return detail::make_object_proxy(std::forward<T>(pFunc), sig{});
+}
+
+template <typename Tret, typename...Tparams>
+detail::generic_function_binding function(this_first_t, Tret(*pFunc)(Tparams...))
+{
+	static_assert(sizeof...(Tparams) > 0, "You need to provide at least one parameter for method function");
+	using class_type = detail::first_param<Tparams...>::type;
+
+	static_assert(std::is_pointer_v<class_type>, "First parameter of method function needs to be a pointer");
+
+	using sig = detail::function_signature<Tret, detail::function_params<Tparams...>, true, std::is_const_v<class_type>>{};
+
+	return detail::make_object_proxy(std::move(pFunc), sig{});
 }
 
 template <typename Tret, typename...Tparams>
@@ -278,19 +328,50 @@ detail::generic_function_binding function(Tret(*pFunc)(Tparams...))
 template <typename Tret, typename Tclass, typename...Tparams>
 detail::generic_function_binding function(Tret(Tclass::*pFunc)(Tparams...))
 {
-	return detail::make_object_proxy(std::move(pFunc), detail::function_signature<Tret, detail::function_params<Tclass, Tparams...>, true>{});
+	return detail::make_object_proxy(std::move(pFunc), detail::function_signature<Tret, detail::function_params<Tclass*, Tparams...>, true>{});
 }
 
 template <typename Tret, typename Tclass, typename...Tparams>
 detail::generic_function_binding function(Tret(Tclass::*pFunc)(Tparams...) const)
 {
-	return detail::make_object_proxy(std::move(pFunc), detail::function_signature<Tret, detail::function_params<Tclass, Tparams...>, true, true>{});
+	return detail::make_object_proxy(std::move(pFunc), detail::function_signature<Tret, detail::function_params<const Tclass*, Tparams...>, true, true>{});
 }
+
+template <typename T>
+detail::generic_function_binding function(T&& pFunc)
+{
+	using traits = detail::function_signature_traits<typename decltype(&std::decay_t<T>::operator())>;
+	using sig = detail::function_signature<traits::type::return_type, traits::type::param_types>;
+	return detail::make_object_proxy(std::forward<T>(pFunc), sig{});
+}
+
 // Bind a member function
 template <typename T, typename Tinstance>
 detail::generic_function_binding function(T&& pFunc, Tinstance&& pInstance)
 {
 	return detail::make_object_proxy(bind_mem_fn(pFunc, std::forward<Tinstance>(pInstance)));
+}
+
+template <typename T, typename...Tparams>
+detail::generic_constructor_binding constructor()
+{
+	auto c = [](T* pLocation, Tparams&&...pArgs)
+	{
+		new(pLocation) T(std::forward<Tparams>(pArgs)...);
+	};
+	detail::generic_constructor_binding binding = scripting::function(this_first, c);
+	return binding;
+}
+
+template <typename T>
+detail::generic_destructor_binding destructor()
+{
+	auto d = [](T* pLocation)
+	{
+		pLocation->~T();
+	};
+	detail::generic_destructor_binding binding = scripting::function(this_first, d);
+	return binding;
 }
 
 namespace detail
@@ -307,27 +388,20 @@ struct member_binding
 template <typename Tclass, typename Ttype>
 detail::member_binding member(Ttype Tclass::* pMember)
 {
-	member_binding mem;
+	detail::member_binding binding;
 	// Expanded asOFFSET here and added some parenthesis because
 	// the reinterpret_cast is being converted to Tclass** for some
 	// odd reason. Is this perhaps a Visual Studio thing?
-	mem.offset = ((std::size_t)(&(reinterpret_cast<Tclass*>(100000)->*pMember)) - 100000);
-	mem.type = type_info::create<Ttype>();
-	return mem;
+	binding.offset = ((std::size_t)(&(reinterpret_cast<Tclass*>(100000)->*pMember)) - 100000);
+	binding.type = detail::type_info::create<Ttype>();
+	return binding;
 }
-
-
 
 class script;
 
 class script_object
 {
 public:
-	template <typename Treturn, typename Tparams>
-	void call(const std::string_view& pName, Treturn& pReturn, Tparams&& pParams...)
-	{
-
-	}
 
 	template <typename T>
 	T& get(const std::string_view& pIdentifier)
@@ -365,8 +439,10 @@ using script_function = std::function<T>;
 //     This will allow the use of lambdas and anything else with
 //     the operator() method overloaded to be registered
 //     as a function.
-class script
+class script :
+	public core::system
 {
+	WGE_SYSTEM("Script", 8042);
 public:
 	// Return true on success or false if your callback has failed to retrieve the include
 	using include_callback = std::function<bool(const char* pInclude, const char* pFrom, script& pScript)>;
@@ -420,7 +496,7 @@ public:
 	}
 	script(const script&) = delete;
 	script(script&&) = delete; // Disabled for now
-	~script()
+	virtual ~script()
 	{
 		mEngine->ShutDownAndRelease();
 	}
@@ -435,7 +511,7 @@ public:
 		const auto types = detail::function_signature_types::create(traits::type{});
 		const std::string declaration = get_function_declaration(pName, types);
 		//mEngine->GetGlobalFunctionByDecl
-		auto mod = mEngine->GetModule("default");
+		auto mod = mEngine->GetModule(mCurrent_module.c_str());
 		asIScriptFunction * func = nullptr;
 		if (mod)
 			func = mod->GetFunctionByDecl(declaration.c_str());
@@ -452,8 +528,43 @@ public:
 	void value(const std::string& pIdentifier)
 	{
 		type<T>(pIdentifier);
-		int r = mEngine->RegisterObjectType(pIdentifier.c_str(), sizeof(T), AngelScript::asOBJ_VALUE);
+		int r = mEngine->RegisterObjectType(pIdentifier.c_str(), sizeof(T),
+			AngelScript::asOBJ_VALUE | AngelScript::asGetTypeTraits<T>());
 		WGE_ASSERT(r >= 0);
+	}
+
+	// Register a reference type.
+	template <typename T>
+	void reference(const std::string& pName,
+		const detail::generic_function_binding& pFactory,
+		const detail::generic_function_binding& pAddref,
+		const detail::generic_function_binding& pRelref)
+	{
+		type<T>(pName);
+		int r = mEngine->RegisterObjectType(pName.c_str(), 0, AngelScript::asOBJ_REF);
+		WGE_ASSERT(r >= 0);
+		register_object_behavior(pObject, pFactory, AngelScript::asBEHAVE_FACTORY);
+		register_object_behavior(pObject, pAddref, AngelScript::asBEHAVE_ADDREF);
+		register_object_behavior(pObject, pRelref, AngelScript::asBEHAVE_RELEASE);
+	}
+
+	// Register a reference type with no reference counting.
+	template <typename T>
+	void reference(const std::string& pName)
+	{
+		type<T>(pName);
+		int r = mEngine->RegisterObjectType(pName.c_str(), 0, AngelScript::asOBJ_REF | AngelScript::asOBJ_NOCOUNT);
+		WGE_ASSERT(r >= 0);
+	}
+	
+	void object(const std::string& pObject, const detail::generic_constructor_binding& pConstructor)
+	{
+		register_object_behavior(pObject, pConstructor, AngelScript::asBEHAVE_CONSTRUCT);
+	}
+
+	void object(const std::string& pObject, const detail::generic_destructor_binding& pDestructor)
+	{
+		register_object_behavior(pObject, pDestructor, AngelScript::asBEHAVE_DESTRUCT);
 	}
 
 	void object(const std::string& pIdentifier, const std::string& pMember_name, const detail::member_binding& pMember)
@@ -465,6 +576,8 @@ public:
 
 	void object(const std::string& pIdentifier, const std::string& pFunction_name, const detail::generic_function_binding& pFunction)
 	{
+		using namespace AngelScript;
+
 		const std::string declaration = get_function_declaration(pFunction_name, pFunction.types, pFunction.is_const_member);
 
 		// Store the function object so it stays alive during the scripts lifetime
@@ -473,7 +586,7 @@ public:
 		// Register with the generic_function_caller function. This function will delegate the call to the function object above
 		// through the generic's auxilary.
 		int r = mEngine->RegisterObjectMethod(pIdentifier.c_str(), declaration.c_str(),
-			AngelScript::asFUNCTION(&script::generic_function_caller), AngelScript::asCALL_GENERIC, &func);
+			asFUNCTION(&script::generic_function_caller), asCALL_GENERIC, &func);
 		WGE_ASSERT(r >= 0);
 	}
 
@@ -481,8 +594,9 @@ public:
 	template <typename T>
 	void global(const std::string& pIdentifier, const std::reference_wrapper<T>& pReference)
 	{
-		int r = mEngine->RegisterGlobalProperty(get_variable_declaration(pIdentifier, detail::type_info::create<T>()).c_str(),
-			const_cast<std::remove_const_t<T*>>(&pReference.get()));
+		const std::string declaration = get_variable_declaration(pIdentifier, detail::type_info::create<T>());
+		int r = mEngine->RegisterGlobalProperty(declaration.c_str(),
+			const_cast<std::remove_const_t<T>*>(&pReference.get()));
 		WGE_ASSERT(r >= 0);
 	}
 
@@ -509,23 +623,56 @@ public:
 		mEngine->SetDefaultNamespace("");
 	}
 
+	template <typename T>
+	void enumerator(const std::string& pName)
+	{
+		static_assert(std::is_enum_v<T>, "This needs to be an enum type");
+		type<T>(pName);
+		int r = mEngine->RegisterEnum(pName.c_str());
+		WGE_ASSERT(r >= 0);
+	}
+
+	template <typename T>
+	void enumerator(const std::string& pName, T pValue)
+	{
+		static_assert(std::is_enum_v<T>, "This needs to be an enum type");
+		WGE_ASSERT(mTypenames.find(typeid(T)) != mTypenames.end());
+		int r = mEngine->RegisterEnumValue(mTypenames[typeid(T)].c_str(), pName.c_str(), static_cast<int>(pValue));
+		WGE_ASSERT(r >= 0);
+	}
+
 	// Registers a type identifier.
 	// It is required to register your type before
 	// registering anything else that uses it.
 	template <typename T>
-	void type(const std::string_view& pIdentifier)
+	void type(const std::string& pIdentifier)
 	{
 		WGE_ASSERT(mTypenames.find(typeid(T)) == mTypenames.end());
-		mTypenames[typeid(T)] = pIdentifier;
+		std::string ns = mEngine->GetDefaultNamespace();
+		if (!ns.empty()) ns += "::";
+		mTypenames[typeid(T)] = ns + pIdentifier;
 	}
 
-	void module()
+	void remove_module(const std::string& pName)
 	{
-		mEngine->DiscardModule("default");
-		mBuilder.StartNewModule(mEngine, "default");
+		mEngine->DiscardModule(pName.c_str());
+		if (mCurrent_module == pName)
+			mCurrent_module.clear();
 	}
 
-	// Set the include callback 
+	void module(const std::string& pName)
+	{
+		mCurrent_module = pName;
+	}
+
+	void new_module(const std::string& pName)
+	{
+		remove_module(pName);
+		mCurrent_module = pName;
+		WGE_SASSERT(mBuilder.StartNewModule(mEngine, pName.c_str()) >= 0);
+	}
+
+	// Set the include callback
 	void set_include_callback(include_callback pFunc)
 	{
 		using namespace AngelScript;
@@ -542,11 +689,19 @@ public:
 
 	void file(const char* pFilename)
 	{
+		WGE_ASSERT(!mCurrent_module.empty());
 		mBuilder.AddSectionFromFile(pFilename);
+	}
+
+	void memory(const char* pName, const char* pScript)
+	{
+		WGE_ASSERT(!mCurrent_module.empty());
+		WGE_SASSERT(mBuilder.AddSectionFromMemory(pName, pScript));
 	}
 
 	void build()
 	{
+		WGE_ASSERT(!mCurrent_module.empty());
 		mBuilder.BuildModule();
 	}
 
@@ -563,13 +718,31 @@ private:
 	static void set_context_args_impl(AngelScript::asIScriptContext* pCtx,
 		std::index_sequence<I...>, Tparams&&... pParams)
 	{
+		using namespace AngelScript;
 		// A fold expression will help set all the arguments
 		([&]()
 		{
-			using type = std::decay_t<Tparams>;
-			type* p_ptr = new type{ std::forward<Tparams>(pParams) };
-			type** ptr = static_cast<type**>(pCtx->GetAddressOfArg(I));
-			*ptr = p_ptr;
+			asDWORD typeid_flags = 0;
+			int arg_typeid = 0;
+			pCtx->GetFunction()->GetParam(I, &arg_typeid, &typeid_flags);
+			if (std::is_reference_v<Tparams>)
+			{
+				using type = std::remove_reference_t<Tparams>;
+				type** ptr = static_cast<type**>(pCtx->GetAddressOfArg(I));
+				*ptr = &pParams;
+			}
+			else if (arg_typeid & asTYPEID_APPOBJECT)
+			{
+				using type = std::decay_t<Tparams>;
+				type** ptr = static_cast<type**>(pCtx->GetAddressOfArg(I));
+				*ptr = new type{ std::forward<Tparams>(pParams) };
+			}
+			else
+			{
+				using type = std::decay_t<Tparams>;
+				type* ptr = static_cast<type*>(pCtx->GetAddressOfArg(I));
+				*ptr = pParams;
+			}
 		}(), ...);
 	}
 	template <typename...Tparams>
@@ -586,7 +759,7 @@ private:
 		return [this, pFunc](Tparams&&... pArgs)->Tret
 		{
 			AngelScript::asIScriptContext* ctx = mEngine->RequestContext();
-			assert(ctx->Prepare(pFunc) >= 0);
+			WGE_ASSERT(ctx->Prepare(pFunc) >= 0);
 			set_context_args(ctx, std::forward<Tparams>(pArgs)...);
 			ctx->Execute();
 			ctx->Unprepare();
@@ -605,7 +778,7 @@ private:
 	// [const] TYPE IDENTIFIER
 	std::string get_variable_declaration(const std::string& pIdentifier, const detail::type_info& pType) const
 	{
-		assert(mTypenames.find(*pType.stdtypeinfo) != mTypenames.end());
+		WGE_ASSERT(mTypenames.find(*pType.stdtypeinfo) != mTypenames.end());
 		std::string result;
 		if (pType.is_const)
 			result += "const ";
@@ -613,11 +786,24 @@ private:
 		return result;
 	}
 
+	// Generates a string used as a return for a function declaration
+	std::string get_return_declaration(const detail::type_info& pType) const
+	{
+		WGE_ASSERT(mTypenames.find(*pType.stdtypeinfo) != mTypenames.end());
+		std::string result;
+		if (pType.is_const)
+			result += "const ";
+		result += mTypenames.find(*pType.stdtypeinfo)->second;
+		if (pType.is_pointer)
+			result += "&";
+		return result;
+	}
+
 	// Generates a parameter
 	// [const] TYPE [&in]
 	std::string get_parameter_declaration(const detail::type_info& pType) const
 	{
-		assert(mTypenames.find(*pType.stdtypeinfo) != mTypenames.end());
+		WGE_ASSERT(mTypenames.find(*pType.stdtypeinfo) != mTypenames.end());
 		std::string result;
 		if (pType.is_const)
 			result += "const ";
@@ -632,9 +818,8 @@ private:
 	std::string get_function_declaration(const std::string& pIdentifier,
 		const detail::function_signature_types& pTypes, bool pIs_const = false) const
 	{
-		assert(mTypenames.find(*pTypes.return_type.stdtypeinfo) != mTypenames.end());
 		std::string result;
-		result += mTypenames.find(*pTypes.return_type.stdtypeinfo)->second;
+		result += get_return_declaration(pTypes.return_type);
 		result += " ";
 		result += pIdentifier;
 		result += "(";
@@ -650,6 +835,22 @@ private:
 		return result;
 	}
 
+	void register_object_behavior(const std::string& pObject,
+		const detail::generic_function_binding& pFunction,
+		AngelScript::asEBehaviours pBehavior)
+	{
+		using namespace AngelScript;
+
+		const std::string declaration = get_function_declaration("f", pFunction.types, pFunction.is_const_member);
+
+		// Preserve the lifetime fo the function
+		detail::generic_function& func = mFunction_cache.emplace_back(pFunction.function);
+
+		// Register the behavior
+		int r = mEngine->RegisterObjectBehaviour(pObject.c_str(), pBehavior, declaration.c_str(),
+			asFUNCTION(&script::generic_function_caller), AngelScript::asCALL_GENERIC, &func);
+		WGE_ASSERT(r >= 0);
+	}
 private:
 	// This simply stores all the function objects that have been registered.
 	// It will never be accessed and only serves to keep the function objects alive.
@@ -661,6 +862,8 @@ private:
 
 	AngelScript::asIScriptEngine* mEngine;
 	AngelScript::CScriptBuilder mBuilder;
+
+	std::string mCurrent_module;
 };
 
-}
+} // namespace wge::scripting
