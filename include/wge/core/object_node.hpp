@@ -196,4 +196,4 @@ private:
 
 util::ref<object_node> find_first_parent_with_component(int pId, util::ref<object_node> pNode);
 
-}
+} // namespace wge::core

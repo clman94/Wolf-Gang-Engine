@@ -69,15 +69,6 @@ struct generic_getter<T*>
 	}
 };
 
-template <typename T>
-struct generic_getter<T&>
-{
-	static T& get(AngelScript::asIScriptGeneric* pGen, std::size_t pIndex)
-	{
-		return generic_getter<T>::get(pGen, pIndex);
-	}
-};
-
 template <typename...Tparams>
 struct function_params
 {
@@ -525,10 +516,10 @@ public:
 
 	// Register a value type.
 	template <typename T>
-	void value(const std::string& pIdentifier)
+	void value(const std::string& pName)
 	{
-		type<T>(pIdentifier);
-		int r = mEngine->RegisterObjectType(pIdentifier.c_str(), sizeof(T),
+		type<T>(pName);
+		int r = mEngine->RegisterObjectType(pName.c_str(), sizeof(T),
 			AngelScript::asOBJ_VALUE | AngelScript::asGetTypeTraits<T>());
 		WGE_ASSERT(r >= 0);
 	}
@@ -543,9 +534,9 @@ public:
 		type<T>(pName);
 		int r = mEngine->RegisterObjectType(pName.c_str(), 0, AngelScript::asOBJ_REF);
 		WGE_ASSERT(r >= 0);
-		register_object_behavior(pObject, pFactory, AngelScript::asBEHAVE_FACTORY);
-		register_object_behavior(pObject, pAddref, AngelScript::asBEHAVE_ADDREF);
-		register_object_behavior(pObject, pRelref, AngelScript::asBEHAVE_RELEASE);
+		register_object_behavior(pName, pFactory, AngelScript::asBEHAVE_FACTORY);
+		register_object_behavior(pName, pAddref, AngelScript::asBEHAVE_ADDREF);
+		register_object_behavior(pName, pRelref, AngelScript::asBEHAVE_RELEASE);
 	}
 
 	// Register a reference type with no reference counting.
@@ -567,14 +558,14 @@ public:
 		register_object_behavior(pObject, pDestructor, AngelScript::asBEHAVE_DESTRUCT);
 	}
 
-	void object(const std::string& pIdentifier, const std::string& pMember_name, const detail::member_binding& pMember)
+	void object(const std::string& pObject, const std::string& pMember_name, const detail::member_binding& pMember)
 	{
-		int r = mEngine->RegisterObjectProperty(pIdentifier.c_str(),
+		int r = mEngine->RegisterObjectProperty(pObject.c_str(),
 			get_variable_declaration(pMember_name, pMember.type).c_str(), pMember.offset);
 		WGE_ASSERT(r >= 0);
 	}
 
-	void object(const std::string& pIdentifier, const std::string& pFunction_name, const detail::generic_function_binding& pFunction)
+	void object(const std::string& pObject, const std::string& pFunction_name, const detail::generic_function_binding& pFunction)
 	{
 		using namespace AngelScript;
 
@@ -585,16 +576,16 @@ public:
 
 		// Register with the generic_function_caller function. This function will delegate the call to the function object above
 		// through the generic's auxilary.
-		int r = mEngine->RegisterObjectMethod(pIdentifier.c_str(), declaration.c_str(),
+		int r = mEngine->RegisterObjectMethod(pObject.c_str(), declaration.c_str(),
 			asFUNCTION(&script::generic_function_caller), asCALL_GENERIC, &func);
 		WGE_ASSERT(r >= 0);
 	}
 
 	// Register a global property
 	template <typename T>
-	void global(const std::string& pIdentifier, const std::reference_wrapper<T>& pReference)
+	void global(const std::string& pObject, const std::reference_wrapper<T>& pReference)
 	{
-		const std::string declaration = get_variable_declaration(pIdentifier, detail::type_info::create<T>());
+		const std::string declaration = get_variable_declaration(pObject, detail::type_info::create<T>());
 		int r = mEngine->RegisterGlobalProperty(declaration.c_str(),
 			const_cast<std::remove_const_t<T>*>(&pReference.get()));
 		WGE_ASSERT(r >= 0);
