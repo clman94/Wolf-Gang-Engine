@@ -1609,8 +1609,8 @@ int main()
 
 	use_default_style();
 
-	glEnable(GL_DEBUG_OUTPUT);
-	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+	//glEnable(GL_DEBUG_OUTPUT);
+	//glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 	glDebugMessageCallback(MessageCallback, 0);
 
 	// Enable blending
@@ -1781,6 +1781,13 @@ int main()
 	myscript.object("vec2", scripting::destructor<math::vec2>());
 	myscript.object("vec2", "x", scripting::member(&math::vec2::x));
 	myscript.object("vec2", "y", scripting::member(&math::vec2::y));
+
+	myscript.value<math::radians>("radians");
+	myscript.object("radians", scripting::constructor<math::radians>());
+	myscript.object("radians", scripting::constructor<math::radians, const math::radians&>());
+	myscript.object("radians", scripting::constructor<math::radians, float>());
+	myscript.object("radians", scripting::destructor<math::radians>());
+	myscript.object("radians", "value", scripting::function(&math::radians::value));
 	myscript.default_namespace();
 
 	myscript.reference<input>("input");
