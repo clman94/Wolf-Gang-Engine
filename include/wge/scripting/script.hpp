@@ -374,6 +374,12 @@ struct member_binding
 	type_info type;
 };
 
+struct base_cast_binding
+{
+	generic_function_binding derived_to_base, base_to_derived;
+	type_info base, derived;
+};
+
 } // namespace detail
 
 template <typename Tclass, typename Ttype>
@@ -386,6 +392,25 @@ detail::member_binding member(Ttype Tclass::* pMember)
 	binding.offset = ((std::size_t)(&(reinterpret_cast<Tclass*>(100000)->*pMember)) - 100000);
 	binding.type = detail::type_info::create<Ttype>();
 	return binding;
+}
+
+template <typename Tderived, typename Tbase>
+detail::base_cast_binding base()
+{
+	auto derived_to_base = [](Tderived* pPtr)->Tbase*
+	{
+		return dynamic_cast<Tbase*>(pPtr);
+	};
+	auto base_to_derived = [](Tbase* pPtr)->Tderived*
+	{
+		return dynamic_cast<Tderived*>(pPtr);
+	};
+	return { 
+		function(this_first, derived_to_base),
+		function(this_first, base_to_derived),
+		detail::type_info::create<Tderived>(),
+		detail::type_info::create<Tbase>()
+	};
 }
 
 class script;
@@ -548,16 +573,19 @@ public:
 		WGE_ASSERT(r >= 0);
 	}
 	
+	// Register the constructor
 	void object(const std::string& pObject, const detail::generic_constructor_binding& pConstructor)
 	{
 		register_object_behavior(pObject, pConstructor, AngelScript::asBEHAVE_CONSTRUCT);
 	}
 
+	// Register the destructor
 	void object(const std::string& pObject, const detail::generic_destructor_binding& pDestructor)
 	{
 		register_object_behavior(pObject, pDestructor, AngelScript::asBEHAVE_DESTRUCT);
 	}
 
+	// Registera a member/property
 	void object(const std::string& pObject, const std::string& pMember_name, const detail::member_binding& pMember)
 	{
 		int r = mEngine->RegisterObjectProperty(pObject.c_str(),
@@ -565,6 +593,7 @@ public:
 		WGE_ASSERT(r >= 0);
 	}
 
+	// Register a method
 	void object(const std::string& pObject, const std::string& pFunction_name, const detail::generic_function_binding& pFunction)
 	{
 		using namespace AngelScript;
@@ -578,6 +607,39 @@ public:
 		// through the generic's auxilary.
 		int r = mEngine->RegisterObjectMethod(pObject.c_str(), declaration.c_str(),
 			asFUNCTION(&script::generic_function_caller), asCALL_GENERIC, &func);
+		WGE_ASSERT(r >= 0);
+	}
+
+	// Register a base-derived relationship
+	void object(const detail::base_cast_binding& pCast)
+	{
+		using namespace AngelScript;
+
+		WGE_ASSERT(mTypenames.find(*pCast.base.stdtypeinfo) != mTypenames.end());
+		WGE_ASSERT(mTypenames.find(*pCast.derived.stdtypeinfo) != mTypenames.end());
+
+		const std::string& base_name = mTypenames[*pCast.base.stdtypeinfo];
+		const std::string& derived_name = mTypenames[*pCast.derived.stdtypeinfo];
+
+		detail::generic_function& derived_to_base = mFunction_cache.emplace_back(pCast.derived_to_base.function);
+		detail::generic_function& base_to_derived = mFunction_cache.emplace_back(pCast.base_to_derived.function);
+
+		const std::string derived_to_base_declaration = base_name + "@ opImplCast()";
+		const std::string base_to_derived_declaration = derived_name + "@ opCast()";
+
+		int r = mEngine->RegisterObjectMethod(derived_name.c_str(), derived_to_base_declaration.c_str(),
+			asFUNCTION(&script::generic_function_caller), asCALL_GENERIC, &derived_to_base);
+		WGE_ASSERT(r >= 0);
+		r = mEngine->RegisterObjectMethod(base_name.c_str(), base_to_derived_declaration.c_str(),
+			asFUNCTION(&script::generic_function_caller), asCALL_GENERIC, &base_to_derived);
+		WGE_ASSERT(r >= 0);
+
+		// Const versions
+		r = mEngine->RegisterObjectMethod(derived_name.c_str(), ("const " + derived_to_base_declaration + "const").c_str(),
+			asFUNCTION(&script::generic_function_caller), asCALL_GENERIC, &derived_to_base);
+		WGE_ASSERT(r >= 0);
+		r = mEngine->RegisterObjectMethod(base_name.c_str(), ("const " + derived_to_base_declaration + "const").c_str(),
+			asFUNCTION(&script::generic_function_caller), asCALL_GENERIC, &base_to_derived);
 		WGE_ASSERT(r >= 0);
 	}
 
