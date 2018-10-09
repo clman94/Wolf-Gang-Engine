@@ -185,6 +185,13 @@ util::ref<object_node> object_node::create_child()
 	return node;
 }
 
+util::ref<object_node> object_node::create_child(const std::string& pName)
+{
+	auto node = create_child();
+	node->set_name(pName);
+	return node;
+}
+
 void object_node::add_child(util::ref<object_node> pNode)
 {
 	if (pNode == this)

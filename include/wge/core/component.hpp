@@ -33,6 +33,7 @@ using json = nlohmann::json;
 	static constexpr bool COMPONENT_SINGLE_INSTANCE = true; \
 	virtual int get_component_id() const override { return id__; } \
 	virtual std::string get_component_name() const override { return name__; }
+#define WGE_SYSTEM_COMPONENT(name__, id__) WGE_COMPONENT_SINGLE_INSTANCE(name__, id__)
 
 namespace wge::core
 {
@@ -77,7 +78,7 @@ public:
 	context* get_context() const;
 
 protected:
-	// Tells the object that this component requires another to function
+	// Tells the object that this component requires another component to function
 	// correctly eg a sprite requires a transform.
 	// If the object does not have the component, it will be create automatically.
 	template <typename T>

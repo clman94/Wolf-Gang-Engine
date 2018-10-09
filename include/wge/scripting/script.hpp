@@ -419,11 +419,25 @@ class script_object
 {
 public:
 
-	template <typename T>
-	T& get(const std::string_view& pIdentifier)
+	/*template <typename Tdeclar>
+	script_function<Tdeclar> get_method(const std::string& pName)
 	{
+		using namespace AngelScript;
+		using traits = detail::function_signature_traits<Tdeclar*>;
+		const auto types = detail::function_signature_types::create(traits::type{});
+		const std::string declaration = get_function_declaration(pName, types);
+		//mEngine->GetGlobalFunctionByDecl
+		auto mod = mEngine->GetModule(mCurrent_module.c_str());
+		asIScriptFunction * func = nullptr;
+		if (mod)
+			func = mod->GetFunctionByDecl(declaration.c_str());
+		else
+			// Get global function from engine by default if there is no module yet
+			func = mEngine->GetGlobalFunctionByDecl(declaration.c_str());
+		WGE_ASSERT(func);
 
-	}
+		return make_script_function(func, traits::type{});
+	}*/
 
 private:
 	script* mScript;
@@ -537,6 +551,22 @@ public:
 		WGE_ASSERT(func);
 
 		return make_script_function(func, traits::type{});
+	}
+
+	template <typename...Tparams>
+	script_object create_instance(const std::string& pName, Tparams&&...pArgs)
+	{
+		using namespace AngelScript;
+
+		auto mod = mEngine->GetModule(mCurrent_module.c_str());
+		WGE_ASSERT(mod);
+		asITypeInfo *type = mod->GetTypeInfoByDecl(pName.c_str());
+		if (!type)
+			return{};
+
+		asIScriptFunction *factory = type->GetFactoryByDecl(pName + "@ " + pName + "()");
+
+
 	}
 
 	// Register a value type.

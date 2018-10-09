@@ -141,56 +141,6 @@ private:
 	std::set<std::string> mFlags;
 };
 
-class collection
-{
-public:
-	// Json will act as our map because it provides a lot of convenience
-	// with is implicit convertions and easy serialization.
-	using option_map = json;
-
-	void set_name(const std::string& pName)
-	{
-		mName = pName;
-	}
-
-	json serialize() const
-	{
-		json result;
-		result["name"] = mName;
-
-		for (const auto& i : mMaps)
-			result["maps"][i.first] = i.second;
-
-		result["node"] = mRoot_node->serialize();
-	}
-
-	void deserialize(const json& pJson)
-	{
-		mName = pJson["name"];
-		const json& maps = pJson["maps"];
-		mMaps.clear();
-		for (json::const_iterator i = maps.begin(); i != maps.end(); i++)
-			mMaps[i.key()] = i.value();
-		mRoot_node->deserialize(pJson["node"]);
-	}
-
-	option_map& operator[](const std::string& pString)
-	{
-		return mMaps[pString];
-	}
-
-	// Root node for this collection
-	util::ref<core::object_node> get_node() const
-	{
-		return mRoot_node;
-	}
-
-private:
-	util::ref<core::object_node> mRoot_node;
-	std::map<std::string, option_map> mMaps;
-	std::string mName;
-};
-
 void show_info(stb_vorbis *v)
 {
 	if (v) {
@@ -853,11 +803,11 @@ bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr , bool pDefault
 	return *pOpen;
 }
 
-void show_node_tree(util::ref<core::object_node> pNode, editor_component_inspector& pInspector, util::ref<core::object_node>& pSelected)
+void show_node_tree(util::ref<core::object_node> pNode, editor_component_inspector& pInspector, util::ref<core::object_node>& pSelected, bool pIs_collection = false)
 {
 	ImGui::PushID(pNode.get());
 
-	bool* open = ImGui::GetStateStorage()->GetBoolRef(ImGui::GetID("IsOpen"));
+	bool* open = ImGui::GetStateStorage()->GetBoolRef(ImGui::GetID("_IsOpen"));
 
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
 
@@ -870,11 +820,16 @@ void show_node_tree(util::ref<core::object_node> pNode, editor_component_inspect
 		ImGui::SameLine();
 	}
 
-	if (ImGui::Selectable(pNode->get_name().c_str(), pSelected == pNode))
+	std::string label;
+	if (pIs_collection) label = "Collection - " + pNode->get_name();
+	else label = pNode->get_name();
+	if (ImGui::Selectable(label.c_str(), pSelected == pNode))
 		pSelected = pNode;
+
+
 	if (ImGui::IsItemActive() && ImGui::IsMouseDoubleClicked(0))
 		*open = !*open; // Toggle open flag
-	if (ImGui::BeginDragDropSource())
+	if (!pIs_collection && ImGui::BeginDragDropSource())
 	{
 		core::object_node* ptr = pNode.get();
 		ImGui::SetDragDropPayload("MoveNodeInTree", &ptr, sizeof(void*));
@@ -883,6 +838,8 @@ void show_node_tree(util::ref<core::object_node> pNode, editor_component_inspect
 
 		ImGui::EndDragDropSource();
 	}
+
+	// Drop node as child of this node. Inserted at end.
 	if (ImGui::BeginDragDropTarget())
 	{
 		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MoveNodeInTree"))
@@ -894,6 +851,7 @@ void show_node_tree(util::ref<core::object_node> pNode, editor_component_inspect
 		ImGui::EndDragDropTarget();
 	}
 
+	// Drop node as first child of this node or as previous node if this node is collapsed
 	ImGui::InvisibleButton("__DragBetween", ImVec2(-1, 3));
 	if (ImGui::BeginDragDropTarget())
 	{
@@ -919,6 +877,8 @@ void show_node_tree(util::ref<core::object_node> pNode, editor_component_inspect
 		for (std::size_t i = 0; i < pNode->get_child_count(); i++)
 			show_node_tree(pNode->get_child(i), pInspector, pSelected);
 		ImGui::TreePop();
+
+		// Drop node as next node
 		if (pNode->get_child_count() > 0 && *open)
 		{
 			ImGui::InvisibleButton("__DragAfterChildrenInParent", ImVec2(-1, 3));
@@ -1565,6 +1525,30 @@ private:
 	bool mIs_enabled{ true };
 };
 
+void main_viewport_dock()
+{
+	ImGuiViewport* viewport = ImGui::GetMainViewport();
+	ImGui::SetNextWindowPos(viewport->Pos);
+	ImGui::SetNextWindowSize(viewport->Size);
+	ImGui::SetNextWindowViewport(viewport->ID);
+	ImGui::SetNextWindowBgAlpha(0.0f);
+
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+	window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+	window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	ImGui::Begin("_MainDockSpace", nullptr, window_flags);
+	ImGui::PopStyleVar(3);
+
+	ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;//ImGuiDockNodeFlags_PassthruDockspace;
+	ImGui::DockSpace(ImGui::GetID("_Dockspace"), ImVec2(0.0f, 0.0f), dockspace_flags);
+
+	ImGui::End();
+}
+
 int main()
 {
 	log::open_file("./editor/log.txt");
@@ -1803,6 +1787,8 @@ int main()
 	myscript.object("transform", "get_position", scripting::function(&core::transform_component::get_position));
 	myscript.object("transform", "set_position", scripting::function(&core::transform_component::set_position));
 
+	myscript.reference<core::asset_manager>("asset_manager");
+
 	myscript.global("gameInput", std::cref(mygameinput));
 	myscript.global("dprint", scripting::function(
 		[](const std::string& pString)
@@ -1810,29 +1796,25 @@ int main()
 		log::debug() << pString << log::endm;
 	}));
 
-	auto root_node = core::object_node::create(&mycontext);
-	root_node->set_name("Game");
+	auto root_node = mycontext.create_collection("Game");
 	root_node->add_component<physics::physics_world_component>();
 	root_node->add_component<physics_debug_component>();
 	{
-		auto node1 = root_node->create_child();
-		node1->set_name("Scene node 1");
+		auto node1 = root_node->create_child("Scene node 1");
 		node1->add_component<core::transform_component>();
 		auto sprite = node1->add_component<graphics::sprite_component>();
 		sprite->set_texture("mytex.png");
 		node1->add_component<physics::physics_component>();
 
 		{
-			auto node2 = node1->create_child();
-			node2->set_name("Scene node 2");
+			auto node2 = node1->create_child("Scene node 2");
 			node2->add_component<core::transform_component>();
 			node2->add_component<graphics::sprite_component>();
 			node2->add_component<physics::box_collider_component>();
 		}
 
 		{
-			auto node3 = root_node->create_child();
-			node3->set_name("Scene node 3");
+			auto node3 = root_node->create_child("Scene node 3");
 			auto transform = node3->add_component<core::transform_component>();
 			transform->set_position(math::vec2(0, 100));
 			node3->add_component<graphics::sprite_component>();
@@ -1846,14 +1828,18 @@ int main()
 
 	graphics::framebuffer myframebuffer;
 	myframebuffer.create(200, 200);
-	graphics::renderer myrenderer;
+	graphics::renderer myrenderer(&mycontext);
 	myrenderer.initialize();
 	myrenderer.set_framebuffer(&myframebuffer);
 	myrenderer.set_pixel_size(0.01f);
+	mycontext.add_system(&myrenderer);
 
+	bool playing_game = false;
 	bool updates_enabled = false;
 
 	util::ref<core::object_node> selected_object;
+
+	json game_initial_state;
 
 	util::clock clock;
 	while (!glfwWindowShouldClose(window))
@@ -1864,7 +1850,7 @@ int main()
 		// Get window events
 		glfwPollEvents();
 
-		if (updates_enabled)
+		if (playing_game && updates_enabled)
 		{
 			// Send update events
 			root_node->send_down("on_preupdate", delta);
@@ -1875,40 +1861,20 @@ int main()
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
-		
-		ImGuiViewport* viewport = ImGui::GetMainViewport();
-		ImGui::SetNextWindowPos(viewport->Pos);
-		ImGui::SetNextWindowSize(viewport->Size);
-		ImGui::SetNextWindowViewport(viewport->ID);
-		ImGui::SetNextWindowBgAlpha(0.0f);
 
-		ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
-		window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-		window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-		ImGui::Begin("DockSpace Demo", nullptr, window_flags);
-		ImGui::PopStyleVar(3);
-
-		ImGuiID dockspace_id = ImGui::GetID("MyDockspace");
-		ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;//ImGuiDockNodeFlags_PassthruDockspace;
-		ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-
-		ImGui::End();
+		main_viewport_dock();
 
 		if (ImGui::Begin("Game"))
 		{
 			ImGui::Text("FPS: %f", 1.f / delta);
 
-			if (ImGui::Button("Serialize"))
+			if (ImGui::Button("Save State"))
 			{
 				json j = root_node->serialize();
 				std::ofstream{ "./serialization_data.json" } << j.dump(2);
 			}
 			ImGui::SameLine();
-			if (ImGui::Button("Deserialize"))
+			if (ImGui::Button("Load State"))
 			{
 				json deserial;
 				std::ifstream{ "./serialization_data.json" } >> deserial;
@@ -1917,7 +1883,23 @@ int main()
 				root_node->deserialize(deserial);
 				selected_object.reset();
 			}
-			ImGui::Checkbox("Run", &updates_enabled);
+
+			if (ImGui::Checkbox("Play", &playing_game))
+			{
+				if (playing_game)
+				{
+					game_initial_state = root_node->serialize();
+				}
+				else
+				{
+					root_node->remove_children();
+					root_node->remove_components();
+					root_node->deserialize(game_initial_state);
+					selected_object.reset();
+				}
+			}
+			if (playing_game)
+				ImGui::Checkbox("Running", &updates_enabled);
 		}
 		ImGui::End();
 
@@ -1928,6 +1910,10 @@ int main()
 			{
 				if (ImGui::BeginMenu("Add"))
 				{
+					if (ImGui::MenuItem("Collection"))
+					{
+						selected_object = mycontext.create_collection();
+					}
 					if (ImGui::MenuItem("Object 2D"))
 					{
 						auto node = core::object_node::create(&mycontext);
@@ -1942,7 +1928,8 @@ int main()
 				}
 				ImGui::EndMenuBar();
 			}
-			show_node_tree(root_node, inspector_guis, selected_object);
+			for (auto& i : mycontext.get_collection_container())
+				show_node_tree(i, inspector_guis, selected_object, true);
 		}
 		ImGui::End();
 		ImGui::PopStyleVar();
@@ -1986,7 +1973,7 @@ int main()
 					- (ImGui::CalcTextSize("Delete ").x
 						+ ImGui::GetStyle().WindowPadding.x * 2
 						+ ImGui::GetStyle().FramePadding.x * 2), 1));
-				ImGui::SameLine();;
+				ImGui::SameLine();
 				delete_component = ImGui::Button("Delete");
 
 				ImGui::EndChild();
@@ -2170,7 +2157,7 @@ int main()
 		}
 		ImGui::End();
 
-		if (updates_enabled)
+		if (playing_game && updates_enabled)
 			root_node->send_down("on_postupdate", delta);
 
 		// Send renderer events

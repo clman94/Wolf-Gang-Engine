@@ -51,7 +51,7 @@ private:
 	std::map<int, std::function<component*(object_node*)>> mFactories;
 };
 
-// Object nodes are game objects that relay
+// Object nodes are objects that relay
 // messages between components and to other 
 // game objects.
 class object_node :
@@ -64,6 +64,8 @@ public:
 public:
 	object_node(context*);
 	~object_node();
+
+	using ref = util::ref<object_node>;
 
 	// Creates a component and adds it to this object
 	template<class T,
@@ -125,6 +127,8 @@ public:
 
 	// Creates the child object
 	util::ref<object_node> create_child();
+	// Creates the child object with a name
+	util::ref<object_node> create_child(const std::string& pName);
 	// Get total children connected to this object
 	std::size_t get_child_count() const;
 	// Get child by index

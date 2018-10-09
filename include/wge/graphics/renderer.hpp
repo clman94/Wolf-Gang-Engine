@@ -7,6 +7,8 @@
 #include <wge/math/matrix.hpp>
 #include <wge/graphics/color.hpp>
 #include <wge/graphics/texture.hpp>
+#include <wge/core/system.hpp>
+#include <wge/core/context.hpp>
 
 namespace wge::graphics
 {
@@ -73,13 +75,19 @@ private:
 	render_batch_2d mBatch;
 };
 
-class renderer
+class renderer :
+	public core::system
 {
+	WGE_SYSTEM("Renderer", 43);
 public:
+	renderer(core::context* pCtx) :
+		mContext(pCtx)
+	{}
+
 	// Compile the default shaders and initialize opengl
 	void initialize();
 
-	// Add a batch to render
+	// Add a batch to be rendered
 	void push_batch(const render_batch_2d& pBatch)
 	{
 		mBatches.push_back(pBatch);
@@ -129,6 +137,8 @@ private:
 	float mPixel_size{ 1 };
 
 	std::vector<render_batch_2d> mBatches;
+
+	core::context* mContext;
 };
 
 } // namespace wge::graphics

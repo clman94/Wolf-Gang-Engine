@@ -152,6 +152,9 @@ void renderer::render()
 {
 	assert(mFramebuffer);
 
+	for (auto& i : mContext->get_collection_container())
+		i->send_down("on_render", this);
+
 	mFramebuffer->begin_framebuffer();
 
 	glClearColor(0, 0, 0, 1);
