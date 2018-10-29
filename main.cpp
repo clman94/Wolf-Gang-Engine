@@ -1758,7 +1758,7 @@ int main()
 	myscript.enumerator("middle", mousebutton::middle);
 
 	myscript.user_namespace("math");
-	myscript.value<math::vec2>("vec2");
+	myscript.value_type<math::vec2>("vec2");
 	myscript.object("vec2", scripting::constructor<math::vec2>());
 	myscript.object("vec2", scripting::constructor<math::vec2, const math::vec2&>());
 	myscript.object("vec2", scripting::constructor<math::vec2, float, float>());
@@ -1766,7 +1766,7 @@ int main()
 	myscript.object("vec2", "x", scripting::member(&math::vec2::x));
 	myscript.object("vec2", "y", scripting::member(&math::vec2::y));
 
-	myscript.value<math::radians>("radians");
+	myscript.value_type<math::radians>("radians");
 	myscript.object("radians", scripting::constructor<math::radians>());
 	myscript.object("radians", scripting::constructor<math::radians, const math::radians&>());
 	myscript.object("radians", scripting::constructor<math::radians, float>());
@@ -1774,7 +1774,7 @@ int main()
 	myscript.object("radians", "value", scripting::function(&math::radians::value));
 	myscript.default_namespace();
 
-	myscript.reference<input>("input");
+	myscript.reference_type<input>("input");
 	myscript.type<imgui_input>("input");
 	myscript.object("input", "pressed", scripting::function<bool, input, key>(&input::pressed));
 	myscript.object("input", "released", scripting::function<bool, input, key>(&input::released));
@@ -1783,11 +1783,11 @@ int main()
 	myscript.object("input", "released", scripting::function<bool, input, mousebutton>(&input::released));
 	myscript.object("input", "down", scripting::function<bool, input, mousebutton>(&input::down));
 	
-	myscript.reference<core::transform_component>("transform");
+	myscript.reference_type<core::transform_component>("transform");
 	myscript.object("transform", "get_position", scripting::function(&core::transform_component::get_position));
 	myscript.object("transform", "set_position", scripting::function(&core::transform_component::set_position));
 
-	myscript.reference<core::asset_manager>("asset_manager");
+	myscript.reference_type<core::asset_manager>("asset_manager");
 
 	myscript.global("gameInput", std::cref(mygameinput));
 	myscript.global("dprint", scripting::function(

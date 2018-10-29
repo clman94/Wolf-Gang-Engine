@@ -148,7 +148,7 @@ struct type_info
 	static type_info create()
 	{
 		return type_info(
-			std::is_const<T>::value,
+			std::is_const<std::remove_pointer<std::remove_reference_t<T>>>::value,
 			std::is_reference<T>::value,
 			std::is_pointer<T>::value,
 			&typeid(std::decay_t<T>)
@@ -571,7 +571,7 @@ public:
 
 	// Register a value type.
 	template <typename T>
-	void value(const std::string& pName)
+	void value_type(const std::string& pName)
 	{
 		type<T>(pName);
 		int r = mEngine->RegisterObjectType(pName.c_str(), sizeof(T),
@@ -581,7 +581,7 @@ public:
 
 	// Register a reference type.
 	template <typename T>
-	void reference(const std::string& pName,
+	void reference_type(const std::string& pName,
 		const detail::generic_function_binding& pFactory,
 		const detail::generic_function_binding& pAddref,
 		const detail::generic_function_binding& pRelref)
@@ -596,7 +596,7 @@ public:
 
 	// Register a reference type with no reference counting.
 	template <typename T>
-	void reference(const std::string& pName)
+	void reference_type(const std::string& pName)
 	{
 		type<T>(pName);
 		int r = mEngine->RegisterObjectType(pName.c_str(), 0, AngelScript::asOBJ_REF | AngelScript::asOBJ_NOCOUNT);
@@ -934,6 +934,7 @@ private:
 			asFUNCTION(&script::generic_function_caller), AngelScript::asCALL_GENERIC, &func);
 		WGE_ASSERT(r >= 0);
 	}
+
 private:
 	// This simply stores all the function objects that have been registered.
 	// It will never be accessed and only serves to keep the function objects alive.
