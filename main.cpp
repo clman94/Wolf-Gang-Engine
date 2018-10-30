@@ -1549,8 +1549,13 @@ void main_viewport_dock()
 	ImGui::End();
 }
 
-int main()
+#include <wge/editor/editor.hpp>
+
+int main(int argc, char** argv)
 {
+	return wge::editor::main(argc, argv);
+
+
 	log::open_file("./editor/log.txt");
 
 	test_scripting_wrapper();
