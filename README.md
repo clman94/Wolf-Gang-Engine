@@ -1,6 +1,5 @@
 # Wolf-Gang Engine
-### Preface
-___
+
 Simply, the greatest open-source game engine boosting evolutionary 2D graphics beyond the boundaries of modern computing to unimaginable degrees... Also it's not done yet so it can't do anything ye~ waitwaitwait WAIT! But when it is, it will be THE BEST in the industry. You believe me, *right?*
 
 In all seriousness, this engine is meant to provide a simple platform for creating your own 2d games quick and easy. It is inspired by Unity3d and various other fantastic engines out there! With its own quirks, of course.
@@ -13,12 +12,13 @@ It is still under heavy development so there isn't much to show here but here's 
 ### Building
 ___
 Building _should_ be quite simple. It uses modern C++17 features so **you are required to use the latest GCC 7, Clang 7, and VS 2017 15.7 compilers in order to compile this project correctly.** C++17 helped simplify some code that would otherwise be distasteful workarounds <cl><font size="1">(well... most of the script system code is riddled with distasteful workarounds but not as much as it could be *OK?*)</font></cl>.
+3rdparty libraries are compiled as part of this project's source to ensure you have the correct version.
 
 Dependencies:
 - Latest compiler with C++17 compliance (GCC 7, Clang 7, and VS 2017 15.7)
 - CMake
 
-Clone the repository and cd to the new directory. The `--recursive` is important because it will clone and initialize the submodules as well. I might consider just inlining those third party libraries if it becomes too much of an inconvenience.
+Clone the repository and cd to the new directory. The `--recursive` is important here because it will clone and initialize the submodules as well. I might consider just inlining those third party libraries if it becomes too much of an inconvenience so any feedback is welcome.
 ```bash
 git clone --recursive https://github.com/clman94/Wolf-Gang-Engine.git
 cd Wolf-Gang-Engine
@@ -35,4 +35,11 @@ Generate the project.
 cmake ..
 ```
 
-If you are using an IDE, open the project and make sure to set the "Startup project" to the WolfGangEngine Project and that _should_ be it!
+If you are using an IDE, open the project and make sure to set the "Startup project" to the WolfGangEngine Project and that should be it!
+
+### License
+___
+
+This project is under the very permissive MIT license so you can modify and redistribute as appropriate for your project.
+I do advise that you mention when you use code from this engine or use the engine to develop your game.
+Maybe even send your own improvements as pull-requests. :)
