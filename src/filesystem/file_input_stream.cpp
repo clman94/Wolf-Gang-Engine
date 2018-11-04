@@ -1,71 +1,138 @@
 
 #include <wge/filesystem/file_input_stream.hpp>
+#include <wge/filesystem/exception.hpp>
 
-using namespace wge;
-using namespace wge::filesystem;
-
-file_input_stream::~file_input_stream()
+namespace wge::filesystem
 {
-	close();
+
+file_stream::file_stream() :
+	mAccess(stream_access::none)
+{
+	mStream.exceptions(std::fstream::failbit | std::fstream::badbit);
 }
 
-bool file_input_stream::open(const path & pPath)
+file_stream::~file_stream()
 {
-	auto flags = std::fstream::binary | std::fstream::in | std::fstream::ate;
-	mStream.open(pPath.string().c_str(), flags);
+}
+
+bool file_stream::open(const path & pPath, stream_access pAccess)
+{
+	auto flags = std::fstream::binary | std::fstream::ate;
+	flags |= pAccess & stream_access::read ? std::fstream::in : 0;
+	flags |= pAccess & stream_access::write ? std::fstream::out : 0;
+
+	try {
+		mStream.open(pPath.string().c_str(), flags);
+	}
+	catch (const std::fstream::failure& e)
+	{
+		throw io_error("Error opening stream for file \"" + pPath.string() + "\": (std::fstream::failure) " + std::string(e.what()));
+	}
+
 	if (mStream)
 	{
-		mLength = mStream.tellg();
-		mStream.seekg(0);
+		mLength = tell();
+		seek(0);
 		mPath = pPath;
 	}
+	mAccess = pAccess;
 	return mStream.good();
 }
 
-void file_input_stream::close()
+void file_stream::close()
 {
 	mStream.close();
 }
 
-std::size_t file_input_stream::seek(std::size_t pPos)
+std::size_t file_stream::seek(std::size_t pPos)
 {
-	mStream.seekg(pPos);
+	try {
+		if (mAccess & stream_access::read)
+			mStream.seekg(pPos);
+		if (mAccess & stream_access::write)
+			mStream.seekp(pPos);
+	}
+	catch (const std::fstream::failure& e)
+	{
+		throw io_error("Error seeking to position " + std::to_string(pPos) + " in stream: (std::fstream::failure) " + std::string(e.what()));
+	}
 	return tell();
 }
 
-std::size_t file_input_stream::tell()
+std::size_t file_stream::tell()
 {
-	return mStream.tellg();
+	try {
+		if (mAccess & stream_access::read)
+			return mStream.tellg();
+		else
+			return mStream.tellp();
+	}
+	catch (const std::fstream::failure& e)
+	{
+		throw io_error("Error telling to position of stream: (std::fstream::failure) " + std::string(e.what()));
+	}
 }
 
-bool file_input_stream::is_eof()
+bool file_stream::is_eof()
 {
 	return mStream.eof();
 }
 
-bool file_input_stream::has_error()
+bool file_stream::has_error()
 {
 	return mStream.fail() || mStream.bad();
 }
 
-bool file_input_stream::is_good()
+bool file_stream::is_good()
 {
 	return !is_eof() || !has_error();
 }
 
-std::size_t file_input_stream::read(unsigned char * pData, std::size_t pRequested_size)
+std::size_t file_stream::read(unsigned char* pData, std::size_t pRequested_size)
 {
+	if (!(mAccess & stream_access::read))
+		throw io_error("Reading from stream with no read access");
+
 	std::size_t last_position = tell();
-	mStream.read(reinterpret_cast<char*>(pData), pRequested_size);
+	try {
+		mStream.read(reinterpret_cast<char*>(pData), pRequested_size);
+	}
+	catch (const std::fstream::failure& e)
+	{
+		throw io_error("Error reading from stream: (std::fstream::failure) " + std::string(e.what()));
+	}
 	return tell() - last_position;
 }
 
-std::size_t file_input_stream::length()
+std::size_t file_stream::write(unsigned char* pData, std::size_t pSize)
+{
+	if (!(mAccess & stream_access::write))
+		throw io_error("Writing to stream with no write access");
+
+	std::size_t last_position = tell();
+	try {
+		mStream.write(reinterpret_cast<char*>(pData), pSize);
+	}
+	catch (const std::fstream::failure& e)
+	{
+		throw io_error("Error reading from stream: (std::fstream::failure) " + std::string(e.what()));
+	}
+	return tell() - last_position;
+}
+
+std::size_t file_stream::length()
 {
 	return mLength;
 }
 
-path file_input_stream::get_path()
+path file_stream::get_path()
 {
 	return mPath;
 }
+
+stream_access file_stream::get_access() const
+{
+	return mAccess;
+}
+
+} // namespace wge::filsystem

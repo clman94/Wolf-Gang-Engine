@@ -97,6 +97,9 @@ public:
 	// All batches are cleared after this is called.
 	void render();
 
+	// Clear all batches for a new frame
+	void clear();
+
 	// Set the current frame buffer to render to
 	void set_framebuffer(framebuffer* pFramebuffer)
 	{

@@ -3,13 +3,12 @@
 #include <memory>
 
 #include <wge/filesystem/filesystem_interface.hpp>
+#include <wge/filesystem/input_stream.hpp>
+#include <wge/filesystem/file_input_stream.hpp>
+#include <wge/filesystem/path.hpp>
 
 namespace wge::filesystem
 {
-
-class path;
-class input_stream;
-class file_input_stream;
 
 class system_filesystem :
 	public filesystem_interface
@@ -27,13 +26,13 @@ public:
 	virtual path get_absolute_path(const path& pPath) override;
 
 	// Open a new input stream
-	virtual input_stream::ptr open(const path& pPath) override;
+	virtual stream::ptr open(const path& pPath) override;
 
 private:
-	std::shared_ptr<file_input_stream> find_or_create_stream();
+	std::shared_ptr<file_stream> find_or_create_stream();
 
 private:
-	std::vector<std::shared_ptr<file_input_stream>> mStreams;
+	std::vector<std::shared_ptr<file_stream>> mStreams;
 };
 
-}
+} // namespace wge::filesystem

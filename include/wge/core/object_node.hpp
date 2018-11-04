@@ -66,6 +66,7 @@ public:
 	~object_node();
 
 	using ref = util::ref<object_node>;
+	using weak_ref = util::weak_ref<object_node>;
 
 	// Creates a component and adds it to this object
 	template<class T,
@@ -137,10 +138,10 @@ public:
 	// Add a child object
 	void add_child(util::ref<object_node> pNode);
 	// Insert a child at a position
-	void add_child(util::ref<object_node> pNode, std::size_t pIndex);
-	std::size_t get_child_index(util::ref<object_node> pNode) const;
+	void add_child(ref pNode, std::size_t pIndex);
+	std::size_t get_child_index(ref pNode) const;
 	// Remove a child object by reference. Returns true if successful.
-	bool remove_child(util::ref<object_node> pNode);
+	bool remove_child(ref pNode);
 	// Remove a child object by index. Returns true if successful.
 	bool remove_child(std::size_t pIndex);
 	// Remove all children
@@ -190,14 +191,14 @@ private:
 private:
 	std::vector<std::unique_ptr<component>> mComponents;
 
-	util::weak_ref<object_node> mParent;
-	std::vector<util::ref<object_node>> mChildren;
+	weak_ref mParent;
+	std::vector<ref> mChildren;
 
 	std::string mName;
 
 	context* mContext;
 };
 
-util::ref<object_node> find_first_parent_with_component(int pId, util::ref<object_node> pNode);
+object_node::ref find_first_parent_with_component(int pId, object_node::ref pNode);
 
 } // namespace wge::core

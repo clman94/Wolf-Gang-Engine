@@ -2,14 +2,15 @@
 
 #include <Box2D/Box2D.h>
 
-using namespace wge;
-using namespace wge::physics;
+namespace wge::physics
+{
 
 physics_world_component::physics_world_component(core::object_node* pObj) :
 	component(pObj)
 {
 	mWorld = new b2World(b2Vec2(0, 1));
 	//mWorld->SetContactListener(&mContact_listener);
+	// Physics are updated before game logic does (which happenes on the "update" event).
 	subscribe_to(pObj, "on_preupdate", &physics_world_component::on_preupdate, this);
 }
 
@@ -42,9 +43,15 @@ b2World* physics_world_component::get_world() const
 
 void physics_world_component::on_preupdate(float pDelta)
 {
-	// Update the bodies
-	get_object()->send_down("on_physics_update_bodies", this);
+	// Update the bodies.
+	// This will only update the children of this node.
+	// The reason for this limitation, is that the bodies can easily reference their
+	// parent for the world node and also it doesn't make sense to have bodies
+	// children of other bodies, it simply does not work that way.
+	get_object()->send("on_physics_update_bodies", this);
 
 	// Calculate physics
 	mWorld->Step(pDelta, 1, 1);
 }
+
+} // namespacw wge::physics

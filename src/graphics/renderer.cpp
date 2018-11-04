@@ -173,6 +173,10 @@ void renderer::render()
 
 	// Cleanup
 	mFramebuffer->end_framebuffer();
+}
+
+void renderer::clear()
+{
 	mBatches.clear();
 }
 

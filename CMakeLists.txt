@@ -183,7 +183,7 @@ set(ALL_SOURCES
 # Set output to bin directory
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
-add_executable(WolfGangEngine main.cpp ${ALL_SOURCES})
+add_executable(WolfGangEngine "${WGE_SOURCE_DIR}/main.cpp" ${ALL_SOURCES})
 
 # Set the VS debugger's working directory to the binaries
 set_property(TARGET WolfGangEngine PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/resources)

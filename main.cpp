@@ -536,7 +536,7 @@ namespace ImGui
 {
 
 // Draws a framebuffer as a regular image
-void Image(const graphics::framebuffer& mFramebuffer, const ImVec2& pSize = ImVec2(0, 0))
+inline void Image(const graphics::framebuffer& mFramebuffer, const ImVec2& pSize = ImVec2(0, 0))
 {
 	ImGui::Image((void*)mFramebuffer.get_gl_texture(), pSize,
 		ImVec2(0, 1), ImVec2(1, 0)); // Y-axis needs to be flipped
@@ -1048,7 +1048,6 @@ void EndChildWithHeader()
 }
 
 }
-
 
 struct editor_state
 {
@@ -1842,7 +1841,7 @@ int main(int argc, char** argv)
 	bool playing_game = false;
 	bool updates_enabled = false;
 
-	util::ref<core::object_node> selected_object;
+	core::object_node::ref selected_object;
 
 	json game_initial_state;
 

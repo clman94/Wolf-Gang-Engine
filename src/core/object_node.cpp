@@ -52,9 +52,9 @@ inline std::string create_unique_name(std::string pPrefix, Titer pBegin, Titer p
 		return pPrefix + "_" + std::to_string(max + 1);
 }
 
-util::ref<object_node> object_node::create(context* pContext)
+object_node::ref object_node::create(context* pContext)
 {
-	return util::ref<object_node>::create(pContext);
+	return object_node::ref::create(pContext);
 }
 
 object_node::object_node(context * pContext)
@@ -173,26 +173,26 @@ std::size_t object_node::get_child_count() const
 	return mChildren.size();
 }
 
-util::ref<object_node> object_node::get_child(std::size_t pIndex) const
+object_node::ref object_node::get_child(std::size_t pIndex) const
 {
 	return mChildren[pIndex];
 }
 
-util::ref<object_node> object_node::create_child()
+object_node::ref object_node::create_child()
 {
 	auto node = object_node::create(mContext);
 	add_child(node);
 	return node;
 }
 
-util::ref<object_node> object_node::create_child(const std::string& pName)
+object_node::ref object_node::create_child(const std::string& pName)
 {
 	auto node = create_child();
 	node->set_name(pName);
 	return node;
 }
 
-void object_node::add_child(util::ref<object_node> pNode)
+void object_node::add_child(ref pNode)
 {
 	if (pNode == this)
 		return;
@@ -201,7 +201,7 @@ void object_node::add_child(util::ref<object_node> pNode)
 	mChildren.push_back(pNode);
 }
 
-void object_node::add_child(util::ref<object_node> pNode, std::size_t pIndex)
+void object_node::add_child(ref pNode, std::size_t pIndex)
 {
 	if (pNode == this)
 		return;
@@ -210,7 +210,7 @@ void object_node::add_child(util::ref<object_node> pNode, std::size_t pIndex)
 	mChildren.insert(mChildren.begin() + std::min(pIndex, mChildren.size()), pNode);
 }
 
-std::size_t object_node::get_child_index(util::ref<object_node> pNode) const
+std::size_t object_node::get_child_index(ref pNode) const
 {
 	for (std::size_t i = 0; i < mChildren.size(); i++)
 		if (pNode == mChildren[i])
@@ -218,7 +218,7 @@ std::size_t object_node::get_child_index(util::ref<object_node> pNode) const
 	return 0;
 }
 
-bool object_node::remove_child(util::ref<object_node> pNode)
+bool object_node::remove_child(ref pNode)
 {
 	for (std::size_t i = 0; i < mChildren.size(); i++)
 		if (mChildren[i] == pNode)
@@ -291,7 +291,7 @@ std::string object_node::get_unique_component_name(std::string pPrefix)
 		[](const auto& i) { return i->get_name(); });
 }
 
-util::ref<object_node> wge::core::find_first_parent_with_component(int pId, util::ref<object_node> pNode)
+object_node::ref wge::core::find_first_parent_with_component(int pId, object_node::ref pNode)
 {
 	while (pNode = pNode->get_parent())
 		if (pNode->has_component(pId))

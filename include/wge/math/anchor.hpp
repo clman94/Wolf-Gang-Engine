@@ -2,6 +2,7 @@
 
 #include <wge/math/vector.hpp>
 
+// Predefined ratios
 namespace wge::math::anchor
 {
 
@@ -15,4 +16,4 @@ static constexpr math::vec2 left       { 0, 0.5f };
 static constexpr math::vec2 right      { 1, 0.5f };
 static constexpr math::vec2 center     { 0.5f, 0.5f };
 
-}
+} // namespace wge::math::anchor

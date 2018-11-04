@@ -1,5 +1,16 @@
 #include <wge/editor/editor.hpp>
 #include <wge/logging/log.hpp>
+#include <wge/filesystem/path.hpp>
+#include <wge/core/context.hpp>
+#include <wge/core/transform_component.hpp>
+#include <wge/physics/box_collider_component.hpp>
+#include <wge/physics/physics_component.hpp>
+#include <wge/physics/physics_world_component.hpp>
+#include <wge/graphics/sprite_component.hpp>
+#include <wge/scripting/script.hpp>
+#include <wge/core/asset_manager.hpp>
+#include <wge/graphics/texture_asset_loader.hpp>
+#include <wge/graphics/framebuffer.hpp>
 
 // GL
 #include <GL/glew.h>
@@ -12,6 +23,18 @@
 #include <imgui/imgui_stl.h>
 
 #include <functional>
+
+namespace ImGui
+{
+
+// Draws a framebuffer as a regular image
+inline void Image(const wge::graphics::framebuffer& mFramebuffer, const ImVec2& pSize = ImVec2(0, 0))
+{
+	ImGui::Image((void*)mFramebuffer.get_gl_texture(), pSize,
+		ImVec2(0, 1), ImVec2(1, 0)); // Y-axis needs to be flipped
+}
+
+}
 
 namespace wge::editor
 {
@@ -109,15 +132,83 @@ public:
 	virtual void on_close() {}
 };
 
-/*class editor_context
+// This class stores a list of inspectors to be used for
+// each type of component.
+class editor_component_inspector
 {
+public:
+	// Assign an inspector for a component
+	void add_inspector(int pComponent_id, std::function<void(core::component*)> pFunc)
+	{
+		mInspector_guis[pComponent_id] = pFunc;
+	}
 
-};*/
+	// Show the inspector's gui for this component
+	void on_gui(core::component* pComponent)
+	{
+		if (auto func = mInspector_guis[pComponent->get_component_id()])
+			func(pComponent);
+	}
+
+private:
+	std::map<int, std::function<void(core::component*)>> mInspector_guis;
+};
+
+struct editor_context
+{
+	editor_context() : 
+		renderer(&game_context)
+	{
+	}
+
+	void init()
+	{
+		core::component_factory& factory = game_context.get_component_factory();
+		factory.add<core::transform_component>();
+		factory.add<physics::physics_world_component>();
+		factory.add<physics::physics_component>();
+		factory.add<physics::box_collider_component>();
+		factory.add<graphics::sprite_component>();
+
+		asset_manager.add_loader("texture", &texture_loader);
+		asset_manager.set_root_directory(".");
+		asset_manager.load_assets();
+		game_context.add_system(&asset_manager);
+
+		renderer.initialize();
+		renderer.set_pixel_size(0.01f);
+		game_context.add_system(&renderer);
+	}
+
+	core::context game_context;
+	filesystem::path game_path;
+
+	graphics::texture_asset_loader texture_loader;
+	core::asset_manager asset_manager;
+
+	graphics::renderer renderer;
+
+	editor_component_inspector inspectors;
+};
 
 class scene_editor :
 	public editor
 {
+public:
+	scene_editor(editor_context& pContext)
+	{
+		mContext = &pContext;
+	}
 
+	virtual void on_gui(float pDelta) override
+	{
+		mContext->renderer.set_framebuffer(&mFramebuffer);
+		mContext->renderer.render();
+	}
+
+private:
+	graphics::framebuffer mFramebuffer;
+	editor_context* mContext;
 };
 
 // Creates an imgui dockspace in the main window
@@ -145,6 +236,123 @@ inline void main_viewport_dock()
 	ImGui::End();
 }
 
+bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr, bool pDefault_open = false)
+{
+	ImGui::PushID(pStr_id);
+
+	// Use internal instead
+	if (!pOpen)
+		pOpen = ImGui::GetStateStorage()->GetBoolRef(ImGui::GetID("IsOpen"), pDefault_open);;
+
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
+	ImGui::PushStyleColor(ImGuiCol_BorderShadow, ImVec4(0, 0, 0, 0));
+	if (ImGui::ArrowButton("Arrow", *pOpen ? ImGuiDir_Down : ImGuiDir_Right))
+		*pOpen = !*pOpen; // Toggle open flag
+	ImGui::PopStyleColor(3);
+	ImGui::PopID();
+	return *pOpen;
+}
+
+void show_node_tree(util::ref<core::object_node> pNode, util::ref<core::object_node>& pSelected, bool pIs_collection = false)
+{
+	ImGui::PushID(pNode.get());
+
+	bool* open = ImGui::GetStateStorage()->GetBoolRef(ImGui::GetID("_IsOpen"));
+
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+
+	// Don't show the arrow if there are no children nodes
+	if (pNode->get_child_count() > 0)
+	{
+		ImGui::PushStyleVar(ImGuiStyleVar_::ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+		collapsing_arrow("NodeUnfold", open);
+		ImGui::PopStyleVar();
+		ImGui::SameLine();
+	}
+
+	std::string label;
+	if (pIs_collection) label = "Collection - " + pNode->get_name();
+	else label = pNode->get_name();
+	if (ImGui::Selectable(label.c_str(), pSelected == pNode))
+		pSelected = pNode;
+
+
+	if (ImGui::IsItemActive() && ImGui::IsMouseDoubleClicked(0))
+		*open = !*open; // Toggle open flag
+	if (!pIs_collection && ImGui::BeginDragDropSource())
+	{
+		core::object_node* ptr = pNode.get();
+		ImGui::SetDragDropPayload("MoveNodeInTree", &ptr, sizeof(void*));
+
+		ImGui::Text(pNode->get_name().c_str());
+
+		ImGui::EndDragDropSource();
+	}
+
+	// Drop node as child of this node. Inserted at end.
+	if (ImGui::BeginDragDropTarget())
+	{
+		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MoveNodeInTree"))
+		{
+			util::ref<core::object_node> node = *static_cast<core::object_node**>(payload->Data);
+			if (!pNode->is_child_of(node)) // Do not move parent into its own child!
+				pNode->add_child(node);
+		}
+		ImGui::EndDragDropTarget();
+	}
+
+	// Drop node as first child of this node or as previous node if this node is collapsed
+	ImGui::InvisibleButton("__DragBetween", ImVec2(-1, 3));
+	if (ImGui::BeginDragDropTarget())
+	{
+		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MoveNodeInTree"))
+		{
+			util::ref<core::object_node> node = *static_cast<core::object_node**>(payload->Data);
+			if (!pNode->is_child_of(node)) // Do not move parent into its own child!
+			{
+				if (pNode->get_child_count() && *open)
+					pNode->add_child(node, 0);
+				else if (auto parent = pNode->get_parent())
+					parent->add_child(node, parent->get_child_index(pNode));
+			}
+		}
+		ImGui::EndDragDropTarget();
+	}
+	ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 3);
+
+	if (*open)
+	{
+		ImGui::TreePush();
+		// Show the children nodes and their components
+		for (std::size_t i = 0; i < pNode->get_child_count(); i++)
+			show_node_tree(pNode->get_child(i), pSelected);
+		ImGui::TreePop();
+
+		// Drop node as next node
+		if (pNode->get_child_count() > 0 && *open)
+		{
+			ImGui::InvisibleButton("__DragAfterChildrenInParent", ImVec2(-1, 3));
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MoveNodeInTree"))
+				{
+					util::ref<core::object_node> node = *static_cast<core::object_node**>(payload->Data);
+					if (!pNode->is_child_of(node)) // Do not move parent into its own child!
+						if (auto parent = pNode->get_parent())
+							parent->add_child(node, parent->get_child_index(pNode) + 1);
+				}
+				ImGui::EndDragDropTarget();
+			}
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 3);
+		}
+	}
+
+	ImGui::PopStyleVar(); // ImGuiStyleVar_ItemSpacing
+
+	ImGui::PopID();
+}
+
 inline void GLAPIENTRY opengl_message_callback(GLenum source,
 	GLenum type,
 	GLuint id,
@@ -160,6 +368,8 @@ public:
 	{
 		init_glfw();
 		init_imgui();
+		mContext.init();
+		mViewport_framebuffer.create(200, 200); // Some arbitrary default
 		mainloop();
 		return 0;
 	}
@@ -174,9 +384,14 @@ private:
 
 			for (auto& i : mEditors)
 			{
-				i->on_update(1);
-				i->on_gui(1);
+				float delta = 1.f / 60.f;
+				i->on_update(delta);
+				i->on_gui(delta);
 			}
+
+			show_asset_manager();
+			show_viewport();
+			show_objects();
 
 			end_frame();
 		}
@@ -185,6 +400,8 @@ private:
 
 	void shutdown()
 	{
+		mContext.renderer.clear();
+
 		// Cleanup ImGui
 		ImGui_ImplOpenGL3_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
@@ -226,7 +443,7 @@ private:
 		glfwMakeContextCurrent(mWindow);
 		glfwSwapBuffers(mWindow);
 	}
-	
+
 	void init_glfw()
 	{
 		glfwInit();
@@ -266,8 +483,102 @@ private:
 	}
 
 private:
+	void show_asset_manager()
+	{
+		if (ImGui::Begin("Asset Manager"))
+		{
+			ImGui::Columns(3, "_AssetColumns");
+			ImGui::SetColumnWidth(0, 100);
+
+			ImGui::TextUnformatted("Type:");
+			ImGui::NextColumn();
+			ImGui::TextUnformatted("Path:");
+			ImGui::NextColumn();
+			ImGui::TextUnformatted("UID:");
+			ImGui::NextColumn();
+
+			for (auto& i : mContext.asset_manager.get_asset_list())
+			{
+				ImGui::PushID(i->get_id());
+				ImGui::Selectable(i->get_type().c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
+				if (ImGui::BeginDragDropSource())
+				{
+					core::asset_uid id = i->get_id();
+					ImGui::SetDragDropPayload((i->get_type() + "Asset").c_str(), &id, sizeof(core::asset_uid));
+					ImGui::Text("Asset");
+					ImGui::EndDragDropSource();
+				}
+				ImGui::NextColumn();
+				ImGui::TextUnformatted(i->get_path().string().c_str());
+				ImGui::NextColumn();
+				ImGui::TextUnformatted(std::to_string(i->get_id()).c_str());
+				ImGui::NextColumn();
+				ImGui::PopID();
+			}
+			ImGui::Columns();
+		}
+		ImGui::End();
+	}
+
+	void show_viewport()
+	{
+		if (ImGui::Begin("Viewport"))
+		{
+
+			//mygameinput.set_enabled(ImGui::IsWindowFocused());
+
+			float width = ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x * 2;
+			float height = ImGui::GetWindowHeight() - ImGui::GetCursorPos().y - ImGui::GetStyle().WindowPadding.y;
+
+			if (mViewport_framebuffer.get_width() != width
+				|| mViewport_framebuffer.get_height() != height)
+				mViewport_framebuffer.resize(width, height);
+
+			ImGui::Image(mViewport_framebuffer, ImVec2(width, height));
+		}
+		ImGui::End();
+	}
+
+	void show_objects()
+	{
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, ImGui::GetStyle().WindowPadding.y));
+		if (ImGui::Begin("Objects", NULL, ImGuiWindowFlags_MenuBar))
+		{
+			if (ImGui::BeginMenuBar())
+			{
+				if (ImGui::BeginMenu("Add"))
+				{
+					if (ImGui::MenuItem("Collection"))
+					{
+						mSelected_node = mContext.game_context.create_collection();
+					}
+					if (ImGui::MenuItem("Object 2D"))
+					{
+						auto node = core::object_node::create(&mContext.game_context);
+						node->set_name("New 2D Object");
+						node->add_component<core::transform_component>();
+						if (mSelected_node)
+							mSelected_node->add_child(node);
+						else
+							log::error() << "Could not create object" << log::endm;
+					}
+					ImGui::EndMenu();
+				}
+				ImGui::EndMenuBar();
+			}
+			for (auto& i : mContext.game_context.get_collection_container())
+				show_node_tree(i, mSelected_node, true);
+		}
+		ImGui::End();
+		ImGui::PopStyleVar();
+	}
+
+private:
 	GLFWwindow* mWindow;
+	core::object_node::ref mSelected_node;
 	std::vector<std::unique_ptr<editor>> mEditors;
+	editor_context mContext;
+	graphics::framebuffer mViewport_framebuffer;
 };
 
 void GLAPIENTRY opengl_message_callback(GLenum source,
@@ -296,4 +607,4 @@ int main(int argc, char ** argv)
 	return app.run();
 }
 
-}
+} // namespace wge::editor

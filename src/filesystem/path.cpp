@@ -1,6 +1,7 @@
 #include <wge/filesystem/path.hpp>
 
-using namespace wge::filesystem;
+namespace wge::filesystem
+{
 
 path::path(const char * pString)
 {
@@ -315,3 +316,5 @@ path wge::filesystem::make_relative_to(const path & pFrom_directory, const path 
 	temp.erase(temp.begin(), temp.begin() + pFrom_directory.size());
 	return temp;
 }
+
+} // namespace wge::filesystem

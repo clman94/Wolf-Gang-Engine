@@ -23,7 +23,7 @@ public:
 	virtual path get_absolute_path(const path& pPath) = 0;
 
 	// Open a new input stream
-	virtual input_stream::ptr open(const path& pPath) = 0;
+	virtual stream::ptr open(const path& pPath) = 0;
 };
 
 }

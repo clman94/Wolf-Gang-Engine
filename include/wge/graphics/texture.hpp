@@ -53,7 +53,7 @@ public:
 	void load(const std::string& pFilepath);
 
 	// Load texture from a stream. If pSize = 0, the rest of the stream will be used.
-	void load(filesystem::input_stream::ptr pStream, std::size_t pSize = 0);
+	void load(filesystem::stream::ptr pStream, std::size_t pSize = 0);
 
 	// Get the raw gl texture id
 	GLuint get_gl_texture() const;

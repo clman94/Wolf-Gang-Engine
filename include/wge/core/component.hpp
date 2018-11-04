@@ -63,9 +63,12 @@ public:
 	// Load the current state of this component
 	virtual void deserialize(const json&) {}
 
+	// Name of the component type
 	virtual std::string get_component_name() const = 0;
+	// Id of the component type for serialization
 	virtual int get_component_id() const = 0;
 
+	// Unique name of component instance
 	const void set_name(const std::string& pName);
 	const std::string& get_name() const;
 
@@ -105,4 +108,4 @@ private:
 	int mInstance_id;
 };
 
-}
+} // namespace wge::core

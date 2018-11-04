@@ -54,7 +54,7 @@ void texture::load(const std::string & pFilepath)
 	mPixels = pixels;
 }
 
-void texture::load(filesystem::input_stream::ptr pStream, std::size_t pSize)
+void texture::load(filesystem::stream::ptr pStream, std::size_t pSize)
 {
 	pSize = (pSize == 0 ? pStream->length() - pStream->tell() : pSize);
 	std::vector<unsigned char> data;
@@ -104,12 +104,12 @@ animation::ptr texture::get_animation(const std::string & pName) const
 			return i;
 }
 
-texture::atlas_container & texture::get_raw_atlas()
+texture::atlas_container& texture::get_raw_atlas()
 {
 	return mAtlas;
 }
 
-const texture::atlas_container & texture::get_raw_atlas() const
+const texture::atlas_container& texture::get_raw_atlas() const
 {
 	return mAtlas;
 }
