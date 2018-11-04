@@ -2,3 +2,6 @@ build
 bin
 resources/imgui.ini
 3rdparty/glew/glew.pc
+resources/editor/log.txt
+resources/imgui.ini
+resources/serialization_data.json
