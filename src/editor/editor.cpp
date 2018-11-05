@@ -657,7 +657,7 @@ private:
 			{
 				if (ImGui::BeginMenu("Scene"))
 				{
-					if (ImGui::MenuItem("Loader"))
+					if (ImGui::MenuItem("Load"))
 					{
 						if (auto scene = mContext.asset_manager.find_asset("myscene.asset"))
 						{
