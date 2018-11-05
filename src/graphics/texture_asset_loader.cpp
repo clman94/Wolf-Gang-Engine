@@ -4,8 +4,8 @@
 #include <iostream>
 #include <fstream>
 
-using namespace wge;
-using namespace wge::graphics;
+namespace wge::graphics
+{
 
 core::asset::ptr texture_asset_loader::create_asset(core::asset_config::ptr pConfig, const filesystem::path & mRoot_path)
 {
@@ -28,18 +28,14 @@ core::asset::ptr texture_asset_loader::import_asset(const filesystem::path & pPa
 	core::asset_config::ptr config = std::make_shared<core::asset_config>();
 	config->set_type("texture");
 
-	// Generate an id from a hash of the file path
-	// TODO: Replace this with something that can generate a more "unique" id.
-	config->set_id(util::hash::hash64(pPath.string()));
-
 	filesystem::path config_path(pPath);
 	config_path.pop_filepath();
 	config_path /= pPath.filename() + ".asset";
 	config->set_path(config_path);
-
-	// Save the configuration
-	std::ofstream out_config_stream(config_path.string().c_str());
-	out_config_stream << config->save().dump(2);
+	config->generate_id();
+	config->save();
 
 	return create_asset(config, mRoot_path);
 }
+
+} // namespace wge::graphics

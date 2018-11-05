@@ -57,10 +57,10 @@ void texture::load(const std::string & pFilepath)
 void texture::load(filesystem::stream::ptr pStream, std::size_t pSize)
 {
 	pSize = (pSize == 0 ? pStream->length() - pStream->tell() : pSize);
-	std::vector<unsigned char> data;
+	std::vector<char> data;
 	data.resize(pSize);
 	std::size_t bytes_read = pStream->read(&data[0], pSize);
-	stbi_uc* pixels = stbi_load_from_memory(&data[0], bytes_read, &mWidth, &mHeight, &mChannels, 4);
+	stbi_uc* pixels = stbi_load_from_memory(reinterpret_cast<unsigned char*>(&data[0]), bytes_read, &mWidth, &mHeight, &mChannels, 4);
 	if (!pixels)
 	{
 		std::cout << "Failed to open image\n";

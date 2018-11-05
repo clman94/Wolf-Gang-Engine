@@ -1,0 +1,36 @@
+{
+  "description": "",
+  "id": 676082371,
+  "metadata": {
+    "collections": [
+      {
+        "children": [
+          {
+            "children": [],
+            "components": [
+              {
+                "data": {
+                  "position": [
+                    0.0,
+                    0.0
+                  ],
+                  "rotation": 0.0,
+                  "scale": [
+                    1.0,
+                    1.0
+                  ]
+                },
+                "id": 0,
+                "name": "Transform 2D"
+              }
+            ],
+            "name": "New 2D Object"
+          }
+        ],
+        "components": [],
+        "name": ""
+      }
+    ]
+  },
+  "type": "scene"
+}

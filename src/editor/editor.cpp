@@ -11,6 +11,8 @@
 #include <wge/core/asset_manager.hpp>
 #include <wge/graphics/texture_asset_loader.hpp>
 #include <wge/graphics/framebuffer.hpp>
+#include <wge/filesystem/file_input_stream.hpp>
+#include <wge/filesystem/exception.hpp>
 
 // GL
 #include <GL/glew.h>
@@ -170,7 +172,8 @@ struct editor_context
 		factory.add<physics::box_collider_component>();
 		factory.add<graphics::sprite_component>();
 
-		asset_manager.add_loader("texture", &texture_loader);
+		asset_manager.add_loader("texture", texture_loader);
+		asset_manager.add_loader("scene", config_loader);
 		asset_manager.set_root_directory(".");
 		asset_manager.load_assets();
 		game_context.add_system(&asset_manager);
@@ -178,11 +181,108 @@ struct editor_context
 		renderer.initialize();
 		renderer.set_pixel_size(0.01f);
 		game_context.add_system(&renderer);
+
+		setup_inspectors();
+	}
+
+	void setup_inspectors()
+	{
+		// Inspector for transform_component
+		inspectors.add_inspector(core::transform_component::COMPONENT_ID,
+			[](core::component* pComponent)
+		{
+			auto reset_context_menu = [](const char * pId)->bool
+			{
+				bool clicked = false;
+				if (ImGui::BeginPopupContextItem(pId))
+				{
+					if (ImGui::Button("Reset"))
+					{
+						clicked = true;
+						ImGui::CloseCurrentPopup();
+					}
+					ImGui::EndPopup();
+				}
+				return clicked;
+			};
+
+			auto transform = dynamic_cast<core::transform_component*>(pComponent);
+			math::vec2 position = transform->get_position();
+			if (ImGui::DragFloat2("Position", position.components))
+				transform->set_position(position);
+			if (reset_context_menu("posreset"))
+				transform->set_position(math::vec2(0, 0));
+
+			float rotation = math::degrees(transform->get_rotation());
+			if (ImGui::DragFloat("Rotation", &rotation, 1, 0, 0, "%.3f degrees"))
+				transform->set_rotaton(math::degrees(rotation));
+			if (reset_context_menu("rotreset"))
+				transform->set_rotaton(0);
+
+			math::vec2 scale = transform->get_scale();
+			if (ImGui::DragFloat2("Scale", scale.components, 0.01f))
+				transform->set_scale(scale);
+			if (reset_context_menu("scalereset"))
+				transform->set_scale(math::vec2(0, 0));
+		});
+
+		// Inspector for sprite_component
+		inspectors.add_inspector(graphics::sprite_component::COMPONENT_ID,
+			[](core::component* pComponent)
+		{
+			auto sprite = dynamic_cast<graphics::sprite_component*>(pComponent);
+			math::vec2 offset = sprite->get_offset();
+			if (ImGui::DragFloat2("Offset", offset.components))
+				sprite->set_offset(offset);
+
+			graphics::texture::ptr tex = sprite->get_texture();
+			std::string inputtext = tex ? tex->get_path().string().c_str() : "None";
+			ImGui::InputText("Texture", &inputtext, ImGuiInputTextFlags_ReadOnly);
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("textureAsset"))
+				{
+					core::asset_uid id = *(core::asset_uid*)payload->Data;
+					sprite->set_texture(id);
+				}
+				ImGui::EndDragDropTarget();
+			}
+		});
+
+		// Inspector for physics_world_component
+		inspectors.add_inspector(physics::physics_world_component::COMPONENT_ID,
+			[](core::component* pComponent)
+		{
+			auto physicsworld = dynamic_cast<physics::physics_world_component*>(pComponent);
+			math::vec2 gravity = physicsworld->get_gravity();
+			if (ImGui::DragFloat2("Gravity", gravity.components))
+				physicsworld->set_gravity(gravity);
+		});
+
+		// Inspector for physics_box_collider
+		inspectors.add_inspector(physics::box_collider_component::COMPONENT_ID,
+			[](core::component* pComponent)
+		{
+			auto collider = dynamic_cast<physics::box_collider_component*>(pComponent);
+
+			math::vec2 offset = collider->get_offset();
+			if (ImGui::DragFloat2("Offset", offset.components))
+				collider->set_offset(offset);
+
+			math::vec2 size = collider->get_size();
+			if (ImGui::DragFloat2("Size", size.components))
+				collider->set_size(size);
+
+			float rotation = math::degrees(collider->get_rotation());
+			if (ImGui::DragFloat("Rotation", &rotation))
+				collider->set_rotation(math::degrees(rotation));
+		});
 	}
 
 	core::context game_context;
 	filesystem::path game_path;
 
+	core::config_asset_loader config_loader;
 	graphics::texture_asset_loader texture_loader;
 	core::asset_manager asset_manager;
 
@@ -236,7 +336,7 @@ inline void main_viewport_dock()
 	ImGui::End();
 }
 
-bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr, bool pDefault_open = false)
+inline bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr, bool pDefault_open = false)
 {
 	ImGui::PushID(pStr_id);
 
@@ -254,7 +354,7 @@ bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr, bool pDefault_
 	return *pOpen;
 }
 
-void show_node_tree(util::ref<core::object_node> pNode, util::ref<core::object_node>& pSelected, bool pIs_collection = false)
+inline void show_node_tree(util::ref<core::object_node> pNode, util::ref<core::object_node>& pSelected, bool pIs_collection = false)
 {
 	ImGui::PushID(pNode.get());
 
@@ -379,12 +479,13 @@ private:
 	{
 		while (!glfwWindowShouldClose(mWindow))
 		{
+			float delta = 1.f / 60.f;
+
 			new_frame();
 			main_viewport_dock();
 
 			for (auto& i : mEditors)
 			{
-				float delta = 1.f / 60.f;
 				i->on_update(delta);
 				i->on_gui(delta);
 			}
@@ -392,6 +493,14 @@ private:
 			show_asset_manager();
 			show_viewport();
 			show_objects();
+			show_component_inspector();
+
+			for (auto i : mContext.game_context.get_collection_container())
+				i->send_down("on_render", &mContext.renderer);
+
+			mContext.renderer.set_framebuffer(&mViewport_framebuffer);
+			mContext.renderer.render();
+			mContext.renderer.clear();
 
 			end_frame();
 		}
@@ -546,6 +655,51 @@ private:
 		{
 			if (ImGui::BeginMenuBar())
 			{
+				if (ImGui::BeginMenu("Scene"))
+				{
+					if (ImGui::MenuItem("Loader"))
+					{
+						if (auto scene = mContext.asset_manager.find_asset("myscene.asset"))
+						{
+							mContext.game_context.deserialize(scene->get_config()->get_metadata());
+						}
+						else
+						{
+							log::error() << "myscene asset missing" << log::endm;
+						}
+					}
+					if (ImGui::MenuItem("Save"))
+					{
+						try
+						{
+							if (auto scene = mContext.asset_manager.find_asset("myscene.asset"))
+							{
+								scene->get_config()->set_metadata(mContext.game_context.serialize());
+								scene->get_config()->save();
+							}
+							else
+							{
+								auto config = std::make_shared<core::asset_config>();
+								config->set_metadata(mContext.game_context.serialize());
+								config->set_path(mContext.asset_manager.get_root_directory() / "myscene.asset");
+								config->set_type("scene");
+								config->generate_id();
+
+								config->save();
+
+								core::asset_loader* loader = mContext.asset_manager.find_loader("scene");
+								mContext.asset_manager.add_asset(loader->create_asset(config, mContext.asset_manager.get_root_directory()));
+							}
+						}
+						catch (const std::exception& e)
+						{
+							log::error() << e.what() << log::endm;
+							log::error() << "Could not save scene" << log::endm;
+						}
+					}
+					ImGui::EndMenu();
+				}
+
 				if (ImGui::BeginMenu("Add"))
 				{
 					if (ImGui::MenuItem("Collection"))
@@ -571,6 +725,83 @@ private:
 		}
 		ImGui::End();
 		ImGui::PopStyleVar();
+	}
+
+	void show_component_inspector()
+	{
+		ImGui::Begin("Component Inspector");
+		if (mSelected_node)
+		{
+			std::string name = mSelected_node->get_name();
+			if (ImGui::InputText("Name", &name))
+				mSelected_node->set_name(name);
+
+			for (std::size_t i = 0; i < mSelected_node->get_component_count(); i++)
+			{
+				// If set to true, the component will be deleted at the end of this loop
+				bool delete_component = false;
+
+				core::component* comp = mSelected_node->get_component_index(i);
+				ImGui::PushID(comp);
+
+				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4, 4));
+				ImGui::BeginChild(ImGui::GetID("Actions"),
+					ImVec2(0, (ImGui::GetStyle().WindowPadding.y * 2
+						+ ImGui::GetStyle().FramePadding.y * 2
+						+ ImGui::GetFontSize()) * 2), true);
+
+				bool open = collapsing_arrow("CollapsingArrow");
+
+				ImGui::SameLine();
+				{
+					ImGui::PushItemWidth(150);
+					std::string name = comp->get_name();
+					if (ImGui::InputText("##NameInput", &name))
+						comp->set_name(name);
+					ImGui::PopItemWidth();
+				}
+
+				ImGui::SameLine();
+				ImGui::Text(comp->get_component_name().c_str());
+
+				ImGui::Dummy(ImVec2(ImGui::GetWindowContentRegionWidth()
+					- (ImGui::CalcTextSize("Delete ").x
+						+ ImGui::GetStyle().WindowPadding.x * 2
+						+ ImGui::GetStyle().FramePadding.x * 2), 1));
+				ImGui::SameLine();
+				delete_component = ImGui::Button("Delete");
+
+				ImGui::EndChild();
+				ImGui::PopStyleVar();
+
+				if (open)
+					mContext.inspectors.on_gui(comp);
+
+				ImGui::PopID();
+				if (delete_component)
+					mSelected_node->remove_component(i--);
+			}
+
+			ImGui::Separator();
+			if (ImGui::BeginCombo("###Add Component", "Add Component"))
+			{
+				if (ImGui::Selectable("Transform 2D"))
+					mSelected_node->add_component<core::transform_component>();
+				if (ImGui::Selectable("Physics World"))
+					mSelected_node->add_component<physics::physics_world_component>();
+				if (ImGui::Selectable("Physics"))
+					mSelected_node->add_component<physics::physics_component>();
+				if (ImGui::Selectable("Box Collider"))
+					mSelected_node->add_component<physics::box_collider_component>();
+				if (ImGui::Selectable("Sprite"))
+					mSelected_node->add_component<graphics::sprite_component>();
+				//if (ImGui::Selectable("Script"))
+				//	mSelected_node->add_component<script_component>();
+				ImGui::EndCombo();
+			}
+		}
+		ImGui::End();
+
 	}
 
 private:

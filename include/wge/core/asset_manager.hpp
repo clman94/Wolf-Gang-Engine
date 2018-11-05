@@ -30,6 +30,29 @@ protected:
 	static filesystem::path make_path_relative(const filesystem::path& pPath, const filesystem::path& mRoot_path);
 };
 
+// Only loads assets as json configuration files.
+class config_asset_loader :
+	public asset_loader
+{
+public:
+	virtual asset::ptr create_asset(asset_config::ptr pConfig, const filesystem::path& mRoot_path) override
+	{
+		auto nasset = std::make_shared<asset>(pConfig);
+		nasset->set_path(make_path_relative(pConfig->get_path(), mRoot_path));
+		return nasset;
+	}
+
+	virtual bool can_import(const filesystem::path & pPath) override
+	{
+		return false;
+	}
+
+	virtual asset::ptr import_asset(const filesystem::path& pPath, const filesystem::path& mRoot_path) override
+	{
+		return{};
+	}
+};
+
 class asset_manager :
 	public core::system
 {
@@ -69,7 +92,8 @@ public:
 	}
 
 	// Add a loader for a specific type of asset
-	void add_loader(const std::string& pType, asset_loader* pLoader);
+	void add_loader(const std::string& pType, asset_loader& pLoader);
+	asset_loader* find_loader(const std::string& pType) const;
 
 	// Import a file as an asset
 	bool import_asset(const filesystem::path& pPath);
@@ -77,6 +101,7 @@ public:
 	// Set the root directory to find all assets.
 	// Note: This affects the relative path of all assets.
 	void set_root_directory(const filesystem::path& pPath);
+	const filesystem::path& get_root_directory() const;
 
 	// Load all assets in the root directory
 	void load_assets();
@@ -87,8 +112,6 @@ private:
 	// Iterates through all the files in the directory and returns a list of
 	// paths to files with the extesion ".asset"
 	static std::vector<filesystem::path> get_absolute_path_list(const filesystem::path& pPath);
-
-	asset_loader* find_loader(const std::string& pType) const;
 
 private:
 	std::vector<asset::ptr> mAsset_list;

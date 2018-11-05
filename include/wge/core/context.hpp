@@ -83,6 +83,7 @@ public:
 		json result;
 		for (auto& i : mCollections)
 			result["collections"].push_back(i->serialize());
+		return result;
 	}
 	void deserialize(const json& pJson)
 	{
@@ -97,4 +98,4 @@ private:
 	std::vector<core::object_node::ref> mCollections;
 };
 
-}
+} // namespace wge::core

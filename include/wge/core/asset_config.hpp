@@ -43,14 +43,18 @@ public:
 	using ptr = std::shared_ptr<asset_config>;
 
 	// Load the json for this asset
-	void load(const json& pJson);
+	void deserialize(const json& pJson);
 
 	// Save any modified configuration for this asset
-	json save() const;
+	json serialize() const;
+
+	// Save the serialized data to a file specified by the path.
+	void save() const;
 
 	const std::string& get_type() const;
 	void set_type(const std::string& pType);
 
+	void generate_id();
 	asset_uid get_id() const;
 	void set_id(asset_uid pID);
 

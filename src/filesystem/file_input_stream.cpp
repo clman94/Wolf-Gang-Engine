@@ -88,14 +88,14 @@ bool file_stream::is_good()
 	return !is_eof() || !has_error();
 }
 
-std::size_t file_stream::read(unsigned char* pData, std::size_t pRequested_size)
+std::size_t file_stream::read(char* pData, std::size_t pRequested_size)
 {
 	if (!(mAccess & stream_access::read))
 		throw io_error("Reading from stream with no read access");
 
 	std::size_t last_position = tell();
 	try {
-		mStream.read(reinterpret_cast<char*>(pData), pRequested_size);
+		mStream.read(pData, pRequested_size);
 	}
 	catch (const std::fstream::failure& e)
 	{
@@ -104,14 +104,14 @@ std::size_t file_stream::read(unsigned char* pData, std::size_t pRequested_size)
 	return tell() - last_position;
 }
 
-std::size_t file_stream::write(unsigned char* pData, std::size_t pSize)
+std::size_t file_stream::write(const char* pData, std::size_t pSize)
 {
 	if (!(mAccess & stream_access::write))
 		throw io_error("Writing to stream with no write access");
 
 	std::size_t last_position = tell();
 	try {
-		mStream.write(reinterpret_cast<char*>(pData), pSize);
+		mStream.write(pData, pSize);
 	}
 	catch (const std::fstream::failure& e)
 	{

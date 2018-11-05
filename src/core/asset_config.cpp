@@ -1,9 +1,11 @@
 #include <wge/core/asset_config.hpp>
+#include <wge/util/hash.hpp>
+#include <wge/filesystem/file_input_stream.hpp>
 
-using namespace wge;
-using namespace wge::core;
+namespace wge::core
+{
 
-void asset_config::load(const json & pJson)
+void asset_config::deserialize(const json & pJson)
 {
 	mType = pJson["type"];
 	mID = pJson["id"];
@@ -11,7 +13,7 @@ void asset_config::load(const json & pJson)
 	mMetadata = pJson["metadata"];
 }
 
-json asset_config::save() const
+json asset_config::serialize() const
 {
 	json result;
 	result["type"] = mType;
@@ -19,6 +21,13 @@ json asset_config::save() const
 	result["description"] = mDescription;
 	result["metadata"] = mMetadata;
 	return result;
+}
+
+void asset_config::save() const
+{
+	filesystem::file_stream out;
+	out.open(mPath, filesystem::stream_access::write);
+	out.write(serialize().dump(2));
 }
 
 const std::string & asset_config::get_type() const
@@ -29,6 +38,13 @@ const std::string & asset_config::get_type() const
 void asset_config::set_type(const std::string & pType)
 {
 	mType = pType;
+}
+
+void asset_config::generate_id()
+{
+	// Generate an id from a hash of the file path
+	// TODO: Replace this with something that can generate a more "unique" id.
+	mID = util::hash::hash64(mPath.string()) + reinterpret_cast<asset_uid>(this);
 }
 
 asset_uid asset_config::get_id() const
@@ -61,3 +77,5 @@ void asset_config::set_metadata(const json & pJson)
 {
 	mMetadata = pJson;
 }
+
+} // namespace wge::core

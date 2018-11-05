@@ -1,8 +1,9 @@
 #include <fstream>
 
 #include <wge/core/asset_manager.hpp>
-using namespace wge;
-using namespace wge::core;
+
+namespace wge::core
+{
 
 filesystem::path asset_loader::make_path_relative(const filesystem::path & pPath, const filesystem::path & mRoot_path)
 {
@@ -41,10 +42,10 @@ asset::ptr asset_manager::find_asset(asset_uid pUID) const
 	return{};
 }
 
-void asset_manager::add_loader(const std::string & pType, asset_loader * pLoader)
+void asset_manager::add_loader(const std::string & pType, asset_loader& pLoader)
 {
 	assert(mLoader_list.find(pType) == mLoader_list.end());
-	mLoader_list[pType] = pLoader;
+	mLoader_list[pType] = &pLoader;
 }
 
 bool asset_manager::import_asset(const filesystem::path & pPath)
@@ -68,6 +69,11 @@ void asset_manager::set_root_directory(const filesystem::path & pPath)
 	mRoot_dir = system_fs::absolute(pPath);
 }
 
+const filesystem::path & asset_manager::get_root_directory() const
+{
+	return mRoot_dir;
+}
+
 void asset_manager::load_assets()
 {
 	filesystem::path absolute_root_path = system_fs::absolute(mRoot_dir);
@@ -82,7 +88,7 @@ void asset_manager::load_assets()
 			// Parse configuration file
 			std::ifstream stream(i.string().c_str());
 			std::string config_str(std::istreambuf_iterator<char>(stream), {});
-			config->load(json::parse(config_str));
+			config->deserialize(json::parse(config_str));
 
 			// Load asset
 			asset_loader* loader = find_loader(config->get_type());
@@ -117,3 +123,5 @@ asset_loader * asset_manager::find_loader(const std::string & pType) const
 			return i.second;
 	return nullptr;
 }
+
+} // namespace wge::core

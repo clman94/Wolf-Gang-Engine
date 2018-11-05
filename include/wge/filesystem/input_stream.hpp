@@ -72,9 +72,13 @@ public:
 	virtual path get_path() = 0;
 
 	// Returns the amount of bytes actually read.
-	virtual std::size_t read(unsigned char* pData, std::size_t pRequested_size) = 0;
+	virtual std::size_t read(char* pData, std::size_t pRequested_size) = 0;
 	// Returns the amount of bytes actually written.
-	virtual std::size_t write(unsigned char* pData, std::size_t pSize) = 0;
+	virtual std::size_t write(const char* pData, std::size_t pSize) = 0;
+	std::size_t write(const std::string& pData)
+	{
+		return write(pData.c_str(), pData.size());
+	}
 };
 
 } // namespace wge::filesystem

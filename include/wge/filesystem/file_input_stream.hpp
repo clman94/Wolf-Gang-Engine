@@ -26,8 +26,11 @@ public:
 	virtual bool is_eof() override;
 	virtual bool has_error() override;
 	virtual bool is_good() override;
-	virtual std::size_t read(unsigned char* pData, std::size_t pRequested_size) override;
-	virtual std::size_t write(unsigned char* pData, std::size_t pSize) override;
+
+	virtual std::size_t read(char* pData, std::size_t pRequested_size) override;
+	virtual std::size_t write(const char* pData, std::size_t pSize) override;
+	using stream::write;
+
 	virtual std::size_t length() override;
 	virtual path get_path() override;
 	virtual stream_access get_access() const override;
