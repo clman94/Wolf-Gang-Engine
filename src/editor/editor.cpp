@@ -43,86 +43,11 @@ namespace wge::editor
 
 class editor_context;
 
-class history
-{
-public:
-	class command
-	{
-	public:
-		using ptr = std::shared_ptr<command>;
 
-		virtual const char* get_name() const = 0;
-		virtual void undo() = 0;
-		virtual void redo() = 0;
-	};
-
-	class functional_command :
-		public command
-	{
-	public:
-		functional_command(std::string pName,
-			std::function<void()> pUndo,
-			std::function<void()> pRedo) :
-			mName(pName), mUndo(pUndo), mRedo(pRedo)
-		{}
-
-		virtual const char* get_name() const
-		{
-			return mName.c_str();
-		}
-
-		virtual void undo()
-		{
-			mUndo();
-		}
-
-		virtual void redo()
-		{
-			mRedo();
-		}
-
-	private:
-		std::string mName;
-		std::function<void()> mUndo, mRedo;
-	};
-
-public:
-	void add(const std::string pName, std::function<void()> pUndo, std::function<void()> pRedo)
-	{
-		auto ptr = std::make_shared<functional_command>(pName, pUndo, pRedo);
-	}
-};
-
-class document
-{
-public:
-	using ptr = std::shared_ptr<document>;
-
-public:
-	virtual ~document() {}
-	virtual void save() {}
-
-	bool is_dirty() const
-	{
-		return mDirty;
-	}
-
-	void mark_dirty()
-	{
-		mDirty = true;
-	}
-
-private:
-	bool mDirty{ false };
-};
-
-// Base class for document editors
 class editor
 {
 public:
 	virtual ~editor() {}
-
-	virtual document::ptr get_document() { return{}; }
 
 	// Normally called before on_gui. Update any logic here.
 	virtual void on_update(float pDelta) {}
@@ -350,6 +275,7 @@ inline bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr, bool pD
 	if (ImGui::ArrowButton("Arrow", *pOpen ? ImGuiDir_Down : ImGuiDir_Right))
 		*pOpen = !*pOpen; // Toggle open flag
 	ImGui::PopStyleColor(3);
+
 	ImGui::PopID();
 	return *pOpen;
 }

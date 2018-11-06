@@ -53,6 +53,7 @@ file(GLOB WGE_UTIL_HEADERS "${WGE_HEADER_DIR}/util/*.hpp")
 source_group("Util" FILES ${WGE_UTIL_HEADERS})
 
 file(GLOB WGE_EDITOR_HEADERS "${WGE_HEADER_DIR}/editor/*.hpp")
+file(GLOB_RECURSE WGE_EDITOR_HEADERS "${WGE_SOURCE_DIR}/editor/*.hpp")
 source_group("Editor" FILES ${WGE_EDITOR_HEADERS})
 
 set(WGE_ALL_HEADERS
@@ -95,7 +96,7 @@ source_group("Filesystem" FILES ${WGE_FILESYSTEM_SOURCES})
 file(GLOB WGE_UTIL_SOURCES "${WGE_SOURCE_DIR}/util/*.cpp")
 source_group("Util" FILES ${WGE_UTIL_SOURCES})
 
-file(GLOB WGE_EDITOR_SOURCES "${WGE_SOURCE_DIR}/editor/*.cpp")
+file(GLOB_RECURSE WGE_EDITOR_SOURCES "${WGE_SOURCE_DIR}/editor/*.cpp")
 source_group("Editor" FILES ${WGE_EDITOR_SOURCES})
 
 set(WGE_ALL_SOURCES
