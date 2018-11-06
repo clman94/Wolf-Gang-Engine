@@ -1,4 +1,4 @@
-#include <wge/editor/editor.hpp>
+#include <wge/editor/application.hpp>
 
 int main(int argc, char** argv)
 {
