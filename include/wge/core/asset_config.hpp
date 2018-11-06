@@ -76,4 +76,4 @@ private:
 	friend class asset;
 };
 
-}
+} // namespace wge::core

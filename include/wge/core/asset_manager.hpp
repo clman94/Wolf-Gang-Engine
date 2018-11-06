@@ -120,4 +120,4 @@ private:
 	filesystem::filesystem_interface* mFilesystem;
 };
 
-}
+} // namespace wge::core
