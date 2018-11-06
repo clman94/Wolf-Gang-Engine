@@ -13,7 +13,7 @@ namespace wge::editor
 
 // This class stores a list of inspectors to be used for
 // each type of component.
-class editor_component_inspector
+class component_inspector
 {
 public:
 	// Assign an inspector for a component

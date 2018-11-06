@@ -80,8 +80,8 @@ class renderer :
 {
 	WGE_SYSTEM("Renderer", 43);
 public:
-	renderer(core::context* pCtx) :
-		mContext(pCtx)
+	renderer(core::context& pCtx) :
+		mContext(&pCtx)
 	{}
 
 	// Compile the default shaders and initialize opengl

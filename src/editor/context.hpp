@@ -10,7 +10,7 @@ namespace wge::editor
 struct editor_context
 {
 	editor_context() :
-		renderer(&game_context)
+		renderer(game_context)
 	{
 	}
 
@@ -23,8 +23,8 @@ struct editor_context
 		factory.add<physics::box_collider_component>();
 		factory.add<graphics::sprite_component>();
 
-		asset_manager.add_loader("texture", texture_loader);
-		asset_manager.add_loader("scene", config_loader);
+		asset_manager.add_loader("texture", std::make_shared<graphics::texture_asset_loader>());
+		asset_manager.add_loader("scene", std::make_shared<core::config_asset_loader>());
 		asset_manager.set_root_directory(".");
 		asset_manager.load_assets();
 		game_context.add_system(&asset_manager);
@@ -132,14 +132,11 @@ struct editor_context
 
 	core::context game_context;
 	filesystem::path game_path;
-
-	core::config_asset_loader config_loader;
-	graphics::texture_asset_loader texture_loader;
 	core::asset_manager asset_manager;
 
 	graphics::renderer renderer;
 
-	editor_component_inspector inspectors;
+	component_inspector inspectors;
 };
 
 }

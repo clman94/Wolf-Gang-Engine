@@ -14,6 +14,8 @@ namespace wge::core
 class asset_loader
 {
 public:
+	using ptr = std::shared_ptr<asset_loader>;
+
 	// Create an asset from and config file
 	virtual asset::ptr create_asset(asset_config::ptr pConfig, const filesystem::path& mRoot_path) = 0;
 
@@ -92,8 +94,8 @@ public:
 	}
 
 	// Add a loader for a specific type of asset
-	void add_loader(const std::string& pType, asset_loader& pLoader);
-	asset_loader* find_loader(const std::string& pType) const;
+	void add_loader(const std::string& pType, asset_loader::ptr pLoader);
+	asset_loader::ptr find_loader(const std::string& pType) const;
 
 	// Import a file as an asset
 	bool import_asset(const filesystem::path& pPath);
@@ -115,7 +117,7 @@ private:
 
 private:
 	std::vector<asset::ptr> mAsset_list;
-	std::map<std::string, asset_loader*> mLoader_list;
+	std::map<std::string, asset_loader::ptr> mLoader_list;
 	filesystem::path mRoot_dir;
 	filesystem::filesystem_interface* mFilesystem;
 };

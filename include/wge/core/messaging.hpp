@@ -49,14 +49,13 @@ class subscription :
 	public subscription_base
 {
 private:
-	// Use event<>::create() instead
+	// Use subscription<>::create() instead
 	subscription(const std::string& pEvent_name, const std::function<T>& pFunc) :
 		subscription_base(pEvent_name),
 		mFunction(pFunc)
 	{}
 
 public:
-
 	static std::shared_ptr<subscription_base> create(const std::string& pEvent_name, const std::function<T>& pFunc)
 	{
 		return std::shared_ptr<subscription<T>>(new subscription<T>(pEvent_name, pFunc));
@@ -71,7 +70,6 @@ public:
 private:
 	std::function<T> mFunction;
 };
-
 
 class publisher
 {
@@ -182,4 +180,4 @@ private:
 	std::vector<std::shared_ptr<subscription_base>> mSubscriptions;
 };
 
-}
+} // namespace wge::core

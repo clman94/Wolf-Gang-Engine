@@ -444,7 +444,7 @@ private:
 
 								config->save();
 
-								core::asset_loader* loader = mContext.asset_manager.find_loader("scene");
+								auto loader = mContext.asset_manager.find_loader("scene");
 								mContext.asset_manager.add_asset(loader->create_asset(config, mContext.asset_manager.get_root_directory()));
 							}
 						}

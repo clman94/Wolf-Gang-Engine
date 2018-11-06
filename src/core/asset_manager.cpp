@@ -42,10 +42,18 @@ asset::ptr asset_manager::find_asset(asset_uid pUID) const
 	return{};
 }
 
-void asset_manager::add_loader(const std::string & pType, asset_loader& pLoader)
+void asset_manager::add_loader(const std::string & pType, asset_loader::ptr pLoader)
 {
 	assert(mLoader_list.find(pType) == mLoader_list.end());
-	mLoader_list[pType] = &pLoader;
+	mLoader_list[pType] = pLoader;
+}
+
+asset_loader::ptr asset_manager::find_loader(const std::string & pType) const
+{
+	for (auto i : mLoader_list)
+		if (i.first == pType)
+			return i.second;
+	return{};
 }
 
 bool asset_manager::import_asset(const filesystem::path & pPath)
@@ -91,7 +99,7 @@ void asset_manager::load_assets()
 			config->deserialize(json::parse(config_str));
 
 			// Load asset
-			asset_loader* loader = find_loader(config->get_type());
+			auto loader = find_loader(config->get_type());
 			if (!loader)
 			{
 				std::cout << "Unable to load asset " << i.string() << "\n";
@@ -114,14 +122,6 @@ std::vector<filesystem::path> asset_manager::get_absolute_path_list(const filesy
 		if (!system_fs::is_directory(i.path()) && i.path().extension() == ".asset")
 			result.emplace_back(system_fs::absolute(i.path()));
 	return result;
-}
-
-asset_loader * asset_manager::find_loader(const std::string & pType) const
-{
-	for (auto i : mLoader_list)
-		if (i.first == pType)
-			return i.second;
-	return nullptr;
 }
 
 } // namespace wge::core
