@@ -1,5 +1,7 @@
 #pragma once
 
+#include "command.hpp"
+
 #include <memory>
 #include <deque>
 
@@ -8,17 +10,6 @@ namespace wge::editor
 
 class history
 {
-public:
-	class command
-	{
-	public:
-		using ptr = std::shared_ptr<command>;
-
-		virtual void execute() = 0;
-		virtual void on_undo() = 0;
-		virtual void on_redo() = 0;
-	};
-
 public:
 	// Adds a command to the undo stack
 	void add(command::ptr pCommand);

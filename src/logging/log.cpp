@@ -5,13 +5,7 @@
 
 #include <filesystem>
 
-
 using namespace wge;
-using namespace wge::log;
-
-static message_builder gMessage_builder;
-static log_container gLog;
-static std::ofstream gLog_output_file;
 
 static const char* get_ansi_color_reset()
 {
@@ -22,17 +16,21 @@ static const char* get_ansi_color_for_level(log::level pSeverity_level)
 {
 	switch (pSeverity_level)
 	{
-	case level::unknown: return "\033[95m"; break;
-	case level::info:    return get_ansi_color_reset(); break;
-	case level::debug:   return "\033[96m"; break;
-	case level::warning: return "\033[93m"; break;
-	case level::error:   return "\033[91m"; break;
+	case log::level::unknown: return "\033[95m"; break;
+	case log::level::info:    return get_ansi_color_reset(); break;
+	case log::level::debug:   return "\033[96m"; break;
+	case log::level::warning: return "\033[93m"; break;
+	case log::level::error:   return "\033[91m"; break;
 	default:             return get_ansi_color_reset();
 	}
 }
 
 namespace wge::log
 {
+
+static message_builder gMessage_builder;
+static log_container gLog;
+static std::ofstream gLog_output_file;
 
 extern message_builder& out = gMessage_builder;
 
@@ -113,7 +111,6 @@ message message_builder::finalize()
 
 	return std::move(mMessage);
 }
-
 
 const std::vector<message>& get_log()
 {

@@ -4,6 +4,7 @@
 #include <wge/core/component.hpp>
 #include <wge/graphics/renderer.hpp>
 #include <wge/math/anchor.hpp>
+#include <wge/math/aabb.hpp>
 
 namespace wge::graphics
 {
@@ -59,7 +60,11 @@ public:
 		return mTexture;
 	}
 
+	virtual bool has_aabb() const override { return true; }
+	virtual math::aabb get_screen_aabb() const override { return mSceen_aabb; };
+
 private:
+	math::aabb mSceen_aabb;
 	texture::ptr mTexture;
 	math::vec2 mOffset, mAnchor{ math::anchor::topleft };
 };

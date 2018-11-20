@@ -2,6 +2,9 @@
 
 #include <wge/core/system.hpp>
 #include <wge/core/object_node.hpp>
+#include <wge/core/layer.hpp>
+
+#include <list>
 
 namespace wge::core
 {
@@ -9,7 +12,7 @@ namespace wge::core
 class context
 {
 public:
-	using collection_container = std::vector<core::object_node::ref>;
+	using layer_container = std::vector<layer::ptr>;
 
 	core::component_factory& get_component_factory()
 	{
@@ -45,35 +48,34 @@ public:
 
 	// Get the root node of a collection.
 	// The root node is where all system-specific components should go.
-	core::object_node::ref get_collection(std::size_t pIndex) const
+	layer::ptr get_layer(std::size_t pIndex) const
 	{
-		if (pIndex >= mCollections.size())
+		if (pIndex >= mLayers.size())
 			return{};
-		return mCollections[pIndex];
+		return mLayers[pIndex];
 	}
 
-	core::object_node::ref create_collection()
+	layer::ptr create_layer()
 	{
-		mCollections.push_back(core::object_node::create(this));
-		return mCollections.back();
+		return mLayers.emplace_back(layer::create(*this));
 	}
 
-	core::object_node::ref create_collection(const std::string& pName)
+	layer::ptr create_layer(const std::string& pName)
 	{
-		auto c = create_collection();
-		c->set_name(pName);
-		return c;
+		auto l = create_layer();
+		l->set_name(pName);
+		return l;
 	}
 
-	core::object_node::ref create_collection(const std::string& pName, std::size_t pInsert)
+	layer::ptr create_collection(const std::string& pName, std::size_t pInsert)
 	{
-		mCollections.insert(mCollections.begin() + pInsert, core::object_node::create(this));
-		return mCollections[pInsert];
+		mLayers.insert(mLayers.begin() + pInsert, layer::create(*this));
+		return mLayers[pInsert];
 	}
 
-	const collection_container& get_collection_container() const
+	const layer_container& get_layer_container() const
 	{
-		return mCollections;
+		return mLayers;
 	}
 
 	// Serializes all collections and their nodes.
@@ -81,21 +83,21 @@ public:
 	json serialize() const
 	{
 		json result;
-		for (auto& i : mCollections)
-			result["collections"].push_back(i->serialize());
+		for (auto& i : mLayers)
+			result["layers"].push_back(i->serialize());
 		return result;
 	}
 	void deserialize(const json& pJson)
 	{
-		mCollections.clear();
-		for (const json& i : pJson["collections"])
-			create_collection()->deserialize(i);
+		mLayers.clear();
+		for (const json& i : pJson["layers"])
+			create_layer()->deserialize(i);
 	}
 
 private:
 	core::component_factory mFactory;
 	std::vector<system*> mSystems;
-	std::vector<core::object_node::ref> mCollections;
+	layer_container mLayers;
 };
 
 } // namespace wge::core

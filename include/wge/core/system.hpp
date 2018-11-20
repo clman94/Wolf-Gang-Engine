@@ -20,4 +20,4 @@ public:
 	virtual std::string get_system_name() const = 0;
 };
 
-}
+} // namespace wge::core

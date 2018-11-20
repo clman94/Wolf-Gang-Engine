@@ -3,6 +3,8 @@
 #include <GL/glew.h>
 #include <vector>
 
+#include <wge/math/aabb.hpp>
+#include <wge/math/rect.hpp>
 #include <wge/math/vector.hpp>
 #include <wge/math/matrix.hpp>
 #include <wge/graphics/color.hpp>
@@ -93,8 +95,17 @@ public:
 		mBatches.push_back(pBatch);
 	}
 
+	void set_render_view(const math::aabb& mAABB);
+	math::aabb get_render_view() const;
+
+	math::vec2 get_render_view_scale() const;
+
+	// Convert world coordinates to screen coordinates
+	math::vec2 world_to_screen(const math::vec2& pVec) const;
+	// Convert screen coordinates to world coordinates
+	math::vec2 screen_to_world(const math::vec2& pVec) const;
+
 	// Renders all the batches.
-	// All batches are cleared after this is called.
 	void render();
 
 	// Clear all batches for a new frame
@@ -133,6 +144,7 @@ private:
 	void render_batch(const render_batch_2d& pBatch);
 
 private:
+	math::aabb mRender_view;
 	framebuffer* mFramebuffer{ nullptr };
 	GLuint mShader_texture, mShader_color;
 	GLuint mVertex_buffer, mElement_buffer, mVAO_id;

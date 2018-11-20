@@ -63,7 +63,13 @@ void sprite_component::on_render(renderer * pRenderer)
 
 	// Transform the vertices
 	for (int i = 0; i < 4; i++)
+	{
 		verts[i].position = transform_mat * (verts[i].position + (-mAnchor * texture_size) + mOffset);
+		if (i == 0)
+			mSceen_aabb = math::aabb{ verts[i].position, verts[i].position };
+		else
+			mSceen_aabb.merge(verts[i].position);
+	}
 
 	batch.add_quad(verts);
 

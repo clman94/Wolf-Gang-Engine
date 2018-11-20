@@ -26,6 +26,15 @@ void to_json(nlohmann::json&, const rect&);
 void from_json(const nlohmann::json&, rect&);
 }
 
+namespace wge::core
+{
+
+class serializable;
+void to_json(nlohmann::json&, const serializable&);
+void from_json(const nlohmann::json&, serializable&);
+
+}
+
 struct b2Vec2;
 void to_json(nlohmann::json&, const b2Vec2&);
 void from_json(const nlohmann::json&, b2Vec2&);

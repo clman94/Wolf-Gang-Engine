@@ -8,8 +8,8 @@
 #include <wge/graphics/framebuffer.hpp>
 #include <wge/math/transformations.hpp>
 
-using namespace wge;
-using namespace wge::graphics;
+namespace wge::graphics
+{
 
 static std::string load_file_as_string(const std::string& pPath)
 {
@@ -148,12 +148,37 @@ void renderer::initialize()
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6, NULL, GL_STATIC_DRAW);
 }
 
+void renderer::set_render_view(const math::aabb& mAABB)
+{
+	mRender_view = mAABB;
+}
+
+math::aabb renderer::get_render_view() const
+{
+	return mRender_view;
+}
+
+math::vec2 renderer::get_render_view_scale() const
+{
+	return (mRender_view.max - mRender_view.min) / math::vec2((float)mFramebuffer->get_width(), (float)mFramebuffer->get_height());
+}
+
+math::vec2 renderer::world_to_screen(const math::vec2 & pVec) const
+{
+	return (pVec - mRender_view.min) * get_render_view_scale();
+}
+
+math::vec2 renderer::screen_to_world(const math::vec2 & pVec) const
+{
+	return (pVec / get_render_view_scale()) + mRender_view.max;
+}
+
 void renderer::render()
 {
 	assert(mFramebuffer);
 
-	for (auto& i : mContext->get_collection_container())
-		i->send_down("on_render", this);
+	for (auto& i : mContext->get_layer_container())
+		i->send_all("on_render", this);
 
 	mFramebuffer->begin_framebuffer();
 
@@ -162,9 +187,7 @@ void renderer::render()
 	glViewport(0, 0, mFramebuffer->get_width(), mFramebuffer->get_height());
 
 	// Create the projection matrix
-	mProjection_matrix =
-		math::ortho(0, static_cast<float>(mFramebuffer->get_width())*0.01f,
-			0, static_cast<float>(mFramebuffer->get_height())*0.01f);
+	mProjection_matrix = math::ortho(mRender_view);
 
 	// Render the batches
 	sort_batches();
@@ -254,3 +277,5 @@ void renderer::render_batch(const render_batch_2d & pBatch)
 
 	glBindVertexArray(0);
 }
+
+} // namespace wge::graphics

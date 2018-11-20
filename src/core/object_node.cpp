@@ -3,8 +3,8 @@
 #include <wge/core/component.hpp>
 #include <wge/core/context.hpp>
 
-using namespace wge;
-using namespace wge::core;
+namespace wge::core
+{
 
 inline bool starts_with(const std::string& pStr, const std::string& pPrefix)
 {
@@ -52,14 +52,16 @@ inline std::string create_unique_name(std::string pPrefix, Titer pBegin, Titer p
 		return pPrefix + "_" + std::to_string(max + 1);
 }
 
-object_node::ref object_node::create(context* pContext)
+object_node::ref object_node::create(context& pContext)
 {
 	return object_node::ref::create(pContext);
 }
 
-object_node::object_node(context * pContext)
+object_node::object_node(context& pContext) :
+	mContext(pContext)
 {
-	mContext = pContext;
+	register_property("name", mName);
+	register_property("assetid", mAsset_id);
 }
 
 object_node::~object_node()
@@ -102,6 +104,7 @@ json object_node::serialize() const
 	using nlohmann::json;
 	json result;
 	result["name"] = mName;
+	result["assetID"] = mAsset_id;
 
 	// Serialize the components
 	{
@@ -131,10 +134,11 @@ json object_node::serialize() const
 void object_node::deserialize(const json& pJson)
 {
 	mName = pJson["name"];
+	mAsset_id = pJson["assetID"];
 
 	for (const json& i : pJson["components"])
 	{
-		component* c = mContext->get_component_factory().create(i["id"], this);
+		component* c = mContext.get().get_component_factory().create(i["id"], this);
 		c->set_name(i["name"]);
 		c->deserialize(i["data"]);
 		mComponents.emplace_back(c);
@@ -279,9 +283,24 @@ void object_node::remove_parent()
 	}
 }
 
-context* object_node::get_context() const
+context& object_node::get_context() const
 {
 	return mContext;
+}
+
+void object_node::set_asset_id(asset_uid pId)
+{
+	mAsset_id = pId;
+}
+
+asset_uid object_node::get_asset_id() const
+{
+	return mAsset_id;
+}
+
+bool object_node::has_asset_id() const
+{
+	return mAsset_id != 0;
 }
 
 std::string object_node::get_unique_component_name(std::string pPrefix)
@@ -298,3 +317,5 @@ object_node::ref wge::core::find_first_parent_with_component(int pId, object_nod
 			return pNode;
 	return{};
 }
+
+} // namespace wge::core

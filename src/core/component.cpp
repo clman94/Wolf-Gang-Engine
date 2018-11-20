@@ -16,7 +16,7 @@ const std::string& component::get_name() const
 	return mName;
 }
 
-context* component::get_context() const
+context& component::get_context() const
 {
 	assert(mObject);
 	return mObject->get_context();
@@ -24,5 +24,5 @@ context* component::get_context() const
 
 asset_manager* component::get_asset_manager() const
 {
-	return get_context()->get_system<asset_manager>();
+	return get_context().get_system<asset_manager>();
 }

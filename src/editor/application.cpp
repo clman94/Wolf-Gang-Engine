@@ -19,6 +19,7 @@
 #include "history.hpp"
 #include "context.hpp"
 #include "component_inspector.hpp"
+#include "imgui_editor_tools.hpp"
 
 // GL
 #include <GL/glew.h>
@@ -35,11 +36,24 @@
 namespace ImGui
 {
 
-// Draws a framebuffer as a regular image
+// Draws a framebuffer
 inline void Image(const wge::graphics::framebuffer& mFramebuffer, const ImVec2& pSize = ImVec2(0, 0))
 {
 	ImGui::Image((void*)mFramebuffer.get_gl_texture(), pSize,
 		ImVec2(0, 1), ImVec2(1, 0)); // Y-axis needs to be flipped
+}
+
+// Draws a texture
+inline void Image(wge::graphics::texture::ptr mTexture, const ImVec2& pSize = ImVec2(0, 0))
+{
+	ImGui::Image((void*)mTexture->get_gl_texture(), pSize,
+		ImVec2(0, 1), ImVec2(1, 0)); // Y-axis needs to be flipped
+}
+
+// Draws a texture
+inline void ImageButton(wge::graphics::texture::ptr mTexture, const ImVec2& pSize = ImVec2(0, 0))
+{
+	ImGui::ImageButton((void*)mTexture->get_gl_texture(), pSize);
 }
 
 }
@@ -47,24 +61,10 @@ inline void Image(const wge::graphics::framebuffer& mFramebuffer, const ImVec2& 
 namespace wge::editor
 {
 
-class scene_editor :
+class object_editor :
 	public editor
 {
-public:
-	scene_editor(editor_context& pContext)
-	{
-		mContext = &pContext;
-	}
 
-	virtual void on_gui(float pDelta) override
-	{
-		mContext->renderer.set_framebuffer(&mFramebuffer);
-		mContext->renderer.render();
-	}
-
-private:
-	graphics::framebuffer mFramebuffer;
-	editor_context* mContext;
 };
 
 // Creates an imgui dockspace in the main window
@@ -77,7 +77,7 @@ inline void main_viewport_dock()
 	ImGui::SetNextWindowBgAlpha(0.0f);
 
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
-	window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+	window_flags |=  ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
 	window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
@@ -85,7 +85,7 @@ inline void main_viewport_dock()
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 	ImGui::Begin("_MainDockSpace", nullptr, window_flags);
 	ImGui::PopStyleVar(3);
-
+	
 	ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;//ImGuiDockNodeFlags_PassthruDockspace;
 	ImGui::DockSpace(ImGui::GetID("_Dockspace"), ImVec2(0.0f, 0.0f), dockspace_flags);
 
@@ -111,7 +111,7 @@ inline bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr, bool pD
 	return *pOpen;
 }
 
-inline void show_node_tree(util::ref<core::object_node> pNode, util::ref<core::object_node>& pSelected, bool pIs_collection = false)
+inline void show_node_tree(core::object_node::ref pNode, util::ref<core::object_node>& pSelected)
 {
 	ImGui::PushID(pNode.get());
 
@@ -129,15 +129,11 @@ inline void show_node_tree(util::ref<core::object_node> pNode, util::ref<core::o
 	}
 
 	std::string label;
-	if (pIs_collection) label = "Collection - " + pNode->get_name();
-	else label = pNode->get_name();
-	if (ImGui::Selectable(label.c_str(), pSelected == pNode))
+	if (ImGui::Selectable(pNode->get_name().c_str(), pSelected == pNode))
 		pSelected = pNode;
-
-
 	if (ImGui::IsItemActive() && ImGui::IsMouseDoubleClicked(0))
 		*open = !*open; // Toggle open flag
-	if (!pIs_collection && ImGui::BeginDragDropSource())
+	if (ImGui::BeginDragDropSource())
 	{
 		core::object_node* ptr = pNode.get();
 		ImGui::SetDragDropPayload("MoveNodeInTree", &ptr, sizeof(void*));
@@ -210,6 +206,18 @@ inline void show_node_tree(util::ref<core::object_node> pNode, util::ref<core::o
 	ImGui::PopID();
 }
 
+inline void show_node_tree(core::layer::ptr pLayer, util::ref<core::object_node>& pSelected)
+{
+	collapsing_arrow("LayerUnfold", nullptr, true);
+	ImGui::Selectable(pLayer->get_name().c_str());
+
+	ImGui::TreePush();
+	// Show the children nodes and their components
+	for (auto obj : *pLayer)
+		show_node_tree(obj, pSelected);
+	ImGui::TreePop();
+}
+
 inline void GLAPIENTRY opengl_message_callback(GLenum source,
 	GLenum type,
 	GLuint id,
@@ -221,11 +229,16 @@ inline void GLAPIENTRY opengl_message_callback(GLenum source,
 class application
 {
 public:
+	application() :
+		mRenderer(mGame_context)
+	{}
+
 	int run()
 	{
 		init_glfw();
 		init_imgui();
-		mContext.init();
+		init_game_context();
+		init_inspectors();
 		mViewport_framebuffer.create(200, 200); // Some arbitrary default
 		mainloop();
 		return 0;
@@ -252,12 +265,16 @@ private:
 			show_objects();
 			show_component_inspector();
 
-			for (auto i : mContext.game_context.get_collection_container())
-				i->send_down("on_render", &mContext.renderer);
+			for (auto& i : mGame_context.get_layer_container())
+				i->send_all("on_render", &mRenderer);
 
-			mContext.renderer.set_framebuffer(&mViewport_framebuffer);
-			mContext.renderer.render();
-			mContext.renderer.clear();
+			mRenderer.set_framebuffer(&mViewport_framebuffer);
+			mRenderer.set_render_view({
+				{ 0.f, 0.f },
+				{ (float)mViewport_framebuffer.get_width() * 0.01f, (float)mViewport_framebuffer.get_height() * 0.01f }
+				});
+			mRenderer.render();
+			mRenderer.clear();
 
 			end_frame();
 		}
@@ -266,7 +283,7 @@ private:
 
 	void shutdown()
 	{
-		mContext.renderer.clear();
+		mRenderer.clear();
 
 		// Cleanup ImGui
 		ImGui_ImplOpenGL3_Shutdown();
@@ -348,6 +365,132 @@ private:
 		ImGui_ImplOpenGL3_Init("#version 150");
 	}
 
+	void init_game_context()
+	{
+		core::component_factory& factory = mGame_context.get_component_factory();
+		factory.add<core::transform_component>();
+		factory.add<physics::physics_world_component>();
+		factory.add<physics::physics_component>();
+		factory.add<physics::box_collider_component>();
+		factory.add<graphics::sprite_component>();
+
+		mAsset_manager.add_loader("texture", std::make_shared<graphics::texture_asset_loader>());
+		mAsset_manager.add_loader("scene", std::make_shared<core::config_asset_loader>());
+		mAsset_manager.set_root_directory(".");
+		mAsset_manager.load_assets();
+		mGame_context.add_system(&mAsset_manager);
+
+		mRenderer.initialize();
+		mRenderer.set_pixel_size(0.01f);
+		mGame_context.add_system(&mRenderer);
+	}
+
+	void init_inspectors()
+	{
+		// Inspector for transform_component
+		mInspectors.add_inspector(core::transform_component::COMPONENT_ID,
+			[](core::component* pComponent)
+		{
+			auto reset_context_menu = [](const char * pId)->bool
+			{
+				bool clicked = false;
+				if (ImGui::BeginPopupContextItem(pId))
+				{
+					if (ImGui::Button("Reset"))
+					{
+						clicked = true;
+						ImGui::CloseCurrentPopup();
+					}
+					ImGui::EndPopup();
+				}
+				return clicked;
+			};
+
+			auto transform = dynamic_cast<core::transform_component*>(pComponent);
+			math::vec2 position = transform->get_position();
+			if (ImGui::DragFloat2("Position", position.components))
+				transform->set_position(position);
+			if (reset_context_menu("posreset"))
+				transform->set_position(math::vec2(0, 0));
+
+			float rotation = math::degrees(transform->get_rotation());
+			if (ImGui::DragFloat("Rotation", &rotation, 1, 0, 0, "%.3f degrees"))
+				transform->set_rotaton(math::degrees(rotation));
+			if (reset_context_menu("rotreset"))
+				transform->set_rotaton(0);
+
+			math::vec2 scale = transform->get_scale();
+			if (ImGui::DragFloat2("Scale", scale.components, 0.01f))
+				transform->set_scale(scale);
+			if (reset_context_menu("scalereset"))
+				transform->set_scale(math::vec2(0, 0));
+		});
+
+		// Inspector for sprite_component
+		mInspectors.add_inspector(graphics::sprite_component::COMPONENT_ID,
+			[](core::component* pComponent)
+		{
+			auto sprite = dynamic_cast<graphics::sprite_component*>(pComponent);
+			math::vec2 offset = sprite->get_offset();
+			if (ImGui::DragFloat2("Offset", offset.components))
+				sprite->set_offset(offset);
+
+			graphics::texture::ptr tex = sprite->get_texture();
+			std::string inputtext = tex ? tex->get_path().string().c_str() : "None";
+			ImGui::BeginGroup();
+			if (tex)
+			{
+				ImGui::ImageButton(tex, { 150, 150 });
+				ImGui::SameLine();
+				ImGui::BeginGroup();
+				ImGui::Text("Size: %i, %i", tex->get_width(), tex->get_height());
+				ImGui::Text("Animations: %u", tex->get_raw_atlas().size());
+				ImGui::EndGroup();
+			}
+			ImGui::InputText("Texture", &inputtext, ImGuiInputTextFlags_ReadOnly);
+			ImGui::EndGroup();
+
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("textureAsset"))
+				{
+					core::asset_uid id = *(core::asset_uid*)payload->Data;
+					sprite->set_texture(id);
+				}
+				ImGui::EndDragDropTarget();
+			}
+		});
+
+		// Inspector for physics_world_component
+		mInspectors.add_inspector(physics::physics_world_component::COMPONENT_ID,
+			[](core::component* pComponent)
+		{
+			auto physicsworld = dynamic_cast<physics::physics_world_component*>(pComponent);
+			math::vec2 gravity = physicsworld->get_gravity();
+			if (ImGui::DragFloat2("Gravity", gravity.components))
+				physicsworld->set_gravity(gravity);
+		});
+
+		// Inspector for box_collider_component
+		mInspectors.add_inspector(physics::box_collider_component::COMPONENT_ID,
+			[](core::component* pComponent)
+		{
+			auto collider = dynamic_cast<physics::box_collider_component*>(pComponent);
+
+			math::vec2 offset = collider->get_offset();
+			if (ImGui::DragFloat2("Offset", offset.components))
+				collider->set_offset(offset);
+
+			math::vec2 size = collider->get_size();
+			if (ImGui::DragFloat2("Size", size.components))
+				collider->set_size(size);
+
+			float rotation = math::degrees(collider->get_rotation());
+			if (ImGui::DragFloat("Rotation", &rotation))
+				collider->set_rotation(math::degrees(rotation));
+		});
+	}
+
 private:
 	void show_asset_manager()
 	{
@@ -363,7 +506,7 @@ private:
 			ImGui::TextUnformatted("UID:");
 			ImGui::NextColumn();
 
-			for (auto& i : mContext.asset_manager.get_asset_list())
+			for (auto& i : mAsset_manager.get_asset_list())
 			{
 				ImGui::PushID(i->get_id());
 				ImGui::Selectable(i->get_type().c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
@@ -371,7 +514,7 @@ private:
 				{
 					core::asset_uid id = i->get_id();
 					ImGui::SetDragDropPayload((i->get_type() + "Asset").c_str(), &id, sizeof(core::asset_uid));
-					ImGui::Text("Asset");
+					ImGui::Text("Asset: %s", i->get_path().string().c_str());
 					ImGui::EndDragDropSource();
 				}
 				ImGui::NextColumn();
@@ -400,7 +543,62 @@ private:
 				|| mViewport_framebuffer.get_height() != height)
 				mViewport_framebuffer.resize(width, height);
 
+			ImVec2 cursor = ImGui::GetCursorScreenPos();
 			ImGui::Image(mViewport_framebuffer, ImVec2(width, height));
+
+			visual_editor::begin_editor("_SceneEditor", { cursor.x, cursor.y }, { 1, 1 });
+
+			if (ImGui::IsItemHovered())
+			{
+				ImDrawList* dl = ImGui::GetWindowDrawList();
+
+				const math::vec2 mouse(ImGui::GetMousePos().x - cursor.x, ImGui::GetMousePos().y - cursor.y);
+				for (auto layer : mGame_context.get_layer_container())
+				{
+					for (auto obj : *layer)
+					{
+						auto transform = obj->get_component<core::transform_component>();
+
+						for (std::size_t comp_idx = 0; comp_idx < obj->get_component_count(); comp_idx++)
+						{
+							auto comp = obj->get_component_index(comp_idx);
+							if (!comp->has_aabb())
+								continue;
+
+							auto aabb = comp->get_screen_aabb();
+							aabb.min /= mRenderer.get_render_view_scale();
+							aabb.max /= mRenderer.get_render_view_scale();
+
+							if (obj == mSelected_node)
+							{
+								// Draw center point
+								dl->AddCircle({ transform->get_absolute_position().x, transform->get_absolute_position().y },
+									5, ImGui::GetColorU32({ 1, 1, 1, 0.6f }), 12, 3);
+
+								const math::rect rect(aabb.min, aabb.max - aabb.min);
+								math::vec2 delta;
+								if (visual_editor::drag_rect("_SelectionResize", rect, &delta))
+								{
+									transform->set_position(transform->get_position() + delta * mRenderer.get_render_view_scale());
+								}
+							}
+
+							if (aabb.intersect(mouse))
+							{
+								if (ImGui::IsItemClicked())
+								{
+									mSelected_node = obj;
+								}
+								dl->AddRect(
+									{ aabb.min.x + cursor.x, aabb.min.y + cursor.y },
+									{ aabb.max.x + cursor.x, aabb.max.y + cursor.y },
+									ImGui::GetColorU32({ 1, 1, 1, 1 }), 0, 15, 3);
+							}
+						}
+					}
+				}
+			}
+			visual_editor::end_editor();
 		}
 		ImGui::End();
 	}
@@ -416,9 +614,9 @@ private:
 				{
 					if (ImGui::MenuItem("Load"))
 					{
-						if (auto scene = mContext.asset_manager.find_asset("myscene.asset"))
+						if (auto scene = mAsset_manager.find_asset("myscene.asset"))
 						{
-							mContext.game_context.deserialize(scene->get_config()->get_metadata());
+							mGame_context.deserialize(scene->get_config()->get_metadata());
 						}
 						else
 						{
@@ -429,23 +627,23 @@ private:
 					{
 						try
 						{
-							if (auto scene = mContext.asset_manager.find_asset("myscene.asset"))
+							if (auto scene = mAsset_manager.find_asset("myscene.asset"))
 							{
-								scene->get_config()->set_metadata(mContext.game_context.serialize());
+								scene->get_config()->set_metadata(mGame_context.serialize());
 								scene->get_config()->save();
 							}
 							else
 							{
 								auto config = std::make_shared<core::asset_config>();
-								config->set_metadata(mContext.game_context.serialize());
-								config->set_path(mContext.asset_manager.get_root_directory() / "myscene.asset");
+								config->set_metadata(mGame_context.serialize());
+								config->set_path(mAsset_manager.get_root_directory() / "myscene.asset");
 								config->set_type("scene");
 								config->generate_id();
 
 								config->save();
 
-								auto loader = mContext.asset_manager.find_loader("scene");
-								mContext.asset_manager.add_asset(loader->create_asset(config, mContext.asset_manager.get_root_directory()));
+								auto loader = mAsset_manager.find_loader("scene");
+								mAsset_manager.add_asset(loader->create_asset(config, mAsset_manager.get_root_directory()));
 							}
 						}
 						catch (const std::exception& e)
@@ -459,13 +657,13 @@ private:
 
 				if (ImGui::BeginMenu("Add"))
 				{
-					if (ImGui::MenuItem("Collection"))
+					if (ImGui::MenuItem("Layer"))
 					{
-						mSelected_node = mContext.game_context.create_collection();
+						mGame_context.create_layer();
 					}
 					if (ImGui::MenuItem("Object 2D"))
 					{
-						auto node = core::object_node::create(&mContext.game_context);
+						auto node = core::object_node::create(mGame_context);
 						node->set_name("New 2D Object");
 						node->add_component<core::transform_component>();
 						if (mSelected_node)
@@ -477,8 +675,8 @@ private:
 				}
 				ImGui::EndMenuBar();
 			}
-			for (auto& i : mContext.game_context.get_collection_container())
-				show_node_tree(i, mSelected_node, true);
+			for (auto& i : mGame_context.get_layer_container())
+				show_node_tree(i, mSelected_node);
 		}
 		ImGui::End();
 		ImGui::PopStyleVar();
@@ -495,8 +693,6 @@ private:
 
 			for (std::size_t i = 0; i < mSelected_node->get_component_count(); i++)
 			{
-				// If set to true, the component will be deleted at the end of this loop
-				bool delete_component = false;
 
 				core::component* comp = mSelected_node->get_component_index(i);
 				ImGui::PushID(comp);
@@ -507,7 +703,7 @@ private:
 						+ ImGui::GetStyle().FramePadding.y * 2
 						+ ImGui::GetFontSize()) * 2), true);
 
-				bool open = collapsing_arrow("CollapsingArrow");
+				bool open = collapsing_arrow("CollapsingArrow", nullptr, true);
 
 				ImGui::SameLine();
 				{
@@ -526,13 +722,15 @@ private:
 						+ ImGui::GetStyle().WindowPadding.x * 2
 						+ ImGui::GetStyle().FramePadding.x * 2), 1));
 				ImGui::SameLine();
+
+				bool delete_component = false;
 				delete_component = ImGui::Button("Delete");
 
 				ImGui::EndChild();
 				ImGui::PopStyleVar();
 
 				if (open)
-					mContext.inspectors.on_gui(comp);
+					mInspectors.on_gui(comp);
 
 				ImGui::PopID();
 				if (delete_component)
@@ -558,15 +756,49 @@ private:
 			}
 		}
 		ImGui::End();
+	}
 
+	void show_asset_picker()
+	{
+		if (ImGui::BeginPopupModal("New Asset##NewAssetPopup"))
+		{
+			ImGui::Text("Type:");
+			ImGui::BeginChild("_AssetTypeList");
+			
+			if (ImGui::Selectable("Scene"))
+			{
+
+			}
+
+			if (ImGui::Selectable("Object"))
+			{
+
+			}
+			
+			ImGui::EndChild();
+			ImGui::EndPopup();
+		}
 	}
 
 private:
 	GLFWwindow* mWindow;
+
 	core::object_node::ref mSelected_node;
+
+	bool mDragging{ false };
+	math::vec2 mDrag_offset;
+
 	std::vector<std::unique_ptr<editor>> mEditors;
-	editor_context mContext;
+	
 	graphics::framebuffer mViewport_framebuffer;
+
+	core::context mGame_context;
+	filesystem::path mGame_path;
+	core::asset_manager mAsset_manager;
+
+	graphics::renderer mRenderer;
+
+	component_inspector mInspectors;
 };
 
 void GLAPIENTRY opengl_message_callback(GLenum source,

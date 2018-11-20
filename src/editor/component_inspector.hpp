@@ -3,6 +3,8 @@
 #include <functional>
 #include <map>
 
+#include <wge/math/vector.hpp>
+
 namespace wge::core
 {
 class component;

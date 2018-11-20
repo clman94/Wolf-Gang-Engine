@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 namespace wge::editor
 {
 
@@ -8,6 +10,8 @@ class editor_context;
 class editor
 {
 public:
+	using ptr = std::shared_ptr<editor>;
+
 	virtual ~editor() {}
 
 	// Normally called before on_gui. Update any logic here.

@@ -27,6 +27,10 @@ public:
 		position(pX, pY), size(pWidth, pHeight)
 	{}
 
+	rect(const math::vec2& pPosition, const math::vec2& pSize) :
+		position(pPosition), size(pSize)
+	{}
+
 	rect& operator=(const rect&);
 
 	vec2 get_corner(unsigned int pIndex) const;

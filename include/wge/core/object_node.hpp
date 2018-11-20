@@ -6,10 +6,13 @@
 
 #include <wge/util/ref.hpp>
 #include <wge/core/messaging.hpp>
+#include <wge/core/asset_config.hpp>
 
 #include <nlohmann/json.hpp>
 #include <wge/util/json_helpers.hpp>
 using nlohmann::json;
+
+#include <wge/core/serializable.hpp>
 
 namespace wge::core
 {
@@ -56,17 +59,18 @@ private:
 // game objects.
 class object_node :
 	public util::ref_counted,
-	public publisher
+	public publisher,
+	public serializable
 {
 public:
-	static util::ref<object_node> create(context*);
+	static util::ref<object_node> create(context&);
 
 public:
-	object_node(context*);
-	~object_node();
-
 	using ref = util::ref<object_node>;
 	using weak_ref = util::weak_ref<object_node>;
+
+	object_node(context&);
+	~object_node();
 
 	// Creates a component and adds it to this object
 	template<class T,
@@ -154,26 +158,6 @@ public:
 	// Detach the parent object
 	void remove_parent();
 
-	// Broadcast an event from this object and up through each parent
-	template<class...Targs>
-	void send_up(const std::string& pEvent_name, Targs...pArgs)
-	{
-		send(pEvent_name, pArgs...);
-		if (auto parent = mParent.lock())
-			parent->send_up(pEvent_name, pArgs...);
-	}
-
-	// Broadcast an event from the top-most parent to the current node.
-	// This is useful in situations where the top-most parent node needs
-	// to take precedence over its children nodes.
-	template<class...Targs>
-	void send_from_top(const std::string& pEvent_name, Targs...pArgs)
-	{
-		if (auto parent = mParent.lock())
-			parent->send_from_top(pEvent_name, pArgs...);
-		send(pEvent_name, pArgs...);
-	}
-
 	// Sends a message to this object and to all its children/sub-children
 	template<class...Targs>
 	void send_down(const std::string& pEvent_name, Targs...pArgs)
@@ -183,7 +167,16 @@ public:
 			i->send_down(pEvent_name, pArgs...);
 	}
 
-	context* get_context() const;
+	context& get_context() const;
+
+	// Set the id of the asset this object mirrors.
+	void set_asset_id(asset_uid pId);
+	// Get the id of the asset this object mirrors
+	asset_uid get_asset_id() const;
+	// Check if this object mirrors serialized object data.
+	// If true, the asset data will be deserialized into an object
+	// including its children.
+	bool has_asset_id() const;
 
 private:
 	std::string get_unique_component_name(std::string pPrefix);
@@ -194,9 +187,11 @@ private:
 	weak_ref mParent;
 	std::vector<ref> mChildren;
 
+	asset_uid mAsset_id{ 0 };
+
 	std::string mName;
 
-	context* mContext;
+	std::reference_wrapper<context> mContext;
 };
 
 object_node::ref find_first_parent_with_component(int pId, object_node::ref pNode);

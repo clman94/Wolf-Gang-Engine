@@ -166,6 +166,15 @@ private:
 degrees radians_to_degrees(float pRadians);
 radians degrees_to_radians(float pDegrees);
 
-
 } // namespace math
 } // namespace wge
+
+inline wge::math::degrees operator""_deg(long double pDegrees)
+{
+	return static_cast<float>(pDegrees);
+}
+
+inline wge::math::radians operator""_rad(long double pRadians)
+{
+	return static_cast<float>(pRadians);
+}

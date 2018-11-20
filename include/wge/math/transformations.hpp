@@ -1,10 +1,9 @@
 #pragma once
 
+#include <wge/math/aabb.hpp>
 #include <wge/math/matrix.hpp>
 
-namespace wge
-{
-namespace math
+namespace wge::math
 {
 
 inline mat44 ortho(float left, float right, float top, float bottom)
@@ -17,5 +16,9 @@ inline mat44 ortho(float left, float right, float top, float bottom)
 	return result;
 }
 
-} // namespace math
-} // namespace wge
+inline mat44 ortho(const math::aabb& pAABB)
+{
+	return ortho(pAABB.min.x, pAABB.max.x, pAABB.min.y, pAABB.max.y);
+}
+
+} // namespace wge::math

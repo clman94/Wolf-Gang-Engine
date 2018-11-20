@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include <wge/math/aabb.hpp>
 #include <wge/core/messaging.hpp>
 
 #include <nlohmann/json.hpp>
@@ -78,7 +79,10 @@ public:
 		return mObject;
 	}
 
-	context* get_context() const;
+	context& get_context() const;
+
+	virtual bool has_aabb() const { return false; }
+	virtual math::aabb get_screen_aabb() const { return{}; };
 
 protected:
 	// Tells the object that this component requires another component to function
