@@ -108,8 +108,8 @@ bool drag_rect(const char* pStr_id, const math::rect& pDisplay, math::vec2* pDel
 	const bool hovered = pDisplay.intersects(gCurrent_editor_state->mouse_editor_position);
 	const bool dragging = drag_behavior(id, hovered, pDelta);
 
-	const math::vec2 min = gCurrent_editor_state->calc_absolute_position(*pDelta);
-	const math::vec2 max = gCurrent_editor_state->calc_absolute_position(*pDelta + pDisplay.size);
+	const math::vec2 min = gCurrent_editor_state->calc_absolute_position(pDisplay.position);
+	const math::vec2 max = gCurrent_editor_state->calc_absolute_position(pDisplay.position + pDisplay.size);
 
 	ImDrawList* dl = ImGui::GetWindowDrawList();
 	dl->AddRect({ min.x, min.y }, { max.x, max.y }, ImGui::GetColorU32({ 1, 1, 0, 0.5f }));

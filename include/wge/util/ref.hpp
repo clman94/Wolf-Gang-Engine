@@ -3,6 +3,7 @@
 #include <type_traits>
 #include <cassert>
 #include <memory>
+#include <utility>
 
 namespace wge
 {
@@ -50,12 +51,8 @@ private:
 	std::shared_ptr<bool> mWeak_valid;
 };
 
-template<class T, class Enable = void>
-class ref
-{};
-
 template <class T>
-class ref<T, std::enable_if_t<std::is_base_of<ref_counted, T>::value>>
+class ref
 {
 public:
 	// ref_counted objects are constructed with one reference
@@ -209,11 +206,8 @@ public:
 		mPtr(nullptr)
 	{}
 
-	weak_ref(const weak_ref& pWeak)
-	{
-		mPtr = pWeak.mPtr;
-		mWeak_valid = pWeak.mWeak_valid;
-	}
+	weak_ref(const weak_ref& pWeak) = default;
+	weak_ref(weak_ref&& pWeak) = default;
 
 	weak_ref(T* pRef)
 	{
@@ -224,7 +218,7 @@ public:
 
 	weak_ref(const ref<T>& pRef)
 	{
-		mPtr = pRef.mPtr;
+		mPtr = pRef.get();
 		if (mPtr)
 			mWeak_valid = mPtr->get_weak_valid();
 	}
@@ -271,26 +265,10 @@ public:
 		return mPtr != pPtr;
 	}
 
-	weak_ref& operator=(T* pPtr)
-	{
-		mPtr = pPtr;
-		if (mPtr)
-			mWeak_valid = mPtr->get_weak_valid();
-		return *this;
-	}
-
-	weak_ref& operator=(const ref<T>& pRef)
+	weak_ref& operator=(weak_ref pRef)
 	{
 		mPtr = pRef.mPtr;
-		if (mPtr)
-			mWeak_valid = mPtr->get_weak_valid();
-		return *this;
-	}
-
-	weak_ref& operator=(const weak_ref& pRef)
-	{
-		mPtr = pRef.mPtr;
-		mWeak_valid = pRef->mWeak_valid;
+		mWeak_valid = pRef.mWeak_valid;
 		return *this;
 	}
 

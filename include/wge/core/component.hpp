@@ -4,6 +4,7 @@
 
 #include <wge/math/aabb.hpp>
 #include <wge/core/messaging.hpp>
+#include <wge/core/serializable.hpp>
 
 #include <nlohmann/json.hpp>
 #include <wge/util/json_helpers.hpp>
@@ -44,12 +45,16 @@ class object_node;
 class asset_manager;
 
 class component :
+	public serializable,
 	protected subscriber
 {
 protected:
 	component(object_node* pNode) :
 		mObject(pNode)
-	{}
+	{
+		register_property("name", mName);
+		register_property("instance", mInstance_id);
+	}
 
 public:
 	virtual ~component() {}

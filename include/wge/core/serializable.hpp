@@ -5,6 +5,7 @@
 #include <functional>
 
 #include <wge/util/json_helpers.hpp>
+#include <wge/logging/log.hpp>
 
 namespace wge::core
 {
@@ -15,24 +16,54 @@ public:
 	using getter_function = std::function<json()>;
 	using setter_function = std::function<void(const json&)>;
 
+private:
 	struct property
 	{
+		// True if this property is independent of the original
+		// if there is one.
+		bool unique{ false };
 		getter_function getter;
 		setter_function setter;
 	};
 
+public:
 	serializable() :
 		mOriginal(nullptr)
 	{}
 
-	virtual json serialize() const { return serialize_all_properties(); }
-	virtual void deserialize(const json& pJson) { deserialize_all_properties(pJson); };
-
-	json get_property(const std::string_view& pName)
+	virtual json serialize() const
 	{
+		return serialize_all_properties();
+	}
+
+	virtual void deserialize(const json& pJson)
+	{
+		deserialize_all_properties(pJson);
+	}
+
+	json get_property(const std::string& pName) const
+	{
+		auto iter = mProperties.find(pName);
+		if (iter == mProperties.end())
+			return{};
+		return iter->second.getter();
 	}
 
 	void set_property(const std::string_view& pName, const json& pJson)
+	{
+
+	}
+
+	// Set a property as nonconforming to the reference property
+	void make_property_unique(const std::string& pName)
+	{
+		auto iter = mProperties.find(pName);
+		WGE_ASSERT(iter == mProperties.end());
+		iter->second.unique = true;
+	}
+
+	// Reset the property to conform with the referenced property
+	void reset_property(const std::string& pName)
 	{
 
 	}
@@ -46,6 +77,8 @@ protected:
 	void register_property(const std::string& pName, T& pRef)
 	{
 		mProperties[pName] = {
+			false,
+
 			[&pRef]() -> json
 			{
 				return { pRef };
@@ -61,7 +94,7 @@ protected:
 
 	void register_property(const std::string& pName, getter_function mGetter, setter_function mSetter)
 	{
-		mProperties[pName] = { mGetter, mSetter };
+		mProperties[pName] = { false, mGetter, mSetter };
 	}
 
 	json serialize_all_properties() const
@@ -76,7 +109,7 @@ protected:
 	{
 		for (auto& i : mProperties)
 		{
-
+			i.second.setter(pJson[i.first]);
 		}
 	}
 

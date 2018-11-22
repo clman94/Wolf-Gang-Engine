@@ -8,9 +8,7 @@
 #include <wge/core/messaging.hpp>
 #include <wge/core/asset_config.hpp>
 
-#include <nlohmann/json.hpp>
 #include <wge/util/json_helpers.hpp>
-using nlohmann::json;
 
 #include <wge/core/serializable.hpp>
 
@@ -131,16 +129,16 @@ public:
 	const std::string& get_name();
 
 	// Creates the child object
-	util::ref<object_node> create_child();
+	ref create_child();
 	// Creates the child object with a name
-	util::ref<object_node> create_child(const std::string& pName);
+	ref create_child(const std::string& pName);
 	// Get total children connected to this object
 	std::size_t get_child_count() const;
 	// Get child by index
-	util::ref<object_node> get_child(std::size_t pIndex) const;
+	ref get_child(std::size_t pIndex) const;
 
 	// Add a child object
-	void add_child(util::ref<object_node> pNode);
+	void add_child(ref pNode);
 	// Insert a child at a position
 	void add_child(ref pNode, std::size_t pIndex);
 	std::size_t get_child_index(ref pNode) const;
@@ -151,10 +149,10 @@ public:
 	// Remove all children
 	void remove_children();
 
-	bool is_child_of(util::ref<object_node> pNode) const;
+	bool is_child_of(ref pNode) const;
 
 	// Get parent object
-	util::ref<object_node> get_parent() const;
+	ref get_parent() const;
 	// Detach the parent object
 	void remove_parent();
 
@@ -197,3 +195,21 @@ private:
 object_node::ref find_first_parent_with_component(int pId, object_node::ref pNode);
 
 } // namespace wge::core
+
+namespace nlohmann
+{
+
+template<>
+struct adl_serializer<wge::core::object_node::ref> {
+	static void to_json(json& j, const wge::core::object_node::ref& pObj)
+	{
+		j = pObj->serialize();
+	}
+
+	static void from_json(const json& j, wge::core::object_node::ref& pObj)
+	{
+		pObj->deserialize(j);
+	}
+};
+
+} //namespace nlohmann

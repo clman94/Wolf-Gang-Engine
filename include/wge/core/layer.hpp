@@ -20,6 +20,7 @@ public:
 	using const_iterator = container::const_iterator;
 
 	using ptr = std::shared_ptr<layer>;
+	using wptr = std::weak_ptr<layer>;
 
 	static ptr create(context& pContext)
 	{
@@ -30,25 +31,21 @@ public:
 		mContext(pContext)
 	{
 		register_property("name", mName);
-	}
-
-	virtual json serialize() const override
-	{
-		json result = serialize_all_properties();
-		for (auto& i : mObjects)
-			result["objects"] = i->serialize();
-		return result;
-	}
-
-	virtual void deserialize(const json& pJson)
-	{
-		deserialize_all_properties(pJson);
-		for (auto& i : pJson["objects"])
+		register_property("objects",
+			[&]() -> json
 		{
-			auto obj = object_node::create(mContext);
-			obj->deserialize(i);
-			add(obj);
-		}
+			return mObjects;
+		},
+			[&](const json& pJson)
+		{
+			mObjects.clear();
+			for (auto& i : pJson)
+			{
+				auto obj = object_node::create(mContext);
+				obj = i;
+				add(obj);
+			}
+		});
 	}
 
 	void set_name(const std::string_view& pName)

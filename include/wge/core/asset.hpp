@@ -17,6 +17,7 @@ public:
 	template<typename T = asset>
 	using tptr = std::shared_ptr<T>;
 	using ptr = std::shared_ptr<asset>;
+	using wptr = std::weak_ptr<asset>;
 
 	asset(asset_config::ptr pConfig);
 

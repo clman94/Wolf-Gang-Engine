@@ -12,7 +12,7 @@ namespace wge::graphics
 class sprite_component :
 	public core::component
 {
-	WGE_COMPONENT_SINGLE_INSTANCE("Sprite", 12409);
+	WGE_COMPONENT("Sprite", 12409);
 public:
 	sprite_component(core::object_node* pNode);
 

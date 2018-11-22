@@ -111,7 +111,7 @@ inline bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr, bool pD
 	return *pOpen;
 }
 
-inline void show_node_tree(core::object_node::ref pNode, util::ref<core::object_node>& pSelected)
+inline void show_node_tree(core::object_node::ref pNode, context& pContext)
 {
 	ImGui::PushID(pNode.get());
 
@@ -129,8 +129,8 @@ inline void show_node_tree(core::object_node::ref pNode, util::ref<core::object_
 	}
 
 	std::string label;
-	if (ImGui::Selectable(pNode->get_name().c_str(), pSelected == pNode))
-		pSelected = pNode;
+	if (ImGui::Selectable(pNode->get_name().c_str(), pContext.get_selection<selection_type::game_object>() == pNode))
+		pContext.set_selection(pNode);
 	if (ImGui::IsItemActive() && ImGui::IsMouseDoubleClicked(0))
 		*open = !*open; // Toggle open flag
 	if (ImGui::BeginDragDropSource())
@@ -179,7 +179,7 @@ inline void show_node_tree(core::object_node::ref pNode, util::ref<core::object_
 		ImGui::TreePush();
 		// Show the children nodes and their components
 		for (std::size_t i = 0; i < pNode->get_child_count(); i++)
-			show_node_tree(pNode->get_child(i), pSelected);
+			show_node_tree(pNode->get_child(i), pContext);
 		ImGui::TreePop();
 
 		// Drop node as next node
@@ -206,16 +206,23 @@ inline void show_node_tree(core::object_node::ref pNode, util::ref<core::object_
 	ImGui::PopID();
 }
 
-inline void show_node_tree(core::layer::ptr pLayer, util::ref<core::object_node>& pSelected)
+inline void show_node_tree(core::layer::ptr pLayer, context& pContext)
 {
+	ImGui::PushID(pLayer.get());
+
 	collapsing_arrow("LayerUnfold", nullptr, true);
-	ImGui::Selectable(pLayer->get_name().c_str());
+	ImGui::SameLine();
+	const bool layer_is_selected = pContext.get_selection<selection_type::layer>() == pLayer;
+	if (ImGui::Selectable(pLayer->get_name().c_str(), layer_is_selected))
+		pContext.set_selection(pLayer);
 
 	ImGui::TreePush();
-	// Show the children nodes and their components
+	// Show the object and their components
 	for (auto obj : *pLayer)
-		show_node_tree(obj, pSelected);
+		show_node_tree(obj, pContext);
 	ImGui::TreePop();
+
+	ImGui::PopID();
 }
 
 inline void GLAPIENTRY opengl_message_callback(GLenum source,
@@ -261,7 +268,10 @@ private:
 			}
 
 			show_asset_manager();
+
+			mRenderer.set_framebuffer(&mViewport_framebuffer);
 			show_viewport();
+
 			show_objects();
 			show_component_inspector();
 
@@ -509,7 +519,9 @@ private:
 			for (auto& i : mAsset_manager.get_asset_list())
 			{
 				ImGui::PushID(i->get_id());
-				ImGui::Selectable(i->get_type().c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
+				const bool asset_is_selected = mContext.get_selection<selection_type::asset>() == i;
+				if (ImGui::Selectable(i->get_type().c_str(), asset_is_selected, ImGuiSelectableFlags_SpanAllColumns))
+					mContext.set_selection(i);
 				if (ImGui::BeginDragDropSource())
 				{
 					core::asset_uid id = i->get_id();
@@ -529,11 +541,29 @@ private:
 		ImGui::End();
 	}
 
+	bool create_aabb_from_object(core::object_node::ref pObj, math::aabb& pAABB)
+	{
+		bool has_aabb = false;
+		for (std::size_t comp_idx = 0; comp_idx < pObj->get_component_count(); comp_idx++)
+		{
+			auto comp = pObj->get_component_index(comp_idx);
+			if (!comp->has_aabb())
+				continue;
+			if (!has_aabb)
+			{
+				pAABB = comp->get_screen_aabb();
+				has_aabb = true;
+			}
+			else
+				pAABB.merge(comp->get_screen_aabb());
+		}
+		return has_aabb;
+	}
+
 	void show_viewport()
 	{
 		if (ImGui::Begin("Viewport"))
 		{
-
 			//mygameinput.set_enabled(ImGui::IsWindowFocused());
 
 			float width = ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x * 2;
@@ -547,9 +577,8 @@ private:
 			ImGui::Image(mViewport_framebuffer, ImVec2(width, height));
 
 			visual_editor::begin_editor("_SceneEditor", { cursor.x, cursor.y }, { 1, 1 });
-
-			if (ImGui::IsItemHovered())
 			{
+				const math::vec2 render_view_scale = mRenderer.get_render_view_scale();
 				ImDrawList* dl = ImGui::GetWindowDrawList();
 
 				const math::vec2 mouse(ImGui::GetMousePos().x - cursor.x, ImGui::GetMousePos().y - cursor.y);
@@ -559,36 +588,31 @@ private:
 					{
 						auto transform = obj->get_component<core::transform_component>();
 
-						for (std::size_t comp_idx = 0; comp_idx < obj->get_component_count(); comp_idx++)
+						math::aabb aabb;
+						if (create_aabb_from_object(obj, aabb))
 						{
-							auto comp = obj->get_component_index(comp_idx);
-							if (!comp->has_aabb())
-								continue;
+							aabb.min /= render_view_scale;
+							aabb.max /= render_view_scale;
 
-							auto aabb = comp->get_screen_aabb();
-							aabb.min /= mRenderer.get_render_view_scale();
-							aabb.max /= mRenderer.get_render_view_scale();
-
-							if (obj == mSelected_node)
+							if (obj == mContext.get_selection<selection_type::game_object>())
 							{
 								// Draw center point
-								dl->AddCircle({ transform->get_absolute_position().x, transform->get_absolute_position().y },
+								math::vec2 center = transform->get_absolute_position() / render_view_scale;
+								dl->AddCircle({ center.x + cursor.x, center.y + cursor.y },
 									5, ImGui::GetColorU32({ 1, 1, 1, 0.6f }), 12, 3);
 
 								const math::rect rect(aabb.min, aabb.max - aabb.min);
 								math::vec2 delta;
 								if (visual_editor::drag_rect("_SelectionResize", rect, &delta))
 								{
-									transform->set_position(transform->get_position() + delta * mRenderer.get_render_view_scale());
+									transform->set_position(transform->get_position() + delta * render_view_scale);
 								}
 							}
 
 							if (aabb.intersect(mouse))
 							{
 								if (ImGui::IsItemClicked())
-								{
-									mSelected_node = obj;
-								}
+									mContext.set_selection(obj);
 								dl->AddRect(
 									{ aabb.min.x + cursor.x, aabb.min.y + cursor.y },
 									{ aabb.max.x + cursor.x, aabb.max.y + cursor.y },
@@ -663,11 +687,11 @@ private:
 					}
 					if (ImGui::MenuItem("Object 2D"))
 					{
-						auto node = core::object_node::create(mGame_context);
-						node->set_name("New 2D Object");
-						node->add_component<core::transform_component>();
-						if (mSelected_node)
-							mSelected_node->add_child(node);
+						auto obj = core::object_node::create(mGame_context);
+						obj->set_name("New 2D Object");
+						obj->add_component<core::transform_component>();
+						if (!mGame_context.get_layer_container().empty())
+							mGame_context.get_layer(0)->add(obj);
 						else
 							log::error() << "Could not create object" << log::endm;
 					}
@@ -676,7 +700,7 @@ private:
 				ImGui::EndMenuBar();
 			}
 			for (auto& i : mGame_context.get_layer_container())
-				show_node_tree(i, mSelected_node);
+				show_node_tree(i, mContext);
 		}
 		ImGui::End();
 		ImGui::PopStyleVar();
@@ -684,17 +708,16 @@ private:
 
 	void show_component_inspector()
 	{
-		ImGui::Begin("Component Inspector");
-		if (mSelected_node)
+		ImGui::Begin("Inspector");
+		if (auto selection = mContext.get_selection<selection_type::game_object>())
 		{
-			std::string name = mSelected_node->get_name();
+			std::string name = selection->get_name();
 			if (ImGui::InputText("Name", &name))
-				mSelected_node->set_name(name);
+				selection->set_name(name);
 
-			for (std::size_t i = 0; i < mSelected_node->get_component_count(); i++)
+			for (std::size_t i = 0; i < selection->get_component_count(); i++)
 			{
-
-				core::component* comp = mSelected_node->get_component_index(i);
+				core::component* comp = selection->get_component_index(i);
 				ImGui::PushID(comp);
 
 				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4, 4));
@@ -734,22 +757,22 @@ private:
 
 				ImGui::PopID();
 				if (delete_component)
-					mSelected_node->remove_component(i--);
+					selection->remove_component(i--);
 			}
 
 			ImGui::Separator();
 			if (ImGui::BeginCombo("###Add Component", "Add Component"))
 			{
 				if (ImGui::Selectable("Transform 2D"))
-					mSelected_node->add_component<core::transform_component>();
+					selection->add_component<core::transform_component>();
 				if (ImGui::Selectable("Physics World"))
-					mSelected_node->add_component<physics::physics_world_component>();
+					selection->add_component<physics::physics_world_component>();
 				if (ImGui::Selectable("Physics"))
-					mSelected_node->add_component<physics::physics_component>();
+					selection->add_component<physics::physics_component>();
 				if (ImGui::Selectable("Box Collider"))
-					mSelected_node->add_component<physics::box_collider_component>();
+					selection->add_component<physics::box_collider_component>();
 				if (ImGui::Selectable("Sprite"))
-					mSelected_node->add_component<graphics::sprite_component>();
+					selection->add_component<graphics::sprite_component>();
 				//if (ImGui::Selectable("Script"))
 				//	mSelected_node->add_component<script_component>();
 				ImGui::EndCombo();
@@ -783,7 +806,7 @@ private:
 private:
 	GLFWwindow* mWindow;
 
-	core::object_node::ref mSelected_node;
+	context mContext;
 
 	bool mDragging{ false };
 	math::vec2 mDrag_offset;

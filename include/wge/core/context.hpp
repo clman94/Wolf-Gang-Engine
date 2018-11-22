@@ -4,7 +4,8 @@
 #include <wge/core/object_node.hpp>
 #include <wge/core/layer.hpp>
 
-#include <list>
+#include <vector>
+#include <map>
 
 namespace wge::core
 {
@@ -46,8 +47,7 @@ public:
 		mSystems.push_back(pSystem);
 	}
 
-	// Get the root node of a collection.
-	// The root node is where all system-specific components should go.
+	// Get a layer to a specific index
 	layer::ptr get_layer(std::size_t pIndex) const
 	{
 		if (pIndex >= mLayers.size())
@@ -67,7 +67,7 @@ public:
 		return l;
 	}
 
-	layer::ptr create_collection(const std::string& pName, std::size_t pInsert)
+	layer::ptr create_layer(const std::string& pName, std::size_t pInsert)
 	{
 		mLayers.insert(mLayers.begin() + pInsert, layer::create(*this));
 		return mLayers[pInsert];

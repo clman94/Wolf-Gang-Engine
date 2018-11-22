@@ -102,6 +102,7 @@ animation::ptr texture::get_animation(const std::string & pName) const
 	for (const auto& i : mAtlas)
 		if (i->name == pName)
 			return i;
+	return{};
 }
 
 texture::atlas_container& texture::get_raw_atlas()

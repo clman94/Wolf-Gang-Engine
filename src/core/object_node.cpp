@@ -3,6 +3,24 @@
 #include <wge/core/component.hpp>
 #include <wge/core/context.hpp>
 
+namespace nlohmann
+{
+
+template<>
+struct adl_serializer<std::unique_ptr<wge::core::component>> {
+	static void to_json(json& j, const std::unique_ptr<wge::core::component>& pObj)
+	{
+		j = pObj->serialize();
+	}
+
+	static void from_json(const json& j, std::unique_ptr<wge::core::component>& pObj)
+	{
+		pObj->deserialize(j);
+	}
+};
+
+} //namespace nlohmann
+
 namespace wge::core
 {
 
@@ -62,6 +80,19 @@ object_node::object_node(context& pContext) :
 {
 	register_property("name", mName);
 	register_property("assetid", mAsset_id);
+	register_property("components",
+		[&]() -> json
+	{
+		return mComponents;
+	},
+		[&](const json& pJson)
+	{
+		mComponents.clear();
+		for (auto& i : pJson)
+		{
+
+		}
+	});
 }
 
 object_node::~object_node()
@@ -244,7 +275,7 @@ bool object_node::remove_child(std::size_t pIndex)
 
 void object_node::remove_children()
 {
-	for (util::ref<object_node> i : mChildren)
+	for (auto& i : mChildren)
 	{
 		i->send_down("on_parent_removed");
 		i->mParent.reset();
@@ -252,7 +283,7 @@ void object_node::remove_children()
 	mChildren.clear();
 }
 
-bool object_node::is_child_of(util::ref<object_node> pNode) const
+bool object_node::is_child_of(object_node::ref pNode) const
 {
 	if (pNode == get_parent())
 		return true;
