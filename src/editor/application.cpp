@@ -128,8 +128,10 @@ inline void show_node_tree(core::object_node::ref pNode, context& pContext)
 		ImGui::SameLine();
 	}
 
+	const bool object_is_selected = pContext.get_selection<selection_type::game_object>() == pNode;
+
 	std::string label;
-	if (ImGui::Selectable(pNode->get_name().c_str(), pContext.get_selection<selection_type::game_object>() == pNode))
+	if (ImGui::Selectable(pNode->get_name().c_str(), object_is_selected))
 		pContext.set_selection(pNode);
 	if (ImGui::IsItemActive() && ImGui::IsMouseDoubleClicked(0))
 		*open = !*open; // Toggle open flag
@@ -148,7 +150,7 @@ inline void show_node_tree(core::object_node::ref pNode, context& pContext)
 	{
 		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MoveNodeInTree"))
 		{
-			util::ref<core::object_node> node = *static_cast<core::object_node**>(payload->Data);
+			core::object_node::ref node = *static_cast<core::object_node**>(payload->Data);
 			if (!pNode->is_child_of(node)) // Do not move parent into its own child!
 				pNode->add_child(node);
 		}
@@ -588,19 +590,24 @@ private:
 					{
 						auto transform = obj->get_component<core::transform_component>();
 
+						const bool is_object_selected = obj == mContext.get_selection<selection_type::game_object>();
+
+						// Draw center point
+						if (is_object_selected)
+						{
+							math::vec2 center = transform->get_absolute_position() / render_view_scale;
+							dl->AddCircle({ center.x + cursor.x, center.y + cursor.y },
+								5, ImGui::GetColorU32({ 1, 1, 1, 0.6f }), 12, 3);
+						}
+
 						math::aabb aabb;
 						if (create_aabb_from_object(obj, aabb))
 						{
 							aabb.min /= render_view_scale;
 							aabb.max /= render_view_scale;
 
-							if (obj == mContext.get_selection<selection_type::game_object>())
+							if (is_object_selected)
 							{
-								// Draw center point
-								math::vec2 center = transform->get_absolute_position() / render_view_scale;
-								dl->AddCircle({ center.x + cursor.x, center.y + cursor.y },
-									5, ImGui::GetColorU32({ 1, 1, 1, 0.6f }), 12, 3);
-
 								const math::rect rect(aabb.min, aabb.max - aabb.min);
 								math::vec2 delta;
 								if (visual_editor::drag_rect("_SelectionResize", rect, &delta))

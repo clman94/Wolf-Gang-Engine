@@ -34,7 +34,6 @@ struct line_info
 	bool system_filesystem{ true };
 };
 
-
 struct message
 {
 	std::string string;
@@ -64,7 +63,6 @@ struct userdata
 class message_builder
 {
 public:
-
 	template <typename T>
 	message_builder& operator<<(T&& pIn)
 	{

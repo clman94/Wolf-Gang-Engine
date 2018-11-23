@@ -42,7 +42,7 @@ public:
 	template<selection_type Ttype>
 	auto get_selection() const
 	{
-		if constexpr(Ttype == selection_type::asset)
+		if constexpr (Ttype == selection_type::asset)
 			return mAsset_selection.lock();
 		if constexpr (Ttype == selection_type::layer)
 			return mLayer_selection.lock();
