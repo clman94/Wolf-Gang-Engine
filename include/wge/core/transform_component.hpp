@@ -13,7 +13,7 @@ class transform_component :
 {
 	WGE_COMPONENT_SINGLE_INSTANCE("Transform 2D", 0);
 public:
-	transform_component(object_node* pObj);
+	transform_component(game_object* pObj);
 
 	virtual json serialize() const override;
 	virtual void deserialize(const json& pJson) override;

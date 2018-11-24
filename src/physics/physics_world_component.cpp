@@ -5,7 +5,7 @@
 namespace wge::physics
 {
 
-physics_world_component::physics_world_component(core::object_node* pObj) :
+physics_world_component::physics_world_component(core::game_object* pObj) :
 	component(pObj)
 {
 	mWorld = new b2World(b2Vec2(0, 1));

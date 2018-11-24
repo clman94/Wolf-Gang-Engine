@@ -111,7 +111,7 @@ inline bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr, bool pD
 	return *pOpen;
 }
 
-inline void show_node_tree(core::object_node::ref pNode, context& pContext)
+inline void show_node_tree(core::game_object::ref pNode, context& pContext)
 {
 	ImGui::PushID(pNode.get());
 
@@ -137,7 +137,7 @@ inline void show_node_tree(core::object_node::ref pNode, context& pContext)
 		*open = !*open; // Toggle open flag
 	if (ImGui::BeginDragDropSource())
 	{
-		core::object_node* ptr = pNode.get();
+		core::game_object* ptr = pNode.get();
 		ImGui::SetDragDropPayload("MoveNodeInTree", &ptr, sizeof(void*));
 
 		ImGui::Text(pNode->get_name().c_str());
@@ -150,7 +150,7 @@ inline void show_node_tree(core::object_node::ref pNode, context& pContext)
 	{
 		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MoveNodeInTree"))
 		{
-			core::object_node::ref node = *static_cast<core::object_node**>(payload->Data);
+			core::game_object::ref node = *static_cast<core::game_object**>(payload->Data);
 			if (!pNode->is_child_of(node)) // Do not move parent into its own child!
 				pNode->add_child(node);
 		}
@@ -163,7 +163,7 @@ inline void show_node_tree(core::object_node::ref pNode, context& pContext)
 	{
 		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MoveNodeInTree"))
 		{
-			util::ref<core::object_node> node = *static_cast<core::object_node**>(payload->Data);
+			util::ref<core::game_object> node = *static_cast<core::game_object**>(payload->Data);
 			if (!pNode->is_child_of(node)) // Do not move parent into its own child!
 			{
 				if (pNode->get_child_count() && *open)
@@ -192,7 +192,7 @@ inline void show_node_tree(core::object_node::ref pNode, context& pContext)
 			{
 				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MoveNodeInTree"))
 				{
-					util::ref<core::object_node> node = *static_cast<core::object_node**>(payload->Data);
+					util::ref<core::game_object> node = *static_cast<core::game_object**>(payload->Data);
 					if (!pNode->is_child_of(node)) // Do not move parent into its own child!
 						if (auto parent = pNode->get_parent())
 							parent->add_child(node, parent->get_child_index(pNode) + 1);
@@ -540,7 +540,7 @@ private:
 		ImGui::End();
 	}
 
-	bool create_aabb_from_object(core::object_node::ref pObj, math::aabb& pAABB)
+	bool create_aabb_from_object(core::game_object::ref pObj, math::aabb& pAABB)
 	{
 		bool has_aabb = false;
 		for (std::size_t comp_idx = 0; comp_idx < pObj->get_component_count(); comp_idx++)
@@ -691,7 +691,7 @@ private:
 					}
 					if (ImGui::MenuItem("Object 2D"))
 					{
-						auto obj = core::object_node::create(mGame_context);
+						auto obj = core::game_object::create(mGame_context);
 						obj->set_name("New 2D Object");
 						obj->add_component<core::transform_component>();
 						if (!mGame_context.get_layer_container().empty())

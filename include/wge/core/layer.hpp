@@ -17,7 +17,7 @@ class context;
 class layer
 {
 public:
-	using container = std::vector<object_node>;
+	using container = std::vector<game_object>;
 	using iterator = container::iterator;
 	using const_iterator = container::const_iterator;
 
@@ -82,17 +82,17 @@ public:
 		return mObjects.end();
 	}
 
-	object_node get(std::size_t pIndex)
+	game_object get(std::size_t pIndex)
 	{
 		return mObjects[pIndex];
 	}
 
-	void add(object_node mObj)
+	void add(game_object mObj)
 	{
 		mObjects.push_back(mObj);
 	}
 
-	void remove(object_node mObj)
+	void remove(game_object mObj)
 	{
 		auto iter = std::find(mObjects.begin(), mObjects.end(), mObj);
 		if (iter != mObjects.end())
@@ -101,13 +101,13 @@ public:
 		}
 	}
 
-	object_node create_object()
+	game_object create_object()
 	{
 		auto& obj = mObjects.emplace_back();
 	}
 
 	template <typename T>
-	T* add_component(object_node pObj)
+	T* add_component(game_object pObj)
 	{
 		auto comp = mComponent_manager.add_component<T>();
 		comp->get_object(pObj);
@@ -115,7 +115,7 @@ public:
 	}
 
 	template <typename T>
-	T* get_first_component(object_node pObj)
+	T* get_first_component(game_object pObj)
 	{
 		return mComponent_manager.get_first_component(pObj);
 	}

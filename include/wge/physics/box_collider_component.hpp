@@ -18,7 +18,7 @@ class box_collider_component :
 {
 	WGE_COMPONENT("Box Collider", 268);
 public:
-	box_collider_component(core::object_node* pObj);
+	box_collider_component(core::game_object* pObj);
 	virtual ~box_collider_component();
 
 	virtual json serialize() const override;

@@ -10,7 +10,7 @@
 using namespace wge;
 using namespace wge::physics;
 
-box_collider_component::box_collider_component(core::object_node* pObj) :
+box_collider_component::box_collider_component(core::game_object* pObj) :
 	component(pObj),
 	mFixture(nullptr),
 	mSize(1, 1),

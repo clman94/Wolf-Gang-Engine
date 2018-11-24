@@ -5,7 +5,7 @@
 using namespace wge;
 using namespace wge::core;
 
-transform_component::transform_component(object_node * pObj) :
+transform_component::transform_component(game_object * pObj) :
 	component(pObj),
 	mScale(1, 1),
 	mRotation(0),

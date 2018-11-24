@@ -42,7 +42,7 @@ namespace wge::core
 {
 
 class context;
-class object_node;
+class game_object;
 class asset_manager;
 
 class component

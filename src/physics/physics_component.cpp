@@ -10,7 +10,7 @@
 using namespace wge;
 using namespace wge::physics;
 
-physics_component::physics_component(core::object_node * pObj) :
+physics_component::physics_component(core::game_object * pObj) :
 	component(pObj)
 {
 	mBody = nullptr;

@@ -19,16 +19,16 @@ struct has_component_id_member <T, decltype((void)T::COMPONENT_ID, 0)> : std::tr
 
 class layer;
 class component;
-class object_node;
+class game_object;
 
 // Object nodes are objects that relay
 // messages between components and to other 
 // game objects.
-class object_node
+class game_object
 {
 public:
-	object_node(layer&);
-	~object_node();
+	game_object(layer&);
+	~game_object();
 
 	// Check if this object has a component of a specific id
 	bool has_component(int pId) const;

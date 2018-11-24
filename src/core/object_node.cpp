@@ -53,17 +53,17 @@ inline std::string create_unique_name(std::string pPrefix, Titer pBegin, Titer p
 		return pPrefix + "_" + std::to_string(max + 1);
 }
 
-object_node::object_node(layer& pLayer) :
+game_object::game_object(layer& pLayer) :
 	mLayer(pLayer),
 	mInstance_id(pLayer)
 {
 }
 
-object_node::~object_node()
+game_object::~game_object()
 {
 }
 
-bool object_node::has_component(int pId) const
+bool game_object::has_component(int pId) const
 {
 	for (auto& i : get_layer().)
 		if (i->get_component_id() == pId)
@@ -71,12 +71,12 @@ bool object_node::has_component(int pId) const
 	return false;
 }
 
-component* object_node::get_component(const std::string & pName)
+component* game_object::get_component(const std::string & pName)
 {
 	return nullptr;
 }
 
-component* object_node::get_component(int pId) const
+component* game_object::get_component(int pId) const
 {
 	for (auto& i : mComponents)
 		if (i->get_component_id() == pId)
@@ -84,17 +84,17 @@ component* object_node::get_component(int pId) const
 	return nullptr;
 }
 
-void object_node::remove_component(std::size_t pIndex)
+void game_object::remove_component(std::size_t pIndex)
 {
 	mComponents.erase(mComponents.begin() + pIndex);
 }
 
-void object_node::remove_components()
+void game_object::remove_components()
 {
 	mComponents.clear();
 }
 
-layer& object_node::get_layer() const
+layer& game_object::get_layer() const
 {
 	return mContemLayerxt;
 }

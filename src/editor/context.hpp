@@ -63,7 +63,7 @@ public:
 		mLayer_selection = pLayer;
 	}
 	// Set the currently selected object
-	void set_selection(core::object_node::ref pObject)
+	void set_selection(core::game_object::ref pObject)
 	{
 		reset_selection();
 		mObject_selection = pObject;
@@ -79,7 +79,7 @@ public:
 private:
 	core::asset::wptr mAsset_selection;
 	core::layer::wptr mLayer_selection;
-	core::object_node::weak_ref mObject_selection;
+	core::game_object::weak_ref mObject_selection;
 
 	std::map<std::string, editor_builder_function> mEditor_builders;
 	std::vector<asset_document> mDocuments;
