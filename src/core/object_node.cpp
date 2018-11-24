@@ -2,24 +2,7 @@
 #include <wge/core/object_node.hpp>
 #include <wge/core/component.hpp>
 #include <wge/core/context.hpp>
-
-namespace nlohmann
-{
-
-template<>
-struct adl_serializer<std::unique_ptr<wge::core::component>> {
-	static void to_json(json& j, const std::unique_ptr<wge::core::component>& pObj)
-	{
-		j = pObj->serialize();
-	}
-
-	static void from_json(const json& j, std::unique_ptr<wge::core::component>& pObj)
-	{
-		pObj->deserialize(j);
-	}
-};
-
-} //namespace nlohmann
+#include <wge/core/layer.hpp>
 
 namespace wge::core
 {
@@ -70,29 +53,10 @@ inline std::string create_unique_name(std::string pPrefix, Titer pBegin, Titer p
 		return pPrefix + "_" + std::to_string(max + 1);
 }
 
-object_node::ref object_node::create(context& pContext)
+object_node::object_node(layer& pLayer) :
+	mLayer(pLayer),
+	mInstance_id(pLayer)
 {
-	return object_node::ref::create(pContext);
-}
-
-object_node::object_node(context& pContext) :
-	mContext(pContext)
-{
-	register_property("name", mName);
-	register_property("assetid", mAsset_id);
-	register_property("components",
-		[&]() -> json
-	{
-		return mComponents;
-	},
-		[&](const json& pJson)
-	{
-		mComponents.clear();
-		for (auto& i : pJson)
-		{
-
-		}
-	});
 }
 
 object_node::~object_node()
@@ -101,7 +65,7 @@ object_node::~object_node()
 
 bool object_node::has_component(int pId) const
 {
-	for (auto& i : mComponents)
+	for (auto& i : get_layer().)
 		if (i->get_component_id() == pId)
 			return true;
 	return false;
@@ -130,223 +94,9 @@ void object_node::remove_components()
 	mComponents.clear();
 }
 
-json object_node::serialize() const
+layer& object_node::get_layer() const
 {
-	using nlohmann::json;
-	json result;
-	result["name"] = mName;
-	result["assetID"] = mAsset_id;
-
-	// Serialize the components
-	{
-		std::vector<json> components_json;
-		for (const auto& i : mComponents)
-		{
-			json c;
-			c["id"] = i->get_component_id();
-			c["name"] = i->get_name();
-			c["data"] = i->serialize();
-			components_json.push_back(c);
-		}
-		result["components"] = components_json;
-	}
-
-	// Serialize the children
-	{
-		std::vector<json> children_json;
-		for (const auto& i : mChildren)
-			children_json.push_back(i->serialize());
-		result["children"] = children_json;
-	}
-
-	return result;
-}
-
-void object_node::deserialize(const json& pJson)
-{
-	mName = pJson["name"];
-	mAsset_id = pJson["assetID"];
-
-	for (const json& i : pJson["components"])
-	{
-		component* c = mContext.get().get_component_factory().create(i["id"], this);
-		c->set_name(i["name"]);
-		c->deserialize(i["data"]);
-		mComponents.emplace_back(c);
-	}
-
-	for (const json& i : pJson["children"])
-	{
-		auto obj = object_node::create(mContext);
-		obj->deserialize(i);
-		add_child(obj);
-	}
-}
-
-component* object_node::get_component_index(std::size_t pIndex) const
-{
-	return mComponents[pIndex].get();
-}
-
-std::size_t object_node::get_component_count() const
-{
-	return mComponents.size();
-}
-
-void object_node::set_name(const std::string & pName)
-{
-	mName = pName;
-}
-
-const std::string & object_node::get_name()
-{
-	return mName;
-}
-
-std::size_t object_node::get_child_count() const
-{
-	return mChildren.size();
-}
-
-object_node::ref object_node::get_child(std::size_t pIndex) const
-{
-	return mChildren[pIndex];
-}
-
-object_node::ref object_node::create_child()
-{
-	auto node = object_node::create(mContext);
-	add_child(node);
-	return node;
-}
-
-object_node::ref object_node::create_child(const std::string& pName)
-{
-	auto node = create_child();
-	node->set_name(pName);
-	return node;
-}
-
-void object_node::add_child(ref pNode)
-{
-	if (pNode == this)
-		return;
-	pNode->remove_parent();
-	pNode->mParent = this;
-	mChildren.push_back(pNode);
-}
-
-void object_node::add_child(ref pNode, std::size_t pIndex)
-{
-	if (pNode == this)
-		return;
-	pNode->remove_parent();
-	pNode->mParent = this;
-	mChildren.insert(mChildren.begin() + std::min(pIndex, mChildren.size()), pNode);
-}
-
-std::size_t object_node::get_child_index(ref pNode) const
-{
-	for (std::size_t i = 0; i < mChildren.size(); i++)
-		if (pNode == mChildren[i])
-			return i;
-	return 0;
-}
-
-bool object_node::remove_child(ref pNode)
-{
-	for (std::size_t i = 0; i < mChildren.size(); i++)
-		if (mChildren[i] == pNode)
-		{
-			mChildren.erase(mChildren.begin() + i);
-			return true;
-		}
-	return false;
-}
-
-bool object_node::remove_child(std::size_t pIndex)
-{
-	if (pIndex >= mChildren.size())
-		return false;
-	mChildren[pIndex]->mParent.reset();
-	mChildren.erase(mChildren.begin() + pIndex);
-	return true;
-}
-
-void object_node::remove_children()
-{
-	for (auto& i : mChildren)
-	{
-		i->send_down("on_parent_removed");
-		i->mParent.reset();
-	}
-	mChildren.clear();
-}
-
-bool object_node::is_child_of(object_node::ref pNode) const
-{
-	if (pNode == get_parent())
-		return true;
-	if (mParent)
-		return get_parent()->is_child_of(pNode);
-	return false;
-}
-
-util::ref<object_node> object_node::get_parent() const
-{
-	return mParent.lock();
-}
-
-void object_node::remove_parent()
-{
-	if (auto parent = mParent.lock())
-	{
-		for (std::size_t i = 0; i < parent->mChildren.size(); i++)
-		{
-			if (parent->mChildren[i] == this)
-			{
-				parent->mChildren.erase(parent->mChildren.begin() + i);
-				break; // Bail early
-			}
-		}
-		mParent.reset();
-		send_down("on_parent_removed");
-	}
-}
-
-context& object_node::get_context() const
-{
-	return mContext;
-}
-
-void object_node::set_asset_id(asset_uid pId)
-{
-	mAsset_id = pId;
-}
-
-asset_uid object_node::get_asset_id() const
-{
-	return mAsset_id;
-}
-
-bool object_node::has_asset_id() const
-{
-	return mAsset_id != 0;
-}
-
-std::string object_node::get_unique_component_name(std::string pPrefix)
-{
-	return create_unique_name(pPrefix,
-		mComponents.begin(), mComponents.end(),
-		[](const auto& i) { return i->get_name(); });
-}
-
-object_node::ref wge::core::find_first_parent_with_component(int pId, object_node::ref pNode)
-{
-	while (pNode = pNode->get_parent())
-		if (pNode->has_component(pId))
-			return pNode;
-	return{};
+	return mContemLayerxt;
 }
 
 } // namespace wge::core

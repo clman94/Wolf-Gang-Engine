@@ -238,9 +238,6 @@ inline void GLAPIENTRY opengl_message_callback(GLenum source,
 class application
 {
 public:
-	application() :
-		mRenderer(mGame_context)
-	{}
 
 	int run()
 	{

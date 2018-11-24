@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <array>
 
 #include <wge/math/aabb.hpp>
 #include <wge/core/messaging.hpp>
@@ -44,18 +45,8 @@ class context;
 class object_node;
 class asset_manager;
 
-class component :
-	public serializable,
-	protected subscriber
+class component
 {
-protected:
-	component(object_node* pNode) :
-		mObject(pNode)
-	{
-		register_property("name", mName);
-		register_property("instance", mInstance_id);
-	}
-
 public:
 	virtual ~component() {}
 
@@ -78,43 +69,61 @@ public:
 	const void set_name(const std::string& pName);
 	const std::string& get_name() const;
 
-	// Get the object this component is apart of 
-	object_node* get_object() const
-	{
-		return mObject;
-	}
-
 	context& get_context() const;
 
 	virtual bool has_aabb() const { return false; }
 	virtual math::aabb get_screen_aabb() const { return{}; };
 
-protected:
-	// Tells the object that this component requires another component to function
-	// correctly eg a sprite requires a transform.
-	// If the object does not have the component, it will be create automatically.
-	template <typename T>
-	T* require() const
+	int get_object_id() const
 	{
-		assert(mObject);
-		if (!mObject->has_component<T>())
-			return mObject->add_component<T>();
-		return mObject->get_component<T>();
+		return mObject_id;
 	}
 
-	template <typename T>
-	T* get_system() const
+	void set_object(int pId)
 	{
-		return get_object()->get_context()->get_system<T>();
+		mObject_id = pId;
 	}
 
-	// Helper method to get the asset manager from the current context.
-	asset_manager* get_asset_manager() const;
+	int get_instance_id()
+	{
+
+	}
 
 private:
 	std::string mName;
-	object_node* mObject;
+	int mObject_id;
 	int mInstance_id;
+};
+
+template <typename...T>
+class component_requires
+{
+	template <typename T>
+	static constexpr bool requires_component()
+	{
+		return requires_component(T::COMPONENT_ID);
+	}
+
+	static constexpr bool requires_component(int pId)
+	{
+		bool has = false;
+		(has |= T::COMPONENT_ID == pId, ...);
+		return has;
+	}
+
+	static constexpr std::array<int, sizeof...(T)> get_all_required_components()
+	{
+		return { T::COMPONENT_ID... };
+	}
+};
+
+template <typename Trequires>
+class component_definition :
+	component
+{
+public:
+	virtual ~component() {}
+
 };
 
 } // namespace wge::core

@@ -11,6 +11,7 @@
 #include <wge/graphics/texture.hpp>
 #include <wge/core/system.hpp>
 #include <wge/core/context.hpp>
+#include <wge/graphics/sprite_component.hpp>
 
 namespace wge::graphics
 {
@@ -78,12 +79,13 @@ private:
 };
 
 class renderer :
-	public core::system
+	public core::system_definition<
+		core::system_components<sprite_component>>
 {
 	WGE_SYSTEM("Renderer", 43);
 public:
-	renderer(core::context& pCtx) :
-		mContext(&pCtx)
+	renderer(core::layer& pLayer) :
+		core::system(pLayer)
 	{}
 
 	// Compile the default shaders and initialize opengl
@@ -152,8 +154,6 @@ private:
 	float mPixel_size{ 1 };
 
 	std::vector<render_batch_2d> mBatches;
-
-	core::context* mContext;
 };
 
 } // namespace wge::graphics

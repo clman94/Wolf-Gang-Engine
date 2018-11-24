@@ -177,8 +177,8 @@ void renderer::render()
 {
 	assert(mFramebuffer);
 
-	for (auto& i : mContext->get_layer_container())
-		i->send_all("on_render", this);
+	for (auto i : get_components().get_container<sprite_component>())
+		push_batch(i.create_batch());
 
 	mFramebuffer->begin_framebuffer();
 

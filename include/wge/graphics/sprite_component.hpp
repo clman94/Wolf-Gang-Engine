@@ -2,25 +2,26 @@
 
 #include <wge/core/asset.hpp>
 #include <wge/core/component.hpp>
-#include <wge/graphics/renderer.hpp>
 #include <wge/math/anchor.hpp>
 #include <wge/math/aabb.hpp>
+#include <wge/math/vector.hpp>
+#include <wge/core/transform_component.hpp>
 
 namespace wge::graphics
 {
+
+class renderer;
 
 class sprite_component :
 	public core::component
 {
 	WGE_COMPONENT("Sprite", 12409);
 public:
-	sprite_component(core::object_node* pNode);
-
 	virtual json serialize() const override;
 	virtual void deserialize(const json& pJson) override;
 
-	// Creates a batch and sends it to the renderer
-	void on_render(renderer* pRenderer);
+	// Creates a batch
+	render_batch_2d create_batch(core::transform_component& pTransform, renderer& pRenderer);
 
 	// Set the offset of the image in pixels
 	void set_offset(const math::vec2& pOffset)

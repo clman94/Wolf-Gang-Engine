@@ -1,21 +1,23 @@
 #pragma once
 
 #include <wge/core/object_node.hpp>
-#include <wge/core/serializable.hpp>
+#include <wge/core/system.hpp>
 
 #include <string>
 #include <string_view>
 #include <vector>
 #include <memory>
+#include <functional>
 
 namespace wge::core
 {
 
-class layer :
-	public serializable
+class context;
+
+class layer
 {
 public:
-	using container = std::vector<object_node::ref>;
+	using container = std::vector<object_node>;
 	using iterator = container::iterator;
 	using const_iterator = container::const_iterator;
 
@@ -30,22 +32,34 @@ public:
 	layer(context& pContext) :
 		mContext(pContext)
 	{
-		register_property("name", mName);
-		register_property("objects",
-			[&]() -> json
-		{
-			return mObjects;
-		},
-			[&](const json& pJson)
-		{
-			mObjects.clear();
-			for (auto& i : pJson)
-			{
-				auto obj = object_node::create(mContext);
-				obj = i;
-				add(obj);
-			}
-		});
+	}
+
+	template <typename T>
+	T* get_system() const
+	{
+		return dynamic_cast<T*>(get_system(T::SYSTEM_ID));
+	}
+
+	system* get_system(int pID) const
+	{
+		for (auto& i : mSystems)
+			if (i->get_system_id() == pID)
+				return i.get();
+		return nullptr;
+	}
+	system* get_system(const std::string& pName) const
+	{
+		for (auto& i : mSystems)
+			if (i->get_system_name() == pName)
+				return i.get();
+		return nullptr;
+	}
+
+	template <typename T>
+	void add_system()
+	{
+		assert(!get_system(pSystem->get_system_id()));
+		mSystems.emplace_back(new T);
 	}
 
 	void set_name(const std::string_view& pName)
@@ -68,17 +82,17 @@ public:
 		return mObjects.end();
 	}
 
-	object_node::ref get(std::size_t pIndex)
+	object_node get(std::size_t pIndex)
 	{
 		return mObjects[pIndex];
 	}
 
-	void add(object_node::ref mObj)
+	void add(object_node mObj)
 	{
 		mObjects.push_back(mObj);
 	}
 
-	void remove(object_node::ref mObj)
+	void remove(object_node mObj)
 	{
 		auto iter = std::find(mObjects.begin(), mObjects.end(), mObj);
 		if (iter != mObjects.end())
@@ -87,18 +101,31 @@ public:
 		}
 	}
 
-	// Sends a message to all objects in this layer
-	template<class...Targs>
-	void send_all(const std::string& pEvent_name, Targs...pArgs)
+	object_node create_object()
 	{
-		for (auto& i : mObjects)
-			i->send_down(pEvent_name, pArgs...);
+		auto& obj = mObjects.emplace_back();
+	}
+
+	template <typename T>
+	T* add_component(object_node pObj)
+	{
+		auto comp = mComponent_manager.add_component<T>();
+		comp->get_object(pObj);
+		return comp;
+	}
+
+	template <typename T>
+	T* get_first_component(object_node pObj)
+	{
+		return mComponent_manager.get_first_component(pObj);
 	}
 
 private:
 	std::string mName;
 	container mObjects;
 	std::reference_wrapper<context> mContext;
+	std::vector<std::unique_ptr<system>> mSystems;
+	component_manager mComponent_manager;
 };
 
 } // namespace wge::core

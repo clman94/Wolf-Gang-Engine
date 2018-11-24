@@ -1,6 +1,5 @@
 #pragma once
 
-#include <wge/core/system.hpp>
 #include <wge/core/object_node.hpp>
 #include <wge/core/layer.hpp>
 
@@ -10,42 +9,12 @@
 namespace wge::core
 {
 
+using instance_id = std::uint64_t;
+
 class context
 {
 public:
 	using layer_container = std::vector<layer::ptr>;
-
-	core::component_factory& get_component_factory()
-	{
-		return mFactory;
-	}
-
-	template <typename T>
-	T* get_system() const
-	{
-		return dynamic_cast<T*>(get_system(T::SYSTEM_ID));
-	}
-
-	system* get_system(int pID) const
-	{
-		for (auto i : mSystems)
-			if (i->get_system_id() == pID)
-				return i;
-		return nullptr;
-	}
-	system* get_system(const std::string& pName) const
-	{
-		for (auto i : mSystems)
-			if (i->get_system_name() == pName)
-				return i;
-		return nullptr;
-	}
-
-	void add_system(system* pSystem)
-	{
-		assert(!get_system(pSystem->get_system_id()));
-		mSystems.push_back(pSystem);
-	}
 
 	// Get a layer to a specific index
 	layer::ptr get_layer(std::size_t pIndex) const
@@ -78,26 +47,14 @@ public:
 		return mLayers;
 	}
 
-	// Serializes all collections and their nodes.
-	// Note: This does not serialize the factories and systems.
-	json serialize() const
+	instance_id get_unique_instance_id()
 	{
-		json result;
-		for (auto& i : mLayers)
-			result["layers"].push_back(i->serialize());
-		return result;
-	}
-	void deserialize(const json& pJson)
-	{
-		mLayers.clear();
-		for (const json& i : pJson["layers"])
-			create_layer()->deserialize(i);
+		return ++mCurrent_instance_id;
 	}
 
 private:
-	core::component_factory mFactory;
-	std::vector<system*> mSystems;
 	layer_container mLayers;
+	instance_id mCurrent_instance_id{ 0 };
 };
 
 } // namespace wge::core
