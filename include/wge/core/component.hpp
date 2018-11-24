@@ -6,6 +6,7 @@
 #include <wge/math/aabb.hpp>
 #include <wge/core/messaging.hpp>
 #include <wge/core/serializable.hpp>
+#include <wge/core/instance_id.hpp>
 
 #include <nlohmann/json.hpp>
 #include <wge/util/json_helpers.hpp>
@@ -69,8 +70,6 @@ public:
 	const void set_name(const std::string& pName);
 	const std::string& get_name() const;
 
-	context& get_context() const;
-
 	virtual bool has_aabb() const { return false; }
 	virtual math::aabb get_screen_aabb() const { return{}; };
 
@@ -79,51 +78,17 @@ public:
 		return mObject_id;
 	}
 
-	void set_object(int pId)
-	{
-		mObject_id = pId;
-	}
+	void set_object(const game_object& pObj);
 
-	int get_instance_id()
+	core::instance_id get_instance_id() const
 	{
-
+		return mInstance_id;
 	}
 
 private:
 	std::string mName;
 	int mObject_id;
-	int mInstance_id;
-};
-
-template <typename...T>
-class component_requires
-{
-	template <typename T>
-	static constexpr bool requires_component()
-	{
-		return requires_component(T::COMPONENT_ID);
-	}
-
-	static constexpr bool requires_component(int pId)
-	{
-		bool has = false;
-		(has |= T::COMPONENT_ID == pId, ...);
-		return has;
-	}
-
-	static constexpr std::array<int, sizeof...(T)> get_all_required_components()
-	{
-		return { T::COMPONENT_ID... };
-	}
-};
-
-template <typename Trequires>
-class component_definition :
-	component
-{
-public:
-	virtual ~component() {}
-
+	core::instance_id mInstance_id;
 };
 
 } // namespace wge::core

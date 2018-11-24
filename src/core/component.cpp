@@ -16,13 +16,7 @@ const std::string& component::get_name() const
 	return mName;
 }
 
-context& component::get_context() const
+void component::set_object(const game_object & pObj)
 {
-	assert(mObject);
-	return mObject->get_context();
-}
-
-asset_manager* component::get_asset_manager() const
-{
-	return get_context().get_system<asset_manager>();
+	mObject_id = pObj.get_instance_id();
 }

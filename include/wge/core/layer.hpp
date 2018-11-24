@@ -2,6 +2,7 @@
 
 #include <wge/core/object_node.hpp>
 #include <wge/core/system.hpp>
+#include <wge/core/component_manager.hpp>
 
 #include <string>
 #include <string_view>
@@ -58,8 +59,7 @@ public:
 	template <typename T>
 	void add_system()
 	{
-		assert(!get_system(pSystem->get_system_id()));
-		mSystems.emplace_back(new T);
+		mSystems.emplace_back(new T(*this));
 	}
 
 	void set_name(const std::string_view& pName)
@@ -87,11 +87,6 @@ public:
 		return mObjects[pIndex];
 	}
 
-	void add(game_object mObj)
-	{
-		mObjects.push_back(mObj);
-	}
-
 	void remove(game_object mObj)
 	{
 		auto iter = std::find(mObjects.begin(), mObjects.end(), mObj);
@@ -103,14 +98,15 @@ public:
 
 	game_object create_object()
 	{
-		auto& obj = mObjects.emplace_back();
+		auto& obj = mObjects.emplace_back(*this);
+		return obj;
 	}
 
 	template <typename T>
-	T* add_component(game_object pObj)
+	T* add_component(const game_object& pObj)
 	{
-		auto comp = mComponent_manager.add_component<T>();
-		comp->get_object(pObj);
+		auto* comp = &mComponent_manager.add_component<T>();
+		comp->set_object(pObj);
 		return comp;
 	}
 
@@ -118,6 +114,34 @@ public:
 	T* get_first_component(game_object pObj)
 	{
 		return mComponent_manager.get_first_component(pObj);
+	}
+
+	template <typename T>
+	component_manager::container<T>& get_component_container()
+	{
+		return mComponent_manager.get_container<T>();
+	}
+
+	// Returns true if all components were found
+	template <typename Tfirst, typename...Trest>
+	bool retrieve_components(game_object pObj, Tfirst*& pFirst, Trest*&...pRest)
+	{
+		auto comp = mComponent_manager.get_first_component<Tfirst>(pObj.get_instance_id());
+		if (!comp)
+			return false;
+		pFirst = comp;
+		return retrieve_components(pObj, pRest...);
+	}
+
+	// Returns true if all components were found
+	template <typename Tfirst>
+	bool retrieve_components(game_object pObj, Tfirst*& pFirst)
+	{
+		auto comp = mComponent_manager.get_first_component<Tfirst>(pObj.get_instance_id());
+		if (!comp)
+			return false;
+		pFirst = comp;
+		return true;
 	}
 
 private:

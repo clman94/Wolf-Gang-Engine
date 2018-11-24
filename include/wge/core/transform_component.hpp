@@ -13,7 +13,7 @@ class transform_component :
 {
 	WGE_COMPONENT_SINGLE_INSTANCE("Transform 2D", 0);
 public:
-	transform_component(game_object* pObj);
+	transform_component();
 
 	virtual json serialize() const override;
 	virtual void deserialize(const json& pJson) override;
@@ -47,11 +47,6 @@ private:
 	void update_absolutes();
 	// Updates the transform
 	void update_transform();
-	
-	// This event is recieved when the transform of this component
-	// or any of its parents change. When any of the get_absolute_*() methods
-	// are called, the cache will be updated.
-	void on_transform_changed();
 
 	// This will notify all components and the children nodes
 	// that this node has changed position and they need to 

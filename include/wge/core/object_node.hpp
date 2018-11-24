@@ -5,7 +5,7 @@
 #include <memory>
 
 #include <wge/core/asset_config.hpp>
-
+#include <wge/core/instance_id.hpp>
 #include <wge/util/json_helpers.hpp>
 
 namespace wge::core
@@ -45,8 +45,6 @@ public:
 	component* get_component(const std::string& pName);
 	// Get first component by id
 	component* get_component(int pId) const;
-	// Get component by index
-	component* get_component_index(std::size_t pIndex) const;
 	// Get first component by type
 	template<class T,
 		// Requires the "int COMPONENT_ID" COMPONENT_ID member
@@ -61,6 +59,26 @@ public:
 	void remove_components();
 
 	layer& get_layer() const;
+
+	instance_id get_instance_id() const
+	{
+		return mInstance_id;
+	}
+
+	void set_instance_id(instance_id pId)
+	{
+		mInstance_id = pId;
+	}
+
+	operator bool() const
+	{
+		return mInstance_id == 0;
+	}
+
+	void reset()
+	{
+		mInstance_id = 0;
+	}
 
 private:
 	std::reference_wrapper<layer> mLayer;

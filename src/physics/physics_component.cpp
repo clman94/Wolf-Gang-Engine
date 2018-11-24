@@ -10,19 +10,9 @@
 using namespace wge;
 using namespace wge::physics;
 
-physics_component::physics_component(core::game_object * pObj) :
-	component(pObj)
+physics_component::physics_component()
 {
 	mBody = nullptr;
-	mType = type_rigidbody;
-	subscribe_to(pObj, "on_preupdate", &physics_component::on_preupdate, this);
-	subscribe_to(pObj, "on_postupdate", &physics_component::on_postupdate, this);
-	subscribe_to(pObj, "on_physics_update_bodies", &physics_component::on_physics_update_bodies, this);
-	subscribe_to(pObj, "on_physics_reset", &physics_component::on_physics_reset, this);
-	subscribe_to(pObj, "on_parent_removed", &physics_component::on_parent_removed, this);
-
-	// Requirements
-	pObj->add_component<core::transform_component>();
 }
 
 physics_component::~physics_component()
@@ -35,7 +25,7 @@ physics_component::~physics_component()
 
 		// Because this body exists, there may still be fixtures connected
 		// to it. Tell the colliders to clean up.
-		get_object()->send_down("on_physics_reset");
+		//get_object()->send_down("on_physics_reset");
 	}
 }
 
@@ -110,8 +100,8 @@ void physics_component::on_physics_update_bodies(physics_world_component * pComp
 {
 	if (!mBody)
 	{
-		auto transform = get_object()->get_component<core::transform_component>();
-		assert(transform);
+		//auto transform = get_object()->get_component<core::transform_component>();
+		/*assert(transform);
 		b2BodyDef body_def;
 		body_def.position.x = transform->get_absolute_position().x;
 		body_def.position.y = transform->get_absolute_position().y;
@@ -123,9 +113,9 @@ void physics_component::on_physics_update_bodies(physics_world_component * pComp
 			deserialize_body_from_cache(); // Finally deserialize if it was waiting for the body to be created
 		mBody->ResetMassData();
 		mPhysics_world = pComponent;
-		log::debug() << WGE_LI << get_object()->get_name() << ": New Physics Body" << log::endm;
+		log::debug() << WGE_LI << get_object()->get_name() << ": New Physics Body" << log::endm;*/
 	}
-	get_object()->send_down("on_physics_update_colliders", this);
+	//get_object()->send_down("on_physics_update_colliders", this);
 }
 
 void physics_component::on_physics_reset()
@@ -164,7 +154,7 @@ void physics_component::on_parent_removed()
 
 		// Tell all possible colliders that this body was removed and
 		// they need to reset.
-		get_object()->send_down("on_physics_reset");
+		//get_object()->send_down("on_physics_reset");
 	}
 }
 
@@ -182,14 +172,14 @@ void physics_component::update_object_transform()
 {
 	if (mBody)
 	{
-		auto transform = get_object()->get_component<core::transform_component>();
+		/*auto transform = get_object()->get_component<core::transform_component>();
 		assert(transform);
 
 		const b2Vec2& pos = mBody->GetPosition();
 		transform->set_position(math::vec2(pos.x, pos.y));
 
 		const float rot = mBody->GetAngle();
-		transform->set_rotaton(rot);
+		transform->set_rotaton(rot);*/
 	}
 }
 
@@ -197,11 +187,11 @@ void physics_component::update_body_transform()
 {
 	if (mBody)
 	{
-		auto transform = get_object()->get_component<core::transform_component>();
+		/*auto transform = get_object()->get_component<core::transform_component>();
 		assert(transform);
 		b2Vec2 body_position{ transform->get_position().x, transform->get_position().y };
 		float body_rotation{ transform->get_rotation() };
-		mBody->SetTransform(body_position, body_rotation);
+		mBody->SetTransform(body_position, body_rotation);*/
 	}
 }
 

@@ -26,7 +26,7 @@ public:
 		type_static
 	};
 
-	physics_component(core::game_object* pObj);
+	physics_component();
 	virtual ~physics_component();
 
 	virtual json serialize() const override;

@@ -55,10 +55,8 @@ public:
 	}
 };
 
-class asset_manager :
-	public core::system
+class asset_manager
 {
-	WGE_SYSTEM("Asset Manager", 0);
 public:
 	using asset_container = std::vector<asset::ptr>;
 

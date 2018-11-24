@@ -177,8 +177,15 @@ void renderer::render()
 {
 	assert(mFramebuffer);
 
-	for (auto i : get_components().get_container<sprite_component>())
-		push_batch(i.create_batch());
+	for (auto& i : get_layer())
+	{
+		core::transform_component* transform;
+		sprite_component* sprite;
+		if (get_layer().retrieve_components(i, sprite, transform))
+		{
+			sprite->create_batch(*transform, *this);
+		}
+	}
 
 	mFramebuffer->begin_framebuffer();
 

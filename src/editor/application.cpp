@@ -1,3 +1,4 @@
+
 #include <wge/editor/application.hpp>
 
 #include <wge/logging/log.hpp>
@@ -14,6 +15,7 @@
 #include <wge/graphics/framebuffer.hpp>
 #include <wge/filesystem/file_input_stream.hpp>
 #include <wge/filesystem/exception.hpp>
+#include <wge/graphics/renderer.hpp>
 
 #include "editor.hpp"
 #include "history.hpp"
@@ -110,8 +112,8 @@ inline bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr, bool pD
 	ImGui::PopID();
 	return *pOpen;
 }
-
-inline void show_node_tree(core::game_object::ref pNode, context& pContext)
+/*
+inline void show_node_tree(core::game_object pNode, context& pContext)
 {
 	ImGui::PushID(pNode.get());
 
@@ -225,7 +227,7 @@ inline void show_node_tree(core::layer::ptr pLayer, context& pContext)
 	ImGui::TreePop();
 
 	ImGui::PopID();
-}
+}*/
 
 inline void GLAPIENTRY opengl_message_callback(GLenum source,
 	GLenum type,
@@ -238,6 +240,10 @@ inline void GLAPIENTRY opengl_message_callback(GLenum source,
 class application
 {
 public:
+	application()
+	{
+		mGame_context.set_asset_manager(&mAsset_manager);
+	}
 
 	int run()
 	{
@@ -268,22 +274,21 @@ private:
 
 			show_asset_manager();
 
-			mRenderer.set_framebuffer(&mViewport_framebuffer);
+			auto renderer = mGame_context.get_layer(0)->get_system<graphics::renderer>();
+
+			renderer->set_framebuffer(&mViewport_framebuffer);
 			show_viewport();
 
 			show_objects();
 			show_component_inspector();
 
-			for (auto& i : mGame_context.get_layer_container())
-				i->send_all("on_render", &mRenderer);
-
-			mRenderer.set_framebuffer(&mViewport_framebuffer);
-			mRenderer.set_render_view({
+			renderer->set_framebuffer(&mViewport_framebuffer);
+			renderer->set_render_view({
 				{ 0.f, 0.f },
 				{ (float)mViewport_framebuffer.get_width() * 0.01f, (float)mViewport_framebuffer.get_height() * 0.01f }
 				});
-			mRenderer.render();
-			mRenderer.clear();
+			renderer->render();
+			renderer->clear();
 
 			end_frame();
 		}
@@ -292,8 +297,6 @@ private:
 
 	void shutdown()
 	{
-		mRenderer.clear();
-
 		// Cleanup ImGui
 		ImGui_ImplOpenGL3_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
@@ -376,22 +379,19 @@ private:
 
 	void init_game_context()
 	{
-		core::component_factory& factory = mGame_context.get_component_factory();
-		factory.add<core::transform_component>();
-		factory.add<physics::physics_world_component>();
-		factory.add<physics::physics_component>();
-		factory.add<physics::box_collider_component>();
-		factory.add<graphics::sprite_component>();
-
 		mAsset_manager.add_loader("texture", std::make_shared<graphics::texture_asset_loader>());
 		mAsset_manager.add_loader("scene", std::make_shared<core::config_asset_loader>());
 		mAsset_manager.set_root_directory(".");
 		mAsset_manager.load_assets();
-		mGame_context.add_system(&mAsset_manager);
 
-		mRenderer.initialize();
-		mRenderer.set_pixel_size(0.01f);
-		mGame_context.add_system(&mRenderer);
+		auto layer = mGame_context.create_layer();
+		layer->add_system<graphics::renderer>();
+		auto renderer = layer->get_system<graphics::renderer>();
+		renderer->set_pixel_size(0.01);
+		auto obj = layer->create_object();
+		layer->add_component<core::transform_component>(obj);
+		auto sprite = layer->add_component<graphics::sprite_component>(obj);
+		sprite->set_texture(mAsset_manager.get_asset<graphics::texture>("mytex.png"));
 	}
 
 	void init_inspectors()
@@ -540,7 +540,7 @@ private:
 		ImGui::End();
 	}
 
-	bool create_aabb_from_object(core::game_object::ref pObj, math::aabb& pAABB)
+	/*bool create_aabb_from_object(core::game_object pObj, math::aabb& pAABB)
 	{
 		bool has_aabb = false;
 		for (std::size_t comp_idx = 0; comp_idx < pObj->get_component_count(); comp_idx++)
@@ -557,7 +557,7 @@ private:
 				pAABB.merge(comp->get_screen_aabb());
 		}
 		return has_aabb;
-	}
+	}*/
 
 	void show_viewport()
 	{
@@ -575,7 +575,7 @@ private:
 			ImVec2 cursor = ImGui::GetCursorScreenPos();
 			ImGui::Image(mViewport_framebuffer, ImVec2(width, height));
 
-			visual_editor::begin_editor("_SceneEditor", { cursor.x, cursor.y }, { 1, 1 });
+			/*visual_editor::begin_editor("_SceneEditor", { cursor.x, cursor.y }, { 1, 1 });
 			{
 				const math::vec2 render_view_scale = mRenderer.get_render_view_scale();
 				ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -626,7 +626,7 @@ private:
 					}
 				}
 			}
-			visual_editor::end_editor();
+			visual_editor::end_editor();*/
 		}
 		ImGui::End();
 	}
@@ -638,7 +638,7 @@ private:
 		{
 			if (ImGui::BeginMenuBar())
 			{
-				if (ImGui::BeginMenu("Scene"))
+				/*if (ImGui::BeginMenu("Scene"))
 				{
 					if (ImGui::MenuItem("Load"))
 					{
@@ -681,7 +681,7 @@ private:
 						}
 					}
 					ImGui::EndMenu();
-				}
+				}*/
 
 				if (ImGui::BeginMenu("Add"))
 				{
@@ -689,7 +689,7 @@ private:
 					{
 						mGame_context.create_layer();
 					}
-					if (ImGui::MenuItem("Object 2D"))
+					/*if (ImGui::MenuItem("Object 2D"))
 					{
 						auto obj = core::game_object::create(mGame_context);
 						obj->set_name("New 2D Object");
@@ -698,13 +698,13 @@ private:
 							mGame_context.get_layer(0)->add(obj);
 						else
 							log::error() << "Could not create object" << log::endm;
-					}
+					}*/
 					ImGui::EndMenu();
 				}
 				ImGui::EndMenuBar();
 			}
-			for (auto& i : mGame_context.get_layer_container())
-				show_node_tree(i, mContext);
+			//for (auto& i : mGame_context.get_layer_container())
+			//	show_node_tree(i, mContext);
 		}
 		ImGui::End();
 		ImGui::PopStyleVar();
@@ -713,7 +713,7 @@ private:
 	void show_component_inspector()
 	{
 		ImGui::Begin("Inspector");
-		if (auto selection = mContext.get_selection<selection_type::game_object>())
+		/*if (auto selection = mContext.get_selection<selection_type::game_object>())
 		{
 			std::string name = selection->get_name();
 			if (ImGui::InputText("Name", &name))
@@ -781,7 +781,7 @@ private:
 				//	mSelected_node->add_component<script_component>();
 				ImGui::EndCombo();
 			}
-		}
+		}*/
 		ImGui::End();
 	}
 
@@ -822,8 +822,6 @@ private:
 	core::context mGame_context;
 	filesystem::path mGame_path;
 	core::asset_manager mAsset_manager;
-
-	graphics::renderer mRenderer;
 
 	component_inspector mInspectors;
 };

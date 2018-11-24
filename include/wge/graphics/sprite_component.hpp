@@ -6,6 +6,7 @@
 #include <wge/math/aabb.hpp>
 #include <wge/math/vector.hpp>
 #include <wge/core/transform_component.hpp>
+#include <wge/graphics/texture.hpp>
 
 namespace wge::graphics
 {
@@ -21,7 +22,7 @@ public:
 	virtual void deserialize(const json& pJson) override;
 
 	// Creates a batch
-	render_batch_2d create_batch(core::transform_component& pTransform, renderer& pRenderer);
+	void create_batch(core::transform_component& pTransform, renderer& pRenderer);
 
 	// Set the offset of the image in pixels
 	void set_offset(const math::vec2& pOffset)

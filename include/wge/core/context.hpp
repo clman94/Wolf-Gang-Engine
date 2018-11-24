@@ -11,6 +11,8 @@ namespace wge::core
 
 using instance_id = std::uint64_t;
 
+class asset_manager;
+
 class context
 {
 public:
@@ -52,9 +54,20 @@ public:
 		return ++mCurrent_instance_id;
 	}
 
+	void set_asset_manager(asset_manager* pAsset_manager)
+	{
+		mAsset_manager = pAsset_manager;
+	}
+
+	asset_manager* get_asset_manager() const
+	{
+		return mAsset_manager;
+	}
+
 private:
 	layer_container mLayers;
 	instance_id mCurrent_instance_id{ 0 };
+	asset_manager* mAsset_manager;
 };
 
 } // namespace wge::core

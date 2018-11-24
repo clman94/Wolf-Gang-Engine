@@ -478,7 +478,8 @@ public:
 	using include_callback = std::function<bool(const char* pInclude, const char* pFrom, script& pScript)>;
 
 public:
-	script()
+	script(core::layer& pLayer) :
+		core::system(pLayer)
 	{
 		using namespace AngelScript;
 

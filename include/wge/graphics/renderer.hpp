@@ -79,14 +79,15 @@ private:
 };
 
 class renderer :
-	public core::system_definition<
-		core::system_components<sprite_component>>
+	public core::system
 {
 	WGE_SYSTEM("Renderer", 43);
 public:
 	renderer(core::layer& pLayer) :
 		core::system(pLayer)
-	{}
+	{
+		initialize();
+	}
 
 	// Compile the default shaders and initialize opengl
 	void initialize();

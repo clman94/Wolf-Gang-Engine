@@ -54,8 +54,7 @@ inline std::string create_unique_name(std::string pPrefix, Titer pBegin, Titer p
 }
 
 game_object::game_object(layer& pLayer) :
-	mLayer(pLayer),
-	mInstance_id(pLayer)
+	mLayer(pLayer)
 {
 }
 
@@ -65,9 +64,6 @@ game_object::~game_object()
 
 bool game_object::has_component(int pId) const
 {
-	for (auto& i : get_layer().)
-		if (i->get_component_id() == pId)
-			return true;
 	return false;
 }
 
@@ -78,25 +74,20 @@ component* game_object::get_component(const std::string & pName)
 
 component* game_object::get_component(int pId) const
 {
-	for (auto& i : mComponents)
-		if (i->get_component_id() == pId)
-			return i.get();
 	return nullptr;
 }
 
 void game_object::remove_component(std::size_t pIndex)
 {
-	mComponents.erase(mComponents.begin() + pIndex);
 }
 
 void game_object::remove_components()
 {
-	mComponents.clear();
 }
 
 layer& game_object::get_layer() const
 {
-	return mContemLayerxt;
+	return mLayer;
 }
 
 } // namespace wge::core

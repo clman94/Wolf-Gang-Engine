@@ -32,7 +32,7 @@ class physics_world_component :
 {
 	WGE_COMPONENT("Physics World", 3)
 public:
-	physics_world_component(core::game_object* pObj);
+	physics_world_component();
 	virtual ~physics_world_component();
 
 	void set_gravity(math::vec2 pVec);

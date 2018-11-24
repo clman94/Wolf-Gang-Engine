@@ -5,18 +5,17 @@
 namespace wge::physics
 {
 
-physics_world_component::physics_world_component(core::game_object* pObj) :
-	component(pObj)
+physics_world_component::physics_world_component()
 {
 	mWorld = new b2World(b2Vec2(0, 1));
 	//mWorld->SetContactListener(&mContact_listener);
 	// Physics are updated before game logic does (which happenes on the "update" event).
-	subscribe_to(pObj, "on_preupdate", &physics_world_component::on_preupdate, this);
+	//subscribe_to(pObj, "on_preupdate", &physics_world_component::on_preupdate, this);
 }
 
 physics_world_component::~physics_world_component()
 {
-	get_object()->send_down("on_physics_reset");
+	//get_object()->send_down("on_physics_reset");
 	delete mWorld;
 }
 
@@ -48,7 +47,7 @@ void physics_world_component::on_preupdate(float pDelta)
 	// The reason for this limitation, is that the bodies can easily reference their
 	// parent for the world node and also it doesn't make sense to have bodies
 	// children of other bodies, it simply does not work that way.
-	get_object()->send("on_physics_update_bodies", this);
+	//get_object()->send("on_physics_update_bodies", this);
 
 	// Calculate physics
 	mWorld->Step(pDelta, 1, 1);

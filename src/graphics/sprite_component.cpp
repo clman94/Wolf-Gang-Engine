@@ -19,7 +19,7 @@ void sprite_component::deserialize(const json & pJson)
 {
 }
 
-render_batch_2d sprite_component::create_batch(core::transform_component& pTransform, renderer& pRenderer)
+void sprite_component::create_batch(core::transform_component& pTransform, renderer& pRenderer)
 {
 	// No texture
 	if (!mTexture)
@@ -56,7 +56,7 @@ render_batch_2d sprite_component::create_batch(core::transform_component& pTrans
 
 	batch.add_quad(verts);
 
-	return *batch.get_batch();
+	pRenderer.push_batch(*batch.get_batch());
 }
 
 // Set the texture based on its asset id.
@@ -64,7 +64,7 @@ render_batch_2d sprite_component::create_batch(core::transform_component& pTrans
 
 void sprite_component::set_texture(core::asset_uid pID)
 {
-	mTexture = get_asset_manager()->get_asset<texture>(pID);
+	//mTexture = get_asset_manager()->get_asset<texture>(pID);
 }
 
 // Set the texture based on its asset path.
@@ -72,5 +72,5 @@ void sprite_component::set_texture(core::asset_uid pID)
 
 void sprite_component::set_texture(const std::string & pPath)
 {
-	mTexture = get_asset_manager()->get_asset<texture>(pPath);
+	//mTexture = get_asset_manager()->get_asset<texture>(pPath);
 }

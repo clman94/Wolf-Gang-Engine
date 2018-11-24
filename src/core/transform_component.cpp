@@ -5,14 +5,13 @@
 using namespace wge;
 using namespace wge::core;
 
-transform_component::transform_component(game_object * pObj) :
-	component(pObj),
+transform_component::transform_component() :
 	mScale(1, 1),
 	mRotation(0),
 	mTransform_needs_update(true),
 	mCache_needs_update(true)
 {
-	subscribe_to(pObj, "on_transform_changed", &transform_component::on_transform_changed, this);
+
 }
 
 json transform_component::serialize() const
@@ -110,6 +109,7 @@ void transform_component::update_absolutes()
 		update_transform();
 		mCache_transform = mTransform;
 
+		/*
 		if (auto parent = get_object()->get_parent())
 		{
 			transform_component* transform = parent->get_component<transform_component>();
@@ -121,7 +121,7 @@ void transform_component::update_absolutes()
 					transform->get_absolute_rotation());
 				mCache_transform = transform->get_absolute_transform() * mCache_transform;
 			}
-		}
+		}*/
 		mCache_needs_update = false;
 	}
 }
@@ -138,13 +138,7 @@ void transform_component::update_transform()
 	}
 }
 
-void transform_component::on_transform_changed()
-{
-	mCache_needs_update = true;
-}
-
 void transform_component::notify_transform_changed()
 {
-	if (!mCache_needs_update)
-		get_object()->send_down("on_transform_changed");
+	mCache_needs_update = true;
 }
