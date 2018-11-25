@@ -73,7 +73,7 @@ public:
 	virtual bool has_aabb() const { return false; }
 	virtual math::aabb get_screen_aabb() const { return{}; };
 
-	int get_object_id() const
+	core::instance_id get_object_id() const
 	{
 		return mObject_id;
 	}
@@ -87,7 +87,7 @@ public:
 
 private:
 	std::string mName;
-	int mObject_id;
+	core::instance_id mObject_id;
 	core::instance_id mInstance_id;
 };
 

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <wge/core/instance_id.hpp>
+#include <wge/core/component_storage.hpp>
+
 #include <map>
 #include <any>
 #include <vector>
@@ -12,45 +15,40 @@ class component_manager
 {
 public:
 	template <typename T>
-	using container = std::vector<T>;
-
-	template <typename T>
 	T& add_component()
 	{
-		return get_container<T>().emplace_back();
+		return get_container<T>().create_component();
 	}
 
 	// Get first component of this type for this object
 	template <typename T>
-	T* get_first_component(int pObject_id)
+	T* get_first_component(instance_id pId)
 	{
 		for (auto& i : get_container<T>())
-			if (i.get_object_id() == pObject_id)
+			if (i.get_object_id() == pId)
 				return &i;
 		return nullptr;
 	}
 
-	// Call all components of this type
-	template <typename T>
-	std::vector<T*> get_all_components(int pObject_id)
-	{
-		for (auto& i : get_container<T>())
-			if (i.get_object_id() == pObject_id)
-				return &i;
-		return{};
-	}
-
 	// Returns the container associated with this type of component
 	template <typename T>
-	container<T>& get_container()
+	component_storage<T>& get_container()
 	{
+		using storage_type = component_storage<T>;
 		if (mContainers.find(T::COMPONENT_ID) == mContainers.end())
-			mContainers[T::COMPONENT_ID] = std::any(container<T>{});
-		return std::any_cast<container<T>&>(mContainers[T::COMPONENT_ID]);
+			mContainers[T::COMPONENT_ID] = std::make_unique<storage_type>();
+		return *dynamic_cast<storage_type*>(mContainers[T::COMPONENT_ID].get());
+	}
+
+	// Remove all components
+	void remove_entity(instance_id pId)
+	{
+		for (auto& i : mContainers)
+			i.second->remove_entity(pId);
 	}
 
 private:
-	std::map<int, std::any> mContainers;
+	std::map<int, std::unique_ptr<component_storage_base>> mContainers;
 };
 
 } // namespace wge::core

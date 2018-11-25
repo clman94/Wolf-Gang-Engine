@@ -87,7 +87,7 @@ public:
 		return mObjects[pIndex];
 	}
 
-	void remove(game_object mObj)
+	void remove(const game_object& mObj)
 	{
 		auto iter = std::find(mObjects.begin(), mObjects.end(), mObj);
 		if (iter != mObjects.end())
@@ -96,11 +96,7 @@ public:
 		}
 	}
 
-	game_object create_object()
-	{
-		auto& obj = mObjects.emplace_back(*this);
-		return obj;
-	}
+	game_object create_object();
 
 	template <typename T>
 	T* add_component(const game_object& pObj)
@@ -111,18 +107,19 @@ public:
 	}
 
 	template <typename T>
-	T* get_first_component(game_object pObj)
+	T* get_first_component(const game_object& pObj)
 	{
-		return mComponent_manager.get_first_component(pObj);
+		return mComponent_manager.get_first_component<T>(pObj.get_instance_id());
 	}
 
 	template <typename T>
-	component_manager::container<T>& get_component_container()
+	component_storage<T>& get_component_container()
 	{
 		return mComponent_manager.get_container<T>();
 	}
 
-	// Returns true if all components were found
+	// Populate these pointers with all the components this object has.
+	// However, it will return false if it couldn't find them all.
 	template <typename Tfirst, typename...Trest>
 	bool retrieve_components(game_object pObj, Tfirst*& pFirst, Trest*&...pRest)
 	{
@@ -130,18 +127,15 @@ public:
 		if (!comp)
 			return false;
 		pFirst = comp;
-		return retrieve_components(pObj, pRest...);
+		if constexpr (sizeof...(pRest) == 0)
+			return true;
+		else
+			return retrieve_components(pObj, pRest...);
 	}
 
-	// Returns true if all components were found
-	template <typename Tfirst>
-	bool retrieve_components(game_object pObj, Tfirst*& pFirst)
+	context& get_context() const
 	{
-		auto comp = mComponent_manager.get_first_component<Tfirst>(pObj.get_instance_id());
-		if (!comp)
-			return false;
-		pFirst = comp;
-		return true;
+		return mContext;
 	}
 
 private:
