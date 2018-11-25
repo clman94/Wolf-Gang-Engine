@@ -56,10 +56,10 @@ public:
 		return nullptr;
 	}
 
-	template <typename T>
-	void add_system()
+	template <typename T, typename...Targs>
+	void add_system(Targs&&...pArgs)
 	{
-		mSystems.emplace_back(new T(*this));
+		mSystems.emplace_back(new T(*this, pArgs...));
 	}
 
 	void set_name(const std::string_view& pName)
@@ -138,7 +138,36 @@ public:
 		return mContext;
 	}
 
+	void set_enabled(bool pEnabled)
+	{
+		mRecieve_update = pEnabled;
+	}
+
+	bool is_enabled() const
+	{
+		return mRecieve_update;
+	}
+
+	void preupdate(float pDelta)
+	{
+		for (auto& i : mSystems)
+			i->preupdate(pDelta);
+	}
+
+	void update(float pDelta)
+	{
+		for (auto& i : mSystems)
+			i->update(pDelta);
+	}
+
+	void postupdate(float pDelta)
+	{
+		for (auto& i : mSystems)
+			i->postupdate(pDelta);
+	}
+
 private:
+	bool mRecieve_update{ true };
 	std::string mName;
 	container mObjects;
 	std::reference_wrapper<context> mContext;
