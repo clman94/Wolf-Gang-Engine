@@ -153,6 +153,15 @@ void renderer::set_render_view(const math::aabb& mAABB)
 	mRender_view = mAABB;
 }
 
+void renderer::set_render_view_to_framebuffer(const math::vec2& pOffset, const math::vec2 & pScale)
+{
+	WGE_ASSERT(mFramebuffer);
+	const math::vec2 framebuffer_size = {
+		static_cast<float>(mFramebuffer->get_width()),
+		static_cast<float>(mFramebuffer->get_height()) };
+	set_render_view({ pOffset, pOffset + framebuffer_size * pScale });
+}
+
 math::aabb renderer::get_render_view() const
 {
 	return mRender_view;
@@ -177,11 +186,11 @@ void renderer::render()
 {
 	assert(mFramebuffer);
 
-	for (auto& i : get_layer())
+	for (std::size_t i = 0; i < get_layer().get_object_count(); i++)
 	{
 		core::transform_component* transform;
 		sprite_component* sprite;
-		if (get_layer().retrieve_components(i, sprite, transform))
+		if (get_layer().retrieve_components(get_layer().get_object(i), sprite, transform))
 		{
 			sprite->create_batch(*transform, *this);
 		}

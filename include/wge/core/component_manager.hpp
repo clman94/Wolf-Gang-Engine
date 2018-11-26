@@ -40,7 +40,7 @@ public:
 		return *dynamic_cast<storage_type*>(mContainers[T::COMPONENT_ID].get());
 	}
 
-	// Remove all components
+	// Remove all components for this entity
 	void remove_entity(instance_id pId)
 	{
 		for (auto& i : mContainers)

@@ -58,7 +58,9 @@ game_object::game_object(layer& pLayer) :
 {
 }
 
-game_object::~game_object()
+game_object::game_object(layer& pLayer, instance_id pId) :
+	mLayer(pLayer),
+	mInstance_id(pId)
 {
 }
 

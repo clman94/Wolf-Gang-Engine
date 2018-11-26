@@ -99,8 +99,8 @@ public:
 	}
 
 	void set_render_view(const math::aabb& mAABB);
+	void set_render_view_to_framebuffer(const math::vec2& pOffset = { 0, 0 }, const math::vec2& pScale = { 1, 1 });
 	math::aabb get_render_view() const;
-
 	math::vec2 get_render_view_scale() const;
 
 	// Convert world coordinates to screen coordinates

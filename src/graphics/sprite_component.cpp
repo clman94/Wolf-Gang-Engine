@@ -3,9 +3,8 @@
 #include <wge/core/asset_manager.hpp>
 #include <wge/core/object_node.hpp>
 
-
-using namespace wge;
-using namespace wge::graphics;
+namespace wge::graphics
+{
 
 json sprite_component::serialize() const
 {
@@ -59,18 +58,14 @@ void sprite_component::create_batch(core::transform_component& pTransform, rende
 	pRenderer.push_batch(*batch.get_batch());
 }
 
-// Set the texture based on its asset id.
-// This will use the asset manager in the current context.
-
 void sprite_component::set_texture(core::asset_uid pID)
 {
 	//mTexture = get_asset_manager()->get_asset<texture>(pID);
 }
 
-// Set the texture based on its asset path.
-// This will use the asset manager in the current context.
-
 void sprite_component::set_texture(const std::string & pPath)
 {
 	//mTexture = get_asset_manager()->get_asset<texture>(pPath);
 }
+
+} // namespace wge::graphics

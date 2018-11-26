@@ -386,11 +386,13 @@ private:
 
 		auto layer = mGame_context.create_layer();
 		layer->add_system<graphics::renderer>();
+
 		auto renderer = layer->get_system<graphics::renderer>();
 		renderer->set_pixel_size(0.01);
+
 		auto obj = layer->create_object();
-		layer->add_component<core::transform_component>(obj);
-		auto sprite = layer->add_component<graphics::sprite_component>(obj);
+		obj.add_component<core::transform_component>();
+		auto sprite = obj.add_component<graphics::sprite_component>();
 		sprite->set_texture(mAsset_manager.get_asset<graphics::texture>("mytex.png"));
 	}
 

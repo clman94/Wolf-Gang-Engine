@@ -21,14 +21,13 @@ class layer;
 class component;
 class game_object;
 
-// Object nodes are objects that relay
-// messages between components and to other 
-// game objects.
+// Game objects represent collections of components
+// in a layer.
 class game_object
 {
 public:
 	game_object(layer&);
-	~game_object();
+	game_object(layer&, instance_id);
 
 	// Check if this object has a component of a specific id
 	bool has_component(int pId) const;
@@ -39,6 +38,12 @@ public:
 	bool has_component() const
 	{
 		return has_component(T::COMPONENT_ID);
+	}
+
+	template <typename T>
+	auto add_component()
+	{
+		return get_layer().add_component<T>(*this);
 	}
 
 	// Get component by name
