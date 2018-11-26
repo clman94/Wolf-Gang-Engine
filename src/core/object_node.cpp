@@ -66,29 +66,42 @@ game_object::game_object(layer& pLayer, instance_id pId) :
 
 bool game_object::has_component(int pId) const
 {
+	WGE_ASSERT(mInstance_id);
 	return false;
 }
 
 component* game_object::get_component(const std::string & pName)
 {
+	WGE_ASSERT(mInstance_id);
 	return nullptr;
 }
 
 component* game_object::get_component(int pId) const
 {
+	WGE_ASSERT(mInstance_id);
 	return nullptr;
 }
 
 void game_object::remove_component(std::size_t pIndex)
 {
+	WGE_ASSERT(mInstance_id);
 }
 
 void game_object::remove_components()
 {
+	WGE_ASSERT(mInstance_id);
+}
+
+void game_object::destroy()
+{
+	WGE_ASSERT(mInstance_id);
+	get_layer().remove_object(*this);
+	mInstance_id.reset();
 }
 
 layer& game_object::get_layer() const
 {
+	WGE_ASSERT(mInstance_id);
 	return mLayer;
 }
 

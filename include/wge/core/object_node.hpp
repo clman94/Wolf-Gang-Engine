@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 
+#include <wge/logging/log.hpp>
 #include <wge/core/asset_config.hpp>
 #include <wge/core/instance_id.hpp>
 #include <wge/util/json_helpers.hpp>
@@ -22,7 +23,9 @@ class component;
 class game_object;
 
 // Game objects represent collections of components
-// in a layer.
+// in a layer. This class mainly acts like a handle
+// to an object in a layer and generally contains only
+// pointers.
 class game_object
 {
 public:
@@ -43,6 +46,7 @@ public:
 	template <typename T>
 	auto add_component()
 	{
+		WGE_ASSERT(mInstance_id);
 		return get_layer().add_component<T>(*this);
 	}
 
@@ -63,6 +67,11 @@ public:
 	// Remove all components
 	void remove_components();
 
+	// Remove this object from the layer.
+	// It is recommended that you discard this object because this
+	// function will leave it in an invalid state.
+	void destroy();
+
 	layer& get_layer() const;
 
 	instance_id get_instance_id() const
@@ -77,7 +86,7 @@ public:
 
 	operator bool() const
 	{
-		return mInstance_id == 0;
+		return mInstance_id.is_valid();
 	}
 
 	void reset()

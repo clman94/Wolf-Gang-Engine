@@ -10,30 +10,45 @@ using instance_id_t = std::uint64_t;
 class instance_id
 {
 public:
-	instance_id() = default;
-	instance_id(instance_id_t pVal) :
+	constexpr instance_id() = default;
+	constexpr instance_id(instance_id_t pVal) :
 		mValue(pVal)
 	{
 	}
 
-	bool operator<(const instance_id& pR) const
+	constexpr bool operator<(const instance_id& pR) const
 	{
 		return mValue < pR.mValue;
 	}
 
-	bool operator==(const instance_id& pR) const
+	constexpr bool operator==(const instance_id& pR) const
 	{
 		return mValue == pR.mValue;
 	}
 	
-	instance_id_t get_value() const
+	constexpr instance_id_t get_value() const
 	{
 		return mValue;
 	}
 
-	void set_value(instance_id_t pId)
+	constexpr void set_value(instance_id_t pId)
 	{
 		mValue = pId;
+	}
+
+	constexpr bool is_valid() const
+	{
+		return mValue != 0;
+	}
+
+	constexpr operator bool() const
+	{
+		return is_valid();
+	}
+
+	constexpr void reset()
+	{
+		mValue = 0;
 	}
 
 private:

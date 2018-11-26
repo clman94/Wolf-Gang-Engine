@@ -32,10 +32,7 @@ public:
 		return std::make_shared<layer>(pContext);
 	}
 
-	layer(context& pContext) :
-		mContext(pContext)
-	{
-	}
+	layer(context& pContext);
 
 	template <typename T>
 	T* get_system() const
@@ -43,20 +40,8 @@ public:
 		return dynamic_cast<T*>(get_system(T::SYSTEM_ID));
 	}
 
-	system* get_system(int pID) const
-	{
-		for (auto& i : mSystems)
-			if (i->get_system_id() == pID)
-				return i.get();
-		return nullptr;
-	}
-	system* get_system(const std::string& pName) const
-	{
-		for (auto& i : mSystems)
-			if (i->get_system_name() == pName)
-				return i.get();
-		return nullptr;
-	}
+	system* get_system(int pID) const;
+	system* get_system(const std::string& pName) const;
 
 	template <typename T, typename...Targs>
 	void add_system(Targs&&...pArgs)
@@ -64,30 +49,11 @@ public:
 		mSystems.emplace_back(new T(*this, pArgs...));
 	}
 
-	void set_name(const std::string_view& pName)
-	{
-		mName = pName;
-	}
-
-	const std::string& get_name() const
-	{
-		return mName;
-	}
-
-	void remove(const game_object& mObj)
-	{
-		for (std::size_t i = 0; i < mObjects.size(); i++)
-		{
-			if (mObjects[i].id == mObj.get_instance_id())
-			{
-				mComponent_manager.remove_entity(mObj.get_instance_id());
-				mObjects.erase(mObjects.begin() + i);
-				return;
-			}
-		}
-	}
+	void set_name(const std::string_view& pName);
+	const std::string& get_name() const;
 
 	game_object create_object();
+	void remove_object(const game_object& mObj);
 	game_object get_object(std::size_t pIndex);
 	game_object get_object(instance_id pId);
 	std::size_t get_object_count() const;
@@ -128,55 +94,22 @@ public:
 			return retrieve_components(pObj, pRest...);
 	}
 
-	context& get_context() const
-	{
-		return mContext;
-	}
+	context& get_context() const;
 
-	void set_enabled(bool pEnabled)
-	{
-		mRecieve_update = pEnabled;
-	}
+	void set_enabled(bool pEnabled);
+	bool is_enabled() const;
 
-	bool is_enabled() const
-	{
-		return mRecieve_update;
-	}
+	float get_time_scale() const;
+	void set_time_scale(float pScale);
 
-	float get_time_scale() const
-	{
-		return mTime_scale;
-	}
-
-	void set_time_scale(float pScale)
-	{
-		mTime_scale = pScale;
-	}
-
-	void preupdate(float pDelta)
-	{
-		pDelta *= mTime_scale;
-		for (auto& i : mSystems)
-			i->preupdate(pDelta);
-	}
-
-	void update(float pDelta)
-	{
-		pDelta *= mTime_scale;
-		for (auto& i : mSystems)
-			i->update(pDelta);
-	}
-
-	void postupdate(float pDelta)
-	{
-		pDelta *= mTime_scale;
-		for (auto& i : mSystems)
-			i->postupdate(pDelta);
-	}
+	void preupdate(float pDelta);
+	void update(float pDelta);
+	void postupdate(float pDelta);
 
 private:
 	struct object_data
 	{
+		object_data(instance_id pId);
 		std::string name;
 		instance_id id;
 	};
