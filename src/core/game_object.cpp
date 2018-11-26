@@ -1,5 +1,5 @@
 
-#include <wge/core/object_node.hpp>
+#include <wge/core/game_object.hpp>
 #include <wge/core/component.hpp>
 #include <wge/core/context.hpp>
 #include <wge/core/layer.hpp>
@@ -58,7 +58,7 @@ game_object::game_object(layer& pLayer) :
 {
 }
 
-game_object::game_object(layer& pLayer, instance_id pId) :
+game_object::game_object(layer& pLayer, object_id pId) :
 	mLayer(pLayer),
 	mInstance_id(pId)
 {
@@ -90,6 +90,18 @@ void game_object::remove_component(std::size_t pIndex)
 void game_object::remove_components()
 {
 	WGE_ASSERT(mInstance_id);
+}
+
+const std::string& game_object::get_name() const
+{
+	WGE_ASSERT(mInstance_id);
+	return get_layer().get_object_name(*this);
+}
+
+void game_object::set_name(const std::string & pName)
+{
+	WGE_ASSERT(mInstance_id);
+	get_layer().set_object_name(*this, pName);
 }
 
 void game_object::destroy()

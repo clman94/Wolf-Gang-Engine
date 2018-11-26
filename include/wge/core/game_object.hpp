@@ -23,14 +23,14 @@ class component;
 class game_object;
 
 // Game objects represent collections of components
-// in a layer. This class mainly acts like a handle
+// in a layer. This class mainly acts as a handle
 // to an object in a layer and generally contains only
 // pointers.
 class game_object
 {
 public:
 	game_object(layer&);
-	game_object(layer&, instance_id);
+	game_object(layer&, object_id);
 
 	// Check if this object has a component of a specific id
 	bool has_component(int pId) const;
@@ -67,6 +67,9 @@ public:
 	// Remove all components
 	void remove_components();
 
+	const std::string& get_name() const;
+	void set_name(const std::string& pName);
+
 	// Remove this object from the layer.
 	// It is recommended that you discard this object because this
 	// function will leave it in an invalid state.
@@ -74,12 +77,12 @@ public:
 
 	layer& get_layer() const;
 
-	instance_id get_instance_id() const
+	object_id get_instance_id() const
 	{
 		return mInstance_id;
 	}
 
-	void set_instance_id(instance_id pId)
+	void set_instance_id(object_id pId)
 	{
 		mInstance_id = pId;
 	}
@@ -96,7 +99,7 @@ public:
 
 private:
 	std::reference_wrapper<layer> mLayer;
-	instance_id mInstance_id;
+	object_id mInstance_id;
 };
 
 } // namespace wge::core

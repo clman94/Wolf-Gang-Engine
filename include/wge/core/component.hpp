@@ -73,22 +73,22 @@ public:
 	virtual bool has_aabb() const { return false; }
 	virtual math::aabb get_screen_aabb() const { return{}; };
 
-	core::instance_id get_object_id() const
+	object_id get_object_id() const
 	{
 		return mObject_id;
 	}
 
 	void set_object(const game_object& pObj);
 
-	core::instance_id get_instance_id() const
+	object_id get_instance_id() const
 	{
 		return mInstance_id;
 	}
 
 private:
 	std::string mName;
-	core::instance_id mObject_id;
-	core::instance_id mInstance_id;
+	object_id mObject_id;
+	component_id mInstance_id;
 };
 
 } // namespace wge::core

@@ -35,49 +35,54 @@ const std::string& layer::get_name() const
 
 game_object layer::create_object()
 {
-	auto& data = mObjects.emplace_back(get_context().get_unique_instance_id());
+	auto& data = mObject_manager.add_object(get_context().get_unique_instance_id());
 	return{ *this, data.id };
 }
 
 void layer::remove_object(const game_object& mObj)
 {
-	for (std::size_t i = 0; i < mObjects.size(); i++)
-	{
-		if (mObjects[i].id == mObj.get_instance_id())
-		{
-			mComponent_manager.remove_entity(mObj.get_instance_id());
-			mObjects.erase(mObjects.begin() + i);
-			return;
-		}
-	}
+	mComponent_manager.remove_object(mObj.get_instance_id());
+	mObject_manager.remove_object(mObj.get_instance_id());
 }
 
 game_object layer::get_object(std::size_t pIndex)
 {
-	if (pIndex >= mObjects.size())
+	auto data = mObject_manager.get_object_data(pIndex);
+	if (!data)
 		return{ *this };
-	return{ *this, mObjects[pIndex].id };
+	return{ *this, data->id };
 }
 
-game_object layer::get_object(instance_id pId)
+game_object layer::get_object(object_id pId)
 {
-	for (auto& i : mObjects)
-		if (i.id == pId)
-			return{ *this, i.id };
+	auto data = mObject_manager.get_object_data(pId);
+	if (data)
+		return{ *this, data->id };
 	return{ *this };
 }
 
 std::size_t layer::get_object_count() const
 {
-	return mObjects.size();
+	return mObject_manager.get_object_count();
 }
 
-std::string layer::get_object_name(const game_object & mObj)
+const std::string& layer::get_object_name(const game_object & pObj)
+{
+	auto* data = mObject_manager.get_object_data(pObj.get_instance_id());
+	WGE_ASSERT(data);
+	return data->name;
+}
+
+void layer::set_object_name(const game_object& pObj, const std::string& pName)
 {
 	for (auto& i : mObjects)
-		if (i.id == mObj.get_instance_id())
-			return i.name;
-	return{};
+	{
+		if (i.id == pObj.get_instance_id())
+		{
+			i.name = pName;
+			break;
+		}
+	}
 }
 
 context & layer::get_context() const
@@ -125,10 +130,5 @@ void layer::postupdate(float pDelta)
 	for (auto& i : mSystems)
 		i->postupdate(pDelta);
 }
-
-layer::object_data::object_data(instance_id pId) :
-	id(pId),
-	name("New Object")
-{}
 
 } // namespace wge::core

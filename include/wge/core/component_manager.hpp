@@ -15,14 +15,14 @@ class component_manager
 {
 public:
 	template <typename T>
-	T& add_component()
+	T& add_component(component_id pId)
 	{
-		return get_container<T>().create_component();
+		return get_container<T>().create_component(pId);
 	}
 
 	// Get first component of this type for this object
 	template <typename T>
-	T* get_first_component(instance_id pId)
+	T* get_first_component(object_id pId)
 	{
 		for (auto& i : get_container<T>())
 			if (i.get_object_id() == pId)
@@ -41,10 +41,10 @@ public:
 	}
 
 	// Remove all components for this entity
-	void remove_entity(instance_id pId)
+	void remove_object(object_id pId)
 	{
 		for (auto& i : mContainers)
-			i.second->remove_entity(pId);
+			i.second->remove_object(pId);
 	}
 
 private:

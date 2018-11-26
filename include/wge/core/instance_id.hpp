@@ -7,6 +7,8 @@ namespace wge::core
 
 using instance_id_t = std::uint64_t;
 
+// Template for strongly typed id values
+template <typename>
 class instance_id
 {
 public:
@@ -54,5 +56,13 @@ public:
 private:
 	instance_id_t mValue{ 0 };
 };
+
+class game_object;
+// Represents the instance id of a game object
+using object_id = instance_id<game_object>;
+
+class component;
+// Represents the instance id of a component
+using component_id = instance_id<component>;
 
 } // namespace wge::core

@@ -22,43 +22,14 @@
 #include "context.hpp"
 #include "component_inspector.hpp"
 #include "imgui_editor_tools.hpp"
+#include "imgui_ext.hpp"
 
 // GL
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
-// ImGUI
-#include <imgui/imgui.h>
-#include <imgui/imgui_impl_glfw.h>
-#include <imgui/imgui_impl_opengl3.h>
-#include <imgui/imgui_stl.h>
 
 #include <functional>
-
-namespace ImGui
-{
-
-// Draws a framebuffer
-inline void Image(const wge::graphics::framebuffer& mFramebuffer, const ImVec2& pSize = ImVec2(0, 0))
-{
-	ImGui::Image((void*)mFramebuffer.get_gl_texture(), pSize,
-		ImVec2(0, 1), ImVec2(1, 0)); // Y-axis needs to be flipped
-}
-
-// Draws a texture
-inline void Image(wge::graphics::texture::ptr mTexture, const ImVec2& pSize = ImVec2(0, 0))
-{
-	ImGui::Image((void*)mTexture->get_gl_texture(), pSize,
-		ImVec2(0, 1), ImVec2(1, 0)); // Y-axis needs to be flipped
-}
-
-// Draws a texture
-inline void ImageButton(wge::graphics::texture::ptr mTexture, const ImVec2& pSize = ImVec2(0, 0))
-{
-	ImGui::ImageButton((void*)mTexture->get_gl_texture(), pSize);
-}
-
-}
 
 namespace wge::editor
 {
@@ -272,6 +243,7 @@ private:
 				i->on_gui(delta);
 			}
 
+			show_settings();
 			show_asset_manager();
 
 			auto renderer = mGame_context.get_layer(0)->get_system<graphics::renderer>();
@@ -561,6 +533,21 @@ private:
 		return has_aabb;
 	}*/
 
+	void show_settings()
+	{
+		if (ImGui::Begin("Settings"))
+		{
+			ImGui::BeginTabBar("SettingsTabBar");
+			if (ImGui::BeginTabItem("Style"))
+			{
+				ImGui::ShowStyleEditor();
+				ImGui::EndTabItem();
+			}
+			ImGui::EndTabBar();
+		}
+		ImGui::End();
+	}
+
 	void show_viewport()
 	{
 		if (ImGui::Begin("Viewport"))
@@ -631,6 +618,42 @@ private:
 			visual_editor::end_editor();*/
 		}
 		ImGui::End();
+	}
+
+	void show_layer_objects(const core::layer::ptr& pLayer)
+	{
+		for (std::size_t i = 0; i < pLayer->get_object_count(); i++)
+		{
+			core::game_object obj = pLayer->get_object(i);
+			const auto selection = mContext.get_selection<selection_type::game_object>();
+			const bool is_selected = selection && selection->get_instance_id() == obj.get_instance_id();
+			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | (is_selected ? ImGuiTreeNodeFlags_Selected : 0);
+			if (ImGui::TreeNodeEx(pLayer->get_object_name(obj).c_str(), flags))
+			{
+				if (ImGui::IsItemClicked())
+					mContext.set_selection(obj);
+				ImGui::TreePop();
+			}
+		}
+	}
+
+	void show_layers()
+	{
+		for (auto& i : mGame_context.get_layer_container())
+		{
+			bool is_selected = mContext.get_selection<selection_type::layer>() == i;
+			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_OpenOnDoubleClick
+				| ImGuiTreeNodeFlags_OpenOnArrow | (is_selected ? ImGuiTreeNodeFlags_Selected : 0);
+			ImGui::PushID(&(*i));
+			if (ImGui::TreeNodeEx(i->get_name().c_str(), flags))
+			{
+				if (ImGui::IsItemClicked())
+					mContext.set_selection(i);
+				show_layer_objects(i);
+				ImGui::TreePop();
+			}
+			ImGui::PopID();
+		}
 	}
 
 	void show_objects()
@@ -705,8 +728,7 @@ private:
 				}
 				ImGui::EndMenuBar();
 			}
-			//for (auto& i : mGame_context.get_layer_container())
-			//	show_node_tree(i, mContext);
+			show_layers();
 		}
 		ImGui::End();
 		ImGui::PopStyleVar();
@@ -715,7 +737,7 @@ private:
 	void show_component_inspector()
 	{
 		ImGui::Begin("Inspector");
-		/*if (auto selection = mContext.get_selection<selection_type::game_object>())
+		if (auto selection = mContext.get_selection<selection_type::game_object>())
 		{
 			std::string name = selection->get_name();
 			if (ImGui::InputText("Name", &name))
@@ -783,7 +805,7 @@ private:
 				//	mSelected_node->add_component<script_component>();
 				ImGui::EndCombo();
 			}
-		}*/
+		}
 		ImGui::End();
 	}
 

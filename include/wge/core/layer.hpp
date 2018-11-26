@@ -1,8 +1,9 @@
 #pragma once
 
-#include <wge/core/object_node.hpp>
+#include <wge/core/game_object.hpp>
 #include <wge/core/system.hpp>
 #include <wge/core/component_manager.hpp>
+#include <wge/core/object_manager.hpp>
 
 #include <string>
 #include <string_view>
@@ -55,9 +56,10 @@ public:
 	game_object create_object();
 	void remove_object(const game_object& mObj);
 	game_object get_object(std::size_t pIndex);
-	game_object get_object(instance_id pId);
+	game_object get_object(object_id pId);
 	std::size_t get_object_count() const;
-	std::string get_object_name(const game_object& mObj);
+	const std::string& get_object_name(const game_object& pObj);
+	void set_object_name(const game_object& pObj, const std::string& pName);
 
 	template <typename T>
 	T* add_component(const game_object& pObj)
@@ -107,21 +109,13 @@ public:
 	void postupdate(float pDelta);
 
 private:
-	struct object_data
-	{
-		object_data(instance_id pId);
-		std::string name;
-		instance_id id;
-	};
-
-private:
 	float mTime_scale{ 1 };
 	bool mRecieve_update{ true };
 	std::string mName;
-	std::vector<object_data> mObjects;
 	std::reference_wrapper<context> mContext;
 	std::vector<std::unique_ptr<system>> mSystems;
 	component_manager mComponent_manager;
+	object_manager mObject_manager;
 };
 
 } // namespace wge::core

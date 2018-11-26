@@ -16,13 +16,13 @@ public:
 	virtual ~component_storage_base() {}
 
 	// Get all generic component referencing this object
-	virtual component_ptr_list get_all_components(instance_id pObject) = 0;
+	virtual component_ptr_list get_all_components(object_id pObject) = 0;
 
 	// Get first generic component referencing this object
-	virtual component* get_first_component(instance_id pObject) = 0;
+	virtual component* get_first_component(object_id pObject) = 0;
 
 	// Remove all components that reference this entity
-	virtual void remove_entity(instance_id pObject) = 0;
+	virtual void remove_object(object_id pObject) = 0;
 };
 
 template <typename T>
@@ -33,12 +33,12 @@ public:
 	using container = std::vector<T>;
 	using iterator = typename container::iterator; 
 
-	T& create_component()
+	T& create_component(component_id pId)
 	{
-		return mStorage.emplace_back();
+		return mStorage.emplace_back(pId);
 	}
 
-	virtual component_ptr_list get_all_components(instance_id pObject) override
+	virtual component_ptr_list get_all_components(object_id pObject) override
 	{
 		component_ptr_list result;
 		for (auto& i : mStorage)
@@ -47,7 +47,7 @@ public:
 		return result;
 	}
 
-	virtual component* get_first_component(instance_id pObject) override
+	virtual component* get_first_component(object_id pObject) override
 	{
 		for (auto& i : mStorage)
 			if (i.get_object_id() == pObject)
@@ -55,7 +55,7 @@ public:
 		return nullptr;
 	}
 
-	virtual void remove_entity(instance_id pObject) override
+	virtual void remove_object(object_id pObject) override
 	{
 		for (std::size_t i = 0; i < mStorage.size(); i++)
 			if (mStorage[i].get_object_id() == pObject)

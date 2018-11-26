@@ -1,6 +1,6 @@
 #pragma once
 
-#include <wge/core/object_node.hpp>
+#include <wge/core/instance_id.hpp>
 #include <wge/core/layer.hpp>
 
 #include <vector>
@@ -47,10 +47,9 @@ public:
 		return mLayers;
 	}
 
-	instance_id get_unique_instance_id()
+	instance_id_t get_unique_instance_id()
 	{
-		mCurrent_instance_id.set_value(mCurrent_instance_id.get_value() + 1);
-		return mCurrent_instance_id;
+		return ++mCurrent_instance_id;
 	}
 
 	void set_asset_manager(asset_manager* pAsset_manager)
@@ -65,7 +64,7 @@ public:
 
 private:
 	layer_container mLayers;
-	instance_id mCurrent_instance_id{ 0 };
+	instance_id_t mCurrent_instance_id{ 0 };
 	asset_manager* mAsset_manager;
 };
 
