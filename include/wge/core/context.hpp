@@ -9,8 +9,6 @@
 namespace wge::core
 {
 
-using instance_id = std::uint64_t;
-
 class asset_manager;
 
 class context
@@ -51,7 +49,8 @@ public:
 
 	instance_id get_unique_instance_id()
 	{
-		return ++mCurrent_instance_id;
+		mCurrent_instance_id.set_value(mCurrent_instance_id.get_value() + 1);
+		return mCurrent_instance_id;
 	}
 
 	void set_asset_manager(asset_manager* pAsset_manager)
