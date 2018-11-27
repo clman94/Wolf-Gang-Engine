@@ -721,16 +721,27 @@ private:
 					{
 						mGame_context.create_layer();
 					}
-					/*if (ImGui::MenuItem("Object 2D"))
+					if (ImGui::MenuItem("Object 2D"))
 					{
-						auto obj = core::game_object::create(mGame_context);
-						obj->set_name("New 2D Object");
-						obj->add_component<core::transform_component>();
-						if (!mGame_context.get_layer_container().empty())
-							mGame_context.get_layer(0)->add(obj);
+						// Find a layer to create the object in
+						core::layer* layer = nullptr;
+						if (auto selected_layer = mContext.get_selection<selection_type::layer>())
+							layer = &(*selected_layer);
+						else if (auto selected_object = mContext.get_selection<selection_type::game_object>())
+							layer = &selected_object->get_layer();
+
+						// Create the object
+						if (layer)
+						{
+							auto obj = layer->create_object();
+							obj.set_name("New 2D Object");
+							obj.add_component<core::transform_component>();
+						}
 						else
-							log::error() << "Could not create object" << log::endm;
-					}*/
+						{
+							log::error() << "Cannot create object; No layer or object is selected" << log::endm;
+						}
+					}
 					ImGui::EndMenu();
 				}
 				ImGui::EndMenuBar();

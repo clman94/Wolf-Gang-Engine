@@ -16,13 +16,18 @@ public:
 	virtual ~component_storage_base() {}
 
 	// Get all generic component referencing this object
-	virtual component_ptr_list get_all_components(object_id pObject) = 0;
+	virtual component_ptr_list get_all_components(object_id) = 0;
 
 	// Get first generic component referencing this object
-	virtual component* get_first_component(object_id pObject) = 0;
+	virtual component* get_first_component(object_id) = 0;
+
+	virtual int get_component_type() const = 0;
+
+	// Get component by its id
+	virtual component* get_component(component_id) = 0;
 
 	// Remove all components that reference this entity
-	virtual void remove_object(object_id pObject) = 0;
+	virtual void remove_object(object_id) = 0;
 };
 
 template <typename T>
@@ -51,6 +56,18 @@ public:
 	{
 		for (auto& i : mStorage)
 			if (i.get_object_id() == pObject)
+				return &i;
+		return nullptr;
+	}
+	virtual int get_component_type() const override
+	{
+		return T::COMPONENT_ID;
+	}
+
+	virtual component* get_component(component_id pId) override
+	{
+		for (auto& i : mStorage)
+			if (i.get_instance_id() == pId)
 				return &i;
 		return nullptr;
 	}

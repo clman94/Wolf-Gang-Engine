@@ -16,11 +16,11 @@ object_data& object_manager::add_object(object_id pId)
 
 void object_manager::remove_object(object_id pId)
 {
-	for (std::size_t i = 0; i < mObjects.size(); i++)
+	for (auto i = mObjects.begin(); i != mObjects.end(); i++)
 	{
-		if (mObjects[i].id == pId)
+		if (i->id == pId)
 		{
-			mObjects.erase(mObjects.begin() + i);
+			mObjects.erase(i);
 			break;
 		}
 	}
@@ -31,20 +31,20 @@ std::size_t object_manager::get_object_count() const
 	return mObjects.size();
 }
 
-void object_manager::register_component(component * pComponent)
+void object_manager::register_component(component* pComponent)
 {
 	auto data = get_object_data(pComponent->get_object_id());
 	WGE_ASSERT(data);
-	data->components.push_back(pComponent);
+	data->components.push_back({ pComponent->get_component_id(), pComponent->get_instance_id() });
 }
 
-void object_manager::unregister_component(component * pComponent)
+void object_manager::unregister_component(component* pComponent)
 {
 	auto data = get_object_data(pComponent->get_object_id());
 	WGE_ASSERT(data);
 	for (std::size_t i = 0; i < data->components.size(); i++)
 	{
-		if (data->components[i] == pComponent)
+		if (data->components[i].id == pComponent->get_instance_id())
 		{
 			data->components.erase(data->components.begin() + i);
 			break;
@@ -62,7 +62,9 @@ object_data* object_manager::get_object_data(object_id pId)
 
 object_data* object_manager::get_object_data(std::size_t pIndex)
 {
-	return &mObjects[pIndex];
+	auto i = mObjects.begin();
+	std::advance(i, pIndex);
+	return &(*i);
 }
 
 } // namespace wge::core

@@ -30,6 +30,14 @@ public:
 		return nullptr;
 	}
 
+	component* get_component(int pType, component_id pId)
+	{
+		auto iter = mContainers.find(pType);
+		if (iter == mContainers.end())
+			return nullptr;
+		return iter->second->get_component(pId);
+	}
+
 	// Returns the container associated with this type of component
 	template <typename T>
 	component_storage<T>& get_container()

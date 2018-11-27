@@ -68,8 +68,8 @@ game_object::game_object(layer& pLayer, object_data& pData) :
 bool game_object::has_component(int pId) const
 {
 	WGE_ASSERT(mData);
-	for (auto i : mData->components)
-		if (i->get_component_id() == pId)
+	for (auto& i : mData->components)
+		if (i.type == pId)
 			return true;
 	return false;
 }
@@ -83,15 +83,19 @@ std::size_t game_object::get_component_count() const
 component* game_object::get_component_index(std::size_t pIndex)
 {
 	WGE_ASSERT(mData);
-	return mData->components[pIndex];
+	auto& comp_entry = mData->components[pIndex];
+	return get_layer().get_component(comp_entry.type, comp_entry.id);
 }
 
 component* game_object::get_component(const std::string & pName)
 {
 	WGE_ASSERT(mData);
-	for (auto i : mData->components)
-		if (i->get_name() == pName)
-			return i;
+	for (auto& i : mData->components)
+	{
+		component* comp = get_layer().get_component(i.type, i.id);
+		if (comp->get_name() == pName)
+			return comp;
+	}
 	return nullptr;
 }
 

@@ -74,6 +74,11 @@ public:
 		return mComponent_manager.get_first_component<T>(pObj.get_instance_id());
 	}
 
+	component* get_component(int pType, component_id pId)
+	{
+		return mComponent_manager.get_component(pType, pId);
+	}
+
 	template <typename T>
 	component_storage<T>& get_component_container()
 	{

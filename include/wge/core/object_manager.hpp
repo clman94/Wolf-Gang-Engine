@@ -2,7 +2,7 @@
 
 #include <wge/core/game_object.hpp>
 #include <wge/core/component.hpp>
-#include <vector>
+#include <list>
 #include <utility>
 #include <optional>
 
@@ -14,7 +14,12 @@ struct object_data
 	object_data(object_id pId);
 	std::string name;
 	object_id id;
-	std::vector<component*> components;
+	struct component_entry
+	{
+		int type;
+		component_id id;
+	};
+	std::vector<component_entry> components;
 };
 
 class object_manager
@@ -36,7 +41,7 @@ public:
 	object_data* get_object_data(std::size_t pIndex);
 
 private:
-	std::vector<object_data> mObjects;
+	std::list<object_data> mObjects;
 };
 
 } // namespace wge::core
