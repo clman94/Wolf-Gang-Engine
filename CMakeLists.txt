@@ -228,7 +228,7 @@ set(ALSOFT_EXAMPLES OFF)
 set(ALSOFT_TESTS OFF)
 set(ALSOFT_UTILS OFF)
 set(ALSOFT_CONFIG OFF)
-add_subdirectory("${WGE_3RDPARTY_DIR}/OpenAL-Soft")
+add_subdirectory("${WGE_3RDPARTY_DIR}/openal-soft")
 include_directories("${OpenAL_SOURCE_DIR}/include")
 target_link_libraries(WolfGangEngine OpenAL)
 
