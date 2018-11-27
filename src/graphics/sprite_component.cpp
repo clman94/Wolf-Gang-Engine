@@ -58,14 +58,4 @@ void sprite_component::create_batch(core::transform_component& pTransform, rende
 	pRenderer.push_batch(*batch.get_batch());
 }
 
-void sprite_component::set_texture(core::asset_uid pID)
-{
-	//mTexture = get_asset_manager()->get_asset<texture>(pID);
-}
-
-void sprite_component::set_texture(const std::string & pPath)
-{
-	//mTexture = get_asset_manager()->get_asset<texture>(pPath);
-}
-
 } // namespace wge::graphics

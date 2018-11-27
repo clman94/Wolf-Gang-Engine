@@ -412,7 +412,7 @@ private:
 
 		// Inspector for sprite_component
 		mInspectors.add_inspector(graphics::sprite_component::COMPONENT_ID,
-			[](core::component* pComponent)
+			[this](core::component* pComponent)
 		{
 			auto sprite = dynamic_cast<graphics::sprite_component*>(pComponent);
 			math::vec2 offset = sprite->get_offset();
@@ -439,7 +439,8 @@ private:
 				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("textureAsset"))
 				{
 					core::asset_uid id = *(core::asset_uid*)payload->Data;
-					sprite->set_texture(id);
+					auto asset = mAsset_manager.get_asset<graphics::texture>(id);
+					sprite->set_texture(asset);
 				}
 				ImGui::EndDragDropTarget();
 			}

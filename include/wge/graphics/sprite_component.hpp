@@ -53,12 +53,6 @@ public:
 	{
 		mTexture = pAsset;
 	}
-	// Set the texture based on its asset id.
-	// This will use the asset manager in the current context.
-	void set_texture(core::asset_uid pID);
-	// Set the texture based on its asset path.
-	// This will use the asset manager in the current context.
-	void set_texture(const std::string& pPath);
 	// Get the current texture
 	texture::ptr get_texture() const
 	{
