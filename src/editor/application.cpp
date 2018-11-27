@@ -252,7 +252,7 @@ private:
 			show_viewport();
 
 			show_objects();
-			show_component_inspector();
+			show_inspector();
 
 			renderer->set_framebuffer(&mViewport_framebuffer);
 			renderer->set_render_view({
@@ -573,7 +573,11 @@ private:
 				const math::vec2 mouse(ImGui::GetMousePos().x - cursor.x, ImGui::GetMousePos().y - cursor.y);
 				for (auto layer : mGame_context.get_layer_container())
 				{
-					const math::vec2 render_view_scale = layer->get_system<graphics::renderer>()->get_render_view_scale();
+					graphics::renderer* renderer = layer->get_system<graphics::renderer>();
+					if (!renderer)
+						continue;
+
+					const math::vec2 render_view_scale = renderer->get_render_view_scale();
 					for (std::size_t i = 0; i < layer->get_object_count(); i++)
 					{
 						auto obj = layer->get_object(i);
@@ -756,79 +760,93 @@ private:
 		ImGui::PopStyleVar();
 	}
 
-	void show_component_inspector()
+	void show_inspector()
 	{
-		ImGui::Begin("Inspector");
-		if (auto selection = mContext.get_selection<selection_type::game_object>())
+		if (ImGui::Begin("Inspector"))
 		{
-			std::string name = selection->get_name();
-			if (ImGui::InputText("Name", &name))
-				selection->set_name(name);
-
-			for (std::size_t i = 0; i < selection->get_component_count(); i++)
-			{
-				core::component* comp = selection->get_component_index(i);
-				ImGui::PushID(comp);
-
-				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4, 4));
-				ImGui::BeginChild(ImGui::GetID("Actions"),
-					ImVec2(0, (ImGui::GetStyle().WindowPadding.y * 2
-						+ ImGui::GetStyle().FramePadding.y * 2
-						+ ImGui::GetFontSize()) * 2), true);
-
-				bool open = collapsing_arrow("CollapsingArrow", nullptr, true);
-
-				ImGui::SameLine();
-				{
-					ImGui::PushItemWidth(150);
-					std::string name = comp->get_name();
-					if (ImGui::InputText("##NameInput", &name))
-						comp->set_name(name);
-					ImGui::PopItemWidth();
-				}
-
-				ImGui::SameLine();
-				ImGui::Text(comp->get_component_name().c_str());
-
-				ImGui::Dummy(ImVec2(ImGui::GetWindowContentRegionWidth()
-					- (ImGui::CalcTextSize("Delete ").x
-						+ ImGui::GetStyle().WindowPadding.x * 2
-						+ ImGui::GetStyle().FramePadding.x * 2), 1));
-				ImGui::SameLine();
-
-				bool delete_component = false;
-				delete_component = ImGui::Button("Delete");
-
-				ImGui::EndChild();
-				ImGui::PopStyleVar();
-
-				if (open)
-					mInspectors.on_gui(comp);
-
-				ImGui::PopID();
-				if (delete_component)
-					selection->remove_component(i--);
-			}
-
-			ImGui::Separator();
-			if (ImGui::BeginCombo("###Add Component", "Add Component"))
-			{
-				if (ImGui::Selectable("Transform 2D"))
-					selection->add_component<core::transform_component>();
-				if (ImGui::Selectable("Physics World"))
-					selection->add_component<physics::physics_world_component>();
-				if (ImGui::Selectable("Physics"))
-					selection->add_component<physics::physics_component>();
-				if (ImGui::Selectable("Box Collider"))
-					selection->add_component<physics::box_collider_component>();
-				if (ImGui::Selectable("Sprite"))
-					selection->add_component<graphics::sprite_component>();
-				//if (ImGui::Selectable("Script"))
-				//	mSelected_node->add_component<script_component>();
-				ImGui::EndCombo();
-			}
+			if (auto selection = mContext.get_selection<selection_type::game_object>())
+				show_component_inspector(*selection);
+			else if (auto selection = mContext.get_selection<selection_type::layer>())
+				show_layer_inspector(*selection);
 		}
 		ImGui::End();
+	}
+
+	void show_layer_inspector(core::layer& pLayer)
+	{
+		std::string name = pLayer.get_name();
+		if (ImGui::InputText("Name", &name))
+			pLayer.set_name(name);
+	}
+
+	void show_component_inspector(core::game_object pObj)
+	{
+		std::string name = pObj.get_name();
+		if (ImGui::InputText("Name", &name))
+			pObj.set_name(name);
+
+		for (std::size_t i = 0; i < pObj.get_component_count(); i++)
+		{
+			core::component* comp = pObj.get_component_index(i);
+			ImGui::PushID(comp);
+
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4, 4));
+			ImGui::BeginChild(ImGui::GetID("Actions"),
+				ImVec2(0, (ImGui::GetStyle().WindowPadding.y * 2
+					+ ImGui::GetStyle().FramePadding.y * 2
+					+ ImGui::GetFontSize()) * 2), true);
+
+			bool open = collapsing_arrow("CollapsingArrow", nullptr, true);
+
+			ImGui::SameLine();
+			{
+				ImGui::PushItemWidth(150);
+				std::string name = comp->get_name();
+				if (ImGui::InputText("##NameInput", &name))
+					comp->set_name(name);
+				ImGui::PopItemWidth();
+			}
+
+			ImGui::SameLine();
+			ImGui::Text(comp->get_component_name().c_str());
+
+			ImGui::Dummy(ImVec2(ImGui::GetWindowContentRegionWidth()
+				- (ImGui::CalcTextSize("Delete ").x
+					+ ImGui::GetStyle().WindowPadding.x * 2
+					+ ImGui::GetStyle().FramePadding.x * 2), 1));
+			ImGui::SameLine();
+
+			bool delete_component = false;
+			delete_component = ImGui::Button("Delete");
+
+			ImGui::EndChild();
+			ImGui::PopStyleVar();
+
+			if (open)
+				mInspectors.on_gui(comp);
+
+			ImGui::PopID();
+			if (delete_component)
+				pObj.remove_component(i--);
+		}
+
+		ImGui::Separator();
+		if (ImGui::BeginCombo("###Add Component", "Add Component"))
+		{
+			if (ImGui::Selectable("Transform 2D"))
+				pObj.add_component<core::transform_component>();
+			if (ImGui::Selectable("Physics World"))
+				pObj.add_component<physics::physics_world_component>();
+			if (ImGui::Selectable("Physics"))
+				pObj.add_component<physics::physics_component>();
+			if (ImGui::Selectable("Box Collider"))
+				pObj.add_component<physics::box_collider_component>();
+			if (ImGui::Selectable("Sprite"))
+				pObj.add_component<graphics::sprite_component>();
+			//if (ImGui::Selectable("Script"))
+			//	mSelected_node->add_component<script_component>();
+			ImGui::EndCombo();
+		}
 	}
 
 	void show_asset_picker()
@@ -851,11 +869,6 @@ private:
 			ImGui::EndChild();
 			ImGui::EndPopup();
 		}
-	}
-
-	core::layer& get_current_layer()
-	{
-
 	}
 
 private:
