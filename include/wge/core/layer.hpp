@@ -64,6 +64,7 @@ public:
 	{
 		auto* comp = &mComponent_manager.add_component<T>(get_context().get_unique_instance_id());
 		comp->set_object(pObj);
+		mObject_manager.register_component(comp);
 		return comp;
 	}
 
