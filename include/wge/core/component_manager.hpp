@@ -20,6 +20,13 @@ public:
 		return get_container<T>().create_component(pId);
 	}
 
+	void remove_component(int pType, component_id pId)
+	{
+		auto iter = mContainers.find(pType);
+		if (iter != mContainers.end())
+			iter->second->remove_component(pId);
+	}
+
 	// Get first component of this type for this object
 	template <typename T>
 	T* get_first_component(object_id pId)

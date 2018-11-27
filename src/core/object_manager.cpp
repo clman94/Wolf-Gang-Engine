@@ -40,11 +40,16 @@ void object_manager::register_component(component* pComponent)
 
 void object_manager::unregister_component(component* pComponent)
 {
-	auto data = get_object_data(pComponent->get_object_id());
+	unregister_component(pComponent->get_object_id(), pComponent->get_instance_id());
+}
+
+void object_manager::unregister_component(object_id pObj_id, component_id pComp_id)
+{
+	auto data = get_object_data(pObj_id);
 	WGE_ASSERT(data);
 	for (std::size_t i = 0; i < data->components.size(); i++)
 	{
-		if (data->components[i].id == pComponent->get_instance_id())
+		if (data->components[i].id == pComp_id)
 		{
 			data->components.erase(data->components.begin() + i);
 			break;

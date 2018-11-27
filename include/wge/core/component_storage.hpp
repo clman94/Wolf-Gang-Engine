@@ -15,6 +15,8 @@ public:
 
 	virtual ~component_storage_base() {}
 
+	virtual void remove_component(component_id pId) = 0;
+
 	// Get all generic component referencing this object
 	virtual component_ptr_list get_all_components(object_id) = 0;
 
@@ -41,6 +43,18 @@ public:
 	T& create_component(component_id pId)
 	{
 		return mStorage.emplace_back(pId);
+	}
+
+	virtual void remove_component(component_id pId)
+	{
+		for (std::size_t i = 0; i < mStorage.size(); i++)
+		{
+			if (mStorage[i].get_instance_id() == pId)
+			{
+				mStorage.erase(mStorage.begin() + i);
+				break;
+			}
+		}
 	}
 
 	virtual component_ptr_list get_all_components(object_id pObject) override

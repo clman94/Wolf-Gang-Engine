@@ -86,6 +86,14 @@ public:
 		return mComponent_manager.get_container<T>();
 	}
 
+	void remove_component(int pType, component_id pId)
+	{
+		component* comp = get_component(pType, pId);
+		object_id obj_id = comp->get_object_id();
+		mObject_manager.unregister_component(obj_id, pId);
+		mComponent_manager.remove_component(pType, pId);
+	}
+
 	// Populate these pointers with all the components this object has.
 	// However, it will return false if it couldn't find them all.
 	template <typename Tfirst, typename...Trest>

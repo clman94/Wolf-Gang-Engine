@@ -108,6 +108,8 @@ component* game_object::get_component(int pType) const
 void game_object::remove_component(std::size_t pIndex)
 {
 	WGE_ASSERT(mData);
+	auto& comp_entry = mData->components[pIndex];
+	get_layer().remove_component(comp_entry.type, comp_entry.id);
 }
 
 void game_object::remove_components()

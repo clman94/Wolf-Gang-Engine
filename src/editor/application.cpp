@@ -768,8 +768,18 @@ private:
 				show_component_inspector(*selection);
 			else if (auto selection = mContext.get_selection<selection_type::layer>())
 				show_layer_inspector(*selection);
+			else if (auto selection = mContext.get_selection<selection_type::asset>())
+				show_asset_inspector(selection);
 		}
 		ImGui::End();
+	}
+	
+	void show_asset_inspector(core::asset::ptr pAsset)
+	{
+		std::string path = pAsset->get_path().string();
+		ImGui::InputText("Name", &path, ImGuiInputTextFlags_ReadOnly);
+		ImGui::Text(("Asset Id: " + std::to_string(pAsset->get_id())).c_str());
+		ImGui::Separator();
 	}
 
 	void show_layer_inspector(core::layer& pLayer)
@@ -777,6 +787,27 @@ private:
 		std::string name = pLayer.get_name();
 		if (ImGui::InputText("Name", &name))
 			pLayer.set_name(name);
+		ImGui::Separator();
+		ImGui::BeginTabBar("LayerSystems");
+
+		if (ImGui::BeginTabItem("Rendering"))
+		{
+			graphics::renderer* renderer = pLayer.get_system<graphics::renderer>();
+			if (!renderer)
+			{
+				if (ImGui::Button("Enable"))
+					pLayer.add_system<graphics::renderer>();
+			}
+			else
+			{
+				float pixel_size = renderer->get_pixel_size();
+				if (ImGui::DragFloat("Pixel Size", &pixel_size, 0.01f))
+					renderer->set_pixel_size(pixel_size);
+			}
+			ImGui::EndTabItem();
+		}
+
+		ImGui::EndTabBar();
 	}
 
 	void show_component_inspector(core::game_object pObj)
@@ -784,7 +815,7 @@ private:
 		std::string name = pObj.get_name();
 		if (ImGui::InputText("Name", &name))
 			pObj.set_name(name);
-
+		ImGui::Separator();
 		for (std::size_t i = 0; i < pObj.get_component_count(); i++)
 		{
 			core::component* comp = pObj.get_component_index(i);

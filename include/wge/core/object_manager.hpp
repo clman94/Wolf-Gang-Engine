@@ -34,6 +34,7 @@ public:
 	void register_component(component* pComponent);
 	// Unregister a component
 	void unregister_component(component* pComponent);
+	void unregister_component(object_id pObj_id, component_id pComp_id);
 
 	// Get object data by object id
 	object_data* get_object_data(object_id pId);
