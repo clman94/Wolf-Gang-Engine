@@ -3,7 +3,7 @@
 #include <queue>
 
 #include <wge/core/component.hpp>
-#include <wge/core/object_node.hpp>
+#include <wge/core/game_object.hpp>
 #include <wge/math/vector.hpp>
 
 #include <Box2D/Dynamics/b2WorldCallbacks.h>
@@ -32,7 +32,7 @@ class physics_world_component :
 {
 	WGE_COMPONENT("Physics World", 3)
 public:
-	physics_world_component();
+	physics_world_component(core::component_id pId);
 	virtual ~physics_world_component();
 
 	void set_gravity(math::vec2 pVec);

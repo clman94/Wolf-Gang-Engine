@@ -54,67 +54,96 @@ inline std::string create_unique_name(std::string pPrefix, Titer pBegin, Titer p
 }
 
 game_object::game_object(layer& pLayer) :
-	mLayer(pLayer)
+	mLayer(pLayer),
+	mData(nullptr)
 {
 }
 
-game_object::game_object(layer& pLayer, object_id pId) :
+game_object::game_object(layer& pLayer, object_data& pData) :
 	mLayer(pLayer),
-	mInstance_id(pId)
+	mData(&pData)
 {
 }
 
 bool game_object::has_component(int pId) const
 {
-	WGE_ASSERT(mInstance_id);
+	WGE_ASSERT(mData);
+	for (auto i : mData->components)
+		if (i->get_component_id() == pId)
+			return true;
 	return false;
+}
+
+std::size_t game_object::get_component_count() const
+{
+	WGE_ASSERT(mData);
+	return mData->components.size();
+}
+
+component* game_object::get_component_index(std::size_t pIndex)
+{
+	WGE_ASSERT(mData);
+	return mData->components[pIndex];
 }
 
 component* game_object::get_component(const std::string & pName)
 {
-	WGE_ASSERT(mInstance_id);
+	WGE_ASSERT(mData);
+	for (auto i : mData->components)
+		if (i->get_name() == pName)
+			return i;
 	return nullptr;
 }
 
 component* game_object::get_component(int pId) const
 {
-	WGE_ASSERT(mInstance_id);
+	WGE_ASSERT(mData);
 	return nullptr;
 }
 
 void game_object::remove_component(std::size_t pIndex)
 {
-	WGE_ASSERT(mInstance_id);
+	WGE_ASSERT(mData);
 }
 
 void game_object::remove_components()
 {
-	WGE_ASSERT(mInstance_id);
+	WGE_ASSERT(mData);
 }
 
 const std::string& game_object::get_name() const
 {
-	WGE_ASSERT(mInstance_id);
-	return get_layer().get_object_name(*this);
+	WGE_ASSERT(mData);
+	return mData->name;
 }
 
 void game_object::set_name(const std::string & pName)
 {
-	WGE_ASSERT(mInstance_id);
-	get_layer().set_object_name(*this, pName);
+	WGE_ASSERT(mData);
+	mData->name = pName;
 }
 
 void game_object::destroy()
 {
-	WGE_ASSERT(mInstance_id);
+	WGE_ASSERT(mData);
 	get_layer().remove_object(*this);
-	mInstance_id.reset();
+	mData = nullptr;
 }
 
 layer& game_object::get_layer() const
 {
-	WGE_ASSERT(mInstance_id);
+	WGE_ASSERT(mData);
 	return mLayer;
+}
+
+object_id game_object::get_instance_id() const
+{
+	return mData->id;
+}
+
+void game_object::set_instance_id(object_id pId)
+{
+	mData->id = pId;
 }
 
 } // namespace wge::core

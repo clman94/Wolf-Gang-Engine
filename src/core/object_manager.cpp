@@ -4,12 +4,12 @@ namespace wge::core
 {
 
 object_data::object_data(object_id pId) :
-	id(pId)
+	id(pId),
+	name("New Object")
 {
 }
 
-
-object_data & object_manager::add_object(object_id pId)
+object_data& object_manager::add_object(object_id pId)
 {
 	return mObjects.emplace_back(pId);
 }
@@ -30,8 +30,6 @@ std::size_t object_manager::get_object_count() const
 {
 	return mObjects.size();
 }
-
-// Registers a component for an object
 
 void object_manager::register_component(component * pComponent)
 {
@@ -54,7 +52,7 @@ void object_manager::unregister_component(component * pComponent)
 	}
 }
 
-object_data * object_manager::get_object_data(object_id pId)
+object_data* object_manager::get_object_data(object_id pId)
 {
 	for (auto& i : mObjects)
 		if (i.id == pId)
@@ -62,7 +60,7 @@ object_data * object_manager::get_object_data(object_id pId)
 	return nullptr;
 }
 
-object_data * object_manager::get_object_data(std::size_t pIndex)
+object_data* object_manager::get_object_data(std::size_t pIndex)
 {
 	return &mObjects[pIndex];
 }

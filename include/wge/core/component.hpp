@@ -49,6 +49,9 @@ class asset_manager;
 class component
 {
 public:
+	component(component_id pId):
+		mInstance_id(pId)
+	{}
 	virtual ~component() {}
 
 	// Save the configuration of this component to json
@@ -80,7 +83,7 @@ public:
 
 	void set_object(const game_object& pObj);
 
-	object_id get_instance_id() const
+	component_id get_instance_id() const
 	{
 		return mInstance_id;
 	}

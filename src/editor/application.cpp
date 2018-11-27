@@ -357,6 +357,7 @@ private:
 		mAsset_manager.load_assets();
 
 		auto layer = mGame_context.create_layer();
+		layer->set_name("Layer1");
 		layer->add_system<graphics::renderer>();
 
 		auto renderer = layer->get_system<graphics::renderer>();
@@ -625,15 +626,19 @@ private:
 		for (std::size_t i = 0; i < pLayer->get_object_count(); i++)
 		{
 			core::game_object obj = pLayer->get_object(i);
+			ImGui::PushID(obj.get_instance_id().get_value());
+
 			const auto selection = mContext.get_selection<selection_type::game_object>();
 			const bool is_selected = selection && selection->get_instance_id() == obj.get_instance_id();
 			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | (is_selected ? ImGuiTreeNodeFlags_Selected : 0);
-			if (ImGui::TreeNodeEx(pLayer->get_object_name(obj).c_str(), flags))
+			if (ImGui::TreeNodeEx((obj.get_name() + "###GameObject").c_str(), flags))
 			{
 				if (ImGui::IsItemClicked())
 					mContext.set_selection(obj);
 				ImGui::TreePop();
 			}
+
+			ImGui::PopID();
 		}
 	}
 
@@ -641,17 +646,19 @@ private:
 	{
 		for (auto& i : mGame_context.get_layer_container())
 		{
+			ImGui::PushID(&(*i));
+
 			bool is_selected = mContext.get_selection<selection_type::layer>() == i;
 			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_OpenOnDoubleClick
 				| ImGuiTreeNodeFlags_OpenOnArrow | (is_selected ? ImGuiTreeNodeFlags_Selected : 0);
-			ImGui::PushID(&(*i));
-			if (ImGui::TreeNodeEx(i->get_name().c_str(), flags))
+			if (ImGui::TreeNodeEx((i->get_name() + "###Layer").c_str(), flags))
 			{
 				if (ImGui::IsItemClicked())
 					mContext.set_selection(i);
 				show_layer_objects(i);
 				ImGui::TreePop();
 			}
+
 			ImGui::PopID();
 		}
 	}

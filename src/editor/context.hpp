@@ -5,7 +5,7 @@
 #include <wge/logging/log.hpp>
 #include <wge/core/asset.hpp>
 #include <wge/core/layer.hpp>
-#include <wge/core/object_node.hpp>
+#include <wge/core/game_object.hpp>
 #include <optional>
 
 #include "asset_document.hpp"

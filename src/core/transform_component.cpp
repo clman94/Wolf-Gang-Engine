@@ -1,11 +1,12 @@
 
 #include <wge/core/transform_component.hpp>
-#include <wge/core/object_node.hpp>
+#include <wge/core/game_object.hpp>
 
 using namespace wge;
 using namespace wge::core;
 
-transform_component::transform_component() :
+transform_component::transform_component(core::component_id pId) :
+	core::component(pId),
 	mScale(1, 1),
 	mRotation(0),
 	mTransform_needs_update(true),

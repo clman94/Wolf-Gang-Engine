@@ -10,9 +10,10 @@
 using namespace wge;
 using namespace wge::physics;
 
-physics_component::physics_component()
+physics_component::physics_component(core::component_id pId) :
+	core::component(pId),
+	mBody(nullptr)
 {
-	mBody = nullptr;
 }
 
 physics_component::~physics_component()

@@ -20,7 +20,7 @@ struct has_component_id_member <T, decltype((void)T::COMPONENT_ID, 0)> : std::tr
 
 class layer;
 class component;
-class game_object;
+struct object_data;
 
 // Game objects represent collections of components
 // in a layer. This class mainly acts as a handle
@@ -30,7 +30,7 @@ class game_object
 {
 public:
 	game_object(layer&);
-	game_object(layer&, object_id);
+	game_object(layer&, object_data&);
 
 	// Check if this object has a component of a specific id
 	bool has_component(int pId) const;
@@ -46,10 +46,12 @@ public:
 	template <typename T>
 	auto add_component()
 	{
-		WGE_ASSERT(mInstance_id);
+		WGE_ASSERT(mData);
 		return get_layer().add_component<T>(*this);
 	}
 
+	std::size_t get_component_count() const;
+	component* get_component_index(std::size_t pIndex);
 	// Get component by name
 	component* get_component(const std::string& pName);
 	// Get first component by id
@@ -77,29 +79,23 @@ public:
 
 	layer& get_layer() const;
 
-	object_id get_instance_id() const
-	{
-		return mInstance_id;
-	}
+	object_id get_instance_id() const;
 
-	void set_instance_id(object_id pId)
-	{
-		mInstance_id = pId;
-	}
+	void set_instance_id(object_id pId);
 
 	operator bool() const
 	{
-		return mInstance_id.is_valid();
+		return mData != nullptr;
 	}
 
 	void reset()
 	{
-		mInstance_id = 0;
+		mData = nullptr;
 	}
 
 private:
 	std::reference_wrapper<layer> mLayer;
-	object_id mInstance_id;
+	object_data* mData;
 };
 
 } // namespace wge::core

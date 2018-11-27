@@ -3,7 +3,7 @@
 #include <queue>
 
 #include <wge/core/component.hpp>
-#include <wge/core/object_node.hpp>
+#include <wge/core/game_object.hpp>
 #include <wge/math/vector.hpp>
 
 class b2Body;
@@ -26,7 +26,7 @@ public:
 		type_static
 	};
 
-	physics_component();
+	physics_component(core::component_id pId);
 	virtual ~physics_component();
 
 	virtual json serialize() const override;

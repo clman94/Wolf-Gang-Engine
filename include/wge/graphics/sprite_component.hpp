@@ -18,6 +18,9 @@ class sprite_component :
 {
 	WGE_COMPONENT("Sprite", 12409);
 public:
+	sprite_component(core::component_id pId) :
+		core::component(pId)
+	{}
 	virtual json serialize() const override;
 	virtual void deserialize(const json& pJson) override;
 

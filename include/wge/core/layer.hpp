@@ -58,13 +58,11 @@ public:
 	game_object get_object(std::size_t pIndex);
 	game_object get_object(object_id pId);
 	std::size_t get_object_count() const;
-	const std::string& get_object_name(const game_object& pObj);
-	void set_object_name(const game_object& pObj, const std::string& pName);
 
 	template <typename T>
 	T* add_component(const game_object& pObj)
 	{
-		auto* comp = &mComponent_manager.add_component<T>();
+		auto* comp = &mComponent_manager.add_component<T>(get_context().get_unique_instance_id());
 		comp->set_object(pObj);
 		return comp;
 	}

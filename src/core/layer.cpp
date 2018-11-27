@@ -36,7 +36,7 @@ const std::string& layer::get_name() const
 game_object layer::create_object()
 {
 	auto& data = mObject_manager.add_object(get_context().get_unique_instance_id());
-	return{ *this, data.id };
+	return{ *this, data };
 }
 
 void layer::remove_object(const game_object& mObj)
@@ -50,39 +50,20 @@ game_object layer::get_object(std::size_t pIndex)
 	auto data = mObject_manager.get_object_data(pIndex);
 	if (!data)
 		return{ *this };
-	return{ *this, data->id };
+	return{ *this, *data };
 }
 
 game_object layer::get_object(object_id pId)
 {
 	auto data = mObject_manager.get_object_data(pId);
 	if (data)
-		return{ *this, data->id };
+		return{ *this, *data };
 	return{ *this };
 }
 
 std::size_t layer::get_object_count() const
 {
 	return mObject_manager.get_object_count();
-}
-
-const std::string& layer::get_object_name(const game_object & pObj)
-{
-	auto* data = mObject_manager.get_object_data(pObj.get_instance_id());
-	WGE_ASSERT(data);
-	return data->name;
-}
-
-void layer::set_object_name(const game_object& pObj, const std::string& pName)
-{
-	for (auto& i : mObjects)
-	{
-		if (i.id == pObj.get_instance_id())
-		{
-			i.name = pName;
-			break;
-		}
-	}
 }
 
 context & layer::get_context() const

@@ -5,7 +5,8 @@
 namespace wge::physics
 {
 
-physics_world_component::physics_world_component()
+physics_world_component::physics_world_component(core::component_id pId) :
+	core::component(pId)
 {
 	mWorld = new b2World(b2Vec2(0, 1));
 	//mWorld->SetContactListener(&mContact_listener);
