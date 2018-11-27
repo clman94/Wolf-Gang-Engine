@@ -83,122 +83,6 @@ inline bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr, bool pD
 	ImGui::PopID();
 	return *pOpen;
 }
-/*
-inline void show_node_tree(core::game_object pNode, context& pContext)
-{
-	ImGui::PushID(pNode.get());
-
-	bool* open = ImGui::GetStateStorage()->GetBoolRef(ImGui::GetID("_IsOpen"));
-
-	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-
-	// Don't show the arrow if there are no children nodes
-	if (pNode->get_child_count() > 0)
-	{
-		ImGui::PushStyleVar(ImGuiStyleVar_::ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-		collapsing_arrow("NodeUnfold", open);
-		ImGui::PopStyleVar();
-		ImGui::SameLine();
-	}
-
-	const bool object_is_selected = pContext.get_selection<selection_type::game_object>() == pNode;
-
-	std::string label;
-	if (ImGui::Selectable(pNode->get_name().c_str(), object_is_selected))
-		pContext.set_selection(pNode);
-	if (ImGui::IsItemActive() && ImGui::IsMouseDoubleClicked(0))
-		*open = !*open; // Toggle open flag
-	if (ImGui::BeginDragDropSource())
-	{
-		core::game_object* ptr = pNode.get();
-		ImGui::SetDragDropPayload("MoveNodeInTree", &ptr, sizeof(void*));
-
-		ImGui::Text(pNode->get_name().c_str());
-
-		ImGui::EndDragDropSource();
-	}
-
-	// Drop node as child of this node. Inserted at end.
-	if (ImGui::BeginDragDropTarget())
-	{
-		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MoveNodeInTree"))
-		{
-			core::game_object::ref node = *static_cast<core::game_object**>(payload->Data);
-			if (!pNode->is_child_of(node)) // Do not move parent into its own child!
-				pNode->add_child(node);
-		}
-		ImGui::EndDragDropTarget();
-	}
-
-	// Drop node as first child of this node or as previous node if this node is collapsed
-	ImGui::InvisibleButton("__DragBetween", ImVec2(-1, 3));
-	if (ImGui::BeginDragDropTarget())
-	{
-		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MoveNodeInTree"))
-		{
-			util::ref<core::game_object> node = *static_cast<core::game_object**>(payload->Data);
-			if (!pNode->is_child_of(node)) // Do not move parent into its own child!
-			{
-				if (pNode->get_child_count() && *open)
-					pNode->add_child(node, 0);
-				else if (auto parent = pNode->get_parent())
-					parent->add_child(node, parent->get_child_index(pNode));
-			}
-		}
-		ImGui::EndDragDropTarget();
-	}
-	ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 3);
-
-	if (*open)
-	{
-		ImGui::TreePush();
-		// Show the children nodes and their components
-		for (std::size_t i = 0; i < pNode->get_child_count(); i++)
-			show_node_tree(pNode->get_child(i), pContext);
-		ImGui::TreePop();
-
-		// Drop node as next node
-		if (pNode->get_child_count() > 0 && *open)
-		{
-			ImGui::InvisibleButton("__DragAfterChildrenInParent", ImVec2(-1, 3));
-			if (ImGui::BeginDragDropTarget())
-			{
-				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MoveNodeInTree"))
-				{
-					util::ref<core::game_object> node = *static_cast<core::game_object**>(payload->Data);
-					if (!pNode->is_child_of(node)) // Do not move parent into its own child!
-						if (auto parent = pNode->get_parent())
-							parent->add_child(node, parent->get_child_index(pNode) + 1);
-				}
-				ImGui::EndDragDropTarget();
-			}
-			ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 3);
-		}
-	}
-
-	ImGui::PopStyleVar(); // ImGuiStyleVar_ItemSpacing
-
-	ImGui::PopID();
-}
-
-inline void show_node_tree(core::layer::ptr pLayer, context& pContext)
-{
-	ImGui::PushID(pLayer.get());
-
-	collapsing_arrow("LayerUnfold", nullptr, true);
-	ImGui::SameLine();
-	const bool layer_is_selected = pContext.get_selection<selection_type::layer>() == pLayer;
-	if (ImGui::Selectable(pLayer->get_name().c_str(), layer_is_selected))
-		pContext.set_selection(pLayer);
-
-	ImGui::TreePush();
-	// Show the object and their components
-	for (auto obj : *pLayer)
-		show_node_tree(obj, pContext);
-	ImGui::TreePop();
-
-	ImGui::PopID();
-}*/
 
 inline void GLAPIENTRY opengl_message_callback(GLenum source,
 	GLenum type,
@@ -669,51 +553,6 @@ private:
 		{
 			if (ImGui::BeginMenuBar())
 			{
-				/*if (ImGui::BeginMenu("Scene"))
-				{
-					if (ImGui::MenuItem("Load"))
-					{
-						if (auto scene = mAsset_manager.find_asset("myscene.asset"))
-						{
-							mGame_context.deserialize(scene->get_config()->get_metadata());
-						}
-						else
-						{
-							log::error() << "myscene asset missing" << log::endm;
-						}
-					}
-					if (ImGui::MenuItem("Save"))
-					{
-						try
-						{
-							if (auto scene = mAsset_manager.find_asset("myscene.asset"))
-							{
-								scene->get_config()->set_metadata(mGame_context.serialize());
-								scene->get_config()->save();
-							}
-							else
-							{
-								auto config = std::make_shared<core::asset_config>();
-								config->set_metadata(mGame_context.serialize());
-								config->set_path(mAsset_manager.get_root_directory() / "myscene.asset");
-								config->set_type("scene");
-								config->generate_id();
-
-								config->save();
-
-								auto loader = mAsset_manager.find_loader("scene");
-								mAsset_manager.add_asset(loader->create_asset(config, mAsset_manager.get_root_directory()));
-							}
-						}
-						catch (const std::exception& e)
-						{
-							log::error() << e.what() << log::endm;
-							log::error() << "Could not save scene" << log::endm;
-						}
-					}
-					ImGui::EndMenu();
-				}*/
-
 				if (ImGui::BeginMenu("Add"))
 				{
 					if (ImGui::MenuItem("Layer"))
@@ -884,28 +723,6 @@ private:
 			//if (ImGui::Selectable("Script"))
 			//	mSelected_node->add_component<script_component>();
 			ImGui::EndCombo();
-		}
-	}
-
-	void show_asset_picker()
-	{
-		if (ImGui::BeginPopupModal("New Asset##NewAssetPopup"))
-		{
-			ImGui::Text("Type:");
-			ImGui::BeginChild("_AssetTypeList");
-			
-			if (ImGui::Selectable("Scene"))
-			{
-
-			}
-
-			if (ImGui::Selectable("Object"))
-			{
-
-			}
-			
-			ImGui::EndChild();
-			ImGui::EndPopup();
 		}
 	}
 
