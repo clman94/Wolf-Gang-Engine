@@ -516,12 +516,12 @@ private:
 		ImGui::End();
 	}
 
-	/*bool create_aabb_from_object(core::game_object pObj, math::aabb& pAABB)
+	bool create_aabb_from_object(core::game_object& pObj, math::aabb& pAABB)
 	{
 		bool has_aabb = false;
-		for (std::size_t comp_idx = 0; comp_idx < pObj->get_component_count(); comp_idx++)
+		for (std::size_t comp_idx = 0; comp_idx < pObj.get_component_count(); comp_idx++)
 		{
-			auto comp = pObj->get_component_index(comp_idx);
+			auto comp = pObj.get_component_index(comp_idx);
 			if (!comp->has_aabb())
 				continue;
 			if (!has_aabb)
@@ -533,7 +533,7 @@ private:
 				pAABB.merge(comp->get_screen_aabb());
 		}
 		return has_aabb;
-	}*/
+	}
 
 	void show_settings()
 	{
@@ -566,17 +566,18 @@ private:
 			ImVec2 cursor = ImGui::GetCursorScreenPos();
 			ImGui::Image(mViewport_framebuffer, ImVec2(width, height));
 
-			/*visual_editor::begin_editor("_SceneEditor", { cursor.x, cursor.y }, { 1, 1 });
+			visual_editor::begin_editor("_SceneEditor", { cursor.x, cursor.y }, { 1, 1 });
 			{
-				const math::vec2 render_view_scale = mRenderer.get_render_view_scale();
 				ImDrawList* dl = ImGui::GetWindowDrawList();
 
 				const math::vec2 mouse(ImGui::GetMousePos().x - cursor.x, ImGui::GetMousePos().y - cursor.y);
 				for (auto layer : mGame_context.get_layer_container())
 				{
-					for (auto obj : *layer)
+					const math::vec2 render_view_scale = layer->get_system<graphics::renderer>()->get_render_view_scale();
+					for (std::size_t i = 0; i < layer->get_object_count(); i++)
 					{
-						auto transform = obj->get_component<core::transform_component>();
+						auto obj = layer->get_object(i);
+						auto transform = obj.get_component<core::transform_component>();
 
 						const bool is_object_selected = obj == mContext.get_selection<selection_type::game_object>();
 
@@ -617,7 +618,7 @@ private:
 					}
 				}
 			}
-			visual_editor::end_editor();*/
+			visual_editor::end_editor();
 		}
 		ImGui::End();
 	}
@@ -848,6 +849,11 @@ private:
 			ImGui::EndChild();
 			ImGui::EndPopup();
 		}
+	}
+
+	core::layer& get_current_layer()
+	{
+
 	}
 
 private:

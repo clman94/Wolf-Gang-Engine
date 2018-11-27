@@ -29,6 +29,14 @@ public:
 				return &i;
 		return nullptr;
 	}
+	// Get first component of this type for this object
+	component* get_first_component(int pType, object_id pId)
+	{
+		component_storage_base* storage = get_container(pType);
+		if (!storage)
+			return nullptr;
+		return storage->get_first_component(pId);
+	}
 
 	component* get_component(int pType, component_id pId)
 	{
@@ -47,6 +55,14 @@ public:
 			mContainers[T::COMPONENT_ID] = std::make_unique<storage_type>();
 		return *dynamic_cast<storage_type*>(mContainers[T::COMPONENT_ID].get());
 	}
+	component_storage_base* get_container(int pType)
+	{
+		auto iter = mContainers.find(pType);
+		if (iter == mContainers.end())
+			return nullptr;
+		return iter->second.get();
+	}
+
 
 	// Remove all components for this entity
 	void remove_object(object_id pId)

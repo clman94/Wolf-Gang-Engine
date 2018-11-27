@@ -12,8 +12,6 @@ class b2World;
 class b2Body;
 struct b2BodyDef;
 
-class renderer;
-
 namespace wge::physics
 {
 

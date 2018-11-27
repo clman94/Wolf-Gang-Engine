@@ -21,10 +21,6 @@ class context;
 class layer
 {
 public:
-	using container = std::vector<game_object>;
-	using iterator = container::iterator;
-	using const_iterator = container::const_iterator;
-
 	using ptr = std::shared_ptr<layer>;
 	using wptr = std::weak_ptr<layer>;
 
@@ -72,6 +68,11 @@ public:
 	T* get_first_component(const game_object& pObj)
 	{
 		return mComponent_manager.get_first_component<T>(pObj.get_instance_id());
+	}
+
+	component* get_first_component(const game_object& pObj, int pType)
+	{
+		return mComponent_manager.get_first_component(pType, pObj.get_instance_id());
 	}
 
 	component* get_component(int pType, component_id pId)

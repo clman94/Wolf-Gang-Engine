@@ -102,7 +102,7 @@ component* game_object::get_component(const std::string & pName)
 component* game_object::get_component(int pId) const
 {
 	WGE_ASSERT(mData);
-	return nullptr;
+	return get_layer().get_first_component(*this, pId);
 }
 
 void game_object::remove_component(std::size_t pIndex)
