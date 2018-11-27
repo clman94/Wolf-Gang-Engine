@@ -99,10 +99,10 @@ component* game_object::get_component(const std::string & pName)
 	return nullptr;
 }
 
-component* game_object::get_component(int pId) const
+component* game_object::get_component(int pType) const
 {
 	WGE_ASSERT(mData);
-	return get_layer().get_first_component(*this, pId);
+	return get_layer().get_first_component(*this, pType);
 }
 
 void game_object::remove_component(std::size_t pIndex)
@@ -148,6 +148,11 @@ object_id game_object::get_instance_id() const
 void game_object::set_instance_id(object_id pId)
 {
 	mData->id = pId;
+}
+
+bool game_object::operator==(const game_object & pObj) const
+{
+	return mData && pObj.mData && mData->id == pObj.mData->id;
 }
 
 } // namespace wge::core

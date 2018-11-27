@@ -55,7 +55,7 @@ public:
 	// Get component by name
 	component* get_component(const std::string& pName);
 	// Get first component by id
-	component* get_component(int pId) const;
+	component* get_component(int pType) const;
 	// Get first component by type
 	template<class T,
 		// Requires the "int COMPONENT_ID" COMPONENT_ID member
@@ -92,6 +92,8 @@ public:
 	{
 		mData = nullptr;
 	}
+
+	bool operator==(const game_object& pObj) const;
 
 private:
 	std::reference_wrapper<layer> mLayer;

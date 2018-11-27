@@ -579,7 +579,9 @@ private:
 						auto obj = layer->get_object(i);
 						auto transform = obj.get_component<core::transform_component>();
 
-						const bool is_object_selected = obj == mContext.get_selection<selection_type::game_object>();
+						// Check for selection
+						auto selection = mContext.get_selection<selection_type::game_object>();
+						const bool is_object_selected = selection && obj == *selection;
 
 						// Draw center point
 						if (is_object_selected)
