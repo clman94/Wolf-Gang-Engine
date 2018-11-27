@@ -663,6 +663,9 @@ static void ImGui_ImplGlfw_MonitorCallback(GLFWmonitor*, int)
 
 static void ImGui_ImplGlfw_InitPlatformInterface()
 {
+	static float dpi_scale = 1.f;
+	glfwGetMonitorContentScale(glfwGetPrimaryMonitor(), &dpi_scale, nullptr);
+
     // Register platform interface (will be coupled with a renderer interface)
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Platform_CreateWindow = ImGui_ImplGlfw_CreateWindow;
@@ -687,6 +690,10 @@ static void ImGui_ImplGlfw_InitPlatformInterface()
 #if HAS_WIN32_IME
     platform_io.Platform_SetImeInputPos = ImGui_ImplWin32_SetImeInputPos;
 #endif
+	platform_io.Platform_GetWindowDpiScale = [](ImGuiViewport* viewport)->float
+	{
+		return dpi_scale;
+	};
 
     // Note: monitor callback are broken GLFW 3.2 and earlier (see github.com/glfw/glfw/issues/784)
     ImGui_ImplGlfw_UpdateMonitors();
