@@ -7,7 +7,7 @@
 #include <wge/core/transform_component.hpp>
 #include <wge/physics/box_collider_component.hpp>
 #include <wge/physics/physics_component.hpp>
-#include <wge/physics/physics_world_component.hpp>
+#include <wge/physics/physics_world.hpp>
 #include <wge/graphics/sprite_component.hpp>
 #include <wge/scripting/script.hpp>
 #include <wge/core/asset_manager.hpp>
@@ -446,16 +446,6 @@ private:
 			}
 		});
 
-		// Inspector for physics_world_component
-		mInspectors.add_inspector(physics::physics_world_component::COMPONENT_ID,
-			[](core::component* pComponent)
-		{
-			auto physicsworld = dynamic_cast<physics::physics_world_component*>(pComponent);
-			math::vec2 gravity = physicsworld->get_gravity();
-			if (ImGui::DragFloat2("Gravity", gravity.components))
-				physicsworld->set_gravity(gravity);
-		});
-
 		// Inspector for box_collider_component
 		mInspectors.add_inspector(physics::box_collider_component::COMPONENT_ID,
 			[](core::component* pComponent)
@@ -659,10 +649,11 @@ private:
 			bool is_selected = mContext.get_selection<selection_type::layer>() == i;
 			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_OpenOnDoubleClick
 				| ImGuiTreeNodeFlags_OpenOnArrow | (is_selected ? ImGuiTreeNodeFlags_Selected : 0);
-			if (ImGui::TreeNodeEx((i->get_name() + "###Layer").c_str(), flags))
+			bool open = ImGui::TreeNodeEx((i->get_name() + "###Layer").c_str(), flags);
+			if (ImGui::IsItemClicked())
+				mContext.set_selection(i);
+			if (open)
 			{
-				if (ImGui::IsItemClicked())
-					mContext.set_selection(i);
 				show_layer_objects(i);
 				ImGui::TreePop();
 			}
@@ -792,7 +783,7 @@ private:
 
 		if (ImGui::BeginTabItem("Rendering"))
 		{
-			graphics::renderer* renderer = pLayer.get_system<graphics::renderer>();
+			auto renderer = pLayer.get_system<graphics::renderer>();
 			if (!renderer)
 			{
 				if (ImGui::Button("Enable"))
@@ -806,6 +797,24 @@ private:
 			}
 			ImGui::EndTabItem();
 		}
+
+		if (ImGui::BeginTabItem("Physics"))
+		{
+			auto physics = pLayer.get_system<physics::physics_world>();
+			if (!physics)
+			{
+				if (ImGui::Button("Enable"))
+					pLayer.add_system<physics::physics_world>();
+			}
+			else
+			{
+				math::vec2 gravity = physics->get_gravity();
+				if (ImGui::DragFloat2("Gravity", gravity.components))
+					physics->set_gravity(gravity);
+			}
+			ImGui::EndTabItem();
+		}
+
 
 		ImGui::EndTabBar();
 	}
@@ -866,8 +875,6 @@ private:
 		{
 			if (ImGui::Selectable("Transform 2D"))
 				pObj.add_component<core::transform_component>();
-			if (ImGui::Selectable("Physics World"))
-				pObj.add_component<physics::physics_world_component>();
 			if (ImGui::Selectable("Physics"))
 				pObj.add_component<physics::physics_component>();
 			if (ImGui::Selectable("Box Collider"))

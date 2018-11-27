@@ -1,5 +1,5 @@
 #include <wge/physics/physics_component.hpp>
-#include <wge/physics/physics_world_component.hpp>
+#include <wge/physics/physics_world.hpp>
 #include <wge/core/transform_component.hpp>
 #include <wge/logging/log.hpp>
 
@@ -97,7 +97,7 @@ b2Fixture* physics_component::create_fixture(const b2FixtureDef & pDef)
 	return mBody->CreateFixture(&pDef);
 }
 
-void physics_component::on_physics_update_bodies(physics_world_component * pComponent)
+void physics_component::on_physics_update_bodies(physics_world * pComponent)
 {
 	if (!mBody)
 	{

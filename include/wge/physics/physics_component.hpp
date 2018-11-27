@@ -14,7 +14,7 @@ enum b2BodyType;
 namespace wge::physics
 {
 
-class physics_world_component;
+class physics_world;
 
 class physics_component :
 	public core::component
@@ -43,7 +43,7 @@ public:
 	b2Fixture* create_fixture(const b2FixtureDef& pDef);
 
 private:
-	void on_physics_update_bodies(physics_world_component* pComponent);
+	void on_physics_update_bodies(physics_world* pComponent);
 	void on_physics_reset();
 	void on_preupdate(float);
 	void on_postupdate(float);
@@ -66,13 +66,13 @@ private:
 private:
 	int mType;
 	b2Body* mBody;
-	physics_world_component* mPhysics_world;
+	physics_world* mPhysics_world;
 
 	// Since we can't create a body whenever we want to, we need store
 	// the serialized data for when it is created.
 	json mBody_instance_cache;
 
-	friend class physics_world_component;
+	friend class physics_world;
 };
 
 }
