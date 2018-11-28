@@ -198,8 +198,6 @@ void renderer::render()
 
 	mFramebuffer->begin_framebuffer();
 
-	glClearColor(0, 0, 0, 1);
-	glClear(GL_COLOR_BUFFER_BIT);
 	glViewport(0, 0, mFramebuffer->get_width(), mFramebuffer->get_height());
 
 	// Create the projection matrix

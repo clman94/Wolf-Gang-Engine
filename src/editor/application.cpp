@@ -129,22 +129,29 @@ private:
 
 			show_settings();
 			show_asset_manager();
-
-			auto renderer = mGame_context.get_layer(0)->get_system<graphics::renderer>();
-
-			renderer->set_framebuffer(&mViewport_framebuffer);
 			show_viewport();
-
 			show_objects();
 			show_inspector();
 
-			renderer->set_framebuffer(&mViewport_framebuffer);
-			renderer->set_render_view({
-				{ 0.f, 0.f },
-				{ (float)mViewport_framebuffer.get_width() * 0.01f, (float)mViewport_framebuffer.get_height() * 0.01f }
-				});
-			renderer->render();
-			renderer->clear();
+			// Clear the framebuffer with black
+			mViewport_framebuffer.begin_framebuffer();
+			mViewport_framebuffer.clear({ 0, 0, 0, 1 });
+			mViewport_framebuffer.end_framebuffer();
+
+			// Render all layers with the renderer system enabled
+			for (auto& i : mGame_context.get_layer_container())
+			{
+				auto renderer = i->get_system<graphics::renderer>();
+				if (!renderer)
+					continue;
+				renderer->set_framebuffer(&mViewport_framebuffer);
+				renderer->set_render_view({
+					{ 0.f, 0.f },
+					{ (float)mViewport_framebuffer.get_width() * 0.01f, (float)mViewport_framebuffer.get_height() * 0.01f }
+					});
+				renderer->render();
+				renderer->clear();
+			}
 
 			end_frame();
 		}
@@ -450,7 +457,9 @@ private:
 					graphics::renderer* renderer = layer->get_system<graphics::renderer>();
 					if (!renderer)
 						continue;
-
+					// Make sure we are working with the viewports framebuffer
+					renderer->set_framebuffer(&mViewport_framebuffer);
+					
 					const math::vec2 render_view_scale = renderer->get_render_view_scale();
 					for (std::size_t i = 0; i < layer->get_object_count(); i++)
 					{
