@@ -14,9 +14,6 @@ physics_world::physics_world(core::layer& pLayer) :
 	core::system(pLayer),
 	mWorld(std::make_unique<b2World>(b2Vec2(0, 1)))
 {
-	//mWorld->SetContactListener(&mContact_listener);
-	// Physics are updated before game logic does (which happenes on the "update" event).
-	//subscribe_to(pObj, "on_preupdate", &physics_world_component::on_preupdate, this);
 }
 
 void physics_world::set_gravity(math::vec2 pVec)

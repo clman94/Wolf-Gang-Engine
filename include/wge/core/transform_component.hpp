@@ -48,11 +48,6 @@ private:
 	// Updates the transform
 	void update_transform();
 
-	// This will notify all components and the children nodes
-	// that this node has changed position and they need to 
-	// update their cache.
-	void notify_transform_changed();
-
 private:
 	math::vec2 mPosition;
 	math::radians mRotation;

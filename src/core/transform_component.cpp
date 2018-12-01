@@ -29,14 +29,12 @@ void transform_component::deserialize(const json & pJson)
 	mRotation = static_cast<float>(pJson["rotation"]);
 	mScale = math::vec2(pJson["scale"][0], pJson["scale"][1]);
 	mTransform_needs_update = true;
-	notify_transform_changed();
 }
 
 void transform_component::set_position(const math::vec2 & pVec)
 {
 	mPosition = pVec;
 	mTransform_needs_update = true;
-	notify_transform_changed();
 }
 
 math::vec2 transform_component::get_position() const
@@ -48,7 +46,6 @@ void transform_component::set_rotaton(const math::radians& pRad)
 {
 	mRotation = pRad;
 	mTransform_needs_update = true;
-	notify_transform_changed();
 }
 
 math::radians transform_component::get_rotation() const
@@ -60,7 +57,6 @@ void transform_component::set_scale(const math::vec2 & pVec)
 {
 	mScale = pVec;
 	mTransform_needs_update = true;
-	notify_transform_changed();
 }
 
 math::vec2 transform_component::get_scale() const
@@ -136,9 +132,4 @@ void transform_component::update_transform()
 		mTransform.scale(mScale);
 		mTransform_needs_update = false;
 	}
-}
-
-void transform_component::notify_transform_changed()
-{
-	mCache_needs_update = true;
 }

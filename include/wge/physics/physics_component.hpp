@@ -44,21 +44,8 @@ public:
 	b2Fixture* create_fixture(const b2FixtureDef& pDef);
 
 private:
-	void on_physics_update_bodies(physics_world* pComponent);
-	void on_physics_reset();
-	void on_preupdate(float);
-	void on_postupdate(float);
-	void on_parent_removed();
-
 	// Get the box2d body type
 	b2BodyType get_b2Body_type() const;
-
-	// Update the transform component to the
-	// transform of the body.
-	void update_object_transform();
-	// Update the body transform with the transform of
-	// the transform component.
-	void update_body_transform();
 
 	json serialize_body() const;
 	void deserialize_body_from_cache();
