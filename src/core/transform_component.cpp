@@ -12,7 +12,6 @@ transform_component::transform_component(core::component_id pId) :
 	mTransform_needs_update(true),
 	mCache_needs_update(true)
 {
-
 }
 
 json transform_component::serialize() const

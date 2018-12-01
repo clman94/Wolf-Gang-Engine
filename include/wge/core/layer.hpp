@@ -157,7 +157,6 @@ inline void layer::for_each_impl(const std::function<void(game_object, Tcomponen
 template<typename Tcomponent, typename...Tdependencies>
 inline void layer::for_each_impl(const std::function<void(Tcomponent&, Tdependencies&...)>& pCallable)
 {
-	std::tuple<Tdependencies*...> dependency_pointers;
 	for (auto& i : mComponent_manager.get_container<Tcomponent>())
 	{
 		if constexpr (sizeof...(Tdependencies) == 0)
@@ -169,6 +168,7 @@ inline void layer::for_each_impl(const std::function<void(Tcomponent&, Tdependen
 		{
 			// Retrieve dependencies
 			game_object obj = get_object(i.get_object_id());
+			std::tuple<Tdependencies*...> dependency_pointers;
 			if (retrieve_components(obj, std::get<Tdependencies*>(dependency_pointers)...))
 			{
 				pCallable(i, *std::get<Tdependencies*>(dependency_pointers)...);

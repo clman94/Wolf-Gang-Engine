@@ -62,6 +62,11 @@ void physics_component::set_type(int pType)
 		mBody->SetType(get_b2Body_type());
 }
 
+int physics_component::get_type() const
+{
+	return mType;
+}
+
 void physics_component::set_linear_velocity(const math::vec2 & pVec)
 {
 	if (mBody)

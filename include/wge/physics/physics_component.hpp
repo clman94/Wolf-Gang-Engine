@@ -33,6 +33,7 @@ public:
 	virtual void deserialize(const json& pJson) override;
 
 	void set_type(int pType);
+	int get_type() const;
 
 	void set_linear_velocity(const math::vec2& pVec);
 	math::vec2 get_linear_velocity() const;

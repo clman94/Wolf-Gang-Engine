@@ -343,6 +343,20 @@ private:
 			}
 		});
 
+		mInspectors.add_inspector(physics::physics_component::COMPONENT_ID,
+			[](core::component* pComponent)
+		{
+			auto physics = dynamic_cast<physics::physics_component*>(pComponent);
+			std::array options = { "Dynamic", "Static" };
+			if (ImGui::BeginCombo("Type", options[physics->get_type()]))
+			{
+				for (std::size_t i = 0; i < options.size(); i++)
+					if (ImGui::Selectable(options[i]))
+						physics->set_type(i);
+				ImGui::EndCombo();
+			}
+		});
+
 		// Inspector for box_collider_component
 		mInspectors.add_inspector(physics::box_collider_component::COMPONENT_ID,
 			[](core::component* pComponent)
