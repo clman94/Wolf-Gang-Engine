@@ -7,12 +7,13 @@
 
 #include <iostream>
 
-using namespace wge;
-using namespace wge::physics;
+namespace wge::physics
+{
 
 physics_component::physics_component(core::component_id pId) :
 	core::component(pId),
-	mBody(nullptr)
+	mBody(nullptr),
+	mType(type_rigidbody)
 {
 }
 
@@ -22,7 +23,7 @@ physics_component::~physics_component()
 	{
 		// Destroy body before the on_physics_reset event
 		// otherwise mBody turns null.
-		mBody->GetWorld()->DestroyBody(mBody);
+		//mBody->GetWorld()->DestroyBody(mBody);
 
 		// Because this body exists, there may still be fixtures connected
 		// to it. Tell the colliders to clean up.
@@ -237,3 +238,5 @@ void physics_component::serialize_and_cache_body()
 	if (mBody_instance_cache.empty())
 		mBody_instance_cache = serialize_body();
 }
+
+} // namespace wge::physics

@@ -71,6 +71,7 @@ void physics_world::preupdate(float pDelta)
 			fixture_def.shape = &shape;
 			fixture_def.density = 1;
 			pCollider.mFixture = pPhysics.create_fixture(fixture_def);
+			pPhysics.mBody->ResetMassData();
 			log::debug() << WGE_LI << pObj.get_name() << ": New Collider" << log::endm;
 		}
 	}));

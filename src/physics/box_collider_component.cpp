@@ -20,8 +20,6 @@ box_collider_component::box_collider_component(core::component_id pId) :
 
 box_collider_component::~box_collider_component()
 {
-	if (mFixture)
-		mFixture->GetBody()->DestroyFixture(mFixture);
 }
 
 json box_collider_component::serialize() const

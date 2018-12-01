@@ -115,7 +115,7 @@ public:
 	}
 
 	template <typename Tcomponent, typename...Tdependencies>
-	void for_each(const std::function<void(game_object pObject, Tcomponent&, Tdependencies&...)>& pCallable)
+	void for_each(const std::function<void(game_object, Tcomponent&, Tdependencies&...)>& pCallable)
 	{
 		auto wrapper = [&](Tcomponent& pComp, Tdependencies&...pDep)
 		{

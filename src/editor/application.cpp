@@ -153,7 +153,7 @@ private:
 				if (auto renderer = i->get_system<graphics::renderer>())
 				{
 					renderer->set_framebuffer(&mViewport_framebuffer);
-					renderer->set_render_view_to_framebuffer();
+					renderer->set_render_view_to_framebuffer({}, { 0.01, 0.01 });
 					renderer->render();
 					renderer->clear();
 				}
