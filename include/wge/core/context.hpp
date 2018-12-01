@@ -62,6 +62,24 @@ public:
 		return mAsset_manager;
 	}
 
+	void preupdate(float pDelta)
+	{
+		for (auto& i : mLayers)
+			i->preupdate(pDelta);
+	}
+
+	void update(float pDelta)
+	{
+		for (auto& i : mLayers)
+			i->update(pDelta);
+	}
+
+	void postupdate(float pDelta)
+	{
+		for (auto& i : mLayers)
+			i->postupdate(pDelta);
+	}
+
 private:
 	layer_container mLayers;
 	instance_id_t mCurrent_instance_id{ 0 };

@@ -186,15 +186,11 @@ void renderer::render()
 {
 	assert(mFramebuffer);
 
-	for (std::size_t i = 0; i < get_layer().get_object_count(); i++)
+	get_layer().for_each(
+		std::function([&](sprite_component& pSprite, core::transform_component& pTransform)
 	{
-		core::transform_component* transform;
-		sprite_component* sprite;
-		if (get_layer().retrieve_components(get_layer().get_object(i), sprite, transform))
-		{
-			sprite->create_batch(*transform, *this);
-		}
-	}
+		pSprite.create_batch(pTransform, *this);
+	}));
 
 	mFramebuffer->begin_framebuffer();
 

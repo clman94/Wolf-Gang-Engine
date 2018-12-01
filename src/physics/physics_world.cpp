@@ -1,5 +1,6 @@
 #include <wge/physics/physics_world.hpp>
 #include <wge/physics/physics_component.hpp>
+#include <wge/physics/box_collider_component.hpp>
 
 #include <wge/core/transform_component.hpp>
 #include <wge/core/layer.hpp>
@@ -36,26 +37,43 @@ b2World* physics_world::get_world() const
 
 void physics_world::preupdate(float pDelta)
 {
-	// Check that all the physics bodies exist
-	for (std::size_t i = 0; i < get_layer().get_object_count(); i++)
+	// Create all the bodies
+	get_layer().for_each(
+		std::function([&](core::game_object pObj,
+			physics_component& pPhysics,
+			core::transform_component& pTransform)
 	{
-		core::game_object obj = get_layer().get_object(i);
-		core::transform_component* transform;
-		physics_component* physics;
-		get_layer().retrieve_components(obj, physics, transform);
-		if (!physics->mBody)
+		if (!pPhysics.mBody)
 		{
 			b2BodyDef body_def;
-			body_def.position.x = transform->get_absolute_position().x;
-			body_def.position.y = transform->get_absolute_position().y;
-			body_def.angle = transform->get_absolute_rotation();
-			body_def.type = physics->get_b2Body_type();
+			body_def.position.x = pTransform.get_absolute_position().x;
+			body_def.position.y = pTransform.get_absolute_position().y;
+			body_def.angle = pTransform.get_absolute_rotation();
+			body_def.type = pPhysics.get_b2Body_type();
 			//body_def.userData = obj.get_instance_id().get_value();
-			physics->mBody = mWorld->CreateBody(&body_def);
-			physics->mBody->ResetMassData();
-			log::debug() << WGE_LI << obj.get_name() << ": New Physics Body" << log::endm;
+			pPhysics.mBody = mWorld->CreateBody(&body_def);
+			pPhysics.mBody->ResetMassData();
+			log::debug() << WGE_LI << pObj.get_name() << ": New Physics Body" << log::endm;
 		}
-	}
+	}));
+
+	// Create all the fixtures
+	get_layer().for_each(
+		std::function([&](core::game_object pObj,
+			box_collider_component& pCollider,
+			physics_component& pPhysics)
+	{
+		if (!pCollider.mFixture)
+		{
+			b2FixtureDef fixture_def;
+			b2PolygonShape shape;
+			pCollider.update_shape(&shape);
+			fixture_def.shape = &shape;
+			fixture_def.density = 1;
+			pCollider.mFixture = pPhysics.create_fixture(fixture_def);
+			log::debug() << WGE_LI << pObj.get_name() << ": New Collider" << log::endm;
+		}
+	}));
 
 	// Calculate physics
 	mWorld->Step(pDelta, 1, 1);
@@ -64,20 +82,16 @@ void physics_world::preupdate(float pDelta)
 
 void physics_world::update_object_transforms()
 {	
-	// Check that all the physics bodies exist
-	for (std::size_t i = 0; i < get_layer().get_object_count(); i++)
+	get_layer().for_each(
+		std::function([&](physics_component& pPhysics, core::transform_component& pTransform)
 	{
-		core::game_object obj = get_layer().get_object(i);
-		core::transform_component* transform;
-		physics_component* physics;
-		get_layer().retrieve_components(obj, physics, transform);
-		if (physics->mBody)
+		if (pPhysics.mBody)
 		{
-			b2Vec2 position = physics->mBody->GetPosition();
-			transform->set_position({ position.x, position.y });
-			transform->set_rotaton(math::radians(physics->mBody->GetAngle()));
+			b2Vec2 position = pPhysics.mBody->GetPosition();
+			pTransform.set_position({ position.x, position.y });
+			pTransform.set_rotaton(math::radians(pPhysics.mBody->GetAngle()));
 		}
-	}
+	}));
 }
 
 } // namespacw wge::physics

@@ -118,6 +118,12 @@ private:
 		{
 			float delta = 1.f / 60.f;
 
+			if (mUpdate)
+			{
+				mGame_context.preupdate(delta);
+				mGame_context.update(delta);
+			}
+
 			new_frame();
 			main_viewport_dock();
 
@@ -133,6 +139,9 @@ private:
 			show_objects();
 			show_inspector();
 
+			if (mUpdate)
+				mGame_context.postupdate(delta);
+
 			// Clear the framebuffer with black
 			mViewport_framebuffer.begin_framebuffer();
 			mViewport_framebuffer.clear({ 0, 0, 0, 1 });
@@ -141,16 +150,13 @@ private:
 			// Render all layers with the renderer system enabled
 			for (auto& i : mGame_context.get_layer_container())
 			{
-				auto renderer = i->get_system<graphics::renderer>();
-				if (!renderer)
-					continue;
-				renderer->set_framebuffer(&mViewport_framebuffer);
-				renderer->set_render_view({
-					{ 0.f, 0.f },
-					{ (float)mViewport_framebuffer.get_width() * 0.01f, (float)mViewport_framebuffer.get_height() * 0.01f }
-					});
-				renderer->render();
-				renderer->clear();
+				if (auto renderer = i->get_system<graphics::renderer>())
+				{
+					renderer->set_framebuffer(&mViewport_framebuffer);
+					renderer->set_render_view_to_framebuffer();
+					renderer->render();
+					renderer->clear();
+				}
 			}
 
 			end_frame();
@@ -433,6 +439,12 @@ private:
 
 	void show_viewport()
 	{
+		if (ImGui::Begin("Game"))
+		{
+			ImGui::Checkbox("Run", &mUpdate);
+		}
+		ImGui::End();
+
 		if (ImGui::Begin("Viewport"))
 		{
 			//mygameinput.set_enabled(ImGui::IsWindowFocused());
@@ -752,6 +764,8 @@ private:
 	core::asset_manager mAsset_manager;
 
 	component_inspector mInspectors;
+
+	bool mUpdate{ false };
 };
 
 void GLAPIENTRY opengl_message_callback(GLenum source,

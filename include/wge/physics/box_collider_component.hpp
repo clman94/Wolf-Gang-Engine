@@ -58,6 +58,8 @@ private:
 	bool mIs_sensor;
 	physics_component* mPhysics_component;
 	math::vec2 mAnchor;
+
+	friend class physics_world;
 };
 
 }

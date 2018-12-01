@@ -109,6 +109,44 @@ public:
 			return retrieve_components(pObj, pRest...);
 	}
 
+	bool retrieve_components(game_object pObj)
+	{
+		return true;
+	}
+
+	template <typename Tcomponent, typename...Tdependencies>
+	void for_each(const std::function<void(game_object pObject, Tcomponent&, Tdependencies&...)>& pCallable)
+	{
+		auto wrapper = [&](Tcomponent& pComp, Tdependencies&...pDep)
+		{
+			pCallable(get_object(pComp.get_object_id()), pComp, pDep...);
+		};
+		for_each(std::function(wrapper));
+	}
+
+	template <typename Tcomponent, typename...Tdependencies>
+	void for_each(const std::function<void(Tcomponent&, Tdependencies&...)>& pCallable)
+	{
+		std::tuple<Tdependencies*...> dependency_pointers;
+		for (auto& i : mComponent_manager.get_container<Tcomponent>())
+		{
+			if constexpr (sizeof...(Tdependencies) == 0)
+			{
+				// No dependencies
+				pCallable(i);
+			}
+			else
+			{
+				// Retrieve dependencies
+				game_object obj = get_object(i.get_object_id());
+				if (retrieve_components(obj, std::get<Tdependencies*>(dependency_pointers)...))
+				{
+					pCallable(i, *std::get<Tdependencies*>(dependency_pointers)...);
+				}
+			}
+		}
+	}
+
 	context& get_context() const;
 
 	void set_enabled(bool pEnabled);
@@ -120,6 +158,9 @@ public:
 	void preupdate(float pDelta);
 	void update(float pDelta);
 	void postupdate(float pDelta);
+
+private:
+	
 
 private:
 	float mTime_scale{ 1 };
