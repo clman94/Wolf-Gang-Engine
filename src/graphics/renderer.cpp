@@ -187,10 +187,10 @@ void renderer::render()
 	assert(mFramebuffer);
 
 	get_layer().for_each(
-		std::function([&](sprite_component& pSprite, core::transform_component& pTransform)
+		[&](sprite_component& pSprite, core::transform_component& pTransform)
 	{
 		pSprite.create_batch(pTransform, *this);
-	}));
+	});
 
 	mFramebuffer->begin_framebuffer();
 

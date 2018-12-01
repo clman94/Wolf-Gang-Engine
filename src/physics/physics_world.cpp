@@ -39,7 +39,7 @@ void physics_world::preupdate(float pDelta)
 {
 	// Create all the bodies
 	get_layer().for_each(
-		std::function([&](core::game_object pObj,
+		[&](core::game_object pObj,
 			physics_component& pPhysics,
 			core::transform_component& pTransform)
 	{
@@ -55,15 +55,15 @@ void physics_world::preupdate(float pDelta)
 			pPhysics.mBody->ResetMassData();
 			log::debug() << WGE_LI << pObj.get_name() << ": New Physics Body" << log::endm;
 		}
-	}));
+	});
 
 	// Create all the fixtures
 	get_layer().for_each(
-		std::function([&](core::game_object pObj,
+		[&](core::game_object pObj,
 			box_collider_component& pCollider,
 			physics_component& pPhysics)
 	{
-		if (!pCollider.mFixture)
+		if (!pCollider.mFixture && pPhysics.mBody)
 		{
 			b2FixtureDef fixture_def;
 			b2PolygonShape shape;
@@ -74,17 +74,32 @@ void physics_world::preupdate(float pDelta)
 			pPhysics.mBody->ResetMassData();
 			log::debug() << WGE_LI << pObj.get_name() << ": New Collider" << log::endm;
 		}
-	}));
+	});
 
 	// Calculate physics
 	mWorld->Step(pDelta, 1, 1);
 	update_object_transforms();
 }
 
+void physics_world::postupdate(float pDelta)
+{
+	// Update the body to the transform of the transform component
+	get_layer().for_each(
+		[&](physics_component& pPhysics, core::transform_component& pTransform)
+	{
+		if (pPhysics.mBody)
+		{
+			math::vec2 position = pTransform.get_absolute_position();
+			math::radians rotation = pTransform.get_rotation();
+			pPhysics.mBody->SetTransform({ position.x, position.y }, rotation);
+		}
+	});
+}
+
 void physics_world::update_object_transforms()
 {	
 	get_layer().for_each(
-		std::function([&](physics_component& pPhysics, core::transform_component& pTransform)
+		[&](physics_component& pPhysics, core::transform_component& pTransform)
 	{
 		if (pPhysics.mBody)
 		{
@@ -92,7 +107,7 @@ void physics_world::update_object_transforms()
 			pTransform.set_position({ position.x, position.y });
 			pTransform.set_rotaton(math::radians(pPhysics.mBody->GetAngle()));
 		}
-	}));
+	});
 }
 
 } // namespacw wge::physics

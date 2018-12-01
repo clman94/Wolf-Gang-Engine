@@ -58,6 +58,7 @@ public:
 	component_storage<T>& get_container()
 	{
 		using storage_type = component_storage<T>;
+		// Create a new container if it doesn't exist
 		if (mContainers.find(T::COMPONENT_ID) == mContainers.end())
 			mContainers[T::COMPONENT_ID] = std::make_unique<storage_type>();
 		return *dynamic_cast<storage_type*>(mContainers[T::COMPONENT_ID].get());

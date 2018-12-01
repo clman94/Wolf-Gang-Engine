@@ -41,7 +41,7 @@ public:
 	b2World* get_world() const;
 
 	virtual void preupdate(float pDelta) override;
-
+	virtual void postupdate(float pDelta) override;
 private:
 	struct contact
 	{

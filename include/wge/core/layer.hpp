@@ -97,55 +97,10 @@ public:
 	// Populate these pointers with all the components this object has.
 	// However, it will return false if it couldn't find them all.
 	template <typename Tfirst, typename...Trest>
-	bool retrieve_components(game_object pObj, Tfirst*& pFirst, Trest*&...pRest)
-	{
-		auto comp = mComponent_manager.get_first_component<Tfirst>(pObj.get_instance_id());
-		if (!comp)
-			return false;
-		pFirst = comp;
-		if constexpr (sizeof...(pRest) == 0)
-			return true;
-		else
-			return retrieve_components(pObj, pRest...);
-	}
+	bool retrieve_components(game_object pObj, Tfirst*& pFirst, Trest*&...pRest);
 
-	bool retrieve_components(game_object pObj)
-	{
-		return true;
-	}
-
-	template <typename Tcomponent, typename...Tdependencies>
-	void for_each(const std::function<void(game_object, Tcomponent&, Tdependencies&...)>& pCallable)
-	{
-		auto wrapper = [&](Tcomponent& pComp, Tdependencies&...pDep)
-		{
-			pCallable(get_object(pComp.get_object_id()), pComp, pDep...);
-		};
-		for_each(std::function(wrapper));
-	}
-
-	template <typename Tcomponent, typename...Tdependencies>
-	void for_each(const std::function<void(Tcomponent&, Tdependencies&...)>& pCallable)
-	{
-		std::tuple<Tdependencies*...> dependency_pointers;
-		for (auto& i : mComponent_manager.get_container<Tcomponent>())
-		{
-			if constexpr (sizeof...(Tdependencies) == 0)
-			{
-				// No dependencies
-				pCallable(i);
-			}
-			else
-			{
-				// Retrieve dependencies
-				game_object obj = get_object(i.get_object_id());
-				if (retrieve_components(obj, std::get<Tdependencies*>(dependency_pointers)...))
-				{
-					pCallable(i, *std::get<Tdependencies*>(dependency_pointers)...);
-				}
-			}
-		}
-	}
+	template <typename T>
+	void for_each(T&& pCallable);
 
 	context& get_context() const;
 
@@ -160,7 +115,11 @@ public:
 	void postupdate(float pDelta);
 
 private:
-	
+	template <typename Tcomponent, typename...Tdependencies>
+	void for_each_impl(const std::function<void(game_object, Tcomponent&, Tdependencies&...)>& pCallable);
+
+	template <typename Tcomponent, typename...Tdependencies>
+	void for_each_impl(const std::function<void(Tcomponent&, Tdependencies&...)>& pCallable);
 
 private:
 	float mTime_scale{ 1 };
@@ -171,5 +130,57 @@ private:
 	component_manager mComponent_manager;
 	object_manager mObject_manager;
 };
+
+template<typename Tfirst, typename ...Trest>
+inline bool layer::retrieve_components(game_object pObj, Tfirst *& pFirst, Trest *& ...pRest)
+{
+	auto comp = mComponent_manager.get_first_component<Tfirst>(pObj.get_instance_id());
+	if (!comp)
+		return false;
+	pFirst = comp;
+	if constexpr (sizeof...(pRest) == 0)
+		return true;
+	else
+		return retrieve_components(pObj, pRest...);
+}
+
+template<typename Tcomponent, typename...Tdependencies>
+inline void layer::for_each_impl(const std::function<void(game_object, Tcomponent&, Tdependencies&...)>& pCallable)
+{
+	auto wrapper = [&](Tcomponent& pComp, Tdependencies&...pDep)
+	{
+		pCallable(get_object(pComp.get_object_id()), pComp, pDep...);
+	};
+	for_each(std::function(wrapper));
+}
+
+template<typename Tcomponent, typename...Tdependencies>
+inline void layer::for_each_impl(const std::function<void(Tcomponent&, Tdependencies&...)>& pCallable)
+{
+	std::tuple<Tdependencies*...> dependency_pointers;
+	for (auto& i : mComponent_manager.get_container<Tcomponent>())
+	{
+		if constexpr (sizeof...(Tdependencies) == 0)
+		{
+			// No dependencies
+			pCallable(i);
+		}
+		else
+		{
+			// Retrieve dependencies
+			game_object obj = get_object(i.get_object_id());
+			if (retrieve_components(obj, std::get<Tdependencies*>(dependency_pointers)...))
+			{
+				pCallable(i, *std::get<Tdependencies*>(dependency_pointers)...);
+			}
+		}
+	}
+}
+
+template<typename T>
+inline void layer::for_each(T&& pCallable)
+{
+	for_each_impl(std::function(std::forward<T>(pCallable)));
+}
 
 } // namespace wge::core
