@@ -499,7 +499,7 @@ private:
 						// Draw center point
 						if (is_object_selected)
 						{
-							math::vec2 center = transform->get_absolute_position() / render_view_scale;
+							math::vec2 center = transform->get_position() / render_view_scale;
 							dl->AddCircle({ center.x + cursor.x, center.y + cursor.y },
 								5, ImGui::GetColorU32({ 1, 1, 1, 0.6f }), 12, 3);
 						}

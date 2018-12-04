@@ -40,7 +40,7 @@ void sprite_component::create_batch(core::transform_component& pTransform, rende
 	verts[3].uv = math::vec2(0, 1);
 
 	// Get transform and scale it by the pixel size
-	math::mat33 transform_mat = pTransform.get_absolute_transform();
+	math::mat33 transform_mat = pTransform.get_transform();
 	transform_mat.scale(math::vec2(pRenderer.get_pixel_size(), pRenderer.get_pixel_size()));
 
 	// Transform the vertices

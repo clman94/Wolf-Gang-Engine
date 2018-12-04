@@ -9,8 +9,7 @@ transform_component::transform_component(core::component_id pId) :
 	core::component(pId),
 	mScale(1, 1),
 	mRotation(0),
-	mTransform_needs_update(true),
-	mCache_needs_update(true)
+	mTransform_needs_update(true)
 {
 }
 
@@ -64,62 +63,10 @@ math::vec2 transform_component::get_scale() const
 	return mScale;
 }
 
-math::vec2 transform_component::get_absolute_position()
-{
-	update_absolutes();
-	return mCache_position;
-}
-
-math::radians transform_component::get_absolute_rotation()
-{
-	update_absolutes();
-	return mCache_rotation;
-}
-
-math::vec2 transform_component::get_absolute_scale()
-{
-	update_absolutes();
-	return mCache_scale;
-}
-
-math::mat33 transform_component::get_absolute_transform()
-{
-	update_absolutes();
-	return mCache_transform;
-}
-
 math::mat33 transform_component::get_transform()
 {
 	update_transform();
 	return mTransform;
-}
-
-void transform_component::update_absolutes()
-{
-	if (mCache_needs_update)
-	{
-		mCache_position = mPosition;
-		mCache_rotation = mRotation;
-		mCache_scale = mScale;
-
-		update_transform();
-		mCache_transform = mTransform;
-
-		/*
-		if (auto parent = get_object()->get_parent())
-		{
-			transform_component* transform = parent->get_component<transform_component>();
-			if (transform)
-			{
-				mCache_scale *= transform->get_absolute_scale();
-				mCache_rotation += transform->get_absolute_rotation();
-				mCache_position = (mCache_position * transform->get_absolute_scale()).rotate(
-					transform->get_absolute_rotation());
-				mCache_transform = transform->get_absolute_transform() * mCache_transform;
-			}
-		}*/
-		mCache_needs_update = false;
-	}
 }
 
 void transform_component::update_transform()

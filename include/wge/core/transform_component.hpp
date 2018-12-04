@@ -35,16 +35,7 @@ public:
 	// and scale properties.
 	math::mat33 get_transform();
 
-	// Combines all of the transforms of this objects
-	// parents. Use these for rendering.
-	math::vec2 get_absolute_position();
-	math::radians get_absolute_rotation();
-	math::vec2 get_absolute_scale();
-	math::mat33 get_absolute_transform();
-
 private:
-	// Updates the the cached absolute values
-	void update_absolutes();
 	// Updates the transform
 	void update_transform();
 
@@ -55,13 +46,6 @@ private:
 
 	bool mTransform_needs_update;
 	math::mat33 mTransform;
-
-	// These are cached values for the absolute transform values
-	bool mCache_needs_update;
-	math::vec2 mCache_position;
-	math::radians mCache_rotation;
-	math::vec2 mCache_scale;
-	math::mat33 mCache_transform;
 };
 
 }

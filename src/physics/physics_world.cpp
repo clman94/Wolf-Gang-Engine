@@ -43,9 +43,9 @@ void physics_world::preupdate(float pDelta)
 		if (!pPhysics.mBody)
 		{
 			b2BodyDef body_def;
-			body_def.position.x = pTransform.get_absolute_position().x;
-			body_def.position.y = pTransform.get_absolute_position().y;
-			body_def.angle = pTransform.get_absolute_rotation();
+			body_def.position.x = pTransform.get_position().x;
+			body_def.position.y = pTransform.get_position().y;
+			body_def.angle = pTransform.get_rotation();
 			body_def.type = pPhysics.get_b2Body_type();
 			//body_def.userData = obj.get_instance_id().get_value();
 			pPhysics.mBody = mWorld->CreateBody(&body_def);
@@ -86,7 +86,7 @@ void physics_world::postupdate(float pDelta)
 	{
 		if (pPhysics.mBody)
 		{
-			math::vec2 position = pTransform.get_absolute_position();
+			math::vec2 position = pTransform.get_position();
 			math::radians rotation = pTransform.get_rotation();
 			pPhysics.mBody->SetTransform({ position.x, position.y }, rotation);
 		}
