@@ -13,7 +13,7 @@ class transform_component :
 {
 	WGE_COMPONENT_SINGLE_INSTANCE("Transform 2D", 0);
 public:
-	transform_component(object_node* pObj);
+	transform_component(core::component_id pId);
 
 	virtual json serialize() const override;
 	virtual void deserialize(const json& pJson) override;
@@ -35,28 +35,9 @@ public:
 	// and scale properties.
 	math::mat33 get_transform();
 
-	// Combines all of the transforms of this objects
-	// parents. Use these for rendering.
-	math::vec2 get_absolute_position();
-	math::radians get_absolute_rotation();
-	math::vec2 get_absolute_scale();
-	math::mat33 get_absolute_transform();
-
 private:
-	// Updates the the cached absolute values
-	void update_absolutes();
 	// Updates the transform
 	void update_transform();
-	
-	// This event is recieved when the transform of this component
-	// or any of its parents change. When any of the get_absolute_*() methods
-	// are called, the cache will be updated.
-	void on_transform_changed();
-
-	// This will notify all components and the children nodes
-	// that this node has changed position and they need to 
-	// update their cache.
-	void notify_transform_changed();
 
 private:
 	math::vec2 mPosition;
@@ -65,13 +46,6 @@ private:
 
 	bool mTransform_needs_update;
 	math::mat33 mTransform;
-
-	// These are cached values for the absolute transform values
-	bool mCache_needs_update;
-	math::vec2 mCache_position;
-	math::radians mCache_rotation;
-	math::vec2 mCache_scale;
-	math::mat33 mCache_transform;
 };
 
 }

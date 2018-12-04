@@ -2,25 +2,30 @@
 
 #include <wge/core/asset.hpp>
 #include <wge/core/component.hpp>
-#include <wge/graphics/renderer.hpp>
 #include <wge/math/anchor.hpp>
 #include <wge/math/aabb.hpp>
+#include <wge/math/vector.hpp>
+#include <wge/core/transform_component.hpp>
+#include <wge/graphics/texture.hpp>
 
 namespace wge::graphics
 {
+
+class renderer;
 
 class sprite_component :
 	public core::component
 {
 	WGE_COMPONENT("Sprite", 12409);
 public:
-	sprite_component(core::object_node* pNode);
-
+	sprite_component(core::component_id pId) :
+		core::component(pId)
+	{}
 	virtual json serialize() const override;
 	virtual void deserialize(const json& pJson) override;
 
-	// Creates a batch and sends it to the renderer
-	void on_render(renderer* pRenderer);
+	// Creates a batch
+	void create_batch(core::transform_component& pTransform, renderer& pRenderer);
 
 	// Set the offset of the image in pixels
 	void set_offset(const math::vec2& pOffset)
@@ -48,12 +53,6 @@ public:
 	{
 		mTexture = pAsset;
 	}
-	// Set the texture based on its asset id.
-	// This will use the asset manager in the current context.
-	void set_texture(core::asset_uid pID);
-	// Set the texture based on its asset path.
-	// This will use the asset manager in the current context.
-	void set_texture(const std::string& pPath);
 	// Get the current texture
 	texture::ptr get_texture() const
 	{

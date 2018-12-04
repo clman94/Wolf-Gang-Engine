@@ -1,5 +1,7 @@
 #pragma once
 
+#include <wge/graphics/color.hpp>
+
 // Redefined here to move the gl header to a different file
 typedef unsigned int GLuint;
 
@@ -28,6 +30,8 @@ public:
 
 	// Resets opengl back to the default framebuffer
 	void end_framebuffer() const;
+
+	void clear(const color& pColor);
 
 	// Get the raw gl texture id
 	GLuint get_gl_texture() const

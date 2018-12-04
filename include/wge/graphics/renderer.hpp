@@ -11,6 +11,7 @@
 #include <wge/graphics/texture.hpp>
 #include <wge/core/system.hpp>
 #include <wge/core/context.hpp>
+#include <wge/graphics/sprite_component.hpp>
 
 namespace wge::graphics
 {
@@ -82,9 +83,11 @@ class renderer :
 {
 	WGE_SYSTEM("Renderer", 43);
 public:
-	renderer(core::context& pCtx) :
-		mContext(&pCtx)
-	{}
+	renderer(core::layer& pLayer) :
+		core::system(pLayer)
+	{
+		initialize();
+	}
 
 	// Compile the default shaders and initialize opengl
 	void initialize();
@@ -96,8 +99,8 @@ public:
 	}
 
 	void set_render_view(const math::aabb& mAABB);
+	void set_render_view_to_framebuffer(const math::vec2& pOffset = { 0, 0 }, const math::vec2& pScale = { 1, 1 });
 	math::aabb get_render_view() const;
-
 	math::vec2 get_render_view_scale() const;
 
 	// Convert world coordinates to screen coordinates
@@ -152,8 +155,6 @@ private:
 	float mPixel_size{ 1 };
 
 	std::vector<render_batch_2d> mBatches;
-
-	core::context* mContext;
 };
 
 } // namespace wge::graphics

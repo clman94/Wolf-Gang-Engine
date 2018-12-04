@@ -5,7 +5,8 @@
 #include <wge/logging/log.hpp>
 #include <wge/core/asset.hpp>
 #include <wge/core/layer.hpp>
-#include <wge/core/object_node.hpp>
+#include <wge/core/game_object.hpp>
+#include <optional>
 
 #include "asset_document.hpp"
 
@@ -47,7 +48,7 @@ public:
 		if constexpr (Ttype == selection_type::layer)
 			return mLayer_selection.lock();
 		if constexpr (Ttype == selection_type::game_object)
-			return mObject_selection.lock();
+			return mObject_selection;
 	}
 
 	// Set the currently selection asset
@@ -63,7 +64,7 @@ public:
 		mLayer_selection = pLayer;
 	}
 	// Set the currently selected object
-	void set_selection(core::object_node::ref pObject)
+	void set_selection(core::game_object pObject)
 	{
 		reset_selection();
 		mObject_selection = pObject;
@@ -79,7 +80,7 @@ public:
 private:
 	core::asset::wptr mAsset_selection;
 	core::layer::wptr mLayer_selection;
-	core::object_node::weak_ref mObject_selection;
+	std::optional<core::game_object> mObject_selection;
 
 	std::map<std::string, editor_builder_function> mEditor_builders;
 	std::vector<asset_document> mDocuments;

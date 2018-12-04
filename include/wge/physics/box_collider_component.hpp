@@ -1,7 +1,7 @@
 #pragma once
 
 #include <wge/core/component.hpp>
-#include <wge/core/object_node.hpp>
+#include <wge/core/game_object.hpp>
 #include <wge/math/vector.hpp>
 
 class b2World;
@@ -18,7 +18,7 @@ class box_collider_component :
 {
 	WGE_COMPONENT("Box Collider", 268);
 public:
-	box_collider_component(core::object_node* pObj);
+	box_collider_component(core::component_id pId);
 	virtual ~box_collider_component();
 
 	virtual json serialize() const override;
@@ -58,6 +58,8 @@ private:
 	bool mIs_sensor;
 	physics_component* mPhysics_component;
 	math::vec2 mAnchor;
+
+	friend class physics_world;
 };
 
 }

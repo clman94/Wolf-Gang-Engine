@@ -3,16 +3,15 @@
 #include <queue>
 
 #include <wge/core/component.hpp>
-#include <wge/core/object_node.hpp>
+#include <wge/core/game_object.hpp>
 #include <wge/math/vector.hpp>
+#include <wge/core/system.hpp>
 
 #include <Box2D/Dynamics/b2WorldCallbacks.h>
 
 class b2World;
 class b2Body;
 struct b2BodyDef;
-
-class renderer;
 
 namespace wge::physics
 {
@@ -27,13 +26,12 @@ Events sent:
 Events recieved:
 	void on_preupdate(float);
 */
-class physics_world_component :
-	public core::component
+class physics_world :
+	public core::system
 {
-	WGE_COMPONENT("Physics World", 3)
+	WGE_SYSTEM("Physics World", 3)
 public:
-	physics_world_component(core::object_node* pObj);
-	virtual ~physics_world_component();
+	physics_world(core::layer&);
 
 	void set_gravity(math::vec2 pVec);
 	math::vec2 get_gravity() const;
@@ -42,6 +40,8 @@ public:
 
 	b2World* get_world() const;
 
+	virtual void preupdate(float pDelta) override;
+	virtual void postupdate(float pDelta) override;
 private:
 	struct contact
 	{
@@ -71,13 +71,13 @@ private:
 		}
 	};
 
-	void on_preupdate(float pDelta);
+	void update_object_transforms();
 
 private:
-	b2World* mWorld;
+	std::unique_ptr<b2World> mWorld;
 	contact_listener mContact_listener;
 
 	friend class physics_component;
 };
 
-}
+} // namespace wge::physics

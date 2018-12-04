@@ -1,3 +1,4 @@
+
 #include <wge/editor/application.hpp>
 
 #include <wge/logging/log.hpp>
@@ -6,7 +7,7 @@
 #include <wge/core/transform_component.hpp>
 #include <wge/physics/box_collider_component.hpp>
 #include <wge/physics/physics_component.hpp>
-#include <wge/physics/physics_world_component.hpp>
+#include <wge/physics/physics_world.hpp>
 #include <wge/graphics/sprite_component.hpp>
 #include <wge/scripting/script.hpp>
 #include <wge/core/asset_manager.hpp>
@@ -14,49 +15,21 @@
 #include <wge/graphics/framebuffer.hpp>
 #include <wge/filesystem/file_input_stream.hpp>
 #include <wge/filesystem/exception.hpp>
+#include <wge/graphics/renderer.hpp>
 
 #include "editor.hpp"
 #include "history.hpp"
 #include "context.hpp"
 #include "component_inspector.hpp"
 #include "imgui_editor_tools.hpp"
+#include "imgui_ext.hpp"
 
 // GL
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
-// ImGUI
-#include <imgui/imgui.h>
-#include <imgui/imgui_impl_glfw.h>
-#include <imgui/imgui_impl_opengl3.h>
-#include <imgui/imgui_stl.h>
 
 #include <functional>
-
-namespace ImGui
-{
-
-// Draws a framebuffer
-inline void Image(const wge::graphics::framebuffer& mFramebuffer, const ImVec2& pSize = ImVec2(0, 0))
-{
-	ImGui::Image((void*)mFramebuffer.get_gl_texture(), pSize,
-		ImVec2(0, 1), ImVec2(1, 0)); // Y-axis needs to be flipped
-}
-
-// Draws a texture
-inline void Image(wge::graphics::texture::ptr mTexture, const ImVec2& pSize = ImVec2(0, 0))
-{
-	ImGui::Image((void*)mTexture->get_gl_texture(), pSize,
-		ImVec2(0, 1), ImVec2(1, 0)); // Y-axis needs to be flipped
-}
-
-// Draws a texture
-inline void ImageButton(wge::graphics::texture::ptr mTexture, const ImVec2& pSize = ImVec2(0, 0))
-{
-	ImGui::ImageButton((void*)mTexture->get_gl_texture(), pSize);
-}
-
-}
 
 namespace wge::editor
 {
@@ -111,122 +84,6 @@ inline bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr, bool pD
 	return *pOpen;
 }
 
-inline void show_node_tree(core::object_node::ref pNode, context& pContext)
-{
-	ImGui::PushID(pNode.get());
-
-	bool* open = ImGui::GetStateStorage()->GetBoolRef(ImGui::GetID("_IsOpen"));
-
-	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-
-	// Don't show the arrow if there are no children nodes
-	if (pNode->get_child_count() > 0)
-	{
-		ImGui::PushStyleVar(ImGuiStyleVar_::ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-		collapsing_arrow("NodeUnfold", open);
-		ImGui::PopStyleVar();
-		ImGui::SameLine();
-	}
-
-	const bool object_is_selected = pContext.get_selection<selection_type::game_object>() == pNode;
-
-	std::string label;
-	if (ImGui::Selectable(pNode->get_name().c_str(), object_is_selected))
-		pContext.set_selection(pNode);
-	if (ImGui::IsItemActive() && ImGui::IsMouseDoubleClicked(0))
-		*open = !*open; // Toggle open flag
-	if (ImGui::BeginDragDropSource())
-	{
-		core::object_node* ptr = pNode.get();
-		ImGui::SetDragDropPayload("MoveNodeInTree", &ptr, sizeof(void*));
-
-		ImGui::Text(pNode->get_name().c_str());
-
-		ImGui::EndDragDropSource();
-	}
-
-	// Drop node as child of this node. Inserted at end.
-	if (ImGui::BeginDragDropTarget())
-	{
-		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MoveNodeInTree"))
-		{
-			core::object_node::ref node = *static_cast<core::object_node**>(payload->Data);
-			if (!pNode->is_child_of(node)) // Do not move parent into its own child!
-				pNode->add_child(node);
-		}
-		ImGui::EndDragDropTarget();
-	}
-
-	// Drop node as first child of this node or as previous node if this node is collapsed
-	ImGui::InvisibleButton("__DragBetween", ImVec2(-1, 3));
-	if (ImGui::BeginDragDropTarget())
-	{
-		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MoveNodeInTree"))
-		{
-			util::ref<core::object_node> node = *static_cast<core::object_node**>(payload->Data);
-			if (!pNode->is_child_of(node)) // Do not move parent into its own child!
-			{
-				if (pNode->get_child_count() && *open)
-					pNode->add_child(node, 0);
-				else if (auto parent = pNode->get_parent())
-					parent->add_child(node, parent->get_child_index(pNode));
-			}
-		}
-		ImGui::EndDragDropTarget();
-	}
-	ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 3);
-
-	if (*open)
-	{
-		ImGui::TreePush();
-		// Show the children nodes and their components
-		for (std::size_t i = 0; i < pNode->get_child_count(); i++)
-			show_node_tree(pNode->get_child(i), pContext);
-		ImGui::TreePop();
-
-		// Drop node as next node
-		if (pNode->get_child_count() > 0 && *open)
-		{
-			ImGui::InvisibleButton("__DragAfterChildrenInParent", ImVec2(-1, 3));
-			if (ImGui::BeginDragDropTarget())
-			{
-				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MoveNodeInTree"))
-				{
-					util::ref<core::object_node> node = *static_cast<core::object_node**>(payload->Data);
-					if (!pNode->is_child_of(node)) // Do not move parent into its own child!
-						if (auto parent = pNode->get_parent())
-							parent->add_child(node, parent->get_child_index(pNode) + 1);
-				}
-				ImGui::EndDragDropTarget();
-			}
-			ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 3);
-		}
-	}
-
-	ImGui::PopStyleVar(); // ImGuiStyleVar_ItemSpacing
-
-	ImGui::PopID();
-}
-
-inline void show_node_tree(core::layer::ptr pLayer, context& pContext)
-{
-	ImGui::PushID(pLayer.get());
-
-	collapsing_arrow("LayerUnfold", nullptr, true);
-	ImGui::SameLine();
-	const bool layer_is_selected = pContext.get_selection<selection_type::layer>() == pLayer;
-	if (ImGui::Selectable(pLayer->get_name().c_str(), layer_is_selected))
-		pContext.set_selection(pLayer);
-
-	ImGui::TreePush();
-	// Show the object and their components
-	for (auto obj : *pLayer)
-		show_node_tree(obj, pContext);
-	ImGui::TreePop();
-
-	ImGui::PopID();
-}
-
 inline void GLAPIENTRY opengl_message_callback(GLenum source,
 	GLenum type,
 	GLuint id,
@@ -238,9 +95,10 @@ inline void GLAPIENTRY opengl_message_callback(GLenum source,
 class application
 {
 public:
-	application() :
-		mRenderer(mGame_context)
-	{}
+	application()
+	{
+		mGame_context.set_asset_manager(&mAsset_manager);
+	}
 
 	int run()
 	{
@@ -260,6 +118,12 @@ private:
 		{
 			float delta = 1.f / 60.f;
 
+			if (mUpdate)
+			{
+				mGame_context.preupdate(delta);
+				mGame_context.update(delta);
+			}
+
 			new_frame();
 			main_viewport_dock();
 
@@ -269,24 +133,31 @@ private:
 				i->on_gui(delta);
 			}
 
+			show_settings();
 			show_asset_manager();
-
-			mRenderer.set_framebuffer(&mViewport_framebuffer);
 			show_viewport();
-
 			show_objects();
-			show_component_inspector();
+			show_inspector();
 
+			if (mUpdate)
+				mGame_context.postupdate(delta);
+
+			// Clear the framebuffer with black
+			mViewport_framebuffer.begin_framebuffer();
+			mViewport_framebuffer.clear({ 0, 0, 0, 1 });
+			mViewport_framebuffer.end_framebuffer();
+
+			// Render all layers with the renderer system enabled
 			for (auto& i : mGame_context.get_layer_container())
-				i->send_all("on_render", &mRenderer);
-
-			mRenderer.set_framebuffer(&mViewport_framebuffer);
-			mRenderer.set_render_view({
-				{ 0.f, 0.f },
-				{ (float)mViewport_framebuffer.get_width() * 0.01f, (float)mViewport_framebuffer.get_height() * 0.01f }
-				});
-			mRenderer.render();
-			mRenderer.clear();
+			{
+				if (auto renderer = i->get_system<graphics::renderer>())
+				{
+					renderer->set_framebuffer(&mViewport_framebuffer);
+					renderer->set_render_view_to_framebuffer({}, { 0.01, 0.01 });
+					renderer->render();
+					renderer->clear();
+				}
+			}
 
 			end_frame();
 		}
@@ -295,8 +166,6 @@ private:
 
 	void shutdown()
 	{
-		mRenderer.clear();
-
 		// Cleanup ImGui
 		ImGui_ImplOpenGL3_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
@@ -379,22 +248,22 @@ private:
 
 	void init_game_context()
 	{
-		core::component_factory& factory = mGame_context.get_component_factory();
-		factory.add<core::transform_component>();
-		factory.add<physics::physics_world_component>();
-		factory.add<physics::physics_component>();
-		factory.add<physics::box_collider_component>();
-		factory.add<graphics::sprite_component>();
-
 		mAsset_manager.add_loader("texture", std::make_shared<graphics::texture_asset_loader>());
 		mAsset_manager.add_loader("scene", std::make_shared<core::config_asset_loader>());
 		mAsset_manager.set_root_directory(".");
 		mAsset_manager.load_assets();
-		mGame_context.add_system(&mAsset_manager);
 
-		mRenderer.initialize();
-		mRenderer.set_pixel_size(0.01f);
-		mGame_context.add_system(&mRenderer);
+		auto layer = mGame_context.create_layer();
+		layer->set_name("Layer1");
+		layer->add_system<graphics::renderer>();
+
+		auto renderer = layer->get_system<graphics::renderer>();
+		renderer->set_pixel_size(0.01);
+
+		auto obj = layer->create_object();
+		obj.add_component<core::transform_component>();
+		auto sprite = obj.add_component<graphics::sprite_component>();
+		sprite->set_texture(mAsset_manager.get_asset<graphics::texture>("mytex.png"));
 	}
 
 	void init_inspectors()
@@ -440,7 +309,7 @@ private:
 
 		// Inspector for sprite_component
 		mInspectors.add_inspector(graphics::sprite_component::COMPONENT_ID,
-			[](core::component* pComponent)
+			[this](core::component* pComponent)
 		{
 			auto sprite = dynamic_cast<graphics::sprite_component*>(pComponent);
 			math::vec2 offset = sprite->get_offset();
@@ -467,20 +336,25 @@ private:
 				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("textureAsset"))
 				{
 					core::asset_uid id = *(core::asset_uid*)payload->Data;
-					sprite->set_texture(id);
+					auto asset = mAsset_manager.get_asset<graphics::texture>(id);
+					sprite->set_texture(asset);
 				}
 				ImGui::EndDragDropTarget();
 			}
 		});
 
-		// Inspector for physics_world_component
-		mInspectors.add_inspector(physics::physics_world_component::COMPONENT_ID,
+		mInspectors.add_inspector(physics::physics_component::COMPONENT_ID,
 			[](core::component* pComponent)
 		{
-			auto physicsworld = dynamic_cast<physics::physics_world_component*>(pComponent);
-			math::vec2 gravity = physicsworld->get_gravity();
-			if (ImGui::DragFloat2("Gravity", gravity.components))
-				physicsworld->set_gravity(gravity);
+			auto physics = dynamic_cast<physics::physics_component*>(pComponent);
+			std::array options = { "Dynamic", "Static" };
+			if (ImGui::BeginCombo("Type", options[physics->get_type()]))
+			{
+				for (std::size_t i = 0; i < options.size(); i++)
+					if (ImGui::Selectable(options[i]))
+						physics->set_type(i);
+				ImGui::EndCombo();
+			}
 		});
 
 		// Inspector for box_collider_component
@@ -543,12 +417,12 @@ private:
 		ImGui::End();
 	}
 
-	bool create_aabb_from_object(core::object_node::ref pObj, math::aabb& pAABB)
+	bool create_aabb_from_object(core::game_object& pObj, math::aabb& pAABB)
 	{
 		bool has_aabb = false;
-		for (std::size_t comp_idx = 0; comp_idx < pObj->get_component_count(); comp_idx++)
+		for (std::size_t comp_idx = 0; comp_idx < pObj.get_component_count(); comp_idx++)
 		{
-			auto comp = pObj->get_component_index(comp_idx);
+			auto comp = pObj.get_component_index(comp_idx);
 			if (!comp->has_aabb())
 				continue;
 			if (!has_aabb)
@@ -562,8 +436,29 @@ private:
 		return has_aabb;
 	}
 
+	void show_settings()
+	{
+		if (ImGui::Begin("Settings"))
+		{
+			ImGui::BeginTabBar("SettingsTabBar");
+			if (ImGui::BeginTabItem("Style"))
+			{
+				ImGui::ShowStyleEditor();
+				ImGui::EndTabItem();
+			}
+			ImGui::EndTabBar();
+		}
+		ImGui::End();
+	}
+
 	void show_viewport()
 	{
+		if (ImGui::Begin("Game"))
+		{
+			ImGui::Checkbox("Run", &mUpdate);
+		}
+		ImGui::End();
+
 		if (ImGui::Begin("Viewport"))
 		{
 			//mygameinput.set_enabled(ImGui::IsWindowFocused());
@@ -580,22 +475,31 @@ private:
 
 			visual_editor::begin_editor("_SceneEditor", { cursor.x, cursor.y }, { 1, 1 });
 			{
-				const math::vec2 render_view_scale = mRenderer.get_render_view_scale();
 				ImDrawList* dl = ImGui::GetWindowDrawList();
 
 				const math::vec2 mouse(ImGui::GetMousePos().x - cursor.x, ImGui::GetMousePos().y - cursor.y);
 				for (auto layer : mGame_context.get_layer_container())
 				{
-					for (auto obj : *layer)
+					graphics::renderer* renderer = layer->get_system<graphics::renderer>();
+					if (!renderer)
+						continue;
+					// Make sure we are working with the viewports framebuffer
+					renderer->set_framebuffer(&mViewport_framebuffer);
+					
+					const math::vec2 render_view_scale = renderer->get_render_view_scale();
+					for (std::size_t i = 0; i < layer->get_object_count(); i++)
 					{
-						auto transform = obj->get_component<core::transform_component>();
+						auto obj = layer->get_object(i);
+						auto transform = obj.get_component<core::transform_component>();
 
-						const bool is_object_selected = obj == mContext.get_selection<selection_type::game_object>();
+						// Check for selection
+						auto selection = mContext.get_selection<selection_type::game_object>();
+						const bool is_object_selected = selection && obj == *selection;
 
 						// Draw center point
 						if (is_object_selected)
 						{
-							math::vec2 center = transform->get_absolute_position() / render_view_scale;
+							math::vec2 center = transform->get_position() / render_view_scale;
 							dl->AddCircle({ center.x + cursor.x, center.y + cursor.y },
 								5, ImGui::GetColorU32({ 1, 1, 1, 0.6f }), 12, 3);
 						}
@@ -634,6 +538,49 @@ private:
 		ImGui::End();
 	}
 
+	void show_layer_objects(const core::layer::ptr& pLayer)
+	{
+		for (std::size_t i = 0; i < pLayer->get_object_count(); i++)
+		{
+			core::game_object obj = pLayer->get_object(i);
+			ImGui::PushID(obj.get_instance_id().get_value());
+
+			const auto selection = mContext.get_selection<selection_type::game_object>();
+			const bool is_selected = selection && selection->get_instance_id() == obj.get_instance_id();
+			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | (is_selected ? ImGuiTreeNodeFlags_Selected : 0);
+			if (ImGui::TreeNodeEx((obj.get_name() + "###GameObject").c_str(), flags))
+			{
+				if (ImGui::IsItemClicked())
+					mContext.set_selection(obj);
+				ImGui::TreePop();
+			}
+
+			ImGui::PopID();
+		}
+	}
+
+	void show_layers()
+	{
+		for (auto& i : mGame_context.get_layer_container())
+		{
+			ImGui::PushID(&(*i));
+
+			bool is_selected = mContext.get_selection<selection_type::layer>() == i;
+			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_OpenOnDoubleClick
+				| ImGuiTreeNodeFlags_OpenOnArrow | (is_selected ? ImGuiTreeNodeFlags_Selected : 0);
+			bool open = ImGui::TreeNodeEx((i->get_name() + "###Layer").c_str(), flags);
+			if (ImGui::IsItemClicked())
+				mContext.set_selection(i);
+			if (open)
+			{
+				show_layer_objects(i);
+				ImGui::TreePop();
+			}
+
+			ImGui::PopID();
+		}
+	}
+
 	void show_objects()
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, ImGui::GetStyle().WindowPadding.y));
@@ -641,51 +588,6 @@ private:
 		{
 			if (ImGui::BeginMenuBar())
 			{
-				if (ImGui::BeginMenu("Scene"))
-				{
-					if (ImGui::MenuItem("Load"))
-					{
-						if (auto scene = mAsset_manager.find_asset("myscene.asset"))
-						{
-							mGame_context.deserialize(scene->get_config()->get_metadata());
-						}
-						else
-						{
-							log::error() << "myscene asset missing" << log::endm;
-						}
-					}
-					if (ImGui::MenuItem("Save"))
-					{
-						try
-						{
-							if (auto scene = mAsset_manager.find_asset("myscene.asset"))
-							{
-								scene->get_config()->set_metadata(mGame_context.serialize());
-								scene->get_config()->save();
-							}
-							else
-							{
-								auto config = std::make_shared<core::asset_config>();
-								config->set_metadata(mGame_context.serialize());
-								config->set_path(mAsset_manager.get_root_directory() / "myscene.asset");
-								config->set_type("scene");
-								config->generate_id();
-
-								config->save();
-
-								auto loader = mAsset_manager.find_loader("scene");
-								mAsset_manager.add_asset(loader->create_asset(config, mAsset_manager.get_root_directory()));
-							}
-						}
-						catch (const std::exception& e)
-						{
-							log::error() << e.what() << log::endm;
-							log::error() << "Could not save scene" << log::endm;
-						}
-					}
-					ImGui::EndMenu();
-				}
-
 				if (ImGui::BeginMenu("Add"))
 				{
 					if (ImGui::MenuItem("Layer"))
@@ -694,119 +596,168 @@ private:
 					}
 					if (ImGui::MenuItem("Object 2D"))
 					{
-						auto obj = core::object_node::create(mGame_context);
-						obj->set_name("New 2D Object");
-						obj->add_component<core::transform_component>();
-						if (!mGame_context.get_layer_container().empty())
-							mGame_context.get_layer(0)->add(obj);
+						// Find a layer to create the object in
+						core::layer* layer = nullptr;
+						if (auto selected_layer = mContext.get_selection<selection_type::layer>())
+							layer = &(*selected_layer);
+						else if (auto selected_object = mContext.get_selection<selection_type::game_object>())
+							layer = &selected_object->get_layer();
+
+						// Create the object
+						if (layer)
+						{
+							auto obj = layer->create_object();
+							obj.set_name("New 2D Object");
+							obj.add_component<core::transform_component>();
+						}
 						else
-							log::error() << "Could not create object" << log::endm;
+						{
+							log::error() << "Cannot create object; No layer or object is selected" << log::endm;
+						}
 					}
 					ImGui::EndMenu();
 				}
 				ImGui::EndMenuBar();
 			}
-			for (auto& i : mGame_context.get_layer_container())
-				show_node_tree(i, mContext);
+			show_layers();
 		}
 		ImGui::End();
 		ImGui::PopStyleVar();
 	}
 
-	void show_component_inspector()
+	void show_inspector()
 	{
-		ImGui::Begin("Inspector");
-		if (auto selection = mContext.get_selection<selection_type::game_object>())
+		if (ImGui::Begin("Inspector"))
 		{
-			std::string name = selection->get_name();
-			if (ImGui::InputText("Name", &name))
-				selection->set_name(name);
-
-			for (std::size_t i = 0; i < selection->get_component_count(); i++)
-			{
-				core::component* comp = selection->get_component_index(i);
-				ImGui::PushID(comp);
-
-				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4, 4));
-				ImGui::BeginChild(ImGui::GetID("Actions"),
-					ImVec2(0, (ImGui::GetStyle().WindowPadding.y * 2
-						+ ImGui::GetStyle().FramePadding.y * 2
-						+ ImGui::GetFontSize()) * 2), true);
-
-				bool open = collapsing_arrow("CollapsingArrow", nullptr, true);
-
-				ImGui::SameLine();
-				{
-					ImGui::PushItemWidth(150);
-					std::string name = comp->get_name();
-					if (ImGui::InputText("##NameInput", &name))
-						comp->set_name(name);
-					ImGui::PopItemWidth();
-				}
-
-				ImGui::SameLine();
-				ImGui::Text(comp->get_component_name().c_str());
-
-				ImGui::Dummy(ImVec2(ImGui::GetWindowContentRegionWidth()
-					- (ImGui::CalcTextSize("Delete ").x
-						+ ImGui::GetStyle().WindowPadding.x * 2
-						+ ImGui::GetStyle().FramePadding.x * 2), 1));
-				ImGui::SameLine();
-
-				bool delete_component = false;
-				delete_component = ImGui::Button("Delete");
-
-				ImGui::EndChild();
-				ImGui::PopStyleVar();
-
-				if (open)
-					mInspectors.on_gui(comp);
-
-				ImGui::PopID();
-				if (delete_component)
-					selection->remove_component(i--);
-			}
-
-			ImGui::Separator();
-			if (ImGui::BeginCombo("###Add Component", "Add Component"))
-			{
-				if (ImGui::Selectable("Transform 2D"))
-					selection->add_component<core::transform_component>();
-				if (ImGui::Selectable("Physics World"))
-					selection->add_component<physics::physics_world_component>();
-				if (ImGui::Selectable("Physics"))
-					selection->add_component<physics::physics_component>();
-				if (ImGui::Selectable("Box Collider"))
-					selection->add_component<physics::box_collider_component>();
-				if (ImGui::Selectable("Sprite"))
-					selection->add_component<graphics::sprite_component>();
-				//if (ImGui::Selectable("Script"))
-				//	mSelected_node->add_component<script_component>();
-				ImGui::EndCombo();
-			}
+			if (auto selection = mContext.get_selection<selection_type::game_object>())
+				show_component_inspector(*selection);
+			else if (auto selection = mContext.get_selection<selection_type::layer>())
+				show_layer_inspector(*selection);
+			else if (auto selection = mContext.get_selection<selection_type::asset>())
+				show_asset_inspector(selection);
 		}
 		ImGui::End();
 	}
-
-	void show_asset_picker()
+	
+	void show_asset_inspector(core::asset::ptr pAsset)
 	{
-		if (ImGui::BeginPopupModal("New Asset##NewAssetPopup"))
+		std::string path = pAsset->get_path().string();
+		ImGui::InputText("Name", &path, ImGuiInputTextFlags_ReadOnly);
+		ImGui::Text(("Asset Id: " + std::to_string(pAsset->get_id())).c_str());
+		ImGui::Separator();
+	}
+
+	void show_layer_inspector(core::layer& pLayer)
+	{
+		std::string name = pLayer.get_name();
+		if (ImGui::InputText("Name", &name))
+			pLayer.set_name(name);
+		ImGui::Separator();
+		ImGui::BeginTabBar("LayerSystems");
+
+		if (ImGui::BeginTabItem("Rendering"))
 		{
-			ImGui::Text("Type:");
-			ImGui::BeginChild("_AssetTypeList");
-			
-			if (ImGui::Selectable("Scene"))
+			auto renderer = pLayer.get_system<graphics::renderer>();
+			if (!renderer)
 			{
+				if (ImGui::Button("Enable"))
+					pLayer.add_system<graphics::renderer>();
+			}
+			else
+			{
+				float pixel_size = renderer->get_pixel_size();
+				if (ImGui::DragFloat("Pixel Size", &pixel_size, 0.01f))
+					renderer->set_pixel_size(pixel_size);
+			}
+			ImGui::EndTabItem();
+		}
 
+		if (ImGui::BeginTabItem("Physics"))
+		{
+			auto physics = pLayer.get_system<physics::physics_world>();
+			if (!physics)
+			{
+				if (ImGui::Button("Enable"))
+					pLayer.add_system<physics::physics_world>();
+			}
+			else
+			{
+				math::vec2 gravity = physics->get_gravity();
+				if (ImGui::DragFloat2("Gravity", gravity.components))
+					physics->set_gravity(gravity);
+			}
+			ImGui::EndTabItem();
+		}
+
+
+		ImGui::EndTabBar();
+	}
+
+	void show_component_inspector(core::game_object pObj)
+	{
+		std::string name = pObj.get_name();
+		if (ImGui::InputText("Name", &name))
+			pObj.set_name(name);
+		ImGui::Separator();
+		for (std::size_t i = 0; i < pObj.get_component_count(); i++)
+		{
+			core::component* comp = pObj.get_component_index(i);
+			ImGui::PushID(comp);
+
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4, 4));
+			ImGui::BeginChild(ImGui::GetID("Actions"),
+				ImVec2(0, (ImGui::GetStyle().WindowPadding.y * 2
+					+ ImGui::GetStyle().FramePadding.y * 2
+					+ ImGui::GetFontSize()) * 2), true);
+
+			bool open = collapsing_arrow("CollapsingArrow", nullptr, true);
+
+			ImGui::SameLine();
+			{
+				ImGui::PushItemWidth(150);
+				std::string name = comp->get_name();
+				if (ImGui::InputText("##NameInput", &name))
+					comp->set_name(name);
+				ImGui::PopItemWidth();
 			}
 
-			if (ImGui::Selectable("Object"))
-			{
+			ImGui::SameLine();
+			ImGui::Text(comp->get_component_name().c_str());
 
-			}
-			
+			ImGui::Dummy(ImVec2(ImGui::GetWindowContentRegionWidth()
+				- (ImGui::CalcTextSize("Delete ").x
+					+ ImGui::GetStyle().WindowPadding.x * 2
+					+ ImGui::GetStyle().FramePadding.x * 2), 1));
+			ImGui::SameLine();
+
+			bool delete_component = false;
+			delete_component = ImGui::Button("Delete");
+
 			ImGui::EndChild();
-			ImGui::EndPopup();
+			ImGui::PopStyleVar();
+
+			if (open)
+				mInspectors.on_gui(comp);
+
+			ImGui::PopID();
+			if (delete_component)
+				pObj.remove_component(i--);
+		}
+
+		ImGui::Separator();
+		if (ImGui::BeginCombo("###Add Component", "Add Component"))
+		{
+			if (ImGui::Selectable("Transform 2D"))
+				pObj.add_component<core::transform_component>();
+			if (ImGui::Selectable("Physics"))
+				pObj.add_component<physics::physics_component>();
+			if (ImGui::Selectable("Box Collider"))
+				pObj.add_component<physics::box_collider_component>();
+			if (ImGui::Selectable("Sprite"))
+				pObj.add_component<graphics::sprite_component>();
+			//if (ImGui::Selectable("Script"))
+			//	mSelected_node->add_component<script_component>();
+			ImGui::EndCombo();
 		}
 	}
 
@@ -826,9 +777,9 @@ private:
 	filesystem::path mGame_path;
 	core::asset_manager mAsset_manager;
 
-	graphics::renderer mRenderer;
-
 	component_inspector mInspectors;
+
+	bool mUpdate{ false };
 };
 
 void GLAPIENTRY opengl_message_callback(GLenum source,

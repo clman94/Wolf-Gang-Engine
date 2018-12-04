@@ -85,4 +85,10 @@ void framebuffer::end_framebuffer() const
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+void framebuffer::clear(const color& pColor)
+{
+	glClearColor(pColor.r, pColor.g, pColor.b, pColor.a);
+	glClear(GL_COLOR_BUFFER_BIT);
+}
+
 } // namespace wge::graphics

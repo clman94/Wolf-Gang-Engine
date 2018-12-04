@@ -1,7 +1,6 @@
 #pragma once
 
-#include <wge/core/system.hpp>
-#include <wge/core/object_node.hpp>
+#include <wge/core/instance_id.hpp>
 #include <wge/core/layer.hpp>
 
 #include <vector>
@@ -10,42 +9,12 @@
 namespace wge::core
 {
 
+class asset_manager;
+
 class context
 {
 public:
 	using layer_container = std::vector<layer::ptr>;
-
-	core::component_factory& get_component_factory()
-	{
-		return mFactory;
-	}
-
-	template <typename T>
-	T* get_system() const
-	{
-		return dynamic_cast<T*>(get_system(T::SYSTEM_ID));
-	}
-
-	system* get_system(int pID) const
-	{
-		for (auto i : mSystems)
-			if (i->get_system_id() == pID)
-				return i;
-		return nullptr;
-	}
-	system* get_system(const std::string& pName) const
-	{
-		for (auto i : mSystems)
-			if (i->get_system_name() == pName)
-				return i;
-		return nullptr;
-	}
-
-	void add_system(system* pSystem)
-	{
-		assert(!get_system(pSystem->get_system_id()));
-		mSystems.push_back(pSystem);
-	}
 
 	// Get a layer to a specific index
 	layer::ptr get_layer(std::size_t pIndex) const
@@ -78,26 +47,43 @@ public:
 		return mLayers;
 	}
 
-	// Serializes all collections and their nodes.
-	// Note: This does not serialize the factories and systems.
-	json serialize() const
+	instance_id_t get_unique_instance_id()
 	{
-		json result;
-		for (auto& i : mLayers)
-			result["layers"].push_back(i->serialize());
-		return result;
+		return ++mCurrent_instance_id;
 	}
-	void deserialize(const json& pJson)
+
+	void set_asset_manager(asset_manager* pAsset_manager)
 	{
-		mLayers.clear();
-		for (const json& i : pJson["layers"])
-			create_layer()->deserialize(i);
+		mAsset_manager = pAsset_manager;
+	}
+
+	asset_manager* get_asset_manager() const
+	{
+		return mAsset_manager;
+	}
+
+	void preupdate(float pDelta)
+	{
+		for (auto& i : mLayers)
+			i->preupdate(pDelta);
+	}
+
+	void update(float pDelta)
+	{
+		for (auto& i : mLayers)
+			i->update(pDelta);
+	}
+
+	void postupdate(float pDelta)
+	{
+		for (auto& i : mLayers)
+			i->postupdate(pDelta);
 	}
 
 private:
-	core::component_factory mFactory;
-	std::vector<system*> mSystems;
 	layer_container mLayers;
+	instance_id_t mCurrent_instance_id{ 0 };
+	asset_manager* mAsset_manager;
 };
 
 } // namespace wge::core

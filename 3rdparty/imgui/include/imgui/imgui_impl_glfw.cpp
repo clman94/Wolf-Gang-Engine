@@ -16,6 +16,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2018-11-07: Inputs: When installing our GLFW callbacks, we save user's previously installed ones - if any - and chain call them.
 //  2018-08-01: Inputs: Workaround for Emscripten which doesn't seem to handle focus related calls.
 //  2018-06-29: Inputs: Added support for the ImGuiMouseCursor_Hand cursor.
 //  2018-06-08: Misc: Extracted imgui_impl_glfw.cpp/.h away from the old combined GLFW+OpenGL/Vulkan examples.
@@ -54,12 +55,18 @@ enum GlfwClientApi
     GlfwClientApi_OpenGL,
     GlfwClientApi_Vulkan
 };
-static GLFWwindow*      g_Window = NULL;
-static GlfwClientApi    g_ClientApi = GlfwClientApi_Unknown;
-static double           g_Time = 0.0;
-static bool             g_MouseJustPressed[5] = { false, false, false, false, false };
-static GLFWcursor*      g_MouseCursors[ImGuiMouseCursor_COUNT] = { 0 };
-static bool             g_WantUpdateMonitors = true;
+static GLFWwindow*          g_Window = NULL;    // Main window
+static GlfwClientApi        g_ClientApi = GlfwClientApi_Unknown;
+static double               g_Time = 0.0;
+static bool                 g_MouseJustPressed[5] = { false, false, false, false, false };
+static GLFWcursor*          g_MouseCursors[ImGuiMouseCursor_COUNT] = { 0 };
+static bool                 g_WantUpdateMonitors = true;
+
+// Chain GLFW callbacks for main viewport: our callbacks will call the user's previously installed callbacks, if any.
+static GLFWmousebuttonfun   g_PrevUserCallbackMousebutton = NULL;
+static GLFWscrollfun        g_PrevUserCallbackScroll = NULL;
+static GLFWkeyfun           g_PrevUserCallbackKey = NULL;
+static GLFWcharfun          g_PrevUserCallbackChar = NULL;
 
 // Forward Declarations
 static void ImGui_ImplGlfw_InitPlatformInterface();
@@ -76,47 +83,51 @@ static void ImGui_ImplGlfw_SetClipboardText(void* user_data, const char* text)
     glfwSetClipboardString((GLFWwindow*)user_data, text);
 }
 
-void ImGui_ImplGlfw_MouseButtonCallback(GLFWwindow*, int button, int action, int /*mods*/)
+void ImGui_ImplGlfw_MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
+    if (g_PrevUserCallbackMousebutton != NULL && window == g_Window)
+        g_PrevUserCallbackMousebutton(window, button, action, mods);
+
     if (action == GLFW_PRESS && button >= 0 && button < IM_ARRAYSIZE(g_MouseJustPressed))
         g_MouseJustPressed[button] = true;
 }
 
-void ImGui_ImplGlfw_ScrollCallback(GLFWwindow*, double xoffset, double yoffset)
+void ImGui_ImplGlfw_ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 {
+    if (g_PrevUserCallbackScroll != NULL && window == g_Window)
+        g_PrevUserCallbackScroll(window, xoffset, yoffset);
+
     ImGuiIO& io = ImGui::GetIO();
     io.MouseWheelH += (float)xoffset;
     io.MouseWheel += (float)yoffset;
 }
 
-void ImGui_ImplGlfw_KeyCallback(GLFWwindow*, int key, int, int action, int mods)
+void ImGui_ImplGlfw_KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+    if (g_PrevUserCallbackKey != NULL && window == g_Window)
+        g_PrevUserCallbackKey(window, key, scancode, action, mods);
+
     ImGuiIO& io = ImGui::GetIO();
     if (action == GLFW_PRESS)
         io.KeysDown[key] = true;
     if (action == GLFW_RELEASE)
         io.KeysDown[key] = false;
 
-    (void)mods; // Modifiers are not reliable across systems
+    // Modifiers are not reliable across systems
     io.KeyCtrl = io.KeysDown[GLFW_KEY_LEFT_CONTROL] || io.KeysDown[GLFW_KEY_RIGHT_CONTROL];
     io.KeyShift = io.KeysDown[GLFW_KEY_LEFT_SHIFT] || io.KeysDown[GLFW_KEY_RIGHT_SHIFT];
     io.KeyAlt = io.KeysDown[GLFW_KEY_LEFT_ALT] || io.KeysDown[GLFW_KEY_RIGHT_ALT];
     io.KeySuper = io.KeysDown[GLFW_KEY_LEFT_SUPER] || io.KeysDown[GLFW_KEY_RIGHT_SUPER];
 }
 
-void ImGui_ImplGlfw_CharCallback(GLFWwindow*, unsigned int c)
+void ImGui_ImplGlfw_CharCallback(GLFWwindow* window, unsigned int c)
 {
+    if (g_PrevUserCallbackChar != NULL && window == g_Window)
+        g_PrevUserCallbackChar(window, c);
+
     ImGuiIO& io = ImGui::GetIO();
     if (c > 0 && c < 0x10000)
         io.AddInputCharacter((unsigned short)c);
-}
-
-void ImGui_ImplGlfw_InstallCallbacks(GLFWwindow* window)
-{
-    glfwSetMouseButtonCallback(window, ImGui_ImplGlfw_MouseButtonCallback);
-    glfwSetScrollCallback(window, ImGui_ImplGlfw_ScrollCallback);
-    glfwSetKeyCallback(window, ImGui_ImplGlfw_KeyCallback);
-    glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
 }
 
 static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, GlfwClientApi client_api)
@@ -169,8 +180,18 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     g_MouseCursors[ImGuiMouseCursor_ResizeNWSE] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);  // FIXME: GLFW doesn't have this.
     g_MouseCursors[ImGuiMouseCursor_Hand] = glfwCreateStandardCursor(GLFW_HAND_CURSOR);
     
+    // Chain GLFW callbacks: our callbacks will call the user's previously installed callbacks, if any.
+    g_PrevUserCallbackMousebutton = NULL;
+    g_PrevUserCallbackScroll = NULL;
+    g_PrevUserCallbackKey = NULL;
+    g_PrevUserCallbackChar = NULL;
     if (install_callbacks)
-        ImGui_ImplGlfw_InstallCallbacks(window);
+    {
+        g_PrevUserCallbackMousebutton = glfwSetMouseButtonCallback(window, ImGui_ImplGlfw_MouseButtonCallback);
+        g_PrevUserCallbackScroll = glfwSetScrollCallback(window, ImGui_ImplGlfw_ScrollCallback);
+        g_PrevUserCallbackKey = glfwSetKeyCallback(window, ImGui_ImplGlfw_KeyCallback);
+        g_PrevUserCallbackChar = glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
+    }
 
     // Our mouse update function expect PlatformHandle to be filled for the main viewport
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
@@ -291,8 +312,8 @@ void ImGui_ImplGlfw_NewFrame()
     int display_w, display_h;
     glfwGetWindowSize(g_Window, &w, &h);
     glfwGetFramebufferSize(g_Window, &display_w, &display_h);
-	io.DisplaySize = ImVec2((float)w, (float)h);
-    io.DisplayFramebufferScale = ImVec2(w > 0 ? ((float)display_w / w) : 0, h > 0 ? ((float)display_h / h)  : 0);
+    io.DisplaySize = ImVec2((float)w, (float)h);
+    io.DisplayFramebufferScale = ImVec2(w > 0 ? ((float)display_w / w) : 0, h > 0 ? ((float)display_h / h) : 0);
     if (g_WantUpdateMonitors)
         ImGui_ImplGlfw_UpdateMonitors();
 
@@ -388,7 +409,13 @@ static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
     data->Window = glfwCreateWindow((int)viewport->Size.x, (int)viewport->Size.y, "No Title Yet", NULL, share_window);
     data->WindowOwned = true;
     viewport->PlatformHandle = (void*)data->Window;
-    ImGui_ImplGlfw_InstallCallbacks(data->Window);
+    glfwSetWindowPos(data->Window, (int)viewport->Pos.x, (int)viewport->Pos.y);
+
+    // Install callbacks for secondary viewports
+    glfwSetMouseButtonCallback(data->Window, ImGui_ImplGlfw_MouseButtonCallback);
+    glfwSetScrollCallback(data->Window, ImGui_ImplGlfw_ScrollCallback);
+    glfwSetKeyCallback(data->Window, ImGui_ImplGlfw_KeyCallback);
+    glfwSetCharCallback(data->Window, ImGui_ImplGlfw_CharCallback);
     glfwSetWindowCloseCallback(data->Window, ImGui_ImplGlfw_WindowCloseCallback);
     glfwSetWindowPosCallback(data->Window, ImGui_ImplGlfw_WindowPosCallback);
     glfwSetWindowSizeCallback(data->Window, ImGui_ImplGlfw_WindowSizeCallback);
@@ -521,6 +548,12 @@ static bool ImGui_ImplGlfw_GetWindowFocus(ImGuiViewport* viewport)
     return glfwGetWindowAttrib(data->Window, GLFW_FOCUSED) != 0;
 }
 
+static bool ImGui_ImplGlfw_GetWindowMinimized(ImGuiViewport* viewport)
+{
+    ImGuiViewportDataGlfw* data = (ImGuiViewportDataGlfw*)viewport->PlatformUserData;
+    return glfwGetWindowAttrib(data->Window, GLFW_ICONIFIED) != 0;
+}
+
 #if GLFW_HAS_WINDOW_ALPHA
 static void ImGui_ImplGlfw_SetWindowAlpha(ImGuiViewport* viewport, float alpha)
 {
@@ -548,7 +581,7 @@ static void ImGui_ImplGlfw_SwapBuffers(ImGuiViewport* viewport, void*)
 //--------------------------------------------------------------------------------------------------------
 
 // We provide a Win32 implementation because this is such a common issue for IME users
-#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS) && !defined(__GNUC__)
+#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS) && !defined(__GNUC__)
 #define HAS_WIN32_IME   1
 #include <imm.h>
 #ifdef _MSC_VER
@@ -630,6 +663,9 @@ static void ImGui_ImplGlfw_MonitorCallback(GLFWmonitor*, int)
 
 static void ImGui_ImplGlfw_InitPlatformInterface()
 {
+	static float dpi_scale = 1.f;
+	glfwGetMonitorContentScale(glfwGetPrimaryMonitor(), &dpi_scale, nullptr);
+
     // Register platform interface (will be coupled with a renderer interface)
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Platform_CreateWindow = ImGui_ImplGlfw_CreateWindow;
@@ -641,6 +677,7 @@ static void ImGui_ImplGlfw_InitPlatformInterface()
     platform_io.Platform_GetWindowSize = ImGui_ImplGlfw_GetWindowSize;
     platform_io.Platform_SetWindowFocus = ImGui_ImplGlfw_SetWindowFocus;
     platform_io.Platform_GetWindowFocus = ImGui_ImplGlfw_GetWindowFocus;
+    platform_io.Platform_GetWindowMinimized = ImGui_ImplGlfw_GetWindowMinimized;
     platform_io.Platform_SetWindowTitle = ImGui_ImplGlfw_SetWindowTitle;
     platform_io.Platform_RenderWindow = ImGui_ImplGlfw_RenderWindow;
     platform_io.Platform_SwapBuffers = ImGui_ImplGlfw_SwapBuffers;
@@ -653,11 +690,9 @@ static void ImGui_ImplGlfw_InitPlatformInterface()
 #if HAS_WIN32_IME
     platform_io.Platform_SetImeInputPos = ImGui_ImplWin32_SetImeInputPos;
 #endif
-	platform_io.Platform_GetWindowDpiScale = [](ImGuiViewport* viewport) ->float
+	platform_io.Platform_GetWindowDpiScale = [](ImGuiViewport* viewport)->float
 	{
-		//float x_scale, y_scale;
-		//glfwGetWindowContentScale((GLFWwindow*)viewport->PlatformHandle, &x_scale, &y_scale);
-		return 2.f;
+		return dpi_scale;
 	};
 
     // Note: monitor callback are broken GLFW 3.2 and earlier (see github.com/glfw/glfw/issues/784)

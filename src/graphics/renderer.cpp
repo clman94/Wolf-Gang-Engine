@@ -153,6 +153,15 @@ void renderer::set_render_view(const math::aabb& mAABB)
 	mRender_view = mAABB;
 }
 
+void renderer::set_render_view_to_framebuffer(const math::vec2& pOffset, const math::vec2 & pScale)
+{
+	WGE_ASSERT(mFramebuffer);
+	const math::vec2 framebuffer_size = {
+		static_cast<float>(mFramebuffer->get_width()),
+		static_cast<float>(mFramebuffer->get_height()) };
+	set_render_view({ pOffset, pOffset + framebuffer_size * pScale });
+}
+
 math::aabb renderer::get_render_view() const
 {
 	return mRender_view;
@@ -177,13 +186,14 @@ void renderer::render()
 {
 	assert(mFramebuffer);
 
-	for (auto& i : mContext->get_layer_container())
-		i->send_all("on_render", this);
+	get_layer().for_each(
+		[&](sprite_component& pSprite, core::transform_component& pTransform)
+	{
+		pSprite.create_batch(pTransform, *this);
+	});
 
 	mFramebuffer->begin_framebuffer();
 
-	glClearColor(0, 0, 0, 1);
-	glClear(GL_COLOR_BUFFER_BIT);
 	glViewport(0, 0, mFramebuffer->get_width(), mFramebuffer->get_height());
 
 	// Create the projection matrix

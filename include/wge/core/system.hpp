@@ -1,6 +1,9 @@
 #pragma once
 
 #include <string>
+#include <vector>
+#include <utility>
+#include <any>
 
 #define WGE_SYSTEM(name__, id__) \
 	public: \
@@ -12,12 +15,29 @@
 namespace wge::core
 {
 
+class layer;
+
 class system
 {
 public:
+	system(layer& pLayer) :
+		mLayer(pLayer)
+	{}
 	virtual ~system() {}
 	virtual int get_system_id() const = 0;
 	virtual std::string get_system_name() const = 0;
+
+	layer& get_layer() const
+	{
+		return mLayer;
+	}
+
+	virtual void preupdate(float pDelta) {}
+	virtual void update(float pDelta) {}
+	virtual void postupdate(float pDelta) {}
+
+private:
+	std::reference_wrapper<layer> mLayer;
 };
 
 } // namespace wge::core

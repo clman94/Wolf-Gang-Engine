@@ -1,10 +1,12 @@
 #pragma once
 
 #include <string>
+#include <array>
 
 #include <wge/math/aabb.hpp>
 #include <wge/core/messaging.hpp>
 #include <wge/core/serializable.hpp>
+#include <wge/core/instance_id.hpp>
 
 #include <nlohmann/json.hpp>
 #include <wge/util/json_helpers.hpp>
@@ -41,22 +43,15 @@ namespace wge::core
 {
 
 class context;
-class object_node;
+class game_object;
 class asset_manager;
 
-class component :
-	public serializable,
-	protected subscriber
+class component
 {
-protected:
-	component(object_node* pNode) :
-		mObject(pNode)
-	{
-		register_property("name", mName);
-		register_property("instance", mInstance_id);
-	}
-
 public:
+	component(component_id pId):
+		mInstance_id(pId)
+	{}
 	virtual ~component() {}
 
 	// Save the configuration of this component to json
@@ -78,43 +73,25 @@ public:
 	const void set_name(const std::string& pName);
 	const std::string& get_name() const;
 
-	// Get the object this component is apart of 
-	object_node* get_object() const
-	{
-		return mObject;
-	}
-
-	context& get_context() const;
-
 	virtual bool has_aabb() const { return false; }
 	virtual math::aabb get_screen_aabb() const { return{}; };
 
-protected:
-	// Tells the object that this component requires another component to function
-	// correctly eg a sprite requires a transform.
-	// If the object does not have the component, it will be create automatically.
-	template <typename T>
-	T* require() const
+	object_id get_object_id() const
 	{
-		assert(mObject);
-		if (!mObject->has_component<T>())
-			return mObject->add_component<T>();
-		return mObject->get_component<T>();
+		return mObject_id;
 	}
 
-	template <typename T>
-	T* get_system() const
-	{
-		return get_object()->get_context()->get_system<T>();
-	}
+	void set_object(const game_object& pObj);
 
-	// Helper method to get the asset manager from the current context.
-	asset_manager* get_asset_manager() const;
+	component_id get_instance_id() const
+	{
+		return mInstance_id;
+	}
 
 private:
 	std::string mName;
-	object_node* mObject;
-	int mInstance_id;
+	object_id mObject_id;
+	component_id mInstance_id;
 };
 
 } // namespace wge::core
