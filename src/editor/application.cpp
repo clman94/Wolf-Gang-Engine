@@ -253,7 +253,16 @@ private:
 		mAsset_manager.register_asset<core::asset>("scene");
 		mAsset_manager.register_config_extension("scene", ".wgescene");
 
-		mAsset_manager.register_asset<graphics::texture>("texture");
+		mAsset_manager.register_asset("texture",
+			[](const filesystem::path& pPath, core::asset_config::ptr pConfig) -> core::asset::ptr
+		{
+			auto ptr = std::make_shared<graphics::texture>(pConfig);
+			ptr->set_path(pPath);
+			auto path = pConfig->get_path();
+			path.remove_extension();
+			ptr->load(path.string());
+			return ptr;
+		});
 		mAsset_manager.register_resource_extension("texture", ".png");
 
 		mAsset_manager.set_root_directory(".");
