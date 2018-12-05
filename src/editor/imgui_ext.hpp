@@ -16,15 +16,15 @@ inline void Image(const wge::graphics::framebuffer& mFramebuffer, const ImVec2& 
 }
 
 // Draws a texture
-inline void Image(wge::graphics::texture::ptr mTexture, const ImVec2& pSize = ImVec2(0, 0))
+inline void Image(wge::graphics::texture::ptr mTexture, const ImVec2& pSize = ImVec2(0, 0), const ImVec2& pUV0 = ImVec2(0, 0), const ImVec2& pUV1 = ImVec2(1, 1))
 {
-	ImGui::Image((void*)mTexture->get_gl_texture(), pSize);
+	ImGui::Image((void*)mTexture->get_gl_texture(), pSize, pUV0, pUV1);
 }
 
 // Draws a texture
-inline void ImageButton(wge::graphics::texture::ptr mTexture, const ImVec2& pSize = ImVec2(0, 0))
+inline bool ImageButton(wge::graphics::texture::ptr mTexture, const ImVec2& pSize = ImVec2(0, 0), const ImVec2& pUV0 = ImVec2(0, 0), const ImVec2& pUV1 = ImVec2(1, 1))
 {
-	ImGui::ImageButton((void*)mTexture->get_gl_texture(), pSize);
+	return ImGui::ImageButton((void*)mTexture->get_gl_texture(), pSize, pUV0, pUV1);
 }
 
 inline bool CollapsingArrow(const char* pStr_id, bool* pOpen = nullptr, bool pDefault_open = false)

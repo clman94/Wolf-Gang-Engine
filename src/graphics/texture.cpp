@@ -152,7 +152,10 @@ void texture::update_metadata() const
 
 void texture::load_metadata()
 {
-	const json& atlas = get_config()->get_metadata()["atlas"];
-	for (const json& i : atlas)
-		mAtlas.push_back(std::make_shared<animation>(i));
+	if (!get_config()->get_metadata().is_null())
+	{
+		const json& atlas = get_config()->get_metadata()["atlas"];
+		for (const json& i : atlas)
+			mAtlas.push_back(std::make_shared<animation>(i));
+	}
 }

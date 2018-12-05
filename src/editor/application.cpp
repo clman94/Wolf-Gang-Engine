@@ -342,7 +342,10 @@ private:
 			ImGui::BeginGroup();
 			if (tex)
 			{
-				ImGui::ImageButton(tex, { 150, 150 });
+				if (ImGui::ImageButton(tex, { 100, 100 }))
+				{
+					mContext.set_selection(tex);
+				}
 				ImGui::SameLine();
 				ImGui::BeginGroup();
 				ImGui::Text("Size: %i, %i", tex->get_width(), tex->get_height());
@@ -660,7 +663,7 @@ private:
 	{
 		std::string path = pAsset->get_path().string();
 		ImGui::InputText("Name", &path, ImGuiInputTextFlags_ReadOnly);
-		ImGui::Text(("Asset Id: " + std::to_string(pAsset->get_id())).c_str());
+		ImGui::LabelText("Asset ID", std::to_string(pAsset->get_id()).c_str());
 		ImGui::Separator();
 
 		std::string description = pAsset->get_config()->get_description();
@@ -668,6 +671,48 @@ private:
 			pAsset->get_config()->set_description(description);
 		if (ImGui::IsItemDeactivatedAfterEdit())
 			pAsset->get_config()->save();
+
+		if (pAsset->get_type() == "texture")
+		{
+			auto texture = core::cast_asset<graphics::texture>(pAsset);
+			ImGui::ImageButton(texture, { 100, 100 });
+			ImGui::TextUnformatted("Atlas");
+			ImGui::BeginChild("_AtlasList", { 0, 200 }, true);
+			ImGui::Columns(2, "_Previews", false);
+			ImGui::SetColumnWidth(0, 50);
+			for (auto& i : texture->get_raw_atlas())
+			{
+				math::aabb aabb{ i->frame_rect.position, i->frame_rect.position + i->frame_rect.size };
+				if (ImGui::Selectable(("###" + i->name).c_str(), false, ImGuiSelectableFlags_SpanAllColumns, { 0, 50 }))
+				{
+				}
+				ImGui::SameLine();
+				ImGui::Image(texture, { 50, 50 }, { aabb.min.x, aabb.min.y }, { aabb.max.x, aabb.max.y });
+				ImGui::NextColumn();
+				ImGui::Text(i->name.c_str());
+				ImGui::NextColumn();
+			}
+			ImGui::Columns();
+			ImGui::EndChild();
+
+			if (ImGui::Button("Add"))
+			{
+				auto animation = std::make_shared<graphics::animation>();
+				animation->frame_rect = math::rect(0, 0, 10, 10);
+				animation->name = "New entry";
+				texture->get_raw_atlas().push_back(animation);
+			}
+
+			ImGui::SameLine();
+			if (ImGui::Button("Rename"))
+			{
+			}
+
+			ImGui::SameLine();
+			if (ImGui::Button("Delete"))
+			{
+			}
+		}
 	}
 
 	void show_layer_inspector(core::layer& pLayer)
