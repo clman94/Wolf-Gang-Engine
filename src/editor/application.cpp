@@ -944,9 +944,10 @@ private:
 					{
 						*zoom += ImGui::GetIO().MouseWheel;
 
-						const float scale = std::powf(2, (*zoom)) * (ImGui::GetIO().MouseWheel > 0 ? 1 : -1);
-						ImGui::SetScrollX(ImGui::GetScrollX() + (ImGui::GetScrollX() * scale) / *zoom);
-						ImGui::SetScrollY(ImGui::GetScrollY() + (ImGui::GetScrollY() * scale) / *zoom);
+						const float new_scale = std::powf(2, (*zoom));
+						const float ratio_changed = new_scale / scale;
+						ImGui::SetScrollX(ImGui::GetScrollX() * ratio_changed);
+						ImGui::SetScrollY(ImGui::GetScrollY() * ratio_changed);
 					}
 					// Hold middle mouse button to scroll
 					else if (ImGui::IsMouseDown(2))
