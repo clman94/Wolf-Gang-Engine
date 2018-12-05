@@ -402,14 +402,12 @@ private:
 	{
 		if (ImGui::Begin("Asset Manager"))
 		{
-			ImGui::Columns(3, "_AssetColumns");
+			ImGui::Columns(2, "_AssetColumns");
 			ImGui::SetColumnWidth(0, 100);
 
 			ImGui::TextUnformatted("Type:");
 			ImGui::NextColumn();
 			ImGui::TextUnformatted("Path:");
-			ImGui::NextColumn();
-			ImGui::TextUnformatted("UID:");
 			ImGui::NextColumn();
 
 			for (auto& i : mAsset_manager.get_asset_list())
@@ -427,8 +425,6 @@ private:
 				}
 				ImGui::NextColumn();
 				ImGui::TextUnformatted(i->get_path().string().c_str());
-				ImGui::NextColumn();
-				ImGui::TextUnformatted(std::to_string(i->get_id()).c_str());
 				ImGui::NextColumn();
 				ImGui::PopID();
 			}
