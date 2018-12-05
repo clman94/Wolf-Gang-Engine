@@ -248,8 +248,6 @@ private:
 
 	void init_game_context()
 	{
-		//mAsset_manager.add_loader("texture", std::make_shared<graphics::texture_asset_loader>());
-		//mAsset_manager.add_loader("scene", std::make_shared<core::config_asset_loader>());
 		mAsset_manager.register_asset<core::asset>("scene");
 		mAsset_manager.register_config_extension("scene", ".wgescene");
 

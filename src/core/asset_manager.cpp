@@ -140,6 +140,7 @@ core::asset_config::ptr asset_manager::create_metadata_config(const std::string 
 
 	config->set_path(make_metadata_config_path(pPath));
 	config->generate_id();
+	config->save();
 
 	return config;
 }
@@ -172,6 +173,7 @@ void asset_manager::load_resource_asset(const filesystem::path & pPath, const st
 	else
 	{
 		config = create_metadata_config(pType, pPath);
+		log::info() << "Imported asset " << make_relative_to_root(pPath).to_system_path() << log::endm;
 	}
 
 	add_asset(mAsset_factories[pType](make_relative_to_root(pPath), config));
