@@ -47,6 +47,12 @@ void end_editor()
 	ImGui::PopID();
 }
 
+math::vec2 get_mouse_position()
+{
+	assert(gCurrent_editor_state);
+	return gCurrent_editor_state->mouse_editor_position;
+}
+
 bool drag_behavior(ImGuiID pID, bool pHovered)
 {
 	assert(gCurrent_editor_state);

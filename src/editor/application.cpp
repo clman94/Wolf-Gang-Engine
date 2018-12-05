@@ -682,10 +682,8 @@ private:
 			ImGui::SetColumnWidth(0, 50);
 			for (auto& i : texture->get_raw_atlas())
 			{
-				math::aabb aabb{ i->frame_rect.position, i->frame_rect.position + i->frame_rect.size };
-				if (ImGui::Selectable(("###" + i->name).c_str(), false, ImGuiSelectableFlags_SpanAllColumns, { 0, 50 }))
-				{
-				}
+				if (ImGui::Selectable(("###" + i->name).c_str(), mSelected_animation == i, ImGuiSelectableFlags_SpanAllColumns, { 0, 50 }))
+					mSelected_animation = i;
 				if (ImGui::IsItemActive() && ImGui::IsMouseDoubleClicked(0))
 				{
 					ImGui::Begin("Sprite Editor");
@@ -693,6 +691,9 @@ private:
 					ImGui::End();
 				}
 				ImGui::SameLine();
+				math::aabb aabb{ i->frame_rect.position, i->frame_rect.position + i->frame_rect.size };
+				aabb.min /= texture->get_width();
+				aabb.max /= texture->get_height();
 				ImGui::Image(texture, { 50, 50 }, { aabb.min.x, aabb.min.y }, { aabb.max.x, aabb.max.y });
 				ImGui::NextColumn();
 				ImGui::Text(i->name.c_str());
@@ -707,11 +708,6 @@ private:
 				animation->frame_rect = math::rect(0, 0, 10, 10);
 				animation->name = "New entry";
 				texture->get_raw_atlas().push_back(animation);
-			}
-
-			ImGui::SameLine();
-			if (ImGui::Button("Rename"))
-			{
 			}
 
 			ImGui::SameLine();
@@ -835,28 +831,27 @@ private:
 		}
 	}
 
-	static void draw_alpha_checkerboard(ImVec2 pMin, ImVec2 pSize)
+	static void draw_alpha_checkerboard(ImVec2 pMin, ImVec2 pSize, float pSquare_size = 20)
 	{
 		ImDrawList* dl = ImGui::GetWindowDrawList();
 		dl->PushClipRect(pMin, { pMin.x + pSize.x, pMin.y + pSize.y }, true);
-		const float square_size = 20;
 
-		// Optimize drawing by clamping the iterations to the clip rect
-		int x_start = math::max<int>(0, (dl->GetClipRectMin().x - pMin.x) / square_size - 1);
-		int y_start = math::max<int>(0, (dl->GetClipRectMin().y - pMin.y) / square_size - 1);
-		int x_count = math::min<int>(pSize.x / square_size + 1, (dl->GetClipRectMax().x - pMin.x) / square_size + 1);
-		int y_count = math::min<int>(pSize.y / square_size + 1, (dl->GetClipRectMax().y - pMin.y) / square_size + 1);
+		// Optimize drawing by clamping the iterations with the clip rect
+		const int x_start = static_cast<int>(math::max<float>(0,       (dl->GetClipRectMin().x - pMin.x) - pSquare_size) / pSquare_size);
+		const int y_start = static_cast<int>(math::max<float>(0,       (dl->GetClipRectMin().y - pMin.y) - pSquare_size) / pSquare_size);
+		const int x_count = static_cast<int>(math::min<float>(pSize.x,  dl->GetClipRectMax().x - pMin.x) / pSquare_size + 1);
+		const int y_count = static_cast<int>(math::min<float>(pSize.y , dl->GetClipRectMax().y - pMin.y) / pSquare_size + 1);
 
 		for (int x = x_start; x < x_count; x++)
 		{
 			for (int y = y_start; y < y_count; y++)
 			{
-				const float x_pos = x * square_size + pMin.x;
-				const float y_pos = y * square_size + pMin.y;
+				const float x_pos = x * pSquare_size + pMin.x;
+				const float y_pos = y * pSquare_size + pMin.y;
 				ImU32 col = (x + y) % 2 == 0 ? ImGui::GetColorU32({ 0.9f, 0.9f, 0.9f, 1 }) : ImGui::GetColorU32({ 0.5f, 0.5f, 0.5f, 1 });
 				dl->AddRectFilled(
 					{ x_pos, y_pos },
-					{ x_pos + square_size, y_pos + square_size },
+					{ x_pos + pSquare_size, y_pos + pSquare_size },
 					col);
 			}
 		}
@@ -932,7 +927,16 @@ private:
 				int* selected_rect = ImGui::GetStateStorage()->GetIntRef(ImGui::GetID("_Selection"), 0);
 				for (auto& i : texture->get_raw_atlas())
 				{
-					visual_editor::drag_resizable_rect(i->name.c_str(), &i->frame_rect);
+					if (ImGui::IsItemClicked(0)
+						&& i->frame_rect.intersects(visual_editor::get_mouse_position()))
+					{
+						mSelected_animation = i;
+					}
+				}
+
+				if (mSelected_animation)
+				{
+					visual_editor::drag_resizable_rect(mSelected_animation->name.c_str(), &mSelected_animation->frame_rect);
 				}
 
 				visual_editor::end_editor();
@@ -943,14 +947,14 @@ private:
 					if (ImGui::GetIO().KeyCtrl && ImGui::GetIO().MouseWheel != 0)
 					{
 						*zoom += ImGui::GetIO().MouseWheel;
-
 						const float new_scale = std::powf(2, (*zoom));
 						const float ratio_changed = new_scale / scale;
 						ImGui::SetScrollX(ImGui::GetScrollX() * ratio_changed);
 						ImGui::SetScrollY(ImGui::GetScrollY() * ratio_changed);
 					}
+
 					// Hold middle mouse button to scroll
-					else if (ImGui::IsMouseDown(2))
+					if (ImGui::IsMouseDown(2))
 					{
 						ImGui::SetScrollX(ImGui::GetScrollX() - ImGui::GetIO().MouseDelta.x);
 						ImGui::SetScrollY(ImGui::GetScrollY() - ImGui::GetIO().MouseDelta.y);
@@ -966,6 +970,8 @@ private:
 	}
 
 private:
+	graphics::animation::ptr mSelected_animation;
+
 	GLFWwindow* mWindow;
 
 	context mContext;
