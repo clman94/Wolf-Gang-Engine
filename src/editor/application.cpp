@@ -686,6 +686,12 @@ private:
 				if (ImGui::Selectable(("###" + i->name).c_str(), false, ImGuiSelectableFlags_SpanAllColumns, { 0, 50 }))
 				{
 				}
+				if (ImGui::IsItemActive() && ImGui::IsMouseDoubleClicked(0))
+				{
+					ImGui::Begin("Sprite Editor");
+					ImGui::SetWindowFocus();
+					ImGui::End();
+				}
 				ImGui::SameLine();
 				ImGui::Image(texture, { 50, 50 }, { aabb.min.x, aabb.min.y }, { aabb.max.x, aabb.max.y });
 				ImGui::NextColumn();
@@ -829,8 +835,37 @@ private:
 		}
 	}
 
+	static void draw_alpha_checkerboard(ImVec2 pMin, ImVec2 pSize)
+	{
+		ImDrawList* dl = ImGui::GetWindowDrawList();
+		dl->PushClipRect(pMin, { pMin.x + pSize.x, pMin.y + pSize.y }, true);
+		const float square_size = 20;
+
+		// Optimize drawing by clamping the iterations to the clip rect
+		int x_start = math::max<int>(0, (dl->GetClipRectMin().x - pMin.x) / square_size - 1);
+		int y_start = math::max<int>(0, (dl->GetClipRectMin().y - pMin.y) / square_size - 1);
+		int x_count = math::min<int>(pSize.x / square_size + 1, (dl->GetClipRectMax().x - pMin.x) / square_size + 1);
+		int y_count = math::min<int>(pSize.y / square_size + 1, (dl->GetClipRectMax().y - pMin.y) / square_size + 1);
+
+		for (int x = x_start; x < x_count; x++)
+		{
+			for (int y = y_start; y < y_count; y++)
+			{
+				const float x_pos = x * square_size + pMin.x;
+				const float y_pos = y * square_size + pMin.y;
+				ImU32 col = (x + y) % 2 == 0 ? ImGui::GetColorU32({ 0.9f, 0.9f, 0.9f, 1 }) : ImGui::GetColorU32({ 0.5f, 0.5f, 0.5f, 1 });
+				dl->AddRectFilled(
+					{ x_pos, y_pos },
+					{ x_pos + square_size, y_pos + square_size },
+					col);
+			}
+		}
+		dl->PopClipRect();
+	}
+
 	void show_sprite_editor()
 	{
+		static graphics::color bg_color{ 0, 0, 0, 1 };
 		if (ImGui::Begin("Sprite Editor", nullptr, ImGuiWindowFlags_HorizontalScrollbar))
 		{
 			auto selection = mContext.get_selection<selection_type::asset>();
@@ -844,7 +879,7 @@ private:
 				ImGui::BeginGroup();
 
 				const float scale = std::powf(2, (*zoom));
-				const ImVec2 image_size((float)texture->get_width()*scale, (float)texture->get_height()*scale);
+				const ImVec2 image_size((float)texture->get_width() * scale, (float)texture->get_height() * scale);
 
 				// Top and left padding
 				ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
@@ -852,6 +887,9 @@ private:
 				ImGui::SameLine();
 
 				const ImVec2 image_position = ImGui::GetCursorScreenPos();
+
+				draw_alpha_checkerboard(image_position, image_size);
+
 				ImGui::Image(texture, image_size);
 
 				// Right and bottom padding

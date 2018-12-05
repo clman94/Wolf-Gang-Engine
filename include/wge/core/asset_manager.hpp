@@ -15,7 +15,6 @@ class asset_manager
 {
 public:
 	using asset_factory = std::function<asset::ptr(const filesystem::path&, asset_config::ptr)>;
-
 	using asset_container = std::vector<asset::ptr>;
 
 	// TODO: Implement the filesystem_interface as the only means of
@@ -95,7 +94,6 @@ private:
 	std::map<std::string, std::string> mAsset_resource_extensions; // { [extension], [asset type] }
 	std::map<std::string, std::string> mAsset_config_extensions;
 	std::vector<asset::ptr> mAsset_list;
-	//std::map<std::string, asset_loader::ptr> mLoader_list;
 	filesystem::path mRoot_dir;
 	filesystem::filesystem_interface* mFilesystem;
 };

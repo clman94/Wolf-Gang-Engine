@@ -2,8 +2,8 @@
 
 #include <stb/stb_image.h>
 
-using namespace wge;
-using namespace wge::graphics;
+namespace wge::graphics
+{
 
 animation::animation(const json & pJson)
 {
@@ -52,6 +52,7 @@ void texture::load(const std::string & pFilepath)
 	create_from_pixels(pixels);
 	stbi_image_free(mPixels);
 	mPixels = pixels;
+	load_metadata();
 }
 
 void texture::load(filesystem::stream::ptr pStream, std::size_t pSize)
@@ -69,6 +70,7 @@ void texture::load(filesystem::stream::ptr pStream, std::size_t pSize)
 	create_from_pixels(pixels);
 	stbi_image_free(mPixels);
 	mPixels = pixels;
+	load_metadata();
 }
 
 GLuint texture::get_gl_texture() const
@@ -152,10 +154,20 @@ void texture::update_metadata() const
 
 void texture::load_metadata()
 {
+	mAtlas.clear();
 	if (!get_config()->get_metadata().is_null())
 	{
 		const json& atlas = get_config()->get_metadata()["atlas"];
 		for (const json& i : atlas)
 			mAtlas.push_back(std::make_shared<animation>(i));
 	}
+	if (!get_animation("default"))
+	{
+		auto def_animation = std::make_shared<animation>();
+		def_animation->name = "Default";
+		def_animation->frame_rect = math::rect(0, 0, mWidth, mHeight);
+		mAtlas.push_back(def_animation);
+	}
 }
+
+} // namespace wge::graphics

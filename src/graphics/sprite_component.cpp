@@ -29,15 +29,20 @@ void sprite_component::create_batch(core::transform_component& pTransform, rende
 
 	const math::vec2 texture_size(mTexture->get_width(), mTexture->get_height());
 
+	math::aabb uv {
+		mAnimation->frame_rect.position / texture_size,
+		(mAnimation->frame_rect.position + mAnimation->frame_rect.size) / texture_size
+	};
+
 	vertex_2d verts[4];
 	verts[0].position = math::vec2(0, 0);
-	verts[0].uv = math::vec2(0, 0);
+	verts[0].uv = uv.min;
 	verts[1].position = texture_size.swizzle(math::_x, 0);
-	verts[1].uv = math::vec2(1, 0);
+	verts[1].uv = math::vec2(uv.max.x, uv.min.y);
 	verts[2].position = texture_size;
-	verts[2].uv = math::vec2(1, 1);
+	verts[2].uv = uv.max;
 	verts[3].position = texture_size.swizzle(0, math::_y);
-	verts[3].uv = math::vec2(0, 1);
+	verts[3].uv = math::vec2(uv.min.x, uv.max.y);
 
 	// Get transform and scale it by the pixel size
 	math::mat33 transform_mat = pTransform.get_transform();

@@ -48,10 +48,21 @@ public:
 		return mAnchor;
 	}
 
+	void set_animation(animation::ptr pAnimation)
+	{
+		mAnimation = pAnimation;
+	}
+	void set_animation(const std::string& pName)
+	{
+		WGE_ASSERT(mTexture);
+		mAnimation = mTexture->get_animation(pName);
+	}
+
 	// Set the texture from a texture pointer.
 	void set_texture(texture::ptr pAsset)
 	{
 		mTexture = pAsset;
+		mAnimation = mTexture->get_animation("Default");
 	}
 	// Get the current texture
 	texture::ptr get_texture() const
@@ -66,6 +77,7 @@ private:
 	math::aabb mSceen_aabb;
 	texture::ptr mTexture;
 	math::vec2 mOffset, mAnchor{ math::anchor::topleft };
+	animation::ptr mAnimation;
 };
 
 } // namespace wge::graphics
