@@ -5,7 +5,7 @@
 #include <deque>
 
 #include <filesystem>
-namespace system_fs = std::experimental::filesystem;
+namespace system_fs = std::filesystem;
 
 #include <wge/util/hash.hpp>
 

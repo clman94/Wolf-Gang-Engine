@@ -11,58 +11,20 @@
 namespace wge::core
 {
 
-class asset_loader
-{
-public:
-	using ptr = std::shared_ptr<asset_loader>;
-
-	// Create an asset from and config file
-	virtual asset::ptr create_asset(asset_config::ptr pConfig, const filesystem::path& mRoot_path) = 0;
-
-	// Return true if this loader can import the file at this path.
-	// pPath will be an absolute path to the file.
-	virtual bool can_import(const filesystem::path& pPath) = 0;
-
-	// Import a resource file as an asset.
-	// pPath will be an absolute path to the file.
-	virtual asset::ptr import_asset(const filesystem::path& pPath, const filesystem::path& mRoot_path) = 0;
-
-protected:
-	// Helper
-	static filesystem::path make_path_relative(const filesystem::path& pPath, const filesystem::path& mRoot_path);
-};
-
-// Only loads assets as json configuration files.
-class config_asset_loader :
-	public asset_loader
-{
-public:
-	virtual asset::ptr create_asset(asset_config::ptr pConfig, const filesystem::path& mRoot_path) override
-	{
-		auto nasset = std::make_shared<asset>(pConfig);
-		nasset->set_path(make_path_relative(pConfig->get_path(), mRoot_path));
-		return nasset;
-	}
-
-	virtual bool can_import(const filesystem::path & pPath) override
-	{
-		return false;
-	}
-
-	virtual asset::ptr import_asset(const filesystem::path& pPath, const filesystem::path& mRoot_path) override
-	{
-		return{};
-	}
-};
-
 class asset_manager
 {
 public:
+	using asset_factory = std::function<asset::ptr(const filesystem::path&, asset_config::ptr)>;
+
 	using asset_container = std::vector<asset::ptr>;
 
 	// TODO: Implement the filesystem_interface as the only means of
 	//   loading assets.
 	void set_filesystem(filesystem::filesystem_interface* pFilesystem);
+
+	template <typename T>
+	void register_asset(const std::string& pType);
+	void register_asset(const std::string& pType, const asset_factory& pFactory);
 
 	// Manually add an asset
 	void add_asset(asset::ptr pAsset);
@@ -91,12 +53,8 @@ public:
 		return cast_asset<T>(find_asset(pUID));
 	}
 
-	// Add a loader for a specific type of asset
-	void add_loader(const std::string& pType, asset_loader::ptr pLoader);
-	asset_loader::ptr find_loader(const std::string& pType) const;
-
-	// Import a file as an asset
-	bool import_asset(const filesystem::path& pPath);
+	void register_config_extension(const std::string& pType, const std::string& pExtension);
+	void register_resource_extension(const std::string& pType, const std::string& pExtension);
 
 	// Set the root directory to find all assets.
 	// Note: This affects the relative path of all assets.
@@ -108,16 +66,50 @@ public:
 
 	const asset_container& get_asset_list() const;
 
-private:
-	// Iterates through all the files in the directory and returns a list of
-	// paths to files with the extesion ".asset"
-	static std::vector<filesystem::path> get_absolute_path_list(const filesystem::path& pPath);
+	// Create a configuration asset
+	asset::ptr create_configuration_asset(const std::string& pType, const filesystem::path& pPath);
 
 private:
+	// Iterates through all the files in the directory and returns a list of
+	// paths to the files.
+	static std::vector<filesystem::path> get_absolute_path_list(const filesystem::path& pPath);
+
+	// Turn a resources filepath into a wgemetadata filepath
+	static filesystem::path make_metadata_config_path(const filesystem::path& pPath);
+
+	// Turn an absolute path into a relative path to the root directory
+	filesystem::path make_relative_to_root(const filesystem::path& pPath) const;
+
+	// Create a metadata config from a resource
+	static core::asset_config::ptr create_metadata_config(const std::string& pType, const filesystem::path& pPath);
+
+	// Load a config/metadata file
+	static asset_config::ptr load_asset_config(const filesystem::path& pPath);
+
+	void load_configuration_asset(const filesystem::path& pPath, const std::string& pType);
+
+	void load_resource_asset(const filesystem::path& pPath, const std::string& pType);
+
+private:
+	std::map<std::string, asset_factory> mAsset_factories;
+	std::map<std::string, std::string> mAsset_resource_extensions; // { [extension], [asset type] }
+	std::map<std::string, std::string> mAsset_config_extensions;
 	std::vector<asset::ptr> mAsset_list;
-	std::map<std::string, asset_loader::ptr> mLoader_list;
+	//std::map<std::string, asset_loader::ptr> mLoader_list;
 	filesystem::path mRoot_dir;
 	filesystem::filesystem_interface* mFilesystem;
 };
+
+template<typename T>
+inline void asset_manager::register_asset(const std::string & pType)
+{
+	mAsset_factories[pType] =
+		[](const filesystem::path& pPath, asset_config::ptr pConfig) -> asset::ptr
+	{
+		auto ptr = std::make_shared<T>(pConfig);
+		ptr->set_path(pPath);
+		return ptr;
+	};
+}
 
 } // namespace wge::core

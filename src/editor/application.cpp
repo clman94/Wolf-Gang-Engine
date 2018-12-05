@@ -248,10 +248,23 @@ private:
 
 	void init_game_context()
 	{
-		mAsset_manager.add_loader("texture", std::make_shared<graphics::texture_asset_loader>());
-		mAsset_manager.add_loader("scene", std::make_shared<core::config_asset_loader>());
+		//mAsset_manager.add_loader("texture", std::make_shared<graphics::texture_asset_loader>());
+		//mAsset_manager.add_loader("scene", std::make_shared<core::config_asset_loader>());
+		mAsset_manager.register_asset<core::asset>("scene");
+		mAsset_manager.register_config_extension("scene", ".wgescene");
+
+		mAsset_manager.register_asset<graphics::texture>("texture");
+		mAsset_manager.register_resource_extension("texture", ".png");
+
 		mAsset_manager.set_root_directory(".");
 		mAsset_manager.load_assets();
+		
+		// Create test asset
+		core::asset::ptr asset = mAsset_manager.create_configuration_asset("scene", "myscene.wgescene");
+		json myconfig;
+		myconfig["test"] = 234;
+		asset->get_config()->set_metadata(myconfig);
+		asset->get_config()->save();
 
 		auto layer = mGame_context.create_layer();
 		layer->set_name("Layer1");

@@ -4,7 +4,7 @@
 
 namespace wge::graphics
 {
-
+/*
 class texture_asset_loader :
 	public core::asset_loader
 {
@@ -14,6 +14,6 @@ public:
 	virtual bool can_import(const filesystem::path & pPath) override;
 	
 	virtual core::asset::ptr import_asset(const filesystem::path & pPath, const filesystem::path& mRoot_path) override;
-};
+};*/
 
 } // namespace wge::graphics

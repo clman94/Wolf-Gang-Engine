@@ -37,7 +37,7 @@ using asset_uid = std::uint64_t;
 //   This is the configuration the asset stores. E.g. texture atlas,
 //   serialized data, etc...
 //
-class asset_config
+class asset_config final
 {
 public:
 	using ptr = std::shared_ptr<asset_config>;

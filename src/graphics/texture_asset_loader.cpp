@@ -6,7 +6,7 @@
 
 namespace wge::graphics
 {
-
+/*
 core::asset::ptr texture_asset_loader::create_asset(core::asset_config::ptr pConfig, const filesystem::path & mRoot_path)
 {
 	filesystem::path tex_path = pConfig->get_path();
@@ -18,12 +18,12 @@ core::asset::ptr texture_asset_loader::create_asset(core::asset_config::ptr pCon
 	return tex;
 }
 
-bool texture_asset_loader::can_import(const filesystem::path & pPath)
+bool texture_asset_loader::can_import(const filesystem::path& pPath)
 {
 	return pPath.extension() == ".png";
 }
 
-core::asset::ptr texture_asset_loader::import_asset(const filesystem::path & pPath, const filesystem::path & mRoot_path)
+core::asset::ptr texture_asset_loader::import_asset(const filesystem::path& pPath, const filesystem::path & mRoot_path)
 {
 	core::asset_config::ptr config = std::make_shared<core::asset_config>();
 	config->set_type("texture");
@@ -36,6 +36,6 @@ core::asset::ptr texture_asset_loader::import_asset(const filesystem::path & pPa
 	config->save();
 
 	return create_asset(config, mRoot_path);
-}
+}*/
 
 } // namespace wge::graphics
