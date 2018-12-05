@@ -138,6 +138,7 @@ private:
 			show_viewport();
 			show_objects();
 			show_inspector();
+			show_sprite_editor();
 
 			if (mUpdate)
 				mGame_context.postupdate(delta);
@@ -781,6 +782,103 @@ private:
 			//	mSelected_node->add_component<script_component>();
 			ImGui::EndCombo();
 		}
+	}
+
+	void show_sprite_editor()
+	{
+		if (ImGui::Begin("Sprite Editor", nullptr, ImGuiWindowFlags_HorizontalScrollbar))
+		{
+			auto selection = mContext.get_selection<selection_type::asset>();
+			if (selection && selection->get_type() == "texture")
+			{
+				auto texture = core::cast_asset<graphics::texture>(selection);
+
+				float* zoom = ImGui::GetStateStorage()->GetFloatRef(ImGui::GetID("_Zoom"), 0);
+
+				const ImVec2 last_cursor = ImGui::GetCursorPos();
+				ImGui::BeginGroup();
+
+				const float scale = std::powf(2, (*zoom));
+				const ImVec2 image_size((float)texture->get_width()*scale, (float)texture->get_height()*scale);
+
+				// Top and left padding
+				ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
+				ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
+				ImGui::SameLine();
+
+				const ImVec2 image_position = ImGui::GetCursorScreenPos();
+				ImGui::Image(texture, image_size);
+
+				// Right and bottom padding
+				ImGui::SameLine();
+				ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
+				ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
+				ImGui::EndGroup();
+
+				// Draw grid
+				if (*zoom > 2)
+				{
+					// Horizontal lines
+					ImDrawList* dl = ImGui::GetWindowDrawList();
+					for (float i = 0; i < texture->get_width(); i++)
+					{
+						const float x = image_position.x + i * scale;
+						if (x > ImGui::GetWindowPos().x && x < ImGui::GetWindowPos().x + ImGui::GetWindowWidth())
+							dl->AddLine(ImVec2(x, image_position.y),
+								ImVec2(x, image_position.y + image_size.y),
+								ImGui::GetColorU32(ImVec4(0, 1, 1, 0.2f)));
+					}
+
+					// Vertical lines
+					for (float i = 0; i < texture->get_height(); i++)
+					{
+						const float y = image_position.y + i * scale;
+						if (y > ImGui::GetWindowPos().y && y < ImGui::GetWindowPos().y + ImGui::GetWindowHeight())
+							dl->AddLine(ImVec2(image_position.x, y),
+								ImVec2(image_position.x + image_size.x, y),
+								ImGui::GetColorU32(ImVec4(0, 1, 1, 0.2f)));
+					}
+				}
+
+				// Overlap with an invisible button to recieve input
+				ImGui::SetCursorPos(last_cursor);
+				ImGui::InvisibleButton("_Input", ImVec2(image_size.x + ImGui::GetWindowWidth(), image_size.y + ImGui::GetWindowHeight()));
+
+				visual_editor::begin_editor("_SomeEditor", { image_position.x, image_position.y }, { scale, scale });
+
+				int* selected_rect = ImGui::GetStateStorage()->GetIntRef(ImGui::GetID("_Selection"), 0);
+				for (auto& i : texture->get_raw_atlas())
+				{
+					visual_editor::drag_resizable_rect(i->name.c_str(), &i->frame_rect);
+				}
+
+				visual_editor::end_editor();
+
+				if (ImGui::IsItemHovered())
+				{
+					// Zoom with ctrl and mousewheel
+					if (ImGui::GetIO().KeyCtrl && ImGui::GetIO().MouseWheel != 0)
+					{
+						*zoom += ImGui::GetIO().MouseWheel;
+
+						const float scale = std::powf(2, (*zoom)) * (ImGui::GetIO().MouseWheel > 0 ? 1 : -1);
+						ImGui::SetScrollX(ImGui::GetScrollX() + (ImGui::GetScrollX() * scale) / *zoom);
+						ImGui::SetScrollY(ImGui::GetScrollY() + (ImGui::GetScrollY() * scale) / *zoom);
+					}
+					// Hold middle mouse button to scroll
+					else if (ImGui::IsMouseDown(2))
+					{
+						ImGui::SetScrollX(ImGui::GetScrollX() - ImGui::GetIO().MouseDelta.x);
+						ImGui::SetScrollY(ImGui::GetScrollY() - ImGui::GetIO().MouseDelta.y);
+					}
+				}
+			}
+			else
+			{
+				ImGui::TextUnformatted("No texture asset selected");
+			}
+		}
+		ImGui::End();
 	}
 
 private:

@@ -18,8 +18,7 @@ inline void Image(const wge::graphics::framebuffer& mFramebuffer, const ImVec2& 
 // Draws a texture
 inline void Image(wge::graphics::texture::ptr mTexture, const ImVec2& pSize = ImVec2(0, 0))
 {
-	ImGui::Image((void*)mTexture->get_gl_texture(), pSize,
-		ImVec2(0, 1), ImVec2(1, 0)); // Y-axis needs to be flipped
+	ImGui::Image((void*)mTexture->get_gl_texture(), pSize);
 }
 
 // Draws a texture
