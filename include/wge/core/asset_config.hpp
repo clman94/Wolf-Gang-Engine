@@ -66,6 +66,9 @@ public:
 	const json& get_metadata() const;
 	void set_metadata(const json& pJson);
 
+	const std::string& get_description() const;
+	void set_description(const std::string& pDescription);
+
 private:
 	filesystem::path mPath;
 	std::string mType;

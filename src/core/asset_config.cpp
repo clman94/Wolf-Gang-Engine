@@ -78,4 +78,14 @@ void asset_config::set_metadata(const json & pJson)
 	mMetadata = pJson;
 }
 
+const std::string& asset_config::get_description() const
+{
+	return mDescription;
+}
+
+void asset_config::set_description(const std::string& pDescription)
+{
+	mDescription = pDescription;
+}
+
 } // namespace wge::core

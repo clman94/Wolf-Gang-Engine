@@ -74,7 +74,7 @@ private:
 	// paths to the files.
 	static std::vector<filesystem::path> get_absolute_path_list(const filesystem::path& pPath);
 
-	// Turn a resources filepath into a wgemetadata filepath
+	// Turn a resource filepath into a wgemetadata filepath
 	static filesystem::path make_metadata_config_path(const filesystem::path& pPath);
 
 	// Turn an absolute path into a relative path to the root directory

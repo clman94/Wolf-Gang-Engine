@@ -260,11 +260,11 @@ private:
 		mAsset_manager.load_assets();
 		
 		// Create test asset
-		core::asset::ptr asset = mAsset_manager.create_configuration_asset("scene", "myscene.wgescene");
+		/*core::asset::ptr asset = mAsset_manager.create_configuration_asset("scene", "myscene.wgescene");
 		json myconfig;
 		myconfig["test"] = 234;
 		asset->get_config()->set_metadata(myconfig);
-		asset->get_config()->save();
+		asset->get_config()->save();*/
 
 		auto layer = mGame_context.create_layer();
 		layer->set_name("Layer1");
@@ -658,6 +658,12 @@ private:
 		ImGui::InputText("Name", &path, ImGuiInputTextFlags_ReadOnly);
 		ImGui::Text(("Asset Id: " + std::to_string(pAsset->get_id())).c_str());
 		ImGui::Separator();
+
+		std::string description = pAsset->get_config()->get_description();
+		if (ImGui::InputText("Description", &description))
+			pAsset->get_config()->set_description(description);
+		if (ImGui::IsItemDeactivatedAfterEdit())
+			pAsset->get_config()->save();
 	}
 
 	void show_layer_inspector(core::layer& pLayer)
