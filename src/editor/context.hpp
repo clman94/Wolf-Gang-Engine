@@ -6,6 +6,7 @@
 #include <wge/core/asset.hpp>
 #include <wge/core/layer.hpp>
 #include <wge/core/game_object.hpp>
+#include "signal.hpp"
 #include <optional>
 
 #include "asset_document.hpp"
@@ -56,18 +57,21 @@ public:
 	{
 		reset_selection();
 		mAsset_selection = pAsset;
+		on_new_selection();
 	}
 	// Set the currently selection layer
 	void set_selection(core::layer::ptr pLayer)
 	{
 		reset_selection();
 		mLayer_selection = pLayer;
+		on_new_selection();
 	}
 	// Set the currently selected object
 	void set_selection(core::game_object pObject)
 	{
 		reset_selection();
 		mObject_selection = pObject;
+		on_new_selection();
 	}
 
 	void reset_selection()
@@ -75,7 +79,10 @@ public:
 		mAsset_selection.reset();
 		mLayer_selection.reset();
 		mObject_selection.reset();
+		on_new_selection();
 	}
+
+	util::signal<void()> on_new_selection;
 
 private:
 	core::asset::wptr mAsset_selection;

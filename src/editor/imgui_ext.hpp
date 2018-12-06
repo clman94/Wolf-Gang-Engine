@@ -4,6 +4,7 @@
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
 #include <imgui/imgui_stl.h>
+#include <wge/math/math.hpp>
 
 namespace ImGui
 {
@@ -53,6 +54,35 @@ inline bool SelectableHeader(const char* pLabel, bool pSelected = false, bool pD
 	bool result = ImGui::Selectable(pLabel, pSelected);
 
 	ImGui::PopID();
+}
+
+inline void DrawAlphaCheckerBoard(ImVec2 pMin, ImVec2 pSize, float pSquare_size = 20)
+{
+	using namespace wge;
+
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	dl->PushClipRect(pMin, { pMin.x + pSize.x, pMin.y + pSize.y }, true);
+
+	// Optimize drawing by clamping the iterations with the clip rect
+	const int x_start = static_cast<int>(math::max<float>(0, (dl->GetClipRectMin().x - pMin.x) - pSquare_size) / pSquare_size);
+	const int y_start = static_cast<int>(math::max<float>(0, (dl->GetClipRectMin().y - pMin.y) - pSquare_size) / pSquare_size);
+	const int x_count = static_cast<int>(math::min<float>(pSize.x, dl->GetClipRectMax().x - pMin.x) / pSquare_size + 1);
+	const int y_count = static_cast<int>(math::min<float>(pSize.y, dl->GetClipRectMax().y - pMin.y) / pSquare_size + 1);
+
+	for (int x = x_start; x < x_count; x++)
+	{
+		for (int y = y_start; y < y_count; y++)
+		{
+			const float x_pos = x * pSquare_size + pMin.x;
+			const float y_pos = y * pSquare_size + pMin.y;
+			ImU32 col = (x + y) % 2 == 0 ? ImGui::GetColorU32({ 0.9f, 0.9f, 0.9f, 1 }) : ImGui::GetColorU32({ 0.5f, 0.5f, 0.5f, 1 });
+			dl->AddRectFilled(
+				{ x_pos, y_pos },
+				{ x_pos + pSquare_size, y_pos + pSquare_size },
+				col);
+		}
+	}
+	dl->PopClipRect();
 }
 
 } // namespace ImGui

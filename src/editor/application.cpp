@@ -16,6 +16,7 @@
 #include <wge/filesystem/file_input_stream.hpp>
 #include <wge/filesystem/exception.hpp>
 #include <wge/graphics/renderer.hpp>
+#include <wge/util/unique_names.hpp>
 
 #include "editor.hpp"
 #include "history.hpp"
@@ -92,6 +93,216 @@ inline void GLAPIENTRY opengl_message_callback(GLenum source,
 	const GLchar* message,
 	const void* userParam);
 
+class sprite_editor
+{
+public:
+	sprite_editor(context& pContext) :
+		mContext(&pContext)
+	{
+		mConnection_on_new_selection = pContext.on_new_selection.connect(
+			[&]()
+		{
+			mSelected_animation.reset();
+		});
+	}
+
+	virtual ~sprite_editor()
+	{
+		mConnection_on_new_selection.disconnect();
+	}
+
+	void on_gui()
+	{
+		if (ImGui::Begin("Sprite Editor", nullptr, ImGuiWindowFlags_HorizontalScrollbar))
+		{
+			auto selection = mContext->get_selection<selection_type::asset>();
+			if (selection && selection->get_type() == "texture")
+			{
+				auto texture = core::cast_asset<graphics::texture>(selection);
+
+				float* zoom = ImGui::GetStateStorage()->GetFloatRef(ImGui::GetID("_Zoom"), 0);
+
+				const ImVec2 last_cursor = ImGui::GetCursorPos();
+				ImGui::BeginGroup();
+
+				const float scale = std::powf(2, (*zoom));
+				const ImVec2 image_size((float)texture->get_width() * scale, (float)texture->get_height() * scale);
+
+				// Top and left padding
+				ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
+				ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
+				ImGui::SameLine();
+
+				const ImVec2 image_position = ImGui::GetCursorScreenPos();
+
+				ImGui::DrawAlphaCheckerBoard(image_position, image_size);
+
+				ImGui::Image(texture, image_size);
+
+				// Right and bottom padding
+				ImGui::SameLine();
+				ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
+				ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
+				ImGui::EndGroup();
+
+				// Draw grid
+				if (*zoom > 2)
+				{
+					// Horizontal lines
+					ImDrawList* dl = ImGui::GetWindowDrawList();
+					for (float i = 0; i < texture->get_width(); i++)
+					{
+						const float x = image_position.x + i * scale;
+						if (x > ImGui::GetWindowPos().x && x < ImGui::GetWindowPos().x + ImGui::GetWindowWidth())
+							dl->AddLine(ImVec2(x, image_position.y),
+								ImVec2(x, image_position.y + image_size.y),
+								ImGui::GetColorU32(ImVec4(0, 1, 1, 0.2f)));
+					}
+
+					// Vertical lines
+					for (float i = 0; i < texture->get_height(); i++)
+					{
+						const float y = image_position.y + i * scale;
+						if (y > ImGui::GetWindowPos().y && y < ImGui::GetWindowPos().y + ImGui::GetWindowHeight())
+							dl->AddLine(ImVec2(image_position.x, y),
+								ImVec2(image_position.x + image_size.x, y),
+								ImGui::GetColorU32(ImVec4(0, 1, 1, 0.2f)));
+					}
+				}
+
+				// Overlap with an invisible button to recieve input
+				ImGui::SetCursorPos(last_cursor);
+				ImGui::InvisibleButton("_Input", ImVec2(image_size.x + ImGui::GetWindowWidth(), image_size.y + ImGui::GetWindowHeight()));
+
+				visual_editor::begin_editor("_SomeEditor", { image_position.x, image_position.y }, { scale, scale });
+
+				int* selected_rect = ImGui::GetStateStorage()->GetIntRef(ImGui::GetID("_Selection"), 0);
+				for (auto& i : texture->get_raw_atlas())
+				{
+					if (ImGui::IsItemClicked(0)
+						&& i->frame_rect.intersects(visual_editor::get_mouse_position()))
+					{
+						mSelected_animation = i;
+					}
+				}
+
+				if (mSelected_animation)
+				{
+					visual_editor::drag_resizable_rect(mSelected_animation->name.c_str(), &mSelected_animation->frame_rect);
+				}
+
+				visual_editor::end_editor();
+
+				if (ImGui::IsItemHovered())
+				{
+					// Zoom with ctrl and mousewheel
+					if (ImGui::GetIO().KeyCtrl && ImGui::GetIO().MouseWheel != 0)
+					{
+						*zoom += ImGui::GetIO().MouseWheel;
+						const float new_scale = std::powf(2, (*zoom));
+						const float ratio_changed = new_scale / scale;
+						ImGui::SetScrollX(ImGui::GetScrollX() * ratio_changed);
+						ImGui::SetScrollY(ImGui::GetScrollY() * ratio_changed);
+					}
+
+					// Hold middle mouse button to scroll
+					if (ImGui::IsMouseDown(2))
+					{
+						ImGui::SetScrollX(ImGui::GetScrollX() - ImGui::GetIO().MouseDelta.x);
+						ImGui::SetScrollY(ImGui::GetScrollY() - ImGui::GetIO().MouseDelta.y);
+					}
+				}
+			}
+			else
+			{
+				ImGui::TextUnformatted("No texture asset selected");
+			}
+		}
+		ImGui::End();
+	}
+
+	void on_inspector_gui()
+	{
+		auto selection = mContext->get_selection<selection_type::asset>();
+		auto texture = core::cast_asset<graphics::texture>(selection);
+
+		if (ImGui::CollapsingHeader("Preview", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			ImGui::ImageButton(texture, { 100, 100 });
+		}
+
+		if (ImGui::CollapsingHeader("Atlas", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			ImGui::BeginChild("_AtlasList", { 0, 200 }, true);
+			ImGui::Columns(2, "_Previews", false);
+			ImGui::SetColumnWidth(0, 50);
+			for (auto& i : texture->get_raw_atlas())
+			{
+				if (ImGui::Selectable(("###" + i->name).c_str(), mSelected_animation == i, ImGuiSelectableFlags_SpanAllColumns, { 0, 50 }))
+					mSelected_animation = i;
+				if (ImGui::IsItemActive() && ImGui::IsMouseDoubleClicked(0))
+				{
+					ImGui::Begin("Sprite Editor");
+					ImGui::SetWindowFocus();
+					ImGui::End();
+				}
+				ImGui::SameLine();
+				math::aabb aabb{ i->frame_rect.position, i->frame_rect.position + i->frame_rect.size };
+				aabb.min /= texture->get_width();
+				aabb.max /= texture->get_height();
+				ImGui::Image(texture, { 50, 50 }, { aabb.min.x, aabb.min.y }, { aabb.max.x, aabb.max.y });
+				ImGui::NextColumn();
+				ImGui::Text(i->name.c_str());
+				ImGui::NextColumn();
+			}
+			ImGui::Columns();
+			ImGui::EndChild();
+
+			if (ImGui::Button("Add"))
+			{
+				auto animation = std::make_shared<graphics::animation>();
+				animation->frame_rect = math::rect(0, 0, 10, 10);
+				animation->name = make_unique_animation_name(texture, "NewEntry");
+				texture->get_raw_atlas().push_back(animation);
+			}
+
+			ImGui::SameLine();
+			if (ImGui::Button("Delete"))
+			{
+			}
+
+			if (mSelected_animation)
+			{
+				ImGui::PushID("_AnimationSettings");
+
+				ImGui::InputText("Name", &mSelected_animation->name);
+				if (ImGui::IsItemDeactivatedAfterEdit())
+				{
+					std::string temp = std::move(mSelected_animation->name);
+					mSelected_animation->name = make_unique_animation_name(texture, temp);
+				}
+				ImGui::DragFloat2("Position", mSelected_animation->frame_rect.position.components);
+				ImGui::DragFloat2("Size", mSelected_animation->frame_rect.size.components);
+
+				ImGui::PopID();
+			}
+		}
+	}
+
+private:
+	static std::string make_unique_animation_name(graphics::texture::ptr pTexture, const std::string& pName)
+	{
+		return util::create_unique_name(pName,
+			pTexture->get_raw_atlas().begin(), pTexture->get_raw_atlas().end(),
+			[](auto& i) -> const std::string& { return i->name; });
+	}
+
+private:
+	context* mContext;
+	util::connection mConnection_on_new_selection;
+	graphics::animation::ptr mSelected_animation;
+};
+
 class application
 {
 public:
@@ -138,7 +349,7 @@ private:
 			show_viewport();
 			show_objects();
 			show_inspector();
-			show_sprite_editor();
+			mSprite_editor.on_gui();
 
 			if (mUpdate)
 				mGame_context.postupdate(delta);
@@ -658,7 +869,8 @@ private:
 		}
 		ImGui::End();
 	}
-	
+
+
 	void show_asset_inspector(core::asset::ptr pAsset)
 	{
 		std::string path = pAsset->get_path().string();
@@ -672,49 +884,9 @@ private:
 		if (ImGui::IsItemDeactivatedAfterEdit())
 			pAsset->get_config()->save();
 
+		
 		if (pAsset->get_type() == "texture")
-		{
-			auto texture = core::cast_asset<graphics::texture>(pAsset);
-			ImGui::ImageButton(texture, { 100, 100 });
-			ImGui::TextUnformatted("Atlas");
-			ImGui::BeginChild("_AtlasList", { 0, 200 }, true);
-			ImGui::Columns(2, "_Previews", false);
-			ImGui::SetColumnWidth(0, 50);
-			for (auto& i : texture->get_raw_atlas())
-			{
-				if (ImGui::Selectable(("###" + i->name).c_str(), mSelected_animation == i, ImGuiSelectableFlags_SpanAllColumns, { 0, 50 }))
-					mSelected_animation = i;
-				if (ImGui::IsItemActive() && ImGui::IsMouseDoubleClicked(0))
-				{
-					ImGui::Begin("Sprite Editor");
-					ImGui::SetWindowFocus();
-					ImGui::End();
-				}
-				ImGui::SameLine();
-				math::aabb aabb{ i->frame_rect.position, i->frame_rect.position + i->frame_rect.size };
-				aabb.min /= texture->get_width();
-				aabb.max /= texture->get_height();
-				ImGui::Image(texture, { 50, 50 }, { aabb.min.x, aabb.min.y }, { aabb.max.x, aabb.max.y });
-				ImGui::NextColumn();
-				ImGui::Text(i->name.c_str());
-				ImGui::NextColumn();
-			}
-			ImGui::Columns();
-			ImGui::EndChild();
-
-			if (ImGui::Button("Add"))
-			{
-				auto animation = std::make_shared<graphics::animation>();
-				animation->frame_rect = math::rect(0, 0, 10, 10);
-				animation->name = "New entry";
-				texture->get_raw_atlas().push_back(animation);
-			}
-
-			ImGui::SameLine();
-			if (ImGui::Button("Delete"))
-			{
-			}
-		}
+			mSprite_editor.on_inspector_gui();
 	}
 
 	void show_layer_inspector(core::layer& pLayer)
@@ -831,147 +1003,7 @@ private:
 		}
 	}
 
-	static void draw_alpha_checkerboard(ImVec2 pMin, ImVec2 pSize, float pSquare_size = 20)
-	{
-		ImDrawList* dl = ImGui::GetWindowDrawList();
-		dl->PushClipRect(pMin, { pMin.x + pSize.x, pMin.y + pSize.y }, true);
-
-		// Optimize drawing by clamping the iterations with the clip rect
-		const int x_start = static_cast<int>(math::max<float>(0,       (dl->GetClipRectMin().x - pMin.x) - pSquare_size) / pSquare_size);
-		const int y_start = static_cast<int>(math::max<float>(0,       (dl->GetClipRectMin().y - pMin.y) - pSquare_size) / pSquare_size);
-		const int x_count = static_cast<int>(math::min<float>(pSize.x,  dl->GetClipRectMax().x - pMin.x) / pSquare_size + 1);
-		const int y_count = static_cast<int>(math::min<float>(pSize.y , dl->GetClipRectMax().y - pMin.y) / pSquare_size + 1);
-
-		for (int x = x_start; x < x_count; x++)
-		{
-			for (int y = y_start; y < y_count; y++)
-			{
-				const float x_pos = x * pSquare_size + pMin.x;
-				const float y_pos = y * pSquare_size + pMin.y;
-				ImU32 col = (x + y) % 2 == 0 ? ImGui::GetColorU32({ 0.9f, 0.9f, 0.9f, 1 }) : ImGui::GetColorU32({ 0.5f, 0.5f, 0.5f, 1 });
-				dl->AddRectFilled(
-					{ x_pos, y_pos },
-					{ x_pos + pSquare_size, y_pos + pSquare_size },
-					col);
-			}
-		}
-		dl->PopClipRect();
-	}
-
-	void show_sprite_editor()
-	{
-		static graphics::color bg_color{ 0, 0, 0, 1 };
-		if (ImGui::Begin("Sprite Editor", nullptr, ImGuiWindowFlags_HorizontalScrollbar))
-		{
-			auto selection = mContext.get_selection<selection_type::asset>();
-			if (selection && selection->get_type() == "texture")
-			{
-				auto texture = core::cast_asset<graphics::texture>(selection);
-
-				float* zoom = ImGui::GetStateStorage()->GetFloatRef(ImGui::GetID("_Zoom"), 0);
-
-				const ImVec2 last_cursor = ImGui::GetCursorPos();
-				ImGui::BeginGroup();
-
-				const float scale = std::powf(2, (*zoom));
-				const ImVec2 image_size((float)texture->get_width() * scale, (float)texture->get_height() * scale);
-
-				// Top and left padding
-				ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
-				ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
-				ImGui::SameLine();
-
-				const ImVec2 image_position = ImGui::GetCursorScreenPos();
-
-				draw_alpha_checkerboard(image_position, image_size);
-
-				ImGui::Image(texture, image_size);
-
-				// Right and bottom padding
-				ImGui::SameLine();
-				ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
-				ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
-				ImGui::EndGroup();
-
-				// Draw grid
-				if (*zoom > 2)
-				{
-					// Horizontal lines
-					ImDrawList* dl = ImGui::GetWindowDrawList();
-					for (float i = 0; i < texture->get_width(); i++)
-					{
-						const float x = image_position.x + i * scale;
-						if (x > ImGui::GetWindowPos().x && x < ImGui::GetWindowPos().x + ImGui::GetWindowWidth())
-							dl->AddLine(ImVec2(x, image_position.y),
-								ImVec2(x, image_position.y + image_size.y),
-								ImGui::GetColorU32(ImVec4(0, 1, 1, 0.2f)));
-					}
-
-					// Vertical lines
-					for (float i = 0; i < texture->get_height(); i++)
-					{
-						const float y = image_position.y + i * scale;
-						if (y > ImGui::GetWindowPos().y && y < ImGui::GetWindowPos().y + ImGui::GetWindowHeight())
-							dl->AddLine(ImVec2(image_position.x, y),
-								ImVec2(image_position.x + image_size.x, y),
-								ImGui::GetColorU32(ImVec4(0, 1, 1, 0.2f)));
-					}
-				}
-
-				// Overlap with an invisible button to recieve input
-				ImGui::SetCursorPos(last_cursor);
-				ImGui::InvisibleButton("_Input", ImVec2(image_size.x + ImGui::GetWindowWidth(), image_size.y + ImGui::GetWindowHeight()));
-
-				visual_editor::begin_editor("_SomeEditor", { image_position.x, image_position.y }, { scale, scale });
-
-				int* selected_rect = ImGui::GetStateStorage()->GetIntRef(ImGui::GetID("_Selection"), 0);
-				for (auto& i : texture->get_raw_atlas())
-				{
-					if (ImGui::IsItemClicked(0)
-						&& i->frame_rect.intersects(visual_editor::get_mouse_position()))
-					{
-						mSelected_animation = i;
-					}
-				}
-
-				if (mSelected_animation)
-				{
-					visual_editor::drag_resizable_rect(mSelected_animation->name.c_str(), &mSelected_animation->frame_rect);
-				}
-
-				visual_editor::end_editor();
-
-				if (ImGui::IsItemHovered())
-				{
-					// Zoom with ctrl and mousewheel
-					if (ImGui::GetIO().KeyCtrl && ImGui::GetIO().MouseWheel != 0)
-					{
-						*zoom += ImGui::GetIO().MouseWheel;
-						const float new_scale = std::powf(2, (*zoom));
-						const float ratio_changed = new_scale / scale;
-						ImGui::SetScrollX(ImGui::GetScrollX() * ratio_changed);
-						ImGui::SetScrollY(ImGui::GetScrollY() * ratio_changed);
-					}
-
-					// Hold middle mouse button to scroll
-					if (ImGui::IsMouseDown(2))
-					{
-						ImGui::SetScrollX(ImGui::GetScrollX() - ImGui::GetIO().MouseDelta.x);
-						ImGui::SetScrollY(ImGui::GetScrollY() - ImGui::GetIO().MouseDelta.y);
-					}
-				}
-			}
-			else
-			{
-				ImGui::TextUnformatted("No texture asset selected");
-			}
-		}
-		ImGui::End();
-	}
-
 private:
-	graphics::animation::ptr mSelected_animation;
-
 	GLFWwindow* mWindow;
 
 	context mContext;
@@ -990,6 +1022,8 @@ private:
 	component_inspector mInspectors;
 
 	bool mUpdate{ false };
+
+	sprite_editor mSprite_editor{ mContext };
 };
 
 void GLAPIENTRY opengl_message_callback(GLenum source,
