@@ -226,10 +226,7 @@ public:
 		auto selection = mContext->get_selection<selection_type::asset>();
 		auto texture = core::cast_asset<graphics::texture>(selection);
 
-		if (ImGui::CollapsingHeader("Preview", ImGuiTreeNodeFlags_DefaultOpen))
-		{
-			ImGui::ImageButton(texture, { 100, 100 });
-		}
+
 
 		if (ImGui::CollapsingHeader("Atlas", ImGuiTreeNodeFlags_DefaultOpen))
 		{
@@ -275,6 +272,7 @@ public:
 			{
 				ImGui::PushID("_AnimationSettings");
 
+
 				ImGui::InputText("Name", &mSelected_animation->name);
 				if (ImGui::IsItemDeactivatedAfterEdit())
 				{
@@ -283,6 +281,14 @@ public:
 				}
 				ImGui::DragFloat2("Position", mSelected_animation->frame_rect.position.components);
 				ImGui::DragFloat2("Size", mSelected_animation->frame_rect.size.components);
+
+				if (ImGui::CollapsingHeader("Preview", ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					ImGui::Image(texture, { 100, 100 });
+					ImGui::Button("Play");
+					static int a = 0;
+					ImGui::SliderInt("Frame", &a, 0, mSelected_animation->frames);
+				}
 
 				ImGui::PopID();
 			}
@@ -876,7 +882,6 @@ private:
 		std::string path = pAsset->get_path().string();
 		ImGui::InputText("Name", &path, ImGuiInputTextFlags_ReadOnly);
 		ImGui::LabelText("Asset ID", std::to_string(pAsset->get_id()).c_str());
-		ImGui::Separator();
 
 		std::string description = pAsset->get_config()->get_description();
 		if (ImGui::InputText("Description", &description))
@@ -884,6 +889,7 @@ private:
 		if (ImGui::IsItemDeactivatedAfterEdit())
 			pAsset->get_config()->save();
 
+		ImGui::Separator();
 		
 		if (pAsset->get_type() == "texture")
 			mSprite_editor.on_inspector_gui();
