@@ -9,49 +9,16 @@
 #include <wge/math/matrix.hpp>
 #include <wge/graphics/color.hpp>
 #include <wge/graphics/texture.hpp>
+#include <wge/graphics/render_batch_2d.hpp>
 #include <wge/core/system.hpp>
 #include <wge/core/context.hpp>
 #include <wge/graphics/sprite_component.hpp>
+#include <wge/graphics/framebuffer.hpp>
 
 namespace wge::graphics
 {
 
 class framebuffer;
-
-struct vertex_2d
-{
-	// Represents the 2d coordinates of this vertex
-	math::vec2 position;
-	// UV position in the texture
-	math::vec2 uv;
-	// Color of vertex
-	graphics::color color{ 1, 1, 1, 1 };
-};
-
-struct render_batch_2d
-{
-	// Texture associated with this batch.
-	// If nullptr, the primitives will be drawn with
-	// a flat color.
-	texture* rendertexture{ nullptr };
-
-	// This is the depth in which this batch will be drawn.
-	// Batches with lower values are closer to the forground
-	// and higher values are closer to the background.
-	float depth{ 0 };
-
-	enum primitive_type
-	{
-		type_triangles = GL_TRIANGLES,
-		type_linestrip = GL_LINE_STRIP,
-		type_triangle_fan = GL_TRIANGLE_FAN,
-	};
-	// Primitive type to be drawn
-	primitive_type type{ type_triangles };
-
-	std::vector<unsigned int> indexes;
-	std::vector<vertex_2d> vertices;
-};
 
 class batch_builder
 {
@@ -86,11 +53,7 @@ public:
 	renderer(core::layer& pLayer) :
 		core::system(pLayer)
 	{
-		initialize();
 	}
-
-	// Compile the default shaders and initialize opengl
-	void initialize();
 
 	// Add a batch to be rendered
 	void push_batch(const render_batch_2d& pBatch)
@@ -108,18 +71,17 @@ public:
 	// Convert screen coordinates to world coordinates
 	math::vec2 screen_to_world(const math::vec2& pVec) const;
 
-	// Renders all the batches.
-	void render();
+	const std::vector<render_batch_2d>& collect_batches();
 
 	// Clear all batches for a new frame
 	void clear();
 
 	// Set the current frame buffer to render to
-	void set_framebuffer(framebuffer* pFramebuffer)
+	void set_framebuffer(const framebuffer::ptr& pFramebuffer)
 	{
 		mFramebuffer = pFramebuffer;
 	}
-	framebuffer* get_framebuffer() const
+	framebuffer::ptr get_framebuffer() const
 	{
 		return mFramebuffer;
 	}
@@ -143,14 +105,9 @@ private:
 	// forground.
 	void sort_batches();
 
-	// Render a single batch
-	void render_batch(const render_batch_2d& pBatch);
-
 private:
 	math::aabb mRender_view;
-	framebuffer* mFramebuffer{ nullptr };
-	GLuint mShader_texture, mShader_color;
-	GLuint mVertex_buffer, mElement_buffer, mVAO_id;
+	framebuffer::ptr mFramebuffer;
 	math::mat44 mProjection_matrix;
 	float mPixel_size{ 1 };
 

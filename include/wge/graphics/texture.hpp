@@ -8,8 +8,6 @@
 #include <wge/util/json_helpers.hpp>
 using json = nlohmann::json;
 
-#include <GL/glew.h>
-
 #include <wge/math/rect.hpp>
 #include <wge/core/asset.hpp>
 #include <wge/filesystem/filesystem_interface.hpp>
@@ -36,6 +34,16 @@ public:
 	json save() const;
 };
 
+class texture_impl
+{
+public:
+	using ptr = std::shared_ptr<texture_impl>;
+	virtual ~texture_impl() {}
+	virtual void create_from_pixels(unsigned char* pBuffer, int pWidth, int pHeight, int mChannels) = 0;
+	virtual void set_smooth(bool pSmooth) = 0;
+	virtual bool is_smooth() const = 0;
+};
+
 class texture :
 	public core::asset
 {
@@ -44,19 +52,16 @@ public:
 	using ptr = tptr<texture>;
 
 	texture(core::asset_config::ptr pConfig);
-	texture(texture&&) = default;
-	texture(const texture&) = delete;
-	texture& operator=(const texture&) = delete;
 	~texture();
+
+	void set_implementation(const texture_impl::ptr& pImpl);
+	texture_impl::ptr get_implementation() const;
 
 	// Load a texture from a file
 	void load(const std::string& pFilepath);
 
 	// Load texture from a stream. If pSize = 0, the rest of the stream will be used.
 	void load(filesystem::stream::ptr pStream, std::size_t pSize = 0);
-
-	// Get the raw gl texture id
-	GLuint get_gl_texture() const;
 
 	// Get width of texture in pixels
 	int get_width() const;
@@ -81,18 +86,14 @@ public:
 	const atlas_container& get_raw_atlas() const;
 
 private:
-	void create_from_pixels(unsigned char* pBuffer);
-
-	void update_filtering();
-
 	// Update the configuration with the current atlas
 	void update_metadata() const;
 	// Load the atlas from the metadata
 	void load_metadata();
 
 private:
-	int mChannels, mWidth, mHeight;
-	GLuint mGL_texture;
+	texture_impl::ptr mImpl;
+	int mWidth, mHeight, mChannels;
 	bool mSmooth;
 	unsigned char* mPixels;
 	atlas_container mAtlas;

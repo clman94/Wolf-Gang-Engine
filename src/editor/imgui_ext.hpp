@@ -5,27 +5,32 @@
 #include <imgui/imgui_impl_opengl3.h>
 #include <imgui/imgui_stl.h>
 #include <wge/math/math.hpp>
+#include <wge/graphics/opengl_framebuffer.hpp>
+#include <wge/graphics/opengl_texture.hpp>
 
 namespace ImGui
 {
 
 // Draws a framebuffer
-inline void Image(const wge::graphics::framebuffer& mFramebuffer, const ImVec2& pSize = ImVec2(0, 0))
+inline void Image(const wge::graphics::framebuffer::ptr& mFramebuffer, const ImVec2& pSize = ImVec2(0, 0))
 {
-	ImGui::Image((void*)mFramebuffer.get_gl_texture(), pSize,
+	auto ogl_texture = std::dynamic_pointer_cast<wge::graphics::opengl_framebuffer>(mFramebuffer);
+	ImGui::Image((void*)ogl_texture->get_gl_texture(), pSize,
 		ImVec2(0, 1), ImVec2(1, 0)); // Y-axis needs to be flipped
 }
 
 // Draws a texture
 inline void Image(wge::graphics::texture::ptr mTexture, const ImVec2& pSize = ImVec2(0, 0), const ImVec2& pUV0 = ImVec2(0, 0), const ImVec2& pUV1 = ImVec2(1, 1))
 {
-	ImGui::Image((void*)mTexture->get_gl_texture(), pSize, pUV0, pUV1);
+	auto impl = std::dynamic_pointer_cast<wge::graphics::opengl_texture_impl>(mTexture->get_implementation());
+	ImGui::Image((void*)impl->get_gl_texture(), pSize, pUV0, pUV1);
 }
 
 // Draws a texture
 inline bool ImageButton(wge::graphics::texture::ptr mTexture, const ImVec2& pSize = ImVec2(0, 0), const ImVec2& pUV0 = ImVec2(0, 0), const ImVec2& pUV1 = ImVec2(1, 1))
 {
-	return ImGui::ImageButton((void*)mTexture->get_gl_texture(), pSize, pUV0, pUV1);
+	auto impl = std::dynamic_pointer_cast<wge::graphics::opengl_texture_impl>(mTexture->get_implementation());
+	return ImGui::ImageButton((void*)impl->get_gl_texture(), pSize, pUV0, pUV1);
 }
 
 inline bool CollapsingArrow(const char* pStr_id, bool* pOpen = nullptr, bool pDefault_open = false)

@@ -152,8 +152,8 @@ class signal
 {
 private:
 	using body_type = connection_body<Tsignature>;
-public:
 
+public:
 	connection connect(const slot<Tsignature>& pSlot)
 	{
 		return{ mConnections.emplace_back(std::make_shared<body_type>(pSlot)) };

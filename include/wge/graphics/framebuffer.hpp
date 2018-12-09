@@ -1,6 +1,7 @@
 #pragma once
 
 #include <wge/graphics/color.hpp>
+#include <memory>
 
 // Redefined here to move the gl header to a different file
 typedef unsigned int GLuint;
@@ -13,47 +14,20 @@ namespace wge::graphics
 class framebuffer
 {
 public:
-	framebuffer();
-	~framebuffer();
+	using ptr = std::shared_ptr<framebuffer>;
 
-	// Create the framebuffer and texture.
-	// Use resize() to adjust the framebuffer size.
-	void create(int pWidth, int pHeight);
+	virtual ~framebuffer() {}
 
 	// Resize the framebuffer
-	void resize(int pWidth, int pHeight);
+	virtual void resize(int pWidth, int pHeight) = 0;
 
-	// This sets the frame buffer for opengl.
-	// Call this first if you want to draw to this framebuffer.
-	// Call end_framebuffer() when you are done.
-	void begin_framebuffer() const;
-
-	// Resets opengl back to the default framebuffer
-	void end_framebuffer() const;
-
-	void clear(const color& pColor);
-
-	// Get the raw gl texture id
-	GLuint get_gl_texture() const
-	{
-		return mTexture;
-	}
+	// Clear the framebuffer vto a solid color
+	virtual void clear(const color& pColor = { 0, 0, 0, 1 }) = 0;
 
 	// Get width of framebuffer texture in pixels
-	int get_width() const
-	{
-		return mWidth;
-	}
-
+	virtual int get_width() const = 0;
 	// Get height of framebuffer texture in pixels
-	int get_height() const
-	{
-		return mHeight;
-	}
-
-private:
-	GLuint mTexture, mFramebuffer;
-	int mWidth, mHeight;
+	virtual int get_height() const = 0;
 };
 
 } // namespace wge::graphics

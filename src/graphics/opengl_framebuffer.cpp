@@ -1,25 +1,18 @@
-#include <wge/graphics/framebuffer.hpp>
+#include <wge/graphics/opengl_framebuffer.hpp>
 
+#include <wge/logging/log.hpp>
 #include <GL/glew.h>
-#include <iostream>
 
 namespace wge::graphics
 {
 
-framebuffer::framebuffer()
-{
-	mWidth = 0;
-	mHeight = 0;
-	mTexture = 0;
-}
-
-framebuffer::~framebuffer()
+opengl_framebuffer::~opengl_framebuffer()
 {
 	glDeleteTextures(1, &mTexture);
 	glDeleteFramebuffers(1, &mFramebuffer);
 }
 
-void framebuffer::create(int pWidth, int pHeight)
+void opengl_framebuffer::create(int pWidth, int pHeight)
 {
 	if (pWidth <= 0 || pHeight <= 0 || mTexture != 0)
 		return;
@@ -50,7 +43,7 @@ void framebuffer::create(int pWidth, int pHeight)
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 	{
-		std::cout << "Incomplete framebuffer\n";
+		log::error() << "Incomplete framebuffer\n" << log::endm;
 		return;
 	}
 
@@ -61,7 +54,7 @@ void framebuffer::create(int pWidth, int pHeight)
 	mHeight = pHeight;
 }
 
-void framebuffer::resize(int pWidth, int pHeight)
+void opengl_framebuffer::resize(int pWidth, int pHeight)
 {
 	if (pWidth > 0 && pHeight > 0)
 	{
@@ -75,20 +68,37 @@ void framebuffer::resize(int pWidth, int pHeight)
 	}
 }
 
-void framebuffer::begin_framebuffer() const
+int opengl_framebuffer::get_width() const
+{
+	return mWidth;
+}
+
+int opengl_framebuffer::get_height() const
+{
+	return mHeight;
+}
+
+void opengl_framebuffer::clear(const color & pColor)
+{
+	begin_framebuffer();
+	glClearColor(pColor.r, pColor.g, pColor.b, pColor.a);
+	glClear(GL_COLOR_BUFFER_BIT);
+	end_framebuffer();
+}
+
+GLuint opengl_framebuffer::get_gl_texture() const
+{
+	return mTexture;
+}
+
+void opengl_framebuffer::begin_framebuffer() const
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, mFramebuffer);
 }
 
-void framebuffer::end_framebuffer() const
+void opengl_framebuffer::end_framebuffer() const
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
-
-void framebuffer::clear(const color& pColor)
-{
-	glClearColor(pColor.r, pColor.g, pColor.b, pColor.a);
-	glClear(GL_COLOR_BUFFER_BIT);
 }
 
 } // namespace wge::graphics

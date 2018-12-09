@@ -31,7 +31,6 @@ json animation::save() const
 texture::texture(core::asset_config::ptr pConfig) :
 	asset(pConfig)
 {
-	mGL_texture = 0;
 	mSmooth = false;
 	mPixels = nullptr;
 }
@@ -39,6 +38,22 @@ texture::texture(core::asset_config::ptr pConfig) :
 texture::~texture()
 {
 	stbi_image_free(mPixels);
+}
+
+void texture::set_implementation(const texture_impl::ptr & pImpl)
+{
+	mImpl = pImpl;
+	// Recreate the texture with the new implementation
+	if (mPixels)
+	{
+		mImpl->create_from_pixels(mPixels, mWidth, mHeight, mChannels);
+		mImpl->set_smooth(mSmooth);
+	}
+}
+
+texture_impl::ptr texture::get_implementation() const
+{
+	return mImpl;
 }
 
 void texture::load(const std::string & pFilepath)
@@ -49,7 +64,8 @@ void texture::load(const std::string & pFilepath)
 		std::cout << "Failed to open image\n";
 		return;
 	}
-	create_from_pixels(pixels);
+	if (mImpl)
+		mImpl->create_from_pixels(pixels, mWidth, mHeight, mChannels);
 	stbi_image_free(mPixels);
 	mPixels = pixels;
 	load_metadata();
@@ -67,15 +83,11 @@ void texture::load(filesystem::stream::ptr pStream, std::size_t pSize)
 		std::cout << "Failed to open image\n";
 		return;
 	}
-	create_from_pixels(pixels);
+	if (mImpl)
+		mImpl->create_from_pixels(pixels, mWidth, mHeight, mChannels);
 	stbi_image_free(mPixels);
 	mPixels = pixels;
 	load_metadata();
-}
-
-GLuint texture::get_gl_texture() const
-{
-	return mGL_texture;
 }
 
 int texture::get_width() const
@@ -91,7 +103,7 @@ int texture::get_height() const
 void texture::set_smooth(bool pEnabled)
 {
 	mSmooth = pEnabled;
-	update_filtering();
+	mImpl->set_smooth(mSmooth);
 }
 
 bool texture::is_smooth() const
@@ -115,33 +127,6 @@ texture::atlas_container& texture::get_raw_atlas()
 const texture::atlas_container& texture::get_raw_atlas() const
 {
 	return mAtlas;
-}
-
-void texture::create_from_pixels(unsigned char * pBuffer)
-{
-	if (!mGL_texture)
-	{
-		// Create the texture object
-		glGenTextures(1, &mGL_texture);
-	}
-
-	// Give the image to OpenGL
-	glBindTexture(GL_TEXTURE_2D, mGL_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWidth, mHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pBuffer);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	update_filtering();
-}
-
-void texture::update_filtering()
-{
-	glBindTexture(GL_TEXTURE_2D, mGL_texture);
-
-	GLint filtering = mSmooth ? GL_LINEAR : GL_NEAREST;
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filtering);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filtering);
-
-	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void texture::update_metadata() const

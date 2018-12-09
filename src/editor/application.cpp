@@ -17,6 +17,7 @@
 #include <wge/filesystem/exception.hpp>
 #include <wge/graphics/renderer.hpp>
 #include <wge/util/unique_names.hpp>
+#include <wge/graphics/graphics.hpp>
 
 #include "editor.hpp"
 #include "history.hpp"
@@ -28,7 +29,7 @@
 // GL
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-
+#include <wge/graphics/glfw_backend.hpp>
 
 #include <functional>
 
@@ -319,11 +320,15 @@ public:
 
 	int run()
 	{
-		init_glfw();
+		// Only glfw and opengl is supported for editing
+		mGraphics.initialize(graphics::window_backend_type::glfw, graphics::backend_type::opengl);
+		mGLFW_backend = std::dynamic_pointer_cast<graphics::glfw_window_backend>(mGraphics.get_window_backend());
+		mViewport_framebuffer = mGraphics.get_graphics_backend()->create_framebuffer();
+
 		init_imgui();
 		init_game_context();
 		init_inspectors();
-		mViewport_framebuffer.create(200, 200); // Some arbitrary default
+
 		mainloop();
 		return 0;
 	}
@@ -331,7 +336,7 @@ public:
 private:
 	void mainloop()
 	{
-		while (!glfwWindowShouldClose(mWindow))
+		while (!glfwWindowShouldClose(mGLFW_backend->get_window()))
 		{
 			float delta = 1.f / 60.f;
 
@@ -361,19 +366,16 @@ private:
 				mGame_context.postupdate(delta);
 
 			// Clear the framebuffer with black
-			mViewport_framebuffer.begin_framebuffer();
-			mViewport_framebuffer.clear({ 0, 0, 0, 1 });
-			mViewport_framebuffer.end_framebuffer();
+			mViewport_framebuffer->clear({ 0, 0, 0, 1 });
 
 			// Render all layers with the renderer system enabled
 			for (auto& i : mGame_context.get_layer_container())
 			{
 				if (auto renderer = i->get_system<graphics::renderer>())
 				{
-					renderer->set_framebuffer(&mViewport_framebuffer);
+					renderer->set_framebuffer(mViewport_framebuffer);
 					renderer->set_render_view_to_framebuffer({}, { 0.01, 0.01 });
-					renderer->render();
-					renderer->clear();
+					renderer->collect_batches();
 				}
 			}
 
@@ -388,10 +390,6 @@ private:
 		ImGui_ImplOpenGL3_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
 		ImGui::DestroyContext();
-
-		// Cleanup GLFW
-		glfwDestroyWindow(mWindow);
-		glfwTerminate();
 	}
 
 	void new_frame()
@@ -408,8 +406,8 @@ private:
 		ImGui::Render();
 
 		int display_w, display_h;
-		glfwMakeContextCurrent(mWindow);
-		glfwGetFramebufferSize(mWindow, &display_w, &display_h);
+		glfwMakeContextCurrent(mGLFW_backend->get_window());
+		glfwGetFramebufferSize(mGLFW_backend->get_window(), &display_w, &display_h);
 		glViewport(0, 0, display_w, display_h);
 		glClearColor(0.15f, 0.15f, 0.15f, 1);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -422,34 +420,7 @@ private:
 			ImGui::RenderPlatformWindowsDefault();
 		}
 
-		glfwMakeContextCurrent(mWindow);
-		glfwSwapBuffers(mWindow);
-	}
-
-	void init_glfw()
-	{
-		glfwInit();
-
-		// OpenGL 3.3 minimum
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // Make Mac happy
-		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // No old OpenGL
-
-		// Create our window and initialize the opengl context
-		mWindow = glfwCreateWindow(640, 480, "My Title", NULL, NULL);
-		glfwMakeContextCurrent(mWindow);
-		// Load extensions
-		glewInit();
-
-		// Match the monitors refresh rate (VSync)
-		glfwSwapInterval(1);
-
-		// Enable blending (for transparancy)
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-		glDebugMessageCallback(opengl_message_callback, 0);
+		mGLFW_backend->refresh();
 	}
 
 	void init_imgui()
@@ -460,7 +431,7 @@ private:
 		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports;
 		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts;
 		ImGui::GetIO().ConfigDockingWithShift = true;
-		ImGui_ImplGlfw_InitForOpenGL(mWindow, true);
+		ImGui_ImplGlfw_InitForOpenGL(mGLFW_backend->get_window(), true);
 		ImGui_ImplOpenGL3_Init("#version 150");
 	}
 
@@ -470,9 +441,10 @@ private:
 		mAsset_manager.register_config_extension("scene", ".wgescene");
 
 		mAsset_manager.register_asset("texture",
-			[](const filesystem::path& pPath, core::asset_config::ptr pConfig) -> core::asset::ptr
+			[&](const filesystem::path& pPath, core::asset_config::ptr pConfig) -> core::asset::ptr
 		{
 			auto ptr = std::make_shared<graphics::texture>(pConfig);
+			ptr->set_implementation(mGraphics.get_graphics_backend()->create_texture_implementation());
 			ptr->set_path(pPath);
 			auto path = pConfig->get_path();
 			path.remove_extension();
@@ -703,9 +675,9 @@ private:
 			float width = ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x * 2;
 			float height = ImGui::GetWindowHeight() - ImGui::GetCursorPos().y - ImGui::GetStyle().WindowPadding.y;
 
-			if (mViewport_framebuffer.get_width() != width
-				|| mViewport_framebuffer.get_height() != height)
-				mViewport_framebuffer.resize(width, height);
+			if (mViewport_framebuffer->get_width() != width
+				|| mViewport_framebuffer->get_height() != height)
+				mViewport_framebuffer->resize(width, height);
 
 			ImVec2 cursor = ImGui::GetCursorScreenPos();
 			ImGui::Image(mViewport_framebuffer, ImVec2(width, height));
@@ -721,7 +693,7 @@ private:
 					if (!renderer)
 						continue;
 					// Make sure we are working with the viewports framebuffer
-					renderer->set_framebuffer(&mViewport_framebuffer);
+					renderer->set_framebuffer(mViewport_framebuffer);
 					
 					const math::vec2 render_view_scale = renderer->get_render_view_scale();
 					for (std::size_t i = 0; i < layer->get_object_count(); i++)
@@ -1010,7 +982,8 @@ private:
 	}
 
 private:
-	GLFWwindow* mWindow;
+	graphics::graphics mGraphics;
+	graphics::glfw_window_backend::ptr mGLFW_backend;
 
 	context mContext;
 
@@ -1019,7 +992,7 @@ private:
 
 	std::vector<std::unique_ptr<editor>> mEditors;
 	
-	graphics::framebuffer mViewport_framebuffer;
+	graphics::framebuffer::ptr mViewport_framebuffer;
 
 	core::context mGame_context;
 	filesystem::path mGame_path;
