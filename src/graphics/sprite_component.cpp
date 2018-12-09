@@ -25,7 +25,7 @@ void sprite_component::create_batch(core::transform_component& pTransform, rende
 		return;
 
 	batch_builder batch;
-	batch.set_texture(&(*mTexture));
+	batch.set_texture(mTexture);
 
 	const math::vec2 texture_size(mTexture->get_width(), mTexture->get_height());
 
@@ -60,7 +60,7 @@ void sprite_component::create_batch(core::transform_component& pTransform, rende
 
 	batch.add_quad(verts);
 
-	pRenderer.push_batch(*batch.get_batch());
+	pRenderer.push_batch(batch.finalize());
 }
 
 } // namespace wge::graphics

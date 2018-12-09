@@ -7,6 +7,7 @@
 #include <wge/graphics/renderer.hpp>
 #include <wge/graphics/framebuffer.hpp>
 #include <wge/math/transformations.hpp>
+#include <wge/graphics/graphics.hpp>
 
 namespace wge::graphics
 {
@@ -70,7 +71,7 @@ math::vec2 renderer::screen_to_world(const math::vec2 & pVec) const
 	return (pVec / get_render_view_scale()) + mRender_view.max;
 }
 
-const std::vector<render_batch_2d>& renderer::collect_batches()
+void renderer::render(graphics& pGraphics)
 {
 	get_layer().for_each(
 		[&](sprite_component& pSprite, core::transform_component& pTransform)
@@ -78,14 +79,13 @@ const std::vector<render_batch_2d>& renderer::collect_batches()
 		pSprite.create_batch(pTransform, *this);
 	});
 
-	return mBatches;
-}
+	sort_batches();
 
-void renderer::clear()
-{
+	mProjection_matrix = math::ortho(mRender_view);
+	for (auto& i : mBatches)
+		pGraphics.get_graphics_backend()->render_batch(mFramebuffer, mProjection_matrix, i);
 	mBatches.clear();
 }
-
 void renderer::sort_batches()
 {
 	std::sort(mBatches.begin(), mBatches.end(),

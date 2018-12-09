@@ -44,7 +44,7 @@ void texture::set_implementation(const texture_impl::ptr & pImpl)
 {
 	mImpl = pImpl;
 	// Recreate the texture with the new implementation
-	if (mPixels)
+	if (mPixels && mImpl)
 	{
 		mImpl->create_from_pixels(mPixels, mWidth, mHeight, mChannels);
 		mImpl->set_smooth(mSmooth);

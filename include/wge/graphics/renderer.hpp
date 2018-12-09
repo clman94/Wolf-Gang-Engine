@@ -27,7 +27,7 @@ public:
 	// TODO: Add ability to draw to several framebuffers for post-processing
 	//void set_framebuffer(const std::string& pName);
 
-	void set_texture(texture* pTexture)
+	void set_texture(const texture::ptr& pTexture)
 	{
 		mBatch.rendertexture = pTexture;
 	}
@@ -36,14 +36,16 @@ public:
 	// member of the batch.
 	std::size_t add_quad(const vertex_2d* pBuffer);
 
-	render_batch_2d* get_batch()
+	render_batch_2d finalize()
 	{
-		return &mBatch;
+		return std::move(mBatch);
 	}
 
 private:
 	render_batch_2d mBatch;
 };
+
+class graphics;
 
 class renderer :
 	public core::system
@@ -71,10 +73,7 @@ public:
 	// Convert screen coordinates to world coordinates
 	math::vec2 screen_to_world(const math::vec2& pVec) const;
 
-	const std::vector<render_batch_2d>& collect_batches();
-
-	// Clear all batches for a new frame
-	void clear();
+	void render(graphics& pGraphics);
 
 	// Set the current frame buffer to render to
 	void set_framebuffer(const framebuffer::ptr& pFramebuffer)

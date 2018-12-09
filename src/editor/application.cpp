@@ -374,8 +374,8 @@ private:
 				if (auto renderer = i->get_system<graphics::renderer>())
 				{
 					renderer->set_framebuffer(mViewport_framebuffer);
-					renderer->set_render_view_to_framebuffer({}, { 0.01, 0.01 });
-					renderer->collect_batches();
+					renderer->set_render_view_to_framebuffer({ 0, 0 }, { 0.01, 0.01 });
+					renderer->render(mGraphics);
 				}
 			}
 
@@ -983,6 +983,7 @@ private:
 
 private:
 	graphics::graphics mGraphics;
+	// ImGui needs access to some glfw specific objects
 	graphics::glfw_window_backend::ptr mGLFW_backend;
 
 	context mContext;

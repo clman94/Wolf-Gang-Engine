@@ -33,7 +33,7 @@ struct render_batch_2d
 	// Texture associated with this batch.
 	// If nullptr, the primitives will be drawn with
 	// a flat color.
-	texture* rendertexture{ nullptr };
+	texture::ptr rendertexture;
 
 	// This is the depth in which this batch will be drawn.
 	// Batches with lower values are closer to the forground

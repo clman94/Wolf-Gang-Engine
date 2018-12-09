@@ -96,6 +96,8 @@ public:
 
 		ogl_framebuffer->begin_framebuffer();
 
+		glViewport(0, 0, ogl_framebuffer->get_width(), ogl_framebuffer->get_height());
+
 		glBindVertexArray(mVAO_id);
 
 		// Populate the vertex buffer
@@ -165,7 +167,9 @@ public:
 
 	virtual framebuffer::ptr create_framebuffer() override
 	{
-		return std::make_shared<opengl_framebuffer>();
+		auto ogl_framebuffer = std::make_shared<opengl_framebuffer>();
+		ogl_framebuffer->create(200, 200); // Some arbitrary default
+		return ogl_framebuffer;
 	}
 
 	virtual texture_impl::ptr create_texture_implementation() override
