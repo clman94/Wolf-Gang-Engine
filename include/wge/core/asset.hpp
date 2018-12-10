@@ -50,7 +50,7 @@ private:
 };
 
 template <typename Tto, typename Tfrom>
-asset::tptr<Tto> cast_asset(asset::tptr<Tfrom> pFrom)
+[[nodiscard]] asset::tptr<Tto> cast_asset(asset::tptr<Tfrom> pFrom) noexcept
 {
 	return std::dynamic_pointer_cast<Tto>(pFrom);
 }

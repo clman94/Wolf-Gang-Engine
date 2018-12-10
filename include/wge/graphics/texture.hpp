@@ -30,8 +30,7 @@ public:
 
 	// Parse json
 	void load(const json& pJson);
-
-	json save() const;
+	[[nodiscard]] json save() const;
 };
 
 class texture_impl

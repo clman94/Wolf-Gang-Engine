@@ -63,24 +63,24 @@ public:
 		mBatches.push_back(pBatch);
 	}
 
-	void set_render_view(const math::aabb& mAABB);
-	void set_render_view_to_framebuffer(const math::vec2& pOffset = { 0, 0 }, const math::vec2& pScale = { 1, 1 });
-	math::aabb get_render_view() const;
-	math::vec2 get_render_view_scale() const;
+	void set_render_view(const math::aabb& mAABB) noexcept;
+	void set_render_view_to_framebuffer(const math::vec2& pOffset = { 0, 0 }, const math::vec2& pScale = { 1, 1 }) noexcept;
+	math::aabb get_render_view() const noexcept;
+	math::vec2 get_render_view_scale() const noexcept;
 
 	// Convert world coordinates to screen coordinates
-	math::vec2 world_to_screen(const math::vec2& pVec) const;
+	[[nodiscard]] math::vec2 world_to_screen(const math::vec2& pVec) const noexcept;
 	// Convert screen coordinates to world coordinates
-	math::vec2 screen_to_world(const math::vec2& pVec) const;
+	[[nodiscard]] math::vec2 screen_to_world(const math::vec2& pVec) const noexcept;
 
 	void render(graphics& pGraphics);
 
 	// Set the current frame buffer to render to
-	void set_framebuffer(const framebuffer::ptr& pFramebuffer)
+	void set_framebuffer(const framebuffer::ptr& pFramebuffer) noexcept
 	{
 		mFramebuffer = pFramebuffer;
 	}
-	framebuffer::ptr get_framebuffer() const
+	framebuffer::ptr get_framebuffer() const noexcept
 	{
 		return mFramebuffer;
 	}
@@ -89,11 +89,11 @@ public:
 	// to any unit system you want. This is very helpful 
 	// when you want to use physics which works with meters
 	// per unit. Default: 1
-	void set_pixel_size(float pSize)
+	void set_pixel_size(float pSize) noexcept
 	{
 		mPixel_size = pSize;
 	}
-	float get_pixel_size() const
+	float get_pixel_size() const noexcept
 	{
 		return mPixel_size;
 	}

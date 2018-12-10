@@ -6,7 +6,8 @@ namespace wge::filesystem
 {
 
 file_stream::file_stream() :
-	mAccess(stream_access::none)
+	mAccess(stream_access::none),
+	mLength(0)
 {
 	mStream.exceptions(std::fstream::failbit | std::fstream::badbit);
 }

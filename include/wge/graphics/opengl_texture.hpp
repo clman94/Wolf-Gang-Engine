@@ -61,7 +61,7 @@ private:
 
 private:
 	bool mSmooth{ false };
-	GLuint mGL_texture;
+	GLuint mGL_texture{ 0 };
 };
 
 } // namespace wge::graphics

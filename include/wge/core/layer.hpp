@@ -24,12 +24,12 @@ public:
 	using ptr = std::shared_ptr<layer>;
 	using wptr = std::weak_ptr<layer>;
 
-	static ptr create(context& pContext)
+	[[nodiscard]] static ptr create(context& pContext)
 	{
 		return std::make_shared<layer>(pContext);
 	}
 
-	layer(context& pContext);
+	layer(context& pContext) noexcept;
 
 	template <typename T>
 	T* get_system() const
@@ -46,14 +46,14 @@ public:
 		mSystems.emplace_back(new T(*this, pArgs...));
 	}
 
-	void set_name(const std::string_view& pName);
-	const std::string& get_name() const;
+	void set_name(const std::string_view& pName) noexcept;
+	const std::string& get_name() const noexcept;
 
 	game_object create_object();
 	void remove_object(const game_object& mObj);
 	game_object get_object(std::size_t pIndex);
 	game_object get_object(object_id pId);
-	std::size_t get_object_count() const;
+	std::size_t get_object_count() const noexcept;
 
 	template <typename T>
 	T* add_component(const game_object& pObj)
@@ -102,13 +102,13 @@ public:
 	template <typename T>
 	void for_each(T&& pCallable);
 
-	context& get_context() const;
+	context& get_context() const noexcept;
 
-	void set_enabled(bool pEnabled);
-	bool is_enabled() const;
+	void set_enabled(bool pEnabled) noexcept;
+	bool is_enabled() const noexcept;
 
-	float get_time_scale() const;
-	void set_time_scale(float pScale);
+	void set_time_scale(float pScale) noexcept;
+	float get_time_scale() const noexcept;
 
 	void preupdate(float pDelta);
 	void update(float pDelta);

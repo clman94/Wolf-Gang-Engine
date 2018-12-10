@@ -259,32 +259,27 @@ unsigned long wge::math::binomial_coeff(unsigned long n, unsigned long k)
 	return c;
 }
 
-degrees wge::math::radians_to_degrees(float pRadians)
+degrees wge::math::radians_to_degrees(float pRadians) noexcept
 {
 	return{ radians{ pRadians } };
 }
 
-radians wge::math::degrees_to_radians(float pDegrees)
+radians wge::math::degrees_to_radians(float pDegrees) noexcept
 {
 	return{ degrees{ pDegrees } };
 }
 
-radians::radians()
+radians::radians() noexcept
 {
 	mRadians = 0;
 }
 
-radians::radians(const float & pRadians)
+radians::radians(const float & pRadians) noexcept
 {
 	mRadians = pRadians;
 }
 
-radians::radians(const radians & pRadians)
-{
-	mRadians = pRadians.mRadians;
-}
-
-radians::radians(const degrees & pDegrees)
+radians::radians(const degrees & pDegrees) noexcept
 {
 	mRadians = pDegrees.to_radians().value();
 }
@@ -358,12 +353,6 @@ degrees::degrees(const float & pDegrees)
 {
 	mDegrees = pDegrees;
 }
-
-degrees::degrees(const degrees & pDegrees)
-{
-	mDegrees = pDegrees.mDegrees;
-}
-
 degrees::degrees(const radians & pRadians)
 {
 	mDegrees = pRadians.to_degrees().value();

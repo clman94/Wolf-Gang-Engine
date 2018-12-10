@@ -54,7 +54,6 @@ private:
 private:
 	int mType;
 	b2Body* mBody;
-	physics_world* mPhysics_world;
 
 	// Since we can't create a body whenever we want to, we need store
 	// the serialized data for when it is created.

@@ -53,7 +53,7 @@ inline void main_viewport_dock()
 
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
 	window_flags |=  ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-	window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+	window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoTitleBar;
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
@@ -226,8 +226,6 @@ public:
 	{
 		auto selection = mContext->get_selection<selection_type::asset>();
 		auto texture = core::cast_asset<graphics::texture>(selection);
-
-
 
 		if (ImGui::CollapsingHeader("Atlas", ImGuiTreeNodeFlags_DefaultOpen))
 		{
@@ -668,8 +666,18 @@ private:
 		}
 		ImGui::End();
 
-		if (ImGui::Begin("Viewport"))
+		if (ImGui::Begin("Viewport", NULL, ImGuiWindowFlags_MenuBar))
 		{
+			if (ImGui::BeginMenuBar())
+			{
+				if (ImGui::BeginMenu("View"))
+				{
+					static bool grid = false;
+					ImGui::Checkbox("Grid", &grid);
+					ImGui::EndMenu();
+				}
+				ImGui::EndMenuBar();
+			}
 			//mygameinput.set_enabled(ImGui::IsWindowFocused());
 
 			float width = ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x * 2;
@@ -714,7 +722,7 @@ private:
 						}
 
 						math::aabb aabb;
-						if (create_aabb_from_object(obj, aabb))
+						if (ImGui::IsItemHovered() && create_aabb_from_object(obj, aabb))
 						{
 							aabb.min /= render_view_scale;
 							aabb.max /= render_view_scale;
@@ -847,7 +855,6 @@ private:
 		}
 		ImGui::End();
 	}
-
 
 	void show_asset_inspector(core::asset::ptr pAsset)
 	{

@@ -792,7 +792,7 @@ public:
 private:
 	struct include_callback_info
 	{
-		script* pScript;
+		script* pScript{ nullptr };
 		include_callback pFunc;
 	} mInclude_callback_info;
 

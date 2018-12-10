@@ -37,12 +37,12 @@ std::size_t batch_builder::add_quad(const vertex_2d * pBuffer)
 	return start_index;
 }
 
-void renderer::set_render_view(const math::aabb& mAABB)
+void renderer::set_render_view(const math::aabb& mAABB) noexcept
 {
 	mRender_view = mAABB;
 }
 
-void renderer::set_render_view_to_framebuffer(const math::vec2& pOffset, const math::vec2 & pScale)
+void renderer::set_render_view_to_framebuffer(const math::vec2& pOffset, const math::vec2 & pScale) noexcept
 {
 	WGE_ASSERT(mFramebuffer);
 	const math::vec2 framebuffer_size = {
@@ -51,22 +51,22 @@ void renderer::set_render_view_to_framebuffer(const math::vec2& pOffset, const m
 	set_render_view({ pOffset, pOffset + framebuffer_size * pScale });
 }
 
-math::aabb renderer::get_render_view() const
+math::aabb renderer::get_render_view() const noexcept
 {
 	return mRender_view;
 }
 
-math::vec2 renderer::get_render_view_scale() const
+math::vec2 renderer::get_render_view_scale() const  noexcept
 {
 	return (mRender_view.max - mRender_view.min) / math::vec2((float)mFramebuffer->get_width(), (float)mFramebuffer->get_height());
 }
 
-math::vec2 renderer::world_to_screen(const math::vec2 & pVec) const
+math::vec2 renderer::world_to_screen(const math::vec2 & pVec) const noexcept
 {
 	return (pVec - mRender_view.min) * get_render_view_scale();
 }
 
-math::vec2 renderer::screen_to_world(const math::vec2 & pVec) const
+math::vec2 renderer::screen_to_world(const math::vec2 & pVec) const noexcept
 {
 	return (pVec / get_render_view_scale()) + mRender_view.max;
 }
@@ -86,6 +86,7 @@ void renderer::render(graphics& pGraphics)
 		pGraphics.get_graphics_backend()->render_batch(mFramebuffer, mProjection_matrix, i);
 	mBatches.clear();
 }
+
 void renderer::sort_batches()
 {
 	std::sort(mBatches.begin(), mBatches.end(),

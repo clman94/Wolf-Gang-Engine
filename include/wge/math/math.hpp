@@ -100,10 +100,9 @@ class degrees;
 class radians
 {
 public:
-	radians();
-	radians(const float& pRadians);
-	radians(const radians& pRadians);
-	radians(const degrees& pDegrees);
+	radians() noexcept;
+	radians(const float& pRadians) noexcept;
+	radians(const degrees& pDegrees) noexcept;
 
 	degrees to_degrees() const;
 
@@ -135,7 +134,6 @@ class degrees
 public:
 	degrees();
 	degrees(const float& pDegrees);
-	degrees(const degrees& pDegrees);
 	degrees(const radians& pRadians);
 
 	radians to_radians() const;
@@ -163,18 +161,18 @@ private:
 	float mDegrees;
 };
 
-degrees radians_to_degrees(float pRadians);
-radians degrees_to_radians(float pDegrees);
+degrees radians_to_degrees(float pRadians) noexcept;
+radians degrees_to_radians(float pDegrees) noexcept;
 
 } // namespace math
 } // namespace wge
 
-inline wge::math::degrees operator""_deg(long double pDegrees)
+inline wge::math::degrees operator""_deg(long double pDegrees) noexcept
 {
 	return static_cast<float>(pDegrees);
 }
 
-inline wge::math::radians operator""_rad(long double pRadians)
+inline wge::math::radians operator""_rad(long double pRadians) noexcept
 {
 	return static_cast<float>(pRadians);
 }

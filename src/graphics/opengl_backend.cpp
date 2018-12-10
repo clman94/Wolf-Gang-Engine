@@ -178,8 +178,8 @@ public:
 	}
 
 private:
-	GLuint mVertex_buffer, mElement_buffer, mVAO_id;
-	GLuint mShader_texture, mShader_color;
+	GLuint mVertex_buffer{ 0 }, mElement_buffer{ 0 }, mVAO_id{ 0 };
+	GLuint mShader_texture{ 0 }, mShader_color{ 0 };
 };
 
 graphics_backend::ptr create_opengl_backend()

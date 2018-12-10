@@ -83,7 +83,7 @@ public:
 private:
 	layer_container mLayers;
 	instance_id_t mCurrent_instance_id{ 0 };
-	asset_manager* mAsset_manager;
+	asset_manager* mAsset_manager{ nullptr };
 };
 
 } // namespace wge::core

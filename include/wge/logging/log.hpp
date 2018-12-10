@@ -39,7 +39,7 @@ struct message
 	std::string string;
 	level severity_level{ level::unknown };
 	line_info line_info;
-	std::time_t time_stamp;
+	std::time_t time_stamp{ 0 };
 
 	userdata_t userdata;
 

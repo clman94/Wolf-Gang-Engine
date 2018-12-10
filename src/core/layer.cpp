@@ -3,7 +3,7 @@
 
 namespace wge::core
 {
-layer::layer(context & pContext) :
+layer::layer(context & pContext) noexcept :
 	mContext(pContext)
 {
 }
@@ -23,12 +23,12 @@ system* layer::get_system(const std::string& pName) const
 	return nullptr;
 }
 
-void layer::set_name(const std::string_view& pName)
+void layer::set_name(const std::string_view& pName) noexcept
 {
 	mName = pName;
 }
 
-const std::string& layer::get_name() const
+const std::string& layer::get_name() const noexcept
 {
 	return mName;
 }
@@ -61,34 +61,34 @@ game_object layer::get_object(object_id pId)
 	return{ *this };
 }
 
-std::size_t layer::get_object_count() const
+std::size_t layer::get_object_count() const noexcept
 {
 	return mObject_manager.get_object_count();
 }
 
-context & layer::get_context() const
+context & layer::get_context() const noexcept
 {
 	return mContext;
 }
 
-void layer::set_enabled(bool pEnabled)
+void layer::set_enabled(bool pEnabled) noexcept
 {
 	mRecieve_update = pEnabled;
 }
 
-bool layer::is_enabled() const
+bool layer::is_enabled() const noexcept
 {
 	return mRecieve_update;
 }
 
-float layer::get_time_scale() const
-{
-	return mTime_scale;
-}
-
-void layer::set_time_scale(float pScale)
+void layer::set_time_scale(float pScale) noexcept
 {
 	mTime_scale = pScale;
+}
+
+float layer::get_time_scale() const noexcept
+{
+	return mTime_scale;
 }
 
 void layer::preupdate(float pDelta)

@@ -162,7 +162,7 @@ std::string path::filename() const
 std::string path::pop_filepath()
 {
 	if (mPath.empty())
-		return false;
+		return{};
 	std::string temp = std::move(mPath.back());
 	mPath.pop_back();
 	return temp;

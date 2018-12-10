@@ -4,7 +4,6 @@
 #include <array>
 
 #include <wge/math/aabb.hpp>
-#include <wge/core/messaging.hpp>
 #include <wge/core/serializable.hpp>
 #include <wge/core/instance_id.hpp>
 

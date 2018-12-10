@@ -95,7 +95,7 @@ private:
 	std::map<std::string, std::string> mAsset_config_extensions;
 	std::vector<asset::ptr> mAsset_list;
 	filesystem::path mRoot_dir;
-	filesystem::filesystem_interface* mFilesystem;
+	filesystem::filesystem_interface* mFilesystem{ nullptr };
 };
 
 template<typename T>

@@ -36,7 +36,7 @@ public:
 	void end_framebuffer() const;
 
 private:
-	GLuint mTexture{ 0 }, mFramebuffer;
+	GLuint mTexture{ 0 }, mFramebuffer{ 0 };
 	int mWidth{ 0 }, mHeight{ 0 };
 };
 

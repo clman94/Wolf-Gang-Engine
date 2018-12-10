@@ -123,8 +123,6 @@ void box_collider_component::on_physics_update_colliders(physics_component * pCo
 {
 	if (!mFixture)
 	{
-		mPhysics_component = pComponent;
-
 		b2FixtureDef fixture_def;
 
 		b2PolygonShape shape;
@@ -145,7 +143,6 @@ void box_collider_component::on_physics_reset()
 	// Clear everything.
 	// Fixture is expected to be cleaned up my the body or world.
 	mFixture = nullptr;
-	mPhysics_component = nullptr;
 }
 
 void box_collider_component::on_parent_removed()
@@ -158,7 +155,6 @@ void box_collider_component::on_parent_removed()
 		//log::debug() << WGE_LI << get_object()->get_name() << ": Removed Fixture" << log::endm;
 	}
 	mFixture = nullptr;
-	mPhysics_component = nullptr;
 }
 
 void box_collider_component::on_transform_changed()

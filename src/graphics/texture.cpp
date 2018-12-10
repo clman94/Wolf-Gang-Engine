@@ -29,7 +29,9 @@ json animation::save() const
 }
 
 texture::texture(core::asset_config::ptr pConfig) :
-	asset(pConfig)
+	asset(pConfig),
+	mWidth(0),
+	mHeight(0)
 {
 	mSmooth = false;
 	mPixels = nullptr;
