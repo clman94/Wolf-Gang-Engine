@@ -99,6 +99,20 @@ public:
 	template <typename Tfirst, typename...Trest>
 	bool retrieve_components(game_object pObj, Tfirst*& pFirst, Trest*&...pRest);
 
+	// Calls a callable for each component specified by the first parameter.
+	// Each component parameter should be a non-const reference and derive from
+	// the component class.
+	// Example:
+	//    // This will iterate over each sprite component in the layer.
+	//    layer.for_each([&](sprite_component& pTarget) {});
+	//    
+	//    // This will iterate over each sprite component and will collect
+	//    // the first transform component of the owning game_object.
+	//    layer.for_each([&](sprite_component& pTarget, transform_component& pTransform) {});
+	//    
+	//    // You can also get the curent game object by adding a `game_object` parameter at the start.
+	//    layer.for_each([&](game_object pObject, sprite_component& pTarget) {})
+	//
 	template <typename T>
 	void for_each(T&& pCallable);
 

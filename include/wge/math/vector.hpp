@@ -29,10 +29,7 @@ public:
 		x(pX),
 		y(pY)
 	{}
-	constexpr vec2(const vec2& pCopy) :
-		x(pCopy.x),
-		y(pCopy.y)
-	{}
+	constexpr vec2(const vec2&) = default;
 
 	float magnitude() const;
 
@@ -84,8 +81,18 @@ public:
 	}
 };
 
+inline constexpr vec2 operator * (float pVal, const math::vec2& pVec)
+{
+	return{ pVal * pVec.x , pVal * pVec.y };
+}
+
+inline constexpr vec2 operator / (float pVal, const math::vec2& pVec)
+{
+	return{ pVal / pVec.x , pVal / pVec.y };
+}
+
 template <typename Tx, typename Ty>
-constexpr vec2 swizzle(const vec2& pVec, Tx pX, Ty pY)
+inline constexpr vec2 swizzle(const vec2& pVec, Tx pX, Ty pY)
 {
 	vec2 result;
 

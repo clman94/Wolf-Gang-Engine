@@ -1,21 +1,15 @@
 #include <wge/math/rect.hpp>
-using namespace wge;
-using namespace wge::math;
+#include <wge/math/aabb.hpp>
 
-rect::rect(const rect & pCopy)
+namespace wge::math
 {
-	position = pCopy.position;
-	size = pCopy.size;
-}
 
-rect& rect::operator=(const rect& pCopy)
-{
-	position = pCopy.position;
-	size = pCopy.size;
-	return *this;
-}
+rect::rect(const aabb& pAABB) noexcept :
+	position(pAABB.min),
+	size(pAABB.max - pAABB.min)
+{}
 
-vec2 rect::get_corner(unsigned int pIndex) const
+vec2 rect::get_corner(unsigned int pIndex) const noexcept
 {
 	switch (pIndex % 4)
 	{
@@ -27,8 +21,10 @@ vec2 rect::get_corner(unsigned int pIndex) const
 	}
 }
 
-bool rect::intersects(const vec2 & pVec) const
+bool rect::intersects(const vec2 & pVec) const noexcept
 {
 	return pVec.x >= x && pVec.x < x + width
 		&& pVec.y >= y && pVec.y < y + height;
+}
+
 }

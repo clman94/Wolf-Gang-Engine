@@ -175,7 +175,7 @@ public:
 				ImGui::SetCursorPos(last_cursor);
 				ImGui::InvisibleButton("_Input", ImVec2(image_size.x + ImGui::GetWindowWidth(), image_size.y + ImGui::GetWindowHeight()));
 
-				visual_editor::begin_editor("_SomeEditor", { image_position.x, image_position.y }, { scale, scale });
+				visual_editor::begin("_SomeEditor", { image_position.x, image_position.y }, { 0, 0 }, { scale, scale });
 
 				int* selected_rect = ImGui::GetStateStorage()->GetIntRef(ImGui::GetID("_Selection"), 0);
 				for (auto& i : texture->get_raw_atlas())
@@ -192,7 +192,7 @@ public:
 					visual_editor::drag_resizable_rect(mSelected_animation->name.c_str(), &mSelected_animation->frame_rect);
 				}
 
-				visual_editor::end_editor();
+				visual_editor::end();
 
 				if (ImGui::IsItemHovered())
 				{
@@ -347,12 +347,6 @@ private:
 			new_frame();
 			main_viewport_dock();
 
-			for (auto& i : mEditors)
-			{
-				i->on_update(delta);
-				i->on_gui(delta);
-			}
-
 			show_settings();
 			show_asset_manager();
 			show_viewport();
@@ -372,7 +366,7 @@ private:
 				if (auto renderer = i->get_system<graphics::renderer>())
 				{
 					renderer->set_framebuffer(mViewport_framebuffer);
-					renderer->set_render_view_to_framebuffer({ 0, 0 }, { 0.01, 0.01 });
+					renderer->set_render_view_to_framebuffer(mViewport_offset, 1 / mViewport_scale);
 					renderer->render(mGraphics);
 				}
 			}
@@ -680,6 +674,7 @@ private:
 			}
 			//mygameinput.set_enabled(ImGui::IsWindowFocused());
 
+
 			float width = ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x * 2;
 			float height = ImGui::GetWindowHeight() - ImGui::GetCursorPos().y - ImGui::GetStyle().WindowPadding.y;
 
@@ -690,11 +685,8 @@ private:
 			ImVec2 cursor = ImGui::GetCursorScreenPos();
 			ImGui::Image(mViewport_framebuffer, ImVec2(width, height));
 
-			visual_editor::begin_editor("_SceneEditor", { cursor.x, cursor.y }, { 1, 1 });
+			visual_editor::begin("_SceneEditor", { cursor.x, cursor.y }, mViewport_offset, mViewport_scale);
 			{
-				ImDrawList* dl = ImGui::GetWindowDrawList();
-
-				const math::vec2 mouse(ImGui::GetMousePos().x - cursor.x, ImGui::GetMousePos().y - cursor.y);
 				for (auto layer : mGame_context.get_layer_container())
 				{
 					graphics::renderer* renderer = layer->get_system<graphics::renderer>();
@@ -703,7 +695,6 @@ private:
 					// Make sure we are working with the viewports framebuffer
 					renderer->set_framebuffer(mViewport_framebuffer);
 					
-					const math::vec2 render_view_scale = renderer->get_render_view_scale();
 					for (std::size_t i = 0; i < layer->get_object_count(); i++)
 					{
 						auto obj = layer->get_object(i);
@@ -716,41 +707,34 @@ private:
 						// Draw center point
 						if (is_object_selected)
 						{
-							math::vec2 center = transform->get_position() / render_view_scale;
-							dl->AddCircle({ center.x + cursor.x, center.y + cursor.y },
-								5, ImGui::GetColorU32({ 1, 1, 1, 0.6f }), 12, 3);
+							math::vec2 center = transform->get_position();
+							visual_editor::draw_circle(center, 5, { 1, 1, 1, 0.6f }, 3.f);
 						}
 
 						math::aabb aabb;
 						if (ImGui::IsItemHovered() && create_aabb_from_object(obj, aabb))
 						{
-							aabb.min /= render_view_scale;
-							aabb.max /= render_view_scale;
-
 							if (is_object_selected)
 							{
-								const math::rect rect(aabb.min, aabb.max - aabb.min);
+								const math::rect rect(aabb);
 								math::vec2 delta;
 								if (visual_editor::drag_rect("_SelectionResize", rect, &delta))
 								{
-									transform->set_position(transform->get_position() + delta * render_view_scale);
+									transform->set_position(transform->get_position() + delta);
 								}
 							}
 
-							if (aabb.intersect(mouse))
+							if (aabb.intersect(visual_editor::get_mouse_position()))
 							{
 								if (ImGui::IsItemClicked())
 									mContext.set_selection(obj);
-								dl->AddRect(
-									{ aabb.min.x + cursor.x, aabb.min.y + cursor.y },
-									{ aabb.max.x + cursor.x, aabb.max.y + cursor.y },
-									ImGui::GetColorU32({ 1, 1, 1, 1 }), 0, 15, 3);
+								visual_editor::draw_rect(aabb, { 1, 1, 1, 1 });
 							}
 						}
 					}
 				}
 			}
-			visual_editor::end_editor();
+			visual_editor::end();
 		}
 		ImGui::End();
 	}
@@ -998,9 +982,9 @@ private:
 	bool mDragging{ false };
 	math::vec2 mDrag_offset;
 
-	std::vector<std::unique_ptr<editor>> mEditors;
-	
 	graphics::framebuffer::ptr mViewport_framebuffer;
+	math::vec2 mViewport_offset;
+	math::vec2 mViewport_scale{ 100, 100 };
 
 	core::context mGame_context;
 	filesystem::path mGame_path;
