@@ -39,6 +39,13 @@ game_object layer::create_object()
 	return{ *this, data };
 }
 
+game_object layer::create_object(const std::string & pName)
+{
+	game_object obj = create_object();
+	obj.set_name(pName);
+	return obj;
+}
+
 void layer::remove_object(const game_object& mObj)
 {
 	mComponent_manager.remove_object(mObj.get_instance_id());
@@ -64,6 +71,24 @@ game_object layer::get_object(object_id pId)
 std::size_t layer::get_object_count() const noexcept
 {
 	return mObject_manager.get_object_count();
+}
+
+component* layer::get_first_component(const game_object & pObj, int pType)
+{
+	return mComponent_manager.get_first_component(pType, pObj.get_instance_id());
+}
+
+component* layer::get_component(int pType, component_id pId)
+{
+	return mComponent_manager.get_component(pType, pId);
+}
+
+void layer::remove_component(int pType, component_id pId)
+{
+	component* comp = get_component(pType, pId);
+	object_id obj_id = comp->get_object_id();
+	mObject_manager.unregister_component(obj_id, pId);
+	mComponent_manager.remove_component(pType, pId);
 }
 
 context & layer::get_context() const noexcept

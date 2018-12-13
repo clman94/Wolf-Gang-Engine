@@ -24,6 +24,7 @@ public:
 	using ptr = std::shared_ptr<layer>;
 	using wptr = std::weak_ptr<layer>;
 
+	// Create a new layer object
 	[[nodiscard]] static ptr create(context& pContext)
 	{
 		return std::make_shared<layer>(pContext);
@@ -31,68 +32,55 @@ public:
 
 	layer(context& pContext) noexcept;
 
+	// Get a system by its type
 	template <typename T>
-	T* get_system() const
-	{
-		return dynamic_cast<T*>(get_system(T::SYSTEM_ID));
-	}
-
+	T* get_system() const;
+	// Get a system by its type
 	system* get_system(int pID) const;
+	// Get a system by name
 	system* get_system(const std::string& pName) const;
 
+	// Emplace a new system
 	template <typename T, typename...Targs>
-	void add_system(Targs&&...pArgs)
-	{
-		mSystems.emplace_back(new T(*this, pArgs...));
-	}
+	void add_system(Targs&&...pArgs);
 
+	// Set the name of this layer
 	void set_name(const std::string_view& pName) noexcept;
+	// Get the name of this layer
 	const std::string& get_name() const noexcept;
 
-	game_object create_object();
+	// Create a new game object in this layer.
+	[[nodiscard]] game_object create_object();
+	game_object create_object(const std::string& pName);
+	// Remove a game object
 	void remove_object(const game_object& mObj);
+	// Get a game object at an index
 	game_object get_object(std::size_t pIndex);
+	// Get a game object by its instance id
 	game_object get_object(object_id pId);
+	// Get the amount of game objects in this layer
 	std::size_t get_object_count() const noexcept;
 
+	// Add a new component to a game object
 	template <typename T>
-	T* add_component(const game_object& pObj)
-	{
-		auto* comp = &mComponent_manager.add_component<T>(get_context().get_unique_instance_id());
-		comp->set_object(pObj);
-		mObject_manager.register_component(comp);
-		return comp;
-	}
+	T* add_component(const game_object& pObj);
 
+	// Get the first component of a specific type that refers to this game object
 	template <typename T>
-	T* get_first_component(const game_object& pObj)
-	{
-		return mComponent_manager.get_first_component<T>(pObj.get_instance_id());
-	}
+	T* get_first_component(const game_object& pObj);
+	// Get the first component of a specific type that refers to this game object
+	component* get_first_component(const game_object& pObj, int pType);
 
-	component* get_first_component(const game_object& pObj, int pType)
-	{
-		return mComponent_manager.get_first_component(pType, pObj.get_instance_id());
-	}
+	// Get a component by its instance it. The type is needed to check in
+	// the correct container.
+	component* get_component(int pType, component_id pId);
 
-	component* get_component(int pType, component_id pId)
-	{
-		return mComponent_manager.get_component(pType, pId);
-	}
-
+	// Get the container associated to a specific type of component.
 	template <typename T>
-	component_storage<T>& get_component_container()
-	{
-		return mComponent_manager.get_container<T>();
-	}
+	component_storage<T>& get_component_container();
 
-	void remove_component(int pType, component_id pId)
-	{
-		component* comp = get_component(pType, pId);
-		object_id obj_id = comp->get_object_id();
-		mObject_manager.unregister_component(obj_id, pId);
-		mComponent_manager.remove_component(pType, pId);
-	}
+	// Remove a component of a specific instance id and type.
+	void remove_component(int pType, component_id pId);
 
 	// Populate these pointers with all the components this object has.
 	// However, it will return false if it couldn't find them all.
@@ -116,12 +104,19 @@ public:
 	template <typename T>
 	void for_each(T&& pCallable);
 
+	// Get the context.
 	context& get_context() const noexcept;
 
+	// Set whether or not this layer will recieve updates.
+	// Note: This does not affect the update methods in this class
+	//   so they are still callable.
 	void set_enabled(bool pEnabled) noexcept;
+	// Check if this layer is eligible to recieve updates.
 	bool is_enabled() const noexcept;
 
+	// Set the scale for the delta parameters in the update methods.
 	void set_time_scale(float pScale) noexcept;
+	// Get the scale for the delta parameters in the update methods.
 	float get_time_scale() const noexcept;
 
 	void preupdate(float pDelta);
@@ -145,6 +140,39 @@ private:
 	object_manager mObject_manager;
 };
 
+template<typename T>
+inline T* layer::get_system() const
+{
+	return dynamic_cast<T*>(get_system(T::SYSTEM_ID));
+}
+
+template<typename T, typename ...Targs>
+inline void layer::add_system(Targs&&...pArgs)
+{
+	mSystems.emplace_back(new T(*this, pArgs...));
+}
+
+template<typename T>
+inline T * layer::add_component(const game_object & pObj)
+{
+	auto* comp = &mComponent_manager.add_component<T>(get_context().get_unique_instance_id());
+	comp->set_object(pObj);
+	mObject_manager.register_component(comp);
+	return comp;
+}
+
+template<typename T>
+inline T * layer::get_first_component(const game_object & pObj)
+{
+	return mComponent_manager.get_first_component<T>(pObj.get_instance_id());
+}
+
+template<typename T>
+inline component_storage<T>& layer::get_component_container()
+{
+	return mComponent_manager.get_container<T>();
+}
+
 template<typename Tfirst, typename ...Trest>
 inline bool layer::retrieve_components(game_object pObj, Tfirst *& pFirst, Trest *& ...pRest)
 {
@@ -165,7 +193,7 @@ inline void layer::for_each_impl(const std::function<void(game_object, Tcomponen
 	{
 		pCallable(get_object(pComp.get_object_id()), pComp, pDep...);
 	};
-	for_each(std::function(wrapper));
+	for_each(std::function(std::move(wrapper)));
 }
 
 template<typename Tcomponent, typename...Tdependencies>
