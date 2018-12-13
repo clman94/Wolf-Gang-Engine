@@ -17,18 +17,19 @@ public:
 	using ptr = std::shared_ptr<slot_base>;
 	using wptr = std::weak_ptr<slot_base>;
 	slot_base() :
-		tracker([]() { return true; })
+		mTracker([]() { return true; })
 	{}
 
 	virtual ~slot_base() {}
 
+	// Trackers may throw.
 	bool are_trackers_valid() const
 	{
-		return tracker();
+		return mTracker();
 	}
 
 protected:
-	std::function<bool()> tracker;
+	std::function<bool()> mTracker;
 };
 
 template <typename Tsignature>
@@ -46,10 +47,10 @@ public:
 
 	// Track a shared_ptr object
 	template <typename T>
-	slot_base& track(const std::shared_ptr<T>& pPtr)
+	slot& track(const std::shared_ptr<T>& pPtr)
 	{
 		std::weak_ptr<T> wptr = pPtr;
-		tracker = [wptr = std::move(wptr)]() -> bool
+		mTracker = [wptr = std::move(wptr)]() -> bool
 		{
 			return !wptr.expired();
 		};
@@ -73,8 +74,8 @@ public:
 	using wptr = std::weak_ptr<connection_body_base>;
 	virtual ~connection_body_base() {}
 
-	virtual bool connected() const = 0;
-	virtual void disconnect() = 0;
+	virtual bool connected() const noexcept = 0;
+	virtual void disconnect() noexcept = 0;
 };
 
 template <typename Tsignature>
@@ -90,18 +91,18 @@ public:
 		mSlot(new slot_type(pSlot))
 	{}
 
-	virtual bool connected() const override
+	virtual bool connected() const noexcept override
 	{
 		return mConnected && mSlot->are_trackers_valid();
 	}
 
-	virtual void disconnect() override
+	virtual void disconnect() noexcept override
 	{
 		mConnected = false;
 		mSlot.reset();
 	}
 
-	slot_type& get_slot()
+	slot_type& get_slot() noexcept
 	{
 		return *mSlot;
 	}
@@ -114,12 +115,12 @@ private:
 class connection
 {
 public:
-	connection() {}
-	connection(const connection_body_base::ptr& pPtr) :
+	connection() noexcept {}
+	connection(const connection_body_base::ptr& pPtr) noexcept :
 		mBody(pPtr)
 	{}
 
-	bool connected() const
+	bool connected() const noexcept
 	{
 		if (auto body = mBody.lock())
 			return body->connected();
@@ -127,18 +128,18 @@ public:
 			return false;
 	}
 
-	void disconnect() const
+	void disconnect() const noexcept
 	{
 		if (auto body = mBody.lock())
 			body->disconnect();
 	}
 
-	bool valid() const
+	bool valid() const noexcept
 	{
 		return !mBody.expired();
 	}
 
-	bool expired() const
+	bool expired() const noexcept
 	{
 		return mBody.expired();
 	}
@@ -176,8 +177,8 @@ public:
 	}
 
 private:
+	// Mutable to allow dead connections to be deleted
 	mutable std::vector<typename body_type::ptr> mConnections;
 };
-
 
 } // namespace wge::util

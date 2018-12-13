@@ -97,7 +97,7 @@ public:
 	// Populate these pointers with all the components this object has.
 	// However, it will return false if it couldn't find them all.
 	template <typename Tfirst, typename...Trest>
-	bool retrieve_components(game_object pObj, Tfirst*& pFirst, Trest*&...pRest);
+	[[nodiscard]] bool retrieve_components(game_object pObj, Tfirst*& pFirst, Trest*&...pRest);
 
 	// Calls a callable for each component specified by the first parameter.
 	// Each component parameter should be a non-const reference and derive from

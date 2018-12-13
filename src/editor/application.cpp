@@ -687,7 +687,7 @@ private:
 
 			visual_editor::begin("_SceneEditor", { cursor.x, cursor.y }, mViewport_offset, mViewport_scale);
 			{
-				for (auto layer : mGame_context.get_layer_container())
+				for (auto& layer : mGame_context.get_layer_container())
 				{
 					graphics::renderer* renderer = layer->get_system<graphics::renderer>();
 					if (!renderer)
