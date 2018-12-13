@@ -5,12 +5,12 @@
 namespace wge::graphics
 {
 
-animation::animation(const json & pJson)
+animation::animation(const json& pJson)
 {
 	load(pJson);
 }
 
-void animation::load(const json & pJson)
+void animation::load(const json& pJson)
 {
 	name = pJson["name"];
 	frames = pJson["frames"];
@@ -31,18 +31,17 @@ json animation::save() const
 texture::texture(core::asset_config::ptr pConfig) :
 	asset(pConfig),
 	mWidth(0),
-	mHeight(0)
-{
-	mSmooth = false;
-	mPixels = nullptr;
-}
+	mHeight(0),
+	mSmooth(false),
+	mPixels(nullptr)
+{}
 
 texture::~texture()
 {
 	stbi_image_free(mPixels);
 }
 
-void texture::set_implementation(const texture_impl::ptr & pImpl)
+void texture::set_implementation(const texture_impl::ptr& pImpl)
 {
 	mImpl = pImpl;
 	// Recreate the texture with the new implementation
@@ -58,7 +57,7 @@ texture_impl::ptr texture::get_implementation() const
 	return mImpl;
 }
 
-void texture::load(const std::string & pFilepath)
+void texture::load(const std::string& pFilepath)
 {
 	stbi_uc* pixels = stbi_load(pFilepath.c_str(), &mWidth, &mHeight, &mChannels, 4);
 	if (!pixels)
@@ -113,7 +112,7 @@ bool texture::is_smooth() const
 	return mSmooth;
 }
 
-animation::ptr texture::get_animation(const std::string & pName) const
+animation::ptr texture::get_animation(const std::string& pName) const
 {
 	for (const auto& i : mAtlas)
 		if (i->name == pName)
