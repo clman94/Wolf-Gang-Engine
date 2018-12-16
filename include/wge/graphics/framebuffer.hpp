@@ -1,6 +1,7 @@
 #pragma once
 
 #include <wge/graphics/color.hpp>
+#include <wge/math/vector.hpp>
 #include <memory>
 
 // Redefined here to move the gl header to a different file
@@ -28,6 +29,12 @@ public:
 	virtual int get_width() const = 0;
 	// Get height of framebuffer texture in pixels
 	virtual int get_height() const = 0;
+
+	// Get a vec2 size of this framebuffer.
+	math::vec2 get_size() const
+	{
+		return{ static_cast<float>(get_width()), static_cast<float>(get_height()) };
+	}
 };
 
 } // namespace wge::graphics

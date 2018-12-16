@@ -1,3 +1,4 @@
+#pragma once
 
 #include <vector>
 #include <map>
@@ -8,6 +9,7 @@
 
 #include <imgui/imgui.h>
 
+#include "imgui_ext.hpp"
 
 namespace wge::editor::visual_editor
 {
@@ -84,12 +86,29 @@ void draw_rect(const math::aabb& pAABB, const graphics::color& pColor)
 	assert(gCurrent_editor_state);
 	ImDrawList* dl = ImGui::GetWindowDrawList();
 	math::aabb aabb(gCurrent_editor_state->calc_absolute(pAABB));
-	dl->AddRect({ aabb.min.x, aabb.min.y }, { aabb.max.x, aabb.max.y }, ImGui::GetColorU32({ 1, 1, 0, 0.5f }));
+	dl->AddRect({ aabb.min.x, aabb.min.y }, { aabb.max.x, aabb.max.y }, ImGui::GetColorU32({ pColor.r, pColor.g, pColor.b, pColor.a }));
 }
 
 void draw_rect(const math::rect& pRect, const graphics::color& pColor)
 {
 	draw_rect(math::aabb(pRect), pColor);
+}
+
+void draw_line(const math::vec2& pP0, const math::vec2& pP1, const graphics::color& pColor, float pThickness = 1)
+{
+	assert(gCurrent_editor_state);
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	math::vec2 p0 = gCurrent_editor_state->calc_absolute(pP0);
+	math::vec2 p1 = gCurrent_editor_state->calc_absolute(pP1);
+	dl->AddLine({ p0.x, p0.y }, { p1.x, p1.y }, ImGui::GetColorU32({ pColor.r, pColor.g, pColor.b, pColor.a }), pThickness);
+}
+
+inline void draw_grid(graphics::color pColor, float pSquare_size)
+{
+	assert(gCurrent_editor_state);
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	math::vec2 min = gCurrent_editor_state->calc_absolute(math::vec2(-1000, -1000));
+	ImGui::DrawGridLines({ min.x, min.y }, dl->GetClipRectMax(), { pColor.r, pColor.g, pColor.b, pColor.a }, gCurrent_editor_state->scale.x * pSquare_size);
 }
 
 math::vec2 get_mouse_position()

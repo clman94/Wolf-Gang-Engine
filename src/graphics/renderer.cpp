@@ -45,10 +45,7 @@ void renderer::set_render_view(const math::aabb& mAABB) noexcept
 void renderer::set_render_view_to_framebuffer(const math::vec2& pOffset, const math::vec2 & pScale) noexcept
 {
 	WGE_ASSERT(mFramebuffer);
-	const math::vec2 framebuffer_size = {
-		static_cast<float>(mFramebuffer->get_width()),
-		static_cast<float>(mFramebuffer->get_height()) };
-	set_render_view({ pOffset, pOffset + framebuffer_size * pScale });
+	set_render_view({ pOffset, pOffset + mFramebuffer->get_size() * pScale });
 }
 
 math::aabb renderer::get_render_view() const noexcept
@@ -58,7 +55,7 @@ math::aabb renderer::get_render_view() const noexcept
 
 math::vec2 renderer::get_render_view_scale() const  noexcept
 {
-	return (mRender_view.max - mRender_view.min) / math::vec2((float)mFramebuffer->get_width(), (float)mFramebuffer->get_height());
+	return (mRender_view.max - mRender_view.min) / mFramebuffer->get_size();
 }
 
 math::vec2 renderer::world_to_screen(const math::vec2 & pVec) const noexcept

@@ -1,12 +1,16 @@
+#pragma once
 
 // ImGUI
 #include <imgui/imgui.h>
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
 #include <imgui/imgui_stl.h>
+
 #include <wge/math/math.hpp>
 #include <wge/graphics/opengl_framebuffer.hpp>
 #include <wge/graphics/opengl_texture.hpp>
+
+// Written in imgui style to fit better.
 
 namespace ImGui
 {
@@ -61,6 +65,34 @@ inline bool SelectableHeader(const char* pLabel, bool pSelected = false, bool pD
 	ImGui::PopID();
 }
 
+inline void DrawGridLines(ImVec2 pMin, ImVec2 pMax, ImVec4 pColor, float pSquare_size = 20)
+{
+	using namespace wge;
+
+	ImDrawList* dl = ImGui::GetWindowDrawList();
+	dl->PushClipRect(pMin, pMax, true);
+
+	// Optimize drawing by clamping the iterations with the clip rect
+	const int x_start = static_cast<int>(math::max<float>(0, (dl->GetClipRectMin().x - pMin.x) - pSquare_size) / pSquare_size);
+	const int y_start = static_cast<int>(math::max<float>(0, (dl->GetClipRectMin().y - pMin.y) - pSquare_size) / pSquare_size);
+	const int x_count = static_cast<int>(math::min<float>(pMax.x - pMin.x, dl->GetClipRectMax().x - pMin.x) / pSquare_size + 1);
+	const int y_count = static_cast<int>(math::min<float>(pMax.y - pMin.y, dl->GetClipRectMax().y - pMin.y) / pSquare_size + 1);
+
+	for (int x = x_start; x < x_count; x++)
+	{
+		const float x_pos = x * pSquare_size + pMin.x;
+		dl->AddLine({ x_pos, 0 }, { x_pos, dl->GetClipRectMax().y }, ImGui::GetColorU32(pColor));
+	}
+
+	for (int y = y_start; y < y_count; y++)
+	{
+		const float y_pos = y * pSquare_size + pMin.y;
+		dl->AddLine({ 0, y_pos }, { dl->GetClipRectMax().x, y_pos }, ImGui::GetColorU32(pColor));
+	}
+
+	dl->PopClipRect();
+}
+
 inline void DrawAlphaCheckerBoard(ImVec2 pMin, ImVec2 pSize, float pSquare_size = 20)
 {
 	using namespace wge;
@@ -88,6 +120,47 @@ inline void DrawAlphaCheckerBoard(ImVec2 pMin, ImVec2 pSize, float pSquare_size 
 		}
 	}
 	dl->PopClipRect();
+}
+
+inline struct
+{
+	ImVec2 contentSize, maxScroll;
+} gFixedScrollRegion;
+
+inline void BeginFixedScrollRegion(ImVec2 pContentSize, ImVec2 pMax)
+{
+	using namespace wge;
+
+	gFixedScrollRegion.contentSize = pContentSize;
+	gFixedScrollRegion.maxScroll = pMax;
+
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+
+	ImGui::Dummy({ pContentSize.x, math::min(pMax.y, ImGui::GetScrollY()) });
+	ImGui::Dummy({ math::min(pMax.x, ImGui::GetScrollX()), pContentSize.y });
+	ImGui::SameLine();
+}
+
+inline void EndFixedScrollRegion()
+{
+	using namespace wge;
+
+	ImGui::SameLine();
+	ImGui::Dummy({ math::max(0.f, gFixedScrollRegion.maxScroll.x - ImGui::GetScrollX()), gFixedScrollRegion.contentSize.y });
+	ImGui::Dummy({ gFixedScrollRegion.contentSize.x, math::max(0.f, gFixedScrollRegion.maxScroll.y - ImGui::GetScrollY()) });
+
+	ImGui::PopStyleVar();
+}
+
+inline bool DragScroll(int pMouseButton, float pLockThrushold = -1)
+{
+	if (ImGui::IsMouseDragging(pMouseButton, pLockThrushold))
+	{
+		ImGui::SetScrollX(ImGui::GetScrollX() - ImGui::GetIO().MouseDelta.x);
+		ImGui::SetScrollY(ImGui::GetScrollY() - ImGui::GetIO().MouseDelta.y);
+		return true;
+	}
+	return false;
 }
 
 } // namespace ImGui

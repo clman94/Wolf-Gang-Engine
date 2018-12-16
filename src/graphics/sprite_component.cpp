@@ -27,7 +27,7 @@ void sprite_component::create_batch(core::transform_component& pTransform, rende
 	batch_builder batch;
 	batch.set_texture(mTexture);
 
-	const math::vec2 texture_size(mTexture->get_width(), mTexture->get_height());
+	const math::vec2 texture_size = mTexture->get_size();
 
 	math::aabb uv {
 		mAnimation->frame_rect.position / texture_size,

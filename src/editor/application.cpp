@@ -207,11 +207,7 @@ public:
 					}
 
 					// Hold middle mouse button to scroll
-					if (ImGui::IsMouseDown(2))
-					{
-						ImGui::SetScrollX(ImGui::GetScrollX() - ImGui::GetIO().MouseDelta.x);
-						ImGui::SetScrollY(ImGui::GetScrollY() - ImGui::GetIO().MouseDelta.y);
-					}
+					ImGui::DragScroll(2);
 				}
 			}
 			else
@@ -713,7 +709,7 @@ private:
 		}
 		ImGui::End();
 
-		if (ImGui::Begin("Viewport", NULL, ImGuiWindowFlags_MenuBar))
+		if (ImGui::Begin("Viewport", NULL, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_HorizontalScrollbar))
 		{
 			if (ImGui::BeginMenuBar())
 			{
@@ -727,19 +723,29 @@ private:
 			}
 			//mygameinput.set_enabled(ImGui::IsWindowFocused());
 
-
-			float width = ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x * 2;
-			float height = ImGui::GetWindowHeight() - ImGui::GetCursorPos().y - ImGui::GetStyle().WindowPadding.y;
+			float width = ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x * 2 - ImGui::GetStyle().ScrollbarSize;
+			float height = ImGui::GetWindowHeight() - ImGui::GetCursorPos().y - ImGui::GetStyle().WindowPadding.y - ImGui::GetStyle().ScrollbarSize;
+			float scroll_x_max = width * 2;
+			float scroll_y_max = height * 2;
 
 			if (mViewport_framebuffer->get_width() != width
 				|| mViewport_framebuffer->get_height() != height)
 				mViewport_framebuffer->resize(width, height);
 
+			ImGui::BeginFixedScrollRegion({ width, height }, { scroll_x_max, scroll_y_max });
+
 			ImVec2 cursor = ImGui::GetCursorScreenPos();
 			ImGui::Image(mViewport_framebuffer, ImVec2(width, height));
 
+			// Middle mouse to drag
+			if (ImGui::IsItemHovered())
+				ImGui::DragScroll(2, 1);
+
+			mViewport_offset = (math::vec2(ImGui::GetScrollX(), ImGui::GetScrollY()) / mViewport_scale);
+
 			visual_editor::begin("_SceneEditor", { cursor.x, cursor.y }, mViewport_offset, mViewport_scale);
 			{
+				visual_editor::draw_grid({ 1, 1, 1, 0.7 }, 1);
 				for (auto& layer : mGame_context.get_layer_container())
 				{
 					graphics::renderer* renderer = layer->get_system<graphics::renderer>();
@@ -788,6 +794,12 @@ private:
 				}
 			}
 			visual_editor::end();
+
+			ImGui::SameLine();
+			ImGui::Dummy({ math::max(0.f, scroll_x_max - ImGui::GetScrollX()), height });
+			ImGui::Dummy({ width, math::max(0.f, scroll_y_max - ImGui::GetScrollY()) });
+
+			ImGui::PopStyleVar();
 		}
 		ImGui::End();
 	}

@@ -68,6 +68,11 @@ public:
 	// Get height of texture in pixels
 	int get_height() const;
 
+	math::vec2 get_size() const noexcept
+	{
+		return{ static_cast<float>(mWidth), static_cast<float>(mHeight) };
+	}
+
 	// Set the smooth filtering. If enabled,
 	// the image will get smoothed when stretched or rotated
 	// making it more pleasing to the eye. However, it may be
