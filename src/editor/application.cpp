@@ -716,7 +716,9 @@ private:
 				if (ImGui::BeginMenu("View"))
 				{
 					static bool grid = false;
-					ImGui::Checkbox("Grid", &grid);
+					ImGui::Checkbox("Enable Grid", &grid);
+					static graphics::color grid_color;
+					ImGui::ColorEdit4("Grid Color", grid_color.components);
 					ImGui::EndMenu();
 				}
 				ImGui::EndMenuBar();
@@ -735,7 +737,18 @@ private:
 			ImGui::BeginFixedScrollRegion({ width, height }, { scroll_x_max, scroll_y_max });
 
 			ImVec2 cursor = ImGui::GetCursorScreenPos();
-			ImGui::Image(mViewport_framebuffer, ImVec2(width, height));
+
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0, 0, 0, 0));
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0, 0, 0, 0));
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+
+			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0);
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+
+			ImGui::ImageButton(mViewport_framebuffer, ImVec2(width, height));
+
+			ImGui::PopStyleVar(2);
+			ImGui::PopStyleColor(3);
 
 			// Middle mouse to drag
 			if (ImGui::IsItemHovered())

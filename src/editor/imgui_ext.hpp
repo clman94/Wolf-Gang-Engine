@@ -30,6 +30,14 @@ inline void Image(wge::graphics::texture::ptr mTexture, const ImVec2& pSize = Im
 	ImGui::Image((void*)impl->get_gl_texture(), pSize, pUV0, pUV1);
 }
 
+// Draws a framebuffer
+inline bool ImageButton(const wge::graphics::framebuffer::ptr& mFramebuffer, const ImVec2& pSize = ImVec2(0, 0), const ImVec2& pUV0 = ImVec2(0, 0), const ImVec2& pUV1 = ImVec2(1, 1))
+{
+	auto ogl_texture = std::dynamic_pointer_cast<wge::graphics::opengl_framebuffer>(mFramebuffer);
+	return ImGui::ImageButton((void*)ogl_texture->get_gl_texture(), pSize,
+		ImVec2(0, 1), ImVec2(1, 0)); // Y-axis needs to be flipped
+}
+
 // Draws a texture
 inline bool ImageButton(wge::graphics::texture::ptr mTexture, const ImVec2& pSize = ImVec2(0, 0), const ImVec2& pUV0 = ImVec2(0, 0), const ImVec2& pUV1 = ImVec2(1, 1))
 {

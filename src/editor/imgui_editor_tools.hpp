@@ -11,6 +11,8 @@
 
 #include "imgui_ext.hpp"
 
+// This is essentually an overlay type editor.
+
 namespace wge::editor::visual_editor
 {
 
