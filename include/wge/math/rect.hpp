@@ -47,4 +47,4 @@ public:
 	bool intersects(const vec2& pVec) const noexcept;
 };
 
-}
+} // namespace wge::math

@@ -173,7 +173,7 @@ inline component_storage<T>& layer::get_component_container()
 	return mComponent_manager.get_container<T>();
 }
 
-template<typename Tfirst, typename ...Trest>
+template<typename Tfirst, typename...Trest>
 inline bool layer::retrieve_components(game_object pObj, Tfirst *& pFirst, Trest *& ...pRest)
 {
 	auto comp = mComponent_manager.get_first_component<Tfirst>(pObj.get_instance_id());

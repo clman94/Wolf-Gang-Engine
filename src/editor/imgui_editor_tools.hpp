@@ -23,7 +23,28 @@ struct editor_state
 	math::vec2 scale;
 	math::vec2 mouse_position; // in pixels
 	math::vec2 mouse_editor_position; // in editor units
+
 	ImGuiID active_dragger_id{ 0 };
+
+	math::vec2 changed_vec;
+	math::vec2 original_vec;
+	math::rect changed_rect;
+	math::rect original_rect;
+
+	bool is_snap_enabled{ true };
+	math::vec2 snap_ratio{ 1, 1 };
+
+	math::vec2 snap_closest(const math::vec2& pVec) const
+	{
+		if (!is_snap_enabled)
+			return pVec;
+		return (pVec / snap_ratio).round() * snap_ratio;
+	}
+
+	math::rect snap_closest(const math::rect& pRect) const
+	{
+		return{ snap_closest(pRect.position), snap_closest(pRect.size) };
+	}
 
 	math::rect calc_absolute(const math::rect& pRect) const
 	{
@@ -119,6 +140,21 @@ math::vec2 get_mouse_position()
 	return gCurrent_editor_state->mouse_editor_position;
 }
 
+inline math::rect snap_behavior(const math::rect& pOriginal, const math::rect& pChange)
+{
+	assert(gCurrent_editor_state);
+	if (ImGui::IsItemClicked())
+	{
+		gCurrent_editor_state->original_rect = pOriginal;
+		gCurrent_editor_state->changed_rect = math::rect{};
+	}
+	gCurrent_editor_state->changed_rect.position += pChange.position;
+	gCurrent_editor_state->changed_rect.size += pChange.size;
+	math::rect original = gCurrent_editor_state->original_rect;
+	math::rect snapped_changes = gCurrent_editor_state->snap_closest(gCurrent_editor_state->changed_rect);
+	return{ original.position + snapped_changes.position, original.size + snapped_changes.size };
+}
+
 bool drag_behavior(ImGuiID pID, bool pHovered)
 {
 	assert(gCurrent_editor_state);
@@ -187,6 +223,8 @@ bool drag_resizable_rect(const char* pStr_id, math::rect* pRect)
 {
 	bool dragging = false;
 
+	math::rect change;
+
 	ImGui::PushID(pStr_id);
 
 	ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -197,67 +235,70 @@ bool drag_resizable_rect(const char* pStr_id, math::rect* pRect)
 	if (drag_circle("TopLeft", pRect->position, &topleft, 6))
 	{
 		dragging = true;
-		pRect->position += topleft;
-		pRect->size -= topleft;
+		change.position += topleft;
+		change.size -= topleft;
 	}
 
-	dragging |= drag_circle("BottomRight", pRect->get_corner(2), &pRect->size, 6);
+	dragging |= drag_circle("BottomRight", pRect->get_corner(2), &change.size, 6);
 
 	math::vec2 topright;
 	if (drag_circle("TopRight", pRect->get_corner(1), &topright, 6))
 	{
 		dragging = true;
-		pRect->y += topright.y;
-		pRect->width += topright.x;
-		pRect->height -= topright.y;
+		change.y += topright.y;
+		change.width += topright.x;
+		change.height -= topright.y;
 	}
 
 	math::vec2 bottomleft;
 	if (drag_circle("BottomLeft", pRect->get_corner(3), &bottomleft, 6))
 	{
 		dragging = true;
-		pRect->x += bottomleft.x;
-		pRect->width -= bottomleft.x;
-		pRect->height += bottomleft.y;
+		change.x += bottomleft.x;
+		change.width -= bottomleft.x;
+		change.height += bottomleft.y;
 	}
 
 	math::vec2 top;
 	if (drag_circle("Top", pRect->position + math::vec2(pRect->width / 2, 0), &top, 6))
 	{
 		dragging = true;
-		pRect->y += top.y;
-		pRect->height -= top.y;
+		change.y += top.y;
+		change.height -= top.y;
 	}
 
 	math::vec2 bottom;
 	if (drag_circle("Bottom", pRect->position + math::vec2(pRect->width / 2, pRect->height), &bottom, 6))
 	{
 		dragging = true;
-		pRect->height += bottom.y;
+		change.height += bottom.y;
 	}
 
 	math::vec2 left;
 	if (drag_circle("Left", pRect->position + math::vec2(0, pRect->height / 2), &left, 6))
 	{
 		dragging = true;
-		pRect->x += left.x;
-		pRect->width -= left.x;
+		change.x += left.x;
+		change.width -= left.x;
 	}
 
 	math::vec2 right;
 	if (drag_circle("Right", pRect->position + math::vec2(pRect->width, pRect->height / 2), &right, 6))
 	{
 		dragging = true;
-		pRect->width += right.x;
+		change.width += right.x;
 	}
 
 	dl->ChannelsSetCurrent(0);
 
-	dragging |= drag_rect("RectMove", *pRect, &pRect->position);
+	dragging |= drag_rect("RectMove", *pRect, &change.position);
 
 	dl->ChannelsMerge();
 
 	ImGui::PopID();
+
+	if (dragging)
+		*pRect = snap_behavior(*pRect, change);
 
 	return dragging;
 }

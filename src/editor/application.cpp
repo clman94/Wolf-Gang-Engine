@@ -267,7 +267,6 @@ public:
 			{
 				ImGui::PushID("_AnimationSettings");
 
-
 				ImGui::InputText("Name", &mSelected_animation->name);
 				if (ImGui::IsItemDeactivatedAfterEdit())
 				{
@@ -723,7 +722,6 @@ private:
 				}
 				ImGui::EndMenuBar();
 			}
-			//mygameinput.set_enabled(ImGui::IsWindowFocused());
 
 			float width = ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x * 2 - ImGui::GetStyle().ScrollbarSize;
 			float height = ImGui::GetWindowHeight() - ImGui::GetCursorPos().y - ImGui::GetStyle().WindowPadding.y - ImGui::GetStyle().ScrollbarSize;

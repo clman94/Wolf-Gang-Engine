@@ -7,7 +7,7 @@ namespace wge::core
 
 using instance_id_t = std::uint64_t;
 
-// Template for strongly typed id values
+// Template for strongly typed id values.
 template <typename>
 class instance_id
 {
