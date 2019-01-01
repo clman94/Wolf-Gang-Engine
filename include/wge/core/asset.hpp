@@ -8,9 +8,9 @@
 namespace wge::core
 {
 
-// This is an overridable class for custom
-// asset data. If you don't wan't to specialize any data,
-// you don't have to override it.
+// This is an overridable class for assets.
+// Technically, an asset object is meant
+// to translate data from the asset configuration.
 class asset
 {
 public:
@@ -19,7 +19,8 @@ public:
 	using ptr = std::shared_ptr<asset>;
 	using wptr = std::weak_ptr<asset>;
 
-	asset(asset_config::ptr pConfig);
+	asset(const asset_config::ptr& pConfig);
+	virtual ~asset() {}
 
 	// This path will be used to locate this asset
 	const filesystem::path& get_path() const;
@@ -50,9 +51,9 @@ private:
 };
 
 template <typename Tto, typename Tfrom>
-[[nodiscard]] asset::tptr<Tto> cast_asset(asset::tptr<Tfrom> pFrom) noexcept
+[[nodiscard]] asset::tptr<Tto> cast_asset(const asset::tptr<Tfrom>& pFrom) noexcept
 {
 	return std::dynamic_pointer_cast<Tto>(pFrom);
 }
 
-}
+} // namespace wge::core

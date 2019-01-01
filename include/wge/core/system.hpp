@@ -27,7 +27,7 @@ public:
 	virtual int get_system_id() const = 0;
 	virtual std::string get_system_name() const = 0;
 
-	layer& get_layer() const
+	layer& get_layer() const noexcept
 	{
 		return mLayer;
 	}

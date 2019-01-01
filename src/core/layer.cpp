@@ -3,10 +3,34 @@
 
 namespace wge::core
 {
-layer::layer(context & pContext) noexcept :
+
+layer::layer(context& pContext) noexcept :
 	mContext(pContext)
 {
 }
+
+json layer::serialize(serialize_type pType)
+{
+	json result;
+	if (pType & serialize_type::properties)
+	{
+		result["name"] = mName;
+		result["timescale"] = mTime_scale;
+		result["enabled"] = mRecieve_update;
+	}
+
+	json& j_objects = result["objects"];
+	for (std::size_t i = 0; i < get_object_count(); i++)
+		j_objects.push_back(get_object(i).serialize(pType));
+
+	return result;
+}
+
+void layer::deserialize(const json& pJson)
+{
+
+}
+
 system* layer::get_system(int pID) const
 {
 	for (auto& i : mSystems)

@@ -21,9 +21,6 @@ public:
 	box_collider_component(core::component_id pId);
 	virtual ~box_collider_component();
 
-	virtual json serialize() const override;
-	virtual void deserialize(const json&) override;
-
 	void set_offset(const math::vec2& pOffset);
 	math::vec2 get_offset() const;
 
@@ -38,6 +35,10 @@ public:
 
 	void set_anchor(math::vec2 pRatio);
 	math::vec2 get_anchor() const;
+
+protected:
+	virtual json on_serialize(core::serialize_type) const override;
+	virtual void on_deserialize(const json&) override;
 
 private:
 	void on_physics_update_colliders(physics_component* pComponent);

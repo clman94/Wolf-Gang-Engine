@@ -13,86 +13,86 @@ constexpr struct _y_t {} _y;
 class vec2
 {
 public:
-	union{
-		struct{
+	union {
+		struct {
 			float x, y;
 		};
 		float components[2];
 	};
 
 public:
-	constexpr vec2() :
+	constexpr vec2() noexcept :
 		x(0),
 		y(0)
 	{}
-	constexpr vec2(float pX, float pY) :
+	constexpr vec2(float pX, float pY) noexcept :
 		x(pX),
 		y(pY)
 	{}
-	constexpr vec2(const vec2&) = default;
+	constexpr vec2(const vec2&) noexcept = default;
 
-	float magnitude() const;
+	float magnitude() const noexcept;
 
-	float distance(const vec2& pTo) const;
+	float distance(const vec2& pTo) const noexcept;
 
-	vec2& rotate(const radians& pRadians);
+	vec2& rotate(const radians& pRadians) noexcept;
 
-	vec2& normalize();
+	vec2& normalize() noexcept;
 
-	vec2& abs();
+	vec2& abs() noexcept;
 
-	vec2& floor();
-	vec2& floor_magnitude();
-	vec2& ceil();
-	vec2& ceil_magnitude();
-	vec2& round();
-	vec2& round_magnitude();
+	vec2& floor() noexcept;
+	vec2& floor_magnitude() noexcept;
+	vec2& ceil() noexcept;
+	vec2& ceil_magnitude() noexcept;
+	vec2& round() noexcept;
+	vec2& round_magnitude() noexcept;
 
 	// Vector operations
-	vec2 operator + (const vec2& pR) const;
-	vec2 operator - (const vec2& pR) const;
-	vec2 operator * (const vec2& pR) const;
-	vec2 operator / (const vec2& pR) const;
+	vec2 operator + (const vec2& pR) const noexcept;
+	vec2 operator - (const vec2& pR) const noexcept;
+	vec2 operator * (const vec2& pR) const noexcept;
+	vec2 operator / (const vec2& pR) const noexcept;
 
-	vec2 operator - () const;
+	vec2 operator - () const noexcept;
 
 	// Scalar operations
-	vec2 operator * (const float& pR) const;
-	vec2 operator / (const float& pR) const;
+	vec2 operator * (const float& pR) const noexcept;
+	vec2 operator / (const float& pR) const noexcept;
 
 	// Vector assignments
-	vec2& operator = (const vec2& pR);
-	vec2& operator += (const vec2& pR);
-	vec2& operator -= (const vec2& pR);
-	vec2& operator *= (const vec2& pR);
-	vec2& operator /= (const vec2& pR);
+	vec2& operator = (const vec2& pR) noexcept;
+	vec2& operator += (const vec2& pR) noexcept;
+	vec2& operator -= (const vec2& pR) noexcept;
+	vec2& operator *= (const vec2& pR) noexcept;
+	vec2& operator /= (const vec2& pR) noexcept;
 
 	// Scalar assignments
-	vec2& operator *= (const float& pR);
-	vec2& operator /= (const float& pR);
+	vec2& operator *= (const float& pR) noexcept;
+	vec2& operator /= (const float& pR) noexcept;
 
 	// Returns format "([x], [y])"
 	std::string to_string() const;
 
 	template <typename Tx, typename Ty>
-	constexpr vec2 swizzle(Tx pX, Ty pY) const
+	constexpr vec2 swizzle(Tx pX, Ty pY) const noexcept
 	{
 		return math::swizzle(*this, pX, pY);
 	}
 };
 
-inline constexpr vec2 operator * (float pVal, const math::vec2& pVec)
+inline constexpr vec2 operator * (float pVal, const math::vec2& pVec) noexcept
 {
 	return{ pVal * pVec.x , pVal * pVec.y };
 }
 
-inline constexpr vec2 operator / (float pVal, const math::vec2& pVec)
+inline constexpr vec2 operator / (float pVal, const math::vec2& pVec) noexcept
 {
 	return{ pVal / pVec.x , pVal / pVec.y };
 }
 
 template <typename Tx, typename Ty>
-inline constexpr vec2 swizzle(const vec2& pVec, Tx pX, Ty pY)
+inline constexpr vec2 swizzle(const vec2& pVec, Tx pX, Ty pY) noexcept
 {
 	vec2 result;
 
@@ -114,31 +114,31 @@ inline constexpr vec2 swizzle(const vec2& pVec, Tx pX, Ty pY)
 }
 
 template<>
-inline vec2 normalize<vec2>(const vec2& a)
+inline vec2 normalize<vec2>(const vec2& a) noexcept
 {
 	return vec2(a).normalize();
 }
 
 template<>
-inline vec2 abs<vec2>(const vec2& a)
+inline vec2 abs<vec2>(const vec2& a) noexcept
 {
 	return vec2(a).abs();
 }
 
 template<>
-inline vec2 floor<vec2>(const vec2& a)
+inline vec2 floor<vec2>(const vec2& a) noexcept
 {
 	return vec2(a).floor();
 }
 
 template<>
-inline vec2 ceil<vec2>(const vec2& a)
+inline vec2 ceil<vec2>(const vec2& a) noexcept
 {
 	return vec2(a).ceil();
 }
 
 template<>
-inline vec2 round<vec2>(const vec2& a)
+inline vec2 round<vec2>(const vec2& a) noexcept
 {
 	return vec2(a).round();
 }

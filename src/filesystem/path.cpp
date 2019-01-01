@@ -54,7 +54,6 @@ bool path::parse(const std::string & pString, const std::set<char>& pSeparators)
 	return true;
 }
 
-
 bool path::in_directory(const path & pPath) const
 {
 	if (pPath.mPath.size() >= mPath.size()) // too big

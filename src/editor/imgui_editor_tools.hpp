@@ -2,10 +2,12 @@
 
 #include <vector>
 #include <map>
+#include <stack>
 
 #include <wge/math/rect.hpp>
 #include <wge/math/vector.hpp>
 #include <wge/graphics/color.hpp>
+#include <wge/math/matrix.hpp>
 
 #include <imgui/imgui.h>
 
@@ -16,21 +18,69 @@
 namespace wge::editor::visual_editor
 {
 
+class transformation_stack
+{
+public:
+	transformation_stack()
+	{
+		// Start with identity matrix
+		mStack.push(math::mat33(1));
+		mInverse = mStack.top();
+	}
+
+	void push(const math::mat33& pMat)
+	{
+		mStack.push(mStack.top() * pMat);
+		mInverse = math::inverse(mStack.top());
+	}
+
+	void pop()
+	{
+		if (mStack.size() > 1)
+		{
+			mStack.pop();
+			mInverse = math::inverse(mStack.top());
+		}
+	}
+
+	const math::mat33& get() const
+	{
+		return mStack.top();
+	}
+
+	const math::mat33& get_inverse() const
+	{
+		return mInverse;
+	}
+
+	bool is_identity() const noexcept
+	{
+		// First matrix is always the identity
+		return mStack.size() == 1;
+	}
+
+private:
+	std::stack<math::mat33> mStack;
+	math::mat33 mInverse;
+};
+
 struct editor_state
 {
 	math::vec2 cursor_offset; // in pixels. This is for offsetting the graphics themselves to align with your window or position of choice. 
 	math::vec2 offset; // in editor units
 	math::vec2 scale;
 	math::vec2 mouse_position; // in pixels
-	math::vec2 mouse_editor_position; // in editor units
 
 	ImGuiID active_dragger_id{ 0 };
 
+	transformation_stack transform;
+
+	// Snapping
 	math::vec2 changed_vec;
 	math::vec2 original_vec;
 	math::rect changed_rect;
 	math::rect original_rect;
-
+	math::rect delta_rect;
 	bool is_snap_enabled{ true };
 	math::vec2 snap_ratio{ 1, 1 };
 
@@ -58,12 +108,12 @@ struct editor_state
 
 	math::vec2 calc_absolute(const math::vec2& pPos) const
 	{
-		return (pPos - offset) * scale + cursor_offset;
+		return ((transform.get() * pPos - offset) * scale) + cursor_offset;
 	}
 
 	math::vec2 calc_from_absolute(const math::vec2& pPos) const
 	{
-		return (pPos - cursor_offset) / scale + offset;
+		return transform.get_inverse() * ((pPos - cursor_offset) / scale + offset);
 	}
 };
 
@@ -80,7 +130,6 @@ void begin(const char* pStr_id, const math::vec2& pCursor_offset, const math::ve
 	gCurrent_editor_state->offset = pOffset;
 	gCurrent_editor_state->scale = pScale;
 	gCurrent_editor_state->mouse_position = { ImGui::GetMousePos().x, ImGui::GetMousePos().y };
-	gCurrent_editor_state->mouse_editor_position = gCurrent_editor_state->calc_from_absolute(gCurrent_editor_state->mouse_position);
 }
 
 void end()
@@ -88,6 +137,26 @@ void end()
 	assert(gCurrent_editor_state);
 	gCurrent_editor_state = nullptr;
 	ImGui::PopID();
+}
+
+void push_transform(const math::mat33& pTransform)
+{
+	assert(gCurrent_editor_state);
+	gCurrent_editor_state->transform.push(pTransform);
+}
+
+void pop_transform()
+{
+	assert(gCurrent_editor_state);
+	gCurrent_editor_state->transform.pop();
+}
+
+// This is affected by the transformation stack
+math::vec2 get_mouse_delta()
+{
+	assert(gCurrent_editor_state);
+	math::vec2 delta(ImGui::GetIO().MouseDelta.x, ImGui::GetIO().MouseDelta.y);
+	return gCurrent_editor_state->transform.get_inverse() * (delta / gCurrent_editor_state->scale);
 }
 
 void draw_circle(const math::vec2& pCenter, float pRadius, const graphics::color& pColor, float pThickness, bool pScale_radius = false)
@@ -108,8 +177,17 @@ void draw_rect(const math::aabb& pAABB, const graphics::color& pColor)
 {
 	assert(gCurrent_editor_state);
 	ImDrawList* dl = ImGui::GetWindowDrawList();
-	math::aabb aabb(gCurrent_editor_state->calc_absolute(pAABB));
-	dl->AddRect({ aabb.min.x, aabb.min.y }, { aabb.max.x, aabb.max.y }, ImGui::GetColorU32({ pColor.r, pColor.g, pColor.b, pColor.a }));
+
+	std::size_t start_index = dl->VtxBuffer.size();
+	dl->PathRect({ pAABB.min.x, pAABB.min.y }, { pAABB.max.x, pAABB.max.y });
+	for (std::size_t i = 0; i < dl->_Path.size(); i++)
+	{
+		math::vec2 pos(dl->_Path[i].x, dl->_Path[i].y);
+		math::vec2 newpos = gCurrent_editor_state->calc_absolute(pos);
+		dl->_Path[i].x = newpos.x;
+		dl->_Path[i].y = newpos.y;
+	}
+	dl->PathStroke(ImGui::GetColorU32({ pColor.r, pColor.g, pColor.b, pColor.a }), true, 2);
 }
 
 void draw_rect(const math::rect& pRect, const graphics::color& pColor)
@@ -134,10 +212,10 @@ inline void draw_grid(graphics::color pColor, float pSquare_size)
 	ImGui::DrawGridLines({ min.x, min.y }, dl->GetClipRectMax(), { pColor.r, pColor.g, pColor.b, pColor.a }, gCurrent_editor_state->scale.x * pSquare_size);
 }
 
-math::vec2 get_mouse_position()
+inline math::vec2 get_mouse_position()
 {
 	assert(gCurrent_editor_state);
-	return gCurrent_editor_state->mouse_editor_position;
+	return gCurrent_editor_state->calc_from_absolute(gCurrent_editor_state->mouse_position);
 }
 
 inline math::rect snap_behavior(const math::rect& pOriginal, const math::rect& pChange)
@@ -159,7 +237,7 @@ bool drag_behavior(ImGuiID pID, bool pHovered)
 {
 	assert(gCurrent_editor_state);
 	bool dragging = gCurrent_editor_state->active_dragger_id == pID;
-	if (pHovered && ImGui::IsItemClicked(0) && gCurrent_editor_state->active_dragger_id == 0)
+	if (pHovered && ImGui::IsMouseClicked(0) && gCurrent_editor_state->active_dragger_id == 0)
 	{
 		gCurrent_editor_state->active_dragger_id = pID; // Start drag
 		dragging = true;
@@ -175,13 +253,16 @@ bool drag_behavior(ImGuiID pID, bool pHovered)
 
 bool drag_behavior(ImGuiID pID, bool pHovered, float* pX, float* pY)
 {
+	assert(gCurrent_editor_state);
 	bool dragging = drag_behavior(pID, pHovered);
 	if (dragging)
 	{
+		math::vec2 delta(ImGui::GetIO().MouseDelta.x, ImGui::GetIO().MouseDelta.y);
+		math::vec2 v = gCurrent_editor_state->transform.get_inverse() * (delta / gCurrent_editor_state->scale);
 		if (pX)
-			*pX += ImGui::GetIO().MouseDelta.x / gCurrent_editor_state->scale.x;
+			*pX += v.x;
 		if (pY)
-			*pY += ImGui::GetIO().MouseDelta.y / gCurrent_editor_state->scale.y;
+			*pY += v.y;
 	}
 	return dragging;
 }
@@ -189,6 +270,12 @@ bool drag_behavior(ImGuiID pID, bool pHovered, float* pX, float* pY)
 bool drag_behavior(ImGuiID pID, bool pHovered, math::vec2* pVec)
 {
 	return drag_behavior(pID, pHovered, &pVec->x, &pVec->y);
+}
+
+bool is_dragging()
+{
+	assert(gCurrent_editor_state);
+	return gCurrent_editor_state->active_dragger_id != 0;
 }
 
 bool drag_circle(const char* pStr_id, math::vec2 pPos, math::vec2* pDelta, float pRadius)
@@ -211,7 +298,7 @@ bool drag_circle(const char* pStr_id, math::vec2* pDelta, float pRadius)
 bool drag_rect(const char* pStr_id, const math::rect& pDisplay, math::vec2* pDelta)
 {
 	const ImGuiID id = ImGui::GetID(pStr_id);
-	const bool hovered = pDisplay.intersects(gCurrent_editor_state->mouse_editor_position);
+	const bool hovered = pDisplay.intersects(get_mouse_position());
 	const bool dragging = drag_behavior(id, hovered, pDelta);
 
 	draw_rect(pDisplay, { 1, 1, 0, 0.5f });

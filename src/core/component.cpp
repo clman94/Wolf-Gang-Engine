@@ -3,20 +3,42 @@
 #include <wge/core/context.hpp>
 #include <wge/core/asset_manager.hpp>
 
-using namespace wge;
-using namespace wge::core;
+namespace wge::core
+{
 
-const void component::set_name(const std::string & pName)
+json component::serialize(serialize_type pType) const
+{
+	json result;
+	result["name"] = mName;
+	result["id"] = mInstance_id;
+	result["object_id"] = mObject_id;
+	result["data"] = on_serialize(pType);
+	return result;
+}
+
+const void component::set_name(const std::string & pName) noexcept
 {
 	mName = pName;
 }
 
-const std::string& component::get_name() const
+const std::string& component::get_name() const noexcept
 {
 	return mName;
 }
 
-void component::set_object(const game_object & pObj)
+object_id component::get_object_id() const noexcept
+{
+	return mObject_id;
+}
+
+void component::set_object(const game_object & pObj) noexcept
 {
 	mObject_id = pObj.get_instance_id();
 }
+
+component_id component::get_instance_id() const noexcept
+{
+	return mInstance_id;
+}
+
+} // namespace wge::core

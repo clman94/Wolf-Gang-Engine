@@ -26,7 +26,7 @@ void object_manager::remove_object(object_id pId)
 	}
 }
 
-std::size_t object_manager::get_object_count() const
+std::size_t object_manager::get_object_count() const noexcept
 {
 	return mObjects.size();
 }

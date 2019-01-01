@@ -7,6 +7,7 @@
 #include <wge/logging/log.hpp>
 #include <wge/core/asset_config.hpp>
 #include <wge/core/instance_id.hpp>
+#include <wge/core/serialize_type.hpp>
 #include <wge/util/json_helpers.hpp>
 
 namespace wge::core
@@ -38,19 +39,16 @@ public:
 	template<class T,
 		// Requires the "int COMPONENT_ID" member
 		typename = std::enable_if<has_component_id_member<T>::value>::type>
-	bool has_component() const
-	{
-		return has_component(T::COMPONENT_ID);
-	}
+		bool has_component() const;
 
+	json serialize(serialize_type pType = serialize_type::all) const;
+
+	// Create a new component for this object
 	template <typename T>
-	auto add_component()
-	{
-		WGE_ASSERT(mData);
-		return get_layer().add_component<T>(*this);
-	}
-
+	T* add_component();
+	// Get the amount of components assigned to this object
 	std::size_t get_component_count() const;
+	// Get a component by its index
 	component* get_component_index(std::size_t pIndex);
 	// Get component by name
 	component* get_component(const std::string& pName);
@@ -60,27 +58,35 @@ public:
 	template<class T,
 		// Requires the "int COMPONENT_ID" COMPONENT_ID member
 		typename = std::enable_if<has_component_id_member<T>::value>::type>
-	T* get_component() const
-	{
-		return static_cast<T*>(get_component(T::COMPONENT_ID));
-	}
+	T* get_component() const;
 	// Remove component at index
 	void remove_component(std::size_t pIndex);
 	// Remove all components
 	void remove_components();
 
+	// Get the name of this object.
 	const std::string& get_name() const;
+	// Set the name of this object. Use this to give meaningful identifiers
+	// to objects.
 	void set_name(const std::string& pName);
 
 	// Remove this object from the layer.
-	// It is recommended that you discard this object because this
-	// function will leave it in an invalid state.
+	// It is recommended that you discard any game_object objects because this
+	// function will remove the data they are pointing to, thus leaving
+	// them in an invalid state.
 	void destroy();
 
+	// Get a reference to the layer this object belongs to.
+	// To actually move an object to a new layer, you will need to
+	// reconstruct this object in destination layer and remove in
+	// the source layer.
 	layer& get_layer() const;
 
+	// Get the id that uniquely identifies this object
 	object_id get_instance_id() const;
-
+	// Set the id for this object. Note: Should not be used
+	// under normal circumstances.
+	// TODO: Remove at some point.
 	void set_instance_id(object_id pId);
 
 	operator bool() const
@@ -99,5 +105,29 @@ private:
 	std::reference_wrapper<layer> mLayer;
 	object_data* mData;
 };
+
+
+// Check if this object has a component of a type
+
+template<class T, typename>
+inline bool game_object::has_component() const
+{
+	return has_component(T::COMPONENT_ID);
+}
+
+template<typename T>
+inline T* game_object::add_component()
+{
+	WGE_ASSERT(mData);
+	return get_layer().add_component<T>(*this);
+}
+
+// Get first component by type
+
+template<class T, typename>
+inline T* game_object::get_component() const
+{
+	return static_cast<T*>(get_component(T::COMPONENT_ID));
+}
 
 } // namespace wge::core

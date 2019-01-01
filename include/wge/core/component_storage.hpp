@@ -73,6 +73,7 @@ public:
 				return &i;
 		return nullptr;
 	}
+
 	virtual int get_component_type() const override
 	{
 		return T::COMPONENT_ID;
@@ -93,12 +94,12 @@ public:
 				mStorage.erase(mStorage.begin() + i--);
 	}
 
-	iterator begin()
+	iterator begin() noexcept
 	{
 		return mStorage.begin();
 	}
 
-	iterator end()
+	iterator end() noexcept
 	{
 		return mStorage.end();
 	}

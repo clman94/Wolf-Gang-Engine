@@ -18,6 +18,7 @@
 #include <wge/graphics/renderer.hpp>
 #include <wge/util/unique_names.hpp>
 #include <wge/graphics/graphics.hpp>
+#include <wge/core/behavior_system.hpp>
 
 #include "editor.hpp"
 #include "history.hpp"
@@ -105,6 +106,13 @@ public:
 		{
 			mSelected_animation.reset();
 		});
+
+		// Tell the context that the asset was modified
+		on_change.connect([this]()
+		{
+			if (auto selection = mContext->get_selection<selection_type::asset>())
+				mContext->add_modified_asset(selection);
+		});
 	}
 
 	virtual ~sprite_editor()
@@ -177,20 +185,43 @@ public:
 
 				visual_editor::begin("_SomeEditor", { image_position.x, image_position.y }, { 0, 0 }, { scale, scale });
 
-				int* selected_rect = ImGui::GetStateStorage()->GetIntRef(ImGui::GetID("_Selection"), 0);
-				for (auto& i : texture->get_raw_atlas())
+				visual_editor::gCurrent_editor_state->transform.push(math::mat33(1).rotate(45_deg));
+
+				for (const auto& i : texture->get_raw_atlas())
+					visual_editor::draw_rect(i->frame_rect, { 0, 1, 1, 0.5f });
+
+				const bool was_dragging = visual_editor::is_dragging();
+
+				// Modify selected
+				if (mSelected_animation)
 				{
-					if (ImGui::IsItemClicked(0)
-						&& i->frame_rect.intersects(visual_editor::get_mouse_position()))
+					if (visual_editor::drag_resizable_rect(mSelected_animation->name.c_str(), &mSelected_animation->frame_rect))
 					{
-						mSelected_animation = i;
+						if (ImGui::IsMouseReleased(0))
+							on_change();
 					}
 				}
 
-				if (mSelected_animation)
+				// Select a new one
+				if (!was_dragging && ImGui::IsMouseReleased(0))
 				{
-					visual_editor::drag_resizable_rect(mSelected_animation->name.c_str(), &mSelected_animation->frame_rect);
+					// Find all overlapping frames
+					std::vector<graphics::animation::ptr> mOverlapping;
+					for (const auto& i : texture->get_raw_atlas())
+						if (i->frame_rect.intersects(visual_editor::get_mouse_position()))
+							mOverlapping.push_back(i);
+
+					if (!mOverlapping.empty())
+					{
+						// Check if the currently selected animation is being selected again
+						auto iter = std::find(mOverlapping.begin(), mOverlapping.end(), mSelected_animation);
+						if (iter == mOverlapping.end() || iter + 1 == mOverlapping.end())
+							mSelected_animation = mOverlapping.front(); // Start/loop to front
+						else
+							mSelected_animation = *(iter + 1); // Next item
+					}
 				}
+				visual_editor::gCurrent_editor_state->transform.pop();
 
 				visual_editor::end();
 
@@ -256,11 +287,13 @@ public:
 				animation->frame_rect = math::rect(0, 0, 10, 10);
 				animation->name = make_unique_animation_name(texture, "NewEntry");
 				texture->get_raw_atlas().push_back(animation);
+				on_change();
 			}
 
 			ImGui::SameLine();
 			if (ImGui::Button("Delete"))
 			{
+				on_change();
 			}
 
 			if (mSelected_animation)
@@ -289,6 +322,8 @@ public:
 		}
 	}
 
+	util::signal<void()> on_change;
+
 private:
 	static std::string make_unique_animation_name(graphics::texture::ptr pTexture, const std::string& pName)
 	{
@@ -301,6 +336,24 @@ private:
 	context* mContext;
 	util::connection mConnection_on_new_selection;
 	graphics::animation::ptr mSelected_animation;
+};
+
+class mybehavior :
+	public core::behavior_instance
+{
+public:
+	virtual ~mybehavior() {}
+	virtual void on_update(float pDelta, core::game_object pObject) override
+	{
+		auto& pLayer = pObject.get_layer();
+		auto transform = pObject.get_component<core::transform_component>();
+		transform->set_position(transform->get_position() + math::vec2(0.1f, 0) * pDelta);
+
+		if (auto physics = pObject.get_component<physics::physics_component>())
+		{
+			
+		}
+	}
 };
 
 class application
@@ -421,6 +474,8 @@ private:
 		ImGui_ImplGlfw_InitForOpenGL(mGLFW_backend->get_window(), true);
 		ImGui_ImplOpenGL3_Init("#version 150");
 
+		ImGui::GetIO().Fonts->AddFontFromFileTTF("./editor/Roboto-Medium.ttf", 16);
+
 		// Theme
 		ImVec4* colors = ImGui::GetStyle().Colors;
 		colors[ImGuiCol_Text] = ImVec4(0.87f, 0.87f, 0.87f, 1.00f);
@@ -493,6 +548,19 @@ private:
 		});
 		mAsset_manager.register_resource_extension("texture", ".png");
 
+		mAsset_manager.register_asset("behavior",
+			[&](const filesystem::path& pPath, core::asset_config::ptr pConfig) -> core::asset::ptr
+		{
+			auto ptr = std::make_shared<core::behavior>(pConfig);
+			ptr->set_path(pPath);
+			ptr->set_instance_factory([](const core::behavior&)
+			{
+				return std::make_shared<mybehavior>();
+			});
+			return ptr;
+		});
+		mAsset_manager.register_resource_extension("behavior", ".as");
+
 		mAsset_manager.set_root_directory(".");
 		mAsset_manager.load_assets();
 		
@@ -557,6 +625,7 @@ private:
 				transform->set_scale(math::vec2(0, 0));
 		});
 
+
 		// Inspector for sprite_component
 		mInspectors.add_inspector(graphics::sprite_component::COMPONENT_ID,
 			[this](core::component* pComponent)
@@ -591,6 +660,30 @@ private:
 					core::asset_uid id = *(core::asset_uid*)payload->Data;
 					auto asset = mAsset_manager.get_asset<graphics::texture>(id);
 					sprite->set_texture(asset);
+				}
+				ImGui::EndDragDropTarget();
+			}
+		});
+
+		// Inspector for behavior_component
+		mInspectors.add_inspector(core::behavior_component::COMPONENT_ID,
+			[this](core::component* pComponent)
+		{
+			auto comp = dynamic_cast<core::behavior_component*>(pComponent);
+
+			auto behavior = comp->get_behavior();
+			ImGui::BeginGroup();
+			std::string inputtext = behavior ? behavior->get_path().string().c_str() : "None";
+			ImGui::InputText("Texture", &inputtext, ImGuiInputTextFlags_ReadOnly);
+			ImGui::EndGroup();
+
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("behaviorAsset"))
+				{
+					core::asset_uid id = *(core::asset_uid*)payload->Data;
+					auto asset = mAsset_manager.get_asset<core::behavior>(id);
+					comp->set_behavior(asset);
 				}
 				ImGui::EndDragDropTarget();
 			}
@@ -676,11 +769,11 @@ private:
 				continue;
 			if (!has_aabb)
 			{
-				pAABB = comp->get_screen_aabb();
+				pAABB = comp->get_local_aabb();
 				has_aabb = true;
 			}
 			else
-				pAABB.merge(comp->get_screen_aabb());
+				pAABB.merge(comp->get_local_aabb());
 		}
 		return has_aabb;
 	}
@@ -732,6 +825,11 @@ private:
 				|| mViewport_framebuffer->get_height() != height)
 				mViewport_framebuffer->resize(width, height);
 
+			ImVec2 topleft_cursor = ImGui::GetCursorScreenPos();
+			ImGui::Button("this thing");
+			ImGui::SetCursorScreenPos(topleft_cursor);
+			
+
 			ImGui::BeginFixedScrollRegion({ width, height }, { scroll_x_max, scroll_y_max });
 
 			ImVec2 cursor = ImGui::GetCursorScreenPos();
@@ -764,11 +862,13 @@ private:
 						continue;
 					// Make sure we are working with the viewports framebuffer
 					renderer->set_framebuffer(mViewport_framebuffer);
-					
+
 					for (std::size_t i = 0; i < layer->get_object_count(); i++)
 					{
 						auto obj = layer->get_object(i);
 						auto transform = obj.get_component<core::transform_component>();
+
+						visual_editor::push_transform(transform->get_transform());
 
 						// Check for selection
 						auto selection = mContext.get_selection<selection_type::game_object>();
@@ -777,8 +877,7 @@ private:
 						// Draw center point
 						if (is_object_selected)
 						{
-							math::vec2 center = transform->get_position();
-							visual_editor::draw_circle(center, 5, { 1, 1, 1, 0.6f }, 3.f);
+							visual_editor::draw_circle({ 0, 0 }, 5, { 1, 1, 1, 0.6f }, 3.f);
 						}
 
 						math::aabb aabb;
@@ -786,11 +885,12 @@ private:
 						{
 							if (is_object_selected)
 							{
-								const math::rect rect(aabb);
-								math::vec2 delta;
-								if (visual_editor::drag_rect("_SelectionResize", rect, &delta))
+								const math::rect orig_rect = aabb;
+								math::rect rect = orig_rect;
+								if (visual_editor::drag_resizable_rect("_SelectionResize", &rect))
 								{
-									transform->set_position(transform->get_position() + delta);
+									transform->move(rect.position - orig_rect.position);
+									transform->set_scale((rect.size / orig_rect.size) * transform->get_scale());
 								}
 							}
 
@@ -801,6 +901,8 @@ private:
 								visual_editor::draw_rect(aabb, { 1, 1, 1, 1 });
 							}
 						}
+
+						visual_editor::pop_transform();
 					}
 				}
 			}
@@ -809,7 +911,6 @@ private:
 			ImGui::SameLine();
 			ImGui::Dummy({ math::max(0.f, scroll_x_max - ImGui::GetScrollX()), height });
 			ImGui::Dummy({ width, math::max(0.f, scroll_y_max - ImGui::GetScrollY()) });
-
 			ImGui::PopStyleVar();
 		}
 		ImGui::End();
@@ -916,7 +1017,7 @@ private:
 		ImGui::End();
 	}
 
-	void show_asset_inspector(core::asset::ptr pAsset)
+	void show_asset_inspector(const core::asset::ptr& pAsset)
 	{
 		std::string path = pAsset->get_path().string();
 		ImGui::InputText("Name", &path, ImGuiInputTextFlags_ReadOnly);
@@ -926,7 +1027,13 @@ private:
 		if (ImGui::InputText("Description", &description))
 			pAsset->get_config()->set_description(description);
 		if (ImGui::IsItemDeactivatedAfterEdit())
-			pAsset->get_config()->save();
+			mContext.add_modified_asset(pAsset);
+
+		if (mContext.is_asset_modified(pAsset))
+		{
+			if (ImGui::Button("Save", { -1, 0 }))
+				mContext.save_asset(pAsset);
+		}
 
 		ImGui::Separator();
 		
@@ -976,6 +1083,20 @@ private:
 			ImGui::EndTabItem();
 		}
 
+		if (ImGui::BeginTabItem("Behaviors"))
+		{
+			auto sys = pLayer.get_system<core::behavior_system>();
+			if (!sys)
+			{
+				if (ImGui::Button("Enable"))
+					pLayer.add_system<core::behavior_system>();
+			}
+			else
+			{
+			}
+			ImGui::EndTabItem();
+		}
+
 
 		ImGui::EndTabBar();
 	}
@@ -991,11 +1112,8 @@ private:
 			core::component* comp = pObj.get_component_index(i);
 			ImGui::PushID(comp);
 
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4, 4));
-			ImGui::BeginChild(ImGui::GetID("Actions"),
-				ImVec2(0, (ImGui::GetStyle().WindowPadding.y * 2
-					+ ImGui::GetStyle().FramePadding.y * 2
-					+ ImGui::GetFontSize()) * 2), true);
+			if (i != 0)
+				ImGui::Separator();
 
 			bool open = collapsing_arrow("CollapsingArrow", nullptr, true);
 
@@ -1020,9 +1138,6 @@ private:
 			bool delete_component = false;
 			delete_component = ImGui::Button("Delete");
 
-			ImGui::EndChild();
-			ImGui::PopStyleVar();
-
 			if (open)
 				mInspectors.on_gui(comp);
 
@@ -1042,6 +1157,8 @@ private:
 				pObj.add_component<physics::box_collider_component>();
 			if (ImGui::Selectable("Sprite"))
 				pObj.add_component<graphics::sprite_component>();
+			if (ImGui::Selectable("Behavior"))
+				pObj.add_component<core::behavior_component>();
 			//if (ImGui::Selectable("Script"))
 			//	mSelected_node->add_component<script_component>();
 			ImGui::EndCombo();

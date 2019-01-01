@@ -29,9 +29,6 @@ public:
 	physics_component(core::component_id pId);
 	virtual ~physics_component();
 
-	virtual json serialize() const override;
-	virtual void deserialize(const json& pJson) override;
-
 	void set_type(int pType);
 	int get_type() const;
 
@@ -42,6 +39,10 @@ public:
 	math::radians get_angular_velocity() const;
 
 	b2Fixture* create_fixture(const b2FixtureDef& pDef);
+
+protected:
+	virtual json on_serialize(core::serialize_type) const override;
+	virtual void on_deserialize(const json& pJson) override;
 
 private:
 	// Get the box2d body type

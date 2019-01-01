@@ -32,6 +32,9 @@ public:
 
 	layer(context& pContext) noexcept;
 
+	json serialize(serialize_type);
+	void deserialize(const json&);
+
 	// Get a system by its type
 	template <typename T>
 	T* get_system() const;

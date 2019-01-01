@@ -6,15 +6,19 @@
 namespace wge::graphics
 {
 
-json sprite_component::serialize() const
+json sprite_component::on_serialize(core::serialize_type pType) const
 {
 	json result;
-	result["offset"] = { mOffset.x, mOffset.y };
-	result["texture"] = mTexture ? json(mTexture->get_id()) : json();
+	if (pType & core::serialize_type::properties)
+	{
+		result["offset"] = { mOffset.x, mOffset.y };
+		result["texture"] = mTexture ? json(mTexture->get_id()) : json();
+		result["animation"] = mAnimation ? json(mAnimation->id) : json();
+	}
 	return result;
 }
 
-void sprite_component::deserialize(const json & pJson)
+void sprite_component::on_deserialize(const json& pJson)
 {
 }
 
@@ -46,12 +50,23 @@ void sprite_component::create_batch(core::transform_component& pTransform, rende
 
 	// Get transform and scale it by the pixel size
 	math::mat33 transform_mat = pTransform.get_transform();
-	transform_mat.scale(math::vec2(pRenderer.get_pixel_size(), pRenderer.get_pixel_size()));
 
 	// Transform the vertices
 	for (int i = 0; i < 4; i++)
 	{
-		verts[i].position = transform_mat * (verts[i].position + (-mAnchor * texture_size) + mOffset);
+		verts[i].position *= pRenderer.get_pixel_size();
+		verts[i].position += -mAnchor * texture_size + mOffset;
+		
+		// Calc aabb of sprite before transform
+		if (i == 0)
+			mLocal_aabb = math::aabb{ verts[i].position, verts[i].position };
+		else
+			mLocal_aabb.merge(verts[i].position);
+
+		// Transform the points
+		verts[i].position = transform_mat * verts[i].position;
+
+		// Calc aabb after transform
 		if (i == 0)
 			mSceen_aabb = math::aabb{ verts[i].position, verts[i].position };
 		else
@@ -61,6 +76,48 @@ void sprite_component::create_batch(core::transform_component& pTransform, rende
 	batch.add_quad(verts);
 
 	pRenderer.push_batch(batch.finalize());
+}
+
+void sprite_component::set_offset(const math::vec2& pOffset) noexcept
+{
+	mOffset = pOffset;
+}
+
+math::vec2 sprite_component::get_offset() const noexcept
+{
+	return mOffset;
+}
+
+void sprite_component::set_anchor(const math::vec2& pRatio) noexcept
+{
+	mAnchor = pRatio;
+}
+
+math::vec2 sprite_component::get_anchor() const noexcept
+{
+	return mAnchor;
+}
+
+void sprite_component::set_animation(animation::ptr pAnimation) noexcept
+{
+	mAnimation = pAnimation;
+}
+
+void sprite_component::set_animation(const std::string& pName) noexcept
+{
+	WGE_ASSERT(mTexture);
+	mAnimation = mTexture->get_animation(pName);
+}
+
+void sprite_component::set_texture(const texture::ptr& pAsset) noexcept
+{
+	mTexture = pAsset;
+	mAnimation = mTexture->get_animation("Default");
+}
+
+texture::ptr sprite_component::get_texture() const noexcept
+{
+	return mTexture;
 }
 
 } // namespace wge::graphics

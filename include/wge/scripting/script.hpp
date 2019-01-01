@@ -505,7 +505,7 @@ public:
 		RegisterStdString(mEngine);
 		RegisterStdStringUtils(mEngine);
 
-		// Register the pod types
+		// Register the types
 		type<void>("void");
 		type<bool>("bool");
 

@@ -41,7 +41,7 @@ texture::~texture()
 	stbi_image_free(mPixels);
 }
 
-void texture::set_implementation(const texture_impl::ptr& pImpl)
+void texture::set_implementation(const texture_impl::ptr& pImpl) noexcept
 {
 	mImpl = pImpl;
 	// Recreate the texture with the new implementation
@@ -52,7 +52,7 @@ void texture::set_implementation(const texture_impl::ptr& pImpl)
 	}
 }
 
-texture_impl::ptr texture::get_implementation() const
+texture_impl::ptr texture::get_implementation() const noexcept
 {
 	return mImpl;
 }
@@ -72,12 +72,17 @@ void texture::load(const std::string& pFilepath)
 	load_metadata();
 }
 
-void texture::load(filesystem::stream::ptr pStream, std::size_t pSize)
+void texture::load(const filesystem::stream::ptr& pStream, std::size_t pSize)
 {
+	// Determine length of stream if size is 0.
 	pSize = (pSize == 0 ? pStream->length() - pStream->tell() : pSize);
+
+	// Read the bytes from the stream
 	std::vector<char> data;
 	data.resize(pSize);
 	std::size_t bytes_read = pStream->read(&data[0], pSize);
+
+	// Decode the image
 	stbi_uc* pixels = stbi_load_from_memory(reinterpret_cast<unsigned char*>(&data[0]), bytes_read, &mWidth, &mHeight, &mChannels, 4);
 	if (!pixels)
 	{
@@ -91,28 +96,33 @@ void texture::load(filesystem::stream::ptr pStream, std::size_t pSize)
 	load_metadata();
 }
 
-int texture::get_width() const
+int texture::get_width() const noexcept
 {
 	return mWidth;
 }
 
-int texture::get_height() const
+int texture::get_height() const noexcept
 {
 	return mHeight;
 }
 
-void texture::set_smooth(bool pEnabled)
+math::vec2 texture::get_size() const noexcept
+{
+	return{ static_cast<float>(mWidth), static_cast<float>(mHeight) };
+}
+
+void texture::set_smooth(bool pEnabled) noexcept
 {
 	mSmooth = pEnabled;
 	mImpl->set_smooth(mSmooth);
 }
 
-bool texture::is_smooth() const
+bool texture::is_smooth() const noexcept
 {
 	return mSmooth;
 }
 
-animation::ptr texture::get_animation(const std::string& pName) const
+animation::ptr texture::get_animation(const std::string& pName) const noexcept
 {
 	for (const auto& i : mAtlas)
 		if (i->name == pName)
@@ -120,12 +130,12 @@ animation::ptr texture::get_animation(const std::string& pName) const
 	return{};
 }
 
-texture::atlas_container& texture::get_raw_atlas()
+texture::atlas_container& texture::get_raw_atlas() noexcept
 {
 	return mAtlas;
 }
 
-const texture::atlas_container& texture::get_raw_atlas() const
+const texture::atlas_container& texture::get_raw_atlas() const noexcept
 {
 	return mAtlas;
 }

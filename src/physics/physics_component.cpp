@@ -31,26 +31,33 @@ physics_component::~physics_component()
 	}
 }
 
-json physics_component::serialize() const
+json physics_component::on_serialize(core::serialize_type pType) const
 {
 	json result;
-	result["type"] = mType;
 
-	// deserialize() and then serialize() called in the same frame?
-	// Just use the cached properties.
-	if (!mBody_instance_cache.empty())
-		result["body-instance"] = mBody_instance_cache;
-	else if (mBody)
-		result["body-instance"] = serialize_body();
+	if (pType & core::serialize_type::properties)
+	{
+		result["type"] = mType;
+	}
+
+	if (pType & core::serialize_type::runtime_state)
+	{
+		// b2Body not created yet? Cache it all for later when it is
+		// created.
+		if (!mBody_instance_cache.empty())
+			result["runtime-state"] = mBody_instance_cache;
+		else if (mBody)
+			result["runtime-state"] = serialize_body();
+	}
 
 	return result;
 }
 
-void physics_component::deserialize(const json& pJson)
+void physics_component::on_deserialize(const json& pJson)
 {
 	set_type(pJson["type"]);
-	if (pJson.find("body-instance") != pJson.end())
-		mBody_instance_cache = pJson["body-instance"];
+	if (pJson.find("runtime-state") != pJson.end())
+		mBody_instance_cache = pJson["runtime-state"];
 	else
 		mBody_instance_cache.clear();
 }

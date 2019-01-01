@@ -28,7 +28,7 @@ public:
 	object_data& add_object(object_id pId);
 	void remove_object(object_id pId);
 
-	std::size_t get_object_count() const;
+	std::size_t get_object_count() const noexcept;
 
 	// Registers a component
 	void register_component(component* pComponent);

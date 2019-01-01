@@ -46,7 +46,7 @@ public:
 	void deserialize(const json& pJson);
 
 	// Save any modified configuration for this asset
-	json serialize() const;
+	json serialize() const noexcept;
 
 	// Save the serialized data to a file specified by the path.
 	void save() const;

@@ -24,25 +24,42 @@ enum class selection_type
 class context
 {
 public:
-	using editor_builder_function = std::function<editor::ptr(asset_document&)>;
-
-	void register_editor(const std::string& pAsset_type, const editor_builder_function& pFunc)
+	void add_modified_asset(const core::asset::ptr& pAsset)
 	{
-		WGE_ASSERT(mEditor_builders.find(pAsset_type) == mEditor_builders.end());
-		mEditor_builders[pAsset_type] = pFunc;
+		if (!pAsset)
+			return;
+		if (std::find(mUnsaved_assets.begin(), mUnsaved_assets.end(), pAsset) == mUnsaved_assets.end())
+			mUnsaved_assets.push_back(pAsset);
 	}
 
-	void start_editor(core::asset::ptr pAsset)
+	bool is_asset_modified(const core::asset::ptr& pAsset) const
 	{
-		if (mEditor_builders.find(pAsset->get_type()) == mEditor_builders.end())
-		{
-			log::error() << "Could not find editor for asset of type \"" << pAsset->get_type() + "\"" << log::endm;
-		}
-		//mDocuments.emplace_back(pAsset, mEditor_builders[pAsset->get_type()](pAsset));
+		return std::find(mUnsaved_assets.begin(), mUnsaved_assets.end(), pAsset) != mUnsaved_assets.end();
+	}
+
+	void save_asset(const core::asset::ptr& pAsset)
+	{
+		auto iter = std::find(mUnsaved_assets.begin(), mUnsaved_assets.end(), pAsset);
+		if (iter == mUnsaved_assets.end())
+			return;
+		(*iter)->get_config()->save();
+		mUnsaved_assets.erase(iter);
+	}
+
+	void save_all_assets()
+	{
+		for (auto& i : mUnsaved_assets)
+			i->get_config()->save();
+		mUnsaved_assets.clear();
+	}
+
+	auto& get_unsaved_assets() noexcept
+	{
+		return mUnsaved_assets;
 	}
 
 	template<selection_type Ttype>
-	auto get_selection() const
+	auto get_selection() const noexcept
 	{
 		if constexpr (Ttype == selection_type::asset)
 			return mAsset_selection.lock();
@@ -52,14 +69,14 @@ public:
 			return mObject_selection;
 	}
 
-	// Set the currently selection asset
+	// Set the currently selected asset
 	void set_selection(core::asset::ptr pAsset)
 	{
 		reset_selection();
 		mAsset_selection = pAsset;
 		on_new_selection();
 	}
-	// Set the currently selection layer
+	// Set the currently selected layer
 	void set_selection(core::layer::ptr pLayer)
 	{
 		reset_selection();
@@ -89,8 +106,7 @@ private:
 	core::layer::wptr mLayer_selection;
 	std::optional<core::game_object> mObject_selection;
 
-	std::map<std::string, editor_builder_function> mEditor_builders;
-	std::vector<asset_document> mDocuments;
+	std::vector<core::asset::ptr> mUnsaved_assets;
 };
 
 } // namespace wge::editor

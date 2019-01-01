@@ -15,6 +15,9 @@ using json = nlohmann::json;
 namespace wge::graphics
 {
 
+struct animation;
+using animation_id = core::instance_id<animation>;
+
 struct animation
 {
 public:
@@ -24,6 +27,7 @@ public:
 	std::size_t frames{ 1 };
 	float interval{ 0 };
 	math::rect frame_rect;
+	animation_id id;
 
 	animation() = default;
 	animation(const json& pJson);
@@ -51,43 +55,40 @@ public:
 	using ptr = tptr<texture>;
 
 	texture(core::asset_config::ptr pConfig);
-	~texture();
+	virtual ~texture();
 
-	void set_implementation(const texture_impl::ptr& pImpl);
-	texture_impl::ptr get_implementation() const;
+	void set_implementation(const texture_impl::ptr& pImpl) noexcept;
+	texture_impl::ptr get_implementation() const noexcept;
 
 	// Load a texture from a file
 	void load(const std::string& pFilepath);
 
 	// Load texture from a stream. If pSize = 0, the rest of the stream will be used.
-	void load(filesystem::stream::ptr pStream, std::size_t pSize = 0);
+	void load(const filesystem::stream::ptr& pStream, std::size_t pSize = 0);
 
 	// Get width of texture in pixels
-	int get_width() const;
+	int get_width() const noexcept;
 
 	// Get height of texture in pixels
-	int get_height() const;
+	int get_height() const noexcept;
 
-	math::vec2 get_size() const noexcept
-	{
-		return{ static_cast<float>(mWidth), static_cast<float>(mHeight) };
-	}
+	math::vec2 get_size() const noexcept;
 
 	// Set the smooth filtering. If enabled,
 	// the image will get smoothed when stretched or rotated
 	// making it more pleasing to the eye. However, it may be
 	// a good idea to disable this if your doing pixel art as it
 	// tends to "blur" tiny images.
-	void set_smooth(bool pEnabled);
-	bool is_smooth() const;
+	void set_smooth(bool pEnabled) noexcept;
+	bool is_smooth() const noexcept;
 
 	// Retrieve an animation by name. Returns an empty pointer if it was not found.
-	animation::ptr get_animation(const std::string& pName) const;
+	animation::ptr get_animation(const std::string& pName) const noexcept;
 
 	// Get the raw container for the atlas.
 	// Mainly for use by an editor.
-	atlas_container& get_raw_atlas();
-	const atlas_container& get_raw_atlas() const;
+	atlas_container& get_raw_atlas() noexcept;
+	const atlas_container& get_raw_atlas() const noexcept;
 
 private:
 	// Update the configuration with the current atlas

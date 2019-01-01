@@ -13,7 +13,7 @@ void asset_config::deserialize(const json & pJson)
 	mMetadata = pJson["metadata"];
 }
 
-json asset_config::serialize() const
+json asset_config::serialize() const noexcept
 {
 	json result;
 	result["type"] = mType;

@@ -4,22 +4,22 @@
 #include <array>
 
 #include <wge/math/aabb.hpp>
-#include <wge/core/serializable.hpp>
+#include <wge/core/serialize_type.hpp>
 #include <wge/core/instance_id.hpp>
 
 #include <nlohmann/json.hpp>
 #include <wge/util/json_helpers.hpp>
 using json = nlohmann::json;
 
-// Use this in your class to define the needed information the engine
-// needs about your component.
+// Use this in your component to define the needed information the engine
+// needs.
 //
 // class mycomponent :
 //     public core::component
 // {
 //     WGE_COMPONENT("My Component", 32);
 // public:
-//     ...
+//     /* ... */
 // };
 //
 #define WGE_COMPONENT(name__, id__) \
@@ -48,44 +48,38 @@ class asset_manager;
 class component
 {
 public:
-	component(component_id pId):
+	component(component_id pId) noexcept :
 		mInstance_id(pId)
 	{}
 	virtual ~component() {}
 
-	// Save the configuration of this component to json
-	virtual json save() { return {}; }
-	// Load the configuration of this conponent from json
-	virtual void load(const json&) {}
-
 	// Save the current state of this component
-	virtual json serialize() const { return {}; }
+	json serialize(serialize_type = serialize_type::all) const;
 	// Load the current state of this component
-	virtual void deserialize(const json&) {}
+	void deserialize(const json&) {}
 
-	// Name of the component type
+	// Get the name of the component type
 	virtual std::string get_component_name() const = 0;
-	// Id of the component type for serialization
+	// Get the value representing the component type
 	virtual int get_component_id() const = 0;
 
 	// Unique name of component instance
-	const void set_name(const std::string& pName);
-	const std::string& get_name() const;
+	const void set_name(const std::string& pName) noexcept;
+	const std::string& get_name() const noexcept;
 
 	virtual bool has_aabb() const { return false; }
-	virtual math::aabb get_screen_aabb() const { return{}; };
+	virtual math::aabb get_screen_aabb() const { return{}; }
+	virtual math::aabb get_local_aabb() const { return{}; }
 
-	object_id get_object_id() const
-	{
-		return mObject_id;
-	}
+	// Get the object this component is registered to
+	object_id get_object_id() const noexcept;
+	void set_object(const game_object& pObj) noexcept;
 
-	void set_object(const game_object& pObj);
+	component_id get_instance_id() const noexcept;
 
-	component_id get_instance_id() const
-	{
-		return mInstance_id;
-	}
+protected:
+	virtual json on_serialize(serialize_type) const { return json(); }
+	virtual	void on_deserialize(const json&) {}
 
 private:
 	std::string mName;

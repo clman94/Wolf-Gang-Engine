@@ -8,7 +8,7 @@ using nlohmann::json;
 #include <wge/math/math.hpp>
 #include <wge/math/vector.hpp>
 #include <wge/math/rect.hpp>
-#include <wge/core/serializable.hpp>
+#include <wge/core/instance_id.hpp>
 using namespace wge;
 
 void wge::math::to_json(nlohmann::json & pJson, const math::vec2 & pVec)
@@ -63,14 +63,4 @@ void from_json(const nlohmann::json & pJson, b2Vec2 & pVec)
 {
 	pVec.x = pJson[0];
 	pVec.y = pJson[1];
-}
-
-void wge::core::to_json(nlohmann::json& pJson, const serializable& pS)
-{
-	pJson = pS.serialize();
-}
-
-void wge::core::from_json(const nlohmann::json& pJson, serializable& pS)
-{
-	pS.deserialize(pJson);
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <wge/logging/log.hpp>
 #include <wge/core/asset.hpp>
 #include <wge/core/component.hpp>
 #include <wge/math/anchor.hpp>
@@ -21,60 +22,37 @@ public:
 	sprite_component(core::component_id pId) :
 		core::component(pId)
 	{}
-	virtual json serialize() const override;
-	virtual void deserialize(const json& pJson) override;
 
 	// Creates a batch
 	void create_batch(core::transform_component& pTransform, renderer& pRenderer);
 
 	// Set the offset of the image in pixels
-	void set_offset(const math::vec2& pOffset)
-	{
-		mOffset = pOffset;
-	}
+	void set_offset(const math::vec2& pOffset) noexcept;
 	// Get the offset of the image in pixels
-	math::vec2 get_offset() const
-	{
-		return mOffset;
-	}
+	math::vec2 get_offset() const noexcept;
 
 	// Set the anchor ratio. Defaults topleft (0, 0).
-	void set_anchor(const math::vec2& pRatio)
-	{
-		mAnchor = pRatio;
-	}
-	math::vec2 get_anchor() const
-	{
-		return mAnchor;
-	}
+	void set_anchor(const math::vec2& pRatio) noexcept;
+	math::vec2 get_anchor() const noexcept;
 
-	void set_animation(animation::ptr pAnimation)
-	{
-		mAnimation = pAnimation;
-	}
-	void set_animation(const std::string& pName)
-	{
-		WGE_ASSERT(mTexture);
-		mAnimation = mTexture->get_animation(pName);
-	}
+	void set_animation(animation::ptr pAnimation) noexcept;
+	void set_animation(const std::string& pName) noexcept;
 
 	// Set the texture from a texture pointer.
-	void set_texture(texture::ptr pAsset)
-	{
-		mTexture = pAsset;
-		mAnimation = mTexture->get_animation("Default");
-	}
+	void set_texture(const texture::ptr& pAsset) noexcept;
 	// Get the current texture
-	texture::ptr get_texture() const
-	{
-		return mTexture;
-	}
+	texture::ptr get_texture() const noexcept;
 
 	virtual bool has_aabb() const override { return true; }
 	virtual math::aabb get_screen_aabb() const override { return mSceen_aabb; };
+	virtual math::aabb get_local_aabb() const override { return mLocal_aabb; };
+
+protected:
+	virtual json on_serialize(core::serialize_type) const override;
+	virtual void on_deserialize(const json& pJson) override;
 
 private:
-	math::aabb mSceen_aabb;
+	math::aabb mSceen_aabb, mLocal_aabb;
 	texture::ptr mTexture;
 	math::vec2 mOffset, mAnchor{ math::anchor::topleft };
 	animation::ptr mAnimation;

@@ -13,27 +13,30 @@ class transform_component :
 {
 	WGE_COMPONENT_SINGLE_INSTANCE("Transform 2D", 0);
 public:
-	transform_component(core::component_id pId);
-
-	virtual json serialize() const override;
-	virtual void deserialize(const json& pJson) override;
+	transform_component(core::component_id pId) noexcept;
 
 	// Set the position of this transform
-	void set_position(const math::vec2& pVec);
-	math::vec2 get_position() const;
+	void set_position(const math::vec2& pVec) noexcept;
+	math::vec2 get_position() const noexcept;
+
+	void move(const math::vec2& pDelta) noexcept;
 
 	// Set the rotation in radians
-	void set_rotaton(const math::radians& pRad);
+	void set_rotaton(const math::radians& pRad) noexcept;
 	// Get the rotation in radians
-	math::radians get_rotation() const;
+	math::radians get_rotation() const noexcept;
 
 	// Scale this transform
-	void set_scale(const math::vec2& pVec);
-	math::vec2 get_scale() const;
+	void set_scale(const math::vec2& pVec) noexcept;
+	math::vec2 get_scale() const noexcept;
 
 	// Get transform combining the position, rotation,
 	// and scale properties.
 	math::mat33 get_transform();
+
+protected:
+	virtual json on_serialize(serialize_type) const override;
+	virtual void on_deserialize(const json&) override;
 
 private:
 	// Updates the transform

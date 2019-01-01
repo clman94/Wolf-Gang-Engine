@@ -1,6 +1,7 @@
 #pragma once
 
 #include "command.hpp"
+#include "signal.hpp"
 
 #include <memory>
 #include <deque>
@@ -24,10 +25,12 @@ public:
 		add(std::make_shared<T>(std::forward<Targs>(pArgs)...));
 	}
 
-	bool can_undo() const;
-	bool can_redo() const;
+	bool can_undo() const noexcept;
+	bool can_redo() const noexcept;
 	void undo();
 	void redo();
+
+	util::signal<void()> on_change;
 
 private:
 	std::deque<command::ptr> mUndo;

@@ -28,6 +28,18 @@ bool game_object::has_component(int pId) const
 	return false;
 }
 
+json game_object::serialize(serialize_type pType) const
+{
+	json result;
+	result["id"] = get_instance_id();
+	for (const auto& i : mData->components)
+	{
+		component* comp = get_layer().get_component(i.type, i.id);
+		result["components"].push_back(comp->serialize(pType));
+	}
+	return result;
+}
+
 std::size_t game_object::get_component_count() const
 {
 	WGE_ASSERT(mData);

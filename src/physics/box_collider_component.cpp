@@ -22,17 +22,20 @@ box_collider_component::~box_collider_component()
 {
 }
 
-json box_collider_component::serialize() const
+json box_collider_component::on_serialize(core::serialize_type pType) const
 {
 	json result;
-	result["offset"] = mOffset;
-	result["size"] = mSize;
-	result["rotation"] = mRotation;
-	result["sensor"] = mIs_sensor;
+	if (pType & core::serialize_type::properties)
+	{
+		result["offset"] = mOffset;
+		result["size"] = mSize;
+		result["rotation"] = mRotation;
+		result["sensor"] = mIs_sensor;
+	}
 	return result;
 }
 
-void box_collider_component::deserialize(const json & pJson)
+void box_collider_component::on_deserialize(const json & pJson)
 {
 	mOffset = pJson["offset"];
 	mSize = pJson["size"];

@@ -27,7 +27,7 @@ public:
 	// TODO: Add ability to draw to several framebuffers for post-processing
 	//void set_framebuffer(const std::string& pName);
 
-	void set_texture(const texture::ptr& pTexture)
+	void set_texture(const texture::ptr& pTexture) noexcept
 	{
 		mBatch.rendertexture = pTexture;
 	}
@@ -36,7 +36,7 @@ public:
 	// member of the batch.
 	std::size_t add_quad(const vertex_2d* pBuffer);
 
-	render_batch_2d finalize()
+	render_batch_2d finalize() noexcept
 	{
 		return std::move(mBatch);
 	}

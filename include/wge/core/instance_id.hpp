@@ -5,9 +5,11 @@
 namespace wge::core
 {
 
+// Type used for instance id values
 using instance_id_t = std::uint64_t;
 
 // Template for strongly typed id values.
+// A value of 0 is considered an invalid id.
 template <typename>
 class instance_id
 {
