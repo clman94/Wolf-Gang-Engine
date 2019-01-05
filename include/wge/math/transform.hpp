@@ -16,12 +16,11 @@ enum class transform_mask : unsigned int
 	scale    = 1 << 2,
 	shear    = 1 << 3,
 };
-
 ENUM_CLASS_FLAG_OPERATORS(transform_mask);
 
 // Represents 4 basic 2d affine transformations.
 // The values are applied in this order:
-// Shear, scale, rotation, and then the position.
+//   Shear, scale, rotation, and then the position.
 // This is how most objects are represented in this game engine.
 class transform
 {
@@ -32,30 +31,29 @@ public:
 	math::vec2 shear{ 0, 0 };
 
 	math::mat33 get_matrix() const noexcept;
-
 	math::mat33 get_inverse_matrix() const noexcept;
 
+	// Check if this transform represents an identity transform
 	bool is_identity() const noexcept;
 
+	// Apply this transform to a vector. Returns the new vector.
 	math::vec2 apply_to(const math::vec2& pVec, const transform_mask& pMask = transform_mask::none) const noexcept;
-
+	// Apply this transform to another transform. Returns the new transform.
 	transform apply_to(const transform& pTransform) const noexcept;
 
+	// Apply the inverse of this transform to a vector. Returns the new vector.
 	math::vec2 apply_inverse_to(const math::vec2& pVec, const transform_mask& pMask = transform_mask::none) const noexcept;
 
+	// Same as apply_to(pTransform)
 	transform operator * (const transform& pTransform) const noexcept;
+	// Same as apply_to(pVec)
 	math::vec2 operator * (const math::vec2& pVec) const noexcept;
-
+	// Same as this = apply_to(pTransform)
 	transform& operator *= (const transform& pTransform) noexcept;
 
+	operator math::mat33() const noexcept;
 
-	std::string to_string() const
-	{
-		return "[Position:" + position.to_string() + "]\n"
-		     + "[Rotation:" + std::to_string(rotation.value()) + "]\n"
-		     + "[Scale:" + scale.to_string() + "]\n"
-		     + "[Shear:" + shear.to_string() + "]";
-	}
+	std::string to_string() const;
 };
 
 // Generate a matrix that is the inverse of a transform.

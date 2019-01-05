@@ -82,6 +82,19 @@ transform& transform::operator *= (const transform& pTransform) noexcept
 	return *this = apply_to(pTransform);
 }
 
+transform::operator math::mat33() const noexcept
+{
+	return get_matrix();
+}
+
+std::string transform::to_string() const
+{
+	return "[Position:" + position.to_string() + "]\n"
+		+ "[Rotation:" + std::to_string(rotation.value()) + "]\n"
+		+ "[Scale:" + scale.to_string() + "]\n"
+		+ "[Shear:" + shear.to_string() + "]";
+}
+
 
 
 // Generate a matrix that is the inverse of a transform.
