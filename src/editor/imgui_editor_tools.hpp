@@ -68,11 +68,7 @@ struct editor_state
 	transformation_stack transform;
 
 	// Snapping
-	math::vec2 changed_vec;
-	math::vec2 original_vec;
-	math::rect changed_rect;
-	math::rect original_rect;
-	math::rect delta_rect;
+	math::vec2 delta_accum;
 	bool is_snap_enabled{ false };
 	math::vec2 snap_ratio{ 1, 1 };
 
@@ -168,6 +164,20 @@ math::vec2 get_mouse_delta()
 	assert(gCurrent_editor_state);
 	math::vec2 delta = math::vec2(ImGui::GetIO().MouseDelta.x, ImGui::GetIO().MouseDelta.y);
 	delta = get_transform().apply_inverse_to(delta / gCurrent_editor_state->scale, math::transform_mask::position);
+	if (gCurrent_editor_state->is_snap_enabled)
+	{
+		// Start at 0
+		if (ImGui::IsItemClicked())
+			gCurrent_editor_state->delta_accum = math::vec2(0, 0);
+
+		// Accumulate the delta...
+		gCurrent_editor_state->delta_accum += delta;
+		delta = gCurrent_editor_state->snap_closest(gCurrent_editor_state->delta_accum);
+
+		// ...until it snaps!
+		if (delta != math::vec2(0, 0))
+			gCurrent_editor_state->delta_accum -= delta;
+	}
 	return delta;
 }
 
@@ -228,23 +238,6 @@ inline math::vec2 get_mouse_position()
 {
 	assert(gCurrent_editor_state);
 	return gCurrent_editor_state->calc_from_absolute(gCurrent_editor_state->mouse_position);
-}
-
-inline math::rect snap_behavior(const math::rect& pOriginal, const math::rect& pChange)
-{
-	assert(gCurrent_editor_state);
-	if (!gCurrent_editor_state->is_snap_enabled)
-		return { pOriginal.position + pChange.position, pOriginal.size + pChange.size };
-	if (ImGui::IsItemClicked())
-	{
-		gCurrent_editor_state->original_rect = pOriginal;
-		gCurrent_editor_state->changed_rect = math::rect{};
-	}
-	gCurrent_editor_state->changed_rect.position += pChange.position;
-	gCurrent_editor_state->changed_rect.size += pChange.size;
-	math::rect original = gCurrent_editor_state->original_rect;
-	math::rect snapped_changes = gCurrent_editor_state->snap_closest(gCurrent_editor_state->changed_rect);
-	return{ original.position + snapped_changes.position, original.size + snapped_changes.size };
 }
 
 bool drag_behavior(ImGuiID pID, bool pHovered)
@@ -319,9 +312,12 @@ bool drag_rect(const char* pStr_id, const math::rect& pDisplay, math::vec2* pDel
 	return dragging;
 }
 
-
 bool resizable_rect(const char* pStr_id, const math::rect& pDisplay, math::rect* pDelta)
 {
+	assert(gCurrent_editor_state);
+
+	ImGui::PushID(pStr_id);
+
 	bool dragging = false;
 	math::vec2 topleft;
 	if (drag_circle("TopLeft", pDisplay.position, &topleft, 6))
@@ -381,10 +377,12 @@ bool resizable_rect(const char* pStr_id, const math::rect& pDisplay, math::rect*
 		pDelta->width += right.x;
 	}
 
+	ImGui::PopID();
+
 	return dragging;
 }
 
-enum class edit_level
+enum class edit_type
 {
 	rect,
 	transform,
@@ -393,25 +391,24 @@ enum class edit_level
 class box_edit
 {
 public:
-
 	box_edit(const math::rect& pRect, const math::transform& pTransform = math::transform{}) noexcept :
 		mRect(pRect),
 		mTransform(pTransform)
 	{}
 
-	bool resize(edit_level pLevel)
+	bool resize(edit_type pType)
 	{
 		push_transform(mTransform);
 
 		math::rect delta;
 		if (resizable_rect("edit", mRect, &delta))
 		{
-			if (pLevel == edit_level::rect)
+			if (pType == edit_type::rect)
 			{
 				mRect.position += delta.position;
 				mRect.size += delta.size;
 			}
-			else if (pLevel == edit_level::transform)
+			else if (pType == edit_type::transform)
 			{
 				const math::vec2 scale = (mRect.size + delta.size) / mRect.size;
 				const math::vec2 position_delta = delta.position - mRect.position * (scale - math::vec2(1, 1));
@@ -425,16 +422,16 @@ public:
 		return false;
 	}
 
-	bool drag(edit_level pLevel)
+	bool drag(edit_type pType)
 	{
 		push_transform(mTransform);
 
 		math::vec2 delta;
 		if (drag_rect("editdrag", mRect, &delta))
 		{
-			if (pLevel == edit_level::rect)
+			if (pType == edit_type::rect)
 				mRect.position += delta;
-			else if (pLevel == edit_level::transform)
+			else if (pType == edit_type::transform)
 				mTransform.position += mTransform.apply_to(delta, math::transform_mask::position);
 		}
 

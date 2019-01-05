@@ -195,15 +195,14 @@ public:
 				// Modify selected
 				if (mSelected_animation)
 				{
-					math::transform t;
-					t.rotation = 45_deg;
-					visual_editor::push_transform(t);
+					visual_editor::begin_snap({ 1, 1 });
 
 					visual_editor::box_edit box_edit(mSelected_animation->frame_rect);
-					box_edit.drag(visual_editor::edit_level::rect);
+					box_edit.resize(visual_editor::edit_type::rect);
+					box_edit.drag(visual_editor::edit_type::rect);
 					mSelected_animation->frame_rect = box_edit.get_rect();
 
-					visual_editor::pop_transform();
+					visual_editor::end_snap();
 				}
 
 				// Select a new one
@@ -888,8 +887,8 @@ private:
 							if (is_object_selected)
 							{
 								visual_editor::box_edit box_edit(aabb, transform->get_transform());
-								box_edit.resize(visual_editor::edit_level::transform);
-								box_edit.drag(visual_editor::edit_level::transform);
+								box_edit.resize(visual_editor::edit_type::transform);
+								box_edit.drag(visual_editor::edit_type::transform);
 								transform->set_position(box_edit.get_transform().position);
 								transform->set_scale(box_edit.get_transform().scale);
 							}
