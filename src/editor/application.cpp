@@ -889,18 +889,17 @@ private:
 								visual_editor::box_edit box_edit(aabb, transform->get_transform());
 								box_edit.resize(visual_editor::edit_type::transform);
 								box_edit.drag(visual_editor::edit_type::transform);
-								transform->set_position(box_edit.get_transform().position);
-								transform->set_scale(box_edit.get_transform().scale);
+								transform->set_transform(box_edit.get_transform());
 							}
 
+							visual_editor::push_transform(transform->get_transform());
 							if (aabb.intersect(visual_editor::get_mouse_position()))
 							{
 								if (ImGui::IsItemClicked())
 									mContext.set_selection(obj);
-								visual_editor::push_transform(transform->get_transform());
 								visual_editor::draw_rect(aabb, { 1, 1, 1, 1 });
-								visual_editor::pop_transform();
 							}
+							visual_editor::pop_transform();
 						}
 					}
 				}
