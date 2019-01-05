@@ -890,7 +890,7 @@ private:
 						}
 
 						math::aabb aabb;
-						if (ImGui::IsItemHovered() && create_aabb_from_object(obj, aabb))
+						if (create_aabb_from_object(obj, aabb))
 						{
 							if (is_object_selected)
 							{

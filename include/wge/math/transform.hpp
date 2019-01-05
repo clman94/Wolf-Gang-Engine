@@ -61,6 +61,14 @@ public:
 			.translate(-position);
 	}
 
+	bool is_identity() const noexcept
+	{
+		return position == math::vec2(0, 0)
+			&& terminal_angle(rotation) == 0
+			&& scale == math::vec2(1, 1)
+			&& shear == math::vec2(0, 0);
+	}
+
 	math::vec2 apply_to(const math::vec2& pVec, const transform_mask& pMask = transform_mask::none) const noexcept
 	{
 		math::vec2 result{ pVec };

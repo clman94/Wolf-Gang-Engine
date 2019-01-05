@@ -121,6 +121,7 @@ public:
 	radians operator - (const radians& pRadians) const noexcept;
 	radians operator * (const radians& pRadians) const noexcept;
 	radians operator / (const radians& pRadians) const noexcept;
+	radians operator % (const radians& pRadians) const noexcept;
 
 	radians operator - () const noexcept;
 
@@ -130,6 +131,14 @@ public:
 	radians& operator -= (const radians& pRadians) noexcept;
 	radians& operator *= (const radians& pRadians) noexcept;
 	radians& operator /= (const radians& pRadians) noexcept;
+
+	// Comparasons
+	bool operator == (const radians& pDegrees) const noexcept;
+	bool operator != (const radians& pRadians) const noexcept;
+	bool operator >= (const radians& pRadians) const noexcept;
+	bool operator <= (const radians& pRadians) const noexcept;
+	bool operator > (const radians& pRadians) const noexcept;
+	bool operator < (const radians& pRadians) const noexcept;
 
 private:
 	float mRadians;
@@ -155,6 +164,7 @@ public:
 	degrees operator - (const degrees& pDegrees) const noexcept;
 	degrees operator * (const degrees& pDegrees) const noexcept;
 	degrees operator / (const degrees& pDegrees) const noexcept;
+	degrees operator % (const degrees& pDegrees) const noexcept;
 
 	degrees operator - () const noexcept;
 
@@ -165,9 +175,20 @@ public:
 	degrees& operator *= (const degrees& pDegrees) noexcept;
 	degrees& operator /= (const degrees& pDegrees) noexcept;
 
+	// Comparasons
+	bool operator == (const degrees& pDegrees) const noexcept;
+	bool operator != (const degrees& pDegrees) const noexcept;
+	bool operator >= (const degrees& pDegrees) const noexcept;
+	bool operator <= (const degrees& pDegrees) const noexcept;
+	bool operator > (const degrees& pDegrees) const noexcept;
+	bool operator < (const degrees& pDegrees) const noexcept;
+
 private:
 	float mDegrees;
 };
+
+degrees terminal_angle(const degrees& pDegrees) noexcept;
+radians terminal_angle(const radians& pDegrees) noexcept;
 
 degrees radians_to_degrees(float pRadians) noexcept;
 radians degrees_to_radians(float pDegrees) noexcept;
@@ -195,6 +216,11 @@ inline wge::math::degrees operator""_deg(std::uintmax_t pDegrees) noexcept
 }
 
 inline wge::math::radians operator""_rad(long double pRadians) noexcept
+{
+	return static_cast<float>(pRadians);
+}
+
+inline wge::math::radians operator""_rad(std::uintmax_t pRadians) noexcept
 {
 	return static_cast<float>(pRadians);
 }
