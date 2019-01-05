@@ -875,12 +875,6 @@ private:
 						auto selection = mContext.get_selection<selection_type::game_object>();
 						const bool is_object_selected = selection && obj == *selection;
 
-						// Draw center point
-						if (is_object_selected)
-						{
-							visual_editor::draw_circle(transform->get_position(), 5, { 1, 1, 1, 0.6f }, 3.f);
-						}
-
 						math::aabb aabb;
 						if (create_aabb_from_object(obj, aabb))
 						{
@@ -900,6 +894,12 @@ private:
 								visual_editor::draw_rect(aabb, { 1, 1, 1, 1 });
 							}
 							visual_editor::pop_transform();
+						}
+
+						// Draw center point
+						if (is_object_selected)
+						{
+							visual_editor::draw_circle(transform->get_position(), 5, { 1, 1, 1, 0.6f }, 3.f);
 						}
 					}
 				}
