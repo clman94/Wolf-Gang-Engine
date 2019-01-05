@@ -1,11 +1,11 @@
 #pragma once
 
 #include <wge/math/math.hpp>
+#include <wge/math/angle.hpp>
 
-namespace wge
+namespace wge::math
 {
-namespace math
-{
+
 // Placeholders for swizzling
 constexpr struct _x_t {} _x;
 constexpr struct _y_t {} _y;
@@ -166,5 +166,4 @@ inline auto min<vec2>(const vec2& pL, const vec2& pR) noexcept
 	return vec2{ min(pL.x, pR.x), min(pL.y, pR.y) };
 }
 
-} // namespace math
-} // namespace wge
+} // namespace wge::math

@@ -3,6 +3,7 @@
 #include <wge/math/math.hpp>
 #include <wge/math/matrix.hpp>
 #include <wge/math/vector.hpp>
+#include <wge/util/enum.hpp>
 
 namespace wge::math
 {
@@ -16,20 +17,7 @@ enum class transform_mask : unsigned int
 	shear    = 1 << 3,
 };
 
-inline constexpr transform_mask operator | (const transform_mask& pL, const transform_mask& pR) noexcept
-{
-	return static_cast<transform_mask>(static_cast<unsigned int>(pL) | static_cast<unsigned int>(pR));
-}
-
-inline constexpr bool operator & (const transform_mask& pL, const transform_mask& pR) noexcept
-{
-	return (static_cast<unsigned int>(pL) & static_cast<unsigned int>(pR)) != 0;
-}
-
-inline constexpr bool operator ^ (const transform_mask& pL, const transform_mask& pR) noexcept
-{
-	return (static_cast<unsigned int>(pL) ^ static_cast<unsigned int>(pR)) != 0;
-}
+ENUM_CLASS_FLAG_OPERATORS(transform_mask);
 
 // Represents 4 basic 2d affine transformations.
 // The values are applied in this order:
@@ -43,84 +31,23 @@ public:
 	math::vec2 scale{ 1, 1 };
 	math::vec2 shear{ 0, 0 };
 
-	math::mat33 get_matrix() const noexcept
-	{
-		return math::mat33(1)
-			.translate(position)
-			.rotate(rotation)
-			.scale(scale)
-			.shear(shear);
-	}
+	math::mat33 get_matrix() const noexcept;
 
-	math::mat33 get_inverse_matrix() const noexcept
-	{
-		return math::mat33(1)
-			.shear(-shear)
-			.scale(1 / scale)
-			.rotate(-rotation)
-			.translate(-position);
-	}
+	math::mat33 get_inverse_matrix() const noexcept;
 
-	bool is_identity() const noexcept
-	{
-		return position == math::vec2(0, 0)
-			&& terminal_angle(rotation) == 0
-			&& scale == math::vec2(1, 1)
-			&& shear == math::vec2(0, 0);
-	}
+	bool is_identity() const noexcept;
 
-	math::vec2 apply_to(const math::vec2& pVec, const transform_mask& pMask = transform_mask::none) const noexcept
-	{
-		math::vec2 result{ pVec };
-		if (!(pMask & transform_mask::shear))
-			result += shear * math::swap_xy(pVec);
-		if (!(pMask & transform_mask::scale))
-			result *= scale;
-		if (!(pMask & transform_mask::rotation))
-			result.rotate(rotation);
-		if (!(pMask & transform_mask::position))
-			result += position;
-		return result;
-	}
+	math::vec2 apply_to(const math::vec2& pVec, const transform_mask& pMask = transform_mask::none) const noexcept;
 
-	transform apply_to(const transform& pTransform) const noexcept
-	{
-		transform result;
-		result.rotation = pTransform.rotation + rotation;
-		result.position = apply_to(pTransform.position);
-		result.scale = pTransform.scale * scale;
-		result.shear = pTransform.shear + shear;
-		return result;
-	}
+	transform apply_to(const transform& pTransform) const noexcept;
 
-	math::vec2 apply_inverse_to(const math::vec2& pVec, const transform_mask& pMask = transform_mask::none) const noexcept
-	{
-		math::vec2 result{ pVec };
-		if (!(pMask & transform_mask::position))
-			result -= position;
-		if (!(pMask & transform_mask::rotation))
-			result.rotate(-rotation);
-		if (!(pMask & transform_mask::scale))
-			result /= scale;
-		if (!(pMask & transform_mask::shear))
-			result -= shear * math::swap_xy(result);
-		return result;
-	}
+	math::vec2 apply_inverse_to(const math::vec2& pVec, const transform_mask& pMask = transform_mask::none) const noexcept;
 
-	transform operator * (const transform& pTransform) const noexcept
-	{
-		return apply_to(pTransform);
-	}
+	transform operator * (const transform& pTransform) const noexcept;
+	math::vec2 operator * (const math::vec2& pVec) const noexcept;
 
-	transform& operator *= (const transform& pTransform) noexcept
-	{
-		return *this = apply_to(pTransform);
-	}
+	transform& operator *= (const transform& pTransform) noexcept;
 
-	math::vec2 operator * (const math::vec2& pVec) const noexcept
-	{
-		return apply_to(pVec);
-	}
 
 	std::string to_string() const
 	{
@@ -136,14 +63,6 @@ public:
 // represent the inverted order of the operations.
 // It is recommended that you use the apply_inverse_to method instead
 // in most cases.
-inline math::mat33 inverse(const transform& pTransform) noexcept
-{
-	math::mat33 result(1);
-	result
-		.scale(1 / pTransform.scale)
-		.rotate(-pTransform.rotation)
-		.translate(-pTransform.position);
-	return result;
-}
+math::mat33 inverse(const transform& pTransform) noexcept;
 
 } // namespace wge::math
