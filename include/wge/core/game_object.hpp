@@ -49,7 +49,7 @@ public:
 	// Get the amount of components assigned to this object
 	std::size_t get_component_count() const;
 	// Get a component by its index
-	component* get_component_index(std::size_t pIndex);
+	component* get_component_at(std::size_t pIndex);
 	// Get component by name
 	component* get_component(const std::string& pName);
 	// Get first component by id

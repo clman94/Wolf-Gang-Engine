@@ -74,6 +74,9 @@ public:
 	template<typename = std::enable_if<R >= 2>::type>
 	mat& scale(const vec2& pVec2) noexcept;
 
+	template<typename = std::enable_if<C >= 2 && R >= 2>::type>
+	mat& shear(const vec2& pVec) noexcept;
+
 	template<typename = std::enable_if<is_square>::type>
 	mat& transpose() noexcept;
 
@@ -199,6 +202,16 @@ inline mat<C, R>& mat<C, R>::scale(const vec2 & pVec2) noexcept
 	mat<C, R> temp{ 1 };
 	temp.m[0][0] = pVec2.x;
 	temp.m[1][1] = pVec2.y;
+	return *this = multiply(temp);
+}
+
+template<std::size_t C, std::size_t R>
+template<typename>
+inline mat<C, R>& mat<C, R>::shear(const vec2 & pVec) noexcept
+{
+	mat<C, R> temp{ 1 };
+	m[1][0] = pVec.x;
+	m[0][1] = pVec.y;
 	return *this = multiply(temp);
 }
 

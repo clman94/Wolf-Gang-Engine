@@ -85,6 +85,12 @@ vec2& vec2::round_magnitude() noexcept
 	return *this;
 }
 
+vec2 & vec2::swap_xy() noexcept
+{
+	std::swap(x, y);
+	return *this;
+}
+
 vec2 vec2::operator + (const vec2& pR) const noexcept
 {
 	return { x + pR.x, y + pR.y };
@@ -102,7 +108,7 @@ vec2 vec2::operator * (const vec2& pR) const noexcept
 
 vec2 vec2::operator / (const vec2& pR) const noexcept
 {
-	return { x / pR.x, y / pR.y };
+	return { pR.x == 0 ? 0 : x / pR.x, pR.y == 0 ? 0 : y / pR.y };
 }
 
 vec2 vec2::operator - () const noexcept
@@ -167,6 +173,16 @@ vec2& vec2::operator /= (const float& pR) noexcept
 	x /= pR;
 	y /= pR;
 	return *this;
+}
+
+bool vec2::operator==(const vec2 & pR) const noexcept
+{
+	return x == pR.x && y == pR.y;
+}
+
+bool vec2::operator!=(const vec2 & pR) const noexcept
+{
+	return !operator==(pR);
 }
 
 std::string vec2::to_string() const

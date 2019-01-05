@@ -11,6 +11,8 @@ namespace wge::math
 static constexpr float pi = 3.14159265f;
 static constexpr float deg_max = 360.f;
 static constexpr float deg_half = 180.f;
+static constexpr float rad_max = pi * 2;
+static constexpr float rad_half = pi;
 
 template<typename T>
 inline T mod(const T& a, const T& b) noexcept
@@ -62,13 +64,13 @@ inline T round(const T& a) noexcept
 }
 
 template <typename T>
-inline constexpr const T& max(const T& pL, const T& pR) noexcept
+inline constexpr auto max(const T& pL, const T& pR) noexcept
 {
 	return pL > pR ? pL : pR;
 }
 
 template <typename T>
-inline constexpr const T& min(const T& pL, const T& pR) noexcept
+inline constexpr auto min(const T& pL, const T& pR) noexcept
 {
 	return pL < pR ? pL : pR;
 }

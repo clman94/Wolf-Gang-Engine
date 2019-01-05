@@ -54,8 +54,8 @@ void sprite_component::create_batch(core::transform_component& pTransform, rende
 	// Transform the vertices
 	for (int i = 0; i < 4; i++)
 	{
-		verts[i].position *= pRenderer.get_pixel_size();
 		verts[i].position += -mAnchor * texture_size + mOffset;
+		verts[i].position *= pRenderer.get_pixel_size();
 		
 		// Calc aabb of sprite before transform
 		if (i == 0)

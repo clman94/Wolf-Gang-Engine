@@ -48,6 +48,8 @@ public:
 	vec2& round() noexcept;
 	vec2& round_magnitude() noexcept;
 
+	vec2& swap_xy() noexcept;
+
 	// Vector operations
 	vec2 operator + (const vec2& pR) const noexcept;
 	vec2 operator - (const vec2& pR) const noexcept;
@@ -70,6 +72,9 @@ public:
 	// Scalar assignments
 	vec2& operator *= (const float& pR) noexcept;
 	vec2& operator /= (const float& pR) noexcept;
+
+	bool operator == (const vec2& pR) const noexcept;
+	bool operator != (const vec2& pR) const noexcept;
 
 	// Returns format "([x], [y])"
 	std::string to_string() const;
@@ -141,6 +146,24 @@ template<>
 inline vec2 round<vec2>(const vec2& a) noexcept
 {
 	return vec2(a).round();
+}
+
+inline vec2 swap_xy(const vec2& a) noexcept
+{
+	return vec2(a).swap_xy();
+}
+
+
+template <>
+inline auto max<vec2>(const vec2& pL, const vec2& pR) noexcept
+{
+	return vec2{ max(pL.x, pR.x), max(pL.y, pR.y) };
+}
+
+template <>
+inline auto min<vec2>(const vec2& pL, const vec2& pR) noexcept
+{
+	return vec2{ min(pL.x, pR.x), min(pL.y, pR.y) };
 }
 
 } // namespace math

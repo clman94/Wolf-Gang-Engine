@@ -8,6 +8,7 @@
 #include <wge/math/vector.hpp>
 #include <wge/graphics/color.hpp>
 #include <wge/math/matrix.hpp>
+#include <wge/math/transform.hpp>
 
 #include <imgui/imgui.h>
 
@@ -23,15 +24,13 @@ class transformation_stack
 public:
 	transformation_stack()
 	{
-		// Start with identity matrix
-		mStack.push(math::mat33(1));
-		mInverse = mStack.top();
+		// Start with the identity
+		mStack.push(math::transform{});
 	}
 
-	void push(const math::mat33& pMat)
+	void push(const math::transform& pMat)
 	{
 		mStack.push(mStack.top() * pMat);
-		mInverse = math::inverse(mStack.top());
 	}
 
 	void pop()
@@ -39,18 +38,12 @@ public:
 		if (mStack.size() > 1)
 		{
 			mStack.pop();
-			mInverse = math::inverse(mStack.top());
 		}
 	}
 
-	const math::mat33& get() const
+	const math::transform& get() const
 	{
 		return mStack.top();
-	}
-
-	const math::mat33& get_inverse() const
-	{
-		return mInverse;
 	}
 
 	bool is_identity() const noexcept
@@ -60,8 +53,7 @@ public:
 	}
 
 private:
-	std::stack<math::mat33> mStack;
-	math::mat33 mInverse;
+	std::stack<math::transform> mStack;
 };
 
 struct editor_state
@@ -81,7 +73,7 @@ struct editor_state
 	math::rect changed_rect;
 	math::rect original_rect;
 	math::rect delta_rect;
-	bool is_snap_enabled{ true };
+	bool is_snap_enabled{ false };
 	math::vec2 snap_ratio{ 1, 1 };
 
 	math::vec2 snap_closest(const math::vec2& pVec) const
@@ -108,12 +100,12 @@ struct editor_state
 
 	math::vec2 calc_absolute(const math::vec2& pPos) const
 	{
-		return ((transform.get() * pPos - offset) * scale) + cursor_offset;
+		return ((transform.get().apply_to(pPos) - offset) * scale) + cursor_offset;
 	}
 
 	math::vec2 calc_from_absolute(const math::vec2& pPos) const
 	{
-		return transform.get_inverse() * ((pPos - cursor_offset) / scale + offset);
+		return transform.get().apply_inverse_to((pPos - cursor_offset) / scale + offset);
 	}
 };
 
@@ -139,7 +131,20 @@ void end()
 	ImGui::PopID();
 }
 
-void push_transform(const math::mat33& pTransform)
+void begin_snap(const math::vec2& pRatio = { 1, 1 })
+{
+	assert(gCurrent_editor_state);
+	gCurrent_editor_state->is_snap_enabled = true;
+	gCurrent_editor_state->snap_ratio = pRatio;
+}
+
+void end_snap()
+{
+	assert(gCurrent_editor_state);
+	gCurrent_editor_state->is_snap_enabled = false;
+}
+
+void push_transform(const math::transform& pTransform)
 {
 	assert(gCurrent_editor_state);
 	gCurrent_editor_state->transform.push(pTransform);
@@ -151,12 +156,19 @@ void pop_transform()
 	gCurrent_editor_state->transform.pop();
 }
 
+const math::transform& get_transform() noexcept
+{
+	assert(gCurrent_editor_state);
+	return gCurrent_editor_state->transform.get();
+}
+
 // This is affected by the transformation stack
 math::vec2 get_mouse_delta()
 {
 	assert(gCurrent_editor_state);
-	math::vec2 delta(ImGui::GetIO().MouseDelta.x, ImGui::GetIO().MouseDelta.y);
-	return gCurrent_editor_state->transform.get_inverse() * (delta / gCurrent_editor_state->scale);
+	math::vec2 delta = math::vec2(ImGui::GetIO().MouseDelta.x, ImGui::GetIO().MouseDelta.y);
+	delta = get_transform().apply_inverse_to(delta / gCurrent_editor_state->scale, math::transform_mask::position);
+	return delta;
 }
 
 void draw_circle(const math::vec2& pCenter, float pRadius, const graphics::color& pColor, float pThickness, bool pScale_radius = false)
@@ -221,6 +233,8 @@ inline math::vec2 get_mouse_position()
 inline math::rect snap_behavior(const math::rect& pOriginal, const math::rect& pChange)
 {
 	assert(gCurrent_editor_state);
+	if (!gCurrent_editor_state->is_snap_enabled)
+		return { pOriginal.position + pChange.position, pOriginal.size + pChange.size };
 	if (ImGui::IsItemClicked())
 	{
 		gCurrent_editor_state->original_rect = pOriginal;
@@ -257,12 +271,11 @@ bool drag_behavior(ImGuiID pID, bool pHovered, float* pX, float* pY)
 	bool dragging = drag_behavior(pID, pHovered);
 	if (dragging)
 	{
-		math::vec2 delta(ImGui::GetIO().MouseDelta.x, ImGui::GetIO().MouseDelta.y);
-		math::vec2 v = gCurrent_editor_state->transform.get_inverse() * (delta / gCurrent_editor_state->scale);
+		math::vec2 delta = get_mouse_delta();
 		if (pX)
-			*pX += v.x;
+			*pX += delta.x;
 		if (pY)
-			*pY += v.y;
+			*pY += delta.y;
 	}
 	return dragging;
 }
@@ -306,88 +319,143 @@ bool drag_rect(const char* pStr_id, const math::rect& pDisplay, math::vec2* pDel
 	return dragging;
 }
 
-bool drag_resizable_rect(const char* pStr_id, math::rect* pRect)
+
+bool resizable_rect(const char* pStr_id, const math::rect& pDisplay, math::rect* pDelta)
 {
 	bool dragging = false;
-
-	math::rect change;
-
-	ImGui::PushID(pStr_id);
-
-	ImDrawList* dl = ImGui::GetWindowDrawList();
-	dl->ChannelsSplit(2);
-	dl->ChannelsSetCurrent(1);
-
 	math::vec2 topleft;
-	if (drag_circle("TopLeft", pRect->position, &topleft, 6))
+	if (drag_circle("TopLeft", pDisplay.position, &topleft, 6))
 	{
 		dragging = true;
-		change.position += topleft;
-		change.size -= topleft;
+		pDelta->position += topleft;
+		pDelta->size -= topleft;
 	}
 
-	dragging |= drag_circle("BottomRight", pRect->get_corner(2), &change.size, 6);
+	dragging |= drag_circle("BottomRight", pDisplay.get_corner(2), &pDelta->size, 6);
 
 	math::vec2 topright;
-	if (drag_circle("TopRight", pRect->get_corner(1), &topright, 6))
+	if (drag_circle("TopRight", pDisplay.get_corner(1), &topright, 6))
 	{
 		dragging = true;
-		change.y += topright.y;
-		change.width += topright.x;
-		change.height -= topright.y;
+		pDelta->y += topright.y;
+		pDelta->width += topright.x;
+		pDelta->height -= topright.y;
 	}
 
 	math::vec2 bottomleft;
-	if (drag_circle("BottomLeft", pRect->get_corner(3), &bottomleft, 6))
+	if (drag_circle("BottomLeft", pDisplay.get_corner(3), &bottomleft, 6))
 	{
 		dragging = true;
-		change.x += bottomleft.x;
-		change.width -= bottomleft.x;
-		change.height += bottomleft.y;
+		pDelta->x += bottomleft.x;
+		pDelta->width -= bottomleft.x;
+		pDelta->height += bottomleft.y;
 	}
 
 	math::vec2 top;
-	if (drag_circle("Top", pRect->position + math::vec2(pRect->width / 2, 0), &top, 6))
+	if (drag_circle("Top", pDisplay.position + math::vec2(pDisplay.width / 2, 0), &top, 6))
 	{
 		dragging = true;
-		change.y += top.y;
-		change.height -= top.y;
+		pDelta->y += top.y;
+		pDelta->height -= top.y;
 	}
 
 	math::vec2 bottom;
-	if (drag_circle("Bottom", pRect->position + math::vec2(pRect->width / 2, pRect->height), &bottom, 6))
+	if (drag_circle("Bottom", pDisplay.position + math::vec2(pDisplay.width / 2, pDisplay.height), &bottom, 6))
 	{
 		dragging = true;
-		change.height += bottom.y;
+		pDelta->height += bottom.y;
 	}
 
 	math::vec2 left;
-	if (drag_circle("Left", pRect->position + math::vec2(0, pRect->height / 2), &left, 6))
+	if (drag_circle("Left", pDisplay.position + math::vec2(0, pDisplay.height / 2), &left, 6))
 	{
 		dragging = true;
-		change.x += left.x;
-		change.width -= left.x;
+		pDelta->x += left.x;
+		pDelta->width -= left.x;
 	}
 
 	math::vec2 right;
-	if (drag_circle("Right", pRect->position + math::vec2(pRect->width, pRect->height / 2), &right, 6))
+	if (drag_circle("Right", pDisplay.position + math::vec2(pDisplay.width, pDisplay.height / 2), &right, 6))
 	{
 		dragging = true;
-		change.width += right.x;
+		pDelta->width += right.x;
 	}
-
-	dl->ChannelsSetCurrent(0);
-
-	dragging |= drag_rect("RectMove", *pRect, &change.position);
-
-	dl->ChannelsMerge();
-
-	ImGui::PopID();
-
-	if (dragging)
-		*pRect = snap_behavior(*pRect, change);
 
 	return dragging;
 }
+
+enum class edit_level
+{
+	rect,
+	transform,
+};
+
+class box_edit
+{
+public:
+
+	box_edit(const math::rect& pRect, const math::transform& pTransform = math::transform{}) noexcept :
+		mRect(pRect),
+		mTransform(pTransform)
+	{}
+
+	bool resize(edit_level pLevel)
+	{
+		push_transform(mTransform);
+
+		math::rect delta;
+		if (resizable_rect("edit", mRect, &delta))
+		{
+			if (pLevel == edit_level::rect)
+			{
+				mRect.position += delta.position;
+				mRect.size += delta.size;
+			}
+			else if (pLevel == edit_level::transform)
+			{
+				const math::vec2 scale = (mRect.size + delta.size) / mRect.size;
+				const math::vec2 position_delta = delta.position - mRect.position * (scale - math::vec2(1, 1));
+				mTransform.position += visual_editor::get_transform().apply_to(position_delta, math::transform_mask::position);
+				mTransform.scale *= scale;
+			}
+		}
+
+		pop_transform();
+
+		return false;
+	}
+
+	bool drag(edit_level pLevel)
+	{
+		push_transform(mTransform);
+
+		math::vec2 delta;
+		if (drag_rect("editdrag", mRect, &delta))
+		{
+			if (pLevel == edit_level::rect)
+				mRect.position += delta;
+			else if (pLevel == edit_level::transform)
+				mTransform.position += mTransform.apply_to(delta, math::transform_mask::position);
+		}
+
+		pop_transform();
+
+		return false;
+	}
+
+	const math::rect& get_rect() const noexcept
+	{
+		return mRect;
+	}
+	
+	const math::transform& get_transform() const noexcept
+	{
+		return mTransform;
+	}
+
+private:
+	math::rect mRect;
+	math::transform mTransform;
+};
 
 } // namespace wge::editor::visual_editor

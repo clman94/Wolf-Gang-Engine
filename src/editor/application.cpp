@@ -19,6 +19,7 @@
 #include <wge/util/unique_names.hpp>
 #include <wge/graphics/graphics.hpp>
 #include <wge/core/behavior_system.hpp>
+#include <wge/math/transform.hpp>
 
 #include "editor.hpp"
 #include "history.hpp"
@@ -185,7 +186,6 @@ public:
 
 				visual_editor::begin("_SomeEditor", { image_position.x, image_position.y }, { 0, 0 }, { scale, scale });
 
-				visual_editor::gCurrent_editor_state->transform.push(math::mat33(1).rotate(45_deg));
 
 				for (const auto& i : texture->get_raw_atlas())
 					visual_editor::draw_rect(i->frame_rect, { 0, 1, 1, 0.5f });
@@ -195,11 +195,15 @@ public:
 				// Modify selected
 				if (mSelected_animation)
 				{
-					if (visual_editor::drag_resizable_rect(mSelected_animation->name.c_str(), &mSelected_animation->frame_rect))
-					{
-						if (ImGui::IsMouseReleased(0))
-							on_change();
-					}
+					math::transform t;
+					t.rotation = 45_deg;
+					visual_editor::push_transform(t);
+
+					visual_editor::box_edit box_edit(mSelected_animation->frame_rect);
+					box_edit.drag(visual_editor::edit_level::rect);
+					mSelected_animation->frame_rect = box_edit.get_rect();
+
+					visual_editor::pop_transform();
 				}
 
 				// Select a new one
@@ -221,7 +225,6 @@ public:
 							mSelected_animation = *(iter + 1); // Next item
 					}
 				}
-				visual_editor::gCurrent_editor_state->transform.pop();
 
 				visual_editor::end();
 
@@ -764,16 +767,17 @@ private:
 		bool has_aabb = false;
 		for (std::size_t comp_idx = 0; comp_idx < pObj.get_component_count(); comp_idx++)
 		{
-			auto comp = pObj.get_component_index(comp_idx);
-			if (!comp->has_aabb())
-				continue;
-			if (!has_aabb)
+			auto comp = pObj.get_component_at(comp_idx);
+			if (comp->has_aabb())
 			{
-				pAABB = comp->get_local_aabb();
-				has_aabb = true;
+				if (!has_aabb)
+				{
+					pAABB = comp->get_local_aabb();
+					has_aabb = true;
+				}
+				else
+					pAABB.merge(comp->get_local_aabb());
 			}
-			else
-				pAABB.merge(comp->get_local_aabb());
 		}
 		return has_aabb;
 	}
@@ -868,7 +872,12 @@ private:
 						auto obj = layer->get_object(i);
 						auto transform = obj.get_component<core::transform_component>();
 
-						visual_editor::push_transform(transform->get_transform());
+						math::mat33 rot_scale_transform;
+						rot_scale_transform
+							.translate(transform->get_position())
+							.scale(transform->get_scale())
+							.rotate(transform->get_rotation())
+							.translate(-transform->get_position());
 
 						// Check for selection
 						auto selection = mContext.get_selection<selection_type::game_object>();
@@ -877,7 +886,7 @@ private:
 						// Draw center point
 						if (is_object_selected)
 						{
-							visual_editor::draw_circle({ 0, 0 }, 5, { 1, 1, 1, 0.6f }, 3.f);
+							visual_editor::draw_circle(transform->get_position(), 5, { 1, 1, 1, 0.6f }, 3.f);
 						}
 
 						math::aabb aabb;
@@ -885,13 +894,16 @@ private:
 						{
 							if (is_object_selected)
 							{
-								const math::rect orig_rect = aabb;
-								math::rect rect = orig_rect;
-								if (visual_editor::drag_resizable_rect("_SelectionResize", &rect))
-								{
-									transform->move(rect.position - orig_rect.position);
-									transform->set_scale((rect.size / orig_rect.size) * transform->get_scale());
-								}
+								math::transform t;
+								t.position = transform->get_position();
+								t.rotation = transform->get_rotation();
+								t.scale = transform->get_scale();
+
+								visual_editor::box_edit box_edit(aabb, t);
+								box_edit.resize(visual_editor::edit_level::transform);
+								box_edit.drag(visual_editor::edit_level::transform);
+								transform->set_position(box_edit.get_transform().position);
+								transform->set_scale(box_edit.get_transform().scale);
 							}
 
 							if (aabb.intersect(visual_editor::get_mouse_position()))
@@ -900,9 +912,8 @@ private:
 									mContext.set_selection(obj);
 								visual_editor::draw_rect(aabb, { 1, 1, 1, 1 });
 							}
+							visual_editor::pop_transform();
 						}
-
-						visual_editor::pop_transform();
 					}
 				}
 			}
@@ -1109,7 +1120,7 @@ private:
 		ImGui::Separator();
 		for (std::size_t i = 0; i < pObj.get_component_count(); i++)
 		{
-			core::component* comp = pObj.get_component_index(i);
+			core::component* comp = pObj.get_component_at(i);
 			ImGui::PushID(comp);
 
 			if (i != 0)

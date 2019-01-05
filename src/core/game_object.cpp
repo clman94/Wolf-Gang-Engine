@@ -46,7 +46,7 @@ std::size_t game_object::get_component_count() const
 	return mData->components.size();
 }
 
-component* game_object::get_component_index(std::size_t pIndex)
+component* game_object::get_component_at(std::size_t pIndex)
 {
 	WGE_ASSERT(mData);
 	auto& comp_entry = mData->components[pIndex];
