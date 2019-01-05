@@ -48,9 +48,6 @@ void sprite_component::create_batch(core::transform_component& pTransform, rende
 	verts[3].position = texture_size.swizzle(0, math::_y);
 	verts[3].uv = math::vec2(uv.min.x, uv.max.y);
 
-	// Get transform and scale it by the pixel size
-	math::mat33 transform_mat = pTransform.get_transform();
-
 	// Transform the vertices
 	for (int i = 0; i < 4; i++)
 	{
@@ -64,7 +61,7 @@ void sprite_component::create_batch(core::transform_component& pTransform, rende
 			mLocal_aabb.merge(verts[i].position);
 
 		// Transform the points
-		verts[i].position = transform_mat * verts[i].position;
+		verts[i].position = pTransform.get_transform() * verts[i].position;
 
 		// Calc aabb after transform
 		if (i == 0)

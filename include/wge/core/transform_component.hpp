@@ -2,7 +2,7 @@
 
 #include <wge/core/component.hpp>
 #include <wge/math/vector.hpp>
-#include <wge/math/matrix.hpp>
+#include <wge/math/transform.hpp>
 
 namespace wge::core
 {
@@ -30,25 +30,17 @@ public:
 	void set_scale(const math::vec2& pVec) noexcept;
 	math::vec2 get_scale() const noexcept;
 
+	void set_transform(const math::transform& pTransform) noexcept;
 	// Get transform combining the position, rotation,
 	// and scale properties.
-	math::mat33 get_transform();
+	const math::transform& get_transform() const noexcept;
 
 protected:
 	virtual json on_serialize(serialize_type) const override;
 	virtual void on_deserialize(const json&) override;
 
 private:
-	// Updates the transform
-	void update_transform();
-
-private:
-	math::vec2 mPosition;
-	math::radians mRotation;
-	math::vec2 mScale;
-
-	bool mTransform_needs_update;
-	math::mat33 mTransform;
+	math::transform mTransform;
 };
 
 }

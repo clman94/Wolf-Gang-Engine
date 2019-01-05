@@ -872,13 +872,6 @@ private:
 						auto obj = layer->get_object(i);
 						auto transform = obj.get_component<core::transform_component>();
 
-						math::mat33 rot_scale_transform;
-						rot_scale_transform
-							.translate(transform->get_position())
-							.scale(transform->get_scale())
-							.rotate(transform->get_rotation())
-							.translate(-transform->get_position());
-
 						// Check for selection
 						auto selection = mContext.get_selection<selection_type::game_object>();
 						const bool is_object_selected = selection && obj == *selection;
@@ -894,12 +887,7 @@ private:
 						{
 							if (is_object_selected)
 							{
-								math::transform t;
-								t.position = transform->get_position();
-								t.rotation = transform->get_rotation();
-								t.scale = transform->get_scale();
-
-								visual_editor::box_edit box_edit(aabb, t);
+								visual_editor::box_edit box_edit(aabb, transform->get_transform());
 								box_edit.resize(visual_editor::edit_level::transform);
 								box_edit.drag(visual_editor::edit_level::transform);
 								transform->set_position(box_edit.get_transform().position);
@@ -910,9 +898,10 @@ private:
 							{
 								if (ImGui::IsItemClicked())
 									mContext.set_selection(obj);
+								visual_editor::push_transform(transform->get_transform());
 								visual_editor::draw_rect(aabb, { 1, 1, 1, 1 });
+								visual_editor::pop_transform();
 							}
-							visual_editor::pop_transform();
 						}
 					}
 				}
