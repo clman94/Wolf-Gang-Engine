@@ -1,7 +1,8 @@
 #pragma once
 
+#include <wge/util/signal.hpp>
+
 #include "command.hpp"
-#include "signal.hpp"
 
 #include <memory>
 #include <deque>

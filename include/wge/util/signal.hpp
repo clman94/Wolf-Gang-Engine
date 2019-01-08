@@ -176,6 +176,11 @@ public:
 		}
 	}
 
+	bool has_connections() const noexcept
+	{
+		return !mConnections.empty()
+	}
+
 private:
 	// Mutable to allow dead connections to be deleted
 	mutable std::vector<typename body_type::ptr> mConnections;

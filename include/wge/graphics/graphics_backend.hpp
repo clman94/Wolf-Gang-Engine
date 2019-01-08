@@ -4,6 +4,7 @@
 #include <wge/graphics/texture.hpp>
 #include <wge/graphics/framebuffer.hpp>
 #include <wge/math/matrix.hpp>
+#include <wge/util/signal.hpp>
 
 #include <memory>
 
@@ -32,6 +33,8 @@ public:
 	virtual int get_display_width() = 0;
 	virtual int get_display_height() = 0;
 	virtual void refresh() = 0;
+
+	util::signal<void()> on_close;
 };
 
 class graphics_backend

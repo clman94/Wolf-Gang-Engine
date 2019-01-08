@@ -22,6 +22,11 @@ bool context::is_asset_modified(const core::asset::ptr& pAsset) const
 	return std::find(mUnsaved_assets.begin(), mUnsaved_assets.end(), pAsset) != mUnsaved_assets.end();
 }
 
+bool context::are_there_modified_assets() const noexcept
+{
+	return !mUnsaved_assets.empty();
+}
+
 void context::save_asset(const core::asset::ptr& pAsset)
 {
 	auto iter = std::find(mUnsaved_assets.begin(), mUnsaved_assets.end(), pAsset);

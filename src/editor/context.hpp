@@ -5,7 +5,7 @@
 #include <wge/core/layer.hpp>
 #include <wge/core/game_object.hpp>
 
-#include "signal.hpp"
+#include <wge/util/signal.hpp>
 
 #include <functional>
 #include <optional>
@@ -28,6 +28,7 @@ public:
 	void add_modified_asset(const core::asset::ptr& pAsset);
 	void mark_selection_as_modified();
 	bool is_asset_modified(const core::asset::ptr& pAsset) const;
+	bool are_there_modified_assets() const noexcept;
 	void save_asset(const core::asset::ptr& pAsset);
 	void save_all_assets();
 	modified_asset_list& get_unsaved_assets() noexcept;

@@ -160,9 +160,9 @@ inline void EndFixedScrollRegion()
 	ImGui::PopStyleVar();
 }
 
-inline bool DragScroll(int pMouseButton, float pLockThrushold = -1)
+inline bool DragScroll(int pMouseButton, float pLockThreshold = -1)
 {
-	if (ImGui::IsMouseDragging(pMouseButton, pLockThrushold))
+	if (ImGui::IsMouseDragging(pMouseButton, pLockThreshold))
 	{
 		ImGui::SetScrollX(ImGui::GetScrollX() - ImGui::GetIO().MouseDelta.x);
 		ImGui::SetScrollY(ImGui::GetScrollY() - ImGui::GetIO().MouseDelta.y);

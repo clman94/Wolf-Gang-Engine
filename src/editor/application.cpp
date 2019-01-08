@@ -157,26 +157,9 @@ public:
 				// Draw grid
 				if (*zoom > 2)
 				{
-					// Horizontal lines
-					ImDrawList* dl = ImGui::GetWindowDrawList();
-					for (float i = 0; i < texture->get_width(); i++)
-					{
-						const float x = image_position.x + i * scale;
-						if (x > ImGui::GetWindowPos().x && x < ImGui::GetWindowPos().x + ImGui::GetWindowWidth())
-							dl->AddLine(ImVec2(x, image_position.y),
-								ImVec2(x, image_position.y + image_size.y),
-								ImGui::GetColorU32(ImVec4(0, 1, 1, 0.2f)));
-					}
-
-					// Vertical lines
-					for (float i = 0; i < texture->get_height(); i++)
-					{
-						const float y = image_position.y + i * scale;
-						if (y > ImGui::GetWindowPos().y && y < ImGui::GetWindowPos().y + ImGui::GetWindowHeight())
-							dl->AddLine(ImVec2(image_position.x, y),
-								ImVec2(image_position.x + image_size.x, y),
-								ImGui::GetColorU32(ImVec4(0, 1, 1, 0.2f)));
-					}
+					ImGui::DrawGridLines(image_position,
+						ImVec2(image_position.x + image_size.x, image_position.y + image_size.y),
+						{ 0, 1, 1, 0.2f }, scale);
 				}
 
 				// Overlap with an invisible button to recieve input
@@ -421,8 +404,9 @@ private:
 					ImGui::MenuItem("New");
 					ImGui::MenuItem("Open");
 					ImGui::Separator();
-					ImGui::MenuItem("Save", "Ctrl+S");
-					ImGui::MenuItem("Save All", "Ctrl+Alt+S");
+					ImGui::MenuItem("Save", "Ctrl+S", false, mContext.are_there_modified_assets());
+					if (ImGui::MenuItem("Save All", "Ctrl+Alt+S", false, mContext.are_there_modified_assets()))
+						mContext.save_all_assets();
 					ImGui::Separator();
 					if (ImGui::BeginMenu("Recent"))
 					{
@@ -849,14 +833,25 @@ private:
 
 		if (ImGui::Begin("Viewport", NULL, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_HorizontalScrollbar))
 		{
+			static bool show_center_point = true;
+			static bool is_grid_enabled = false;
+			static graphics::color grid_color{ 1, 1, 1, 0.7 };
+			static bool show_collision = false;
+
 			if (ImGui::BeginMenuBar())
 			{
 				if (ImGui::BeginMenu("View"))
 				{
-					static bool grid = false;
-					ImGui::Checkbox("Enable Grid", &grid);
-					static graphics::color grid_color;
-					ImGui::ColorEdit4("Grid Color", grid_color.components);
+					ImGui::MenuItem("Object", NULL, false, false);
+					ImGui::Checkbox("Center Point", &show_center_point);
+					ImGui::Separator();
+					ImGui::MenuItem("Grid", NULL, false, false);
+					ImGui::Checkbox("Enable Grid", &is_grid_enabled);
+					ImGui::ColorEdit4("Grid Color", grid_color.components, ImGuiColorEditFlags_NoInputs);
+
+					ImGui::Separator();
+					ImGui::MenuItem("Physics", NULL, false, false);
+					ImGui::Checkbox("Collision", &show_collision);
 					ImGui::EndMenu();
 				}
 				ImGui::EndMenuBar();
@@ -875,7 +870,6 @@ private:
 			ImGui::Button("this thing");
 			ImGui::SetCursorScreenPos(topleft_cursor);
 			
-
 			ImGui::BeginFixedScrollRegion({ width, height }, { scroll_x_max, scroll_y_max });
 
 			ImVec2 cursor = ImGui::GetCursorScreenPos();
@@ -900,7 +894,9 @@ private:
 
 			visual_editor::begin("_SceneEditor", { cursor.x, cursor.y }, mViewport_offset, mViewport_scale);
 			{
-				visual_editor::draw_grid({ 1, 1, 1, 0.7 }, 1);
+				if (is_grid_enabled)
+					visual_editor::draw_grid(grid_color, 1);
+
 				for (auto& layer : mGame_context.get_layer_container())
 				{
 					graphics::renderer* renderer = layer->get_system<graphics::renderer>();
@@ -940,7 +936,7 @@ private:
 						}
 
 						// Draw center point
-						if (is_object_selected)
+						if (is_object_selected && show_center_point)
 						{
 							visual_editor::draw_circle(transform->get_position(), 5, { 1, 1, 1, 0.6f }, 3.f);
 						}
@@ -949,10 +945,7 @@ private:
 			}
 			visual_editor::end();
 
-			ImGui::SameLine();
-			ImGui::Dummy({ math::max(0.f, scroll_x_max - ImGui::GetScrollX()), height });
-			ImGui::Dummy({ width, math::max(0.f, scroll_y_max - ImGui::GetScrollY()) });
-			ImGui::PopStyleVar();
+			ImGui::EndFixedScrollRegion();
 		}
 		ImGui::End();
 	}

@@ -44,7 +44,7 @@ public:
 	}
 
 	// Update and save the assets configuration.
-	// If you use the save in the asset_config object
+	// If you use the save method in the asset_config object
 	// directly, the asset will not have a chance to update
 	// any changed settings.
 	void save() const;
@@ -60,7 +60,7 @@ private:
 };
 
 template <typename Tto, typename Tfrom>
-[[nodiscard]] asset::tptr<Tto> cast_asset(const asset::tptr<Tfrom>& pFrom) noexcept
+[[nodiscard]] inline asset::tptr<Tto> cast_asset(const asset::tptr<Tfrom>& pFrom) noexcept
 {
 	return std::dynamic_pointer_cast<Tto>(pFrom);
 }
