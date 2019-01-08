@@ -314,9 +314,10 @@ public:
 				{
 					std::string temp = std::move(mSelected_animation->name);
 					mSelected_animation->name = make_unique_animation_name(texture, temp);
+					on_change();
 				}
-				ImGui::DragFloat2("Position", mSelected_animation->frame_rect.position.components);
-				ImGui::DragFloat2("Size", mSelected_animation->frame_rect.size.components);
+				ImGui::DragFloat2("Position", mSelected_animation->frame_rect.position.components); check_if_edited();
+				ImGui::DragFloat2("Size", mSelected_animation->frame_rect.size.components); check_if_edited();
 
 				ImGui::PopID();
 			}
@@ -331,6 +332,12 @@ private:
 		return util::create_unique_name(pName,
 			pTexture->get_raw_atlas().begin(), pTexture->get_raw_atlas().end(),
 			[](auto& i) -> const std::string& { return i->name; });
+	}
+
+	void check_if_edited()
+	{
+		if (ImGui::IsItemDeactivated())
+			on_change();
 	}
 
 private:
@@ -404,13 +411,12 @@ private:
 					ImGui::MenuItem("New");
 					ImGui::MenuItem("Open");
 					ImGui::Separator();
-					ImGui::MenuItem("Save", "Ctrl+S", false, mContext.are_there_modified_assets());
+					//ImGui::MenuItem("Save", "Ctrl+S", false, mContext.are_there_modified_assets());
 					if (ImGui::MenuItem("Save All", "Ctrl+Alt+S", false, mContext.are_there_modified_assets()))
 						mContext.save_all_assets();
 					ImGui::Separator();
 					if (ImGui::BeginMenu("Recent"))
 					{
-						ImGui::MenuItem("thing1");
 						ImGui::EndMenu();
 					}
 					ImGui::Separator();
@@ -593,13 +599,6 @@ private:
 		mAsset_manager.set_root_directory(".");
 		mAsset_manager.load_assets();
 		
-		// Create test asset
-		/*core::asset::ptr asset = mAsset_manager.create_configuration_asset("scene", "myscene.wgescene");
-		json myconfig;
-		myconfig["test"] = 234;
-		asset->get_config()->set_metadata(myconfig);
-		asset->get_config()->save();*/
-
 		auto layer = mGame_context.create_layer();
 		layer->set_name("Layer1");
 		layer->add_system<graphics::renderer>();

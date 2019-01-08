@@ -42,22 +42,22 @@ public:
 		return mLayers[pInsert];
 	}
 
-	const layer_container& get_layer_container() const
+	const layer_container& get_layer_container() const noexcept
 	{
 		return mLayers;
 	}
 
-	instance_id_t get_unique_instance_id()
+	instance_id_t get_unique_instance_id() noexcept
 	{
 		return ++mCurrent_instance_id;
 	}
 
-	void set_asset_manager(asset_manager* pAsset_manager)
+	void set_asset_manager(asset_manager* pAsset_manager) noexcept
 	{
 		mAsset_manager = pAsset_manager;
 	}
 
-	asset_manager* get_asset_manager() const
+	asset_manager* get_asset_manager() const noexcept
 	{
 		return mAsset_manager;
 	}
