@@ -38,6 +38,8 @@ public:
 	void set_angular_velocity(math::radians pRads);
 	math::radians get_angular_velocity() const;
 
+	void add_force(const math::vec2& pVec) const;
+
 	b2Fixture* create_fixture(const b2FixtureDef& pDef);
 
 protected:

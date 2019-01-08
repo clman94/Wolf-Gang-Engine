@@ -90,6 +90,9 @@ public:
 	atlas_container& get_raw_atlas() noexcept;
 	const atlas_container& get_raw_atlas() const noexcept;
 
+protected:
+	virtual void on_before_save_config() const;
+
 private:
 	// Update the configuration with the current atlas
 	void update_metadata() const;

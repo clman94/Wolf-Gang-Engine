@@ -23,7 +23,7 @@ public:
 	virtual ~asset() {}
 
 	// This path will be used to locate this asset
-	const filesystem::path& get_path() const;
+	const filesystem::path& get_path() const noexcept;
 	void set_path(const filesystem::path& pPath);
 
 	asset_uid get_id() const;
@@ -43,7 +43,16 @@ public:
 		return true;
 	}
 
-	asset_config::ptr get_config() const;
+	// Update and save the assets configuration.
+	// If you use the save in the asset_config object
+	// directly, the asset will not have a chance to update
+	// any changed settings.
+	void save() const;
+
+	asset_config::ptr get_config() const noexcept;
+
+protected:
+	virtual void on_before_save_config() const {}
 
 private:
 	filesystem::path mPath;

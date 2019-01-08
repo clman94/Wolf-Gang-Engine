@@ -4,6 +4,7 @@
 #include <cmath>
 #include <type_traits>
 #include <string>
+#include <limits>
 
 namespace wge::math
 {
@@ -79,6 +80,14 @@ template <typename T>
 inline constexpr const T& clamp(const T& pVal, const T& pMin, const T& pMax) noexcept
 {
 	return min(max(pVal, pMin), pMax);
+}
+
+template <typename T, typename = std::enable_if_t<std::numeric_limits<T>::is_specialized>>
+inline constexpr T almost_equal(const T& pL, const T& pR) noexcept
+{
+	T dif = pL - pR;
+	return dif > -std::numeric_limits<T>::epsilon()
+		&& dif < std::numeric_limits<T>::epsilon();
 }
 
 // Template for normalizing a value.

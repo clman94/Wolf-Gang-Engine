@@ -158,12 +158,8 @@ const math::transform& get_transform() noexcept
 	return gCurrent_editor_state->transform.get();
 }
 
-// This is affected by the transformation stack
-math::vec2 get_mouse_delta()
+math::vec2 snap_behavior(const math::vec2& pDelta)
 {
-	assert(gCurrent_editor_state);
-	math::vec2 delta = math::vec2(ImGui::GetIO().MouseDelta.x, ImGui::GetIO().MouseDelta.y);
-	delta = get_transform().apply_inverse_to(delta / gCurrent_editor_state->scale, math::transform_mask::position);
 	if (gCurrent_editor_state->is_snap_enabled)
 	{
 		// Start at 0
@@ -171,14 +167,25 @@ math::vec2 get_mouse_delta()
 			gCurrent_editor_state->delta_accum = math::vec2(0, 0);
 
 		// Accumulate the delta...
-		gCurrent_editor_state->delta_accum += delta;
-		delta = gCurrent_editor_state->snap_closest(gCurrent_editor_state->delta_accum);
+		gCurrent_editor_state->delta_accum += pDelta;
+		math::vec2 result = gCurrent_editor_state->snap_closest(gCurrent_editor_state->delta_accum);
 
 		// ...until it snaps!
-		if (delta != math::vec2(0, 0))
-			gCurrent_editor_state->delta_accum -= delta;
+		if (!result.is_zero())
+			gCurrent_editor_state->delta_accum -= result;
+
+		return result;
 	}
-	return delta;
+	else
+		return pDelta;
+}
+
+// This is affected by the transformation stack
+math::vec2 get_mouse_delta()
+{
+	assert(gCurrent_editor_state);
+	const math::vec2 delta = math::vec2(ImGui::GetIO().MouseDelta.x, ImGui::GetIO().MouseDelta.y);
+	return get_transform().apply_inverse_to(delta / gCurrent_editor_state->scale, math::transform_mask::position);
 }
 
 void draw_circle(const math::vec2& pCenter, float pRadius, const graphics::color& pColor, float pThickness, bool pScale_radius = false)
@@ -264,7 +271,7 @@ bool drag_behavior(ImGuiID pID, bool pHovered, float* pX, float* pY)
 	bool dragging = drag_behavior(pID, pHovered);
 	if (dragging)
 	{
-		math::vec2 delta = get_mouse_delta();
+		math::vec2 delta = snap_behavior(get_mouse_delta());
 		if (pX)
 			*pX += delta.x;
 		if (pY)
@@ -415,11 +422,12 @@ public:
 				mTransform.position += visual_editor::get_transform().apply_to(position_delta, math::transform_mask::position);
 				mTransform.scale *= scale;
 			}
+			mIs_dragging = true;
 		}
 
 		pop_transform();
 
-		return false;
+		return mIs_dragging;
 	}
 
 	bool drag(edit_type pType)
@@ -433,11 +441,12 @@ public:
 				mRect.position += delta;
 			else if (pType == edit_type::transform)
 				mTransform.position += mTransform.apply_to(delta, math::transform_mask::position);
+			mIs_dragging = true;
 		}
 
 		pop_transform();
 
-		return false;
+		return mIs_dragging;
 	}
 
 	const math::rect& get_rect() const noexcept
@@ -450,9 +459,15 @@ public:
 		return mTransform;
 	}
 
+	bool is_dragging() const noexcept
+	{
+		return mIs_dragging;
+	}
+
 private:
 	math::rect mRect;
 	math::transform mTransform;
+	bool mIs_dragging{ false };
 };
 
 } // namespace wge::editor::visual_editor

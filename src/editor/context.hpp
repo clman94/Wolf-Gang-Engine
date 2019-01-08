@@ -1,15 +1,14 @@
 #pragma once
 
-#include <functional>
-
 #include <wge/logging/log.hpp>
 #include <wge/core/asset.hpp>
 #include <wge/core/layer.hpp>
 #include <wge/core/game_object.hpp>
-#include "signal.hpp"
-#include <optional>
 
-#include "asset_document.hpp"
+#include "signal.hpp"
+
+#include <functional>
+#include <optional>
 
 namespace wge::editor
 {
@@ -24,39 +23,14 @@ enum class selection_type
 class context
 {
 public:
-	void add_modified_asset(const core::asset::ptr& pAsset)
-	{
-		if (!pAsset)
-			return;
-		if (std::find(mUnsaved_assets.begin(), mUnsaved_assets.end(), pAsset) == mUnsaved_assets.end())
-			mUnsaved_assets.push_back(pAsset);
-	}
+	using modified_asset_list = std::vector<core::asset::ptr>;
 
-	bool is_asset_modified(const core::asset::ptr& pAsset) const
-	{
-		return std::find(mUnsaved_assets.begin(), mUnsaved_assets.end(), pAsset) != mUnsaved_assets.end();
-	}
-
-	void save_asset(const core::asset::ptr& pAsset)
-	{
-		auto iter = std::find(mUnsaved_assets.begin(), mUnsaved_assets.end(), pAsset);
-		if (iter == mUnsaved_assets.end())
-			return;
-		(*iter)->get_config()->save();
-		mUnsaved_assets.erase(iter);
-	}
-
-	void save_all_assets()
-	{
-		for (auto& i : mUnsaved_assets)
-			i->get_config()->save();
-		mUnsaved_assets.clear();
-	}
-
-	auto& get_unsaved_assets() noexcept
-	{
-		return mUnsaved_assets;
-	}
+	void add_modified_asset(const core::asset::ptr& pAsset);
+	void mark_selection_as_modified();
+	bool is_asset_modified(const core::asset::ptr& pAsset) const;
+	void save_asset(const core::asset::ptr& pAsset);
+	void save_all_assets();
+	modified_asset_list& get_unsaved_assets() noexcept;
 
 	template<selection_type Ttype>
 	auto get_selection() const noexcept
@@ -70,21 +44,21 @@ public:
 	}
 
 	// Set the currently selected asset
-	void set_selection(core::asset::ptr pAsset)
+	void set_selection(const core::asset::ptr& pAsset)
 	{
 		reset_selection();
 		mAsset_selection = pAsset;
 		on_new_selection();
 	}
 	// Set the currently selected layer
-	void set_selection(core::layer::ptr pLayer)
+	void set_selection(const core::layer::ptr& pLayer)
 	{
 		reset_selection();
 		mLayer_selection = pLayer;
 		on_new_selection();
 	}
 	// Set the currently selected object
-	void set_selection(core::game_object pObject)
+	void set_selection(const core::game_object& pObject)
 	{
 		reset_selection();
 		mObject_selection = pObject;
@@ -106,7 +80,7 @@ private:
 	core::layer::wptr mLayer_selection;
 	std::optional<core::game_object> mObject_selection;
 
-	std::vector<core::asset::ptr> mUnsaved_assets;
+	modified_asset_list mUnsaved_assets;
 };
 
 } // namespace wge::editor

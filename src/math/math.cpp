@@ -92,6 +92,11 @@ vec2 & vec2::swap_xy() noexcept
 	return *this;
 }
 
+bool vec2::is_zero() const noexcept
+{
+	return almost_equal(x, 0.f) && almost_equal(y, 0.f);
+}
+
 vec2 vec2::operator + (const vec2& pR) const noexcept
 {
 	return { x + pR.x, y + pR.y };
@@ -178,7 +183,7 @@ vec2& vec2::operator /= (const float& pR) noexcept
 
 bool vec2::operator==(const vec2 & pR) const noexcept
 {
-	return x == pR.x && y == pR.y;
+	return almost_equal(x, pR.x) && almost_equal(y, pR.y);
 }
 
 bool vec2::operator!=(const vec2 & pR) const noexcept

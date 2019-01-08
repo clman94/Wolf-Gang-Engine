@@ -50,6 +50,8 @@ public:
 
 	vec2& swap_xy() noexcept;
 
+	bool is_zero() const noexcept;
+
 	// Vector operations
 	vec2 operator + (const vec2& pR) const noexcept;
 	vec2 operator - (const vec2& pR) const noexcept;

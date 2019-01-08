@@ -111,8 +111,7 @@ public:
 		// Tell the context that the asset was modified
 		on_change.connect([this]()
 		{
-			if (auto selection = mContext->get_selection<selection_type::asset>())
-				mContext->add_modified_asset(selection);
+			mContext->mark_selection_as_modified();
 		});
 	}
 
@@ -202,6 +201,12 @@ public:
 					box_edit.drag(visual_editor::edit_type::rect);
 					mSelected_animation->frame_rect = box_edit.get_rect();
 
+					// Limit the minimum size to +1 pixel so the user isn't using 0 or negitive numbers
+					mSelected_animation->frame_rect.size = math::max(mSelected_animation->frame_rect.size, math::vec2(1, 1));
+
+					if (box_edit.is_dragging() && ImGui::IsMouseReleased(0))
+						on_change();
+
 					visual_editor::end_snap();
 				}
 
@@ -253,11 +258,22 @@ public:
 
 	void on_inspector_gui()
 	{
+		const auto open_sprite_editor = []()
+		{
+			ImGui::Begin("Sprite Editor");
+			ImGui::SetWindowFocus();
+			ImGui::End();
+		};
+
 		auto selection = mContext->get_selection<selection_type::asset>();
 		auto texture = core::cast_asset<graphics::texture>(selection);
 
 		if (ImGui::CollapsingHeader("Atlas", ImGuiTreeNodeFlags_DefaultOpen))
 		{
+			if (ImGui::Button("Open Sprite Editor", { -1, 0 }))
+				open_sprite_editor();
+
+			// Atlas list
 			ImGui::BeginChild("_AtlasList", { 0, 200 }, true);
 			ImGui::Columns(2, "_Previews", false);
 			ImGui::SetColumnWidth(0, 50);
@@ -266,17 +282,20 @@ public:
 				if (ImGui::Selectable(("###" + i->name).c_str(), mSelected_animation == i, ImGuiSelectableFlags_SpanAllColumns, { 0, 50 }))
 					mSelected_animation = i;
 				if (ImGui::IsItemActive() && ImGui::IsMouseDoubleClicked(0))
-				{
-					ImGui::Begin("Sprite Editor");
-					ImGui::SetWindowFocus();
-					ImGui::End();
-				}
+					open_sprite_editor();
 				ImGui::SameLine();
-				math::aabb aabb{ i->frame_rect.position, i->frame_rect.position + i->frame_rect.size };
+
+				math::aabb aabb{ i->frame_rect };
+
+				// Convert to UV coord
 				aabb.min /= texture->get_width();
 				aabb.max /= texture->get_height();
+
+				// Draw preview image
 				ImGui::Image(texture, { 50, 50 }, { aabb.min.x, aabb.min.y }, { aabb.max.x, aabb.max.y });
 				ImGui::NextColumn();
+
+				// Entry name
 				ImGui::Text(i->name.c_str());
 				ImGui::NextColumn();
 			}
@@ -302,6 +321,11 @@ public:
 			{
 				ImGui::PushID("_AnimationSettings");
 
+				ImGui::Image(texture, { 100, 100 });
+				ImGui::Button("Play");
+				static int a = 0;
+				ImGui::SliderInt("Frame", &a, 0, mSelected_animation->frames);
+				
 				ImGui::InputText("Name", &mSelected_animation->name);
 				if (ImGui::IsItemDeactivatedAfterEdit())
 				{
@@ -310,14 +334,6 @@ public:
 				}
 				ImGui::DragFloat2("Position", mSelected_animation->frame_rect.position.components);
 				ImGui::DragFloat2("Size", mSelected_animation->frame_rect.size.components);
-
-				if (ImGui::CollapsingHeader("Preview", ImGuiTreeNodeFlags_DefaultOpen))
-				{
-					ImGui::Image(texture, { 100, 100 });
-					ImGui::Button("Play");
-					static int a = 0;
-					ImGui::SliderInt("Frame", &a, 0, mSelected_animation->frames);
-				}
 
 				ImGui::PopID();
 			}
@@ -348,12 +364,12 @@ public:
 	virtual void on_update(float pDelta, core::game_object pObject) override
 	{
 		auto& pLayer = pObject.get_layer();
-		auto transform = pObject.get_component<core::transform_component>();
-		transform->set_position(transform->get_position() + math::vec2(0.1f, 0) * pDelta);
+		//auto transform = pObject.get_component<core::transform_component>();
+		//transform->set_position(transform->get_position() + math::vec2(0.1f, 0) * pDelta);
 
 		if (auto physics = pObject.get_component<physics::physics_component>())
 		{
-			
+			physics->add_force(math::vec2(0.1f, 0));
 		}
 	}
 };
@@ -396,6 +412,33 @@ private:
 
 			new_frame();
 			main_viewport_dock();
+
+			if (ImGui::BeginMainMenuBar())
+			{
+				ImGui::TextColored({ 0.5, 0.5, 0.5, 1 }, "WGE");
+				if (ImGui::BeginMenu("Project"))
+				{
+					ImGui::MenuItem("New");
+					ImGui::MenuItem("Open");
+					ImGui::Separator();
+					ImGui::MenuItem("Save", "Ctrl+S");
+					ImGui::MenuItem("Save All", "Ctrl+Alt+S");
+					ImGui::Separator();
+					if (ImGui::BeginMenu("Recent"))
+					{
+						ImGui::MenuItem("thing1");
+						ImGui::EndMenu();
+					}
+					ImGui::Separator();
+					ImGui::MenuItem("Exit", "Alt+F4");
+					ImGui::EndMenu();
+				}
+				if (ImGui::BeginMenu("Windows"))
+				{
+					ImGui::EndMenu();
+				}
+				ImGui::EndMainMenuBar();
+			}
 
 			show_settings();
 			show_asset_manager();
@@ -507,7 +550,7 @@ private:
 		colors[ImGuiCol_Header] = ImVec4(0.30f, 0.30f, 0.30f, 1.00f);
 		colors[ImGuiCol_HeaderHovered] = ImVec4(0.54f, 0.54f, 0.54f, 0.78f);
 		colors[ImGuiCol_HeaderActive] = ImVec4(0.76f, 0.76f, 0.76f, 1.00f);
-		colors[ImGuiCol_Separator] = ImVec4(0.00f, 0.00f, 0.00f, 0.50f);
+		colors[ImGuiCol_Separator] = ImVec4(0.431f, 0.431f, 0.431f, 0.500f);
 		colors[ImGuiCol_SeparatorHovered] = ImVec4(0.54f, 0.54f, 0.54f, 0.78f);
 		colors[ImGuiCol_SeparatorActive] = ImVec4(0.76f, 0.76f, 0.76f, 1.00f);
 		colors[ImGuiCol_ResizeGrip] = ImVec4(0.26f, 0.59f, 0.98f, 0.25f);

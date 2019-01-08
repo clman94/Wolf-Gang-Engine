@@ -104,6 +104,12 @@ math::radians physics_component::get_angular_velocity() const
 	return mBody->GetAngularVelocity();
 }
 
+void physics_component::add_force(const math::vec2 & pVec) const
+{
+	if (mBody)
+		mBody->ApplyForceToCenter({ pVec.x, pVec.y }, true);
+}
+
 b2Fixture* physics_component::create_fixture(const b2FixtureDef & pDef)
 {
 	assert(mBody);

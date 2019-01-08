@@ -140,6 +140,11 @@ const texture::atlas_container& texture::get_raw_atlas() const noexcept
 	return mAtlas;
 }
 
+void texture::on_before_save_config() const
+{
+	update_metadata();
+}
+
 void texture::update_metadata() const
 {
 	json result;
