@@ -162,7 +162,7 @@ void texture::load_metadata()
 		for (const json& i : atlas)
 			mAtlas.push_back(std::make_shared<animation>(i));
 	}
-	if (!get_animation("default"))
+	if (!get_animation("Default"))
 	{
 		auto def_animation = std::make_shared<animation>();
 		def_animation->name = "Default";

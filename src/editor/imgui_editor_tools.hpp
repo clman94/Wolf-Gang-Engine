@@ -298,7 +298,10 @@ bool drag_circle(const char* pStr_id, math::vec2 pPos, math::vec2* pDelta, float
 	const bool hovered = gCurrent_editor_state->mouse_position.distance(gCurrent_editor_state->calc_absolute(pPos)) <= pRadius;
 	const bool dragging = drag_behavior(id, hovered, pDelta);
 
-	draw_circle(pPos, pRadius, { 1, 1, 0, 0.5f });
+	if (hovered || dragging)
+		draw_circle(pPos, pRadius, { 1, 1, 1, 0.8f }, 3.f);
+	else
+		draw_circle(pPos, pRadius, { 1, 1, 0, 0.8f });
 
 	return dragging;
 }
