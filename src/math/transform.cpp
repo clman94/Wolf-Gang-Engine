@@ -29,7 +29,7 @@ bool transform::is_identity() const noexcept
 		&& shear == math::vec2(0, 0);
 }
 
-math::vec2 transform::apply_to(const math::vec2 & pVec, const transform_mask & pMask) const noexcept
+math::vec2 transform::apply_to(const math::vec2& pVec, const transform_mask& pMask) const noexcept
 {
 	math::vec2 result{ pVec };
 	if (!(pMask & transform_mask::shear))
@@ -43,17 +43,17 @@ math::vec2 transform::apply_to(const math::vec2 & pVec, const transform_mask & p
 	return result;
 }
 
-transform transform::apply_to(const transform & pTransform) const noexcept
+transform transform::apply_to(const transform& pTransform) const noexcept
 {
 	transform result;
-	result.rotation = pTransform.rotation + rotation;
 	result.position = apply_to(pTransform.position);
+	result.rotation = pTransform.rotation + rotation;
 	result.scale = pTransform.scale * scale;
 	result.shear = pTransform.shear + shear;
 	return result;
 }
 
-math::vec2 transform::apply_inverse_to(const math::vec2 & pVec, const transform_mask & pMask) const noexcept
+math::vec2 transform::apply_inverse_to(const math::vec2& pVec, const transform_mask& pMask) const noexcept
 {
 	math::vec2 result{ pVec };
 	if (!(pMask & transform_mask::position))
@@ -102,7 +102,7 @@ std::string transform::to_string() const
 // represent the inverted order of the operations.
 // It is recommended that you use the apply_inverse_to method instead
 // in most cases.
-math::mat33 inverse(const transform & pTransform) noexcept
+math::mat33 inverse(const transform& pTransform) noexcept
 {
 	math::mat33 result(1);
 	result

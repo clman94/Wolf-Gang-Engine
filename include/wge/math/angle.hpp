@@ -37,7 +37,7 @@ public:
 	radians& operator /= (const radians& pRadians) noexcept;
 
 	// Comparasons
-	bool operator == (const radians& pDegrees) const noexcept;
+	bool operator == (const radians& pRadians) const noexcept;
 	bool operator != (const radians& pRadians) const noexcept;
 	bool operator >= (const radians& pRadians) const noexcept;
 	bool operator <= (const radians& pRadians) const noexcept;

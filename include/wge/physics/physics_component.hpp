@@ -37,8 +37,9 @@ public:
 
 	void set_angular_velocity(math::radians pRads);
 	math::radians get_angular_velocity() const;
-
-	void add_force(const math::vec2& pVec) const;
+	
+	void apply_force(const math::vec2& pForce, const math::vec2& pPoint) const;
+	void apply_force(const math::vec2& pForce) const;
 
 	b2Fixture* create_fixture(const b2FixtureDef& pDef);
 

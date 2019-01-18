@@ -28,7 +28,7 @@ public:
 	math::vec2 position;
 	math::radians rotation;
 	math::vec2 scale{ 1, 1 };
-	math::vec2 shear{ 0, 0 };
+	math::vec2 shear;
 
 	math::mat33 get_matrix() const noexcept;
 	math::mat33 get_inverse_matrix() const noexcept;

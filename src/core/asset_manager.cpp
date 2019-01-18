@@ -7,6 +7,52 @@
 namespace wge::core
 {
 
+// Iterates through all the files in the directory and returns a list of
+// paths to the files.
+inline std::vector<filesystem::path> get_absolute_path_list(const filesystem::path & pPath)
+{
+	std::vector<filesystem::path> result;
+	for (const auto& i : system_fs::recursive_directory_iterator(pPath.to_system_path()))
+		if (!system_fs::is_directory(i.path()))
+			result.emplace_back(system_fs::absolute(i.path()));
+	return result;
+}
+
+// Convert a resource filepath into a wgemetadata filepath
+inline filesystem::path make_metadata_config_path(const filesystem::path & pPath)
+{
+	filesystem::path config_path(pPath);
+	config_path.pop_filepath();
+	config_path /= pPath.filename() + ".wgemetadata";
+	return config_path;
+}
+
+// Create metadata configuration from a resource
+inline core::asset_config::ptr create_metadata_config(const std::string & pType, const filesystem::path & pPath)
+{
+	core::asset_config::ptr config = std::make_shared<core::asset_config>();
+	config->set_type(pType);
+
+	config->set_path(make_metadata_config_path(pPath));
+	config->generate_id();
+	config->save();
+
+	return config;
+}
+
+// Load a config/metadata file
+inline asset_config::ptr load_asset_config(const filesystem::path & pPath)
+{
+	asset_config::ptr config = std::make_shared<asset_config>();
+	config->set_path(pPath);
+
+	// Parse configuration file
+	std::ifstream stream(pPath.string().c_str());
+	std::string config_str(std::istreambuf_iterator<char>(stream), {});
+	config->deserialize(json::parse(config_str));
+	return config;
+}
+
 void asset_manager::set_filesystem(filesystem::filesystem_interface * pFilesystem)
 {
 	mFilesystem = pFilesystem;
@@ -17,16 +63,14 @@ void asset_manager::register_asset(const std::string& pType, const asset_factory
 	mAsset_factories[pType] = pFactory;
 }
 
-void asset_manager::add_asset(asset::ptr pAsset)
+void asset_manager::add_asset(const asset::ptr& pAsset)
 {
 	assert(pAsset);
-	for (const auto& i : mAsset_list)
-		if (i->get_id() == pAsset->get_id())
-			return; // Already exists
-	mAsset_list.push_back(pAsset);
+	if (!has_asset(pAsset))
+		mAsset_list.push_back(pAsset);
 }
 
-asset::ptr asset_manager::find_asset(const filesystem::path & pPath) const
+asset::ptr asset_manager::find_asset(const filesystem::path& pPath) const noexcept
 {
 	for (const auto& i : mAsset_list)
 		if (i->get_path() == pPath)
@@ -34,12 +78,28 @@ asset::ptr asset_manager::find_asset(const filesystem::path & pPath) const
 	return{};
 }
 
-asset::ptr asset_manager::find_asset(asset_uid pUID) const
+asset::ptr asset_manager::find_asset(asset_uid pUID) const noexcept
 {
 	for (const auto& i : mAsset_list)
 		if (i->get_id() == pUID)
 			return i;
 	return{};
+}
+
+bool asset_manager::has_asset(asset_uid pUID) const noexcept
+{
+	for (auto& i : mAsset_list)
+		if (i->get_id() == pUID)
+			return true;
+	return false;
+}
+
+bool asset_manager::has_asset(const asset::ptr& pAsset) const noexcept
+{
+	for (auto& i : mAsset_list)
+		if (pAsset == i)
+			return true;
+	return false;
 }
 
 void asset_manager::register_config_extension(const std::string& pType, const std::string& pExtension)
@@ -109,52 +169,12 @@ asset::ptr asset_manager::create_configuration_asset(const std::string & pType, 
 	return nasset;
 }
 
-std::vector<filesystem::path> asset_manager::get_absolute_path_list(const filesystem::path & pPath)
-{
-	std::vector<filesystem::path> result;
-	for (const auto& i : system_fs::recursive_directory_iterator(pPath.to_system_path()))
-		if (!system_fs::is_directory(i.path()))
-			result.emplace_back(system_fs::absolute(i.path()));
-	return result;
-}
-
-filesystem::path asset_manager::make_metadata_config_path(const filesystem::path & pPath)
-{
-	filesystem::path config_path(pPath);
-	config_path.pop_filepath();
-	config_path /= pPath.filename() + ".wgemetadata";
-	return config_path;
-}
 
 filesystem::path asset_manager::make_relative_to_root(const filesystem::path & pPath) const
 {
 	filesystem::path path = pPath;
 	path.erase(path.begin(), path.begin() + mRoot_dir.size());
 	return path;
-}
-
-core::asset_config::ptr asset_manager::create_metadata_config(const std::string & pType, const filesystem::path & pPath)
-{
-	core::asset_config::ptr config = std::make_shared<core::asset_config>();
-	config->set_type(pType);
-
-	config->set_path(make_metadata_config_path(pPath));
-	config->generate_id();
-	config->save();
-
-	return config;
-}
-
-asset_config::ptr asset_manager::load_asset_config(const filesystem::path & pPath)
-{
-	asset_config::ptr config = std::make_shared<asset_config>();
-	config->set_path(pPath);
-
-	// Parse configuration file
-	std::ifstream stream(pPath.string().c_str());
-	std::string config_str(std::istreambuf_iterator<char>(stream), {});
-	config->deserialize(json::parse(config_str));
-	return config;
 }
 
 void asset_manager::load_configuration_asset(const filesystem::path & pPath, const std::string & pType)

@@ -26,14 +26,17 @@ public:
 	void register_asset(const std::string& pType, const asset_factory& pFactory);
 
 	// Manually add an asset
-	void add_asset(asset::ptr pAsset);
+	void add_asset(const asset::ptr& pAsset);
 
 	// Find an asset by its relative path.
 	// Returns empty if it is not found.
-	asset::ptr find_asset(const filesystem::path& pPath) const;
+	asset::ptr find_asset(const filesystem::path& pPath) const noexcept;
 	// Find an asset by its uid.
 	// Returns empty when it it not found.
-	asset::ptr find_asset(asset_uid pUID) const;
+	asset::ptr find_asset(asset_uid pUID) const noexcept;
+
+	bool has_asset(asset_uid pUID) const noexcept;
+	bool has_asset(const asset::ptr& pAsset) const noexcept;
 
 	// Find an asset by its relative path.
 	// Returns empty if it is not found.
@@ -52,7 +55,9 @@ public:
 		return cast_asset<T>(find_asset(pUID));
 	}
 
+	// Register a new configuration asset
 	void register_config_extension(const std::string& pType, const std::string& pExtension);
+	// Register a new resource asset
 	void register_resource_extension(const std::string& pType, const std::string& pExtension);
 
 	// Set the root directory to find all assets.
@@ -69,24 +74,10 @@ public:
 	asset::ptr create_configuration_asset(const std::string& pType, const filesystem::path& pPath);
 
 private:
-	// Iterates through all the files in the directory and returns a list of
-	// paths to the files.
-	static std::vector<filesystem::path> get_absolute_path_list(const filesystem::path& pPath);
-
-	// Turn a resource filepath into a wgemetadata filepath
-	static filesystem::path make_metadata_config_path(const filesystem::path& pPath);
-
 	// Turn an absolute path into a relative path to the root directory
 	filesystem::path make_relative_to_root(const filesystem::path& pPath) const;
 
-	// Create a metadata config from a resource
-	static core::asset_config::ptr create_metadata_config(const std::string& pType, const filesystem::path& pPath);
-
-	// Load a config/metadata file
-	static asset_config::ptr load_asset_config(const filesystem::path& pPath);
-
 	void load_configuration_asset(const filesystem::path& pPath, const std::string& pType);
-
 	void load_resource_asset(const filesystem::path& pPath, const std::string& pType);
 
 private:
@@ -99,7 +90,7 @@ private:
 };
 
 template<typename T>
-inline void asset_manager::register_asset(const std::string & pType)
+inline void asset_manager::register_asset(const std::string& pType)
 {
 	mAsset_factories[pType] =
 		[](const filesystem::path& pPath, asset_config::ptr pConfig) -> asset::ptr

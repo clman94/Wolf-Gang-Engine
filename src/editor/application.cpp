@@ -38,12 +38,6 @@
 namespace wge::editor
 {
 
-class object_editor :
-	public editor
-{
-
-};
-
 // Creates an imgui dockspace in the main window
 inline void main_viewport_dock()
 {
@@ -168,7 +162,7 @@ public:
 
 				visual_editor::begin("_SomeEditor", { image_position.x, image_position.y }, { 0, 0 }, { scale, scale });
 
-
+				// Draw the rectangles for the frames
 				for (const auto& i : texture->get_raw_atlas())
 					visual_editor::draw_rect(i->frame_rect, { 0, 1, 1, 0.5f });
 
@@ -179,6 +173,7 @@ public:
 				{
 					visual_editor::begin_snap({ 1, 1 });
 
+					// Edit the selection
 					visual_editor::box_edit box_edit(mSelected_animation->frame_rect);
 					box_edit.resize(visual_editor::edit_type::rect);
 					box_edit.drag(visual_editor::edit_type::rect);
@@ -196,7 +191,7 @@ public:
 				// Select a new one
 				if (!was_dragging && ImGui::IsMouseReleased(0))
 				{
-					// Find all overlapping frames
+					// Find all overlapping frames that the mouse is hovering
 					std::vector<graphics::animation::ptr> mOverlapping;
 					for (const auto& i : texture->get_raw_atlas())
 						if (i->frame_rect.intersects(visual_editor::get_mouse_position()))
@@ -205,6 +200,7 @@ public:
 					if (!mOverlapping.empty())
 					{
 						// Check if the currently selected animation is being selected again
+						// and cycle through the overlapping animations each click.
 						auto iter = std::find(mOverlapping.begin(), mOverlapping.end(), mSelected_animation);
 						if (iter == mOverlapping.end() || iter + 1 == mOverlapping.end())
 							mSelected_animation = mOverlapping.front(); // Start/loop to front
@@ -359,7 +355,7 @@ public:
 
 		if (auto physics = pObject.get_component<physics::physics_component>())
 		{
-			physics->add_force(math::vec2(0.1f, 0));
+			physics->apply_force(math::vec2(0.1f, 0));
 		}
 	}
 };

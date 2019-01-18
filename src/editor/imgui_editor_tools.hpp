@@ -2,8 +2,8 @@
 
 #include <vector>
 #include <map>
-#include <stack>
 
+#include <wge/math/transform_stack.hpp>
 #include <wge/math/rect.hpp>
 #include <wge/math/vector.hpp>
 #include <wge/graphics/color.hpp>
@@ -19,43 +19,6 @@
 namespace wge::editor::visual_editor
 {
 
-class transformation_stack
-{
-public:
-	transformation_stack()
-	{
-		// Start with the identity
-		mStack.push(math::transform{});
-	}
-
-	void push(const math::transform& pMat)
-	{
-		mStack.push(mStack.top() * pMat);
-	}
-
-	void pop()
-	{
-		if (mStack.size() > 1)
-		{
-			mStack.pop();
-		}
-	}
-
-	const math::transform& get() const
-	{
-		return mStack.top();
-	}
-
-	bool is_identity() const noexcept
-	{
-		// First matrix is always the identity
-		return mStack.size() == 1;
-	}
-
-private:
-	std::stack<math::transform> mStack;
-};
-
 struct editor_state
 {
 	math::vec2 cursor_offset; // in pixels. This is for offsetting the graphics themselves to align with your window or position of choice. 
@@ -65,7 +28,7 @@ struct editor_state
 
 	ImGuiID active_dragger_id{ 0 };
 
-	transformation_stack transform;
+	math::transform_stack transform;
 
 	// Snapping
 	math::vec2 delta_accum;
@@ -96,12 +59,12 @@ struct editor_state
 
 	math::vec2 calc_absolute(const math::vec2& pPos) const
 	{
-		return ((transform.get().apply_to(pPos) - offset) * scale) + cursor_offset;
+		return ((transform.apply_to(pPos) - offset) * scale) + cursor_offset;
 	}
 
 	math::vec2 calc_from_absolute(const math::vec2& pPos) const
 	{
-		return transform.get().apply_inverse_to((pPos - cursor_offset) / scale + offset);
+		return transform.apply_inverse_to((pPos - cursor_offset) / scale + offset);
 	}
 };
 
@@ -160,6 +123,7 @@ const math::transform& get_transform() noexcept
 
 math::vec2 snap_behavior(const math::vec2& pDelta)
 {
+	assert(gCurrent_editor_state);
 	if (gCurrent_editor_state->is_snap_enabled)
 	{
 		// Start at 0

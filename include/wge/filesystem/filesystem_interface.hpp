@@ -26,4 +26,4 @@ public:
 	virtual stream::ptr open(const path& pPath) = 0;
 };
 
-}
+} // namespace wge::filesystem

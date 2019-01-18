@@ -1,10 +1,11 @@
 #include <wge/audio/ogg_vorbis_stream.hpp>
 
-#include <iostream>
-
 #include <stb/stb_vorbis.h>
 
-using namespace wge::audio;
+#include <iostream>
+
+namespace wge::audio
+{
 
 ogg_vorbis_stream::ogg_vorbis_stream()
 {
@@ -102,3 +103,5 @@ bool ogg_vorbis_stream::is_valid() const
 {
 	return mVorbis_stream != NULL;
 }
+
+} // namespace wge::audio
