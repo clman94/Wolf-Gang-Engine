@@ -17,68 +17,22 @@ public:
 	using layer_container = std::vector<layer::ptr>;
 
 	// Get a layer to a specific index
-	layer::ptr get_layer(std::size_t pIndex) const
-	{
-		if (pIndex >= mLayers.size())
-			return{};
-		return mLayers[pIndex];
-	}
+	layer::ptr get_layer(std::size_t pIndex) const;
 
-	layer::ptr create_layer()
-	{
-		return mLayers.emplace_back(layer::create(*this));
-	}
+	layer::ptr create_layer();
+	layer::ptr create_layer(const std::string& pName);
+	layer::ptr create_layer(const std::string& pName, std::size_t pInsert);
 
-	layer::ptr create_layer(const std::string& pName)
-	{
-		auto l = create_layer();
-		l->set_name(pName);
-		return l;
-	}
+	const layer_container& get_layer_container() const noexcept;
 
-	layer::ptr create_layer(const std::string& pName, std::size_t pInsert)
-	{
-		mLayers.insert(mLayers.begin() + pInsert, layer::create(*this));
-		return mLayers[pInsert];
-	}
+	instance_id_t get_unique_instance_id() noexcept;
 
-	const layer_container& get_layer_container() const noexcept
-	{
-		return mLayers;
-	}
+	void set_asset_manager(asset_manager* pAsset_manager) noexcept;
+	asset_manager* get_asset_manager() const noexcept;
 
-	instance_id_t get_unique_instance_id() noexcept
-	{
-		return ++mCurrent_instance_id;
-	}
-
-	void set_asset_manager(asset_manager* pAsset_manager) noexcept
-	{
-		mAsset_manager = pAsset_manager;
-	}
-
-	asset_manager* get_asset_manager() const noexcept
-	{
-		return mAsset_manager;
-	}
-
-	void preupdate(float pDelta)
-	{
-		for (auto& i : mLayers)
-			i->preupdate(pDelta);
-	}
-
-	void update(float pDelta)
-	{
-		for (auto& i : mLayers)
-			i->update(pDelta);
-	}
-
-	void postupdate(float pDelta)
-	{
-		for (auto& i : mLayers)
-			i->postupdate(pDelta);
-	}
+	void preupdate(float pDelta);
+	void update(float pDelta);
+	void postupdate(float pDelta);
 
 private:
 	layer_container mLayers;

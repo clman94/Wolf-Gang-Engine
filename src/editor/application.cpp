@@ -128,7 +128,7 @@ public:
 				const ImVec2 last_cursor = ImGui::GetCursorPos();
 				ImGui::BeginGroup();
 
-				const float scale = std::powf(2, (*zoom));
+				const float scale = std::powf(2, *zoom);
 				const ImVec2 image_size((float)texture->get_width() * scale, (float)texture->get_height() * scale);
 
 				// Top and left padding
@@ -217,7 +217,7 @@ public:
 					if (ImGui::GetIO().KeyCtrl && ImGui::GetIO().MouseWheel != 0)
 					{
 						*zoom += ImGui::GetIO().MouseWheel;
-						const float new_scale = std::powf(2, (*zoom));
+						const float new_scale = std::powf(2, *zoom);
 						const float ratio_changed = new_scale / scale;
 						ImGui::SetScrollX(ImGui::GetScrollX() * ratio_changed);
 						ImGui::SetScrollY(ImGui::GetScrollY() * ratio_changed);

@@ -22,6 +22,7 @@ struct object_data
 	std::vector<component_entry> components;
 };
 
+// Organizes object data
 class object_manager
 {
 public:

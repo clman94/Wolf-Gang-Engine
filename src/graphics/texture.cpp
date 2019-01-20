@@ -7,10 +7,10 @@ namespace wge::graphics
 
 animation::animation(const json& pJson)
 {
-	load(pJson);
+	deserialize(pJson);
 }
 
-void animation::load(const json& pJson)
+void animation::deserialize(const json& pJson)
 {
 	name = pJson["name"];
 	frames = pJson["frames"];
@@ -18,17 +18,18 @@ void animation::load(const json& pJson)
 	frame_rect = pJson["frame-rect"];
 }
 
-json animation::save() const
+json animation::serialize() const
 {
 	json result;
 	result["name"] = name;
 	result["frames"] = frames;
 	result["interval"] = interval;
 	result["frame-rect"] = frame_rect;
+	result["id"] = id;
 	return result;
 }
 
-texture::texture(core::asset_config::ptr pConfig) :
+texture::texture(const core::asset_config::ptr& pConfig) :
 	asset(pConfig),
 	mWidth(0),
 	mHeight(0),
@@ -44,9 +45,9 @@ texture::~texture()
 void texture::set_implementation(const texture_impl::ptr& pImpl) noexcept
 {
 	mImpl = pImpl;
-	// Recreate the texture with the new implementation
 	if (mPixels && mImpl)
 	{
+		// Recreate the texture with the new implementation
 		mImpl->create_from_pixels(mPixels, mWidth, mHeight, mChannels);
 		mImpl->set_smooth(mSmooth);
 	}
@@ -149,7 +150,7 @@ void texture::update_metadata() const
 {
 	json result;
 	for (const auto& i : mAtlas)
-		result["atlas"].push_back(i->save());
+		result["atlas"].push_back(i->serialize());
 	get_config()->set_metadata(result);
 }
 

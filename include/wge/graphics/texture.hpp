@@ -33,10 +33,11 @@ public:
 	animation(const json& pJson);
 
 	// Parse json
-	void load(const json& pJson);
-	[[nodiscard]] json save() const;
+	void deserialize(const json& pJson);
+	[[nodiscard]] json serialize() const;
 };
 
+// Interface for the texture implementation.
 class texture_impl
 {
 public:
@@ -54,7 +55,7 @@ public:
 	using atlas_container = std::vector<animation::ptr>;
 	using ptr = tptr<texture>;
 
-	texture(core::asset_config::ptr pConfig);
+	texture(const core::asset_config::ptr& pConfig);
 	virtual ~texture();
 
 	void set_implementation(const texture_impl::ptr& pImpl) noexcept;
