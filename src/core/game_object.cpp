@@ -102,10 +102,15 @@ void game_object::destroy()
 	mData = nullptr;
 }
 
-layer& game_object::get_layer() const
+layer& game_object::get_layer() const noexcept
 {
 	WGE_ASSERT(mData);
 	return mLayer;
+}
+
+context& game_object::get_context() const noexcept
+{
+	return get_layer().get_context();
 }
 
 object_id game_object::get_instance_id() const

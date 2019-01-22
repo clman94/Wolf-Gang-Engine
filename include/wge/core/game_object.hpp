@@ -19,6 +19,7 @@ struct has_component_id_member : std::false_type {};
 template <typename T>
 struct has_component_id_member <T, decltype((void)T::COMPONENT_ID, 0)> : std::true_type {};
 
+class context;
 class layer;
 class component;
 struct object_data;
@@ -78,9 +79,11 @@ public:
 
 	// Get a reference to the layer this object belongs to.
 	// To actually move an object to a new layer, you will need to
-	// reconstruct this object in destination layer and remove in
+	// reconstruct this object in the destination layer and remove it in
 	// the source layer.
-	layer& get_layer() const;
+	layer& get_layer() const noexcept;
+
+	context& get_context() const noexcept;
 
 	// Get the id that uniquely identifies this object
 	object_id get_instance_id() const;
