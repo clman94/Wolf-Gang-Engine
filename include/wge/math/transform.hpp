@@ -8,7 +8,7 @@
 namespace wge::math
 {
 
-enum class transform_mask : unsigned int
+enum class transform_mask : util::flag_type
 {
 	none     = 0,
 	position = 1,

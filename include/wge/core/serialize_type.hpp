@@ -5,7 +5,7 @@
 namespace wge::core
 {
 
-enum class serialize_type : unsigned int
+enum class serialize_type : util::flag_type
 {
 	// Serialize runtime state. State that is created and
 	// changed during runtime (usually by systems).
