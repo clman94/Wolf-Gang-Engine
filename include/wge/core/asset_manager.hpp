@@ -1,7 +1,9 @@
 #pragma once
 
-#include <wge/core/system.hpp>
 #include <wge/core/asset.hpp>
+#include <wge/core/serialize_type.hpp>
+#include <wge/core/serializable.hpp>
+#include <wge/core/system.hpp>
 #include <wge/filesystem/filesystem_interface.hpp>
 
 #include <vector>
@@ -60,6 +62,10 @@ public:
 	// Register a new resource asset
 	void register_resource_extension(const std::string& pType, const std::string& pExtension);
 
+	// Register an asset specifically for serialized data.
+	// This will automatically call register_asset for serialized_asset.
+	void register_serial_config_extension(const std::string& pType, const std::string& pExtension);
+
 	// Set the root directory to find all assets.
 	// Note: This affects the relative path of all assets.
 	void set_root_directory(const filesystem::path& pPath);
@@ -73,6 +79,26 @@ public:
 	// Create a configuration asset
 	asset::ptr create_configuration_asset(const std::string& pType, const filesystem::path& pPath);
 
+
+	serialized_asset::ptr create_serialized_asset(const filesystem::path& pPath, const std::string& pType, const json& pData)
+	{
+		auto config = std::make_shared<asset_config>();
+		config->set_path(mRoot_dir / pPath);
+		config->set_type(pType);
+		config->set_metadata(pData);
+		config->generate_id();
+		config->save();
+
+		serialized_asset::ptr ptr = std::make_shared<serialized_asset>(config);
+		add_asset(ptr);
+		ptr->set_path(pPath);
+		return ptr;
+	}
+
+	//serialized_asset::ptr create_serialized_asset(const filesystem::path& pPath, serializable& pSerializable)
+	//{
+	//}
+
 private:
 	// Turn an absolute path into a relative path to the root directory
 	filesystem::path make_relative_to_root(const filesystem::path& pPath) const;
@@ -81,9 +107,9 @@ private:
 	void load_resource_asset(const filesystem::path& pPath, const std::string& pType);
 
 private:
-	std::map<std::string, asset_factory> mAsset_factories;
+	std::map<std::string, asset_factory> mAsset_factories; // { [asset type], [factory] }
 	std::map<std::string, std::string> mAsset_resource_extensions; // { [extension], [asset type] }
-	std::map<std::string, std::string> mAsset_config_extensions;
+	std::map<std::string, std::string> mAsset_config_extensions; // { [extension], [asset type] }
 	std::vector<asset::ptr> mAsset_list;
 	filesystem::path mRoot_dir;
 	filesystem::filesystem_interface* mFilesystem{ nullptr };

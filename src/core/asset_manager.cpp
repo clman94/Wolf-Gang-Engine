@@ -112,6 +112,12 @@ void asset_manager::register_resource_extension(const std::string& pType, const 
 	mAsset_resource_extensions[pExtension] = pType;
 }
 
+void asset_manager::register_serial_config_extension(const std::string& pType, const std::string & pExtension)
+{
+	register_asset<serialized_asset>(pType);
+	register_config_extension(pType, pExtension);
+}
+
 void asset_manager::set_root_directory(const filesystem::path & pPath)
 {
 	mRoot_dir = system_fs::absolute(pPath);
@@ -155,7 +161,7 @@ const asset_manager::asset_container& asset_manager::get_asset_list() const
 	return mAsset_list;
 }
 
-asset::ptr asset_manager::create_configuration_asset(const std::string & pType, const filesystem::path & pPath)
+asset::ptr asset_manager::create_configuration_asset(const std::string& pType, const filesystem::path& pPath)
 {
 	assert(mAsset_factories.find(pType) != mAsset_factories.end());
 

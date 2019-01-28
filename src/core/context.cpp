@@ -48,6 +48,16 @@ asset_manager* context::get_asset_manager() const noexcept
 	return mAsset_manager;
 }
 
+void context::set_factory(factory* pFactory) noexcept
+{
+	mFactory = pFactory;
+}
+
+factory* context::get_factory() const noexcept
+{
+	return mFactory;
+}
+
 void context::preupdate(float pDelta)
 {
 	for (auto& i : mLayers)

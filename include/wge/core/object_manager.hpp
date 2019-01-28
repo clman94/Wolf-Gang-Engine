@@ -9,17 +9,31 @@
 namespace wge::core
 {
 
-struct object_data
+using object_tracker = std::shared_ptr<bool>;
+
+class object_data
 {
+public:
 	object_data(object_id pId);
+	~object_data();
+
 	std::string name;
 	object_id id;
+
 	struct component_entry
 	{
 		int type;
 		component_id id;
 	};
 	std::vector<component_entry> components;
+	
+	const object_tracker& get_tracker() const noexcept
+	{
+		return mTracker;
+	}
+
+private:
+	object_tracker mTracker;
 };
 
 // Organizes object data

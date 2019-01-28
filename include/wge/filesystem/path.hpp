@@ -99,6 +99,7 @@ public:
 	const_iterator end() const;
 
 	void push_front(const std::string& pStr);
+	void push_back(const std::string& pStr);
 	void erase(iterator pBegin, iterator pEnd);
 
 private:

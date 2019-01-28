@@ -7,8 +7,8 @@
 
 #include <iostream>
 
-using namespace wge;
-using namespace wge::physics;
+namespace wge::physics
+{
 
 box_collider_component::box_collider_component(core::component_id pId) :
 	core::component(pId),
@@ -35,7 +35,7 @@ json box_collider_component::on_serialize(core::serialize_type pType) const
 	return result;
 }
 
-void box_collider_component::on_deserialize(const json & pJson)
+void box_collider_component::on_deserialize(const core::game_object& pObject, const json & pJson)
 {
 	mOffset = pJson["offset"];
 	mSize = pJson["size"];
@@ -122,45 +122,4 @@ void box_collider_component::update_current_shape()
 	}
 }
 
-void box_collider_component::on_physics_update_colliders(physics_component * pComponent)
-{
-	if (!mFixture)
-	{
-		b2FixtureDef fixture_def;
-
-		b2PolygonShape shape;
-		update_shape(&shape);
-		fixture_def.shape = &shape;
-		fixture_def.density = 2;
-		fixture_def.isSensor = mIs_sensor;
-		//fixture_def.userData = get_object();
-
-		mFixture = pComponent->create_fixture(fixture_def);
-
-		//log::debug() << WGE_LI << get_object()->get_name() << ": Collider Updated" << log::endm;
-	}
-}
-
-void box_collider_component::on_physics_reset()
-{
-	// Clear everything.
-	// Fixture is expected to be cleaned up my the body or world.
-	mFixture = nullptr;
-}
-
-void box_collider_component::on_parent_removed()
-{
-	//log::debug() << WGE_LI << get_object()->get_name() << ": Box collider responding to removed parent" << log::endm;
-
-	if (mFixture)
-	{
-		mFixture->GetBody()->DestroyFixture(mFixture);
-		//log::debug() << WGE_LI << get_object()->get_name() << ": Removed Fixture" << log::endm;
-	}
-	mFixture = nullptr;
-}
-
-void box_collider_component::on_transform_changed()
-{
-	update_current_shape();
-}
+} // namespace wge::physics

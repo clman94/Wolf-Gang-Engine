@@ -71,7 +71,6 @@ public:
 		return iter->second.get();
 	}
 
-
 	// Remove all components for this entity
 	void remove_object(object_id pId)
 	{

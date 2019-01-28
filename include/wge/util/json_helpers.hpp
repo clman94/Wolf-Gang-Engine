@@ -4,12 +4,43 @@
 
 #include <wge/core/instance_id.hpp>
 
+#include <string_view>
+
 namespace wge
 {
 
 using nlohmann::json;
 
 } // namespace wge
+
+namespace wge::util
+{
+
+// Deserialize json value only if it exists.
+// Returns true if the item has been deserialized.
+template <typename T>
+inline bool optional_deserialize(const wge::json& pJson, const std::string_view& pItem, T& pDestination)
+{
+	if (pJson.find(pItem) != pJson.end())
+	{
+		pDestination = pJson[pItem];
+		return true;
+	}
+	return false;
+}
+
+template <typename T, typename Tdefault>
+inline bool optional_deserialize(const wge::json& pJson, const std::string_view& pItem, T& pDestination, Tdefault&& pDefault)
+{
+	if (!optional_deserialize(pJson, pItem, pDestination))
+	{
+		pDestination = pDefault;
+		return false;
+	}
+	return true;
+}
+
+} // namespace wge::util
 
 // To keep things small, we are going to use
 // forward declarations as much as possible.

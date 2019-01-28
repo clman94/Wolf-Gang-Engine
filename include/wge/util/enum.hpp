@@ -25,6 +25,6 @@
 namespace wge::util
 {
 
-using flag_type = unsigned long;
+using flag_type = std::size_t;
 
 } // namespace wge::util

@@ -11,15 +11,27 @@ json sprite_component::on_serialize(core::serialize_type pType) const
 	json result;
 	if (pType & core::serialize_type::properties)
 	{
-		result["offset"] = { mOffset.x, mOffset.y };
+		result["offset"] = mOffset;
 		result["texture"] = mTexture ? json(mTexture->get_id()) : json();
-		result["animation"] = mAnimation ? json(mAnimation->id) : json();
+		result["animation"] = mAnimation ? json(mAnimation->name) : json();
 	}
 	return result;
 }
 
-void sprite_component::on_deserialize(const json& pJson)
+void sprite_component::on_deserialize(const core::game_object& pObj, const json& pJson)
 {
+	mOffset = pJson["offset"];
+	if (!pJson["texture"].is_null())
+	{
+		auto asset_mgr = pObj.get_context().get_asset_manager();
+		core::asset_uid id = pJson["texture"];
+		mTexture = asset_mgr->get_asset<texture>(id);
+	}
+	if (!pJson["animation"].is_null())
+	{
+		std::string name = pJson["animation"];
+		mAnimation = mTexture->get_animation(name);
+	}
 }
 
 void sprite_component::create_batch(core::transform_component& pTransform, renderer& pRenderer)

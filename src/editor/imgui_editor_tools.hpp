@@ -109,10 +109,11 @@ void push_transform(const math::transform& pTransform)
 	gCurrent_editor_state->transform.push(pTransform);
 }
 
-void pop_transform()
+void pop_transform(std::size_t pCount = 1)
 {
 	assert(gCurrent_editor_state);
-	gCurrent_editor_state->transform.pop();
+	for (std::size_t i = 0; i < pCount; i++)
+		gCurrent_editor_state->transform.pop();
 }
 
 const math::transform& get_transform() noexcept

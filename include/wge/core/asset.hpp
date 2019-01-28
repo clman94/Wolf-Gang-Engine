@@ -8,9 +8,7 @@
 namespace wge::core
 {
 
-// This is an overridable class for assets.
-// Technically, an asset object is meant
-// to translate data from the asset configuration.
+// Assets are objects managed by the asset manager.
 class asset
 {
 public:

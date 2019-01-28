@@ -85,6 +85,7 @@ public:
 
 	// Retrieve an animation by name. Returns an empty pointer if it was not found.
 	animation::ptr get_animation(const std::string& pName) const noexcept;
+	animation::ptr get_animation(const animation_id& pId) const noexcept;
 
 	// Get the raw container for the atlas.
 	// Mainly for use by an editor.

@@ -131,6 +131,14 @@ animation::ptr texture::get_animation(const std::string& pName) const noexcept
 	return{};
 }
 
+animation::ptr texture::get_animation(const animation_id & pId) const noexcept
+{
+	for (const auto& i : mAtlas)
+		if (i->id == pId)
+			return i;
+	return{};
+}
+
 texture::atlas_container& texture::get_raw_atlas() noexcept
 {
 	return mAtlas;

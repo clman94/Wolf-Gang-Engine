@@ -38,13 +38,7 @@ public:
 
 protected:
 	virtual json on_serialize(core::serialize_type) const override;
-	virtual void on_deserialize(const json&) override;
-
-private:
-	void on_physics_update_colliders(physics_component* pComponent);
-	void on_physics_reset();
-	void on_parent_removed();
-	void on_transform_changed();
+	virtual void on_deserialize(const core::game_object& pObject, const json&) override;
 
 	// Update a shape to the current transform
 	void update_shape(b2PolygonShape* pShape);

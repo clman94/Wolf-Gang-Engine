@@ -4,36 +4,19 @@
 #include <memory>
 
 #include <wge/filesystem/path.hpp>
+#include <wge/util/enum.hpp>
 
 namespace wge::filesystem
 {
 
-enum class stream_access : std::uint8_t
+enum class stream_access : util::flag_type
 {
 	none = 0,
 	read = 1,
 	write = 2,
 	read_write = 3,
 };
-
-inline stream_access& operator|=(stream_access& l, stream_access r)
-{
-	using type = std::underlying_type_t<stream_access>;
-	l = static_cast<stream_access>(static_cast<type>(l) | static_cast<type>(r));
-	return l;
-}
-
-inline stream_access operator|(stream_access l, stream_access r)
-{
-	using type = std::underlying_type_t<stream_access>;
-	return static_cast<stream_access>(static_cast<type>(l) | static_cast<type>(r));
-}
-
-inline bool operator&(stream_access l, stream_access r)
-{
-	using type = std::underlying_type_t<stream_access>;
-	return static_cast<bool>(static_cast<type>(l) & static_cast<type>(r));
-}
+ENUM_CLASS_FLAG_OPERATORS(stream_access);
 
 // Base class for byte stream objects.
 // Throws io_error on failures.

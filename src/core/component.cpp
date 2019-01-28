@@ -10,10 +10,15 @@ json component::serialize(serialize_type pType) const
 {
 	json result;
 	result["name"] = mName;
-	result["id"] = mInstance_id;
-	result["object_id"] = mObject_id;
+	result["type"] = get_component_id();
 	result["data"] = on_serialize(pType);
 	return result;
+}
+
+void component::deserialize(const game_object& pObj, const json& pJson)
+{
+	mName = pJson["name"];
+	on_deserialize(pObj, pJson["data"]);
 }
 
 const void component::set_name(const std::string & pName) noexcept

@@ -56,7 +56,7 @@ public:
 	// Save the current state of this component
 	json serialize(serialize_type = serialize_type::all) const;
 	// Load the current state of this component
-	void deserialize(const json&) {}
+	void deserialize(const game_object&, const json&);
 
 	// Get the name of the component type
 	virtual std::string get_component_name() const = 0;
@@ -78,8 +78,8 @@ public:
 	component_id get_instance_id() const noexcept;
 
 protected:
-	virtual json on_serialize(serialize_type) const { return json(); }
-	virtual	void on_deserialize(const json&) {}
+	virtual json on_serialize(serialize_type) const { return json{}; }
+	virtual	void on_deserialize(const game_object& pObject, const json&) {}
 
 private:
 	std::string mName;

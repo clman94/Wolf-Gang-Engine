@@ -21,7 +21,7 @@ json transform_component::on_serialize(serialize_type pType) const
 	return result;
 }
 
-void transform_component::on_deserialize(const json& pJson)
+void transform_component::on_deserialize(const game_object& pObject, const json& pJson)
 {
 	mTransform.position = pJson["position"];
 	mTransform.rotation = pJson["rotation"];

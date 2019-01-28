@@ -45,7 +45,7 @@ public:
 
 protected:
 	virtual json on_serialize(core::serialize_type) const override;
-	virtual void on_deserialize(const json& pJson) override;
+	virtual void on_deserialize(const core::game_object& pObject, const json& pJson) override;
 
 private:
 	// Get the box2d body type

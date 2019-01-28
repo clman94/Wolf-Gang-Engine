@@ -37,7 +37,7 @@ public:
 
 protected:
 	virtual json on_serialize(serialize_type) const override;
-	virtual void on_deserialize(const json&) override;
+	virtual void on_deserialize(const game_object& pObject, const json&) override;
 
 private:
 	math::transform mTransform;

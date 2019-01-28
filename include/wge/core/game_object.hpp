@@ -22,7 +22,7 @@ struct has_component_id_member <T, decltype((void)T::COMPONENT_ID, 0)> : std::tr
 class context;
 class layer;
 class component;
-struct object_data;
+class object_data;
 
 // Game objects represent collections of components
 // in a layer. This class mainly acts as a handle
@@ -37,16 +37,18 @@ public:
 	// Check if this object has a component of a specific id
 	bool has_component(int pId) const;
 	// Check if this object has a component of a type
-	template<class T,
+	template <class T,
 		// Requires the "int COMPONENT_ID" member
 		typename = std::enable_if<has_component_id_member<T>::value>::type>
 		bool has_component() const;
 
 	json serialize(serialize_type pType = serialize_type::all) const;
+	void deserialize(const json& pJson);
 
 	// Create a new component for this object
 	template <typename T>
 	T* add_component();
+	component* add_component(int pType);
 	// Get the amount of components assigned to this object
 	std::size_t get_component_count() const;
 	// Get a component by its index
@@ -56,10 +58,11 @@ public:
 	// Get first component by id
 	component* get_component(int pType) const;
 	// Get first component by type
-	template<class T,
+	template <class T,
 		// Requires the "int COMPONENT_ID" COMPONENT_ID member
 		typename = std::enable_if<has_component_id_member<T>::value>::type>
 	T* get_component() const;
+	void move_component(std::size_t pFrom, std::size_t pTo);
 	// Remove component at index
 	void remove_component(std::size_t pIndex);
 	// Remove all components
@@ -92,12 +95,12 @@ public:
 	// TODO: Remove at some point.
 	void set_instance_id(object_id pId);
 
-	operator bool() const
+	operator bool() const noexcept
 	{
 		return mData != nullptr;
 	}
 
-	void reset()
+	void reset() noexcept
 	{
 		mData = nullptr;
 	}

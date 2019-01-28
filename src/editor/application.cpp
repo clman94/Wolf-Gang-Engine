@@ -563,8 +563,15 @@ private:
 
 	void init_game_context()
 	{
+		mFactory.register_component<core::transform_component>();
+		mFactory.register_component<graphics::sprite_component>();
+		mFactory.register_component<physics::physics_component>();
+		mFactory.register_component<physics::box_collider_component>();
+		mGame_context.set_factory(&mFactory);
+
 		mAsset_manager.register_asset<core::asset>("scene");
-		mAsset_manager.register_config_extension("scene", ".wgescene");
+		mAsset_manager.register_serial_config_extension("scene", ".wgescene");
+		mAsset_manager.register_serial_config_extension("gameobject", ".wgegameobject");
 
 		mAsset_manager.register_asset("texture",
 			[&](const filesystem::path& pPath, core::asset_config::ptr pConfig) -> core::asset::ptr
@@ -822,7 +829,17 @@ private:
 	{
 		if (ImGui::Begin("Game"))
 		{
-			ImGui::Checkbox("Run", &mUpdate);
+			// Idea for later
+			//ImGui::BeginGroup();
+			//if (ImGui::Button("Open", { 70, 35 - ImGui::GetStyle().ItemSpacing.y / 2 }));
+			//if (ImGui::Button("Save", { 70, 35 - ImGui::GetStyle().ItemSpacing.y / 2 }));
+			//ImGui::EndGroup();
+			//ImGui::SameLine();
+			ImVec4 play_color = mUpdate ? ImVec4{ 0.4, 0.1, 0.1, 1 } : ImVec4{ 0.1, 0.4, 0.1, 1 };
+			ImGui::PushStyleColor(ImGuiCol_Button, play_color);
+			if (ImGui::Button(mUpdate ? "Pause" : "Play", { 70, 70 }))
+				mUpdate = !mUpdate;
+			ImGui::PopStyleColor();
 		}
 		ImGui::End();
 
@@ -889,6 +906,21 @@ private:
 
 			visual_editor::begin("_SceneEditor", { cursor.x, cursor.y }, mViewport_offset, mViewport_scale);
 			{
+				auto selected_layer = mContext.get_selection<selection_type::layer>();
+				if (ImGui::BeginDragDropTarget() && selected_layer)
+				{
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("gameobjectAsset"))
+					{
+						core::game_object obj = selected_layer->create_object();
+						core::asset_uid id = *(core::asset_uid*)payload->Data;
+						auto asset = mAsset_manager.find_asset(id);
+						obj.deserialize(asset->get_config()->get_metadata());
+						if (auto transform = obj.get_component<core::transform_component>())
+							transform->set_position(visual_editor::get_mouse_position());
+					}
+					ImGui::EndDragDropTarget();
+				}
+
 				if (is_grid_enabled)
 					visual_editor::draw_grid(grid_color, 1);
 
@@ -900,10 +932,30 @@ private:
 					// Make sure we are working with the viewports framebuffer
 					renderer->set_framebuffer(mViewport_framebuffer);
 
+					if (show_collision)
+					{
+						auto& box_collider_container = layer->get_component_container<physics::box_collider_component>();
+						for (auto& i : box_collider_container)
+						{
+							auto transform = layer->get_object(i.get_object_id()).get_component<core::transform_component>();
+							if (!transform)
+								continue;
+							visual_editor::push_transform(transform->get_transform());
+							math::transform box_transform;
+							box_transform.position = i.get_offset();
+							box_transform.rotation = i.get_rotation();
+							visual_editor::push_transform(box_transform);
+							visual_editor::draw_rect(math::rect({ 0, 0 }, i.get_size()), { 0, 1, 0, 0.8f });
+							visual_editor::pop_transform(2);
+						}
+					}
+
 					for (std::size_t i = 0; i < layer->get_object_count(); i++)
 					{
 						auto obj = layer->get_object(i);
 						auto transform = obj.get_component<core::transform_component>();
+						if (!transform)
+							continue;
 
 						// Check for selection
 						auto selection = mContext.get_selection<selection_type::game_object>();
@@ -963,7 +1015,42 @@ private:
 			}
 
 			ImGui::PopID();
+
+			if (ImGui::IsItemClicked(1))
+				ImGui::OpenPopup("Save Object");
 		}
+
+		if (ImGui::BeginPopupModal("Save Object"))
+		{
+			static std::string destination;
+			ImGui::InputText("Destination", &destination);
+
+			if (ImGui::Button("Cancel"))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Save"))
+			{
+				auto object = mContext.get_selection<selection_type::game_object>();
+				json data = object->serialize(core::serialize_type::properties);
+
+				// Make sure it has the wgegameobject extension
+				filesystem::path dest_path = destination;
+				if (dest_path.extension() != ".wgegameobject")
+				{
+					auto filename = dest_path.filename();
+					dest_path.pop_filepath();
+					dest_path.push_back(filename + ".wgegameobject");
+				}
+
+				mAsset_manager.create_serialized_asset(dest_path, "gameobject", data);
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::EndPopup();
+		}
+
 	}
 
 	void show_layers()
@@ -1194,6 +1281,15 @@ private:
 		}
 	}
 
+	core::layer& get_current_layer() const
+	{
+		if (auto layer = mContext.get_selection<selection_type::layer>())
+			return *layer;
+
+		if (auto obj = mContext.get_selection<selection_type::game_object>())
+			return obj->get_layer();
+	}
+
 private:
 	graphics::graphics mGraphics;
 	// ImGui needs access to some glfw specific objects
@@ -1211,6 +1307,7 @@ private:
 	core::context mGame_context;
 	filesystem::path mGame_path;
 	core::asset_manager mAsset_manager;
+	core::factory mFactory;
 
 	component_inspector mInspectors;
 

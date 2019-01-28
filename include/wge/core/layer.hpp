@@ -45,7 +45,7 @@ public:
 
 	// Emplace a new system
 	template <typename T, typename...Targs>
-	void add_system(Targs&&...pArgs);
+	T* add_system(Targs&&...pArgs);
 
 	// Set the name of this layer
 	void set_name(const std::string_view& pName) noexcept;
@@ -67,6 +67,8 @@ public:
 	// Add a new component to a game object
 	template <typename T>
 	T* add_component(const game_object& pObj);
+	// Add a new component by type
+	component* add_component(const game_object& pObj, int pType);
 
 	// Get the first component of a specific type that refers to this game object
 	template <typename T>
@@ -150,13 +152,15 @@ inline T* layer::get_system() const
 }
 
 template<typename T, typename ...Targs>
-inline void layer::add_system(Targs&&...pArgs)
+inline T* layer::add_system(Targs&&...pArgs)
 {
-	mSystems.emplace_back(new T(*this, pArgs...));
+	auto ptr = new T(*this, pArgs...);
+	mSystems.emplace_back(ptr);
+	return ptr;
 }
 
 template<typename T>
-inline T * layer::add_component(const game_object & pObj)
+inline T* layer::add_component(const game_object & pObj)
 {
 	auto* comp = &mComponent_manager.add_component<T>(get_context().get_unique_instance_id());
 	comp->set_object(pObj);
@@ -165,7 +169,7 @@ inline T * layer::add_component(const game_object & pObj)
 }
 
 template<typename T>
-inline T * layer::get_first_component(const game_object & pObj)
+inline T* layer::get_first_component(const game_object & pObj)
 {
 	return mComponent_manager.get_first_component<T>(pObj.get_instance_id());
 }

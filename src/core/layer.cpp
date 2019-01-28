@@ -28,7 +28,13 @@ json layer::serialize(serialize_type pType)
 
 void layer::deserialize(const json& pJson)
 {
+	mName = pJson["name"];
+	mTime_scale = pJson["timescale"];
+	mRecieve_update = pJson["enabled"];
+	for (auto& i : pJson["objects"])
+	{
 
+	}
 }
 
 system* layer::get_system(int pID) const
@@ -63,7 +69,7 @@ game_object layer::create_object()
 	return{ *this, data };
 }
 
-game_object layer::create_object(const std::string & pName)
+game_object layer::create_object(const std::string& pName)
 {
 	game_object obj = create_object();
 	obj.set_name(pName);
@@ -97,7 +103,18 @@ std::size_t layer::get_object_count() const noexcept
 	return mObject_manager.get_object_count();
 }
 
-component* layer::get_first_component(const game_object & pObj, int pType)
+component* layer::add_component(const game_object& pObj, int pType)
+{
+	factory* f = get_context().get_factory();
+	if (!f)
+		return nullptr;
+	component* c = f->create_component(pType, mComponent_manager, get_context().get_unique_instance_id());
+	c->set_object(pObj);
+	mObject_manager.register_component(c);
+	return c;
+}
+
+component* layer::get_first_component(const game_object& pObj, int pType)
 {
 	return mComponent_manager.get_first_component(pType, pObj.get_instance_id());
 }

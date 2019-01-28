@@ -5,8 +5,13 @@ namespace wge::core
 
 object_data::object_data(object_id pId) :
 	id(pId),
-	name("New Object")
+	name("New Object"),
+	mTracker(std::make_shared<bool>(true))
+{}
+
+object_data::~object_data()
 {
+	*mTracker = false;
 }
 
 object_data& object_manager::add_object(object_id pId)

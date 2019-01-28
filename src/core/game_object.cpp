@@ -31,6 +31,7 @@ bool game_object::has_component(int pId) const
 json game_object::serialize(serialize_type pType) const
 {
 	json result;
+	result["name"] = get_name();
 	result["id"] = get_instance_id();
 	for (const auto& i : mData->components)
 	{
@@ -38,6 +39,22 @@ json game_object::serialize(serialize_type pType) const
 		result["components"].push_back(comp->serialize(pType));
 	}
 	return result;
+}
+
+void game_object::deserialize(const json& pJson)
+{
+	//set_instance_id(pJson["id"]);
+	set_name(pJson["name"]);
+	for (auto& i : pJson["components"])
+	{
+		component* c = add_component(i["type"]);
+		c->deserialize(*this, i);
+	}
+}
+
+component* game_object::add_component(int pType)
+{
+	return get_layer().add_component(*this, pType);
 }
 
 std::size_t game_object::get_component_count() const
@@ -69,6 +86,24 @@ component* game_object::get_component(int pType) const
 {
 	WGE_ASSERT(mData);
 	return get_layer().get_first_component(*this, pType);
+}
+
+void game_object::move_component(std::size_t pFrom, std::size_t pTo)
+{
+	if (pFrom == pTo)
+		return;
+	if (pFrom < pTo)
+	{
+		auto iter_begin = mData->components.begin() + pFrom;
+		auto iter_end = mData->components.begin() + pTo + 1;
+		std::rotate(iter_begin, iter_begin + 1, iter_end);
+	}
+	else
+	{
+		auto iter_begin = mData->components.rbegin() + pFrom;
+		auto iter_end = mData->components.rbegin() + pTo + 1;
+		std::rotate(iter_begin, iter_begin + 1, iter_end);
+	}
 }
 
 void game_object::remove_component(std::size_t pIndex)

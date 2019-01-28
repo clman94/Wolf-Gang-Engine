@@ -49,7 +49,7 @@ public:
 
 protected:
 	virtual json on_serialize(core::serialize_type) const override;
-	virtual void on_deserialize(const json& pJson) override;
+	virtual void on_deserialize(const core::game_object& pObj, const json& pJson) override;
 
 private:
 	math::aabb mSceen_aabb, mLocal_aabb;

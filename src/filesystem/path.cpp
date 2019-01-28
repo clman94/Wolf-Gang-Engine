@@ -301,6 +301,11 @@ void path::push_front(const std::string & pStr)
 	mPath.push_front(pStr);
 }
 
+void path::push_back(const std::string & pStr)
+{
+	mPath.push_back(pStr);
+}
+
 void path::erase(iterator pBegin, iterator pEnd)
 {
 	mPath.erase(pBegin, pEnd);

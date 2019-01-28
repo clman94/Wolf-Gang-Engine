@@ -22,6 +22,15 @@ bool file_stream::open(const path & pPath, stream_access pAccess)
 	flags |= pAccess & stream_access::read ? std::fstream::in : 0;
 	flags |= pAccess & stream_access::write ? std::fstream::out : 0;
 
+	// Ensure the directory for the file exists if we are writing
+	if (pAccess & stream_access::write)
+	{
+		filesystem::path directories = pPath;
+		directories.pop_filepath();
+		if (!directories.empty() && !std::filesystem::exists(directories))
+			std::filesystem::create_directories(directories);
+	}
+
 	try {
 		mStream.open(pPath.string().c_str(), flags);
 	}
@@ -32,6 +41,7 @@ bool file_stream::open(const path & pPath, stream_access pAccess)
 
 	if (mStream)
 	{
+		// Calculate the length of this file.
 		mLength = tell();
 		seek(0);
 		mPath = pPath;
