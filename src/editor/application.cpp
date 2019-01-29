@@ -20,6 +20,7 @@
 #include <wge/graphics/graphics.hpp>
 #include <wge/core/behavior_system.hpp>
 #include <wge/math/transform.hpp>
+#include <wge/util/ptr.hpp>
 
 #include "editor.hpp"
 #include "history.hpp"
@@ -906,7 +907,7 @@ private:
 
 			visual_editor::begin("_SceneEditor", { cursor.x, cursor.y }, mViewport_offset, mViewport_scale);
 			{
-				auto selected_layer = mContext.get_selection<selection_type::layer>();
+				auto selected_layer = get_current_layer();
 				if (ImGui::BeginDragDropTarget() && selected_layer)
 				{
 					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("gameobjectAsset"))
@@ -1009,7 +1010,7 @@ private:
 			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | (is_selected ? ImGuiTreeNodeFlags_Selected : 0);
 			if (ImGui::TreeNodeEx((obj.get_name() + "###GameObject").c_str(), flags))
 			{
-				if (ImGui::IsItemClicked())
+				if (ImGui::IsItemClicked() || ImGui::IsItemClicked(1)) // Take both left and right click
 					mContext.set_selection(obj);
 				ImGui::TreePop();
 			}
@@ -1017,52 +1018,67 @@ private:
 			ImGui::PopID();
 
 			if (ImGui::IsItemClicked(1))
-				ImGui::OpenPopup("Save Object");
+				ImGui::OpenPopup("ObjectContextMenu");
 		}
 
-		if (ImGui::BeginPopupModal("Save Object"))
+		if (ImGui::BeginPopup("ObjectContextMenu"))
 		{
-			static std::string destination;
-			ImGui::InputText("Destination", &destination);
-
-			if (ImGui::Button("Cancel"))
+			auto object = mContext.get_selection<selection_type::game_object>();
+			if (ImGui::BeginMenu("Save to asset..."))
 			{
-				ImGui::CloseCurrentPopup();
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Save"))
-			{
-				auto object = mContext.get_selection<selection_type::game_object>();
-				json data = object->serialize(core::serialize_type::properties);
+				static std::string destination;
+				ImGui::InputText("Destination", &destination);
 
-				// Make sure it has the wgegameobject extension
-				filesystem::path dest_path = destination;
-				if (dest_path.extension() != ".wgegameobject")
+				if (ImGui::Button("Cancel"))
 				{
-					auto filename = dest_path.filename();
-					dest_path.pop_filepath();
-					dest_path.push_back(filename + ".wgegameobject");
+					ImGui::CloseCurrentPopup();
 				}
+				ImGui::SameLine();
+				if (ImGui::Button("Save"))
+				{
+					json data = object->serialize(core::serialize_type::properties);
 
-				mAsset_manager.create_serialized_asset(dest_path, "gameobject", data);
-				ImGui::CloseCurrentPopup();
+					// Make sure it has the wgegameobject extension
+					filesystem::path dest_path = destination;
+					if (dest_path.extension() != ".wgegameobject")
+					{
+						auto filename = dest_path.filename();
+						dest_path.pop_filepath();
+						dest_path.push_back(filename + ".wgegameobject");
+					}
+
+					mAsset_manager.create_serialized_asset(dest_path, "gameobject", data);
+					ImGui::CloseCurrentPopup();
+				}
+				ImGui::EndMenu();
 			}
-
+			ImGui::MenuItem("Duplicate");
+			if (ImGui::MenuItem("Delete"))
+			{
+				mContext.reset_selection();
+				object->get_layer().remove_object(*object);
+			}
 			ImGui::EndPopup();
 		}
-
 	}
 
 	void show_layers()
 	{
 		for (auto& i : mGame_context.get_layer_container())
 		{
-			ImGui::PushID(&(*i));
+			ImGui::PushID(util::to_address(i));
 
-			bool is_selected = mContext.get_selection<selection_type::layer>() == i;
+			bool is_selected = get_current_layer() == util::to_address(i);
+
+			ImVec4 color = is_selected ? ImVec4(0.2f, 0.4f, 0.4f, 1) : ImVec4(0.2f, 0.4f, 0.4f, 0.5f);
+			ImGui::PushStyleColor(ImGuiCol_Header, color);
+
 			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_OpenOnDoubleClick
 				| ImGuiTreeNodeFlags_OpenOnArrow | (is_selected ? ImGuiTreeNodeFlags_Selected : 0);
 			bool open = ImGui::TreeNodeEx((i->get_name() + "###Layer").c_str(), flags);
+
+			ImGui::PopStyleColor();
+
 			if (ImGui::IsItemClicked())
 				mContext.set_selection(i);
 			if (open)
@@ -1281,13 +1297,15 @@ private:
 		}
 	}
 
-	core::layer& get_current_layer() const
+	core::layer* get_current_layer() const
 	{
 		if (auto layer = mContext.get_selection<selection_type::layer>())
-			return *layer;
+			return &(*layer);
 
 		if (auto obj = mContext.get_selection<selection_type::game_object>())
-			return obj->get_layer();
+			return &obj->get_layer();
+
+		return nullptr;
 	}
 
 private:
