@@ -603,14 +603,14 @@ private:
 		mAsset_manager.set_root_directory(".");
 		mAsset_manager.load_assets();
 		
-		auto layer = mGame_context.create_layer();
+		auto layer = mGame_context.add_layer();
 		layer->set_name("Layer1");
 		layer->add_system<graphics::renderer>();
 
 		auto renderer = layer->get_system<graphics::renderer>();
 		renderer->set_pixel_size(0.01);
 
-		auto obj = layer->create_object();
+		auto obj = layer->add_object();
 		obj.add_component<core::transform_component>();
 		auto sprite = obj.add_component<graphics::sprite_component>();
 		sprite->set_texture(mAsset_manager.get_asset<graphics::texture>("mytex.png"));
@@ -912,7 +912,7 @@ private:
 				{
 					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("gameobjectAsset"))
 					{
-						core::game_object obj = selected_layer->create_object();
+						core::game_object obj = selected_layer->add_object();
 						core::asset_uid id = *(core::asset_uid*)payload->Data;
 						auto asset = mAsset_manager.find_asset(id);
 						obj.deserialize(asset->get_config()->get_metadata());
@@ -1064,6 +1064,7 @@ private:
 
 	void show_layers()
 	{
+		bool open_context_menu = false;
 		for (auto& i : mGame_context.get_layer_container())
 		{
 			ImGui::PushID(util::to_address(i));
@@ -1077,6 +1078,9 @@ private:
 				| ImGuiTreeNodeFlags_OpenOnArrow | (is_selected ? ImGuiTreeNodeFlags_Selected : 0);
 			bool open = ImGui::TreeNodeEx((i->get_name() + "###Layer").c_str(), flags);
 
+			if (ImGui::IsItemClicked(1))
+				open_context_menu = true;
+
 			ImGui::PopStyleColor();
 
 			if (ImGui::IsItemClicked())
@@ -1088,6 +1092,50 @@ private:
 			}
 
 			ImGui::PopID();
+		}
+
+		if (open_context_menu)
+			ImGui::OpenPopup("LayerContextMenu");
+
+		if (ImGui::BeginPopup("LayerContextMenu"))
+		{
+			auto layer = get_current_layer();
+			if (ImGui::BeginMenu("Save to asset..."))
+			{
+				// Will be implemented
+				/*static std::string destination;
+				ImGui::InputText("Destination", &destination);
+
+				if (ImGui::Button("Cancel"))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("Save"))
+				{
+					json data = object->serialize(core::serialize_type::properties);
+
+					// Make sure it has the wgegameobject extension
+					filesystem::path dest_path = destination;
+					if (dest_path.extension() != ".wgegameobject")
+					{
+						auto filename = dest_path.filename();
+						dest_path.pop_filepath();
+						dest_path.push_back(filename + ".wgegameobject");
+					}
+
+					mAsset_manager.create_serialized_asset(dest_path, "gameobject", data);
+					ImGui::CloseCurrentPopup();
+				}*/
+				ImGui::EndMenu();
+			}
+			ImGui::MenuItem("Duplicate");
+			if (ImGui::MenuItem("Delete"))
+			{
+				mContext.reset_selection();
+				mGame_context.remove_layer(layer);
+			}
+			ImGui::EndPopup();
 		}
 	}
 
@@ -1102,7 +1150,7 @@ private:
 				{
 					if (ImGui::MenuItem("Layer"))
 					{
-						mGame_context.create_layer();
+						mGame_context.add_layer();
 					}
 					if (ImGui::MenuItem("Object 2D"))
 					{
@@ -1116,7 +1164,7 @@ private:
 						// Create the object
 						if (layer)
 						{
-							auto obj = layer->create_object();
+							auto obj = layer->add_object();
 							obj.set_name("New 2D Object");
 							obj.add_component<core::transform_component>();
 						}

@@ -63,15 +63,15 @@ const std::string& layer::get_name() const noexcept
 	return mName;
 }
 
-game_object layer::create_object()
+game_object layer::add_object()
 {
 	auto& data = mObject_manager.add_object(get_context().get_unique_instance_id());
 	return{ *this, data };
 }
 
-game_object layer::create_object(const std::string& pName)
+game_object layer::add_object(const std::string& pName)
 {
-	game_object obj = create_object();
+	game_object obj = add_object();
 	obj.set_name(pName);
 	return obj;
 }

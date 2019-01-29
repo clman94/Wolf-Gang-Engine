@@ -53,8 +53,8 @@ public:
 	const std::string& get_name() const noexcept;
 
 	// Create a new game object in this layer.
-	[[nodiscard]] game_object create_object();
-	game_object create_object(const std::string& pName);
+	[[nodiscard]] game_object add_object();
+	game_object add_object(const std::string& pName);
 	// Remove a game object
 	void remove_object(const game_object& mObj);
 	// Get a game object at an index

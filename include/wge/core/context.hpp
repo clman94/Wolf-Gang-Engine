@@ -65,9 +65,12 @@ public:
 	// Get a layer to a specific index
 	layer::ptr get_layer(std::size_t pIndex) const;
 
-	layer::ptr create_layer();
-	layer::ptr create_layer(const std::string& pName);
-	layer::ptr create_layer(const std::string& pName, std::size_t pInsert);
+	layer::ptr add_layer();
+	layer::ptr add_layer(const std::string& pName);
+	layer::ptr add_layer(const std::string& pName, std::size_t pInsert);
+
+	void remove_layer(const layer* pPtr);
+	void remove_layer(const layer::ptr& pPtr);
 
 	const layer_container& get_layer_container() const noexcept;
 

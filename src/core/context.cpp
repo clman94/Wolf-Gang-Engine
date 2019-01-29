@@ -1,4 +1,5 @@
 #include <wge/core/context.hpp>
+#include <wge/util/ptr.hpp>
 
 namespace wge::core
 {
@@ -10,22 +11,39 @@ layer::ptr context::get_layer(std::size_t pIndex) const
 	return mLayers[pIndex];
 }
 
-layer::ptr context::create_layer()
+layer::ptr context::add_layer()
 {
 	return mLayers.emplace_back(layer::create(*this));
 }
 
-layer::ptr context::create_layer(const std::string& pName)
+layer::ptr context::add_layer(const std::string& pName)
 {
-	auto l = create_layer();
+	auto l = add_layer();
 	l->set_name(pName);
 	return l;
 }
 
-layer::ptr context::create_layer(const std::string& pName, std::size_t pInsert)
+layer::ptr context::add_layer(const std::string& pName, std::size_t pInsert)
 {
 	mLayers.insert(mLayers.begin() + pInsert, layer::create(*this));
 	return mLayers[pInsert];
+}
+
+void context::remove_layer(const layer* pPtr)
+{
+	for (std::size_t i = 0; i < mLayers.size(); i++)
+	{
+		if (util::to_address(mLayers[i]) == pPtr)
+		{
+			mLayers.erase(mLayers.begin() + i);
+			return;
+		}
+	}
+}
+
+void context::remove_layer(const layer::ptr& pPtr)
+{
+	remove_layer(util::to_address(pPtr));
 }
 
 const context::layer_container& context::get_layer_container() const noexcept

@@ -98,6 +98,7 @@ void physics_world::postupdate(float pDelta)
 		[&](box_collider_component& pCollider,
 			core::transform_component& pTransform)
 	{
+		// FIXME: Only update when the transform's scale actually changes.
 		pCollider.update_current_shape(pTransform.get_scale());
 	});
 }
