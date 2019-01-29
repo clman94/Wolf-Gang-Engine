@@ -40,14 +40,12 @@ void box_collider_component::on_deserialize(const core::game_object& pObject, co
 	mOffset = pJson["offset"];
 	mSize = pJson["size"];
 	mRotation = pJson["rotation"];
-	update_current_shape();
 	set_sensor(pJson["sensor"]);
 }
 
 void box_collider_component::set_offset(const math::vec2 & pOffset)
 {
 	mOffset = pOffset;
-	update_current_shape();
 }
 
 math::vec2 box_collider_component::get_offset() const
@@ -60,7 +58,6 @@ void box_collider_component::set_size(const math::vec2 & pSize)
 	if (pSize.x > 0 && pSize.y > 0)
 	{
 		mSize = pSize;
-		update_current_shape();
 	}
 }
 
@@ -72,7 +69,6 @@ math::vec2 box_collider_component::get_size() const
 void box_collider_component::set_rotation(math::radians pRads)
 {
 	mRotation = pRads;
-	update_current_shape();
 }
 
 math::radians box_collider_component::get_rotation() const
@@ -95,7 +91,6 @@ bool box_collider_component::is_sensor() const
 void box_collider_component::set_anchor(math::vec2 pRatio)
 {
 	mAnchor = pRatio;
-	update_current_shape();
 }
 
 math::vec2 box_collider_component::get_anchor() const
@@ -103,7 +98,7 @@ math::vec2 box_collider_component::get_anchor() const
 	return mAnchor;
 }
 
-void box_collider_component::update_shape(b2PolygonShape * pShape)
+void box_collider_component::update_shape(const math::vec2& pScale, b2PolygonShape* pShape)
 {
 	assert(pShape);
 
@@ -111,13 +106,19 @@ void box_collider_component::update_shape(b2PolygonShape * pShape)
 	math::vec2 offset = mSize / 2 + mOffset + skin_size + mSize * mAnchor;
 	math::vec2 h_size = (mSize - skin_size * 2) / 2;
 	pShape->SetAsBox(h_size.x, h_size.y, b2Vec2(offset.x, offset.y), mRotation);
+	for (int i = 0; i < 4; i++)
+	{
+		math::vec2 vec{ pShape->m_vertices[i].x, pShape->m_vertices[i].y };
+		vec *= pScale;
+		pShape->m_vertices[i] = b2Vec2{ vec.x, vec.y };
+	}
 }
 
-void box_collider_component::update_current_shape()
+void box_collider_component::update_current_shape(const math::vec2& pScale)
 {
 	if (mFixture)
 	{
-		update_shape(dynamic_cast<b2PolygonShape*>(mFixture->GetShape()));
+		update_shape(pScale, dynamic_cast<b2PolygonShape*>(mFixture->GetShape()));
 		mFixture->GetBody()->ResetMassData();
 	}
 }

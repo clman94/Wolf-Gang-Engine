@@ -58,13 +58,14 @@ void physics_world::preupdate(float pDelta)
 	get_layer().for_each(
 		[&](core::game_object pObj,
 			box_collider_component& pCollider,
-			physics_component& pPhysics)
+			physics_component& pPhysics,
+			core::transform_component& pTransform)
 	{
 		if (!pCollider.mFixture && pPhysics.mBody)
 		{
 			b2FixtureDef fixture_def;
 			b2PolygonShape shape;
-			pCollider.update_shape(&shape);
+			pCollider.update_shape(pTransform.get_scale(), &shape);
 			fixture_def.shape = &shape;
 			fixture_def.density = 1;
 			pCollider.mFixture = pPhysics.create_fixture(fixture_def);
@@ -90,6 +91,14 @@ void physics_world::postupdate(float pDelta)
 			math::radians rotation = pTransform.get_rotation();
 			pPhysics.mBody->SetTransform({ position.x, position.y }, rotation);
 		}
+	});
+
+	// Update the shapes
+	get_layer().for_each(
+		[&](box_collider_component& pCollider,
+			core::transform_component& pTransform)
+	{
+		pCollider.update_current_shape(pTransform.get_scale());
 	});
 }
 

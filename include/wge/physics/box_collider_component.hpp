@@ -36,14 +36,15 @@ public:
 	void set_anchor(math::vec2 pRatio);
 	math::vec2 get_anchor() const;
 
+	// Update the shape in the fixture (if it exists)
+	void update_current_shape(const math::vec2& pScale);
+
 protected:
 	virtual json on_serialize(core::serialize_type) const override;
 	virtual void on_deserialize(const core::game_object& pObject, const json&) override;
 
 	// Update a shape to the current transform
-	void update_shape(b2PolygonShape* pShape);
-	// Update the shape in the fixture (if it exists)
-	void update_current_shape();
+	void update_shape(const math::vec2& pScale, b2PolygonShape* pShape);
 
 private:
 	b2Fixture* mFixture;
