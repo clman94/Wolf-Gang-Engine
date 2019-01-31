@@ -109,8 +109,6 @@ private:
 	container mPath;
 };
 
-
-
 // Make a relative path from a parent directory to this file.
 // Note: This only works if the this file is in the directory.
 // make_relative_to("dir/dir1", "dir/dir1/dir2/file.exe") => "dir2/file.exe"

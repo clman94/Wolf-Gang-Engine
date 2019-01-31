@@ -6,8 +6,7 @@ namespace wge::core
 
 layer::layer(context& pContext) noexcept :
 	mContext(pContext)
-{
-}
+{}
 
 json layer::serialize(serialize_type pType)
 {
@@ -18,6 +17,10 @@ json layer::serialize(serialize_type pType)
 		result["timescale"] = mTime_scale;
 		result["enabled"] = mRecieve_update;
 	}
+
+	json& j_systems = result["systems"];
+	for (auto& i : mSystems)
+		j_systems.push_back(i->serialize(pType));
 
 	json& j_objects = result["objects"];
 	for (std::size_t i = 0; i < get_object_count(); i++)
@@ -31,9 +34,25 @@ void layer::deserialize(const json& pJson)
 	mName = pJson["name"];
 	mTime_scale = pJson["timescale"];
 	mRecieve_update = pJson["enabled"];
+
+	factory* factory = get_context().get_factory();
+	for (auto& i : pJson["systems"])
+	{
+		int type = i["type"];
+		system* sys = factory->create_system(type, *this);
+		if (!sys)
+		{
+			log::info() << "In layer \"" << mName << "\"" << log::endm;
+			log::error() << "Factory failed to create system with type " << type << log::endm;
+			continue;
+		}
+		sys->deserialize(i);
+	}
+
 	for (auto& i : pJson["objects"])
 	{
-
+		game_object obj = add_object();
+		obj.deserialize(i);
 	}
 }
 

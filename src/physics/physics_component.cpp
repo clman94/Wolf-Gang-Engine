@@ -116,6 +116,10 @@ void physics_component::apply_force(const math::vec2& pForce) const
 		mBody->ApplyForceToCenter({ pForce.x, pForce.y }, true);
 }
 
+void physics_component::set_fixed_rotation(bool pSet)
+{
+}
+
 b2Fixture* physics_component::create_fixture(const b2FixtureDef & pDef)
 {
 	assert(mBody);

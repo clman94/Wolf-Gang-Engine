@@ -564,6 +564,8 @@ private:
 
 	void init_game_context()
 	{
+		mFactory.register_system<graphics::renderer>();
+		mFactory.register_system<physics::physics_world>();
 		mFactory.register_component<core::transform_component>();
 		mFactory.register_component<graphics::sprite_component>();
 		mFactory.register_component<physics::physics_component>();
@@ -573,6 +575,7 @@ private:
 		mAsset_manager.register_asset<core::asset>("scene");
 		mAsset_manager.register_serial_config_extension("scene", ".wgescene");
 		mAsset_manager.register_serial_config_extension("gameobject", ".wgegameobject");
+		mAsset_manager.register_serial_config_extension("layer", ".wgelayer");
 
 		mAsset_manager.register_asset("texture",
 			[&](const filesystem::path& pPath, core::asset_config::ptr pConfig) -> core::asset::ptr
@@ -918,6 +921,15 @@ private:
 						obj.deserialize(asset->get_config()->get_metadata());
 						if (auto transform = obj.get_component<core::transform_component>())
 							transform->set_position(visual_editor::get_mouse_position());
+						mContext.set_selection(obj);
+					}
+					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("layerAsset"))
+					{
+						core::asset_uid id = *(core::asset_uid*)payload->Data;
+						auto asset = mAsset_manager.find_asset(id);
+						auto new_layer = mGame_context.add_layer();
+						new_layer->deserialize(asset->get_config()->get_metadata());
+						mContext.set_selection(new_layer);
 					}
 					ImGui::EndDragDropTarget();
 				}
@@ -998,6 +1010,17 @@ private:
 		ImGui::End();
 	}
 
+	static filesystem::path ensure_extension(filesystem::path pPath, const char* pExtension)
+	{
+		if (pPath.extension() != pExtension)
+		{
+			auto filename = pPath.filename();
+			pPath.pop_filepath();
+			pPath.push_back(filename + pExtension);
+		}
+		return pPath;
+	}
+
 	void show_layer_objects(const core::layer::ptr& pLayer)
 	{
 		for (std::size_t i = 0; i < pLayer->get_object_count(); i++)
@@ -1024,6 +1047,8 @@ private:
 		if (ImGui::BeginPopup("ObjectContextMenu"))
 		{
 			auto object = mContext.get_selection<selection_type::game_object>();
+			if (!object)
+				ImGui::CloseCurrentPopup();
 			if (ImGui::BeginMenu("Save to asset..."))
 			{
 				static std::string destination;
@@ -1037,22 +1062,17 @@ private:
 				if (ImGui::Button("Save"))
 				{
 					json data = object->serialize(core::serialize_type::properties);
-
-					// Make sure it has the wgegameobject extension
-					filesystem::path dest_path = destination;
-					if (dest_path.extension() != ".wgegameobject")
-					{
-						auto filename = dest_path.filename();
-						dest_path.pop_filepath();
-						dest_path.push_back(filename + ".wgegameobject");
-					}
-
-					mAsset_manager.create_serialized_asset(dest_path, "gameobject", data);
+					auto path_with_extension = ensure_extension(destination, ".wgegameobject");
+					mAsset_manager.create_serialized_asset(path_with_extension, "gameobject", data);
 					ImGui::CloseCurrentPopup();
 				}
 				ImGui::EndMenu();
 			}
-			ImGui::MenuItem("Duplicate");
+			if (ImGui::MenuItem("Duplicate"))
+			{
+				json data = object->serialize(core::serialize_type::properties);
+				object->get_layer().add_object().deserialize(data);
+			}
 			if (ImGui::MenuItem("Delete"))
 			{
 				mContext.reset_selection();
@@ -1103,7 +1123,7 @@ private:
 			if (ImGui::BeginMenu("Save to asset..."))
 			{
 				// Will be implemented
-				/*static std::string destination;
+				static std::string destination;
 				ImGui::InputText("Destination", &destination);
 
 				if (ImGui::Button("Cancel"))
@@ -1113,20 +1133,11 @@ private:
 				ImGui::SameLine();
 				if (ImGui::Button("Save"))
 				{
-					json data = object->serialize(core::serialize_type::properties);
-
-					// Make sure it has the wgegameobject extension
-					filesystem::path dest_path = destination;
-					if (dest_path.extension() != ".wgegameobject")
-					{
-						auto filename = dest_path.filename();
-						dest_path.pop_filepath();
-						dest_path.push_back(filename + ".wgegameobject");
-					}
-
-					mAsset_manager.create_serialized_asset(dest_path, "gameobject", data);
+					json data = layer->serialize(core::serialize_type::properties);
+					auto path_with_extension = ensure_extension(destination, ".wgelayer");
+					mAsset_manager.create_serialized_asset(path_with_extension, "layer", data);
 					ImGui::CloseCurrentPopup();
-				}*/
+				}
 				ImGui::EndMenu();
 			}
 			ImGui::MenuItem("Duplicate");

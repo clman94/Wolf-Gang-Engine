@@ -28,9 +28,9 @@ public:
 	void register_system()
 	{
 		mSystem_factories[T::SYSTEM_ID] =
-			[](const layer::ptr& pLayer) -> system*
+			[](layer& pLayer) -> system*
 		{
-			return pLayer->add_system<T>();
+			return pLayer.add_system<T>();
 		};
 	}
 
@@ -42,7 +42,7 @@ public:
 		return iter->second(pManager, pId);
 	}
 
-	system* create_system(int pType, const layer::ptr& pLayer) const
+	system* create_system(int pType, layer& pLayer) const
 	{
 		auto iter = mSystem_factories.find(pType);
 		if (iter == mSystem_factories.end())
@@ -52,7 +52,7 @@ public:
 
 private:
 	using component_factory = std::function<component*(component_manager&, component_id)>;
-	using system_factory = std::function<system*(const layer::ptr&)>;
+	using system_factory = std::function<system*(layer&)>;
 	std::map<int, component_factory> mComponent_factories;
 	std::map<int, system_factory> mSystem_factories;
 };

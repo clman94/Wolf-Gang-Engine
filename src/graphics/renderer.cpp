@@ -84,6 +84,21 @@ void renderer::render(graphics& pGraphics)
 	mBatches.clear();
 }
 
+json renderer::on_serialize(core::serialize_type pType)
+{
+	json result;
+	if (pType & core::serialize_type::properties)
+	{
+		result["pixel-size"] = mPixel_size;
+	}
+	return result;
+}
+
+void renderer::on_deserialize(const json& pJson)
+{
+	mPixel_size = pJson["pixel-size"];
+}
+
 void renderer::sort_batches()
 {
 	std::sort(mBatches.begin(), mBatches.end(),

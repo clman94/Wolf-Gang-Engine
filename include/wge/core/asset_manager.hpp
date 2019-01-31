@@ -5,6 +5,7 @@
 #include <wge/core/serializable.hpp>
 #include <wge/core/system.hpp>
 #include <wge/filesystem/filesystem_interface.hpp>
+#include <wge/util/ptr.hpp>
 
 #include <vector>
 #include <map>
@@ -126,5 +127,20 @@ inline void asset_manager::register_asset(const std::string& pType)
 		return ptr;
 	};
 }
+
+class asset_directory_iterator
+{
+public:
+	asset_directory_iterator() noexcept
+	{}
+
+	asset_directory_iterator(asset_manager& pAsset, const filesystem::path& pDirectory)
+	{
+
+	}
+
+private:
+
+};
 
 } // namespace wge::core

@@ -55,7 +55,10 @@ public:
 
 	// Save the current state of this component
 	json serialize(serialize_type = serialize_type::all) const;
-	// Load the current state of this component
+	// Load the current state of this component.
+	// Some components require extra info to completely
+	// recreate its data so the game object that owns this component
+	// must be provided.
 	void deserialize(const game_object&, const json&);
 
 	// Get the name of the component type
@@ -67,6 +70,8 @@ public:
 	const void set_name(const std::string& pName) noexcept;
 	const std::string& get_name() const noexcept;
 
+	// Returns true if this component can calculate an aabb
+	// from its data.
 	virtual bool has_aabb() const { return false; }
 	virtual math::aabb get_screen_aabb() const { return{}; }
 	virtual math::aabb get_local_aabb() const { return{}; }

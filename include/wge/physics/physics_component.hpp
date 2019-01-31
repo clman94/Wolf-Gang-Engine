@@ -41,6 +41,8 @@ public:
 	void apply_force(const math::vec2& pForce, const math::vec2& pPoint) const;
 	void apply_force(const math::vec2& pForce) const;
 
+	void set_fixed_rotation(bool pSet);
+
 	b2Fixture* create_fixture(const b2FixtureDef& pDef);
 
 protected:
@@ -66,4 +68,4 @@ private:
 	friend class physics_world;
 };
 
-}
+} // namespace wge::physics
