@@ -184,10 +184,8 @@ set(ALL_SOURCES
 # Set output to bin directory
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
-add_executable(WolfGangEngine "${WGE_SOURCE_DIR}/main.cpp" ${ALL_SOURCES})
-
-# Set the VS debugger's working directory to the binaries
-set_property(TARGET WolfGangEngine PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/resources)
+# The main engine will be a library
+add_library(WolfGangEngine ${ALL_SOURCES})
 
 # Note: Not using this for now but keeping it for the future.
 #
@@ -221,7 +219,7 @@ include_directories("${WGE_3RDPARTY_DIR}/glew/include")
 target_link_libraries(WolfGangEngine glew_s)
 
 # JSON
-include_directories("3rdparty/json/include")
+include_directories("${WGE_3RDPARTY_DIR}/json/include")
 
 # OpenAL-Soft
 set(ALSOFT_EXAMPLES OFF)
@@ -234,3 +232,17 @@ target_link_libraries(WolfGangEngine OpenAL)
 
 # STB Nothings
 include_directories("${WGE_3RDPARTY_DIR}/stb/include")
+
+# Editor project
+add_executable(WgeEditor "${WGE_SOURCE_DIR}/main.cpp")
+target_link_libraries(WgeEditor WolfGangEngine)
+
+# Test project
+file(GLOB_RECURSE WGE_TESTS "${CMAKE_SOURCE_DIR}/tests/*.cpp")
+add_executable(WgeTests ${WGE_TESTS})
+include_directories("${WGE_3RDPARTY_DIR}/catch2/single_include")
+target_link_libraries(WgeTests WolfGangEngine)
+
+# Set the VS debugger's working directory
+set_property(TARGET WgeEditor PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/resources)
+set_property(TARGET WgeTests PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/resources)

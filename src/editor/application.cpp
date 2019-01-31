@@ -506,7 +506,12 @@ private:
 		ImGui_ImplGlfw_InitForOpenGL(mGLFW_backend->get_window(), true);
 		ImGui_ImplOpenGL3_Init("#version 150");
 
-		ImGui::GetIO().Fonts->AddFontFromFileTTF("./editor/Roboto-Medium.ttf", 16);
+		auto font = ImGui::GetIO().Fonts->AddFontFromFileTTF("./editor/Roboto-Medium.ttf", 16);
+		if (font == NULL)
+		{
+			log::error() << "Could not load editor font, aborting..." << log::endm;
+			std::abort();
+		}
 
 		// Theme
 		ImVec4* colors = ImGui::GetStyle().Colors;

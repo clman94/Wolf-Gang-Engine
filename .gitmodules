@@ -7,3 +7,6 @@
 [submodule "3rdparty/openal-soft"]
 	path = 3rdparty/openal-soft
 	url = https://github.com/kcat/openal-soft.git
+[submodule "3rdparty/catch2"]
+	path = 3rdparty/catch2
+	url = https://github.com/catchorg/Catch2.git
