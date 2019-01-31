@@ -1293,7 +1293,6 @@ private:
 			ImGui::EndTabItem();
 		}
 
-
 		ImGui::EndTabBar();
 	}
 

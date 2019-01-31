@@ -1,6 +1,6 @@
 [submodule "3rdparty/angelscript"]
 	path = 3rdparty/angelscript
-	url = https://github.com/clman94/AngelScript-Mirror
+	url = https://github.com/codecat/angelscript-mirror.git
 [submodule "3rdparty/glfw"]
 	path = 3rdparty/glfw
 	url = https://github.com/glfw/glfw.git
