@@ -16,7 +16,8 @@ if (MSVC_VERSION GREATER_EQUAL "1900")
 endif()
 
 # Use the angelscript namespace
-add_definitions(-DAS_USE_NAMESPACE)
+# Disabled for now because of some minor errors
+# add_definitions(-DAS_USE_NAMESPACE)
 
 # Tell ImGui that we are using GLEW
 add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLEW)

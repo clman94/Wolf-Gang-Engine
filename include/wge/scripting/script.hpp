@@ -26,7 +26,7 @@ namespace wge::scripting
 namespace detail
 {
 
-using generic_function = std::function<void(AngelScript::asIScriptGeneric*)>;
+using generic_function = std::function<void(asIScriptGeneric*)>;
 
 
 template <typename Tret, typename Tclass, typename...Tparams, typename Tinstance>
@@ -41,7 +41,7 @@ auto bind_mem_fn(Tret(Tclass::* pFunc)(Tparams...), Tinstance&& pInstance)
 template <typename T>
 struct generic_getter
 {
-	static T& get(AngelScript::asIScriptGeneric* pGen, std::size_t pIndex)
+	static T& get(asIScriptGeneric* pGen, std::size_t pIndex)
 	{
 		using namespace AngelScript;
 		asDWORD typeid_flags = 0;
@@ -63,7 +63,7 @@ struct generic_getter
 template <typename T>
 struct generic_getter<T*>
 {
-	static T* get(AngelScript::asIScriptGeneric* pGen, std::size_t pIndex)
+	static T* get(asIScriptGeneric* pGen, std::size_t pIndex)
 	{
 		return &generic_getter<T>::get(pGen, pIndex);
 	}
@@ -224,7 +224,7 @@ struct generic_destructor_binding :
 template <typename Tfunc, bool pIs_member, bool pIs_const, typename Tret, typename...Tparams>
 auto wrap_return(Tfunc&& pFunc, function_signature<Tret, function_params<Tparams...>, pIs_member, pIs_const>)
 {
-	return [pFunc = std::forward<Tfunc>(pFunc)](AngelScript::asIScriptGeneric* pGen, Tparams&&... pParams)
+	return [pFunc = std::forward<Tfunc>(pFunc)](asIScriptGeneric* pGen, Tparams&&... pParams)
 	{
 		if constexpr (std::is_same<void, Tret>::value)
 		{
@@ -243,7 +243,7 @@ generic_function_binding make_generic_callable(Tfunc&& pFunc,
 	function_signature<Tret, function_params<Tparams...>, pIs_member, pIs_const> pSig,
 	std::index_sequence<pParams_index...>)
 {
-	auto wrapper = [pFunc = std::forward<Tfunc>(pFunc), pSig](AngelScript::asIScriptGeneric* pGen)
+	auto wrapper = [pFunc = std::forward<Tfunc>(pFunc), pSig](asIScriptGeneric* pGen)
 	{
 		std::invoke(wrap_return(pFunc, pSig), pGen,
 			std::forward<Tparams>(generic_getter<std::remove_reference_t<Tparams>>::get(pGen, pParams_index))...);
@@ -254,7 +254,7 @@ generic_function_binding make_generic_callable(Tfunc&& pFunc,
 template <typename Tfunc, bool pIs_const, typename Tret, typename Tobject, typename...Tparams>
 generic_function_binding make_object_proxy(Tfunc&& pFunc, function_signature<Tret, function_params<Tobject, Tparams...>, true, pIs_const>)
 {
-	auto object_wrapper = [pFunc = std::forward<Tfunc>(pFunc)](AngelScript::asIScriptGeneric* pGen, Tparams&&... pParams)
+	auto object_wrapper = [pFunc = std::forward<Tfunc>(pFunc)](asIScriptGeneric* pGen, Tparams&&... pParams)
 	{
 		assert(pGen->GetObject());
 		return std::invoke(pFunc, static_cast<Tobject>(pGen->GetObject()), std::forward<Tparams>(pParams)...);
@@ -268,7 +268,7 @@ generic_function_binding make_object_proxy(Tfunc&& pFunc, function_signature<Tre
 template <typename Tfunc, typename Tret, typename...Tparams>
 generic_function_binding make_object_proxy(Tfunc&& pFunc, function_signature<Tret, function_params<Tparams...>, false, false> pSig)
 {
-	auto object_wrapper = [pFunc = std::forward<Tfunc>(pFunc)](AngelScript::asIScriptGeneric*, Tparams&&... pParams)
+	auto object_wrapper = [pFunc = std::forward<Tfunc>(pFunc)](asIScriptGeneric*, Tparams&&... pParams)
 	{
 		return std::invoke(pFunc, std::forward<Tparams>(pParams)...);
 	};
@@ -441,7 +441,7 @@ public:
 
 private:
 	script* mScript;
-	AngelScript::asIScriptObject* mObject;
+	asIScriptObject* mObject;
 };
 
 // A simple callable object that, when called,
@@ -459,7 +459,7 @@ using script_function = std::function<T>;
 //     global function eg myscript.get_function<void(int)>("myglobalfunc").
 //   - Simple, type-safe registeration of variables and functions.
 //     With the power of template metaprogramming, we can transform this:
-//     engine->RegisterGlobalFunction("void myglobalfunc(int)", AngelScript::asFUNCTION(&myglobalfunc), AngelScript::AS);
+//     engine->RegisterGlobalFunction("void myglobalfunc(int)", asFUNCTION(&myglobalfunc), AS);
 //     ...into this:
 //     myscript.global("myglobalfunc", scripting::function(&myglobalfunc));
 //     As you might observe, there is no declaration, just the function identifier. With a simple
@@ -481,8 +481,6 @@ public:
 	script(core::layer& pLayer) :
 		core::system(pLayer)
 	{
-		using namespace AngelScript;
-
 		mEngine = asCreateScriptEngine();
 
 		// Register a message callback so we can see whats happening.
@@ -576,7 +574,7 @@ public:
 	{
 		type<T>(pName);
 		int r = mEngine->RegisterObjectType(pName.c_str(), sizeof(T),
-			AngelScript::asOBJ_VALUE | AngelScript::asGetTypeTraits<T>());
+			asOBJ_VALUE | asGetTypeTraits<T>());
 		WGE_ASSERT(r >= 0);
 	}
 
@@ -588,11 +586,11 @@ public:
 		const detail::generic_function_binding& pRelref)
 	{
 		type<T>(pName);
-		int r = mEngine->RegisterObjectType(pName.c_str(), 0, AngelScript::asOBJ_REF);
+		int r = mEngine->RegisterObjectType(pName.c_str(), 0, asOBJ_REF);
 		WGE_ASSERT(r >= 0);
-		register_object_behavior(pName, pFactory, AngelScript::asBEHAVE_FACTORY);
-		register_object_behavior(pName, pAddref, AngelScript::asBEHAVE_ADDREF);
-		register_object_behavior(pName, pRelref, AngelScript::asBEHAVE_RELEASE);
+		register_object_behavior(pName, pFactory, asBEHAVE_FACTORY);
+		register_object_behavior(pName, pAddref, asBEHAVE_ADDREF);
+		register_object_behavior(pName, pRelref, asBEHAVE_RELEASE);
 	}
 
 	// Register a reference type with no reference counting.
@@ -600,20 +598,20 @@ public:
 	void reference_type(const std::string& pName)
 	{
 		type<T>(pName);
-		int r = mEngine->RegisterObjectType(pName.c_str(), 0, AngelScript::asOBJ_REF | AngelScript::asOBJ_NOCOUNT);
+		int r = mEngine->RegisterObjectType(pName.c_str(), 0, asOBJ_REF | asOBJ_NOCOUNT);
 		WGE_ASSERT(r >= 0);
 	}
 	
 	// Register the constructor
 	void object(const std::string& pObject, const detail::generic_constructor_binding& pConstructor)
 	{
-		register_object_behavior(pObject, pConstructor, AngelScript::asBEHAVE_CONSTRUCT);
+		register_object_behavior(pObject, pConstructor, asBEHAVE_CONSTRUCT);
 	}
 
 	// Register the destructor
 	void object(const std::string& pObject, const detail::generic_destructor_binding& pDestructor)
 	{
-		register_object_behavior(pObject, pDestructor, AngelScript::asBEHAVE_DESTRUCT);
+		register_object_behavior(pObject, pDestructor, asBEHAVE_DESTRUCT);
 	}
 
 	// Registera a member/property
@@ -627,8 +625,6 @@ public:
 	// Register a method
 	void object(const std::string& pObject, const std::string& pFunction_name, const detail::generic_function_binding& pFunction)
 	{
-		using namespace AngelScript;
-
 		const std::string declaration = get_function_declaration(pFunction_name, pFunction.types, pFunction.is_const_member);
 
 		// Store the function object so it stays alive during the scripts lifetime
@@ -644,8 +640,6 @@ public:
 	// Register a base-derived relationship
 	void object(const detail::base_cast_binding& pCast)
 	{
-		using namespace AngelScript;
-
 		WGE_ASSERT(mTypenames.find(*pCast.base.stdtypeinfo) != mTypenames.end());
 		WGE_ASSERT(mTypenames.find(*pCast.derived.stdtypeinfo) != mTypenames.end());
 
@@ -693,7 +687,7 @@ public:
 		detail::generic_function& func = mFunction_cache.emplace_back(pFunction.function);
 
 		int r = mEngine->RegisterGlobalFunction(declaration.c_str(),
-			AngelScript::asFUNCTION(&script::generic_function_caller), AngelScript::asCALL_GENERIC, &func);
+			asFUNCTION(&script::generic_function_caller), asCALL_GENERIC, &func);
 		WGE_ASSERT(r >= 0);
 	}
 
@@ -759,7 +753,6 @@ public:
 	// Set the include callback
 	void set_include_callback(include_callback pFunc)
 	{
-		using namespace AngelScript;
 		mInclude_callback_info.pFunc = pFunc;
 		mInclude_callback_info.pScript = this;
 		INCLUDECALLBACK_t callback_delegate =
@@ -799,7 +792,7 @@ private:
 private:
 
 	template <typename...Tparams, std::size_t...I>
-	static void set_context_args_impl(AngelScript::asIScriptContext* pCtx,
+	static void set_context_args_impl(asIScriptContext* pCtx,
 		std::index_sequence<I...>, Tparams&&... pParams)
 	{
 		using namespace AngelScript;
@@ -830,19 +823,19 @@ private:
 		}(), ...);
 	}
 	template <typename...Tparams>
-	static void set_context_args(AngelScript::asIScriptContext* pCtx, Tparams&&... pParams)
+	static void set_context_args(asIScriptContext* pCtx, Tparams&&... pParams)
 	{
 		set_context_args_impl(pCtx, std::index_sequence_for<Tparams...>{}, std::forward<Tparams>(pParams)...);
 	}
 
 	// Creates a callable script_function object that wraps around angelscript functions.
 	template <typename Tret, typename...Tparams>
-	script_function<Tret(Tparams&&...)> make_script_function(AngelScript::asIScriptFunction* pFunc,
+	script_function<Tret(Tparams&&...)> make_script_function(asIScriptFunction* pFunc,
 		detail::function_signature<Tret, detail::function_params<Tparams...>>)
 	{
 		return [this, pFunc](Tparams&&... pArgs)->Tret
 		{
-			AngelScript::asIScriptContext* ctx = mEngine->RequestContext();
+			asIScriptContext* ctx = mEngine->RequestContext();
 			WGE_ASSERT(ctx->Prepare(pFunc) >= 0);
 			set_context_args(ctx, std::forward<Tparams>(pArgs)...);
 			ctx->Execute();
@@ -852,7 +845,7 @@ private:
 	}
 
 	// Delegates to the generic_function object pointed to in asIScriptGeneric's auxilary
-	static void generic_function_caller(AngelScript::asIScriptGeneric* pGen)
+	static void generic_function_caller(asIScriptGeneric* pGen)
 	{
 		detail::generic_function* func = static_cast<detail::generic_function*>(pGen->GetAuxiliary());
 		(*func)(pGen);
@@ -921,10 +914,8 @@ private:
 
 	void register_object_behavior(const std::string& pObject,
 		const detail::generic_function_binding& pFunction,
-		AngelScript::asEBehaviours pBehavior)
+		asEBehaviours pBehavior)
 	{
-		using namespace AngelScript;
-
 		const std::string declaration = get_function_declaration("f", pFunction.types, pFunction.is_const_member);
 
 		// Preserve the lifetime fo the function
@@ -932,7 +923,7 @@ private:
 
 		// Register the behavior
 		int r = mEngine->RegisterObjectBehaviour(pObject.c_str(), pBehavior, declaration.c_str(),
-			asFUNCTION(&script::generic_function_caller), AngelScript::asCALL_GENERIC, &func);
+			asFUNCTION(&script::generic_function_caller), asCALL_GENERIC, &func);
 		WGE_ASSERT(r >= 0);
 	}
 
@@ -945,8 +936,8 @@ private:
 	// equivalent type.
 	std::map<std::type_index, std::string> mTypenames;
 
-	AngelScript::asIScriptEngine* mEngine;
-	AngelScript::CScriptBuilder mBuilder;
+	asIScriptEngine* mEngine;
+	CScriptBuilder mBuilder;
 
 	std::string mCurrent_module;
 };
