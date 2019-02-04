@@ -775,7 +775,7 @@ private:
 			ImGui::NextColumn();
 			ImGui::TextUnformatted("Path:");
 			ImGui::NextColumn();
-
+			
 			for (auto& i : mAsset_manager.get_asset_list())
 			{
 				ImGui::PushID(i->get_id());

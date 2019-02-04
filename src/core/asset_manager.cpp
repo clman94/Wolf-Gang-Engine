@@ -67,7 +67,10 @@ void asset_manager::add_asset(const asset::ptr& pAsset)
 {
 	assert(pAsset);
 	if (!has_asset(pAsset))
+	{
 		mAsset_list.push_back(pAsset);
+		mFile_structure.insert(pAsset->get_path(), pAsset);
+	}
 }
 
 asset::ptr asset_manager::find_asset(const filesystem::path& pPath) const noexcept

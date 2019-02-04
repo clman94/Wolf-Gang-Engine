@@ -36,8 +36,6 @@ public:
 	void set_gravity(math::vec2 pVec);
 	math::vec2 get_gravity() const;
 
-	b2Body* create_body(const b2BodyDef& pDef);
-
 	b2World* get_world() const;
 
 	virtual void preupdate(float pDelta) override;

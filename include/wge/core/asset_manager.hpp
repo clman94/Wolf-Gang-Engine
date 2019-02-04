@@ -6,6 +6,7 @@
 #include <wge/core/system.hpp>
 #include <wge/filesystem/filesystem_interface.hpp>
 #include <wge/util/ptr.hpp>
+#include <wge/filesystem/file_structure.hpp>
 
 #include <vector>
 #include <map>
@@ -96,6 +97,11 @@ public:
 		return ptr;
 	}
 
+	const filesystem::file_structure<asset::ptr>& get_file_structure() const
+	{
+		return mFile_structure;
+	}
+
 	//serialized_asset::ptr create_serialized_asset(const filesystem::path& pPath, serializable& pSerializable)
 	//{
 	//}
@@ -112,6 +118,7 @@ private:
 	std::map<std::string, std::string> mAsset_resource_extensions; // { [extension], [asset type] }
 	std::map<std::string, std::string> mAsset_config_extensions; // { [extension], [asset type] }
 	std::vector<asset::ptr> mAsset_list;
+	filesystem::file_structure<asset::ptr> mFile_structure;
 	filesystem::path mRoot_dir;
 	filesystem::filesystem_interface* mFilesystem{ nullptr };
 };
