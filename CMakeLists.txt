@@ -67,7 +67,6 @@ set(WGE_ALL_HEADERS
 	${WGE_LOGGING_HEADERS}
 	${WGE_FILESYSTEM_HEADERS}
 	${WGE_UTIL_HEADERS}
-	${WGE_EDITOR_HEADERS}
 	)
 	
 file(GLOB WGE_AUDIO_SOURCES "${WGE_SOURCE_DIR}/audio/*.cpp")
@@ -110,7 +109,6 @@ set(WGE_ALL_SOURCES
 	${WGE_LOGGING_SOURCES}
 	${WGE_FILESYSTEM_SOURCES}
 	${WGE_UTIL_SOURCES}
-	${WGE_EDITOR_SOURCES}
 	)
 
 # ImGUI
@@ -235,7 +233,11 @@ target_link_libraries(WolfGangEngine OpenAL)
 include_directories("${WGE_3RDPARTY_DIR}/stb/include")
 
 # Editor project
-add_executable(WgeEditor "${WGE_SOURCE_DIR}/main.cpp")
+add_executable(WgeEditor
+	"${WGE_SOURCE_DIR}/main.cpp" 
+	${WGE_EDITOR_HEADERS}
+	${WGE_EDITOR_SOURCES}
+	)
 target_link_libraries(WgeEditor WolfGangEngine)
 
 # Test project
