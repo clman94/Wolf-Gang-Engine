@@ -31,8 +31,9 @@ class object_data;
 class game_object
 {
 public:
-	game_object(layer&);
-	game_object(layer&, object_data&);
+	game_object() noexcept;
+	game_object(layer&) noexcept;
+	game_object(layer&, object_data&) noexcept;
 
 	// Check if this object has a component of a specific id
 	bool has_component(int pId) const;
@@ -90,10 +91,6 @@ public:
 
 	// Get the id that uniquely identifies this object
 	object_id get_instance_id() const;
-	// Set the id for this object. Note: Should not be used
-	// under normal circumstances.
-	// TODO: Remove at some point.
-	void set_instance_id(object_id pId);
 
 	operator bool() const noexcept
 	{
@@ -108,7 +105,7 @@ public:
 	bool operator==(const game_object& pObj) const;
 
 private:
-	std::reference_wrapper<layer> mLayer;
+	layer* mLayer;
 	object_data* mData;
 };
 

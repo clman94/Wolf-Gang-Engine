@@ -34,21 +34,8 @@ public:
 		};
 	}
 
-	component* create_component(int pType, component_manager& pManager, component_id pId) const
-	{
-		auto iter = mComponent_factories.find(pType);
-		if (iter == mComponent_factories.end())
-			return nullptr;
-		return iter->second(pManager, pId);
-	}
-
-	system* create_system(int pType, layer& pLayer) const
-	{
-		auto iter = mSystem_factories.find(pType);
-		if (iter == mSystem_factories.end())
-			return nullptr;
-		return iter->second(pLayer);
-	}
+	component* create_component(int pType, component_manager& pManager, component_id pId) const;
+	system* create_system(int pType, layer& pLayer) const;
 
 private:
 	using component_factory = std::function<component*(component_manager&, component_id)>;

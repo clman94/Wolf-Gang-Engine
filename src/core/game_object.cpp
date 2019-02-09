@@ -6,15 +6,20 @@
 
 namespace wge::core
 {
-
-game_object::game_object(layer& pLayer) :
-	mLayer(pLayer),
+game_object::game_object() noexcept :
+	mLayer(nullptr),
 	mData(nullptr)
 {
 }
 
-game_object::game_object(layer& pLayer, object_data& pData) :
-	mLayer(pLayer),
+game_object::game_object(layer& pLayer) noexcept :
+	mLayer(&pLayer),
+	mData(nullptr)
+{
+}
+
+game_object::game_object(layer& pLayer, object_data& pData) noexcept :
+	mLayer(&pLayer),
 	mData(&pData)
 {
 }
@@ -151,11 +156,6 @@ context& game_object::get_context() const noexcept
 object_id game_object::get_instance_id() const
 {
 	return mData->id;
-}
-
-void game_object::set_instance_id(object_id pId)
-{
-	mData->id = pId;
 }
 
 bool game_object::operator==(const game_object & pObj) const
