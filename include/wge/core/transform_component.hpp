@@ -11,7 +11,7 @@ namespace wge::core
 class transform_component :
 	public component
 {
-	WGE_COMPONENT_SINGLE_INSTANCE("Transform 2D", 0);
+	WGE_COMPONENT_SINGLE_INSTANCE("Transform 2D", 1);
 public:
 	transform_component(core::component_id pId) noexcept;
 

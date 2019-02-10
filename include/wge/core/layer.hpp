@@ -4,6 +4,7 @@
 #include <wge/core/system.hpp>
 #include <wge/core/component_manager.hpp>
 #include <wge/core/object_manager.hpp>
+#include <wge/core/component_type.hpp>
 
 #include <string>
 #include <string_view>
@@ -68,17 +69,17 @@ public:
 	template <typename T>
 	T* add_component(const game_object& pObj);
 	// Add a new component by type
-	component* add_component(const game_object& pObj, int pType);
+	component* add_component(const game_object& pObj, const component_type& pType);
 
 	// Get the first component of a specific type that refers to this game object
 	template <typename T>
 	T* get_first_component(const game_object& pObj);
 	// Get the first component of a specific type that refers to this game object
-	component* get_first_component(const game_object& pObj, int pType);
+	component* get_first_component(const game_object& pObj, const component_type& pType);
 
 	// Get a component by its instance it. The type is needed to check in
 	// the correct container.
-	component* get_component(int pType, component_id pId);
+	component* get_component(const component_type& pType, component_id pId);
 
 	// Get the container associated to a specific type of component.
 	template <typename T>

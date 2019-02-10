@@ -4,6 +4,22 @@
 namespace wge::core
 {
 
+component* factory::create_component(int pType, component_manager& pManager, component_id pId) const
+{
+	auto iter = mComponent_factories.find(pType);
+	if (iter == mComponent_factories.end())
+		return nullptr;
+	return iter->second(pManager, pId);
+}
+
+system* factory::create_system(int pType, layer& pLayer) const
+{
+	auto iter = mSystem_factories.find(pType);
+	if (iter == mSystem_factories.end())
+		return nullptr;
+	return iter->second(pLayer);
+}
+
 layer::ptr context::get_layer(std::size_t pIndex) const
 {
 	if (pIndex >= mLayers.size())

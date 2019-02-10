@@ -2,7 +2,7 @@
 
 #include <nlohmann/json.hpp>
 
-#include <wge/core/instance_id.hpp>
+#include <wge/util/strongly_typed_id.hpp>
 
 #include <string_view>
 
@@ -66,16 +66,16 @@ void from_json(const nlohmann::json&, rect&);
 
 } // namespace wge::math
 
-namespace wge::core
+namespace wge::util
 {
 
-template <typename T>
-void to_json(nlohmann::json& pJson, const instance_id<T>& pId)
+template <typename T, typename Tvalue>
+void to_json(nlohmann::json& pJson, const strongly_typed_id<T, Tvalue>& pId)
 {
 	pJson = pId.get_value();
 }
-template <typename T>
-void from_json(const nlohmann::json& pJson, instance_id<T>& pId)
+template <typename T, typename Tvalue>
+void from_json(const nlohmann::json& pJson, strongly_typed_id<T, Tvalue>& pId)
 {
 	pId.set_value(pJson);
 }

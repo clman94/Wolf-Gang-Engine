@@ -140,9 +140,6 @@ struct type_info
 		is_pointer(pIs_pointer),
 		stdtypeinfo(pType)
 	{}
-	type_info(const type_info&) = default;
-	type_info(type_info&&) = default;
-	type_info& operator=(const type_info&) = default;
 
 	template <typename T>
 	static type_info create()
@@ -399,7 +396,7 @@ detail::base_cast_binding base()
 {
 	auto derived_to_base = [](Tderived* pPtr)->Tbase*
 	{
-		return dynamic_cast<Tbase*>(pPtr);
+		return static_cast<Tbase*>(pPtr);
 	};
 	auto base_to_derived = [](Tbase* pPtr)->Tderived*
 	{
@@ -593,7 +590,7 @@ public:
 		register_object_behavior(pName, pRelref, asBEHAVE_RELEASE);
 	}
 
-	// Register a reference type with no reference counting.
+	// Register a reference type with no reference counting (same as a raw pointer).
 	template <typename T>
 	void reference_type(const std::string& pName)
 	{

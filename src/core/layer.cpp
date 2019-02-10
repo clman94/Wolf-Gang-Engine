@@ -122,7 +122,7 @@ std::size_t layer::get_object_count() const noexcept
 	return mObject_manager.get_object_count();
 }
 
-component* layer::add_component(const game_object& pObj, int pType)
+component* layer::add_component(const game_object& pObj, const component_type& pType)
 {
 	factory* f = get_context().get_factory();
 	if (!f)
@@ -133,12 +133,12 @@ component* layer::add_component(const game_object& pObj, int pType)
 	return c;
 }
 
-component* layer::get_first_component(const game_object& pObj, int pType)
+component* layer::get_first_component(const game_object& pObj, const component_type& pType)
 {
 	return mComponent_manager.get_first_component(pType, pObj.get_instance_id());
 }
 
-component* layer::get_component(int pType, component_id pId)
+component* layer::get_component(const component_type& pType, component_id pId)
 {
 	return mComponent_manager.get_component(pType, pId);
 }

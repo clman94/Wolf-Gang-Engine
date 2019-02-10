@@ -768,14 +768,36 @@ private:
 	{
 		if (ImGui::Begin("Asset Manager"))
 		{
-			ImGui::Columns(2, "_AssetColumns");
+			static filesystem::path current_path;
+
+			/*ImGui::Columns(2, "_AssetColumns");
 			ImGui::SetColumnWidth(0, 100);
 
 			ImGui::TextUnformatted("Type:");
 			ImGui::NextColumn();
 			ImGui::TextUnformatted("Path:");
 			ImGui::NextColumn();
-			
+			*/
+			auto root = mAsset_manager.get_file_structure().find(current_path);
+
+			/*for (auto& i : root.child())
+			{
+				core::asset::ptr asset = i.second->has_value() ? i.second->value() : core::asset::ptr{};
+				if (asset)
+				{
+					const bool asset_is_selected = mContext.get_selection<selection_type::asset>() == asset;
+					if (ImGui::Selectable(i.first->c_str(), asset_is_selected))
+						mContext.set_selection(asset);
+				}
+				else
+				{
+					if (ImGui::Selectable(i.first->c_str()))
+					{
+						current_path = root.child();
+					}
+				}
+			}*/
+			/*
 			for (auto& i : mAsset_manager.get_asset_list())
 			{
 				ImGui::PushID(i->get_id());
@@ -794,7 +816,7 @@ private:
 				ImGui::NextColumn();
 				ImGui::PopID();
 			}
-			ImGui::Columns();
+			ImGui::Columns();*/
 		}
 		ImGui::End();
 	}

@@ -2,6 +2,7 @@
 
 #include <wge/core/instance_id.hpp>
 #include <wge/core/component_storage.hpp>
+#include <wge/core/component_type.hpp>
 
 #include <map>
 #include <any>
@@ -20,7 +21,7 @@ public:
 		return get_container<T>().create_component(pId);
 	}
 
-	void remove_component(int pType, component_id pId)
+	void remove_component(const component_type& pType, component_id pId)
 	{
 		auto iter = mContainers.find(pType);
 		if (iter != mContainers.end())
@@ -37,7 +38,7 @@ public:
 		return nullptr;
 	}
 	// Get first component of this type for this object
-	component* get_first_component(int pType, object_id pId)
+	component* get_first_component(const component_type& pType, object_id pId)
 	{
 		component_storage_base* storage = get_container(pType);
 		if (!storage)
@@ -45,7 +46,7 @@ public:
 		return storage->get_first_component(pId);
 	}
 
-	component* get_component(int pType, component_id pId)
+	component* get_component(const component_type& pType, component_id pId)
 	{
 		auto iter = mContainers.find(pType);
 		if (iter == mContainers.end())
@@ -63,7 +64,7 @@ public:
 			mContainers[T::COMPONENT_ID] = std::make_unique<storage_type>();
 		return *dynamic_cast<storage_type*>(mContainers[T::COMPONENT_ID].get());
 	}
-	component_storage_base* get_container(int pType)
+	component_storage_base* get_container(const component_type& pType)
 	{
 		auto iter = mContainers.find(pType);
 		if (iter == mContainers.end())
@@ -79,7 +80,7 @@ public:
 	}
 
 private:
-	std::map<int, std::unique_ptr<component_storage_base>> mContainers;
+	std::map<component_type, std::unique_ptr<component_storage_base>> mContainers;
 };
 
 } // namespace wge::core

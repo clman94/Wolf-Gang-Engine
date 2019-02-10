@@ -22,7 +22,7 @@ public:
 
 	struct component_entry
 	{
-		int type;
+		component_type type;
 		component_id id;
 	};
 	std::vector<component_entry> components;

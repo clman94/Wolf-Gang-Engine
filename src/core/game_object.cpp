@@ -24,17 +24,18 @@ game_object::game_object(layer& pLayer, object_data& pData) noexcept :
 {
 }
 
-bool game_object::has_component(int pId) const
+bool game_object::has_component(const component_type& pType) const
 {
-	WGE_ASSERT(mData);
+	assert_valid_reference();
 	for (auto& i : mData->components)
-		if (i.type == pId)
+		if (i.type == pType)
 			return true;
 	return false;
 }
 
 json game_object::serialize(serialize_type pType) const
 {
+	assert_valid_reference();
 	json result;
 	result["name"] = get_name();
 	result["id"] = get_instance_id();
@@ -48,6 +49,7 @@ json game_object::serialize(serialize_type pType) const
 
 void game_object::deserialize(const json& pJson)
 {
+	assert_valid_reference();
 	//set_instance_id(pJson["id"]);
 	set_name(pJson["name"]);
 	for (auto& i : pJson["components"])
@@ -57,27 +59,28 @@ void game_object::deserialize(const json& pJson)
 	}
 }
 
-component* game_object::add_component(int pType)
+component* game_object::add_component(const component_type& pType)
 {
+	assert_valid_reference();
 	return get_layer().add_component(*this, pType);
 }
 
 std::size_t game_object::get_component_count() const
 {
-	WGE_ASSERT(mData);
+	assert_valid_reference();
 	return mData->components.size();
 }
 
 component* game_object::get_component_at(std::size_t pIndex)
 {
-	WGE_ASSERT(mData);
+	assert_valid_reference();
 	auto& comp_entry = mData->components[pIndex];
 	return get_layer().get_component(comp_entry.type, comp_entry.id);
 }
 
 component* game_object::get_component(const std::string & pName)
 {
-	WGE_ASSERT(mData);
+	assert_valid_reference();
 	for (auto& i : mData->components)
 	{
 		component* comp = get_layer().get_component(i.type, i.id);
@@ -87,14 +90,15 @@ component* game_object::get_component(const std::string & pName)
 	return nullptr;
 }
 
-component* game_object::get_component(int pType) const
+component* game_object::get_component(const component_type& pType) const
 {
-	WGE_ASSERT(mData);
+	assert_valid_reference();
 	return get_layer().get_first_component(*this, pType);
 }
 
 void game_object::move_component(std::size_t pFrom, std::size_t pTo)
 {
+	assert_valid_reference();
 	if (pFrom == pTo)
 		return;
 	if (pFrom < pTo)
@@ -113,54 +117,62 @@ void game_object::move_component(std::size_t pFrom, std::size_t pTo)
 
 void game_object::remove_component(std::size_t pIndex)
 {
-	WGE_ASSERT(mData);
+	assert_valid_reference();
 	auto& comp_entry = mData->components[pIndex];
 	get_layer().remove_component(comp_entry.type, comp_entry.id);
 }
 
 void game_object::remove_components()
 {
-	WGE_ASSERT(mData);
+	assert_valid_reference();
 }
 
 const std::string& game_object::get_name() const
 {
-	WGE_ASSERT(mData);
+	assert_valid_reference();
 	return mData->name;
 }
 
 void game_object::set_name(const std::string & pName)
 {
-	WGE_ASSERT(mData);
+	assert_valid_reference();
 	mData->name = pName;
 }
 
 void game_object::destroy()
 {
-	WGE_ASSERT(mData);
+	assert_valid_reference();;
 	get_layer().remove_object(*this);
 	mData = nullptr;
 }
 
-layer& game_object::get_layer() const noexcept
+layer& game_object::get_layer() const
 {
-	WGE_ASSERT(mData);
-	return mLayer;
+	assert_valid_reference();
+	return *mLayer;
 }
 
-context& game_object::get_context() const noexcept
+context& game_object::get_context() const
 {
+	assert_valid_reference();
 	return get_layer().get_context();
 }
 
 object_id game_object::get_instance_id() const
 {
+	assert_valid_reference();
 	return mData->id;
 }
 
-bool game_object::operator==(const game_object & pObj) const
+bool game_object::operator==(const game_object& pObj) const noexcept
 {
 	return mData && pObj.mData && mData->id == pObj.mData->id;
+}
+
+void game_object::assert_valid_reference() const
+{
+	if (!is_valid())
+		throw invalid_game_object{};
 }
 
 } // namespace wge::core

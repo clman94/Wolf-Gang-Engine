@@ -11,6 +11,7 @@ using json = nlohmann::json;
 #include <wge/math/rect.hpp>
 #include <wge/core/asset.hpp>
 #include <wge/filesystem/filesystem_interface.hpp>
+#include <wge/core/instance_id.hpp>
 
 namespace wge::graphics
 {

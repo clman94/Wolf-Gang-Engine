@@ -3,6 +3,7 @@
 #include <functional>
 #include <map>
 
+#include <wge/core/component_type.hpp>
 #include <wge/math/vector.hpp>
 
 namespace wge::core
@@ -19,7 +20,7 @@ class component_inspector
 {
 public:
 	// Assign an inspector for a component
-	void add_inspector(int pComponent_id, std::function<void(core::component*)> pFunc)
+	void add_inspector(const core::component_type& pComponent_id, std::function<void(core::component*)> pFunc)
 	{
 		mInspector_guis[pComponent_id] = pFunc;
 	}
@@ -32,7 +33,7 @@ public:
 	}
 
 private:
-	std::map<int, std::function<void(core::component*)>> mInspector_guis;
+	std::map<core::component_type, std::function<void(core::component*)>> mInspector_guis;
 };
 
 } // namespace wge::editor

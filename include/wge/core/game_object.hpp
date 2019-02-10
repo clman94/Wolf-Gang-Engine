@@ -3,11 +3,13 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <stdexcept>
 
 #include <wge/logging/log.hpp>
 #include <wge/core/asset_config.hpp>
 #include <wge/core/instance_id.hpp>
 #include <wge/core/serialize_type.hpp>
+#include <wge/core/component_type.hpp>
 #include <wge/util/json_helpers.hpp>
 
 namespace wge::core
@@ -23,6 +25,17 @@ class context;
 class layer;
 class component;
 class object_data;
+
+// Exception thrown when a game_object that references no real game object
+// attempts to access/modify that game object.
+class invalid_game_object :
+	public std::runtime_error
+{
+public:
+	invalid_game_object() :
+		std::runtime_error("Attempting to access game object with invalid reference.")
+	{}
+};
 
 // Game objects represent collections of components
 // in a layer. This class mainly acts as a handle
@@ -49,7 +62,7 @@ public:
 	// Create a new component for this object
 	template <typename T>
 	T* add_component();
-	component* add_component(int pType);
+	component* add_component(const component_type& pType);
 	// Get the amount of components assigned to this object
 	std::size_t get_component_count() const;
 	// Get a component by its index
@@ -57,7 +70,7 @@ public:
 	// Get component by name
 	component* get_component(const std::string& pName);
 	// Get first component by id
-	component* get_component(int pType) const;
+	component* get_component(const component_type& pType) const;
 	// Get first component by type
 	template <class T,
 		// Requires the "int COMPONENT_ID" COMPONENT_ID member
@@ -85,32 +98,39 @@ public:
 	// To actually move an object to a new layer, you will need to
 	// reconstruct this object in the destination layer and remove it in
 	// the source layer.
-	layer& get_layer() const noexcept;
+	layer& get_layer() const;
 
-	context& get_context() const noexcept;
+	context& get_context() const;
 
 	// Get the id that uniquely identifies this object
 	object_id get_instance_id() const;
 
 	operator bool() const noexcept
 	{
+		return is_valid();
+	}
+
+	bool is_valid() const noexcept
+	{
 		return mData != nullptr;
 	}
 
 	void reset() noexcept
 	{
+		mLayer = nullptr;
 		mData = nullptr;
 	}
 
-	bool operator==(const game_object& pObj) const;
+	bool operator==(const game_object& pObj) const noexcept;
+
+
+private:
+	void assert_valid_reference() const;
 
 private:
 	layer* mLayer;
 	object_data* mData;
 };
-
-
-// Check if this object has a component of a type
 
 template<class T, typename>
 inline bool game_object::has_component() const
@@ -121,11 +141,9 @@ inline bool game_object::has_component() const
 template<typename T>
 inline T* game_object::add_component()
 {
-	WGE_ASSERT(mData);
+	assert_valid_reference();
 	return get_layer().add_component<T>(*this);
 }
-
-// Get first component by type
 
 template<class T, typename>
 inline T* game_object::get_component() const

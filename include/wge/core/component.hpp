@@ -6,6 +6,7 @@
 #include <wge/math/aabb.hpp>
 #include <wge/core/serialize_type.hpp>
 #include <wge/core/instance_id.hpp>
+#include <wge/core/component_type.hpp>
 
 #include <nlohmann/json.hpp>
 #include <wge/util/json_helpers.hpp>
@@ -24,18 +25,18 @@ using json = nlohmann::json;
 //
 #define WGE_COMPONENT(name__, id__) \
 	public: \
-	static constexpr int COMPONENT_ID = id__; \
+	static constexpr wge::core::component_type COMPONENT_ID = id__; \
 	static constexpr const char* COMPONENT_NAME = name__; \
 	static constexpr bool COMPONENT_SINGLE_INSTANCE = false; \
-	virtual int get_component_id() const override { return id__; } \
-	virtual std::string get_component_name() const override { return name__; }
+	virtual const wge::core::component_type& get_component_id() const override { return COMPONENT_ID; } \
+	virtual std::string get_component_name() const override { return COMPONENT_NAME; }
 #define WGE_COMPONENT_SINGLE_INSTANCE(name__, id__) \
 	public: \
-	static constexpr int COMPONENT_ID = id__; \
+	static constexpr wge::core::component_type COMPONENT_ID = id__; \
 	static constexpr const char* COMPONENT_NAME = name__; \
 	static constexpr bool COMPONENT_SINGLE_INSTANCE = true; \
-	virtual int get_component_id() const override { return id__; } \
-	virtual std::string get_component_name() const override { return name__; }
+	virtual const wge::core::component_type& get_component_id() const override { return COMPONENT_ID; } \
+	virtual std::string get_component_name() const override { return COMPONENT_NAME; }
 #define WGE_SYSTEM_COMPONENT(name__, id__) WGE_COMPONENT_SINGLE_INSTANCE(name__, id__)
 
 namespace wge::core
@@ -64,7 +65,7 @@ public:
 	// Get the name of the component type
 	virtual std::string get_component_name() const = 0;
 	// Get the value representing the component type
-	virtual int get_component_id() const = 0;
+	virtual const wge::core::component_type& get_component_id() const = 0;
 
 	// Unique name of component instance
 	const void set_name(const std::string& pName) noexcept;
