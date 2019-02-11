@@ -806,8 +806,7 @@ private:
 					mContext.set_selection(i);
 				if (ImGui::BeginDragDropSource())
 				{
-					const util::uuid* id = &i->get_id();
-					ImGui::SetDragDropPayload((i->get_type() + "Asset").c_str(), &id, sizeof(const util::uuid*));
+					ImGui::SetDragDropPayload((i->get_type() + "Asset").c_str(), &i->get_id(), sizeof(util::uuid));
 					ImGui::Text("Asset: %s", i->get_path().string().c_str());
 					ImGui::EndDragDropSource();
 				}
