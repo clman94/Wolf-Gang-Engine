@@ -1,14 +1,11 @@
 #include <wge/util/json_helpers.hpp>
 
-#include <nlohmann/json.hpp>
-using nlohmann::json;
-
 #include <Box2D/Common/b2Math.h>
 
 #include <wge/math/math.hpp>
 #include <wge/math/vector.hpp>
 #include <wge/math/rect.hpp>
-#include <wge/core/instance_id.hpp>
+#include <wge/util/uuid.hpp>
 using namespace wge;
 
 void wge::math::to_json(nlohmann::json & pJson, const math::vec2 & pVec)
@@ -63,4 +60,14 @@ void from_json(const nlohmann::json & pJson, b2Vec2 & pVec)
 {
 	pVec.x = pJson[0];
 	pVec.y = pJson[1];
+}
+
+void wge::util::to_json(nlohmann::json & pJson, const uuid & pUuid)
+{
+	pJson = pUuid.to_json();
+}
+
+void wge::util::from_json(const nlohmann::json & pJson, uuid & pUuid)
+{
+	pUuid.from_json(pJson);
 }

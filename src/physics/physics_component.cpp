@@ -10,8 +10,7 @@
 namespace wge::physics
 {
 
-physics_component::physics_component(core::component_id pId) :
-	core::component(pId),
+physics_component::physics_component() :
 	mBody(nullptr),
 	mType(type_rigidbody)
 {

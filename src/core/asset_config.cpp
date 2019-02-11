@@ -8,7 +8,7 @@ namespace wge::core
 void asset_config::deserialize(const json & pJson)
 {
 	mType = pJson["type"];
-	mID = pJson["id"];
+	mId = pJson["id"];
 	mDescription = pJson["description"];
 	mMetadata = pJson["metadata"];
 }
@@ -17,7 +17,7 @@ json asset_config::serialize() const noexcept
 {
 	json result;
 	result["type"] = mType;
-	result["id"] = mID;
+	result["id"] = mId;
 	result["description"] = mDescription;
 	result["metadata"] = mMetadata;
 	return result;
@@ -40,21 +40,14 @@ void asset_config::set_type(const std::string & pType)
 	mType = pType;
 }
 
-void asset_config::generate_id()
+const util::uuid& asset_config::get_id() const noexcept
 {
-	// Generate an id from a hash of the file path
-	// TODO: Replace this with something that can generate a more "unique" id.
-	mID = util::hash::hash64(mPath.string()) + reinterpret_cast<asset_uid>(this);
+	return mId;
 }
 
-asset_uid asset_config::get_id() const
+void asset_config::set_id(const util::uuid& pId) noexcept
 {
-	return mID;
-}
-
-void asset_config::set_id(asset_uid pID)
-{
-	mID = pID;
+	mId = pId;
 }
 
 const filesystem::path & asset_config::get_path() const

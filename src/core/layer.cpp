@@ -84,7 +84,7 @@ const std::string& layer::get_name() const noexcept
 
 game_object layer::add_object()
 {
-	auto& data = mObject_manager.add_object(get_context().get_unique_instance_id());
+	auto& data = mObject_manager.add_object();
 	return{ *this, data };
 }
 
@@ -109,7 +109,7 @@ game_object layer::get_object(std::size_t pIndex)
 	return{ *this, *data };
 }
 
-game_object layer::get_object(object_id pId)
+game_object layer::get_object(const util::uuid& pId)
 {
 	auto data = mObject_manager.get_object_data(pId);
 	if (data)
@@ -127,7 +127,7 @@ component* layer::add_component(const game_object& pObj, const component_type& p
 	factory* f = get_context().get_factory();
 	if (!f)
 		return nullptr;
-	component* c = f->create_component(pType, mComponent_manager, get_context().get_unique_instance_id());
+	component* c = f->create_component(pType, mComponent_manager);
 	c->set_object(pObj);
 	mObject_manager.register_component(c);
 	return c;
@@ -138,15 +138,15 @@ component* layer::get_first_component(const game_object& pObj, const component_t
 	return mComponent_manager.get_first_component(pType, pObj.get_instance_id());
 }
 
-component* layer::get_component(const component_type& pType, component_id pId)
+component* layer::get_component(const component_type& pType, const util::uuid& pId)
 {
 	return mComponent_manager.get_component(pType, pId);
 }
 
-void layer::remove_component(int pType, component_id pId)
+void layer::remove_component(int pType, const util::uuid& pId)
 {
 	component* comp = get_component(pType, pId);
-	object_id obj_id = comp->get_object_id();
+	const util::uuid& obj_id = comp->get_object_id();
 	mObject_manager.unregister_component(obj_id, pId);
 	mComponent_manager.remove_component(pType, pId);
 }

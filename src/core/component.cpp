@@ -6,6 +6,10 @@
 namespace wge::core
 {
 
+component::component() noexcept :
+	mInstance_id(util::generate_uuid())
+{}
+
 json component::serialize(serialize_type pType) const
 {
 	json result;
@@ -31,17 +35,17 @@ const std::string& component::get_name() const noexcept
 	return mName;
 }
 
-object_id component::get_object_id() const noexcept
+const util::uuid& component::get_object_id() const noexcept
 {
 	return mObject_id;
 }
 
-void component::set_object(const game_object & pObj) noexcept
+void component::set_object(const game_object& pObj) noexcept
 {
 	mObject_id = pObj.get_instance_id();
 }
 
-component_id component::get_instance_id() const noexcept
+const util::uuid& component::get_instance_id() const noexcept
 {
 	return mInstance_id;
 }

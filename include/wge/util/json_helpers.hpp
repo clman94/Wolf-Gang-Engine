@@ -80,6 +80,10 @@ void from_json(const nlohmann::json& pJson, strongly_typed_id<T, Tvalue>& pId)
 	pId.set_value(pJson);
 }
 
+class uuid;
+void to_json(nlohmann::json& pJson, const uuid& pUuid);
+void from_json(const nlohmann::json& pJson, uuid& pUuid);
+
 } // namespace wge::core
 
 struct b2Vec2;

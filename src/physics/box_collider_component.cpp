@@ -10,8 +10,7 @@
 namespace wge::physics
 {
 
-box_collider_component::box_collider_component(core::component_id pId) :
-	core::component(pId),
+box_collider_component::box_collider_component() :
 	mFixture(nullptr),
 	mSize(1, 1),
 	mIs_sensor(false)

@@ -4,12 +4,12 @@
 namespace wge::core
 {
 
-component* factory::create_component(int pType, component_manager& pManager, component_id pId) const
+component* factory::create_component(const component_type& pType, component_manager& pManager) const
 {
 	auto iter = mComponent_factories.find(pType);
 	if (iter == mComponent_factories.end())
 		return nullptr;
-	return iter->second(pManager, pId);
+	return iter->second(pManager);
 }
 
 system* factory::create_system(int pType, layer& pLayer) const
@@ -65,11 +65,6 @@ void context::remove_layer(const layer::ptr& pPtr)
 const context::layer_container& context::get_layer_container() const noexcept
 {
 	return mLayers;
-}
-
-instance_id_t context::get_unique_instance_id() noexcept
-{
-	return ++mCurrent_instance_id;
 }
 
 void context::set_asset_manager(asset_manager * pAsset_manager) noexcept

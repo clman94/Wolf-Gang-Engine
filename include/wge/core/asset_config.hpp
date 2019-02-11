@@ -1,6 +1,7 @@
 #pragma once
 
 #include <wge/filesystem/path.hpp>
+#include <wge/util/uuid.hpp>
 
 #include <string>
 #include <memory>
@@ -10,9 +11,6 @@ using json = nlohmann::json;
 
 namespace wge::core
 {
-
-// A type that holds an asset's unique identification number
-using asset_uid = std::uint64_t;
 
 // Loads and saves the asset configuration
 // file.
@@ -25,13 +23,13 @@ using asset_uid = std::uint64_t;
 //   be called to load the asset.
 //
 // id :
-//   A unique id for quick and decoupled access to an asset.
+//   A unique id for universal access to an asset.
 //   This id will never change for an asset after it
 //   is generated so you can access the same asset even
 //   if its path changes.
 //
 // description :
-//   A user defined piece of text to help document this asset
+//   A user defined piece of text to help document this asset.
 //
 // metadata :
 //   This is the configuration the asset stores. E.g. texture atlas,
@@ -54,9 +52,8 @@ public:
 	const std::string& get_type() const;
 	void set_type(const std::string& pType);
 
-	void generate_id();
-	asset_uid get_id() const;
-	void set_id(asset_uid pID);
+	const util::uuid& get_id() const noexcept;
+	void set_id(const util::uuid& pId) noexcept;
 
 	// Get the absolute path to the configuration file
 	const filesystem::path& get_path() const;
@@ -73,7 +70,7 @@ private:
 	filesystem::path mPath;
 	std::string mType;
 	std::string mDescription;
-	asset_uid mID;
+	util::uuid mId;
 	json mMetadata;
 
 	friend class asset;

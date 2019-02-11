@@ -158,7 +158,7 @@ context& game_object::get_context() const
 	return get_layer().get_context();
 }
 
-object_id game_object::get_instance_id() const
+const util::uuid& game_object::get_instance_id() const
 {
 	assert_valid_reference();
 	return mData->id;

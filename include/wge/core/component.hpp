@@ -5,12 +5,10 @@
 
 #include <wge/math/aabb.hpp>
 #include <wge/core/serialize_type.hpp>
-#include <wge/core/instance_id.hpp>
 #include <wge/core/component_type.hpp>
 
-#include <nlohmann/json.hpp>
+#include <wge/util/uuid.hpp>
 #include <wge/util/json_helpers.hpp>
-using json = nlohmann::json;
 
 // Use this in your component to define the needed information the engine
 // needs.
@@ -49,9 +47,7 @@ class asset_manager;
 class component
 {
 public:
-	component(component_id pId) noexcept :
-		mInstance_id(pId)
-	{}
+	component() noexcept;
 	virtual ~component() {}
 
 	// Save the current state of this component
@@ -78,10 +74,10 @@ public:
 	virtual math::aabb get_local_aabb() const { return{}; }
 
 	// Get the object this component is registered to
-	object_id get_object_id() const noexcept;
+	const util::uuid& get_object_id() const noexcept;
 	void set_object(const game_object& pObj) noexcept;
 
-	component_id get_instance_id() const noexcept;
+	const util::uuid& get_instance_id() const noexcept;
 
 protected:
 	virtual json on_serialize(serialize_type) const { return json{}; }
@@ -89,8 +85,8 @@ protected:
 
 private:
 	std::string mName;
-	object_id mObject_id;
-	component_id mInstance_id;
+	util::uuid mObject_id;
+	util::uuid mInstance_id;
 };
 
 } // namespace wge::core

@@ -37,9 +37,9 @@ public:
 	asset::ptr find_asset(const filesystem::path& pPath) const noexcept;
 	// Find an asset by its uid.
 	// Returns empty when it it not found.
-	asset::ptr find_asset(asset_uid pUID) const noexcept;
+	asset::ptr find_asset(const util::uuid& pUID) const noexcept;
 
-	bool has_asset(asset_uid pUID) const noexcept;
+	bool has_asset(const util::uuid& pUID) const noexcept;
 	bool has_asset(const asset::ptr& pAsset) const noexcept;
 
 	// Find an asset by its relative path.
@@ -50,11 +50,11 @@ public:
 	{
 		return cast_asset<T>(find_asset(pPath));
 	}
-	// Find an asset by its uid.
+	// Find an asset by its id.
 	// Returns empty if it is not found.
 	// It will automatically be casted to T.
 	template <typename T>
-	asset::tptr<T> get_asset(asset_uid pUID) const
+	asset::tptr<T> get_asset(const util::uuid& pUID) const
 	{
 		return cast_asset<T>(find_asset(pUID));
 	}
@@ -88,7 +88,7 @@ public:
 		config->set_path(mRoot_dir / pPath);
 		config->set_type(pType);
 		config->set_metadata(pData);
-		config->generate_id();
+		config->set_id(util::generate_uuid());
 		config->save();
 
 		serialized_asset::ptr ptr = std::make_shared<serialized_asset>(config);
@@ -101,10 +101,6 @@ public:
 	{
 		return mFile_structure;
 	}
-
-	//serialized_asset::ptr create_serialized_asset(const filesystem::path& pPath, serializable& pSerializable)
-	//{
-	//}
 
 private:
 	// Turn an absolute path into a relative path to the root directory
@@ -134,20 +130,5 @@ inline void asset_manager::register_asset(const std::string& pType)
 		return ptr;
 	};
 }
-
-class asset_directory_iterator
-{
-public:
-	asset_directory_iterator() noexcept
-	{}
-
-	asset_directory_iterator(asset_manager& pAsset, const filesystem::path& pDirectory)
-	{
-
-	}
-
-private:
-
-};
 
 } // namespace wge::core

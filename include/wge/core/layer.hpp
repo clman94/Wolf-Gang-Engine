@@ -61,7 +61,7 @@ public:
 	// Get a game object at an index
 	game_object get_object(std::size_t pIndex);
 	// Get a game object by its instance id
-	game_object get_object(object_id pId);
+	game_object get_object(const util::uuid& pId);
 	// Get the amount of game objects in this layer
 	std::size_t get_object_count() const noexcept;
 
@@ -79,14 +79,14 @@ public:
 
 	// Get a component by its instance it. The type is needed to check in
 	// the correct container.
-	component* get_component(const component_type& pType, component_id pId);
+	component* get_component(const component_type& pType, const util::uuid& pId);
 
 	// Get the container associated to a specific type of component.
 	template <typename T>
 	component_storage<T>& get_component_container();
 
 	// Remove a component of a specific instance id and type.
-	void remove_component(int pType, component_id pId);
+	void remove_component(int pType, const util::uuid& pId);
 
 	// Populate these pointers with all the components this object has.
 	// However, it will return false if it couldn't find them all.
@@ -163,7 +163,7 @@ inline T* layer::add_system(Targs&&...pArgs)
 template<typename T>
 inline T* layer::add_component(const game_object & pObj)
 {
-	auto* comp = &mComponent_manager.add_component<T>(get_context().get_unique_instance_id());
+	auto* comp = &mComponent_manager.add_component<T>();
 	comp->set_object(pObj);
 	mObject_manager.register_component(comp);
 	return comp;

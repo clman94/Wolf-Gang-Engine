@@ -18,7 +18,7 @@ class box_collider_component :
 {
 	WGE_COMPONENT("Box Collider", 268);
 public:
-	box_collider_component(core::component_id pId);
+	box_collider_component();
 	virtual ~box_collider_component();
 
 	void set_offset(const math::vec2& pOffset);

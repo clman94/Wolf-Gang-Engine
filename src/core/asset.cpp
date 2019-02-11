@@ -20,7 +20,7 @@ void asset::set_path(const filesystem::path& pPath)
 	mPath = pPath;
 }
 
-asset_uid asset::get_id() const
+const util::uuid& asset::get_id() const
 {
 	return mConfig->get_id();
 }

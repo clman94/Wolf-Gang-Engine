@@ -4,11 +4,6 @@
 namespace wge::core
 {
 
-transform_component::transform_component(core::component_id pId) noexcept :
-	core::component(pId)
-{
-}
-
 json transform_component::on_serialize(serialize_type pType) const
 {
 	json result;

@@ -4,20 +4,14 @@
 #include <string>
 #include <iostream>
 
-#include <nlohmann/json.hpp>
 #include <wge/util/json_helpers.hpp>
-using json = nlohmann::json;
-
+#include <wge/util/uuid.hpp>
 #include <wge/math/rect.hpp>
 #include <wge/core/asset.hpp>
 #include <wge/filesystem/filesystem_interface.hpp>
-#include <wge/core/instance_id.hpp>
 
 namespace wge::graphics
 {
-
-struct animation;
-using animation_id = core::instance_id<animation>;
 
 struct animation
 {
@@ -28,7 +22,7 @@ public:
 	std::size_t frames{ 1 };
 	float interval{ 0 };
 	math::rect frame_rect;
-	animation_id id;
+	util::uuid id;
 
 	animation() = default;
 	animation(const json& pJson);
@@ -86,7 +80,7 @@ public:
 
 	// Retrieve an animation by name. Returns an empty pointer if it was not found.
 	animation::ptr get_animation(const std::string& pName) const noexcept;
-	animation::ptr get_animation(const animation_id& pId) const noexcept;
+	animation::ptr get_animation(const util::uuid& pId) const noexcept;
 
 	// Get the raw container for the atlas.
 	// Mainly for use by an editor.

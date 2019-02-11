@@ -7,7 +7,6 @@
 
 #include <wge/logging/log.hpp>
 #include <wge/core/asset_config.hpp>
-#include <wge/core/instance_id.hpp>
 #include <wge/core/serialize_type.hpp>
 #include <wge/core/component_type.hpp>
 #include <wge/util/json_helpers.hpp>
@@ -49,7 +48,7 @@ public:
 	game_object(layer&, object_data&) noexcept;
 
 	// Check if this object has a component of a specific id
-	bool has_component(int pId) const;
+	bool has_component(const component_type& pType) const;
 	// Check if this object has a component of a type
 	template <class T,
 		// Requires the "int COMPONENT_ID" member
@@ -103,7 +102,7 @@ public:
 	context& get_context() const;
 
 	// Get the id that uniquely identifies this object
-	object_id get_instance_id() const;
+	const util::uuid& get_instance_id() const;
 
 	operator bool() const noexcept
 	{

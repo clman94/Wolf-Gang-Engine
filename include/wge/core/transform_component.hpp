@@ -13,8 +13,6 @@ class transform_component :
 {
 	WGE_COMPONENT_SINGLE_INSTANCE("Transform 2D", 1);
 public:
-	transform_component(core::component_id pId) noexcept;
-
 	// Set the position of this transform
 	void set_position(const math::vec2& pVec) noexcept;
 	math::vec2 get_position() const noexcept;

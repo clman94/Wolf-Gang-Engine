@@ -1,6 +1,5 @@
 #pragma once
 
-#include <wge/core/instance_id.hpp>
 #include <wge/core/layer.hpp>
 
 #include <vector>
@@ -18,9 +17,9 @@ public:
 	void register_component()
 	{
 		mComponent_factories[T::COMPONENT_ID] =
-			[](component_manager& pManager, component_id pId) -> component*
+			[](component_manager& pManager) -> component*
 		{
-			return &pManager.add_component<T>(pId);
+			return &pManager.add_component<T>();
 		};
 	}
 
@@ -34,13 +33,13 @@ public:
 		};
 	}
 
-	component* create_component(int pType, component_manager& pManager, component_id pId) const;
+	component* create_component(const component_type& pType, component_manager& pManager) const;
 	system* create_system(int pType, layer& pLayer) const;
 
 private:
-	using component_factory = std::function<component*(component_manager&, component_id)>;
+	using component_factory = std::function<component*(component_manager&)>;
 	using system_factory = std::function<system*(layer&)>;
-	std::map<int, component_factory> mComponent_factories;
+	std::map<component_type, component_factory> mComponent_factories;
 	std::map<int, system_factory> mSystem_factories;
 };
 
@@ -61,8 +60,6 @@ public:
 
 	const layer_container& get_layer_container() const noexcept;
 
-	instance_id_t get_unique_instance_id() noexcept;
-
 	void set_asset_manager(asset_manager* pAsset_manager) noexcept;
 	asset_manager* get_asset_manager() const noexcept;
 
@@ -75,7 +72,6 @@ public:
 
 private:
 	layer_container mLayers;
-	instance_id_t mCurrent_instance_id{ 0 };
 	factory* mFactory{ nullptr };
 	asset_manager* mAsset_manager{ nullptr };
 };

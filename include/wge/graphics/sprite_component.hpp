@@ -19,10 +19,6 @@ class sprite_component :
 {
 	WGE_COMPONENT("Sprite", 12409);
 public:
-	sprite_component(core::component_id pId) :
-		core::component(pId)
-	{}
-
 	// Creates a batch
 	void create_batch(core::transform_component& pTransform, renderer& pRenderer);
 

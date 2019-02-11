@@ -32,9 +32,8 @@ inline core::asset_config::ptr create_metadata_config(const std::string & pType,
 {
 	core::asset_config::ptr config = std::make_shared<core::asset_config>();
 	config->set_type(pType);
-
 	config->set_path(make_metadata_config_path(pPath));
-	config->generate_id();
+	config->set_id(util::generate_uuid());
 	config->save();
 
 	return config;
@@ -81,7 +80,7 @@ asset::ptr asset_manager::find_asset(const filesystem::path& pPath) const noexce
 	return{};
 }
 
-asset::ptr asset_manager::find_asset(asset_uid pUID) const noexcept
+asset::ptr asset_manager::find_asset(const util::uuid& pUID) const noexcept
 {
 	for (const auto& i : mAsset_list)
 		if (i->get_id() == pUID)
@@ -89,7 +88,7 @@ asset::ptr asset_manager::find_asset(asset_uid pUID) const noexcept
 	return{};
 }
 
-bool asset_manager::has_asset(asset_uid pUID) const noexcept
+bool asset_manager::has_asset(const util::uuid& pUID) const noexcept
 {
 	for (auto& i : mAsset_list)
 		if (i->get_id() == pUID)
@@ -115,18 +114,18 @@ void asset_manager::register_resource_extension(const std::string& pType, const 
 	mAsset_resource_extensions[pExtension] = pType;
 }
 
-void asset_manager::register_serial_config_extension(const std::string& pType, const std::string & pExtension)
+void asset_manager::register_serial_config_extension(const std::string& pType, const std::string& pExtension)
 {
 	register_asset<serialized_asset>(pType);
 	register_config_extension(pType, pExtension);
 }
 
-void asset_manager::set_root_directory(const filesystem::path & pPath)
+void asset_manager::set_root_directory(const filesystem::path& pPath)
 {
 	mRoot_dir = system_fs::absolute(pPath);
 }
 
-const filesystem::path & asset_manager::get_root_directory() const
+const filesystem::path& asset_manager::get_root_directory() const
 {
 	return mRoot_dir;
 }
@@ -171,13 +170,12 @@ asset::ptr asset_manager::create_configuration_asset(const std::string& pType, c
 	auto config = std::make_shared<asset_config>();
 	config->set_path(mRoot_dir / pPath);
 	config->set_type(pType);
-	config->generate_id();
+	config->set_id(util::generate_uuid());
 
 	auto nasset = mAsset_factories[pType](pPath, config);
 	add_asset(nasset);
 	return nasset;
 }
-
 
 filesystem::path asset_manager::make_relative_to_root(const filesystem::path & pPath) const
 {
@@ -186,12 +184,12 @@ filesystem::path asset_manager::make_relative_to_root(const filesystem::path & p
 	return path;
 }
 
-void asset_manager::load_configuration_asset(const filesystem::path & pPath, const std::string & pType)
+void asset_manager::load_configuration_asset(const filesystem::path& pPath, const std::string& pType)
 {
 	add_asset(mAsset_factories[pType](make_relative_to_root(pPath), load_asset_config(pPath)));
 }
 
-void asset_manager::load_resource_asset(const filesystem::path & pPath, const std::string & pType)
+void asset_manager::load_resource_asset(const filesystem::path& pPath, const std::string& pType)
 {
 	asset_config::ptr config;
 	filesystem::path config_path = make_metadata_config_path(pPath);

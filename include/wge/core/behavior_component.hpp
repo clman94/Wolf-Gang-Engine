@@ -11,10 +11,6 @@ class behavior_component :
 {
 	WGE_COMPONENT("Behavior", 9432);
 public:
-	behavior_component(component_id pId) noexcept :
-		component(pId)
-	{}
-
 	void set_behavior(const behavior::ptr& pBehavior) noexcept
 	{
 		mBehavior = pBehavior;

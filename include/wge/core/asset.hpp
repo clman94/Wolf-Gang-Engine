@@ -24,7 +24,7 @@ public:
 	const filesystem::path& get_path() const noexcept;
 	void set_path(const filesystem::path& pPath);
 
-	asset_uid get_id() const;
+	const util::uuid& get_id() const;
 
 	const std::string& get_type() const;
 

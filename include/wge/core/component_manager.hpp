@@ -1,6 +1,5 @@
 #pragma once
 
-#include <wge/core/instance_id.hpp>
 #include <wge/core/component_storage.hpp>
 #include <wge/core/component_type.hpp>
 
@@ -16,42 +15,42 @@ class component_manager
 {
 public:
 	template <typename T>
-	T& add_component(component_id pId)
+	T& add_component()
 	{
-		return get_container<T>().create_component(pId);
+		return get_container<T>().create_component();
 	}
 
-	void remove_component(const component_type& pType, component_id pId)
+	void remove_component(const component_type& pType, const util::uuid& pComponent_id)
 	{
 		auto iter = mContainers.find(pType);
 		if (iter != mContainers.end())
-			iter->second->remove_component(pId);
+			iter->second->remove_component(pComponent_id);
 	}
 
 	// Get first component of this type for this object
 	template <typename T>
-	T* get_first_component(object_id pId)
+	T* get_first_component(const util::uuid& pObject_id)
 	{
 		for (auto& i : get_container<T>())
-			if (i.get_object_id() == pId)
+			if (i.get_object_id() == pObject_id)
 				return &i;
 		return nullptr;
 	}
 	// Get first component of this type for this object
-	component* get_first_component(const component_type& pType, object_id pId)
+	component* get_first_component(const component_type& pType, const util::uuid& pObject_id)
 	{
 		component_storage_base* storage = get_container(pType);
 		if (!storage)
 			return nullptr;
-		return storage->get_first_component(pId);
+		return storage->get_first_component(pObject_id);
 	}
 
-	component* get_component(const component_type& pType, component_id pId)
+	component* get_component(const component_type& pType, const util::uuid& pComponent_id)
 	{
 		auto iter = mContainers.find(pType);
 		if (iter == mContainers.end())
 			return nullptr;
-		return iter->second->get_component(pId);
+		return iter->second->get_component(pComponent_id);
 	}
 
 	// Returns the container associated with this type of component
@@ -73,10 +72,10 @@ public:
 	}
 
 	// Remove all components for this entity
-	void remove_object(object_id pId)
+	void remove_object(const util::uuid& pObject_id)
 	{
 		for (auto& i : mContainers)
-			i.second->remove_object(pId);
+			i.second->remove_object(pObject_id);
 	}
 
 private:

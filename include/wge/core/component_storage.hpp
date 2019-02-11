@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <memory>
+#include <wge/util/uuid.hpp>
 
 namespace wge::core
 {
@@ -15,21 +16,21 @@ public:
 
 	virtual ~component_storage_base() {}
 
-	virtual void remove_component(component_id pId) = 0;
+	virtual void remove_component(const util::uuid& pComponent_id) = 0;
 
 	// Get all generic component referencing this object
-	virtual component_ptr_list get_all_components(object_id) = 0;
+	virtual component_ptr_list get_all_components(const util::uuid& pObject_id) = 0;
 
 	// Get first generic component referencing this object
-	virtual component* get_first_component(object_id) = 0;
+	virtual component* get_first_component(const util::uuid& pObject_id) = 0;
 
 	virtual int get_component_type() const = 0;
 
 	// Get component by its id
-	virtual component* get_component(component_id) = 0;
+	virtual component* get_component(const util::uuid& pComponent_id) = 0;
 
 	// Remove all components that reference this entity
-	virtual void remove_object(object_id) = 0;
+	virtual void remove_object(const util::uuid& pObject_id) = 0;
 };
 
 template <typename T>
@@ -40,16 +41,16 @@ public:
 	using container = std::vector<T>;
 	using iterator = typename container::iterator; 
 
-	T& create_component(component_id pId)
+	T& create_component()
 	{
-		return mStorage.emplace_back(pId);
+		return mStorage.emplace_back();
 	}
 
-	virtual void remove_component(component_id pId)
+	virtual void remove_component(const util::uuid& pComponent_id)
 	{
 		for (std::size_t i = 0; i < mStorage.size(); i++)
 		{
-			if (mStorage[i].get_instance_id() == pId)
+			if (mStorage[i].get_instance_id() == pComponent_id)
 			{
 				mStorage.erase(mStorage.begin() + i);
 				break;
@@ -57,19 +58,19 @@ public:
 		}
 	}
 
-	virtual component_ptr_list get_all_components(object_id pObject) override
+	virtual component_ptr_list get_all_components(const util::uuid& pObject_id) override
 	{
 		component_ptr_list result;
 		for (auto& i : mStorage)
-			if (i.get_object_id() == pObject)
+			if (i.get_object_id() == pObject_id)
 				result.push_back(&i);
 		return result;
 	}
 
-	virtual component* get_first_component(object_id pObject) override
+	virtual component* get_first_component(const util::uuid& pObject_id) override
 	{
 		for (auto& i : mStorage)
-			if (i.get_object_id() == pObject)
+			if (i.get_object_id() == pObject_id)
 				return &i;
 		return nullptr;
 	}
@@ -79,18 +80,18 @@ public:
 		return T::COMPONENT_ID;
 	}
 
-	virtual component* get_component(component_id pId) override
+	virtual component* get_component(const util::uuid& pComponent_id) override
 	{
 		for (auto& i : mStorage)
-			if (i.get_instance_id() == pId)
+			if (i.get_instance_id() == pComponent_id)
 				return &i;
 		return nullptr;
 	}
 
-	virtual void remove_object(object_id pObject) override
+	virtual void remove_object(const util::uuid& pObject_id) override
 	{
 		for (std::size_t i = 0; i < mStorage.size(); i++)
-			if (mStorage[i].get_object_id() == pObject)
+			if (mStorage[i].get_object_id() == pObject_id)
 				mStorage.erase(mStorage.begin() + i--);
 	}
 

@@ -26,7 +26,7 @@ public:
 		type_static
 	};
 
-	physics_component(core::component_id pId);
+	physics_component();
 	virtual ~physics_component();
 
 	void set_type(int pType);

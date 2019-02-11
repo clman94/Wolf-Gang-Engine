@@ -697,7 +697,7 @@ private:
 			{
 				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("textureAsset"))
 				{
-					core::asset_uid id = *(core::asset_uid*)payload->Data;
+					const util::uuid& id = *(const util::uuid*)payload->Data;
 					auto asset = mAsset_manager.get_asset<graphics::texture>(id);
 					sprite->set_texture(asset);
 				}
@@ -721,7 +721,7 @@ private:
 			{
 				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("behaviorAsset"))
 				{
-					core::asset_uid id = *(core::asset_uid*)payload->Data;
+					const util::uuid& id = *(const util::uuid*)payload->Data;
 					auto asset = mAsset_manager.get_asset<core::behavior>(id);
 					comp->set_behavior(asset);
 				}
@@ -770,17 +770,17 @@ private:
 		{
 			static filesystem::path current_path;
 
-			/*ImGui::Columns(2, "_AssetColumns");
+			ImGui::Columns(2, "_AssetColumns");
 			ImGui::SetColumnWidth(0, 100);
 
 			ImGui::TextUnformatted("Type:");
 			ImGui::NextColumn();
 			ImGui::TextUnformatted("Path:");
 			ImGui::NextColumn();
-			*/
-			auto root = mAsset_manager.get_file_structure().find(current_path);
+			
+			/*auto root = mAsset_manager.get_file_structure().find(current_path);
 
-			/*for (auto& i : root.child())
+			for (auto& i : root.child())
 			{
 				core::asset::ptr asset = i.second->has_value() ? i.second->value() : core::asset::ptr{};
 				if (asset)
@@ -797,17 +797,17 @@ private:
 					}
 				}
 			}*/
-			/*
+			
 			for (auto& i : mAsset_manager.get_asset_list())
 			{
-				ImGui::PushID(i->get_id());
+				ImGui::PushID(i->get_id().to_hash32());
 				const bool asset_is_selected = mContext.get_selection<selection_type::asset>() == i;
 				if (ImGui::Selectable(i->get_type().c_str(), asset_is_selected, ImGuiSelectableFlags_SpanAllColumns))
 					mContext.set_selection(i);
 				if (ImGui::BeginDragDropSource())
 				{
-					core::asset_uid id = i->get_id();
-					ImGui::SetDragDropPayload((i->get_type() + "Asset").c_str(), &id, sizeof(core::asset_uid));
+					const util::uuid* id = &i->get_id();
+					ImGui::SetDragDropPayload((i->get_type() + "Asset").c_str(), &id, sizeof(const util::uuid*));
 					ImGui::Text("Asset: %s", i->get_path().string().c_str());
 					ImGui::EndDragDropSource();
 				}
@@ -816,7 +816,7 @@ private:
 				ImGui::NextColumn();
 				ImGui::PopID();
 			}
-			ImGui::Columns();*/
+			ImGui::Columns();
 		}
 		ImGui::End();
 	}
@@ -943,7 +943,7 @@ private:
 					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("gameobjectAsset"))
 					{
 						core::game_object obj = selected_layer->add_object();
-						core::asset_uid id = *(core::asset_uid*)payload->Data;
+						const util::uuid& id = *(const util::uuid*)payload->Data;
 						auto asset = mAsset_manager.find_asset(id);
 						obj.deserialize(asset->get_config()->get_metadata());
 						if (auto transform = obj.get_component<core::transform_component>())
@@ -952,7 +952,7 @@ private:
 					}
 					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("layerAsset"))
 					{
-						core::asset_uid id = *(core::asset_uid*)payload->Data;
+						const util::uuid& id = *(const util::uuid*)payload->Data;
 						auto asset = mAsset_manager.find_asset(id);
 						auto new_layer = mGame_context.add_layer();
 						new_layer->deserialize(asset->get_config()->get_metadata());
@@ -1053,7 +1053,7 @@ private:
 		for (std::size_t i = 0; i < pLayer->get_object_count(); i++)
 		{
 			core::game_object obj = pLayer->get_object(i);
-			ImGui::PushID(obj.get_instance_id().get_value());
+			ImGui::PushID(obj.get_instance_id().to_hash32());
 
 			const auto selection = mContext.get_selection<selection_type::game_object>();
 			const bool is_selected = selection && selection->get_instance_id() == obj.get_instance_id();
@@ -1239,7 +1239,7 @@ private:
 	{
 		std::string path = pAsset->get_path().string();
 		ImGui::InputText("Name", &path, ImGuiInputTextFlags_ReadOnly);
-		ImGui::LabelText("Asset ID", std::to_string(pAsset->get_id()).c_str());
+		ImGui::LabelText("Asset ID", pAsset->get_id().to_string().c_str());
 
 		std::string description = pAsset->get_config()->get_description();
 		if (ImGui::InputText("Description", &description))
