@@ -92,8 +92,8 @@ public:
 		config->save();
 
 		serialized_asset::ptr ptr = std::make_shared<serialized_asset>(config);
-		add_asset(ptr);
 		ptr->set_path(pPath);
+		add_asset(ptr);
 		return ptr;
 	}
 
