@@ -53,13 +53,13 @@ std::string uuid::to_string() const
 	result[18] = '-';
 	put_hex(&result[19], mBytes[8]);
 	put_hex(&result[21], mBytes[9]);
-	result[22] = '-';
-	put_hex(&result[23], mBytes[10]);
-	put_hex(&result[25], mBytes[11]);
-	put_hex(&result[27], mBytes[12]);
-	put_hex(&result[29], mBytes[13]);
-	put_hex(&result[31], mBytes[14]);
-	put_hex(&result[33], mBytes[15]);
+	result[23] = '-';
+	put_hex(&result[24], mBytes[10]);
+	put_hex(&result[26], mBytes[11]);
+	put_hex(&result[28], mBytes[12]);
+	put_hex(&result[30], mBytes[13]);
+	put_hex(&result[32], mBytes[14]);
+	put_hex(&result[34], mBytes[15]);
 
 	return result;
 }
