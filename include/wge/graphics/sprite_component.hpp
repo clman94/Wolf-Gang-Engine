@@ -31,8 +31,8 @@ public:
 	void set_anchor(const math::vec2& pRatio) noexcept;
 	math::vec2 get_anchor() const noexcept;
 
-	void set_animation(animation::ptr pAnimation) noexcept;
-	void set_animation(const std::string& pName) noexcept;
+	bool set_animation(const std::string& pName) noexcept;
+	bool set_animation(const util::uuid& pId) noexcept;
 
 	// Set the texture from a texture pointer.
 	void set_texture(const texture::ptr& pAsset) noexcept;
@@ -51,7 +51,7 @@ private:
 	math::aabb mSceen_aabb, mLocal_aabb;
 	texture::ptr mTexture;
 	math::vec2 mOffset, mAnchor{ math::anchor::topleft };
-	animation::ptr mAnimation;
+	util::uuid mAnimation_id;
 };
 
 } // namespace wge::graphics

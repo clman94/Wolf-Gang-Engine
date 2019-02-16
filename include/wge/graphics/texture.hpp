@@ -16,8 +16,6 @@ namespace wge::graphics
 struct animation
 {
 public:
-	using ptr = std::shared_ptr<animation>;
-
 	std::string name;
 	std::size_t frames{ 1 };
 	float interval{ 0 };
@@ -47,7 +45,7 @@ class texture :
 	public core::asset
 {
 public:
-	using atlas_container = std::vector<animation::ptr>;
+	using atlas_container = std::vector<animation>;
 	using ptr = tptr<texture>;
 
 	texture(const core::asset_config::ptr& pConfig);
@@ -79,8 +77,8 @@ public:
 	bool is_smooth() const noexcept;
 
 	// Retrieve an animation by name. Returns an empty pointer if it was not found.
-	animation::ptr get_animation(const std::string& pName) const noexcept;
-	animation::ptr get_animation(const util::uuid& pId) const noexcept;
+	animation* get_animation(const std::string& pName) noexcept;
+	animation* get_animation(const util::uuid& pId) noexcept;
 
 	// Get the raw container for the atlas.
 	// Mainly for use by an editor.

@@ -100,7 +100,7 @@ public:
 		mConnection_on_new_selection = pContext.on_new_selection.connect(
 			[&]()
 		{
-			mSelected_animation.reset();
+			mSelected_animation_id = util::uuid{};
 		});
 
 		// Tell the context that the asset was modified
@@ -137,6 +137,7 @@ public:
 				ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
 				ImGui::SameLine();
 
+				// Store the cursor so we can position things on top of the image
 				const ImVec2 image_position = ImGui::GetCursorScreenPos();
 
 				ImGui::DrawAlphaCheckerBoard(image_position, image_size);
@@ -165,23 +166,26 @@ public:
 
 				// Draw the rectangles for the frames
 				for (const auto& i : texture->get_raw_atlas())
-					visual_editor::draw_rect(i->frame_rect, { 0, 1, 1, 0.5f });
+					visual_editor::draw_rect(i.frame_rect, { 0, 1, 1, 0.5f });
 
 				const bool was_dragging = visual_editor::is_dragging();
 
+				// Get the pointer to the selected animation
+				graphics::animation* selected_animation = texture->get_animation(mSelected_animation_id);
+
 				// Modify selected
-				if (mSelected_animation)
+				if (selected_animation)
 				{
 					visual_editor::begin_snap({ 1, 1 });
 
 					// Edit the selection
-					visual_editor::box_edit box_edit(mSelected_animation->frame_rect);
+					visual_editor::box_edit box_edit(selected_animation->frame_rect);
 					box_edit.resize(visual_editor::edit_type::rect);
 					box_edit.drag(visual_editor::edit_type::rect);
-					mSelected_animation->frame_rect = box_edit.get_rect();
+					selected_animation->frame_rect = box_edit.get_rect();
 
 					// Limit the minimum size to +1 pixel so the user isn't using 0 or negitive numbers
-					mSelected_animation->frame_rect.size = math::max(mSelected_animation->frame_rect.size, math::vec2(1, 1));
+					selected_animation->frame_rect.size = math::max(selected_animation->frame_rect.size, math::vec2(1, 1));
 
 					if (box_edit.is_dragging() && ImGui::IsMouseReleased(0))
 						on_change();
@@ -193,20 +197,21 @@ public:
 				if (!was_dragging && ImGui::IsMouseReleased(0))
 				{
 					// Find all overlapping frames that the mouse is hovering
-					std::vector<graphics::animation::ptr> mOverlapping;
-					for (const auto& i : texture->get_raw_atlas())
-						if (i->frame_rect.intersects(visual_editor::get_mouse_position()))
-							mOverlapping.push_back(i);
+					std::vector<graphics::animation*> mOverlapping;
+					for (auto& i : texture->get_raw_atlas())
+						if (i.frame_rect.intersects(visual_editor::get_mouse_position()))
+							mOverlapping.push_back(&i);
 
 					if (!mOverlapping.empty())
 					{
 						// Check if the currently selected animation is being selected again
 						// and cycle through the overlapping animations each click.
-						auto iter = std::find(mOverlapping.begin(), mOverlapping.end(), mSelected_animation);
+						auto iter = std::find(mOverlapping.begin(), mOverlapping.end(), selected_animation);
 						if (iter == mOverlapping.end() || iter + 1 == mOverlapping.end())
-							mSelected_animation = mOverlapping.front(); // Start/loop to front
+							selected_animation = mOverlapping.front(); // Start/loop to front
 						else
-							mSelected_animation = *(iter + 1); // Next item
+							selected_animation = *(iter + 1); // Next item
+						mSelected_animation_id = selected_animation->id;
 					}
 				}
 
@@ -236,6 +241,37 @@ public:
 		ImGui::End();
 	}
 
+	static void preview_image(const char* pStr_id, const graphics::texture::ptr& pTexture, const math::vec2& pSize, const math::rect& pFrame_rect)
+	{
+		// Scale the size of the image to preserve the aspect ratio but still fit in the
+		// specified area.
+		math::vec2 scaled_size =
+		{
+			math::min(pFrame_rect.size.x * (pSize.y / pFrame_rect.size.y), pSize.x),
+			math::min(pFrame_rect.size.y * (pSize.x / pFrame_rect.size.x), pSize.y)
+		};
+
+		// Center the position
+		const math::vec2 center_offset = pSize / 2 - scaled_size / 2;
+		const math::vec2 pos = math::vec2(ImGui::GetCursorScreenPos()) + center_offset;
+
+		// Draw the checkered background
+		ImGui::DrawAlphaCheckerBoard(pos, scaled_size, 10);
+
+		// Convert to UV coord
+		math::aabb uv(pFrame_rect);
+		uv.min /= pTexture->get_size();
+		uv.max /= pTexture->get_size();
+
+		// Draw the image
+		const auto impl = std::dynamic_pointer_cast<graphics::opengl_texture_impl>(pTexture->get_implementation());
+		auto dl = ImGui::GetWindowDrawList();
+		dl->AddImage((void*)impl->get_gl_texture(), pos, pos + scaled_size, uv.min, uv.max);
+
+		// Add an invisible button so we can interact with this image
+		ImGui::InvisibleButton(pStr_id, pSize);
+	}
+
 	void on_inspector_gui()
 	{
 		const auto open_sprite_editor = []()
@@ -256,27 +292,23 @@ public:
 			// Atlas list
 			ImGui::BeginChild("_AtlasList", { 0, 200 }, true);
 			ImGui::Columns(2, "_Previews", false);
-			ImGui::SetColumnWidth(0, 50);
+			ImGui::SetColumnWidth(0, 75 + ImGui::GetStyle().WindowPadding.x + ImGui::GetStyle().ItemSpacing.x);
 			for (auto& i : texture->get_raw_atlas())
 			{
-				if (ImGui::Selectable(("###" + i->name).c_str(), mSelected_animation == i, ImGuiSelectableFlags_SpanAllColumns, { 0, 50 }))
-					mSelected_animation = i;
+				if (ImGui::Selectable(("###" + i.name).c_str(), mSelected_animation_id == i.id, ImGuiSelectableFlags_SpanAllColumns, { 0, 75 }))
+					mSelected_animation_id = i.id;
+
+				// Double click will focus the sprite editor
 				if (ImGui::IsItemActive() && ImGui::IsMouseDoubleClicked(0))
 					open_sprite_editor();
 				ImGui::SameLine();
 
-				math::aabb aabb{ i->frame_rect };
+				preview_image("SmallPreviewImage", texture, { 75, 75 }, i.frame_rect);
 
-				// Convert to UV coord
-				aabb.min /= texture->get_width();
-				aabb.max /= texture->get_height();
-
-				// Draw preview image
-				ImGui::Image(texture, { 50, 50 }, { aabb.min.x, aabb.min.y }, { aabb.max.x, aabb.max.y });
 				ImGui::NextColumn();
 
 				// Entry name
-				ImGui::Text(i->name.c_str());
+				ImGui::Text(i.name.c_str());
 				ImGui::NextColumn();
 			}
 			ImGui::Columns();
@@ -284,10 +316,10 @@ public:
 
 			if (ImGui::Button("Add"))
 			{
-				auto animation = std::make_shared<graphics::animation>();
-				animation->frame_rect = math::rect(0, 0, 10, 10);
-				animation->name = make_unique_animation_name(texture, "NewEntry");
-				texture->get_raw_atlas().push_back(animation);
+				graphics::animation& animation = texture->get_raw_atlas().emplace_back();
+				animation.frame_rect = math::rect({ 0, 0 }, texture->get_size());
+				animation.name = make_unique_animation_name(texture, "NewEntry");
+				animation.id = util::generate_uuid();
 				on_change();
 			}
 
@@ -297,24 +329,25 @@ public:
 				on_change();
 			}
 
-			if (mSelected_animation)
+			if (graphics::animation* selected_animation = texture->get_animation(mSelected_animation_id))
 			{
 				ImGui::PushID("_AnimationSettings");
 
-				ImGui::Image(texture, { 100, 100 });
+				preview_image("LargePreviewImage", texture, { ImGui::GetWindowContentRegionWidth(), 200 }, selected_animation->frame_rect);
+
 				ImGui::Button("Play");
 				static int a = 0;
-				ImGui::SliderInt("Frame", &a, 0, mSelected_animation->frames);
+				ImGui::SliderInt("Frame", &a, 0, selected_animation->frames);
 				
-				ImGui::InputText("Name", &mSelected_animation->name);
+				ImGui::InputText("Name", &selected_animation->name);
 				if (ImGui::IsItemDeactivatedAfterEdit())
 				{
-					std::string temp = std::move(mSelected_animation->name);
-					mSelected_animation->name = make_unique_animation_name(texture, temp);
+					std::string temp = std::move(selected_animation->name);
+					selected_animation->name = make_unique_animation_name(texture, temp);
 					on_change();
 				}
-				ImGui::DragFloat2("Position", mSelected_animation->frame_rect.position.components); check_if_edited();
-				ImGui::DragFloat2("Size", mSelected_animation->frame_rect.size.components); check_if_edited();
+				ImGui::DragFloat2("Position", selected_animation->frame_rect.position.components); check_if_edited();
+				ImGui::DragFloat2("Size", selected_animation->frame_rect.size.components); check_if_edited();
 
 				ImGui::PopID();
 			}
@@ -328,7 +361,7 @@ private:
 	{
 		return util::create_unique_name(pName,
 			pTexture->get_raw_atlas().begin(), pTexture->get_raw_atlas().end(),
-			[](auto& i) -> const std::string& { return i->name; });
+			[](auto& i) -> const std::string& { return i.name; });
 	}
 
 	void check_if_edited()
@@ -340,7 +373,7 @@ private:
 private:
 	context* mContext;
 	util::connection mConnection_on_new_selection;
-	graphics::animation::ptr mSelected_animation;
+	util::uuid mSelected_animation_id;
 };
 
 class mybehavior :
@@ -616,7 +649,7 @@ private:
 		layer->add_system<graphics::renderer>();
 
 		auto renderer = layer->get_system<graphics::renderer>();
-		renderer->set_pixel_size(0.01);
+		renderer->set_pixel_size(0.01f);
 
 		auto obj = layer->add_object();
 		obj.add_component<core::transform_component>();
@@ -865,7 +898,7 @@ private:
 			//if (ImGui::Button("Save", { 70, 35 - ImGui::GetStyle().ItemSpacing.y / 2 }));
 			//ImGui::EndGroup();
 			//ImGui::SameLine();
-			ImVec4 play_color = mUpdate ? ImVec4{ 0.4, 0.1, 0.1, 1 } : ImVec4{ 0.1, 0.4, 0.1, 1 };
+			ImVec4 play_color = mUpdate ? ImVec4{ 0.4f, 0.1f, 0.1f, 1 } : ImVec4{ 0.1f, 0.4f, 0.1f, 1 };
 			ImGui::PushStyleColor(ImGuiCol_Button, play_color);
 			if (ImGui::Button(mUpdate ? "Pause" : "Play", { 70, 70 }))
 				mUpdate = !mUpdate;
@@ -877,7 +910,7 @@ private:
 		{
 			static bool show_center_point = true;
 			static bool is_grid_enabled = false;
-			static graphics::color grid_color{ 1, 1, 1, 0.7 };
+			static graphics::color grid_color{ 1, 1, 1, 0.7f };
 			static bool show_collision = false;
 
 			if (ImGui::BeginMenuBar())
@@ -906,7 +939,7 @@ private:
 
 			if (mViewport_framebuffer->get_width() != width
 				|| mViewport_framebuffer->get_height() != height)
-				mViewport_framebuffer->resize(width, height);
+				mViewport_framebuffer->resize(static_cast<int>(width), static_cast<int>(height));
 
 			ImVec2 topleft_cursor = ImGui::GetCursorScreenPos();
 			ImGui::Button("this thing");

@@ -16,6 +16,7 @@ void animation::deserialize(const json& pJson)
 	frames = pJson["frames"];
 	interval = pJson["interval"];
 	frame_rect = pJson["frame-rect"];
+	id = pJson["id"];
 }
 
 json animation::serialize() const
@@ -123,20 +124,20 @@ bool texture::is_smooth() const noexcept
 	return mSmooth;
 }
 
-animation::ptr texture::get_animation(const std::string& pName) const noexcept
+animation* texture::get_animation(const std::string& pName) noexcept
 {
-	for (const auto& i : mAtlas)
-		if (i->name == pName)
-			return i;
-	return{};
+	for (auto& i : mAtlas)
+		if (i.name == pName)
+			return &i;
+	return nullptr;
 }
 
-animation::ptr texture::get_animation(const util::uuid& pId) const noexcept
+animation* texture::get_animation(const util::uuid& pId) noexcept
 {
-	for (const auto& i : mAtlas)
-		if (i->id == pId)
-			return i;
-	return{};
+	for (auto& i : mAtlas)
+		if (i.id == pId)
+			return &i;
+	return nullptr;
 }
 
 texture::atlas_container& texture::get_raw_atlas() noexcept
@@ -158,7 +159,7 @@ void texture::update_metadata() const
 {
 	json result;
 	for (const auto& i : mAtlas)
-		result["atlas"].push_back(i->serialize());
+		result["atlas"].push_back(i.serialize());
 	get_config()->set_metadata(result);
 }
 
@@ -169,14 +170,14 @@ void texture::load_metadata()
 	{
 		const json& atlas = get_config()->get_metadata()["atlas"];
 		for (const json& i : atlas)
-			mAtlas.push_back(std::make_shared<animation>(i));
+			mAtlas.emplace_back(i);
 	}
 	if (!get_animation("Default"))
 	{
-		auto def_animation = std::make_shared<animation>();
-		def_animation->name = "Default";
-		def_animation->frame_rect = math::rect(0, 0, mWidth, mHeight);
-		mAtlas.push_back(def_animation);
+		animation& def_animation = mAtlas.emplace_back();
+		def_animation.name = "Default";
+		def_animation.id = util::generate_uuid();
+		def_animation.frame_rect = math::rect(0, 0, mWidth, mHeight);
 	}
 }
 

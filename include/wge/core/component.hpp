@@ -6,7 +6,6 @@
 #include <wge/math/aabb.hpp>
 #include <wge/core/serialize_type.hpp>
 #include <wge/core/component_type.hpp>
-
 #include <wge/util/uuid.hpp>
 #include <wge/util/json_helpers.hpp>
 

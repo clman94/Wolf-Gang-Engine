@@ -174,7 +174,7 @@ void draw_rect(const math::aabb& pAABB, const graphics::color& pColor)
 
 	std::size_t start_index = dl->VtxBuffer.size();
 	dl->PathRect({ pAABB.min.x, pAABB.min.y }, { pAABB.max.x, pAABB.max.y });
-	for (std::size_t i = 0; i < dl->_Path.size(); i++)
+	for (std::size_t i = 0; i < static_cast<std::size_t>(dl->_Path.size()); i++)
 	{
 		math::vec2 pos(dl->_Path[i].x, dl->_Path[i].y);
 		math::vec2 newpos = gCurrent_editor_state->calc_absolute(pos);
