@@ -194,7 +194,7 @@ public:
 				}
 
 				// Select a new one
-				if (!was_dragging && ImGui::IsMouseReleased(0))
+				if (!was_dragging && ImGui::IsItemHovered() && ImGui::IsMouseReleased(0))
 				{
 					// Find all overlapping frames that the mouse is hovering
 					std::vector<graphics::animation*> mOverlapping;
@@ -821,7 +821,7 @@ private:
 		if (ImGui::Begin("Asset Manager"))
 		{
 			using const_iterator = core::asset_manager::file_structure::const_iterator;
-			const_iterator root = mAsset_manager.get_file_structure().find({});
+			const_iterator root = mAsset_manager.get_file_structure().find("images");
 			ImGui::BeginChild("DirectoryTree", { 200, 0 }, true);
 			show_asset_directory_tree(root);
 			ImGui::EndChild();
@@ -957,7 +957,6 @@ private:
 
 		if (ImGui::Begin("Viewport", NULL, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_HorizontalScrollbar))
 		{
-			ImGui::DockSpace(ImGui::GetID("SomeWindowThing"), ImVec2(0, 50), ImGuiDockNodeFlags_KeepAliveOnly | ImGuiDockNodeFlags_NoSplit);
 			static bool show_center_point = true;
 			static bool is_grid_enabled = false;
 			static graphics::color grid_color{ 1, 1, 1, 0.7f };

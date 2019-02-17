@@ -215,19 +215,25 @@ inline math::vec2 get_mouse_position()
 bool drag_behavior(ImGuiID pID, bool pHovered)
 {
 	assert(gCurrent_editor_state);
-	bool dragging = gCurrent_editor_state->active_dragger_id == pID;
-	if (pHovered && ImGui::IsMouseClicked(0) && gCurrent_editor_state->active_dragger_id == 0)
+	bool is_dragging_this = gCurrent_editor_state->active_dragger_id == pID;
+	bool is_dragging_at_all = gCurrent_editor_state->active_dragger_id != 0;
+	if (pHovered && ImGui::IsItemHovered() && ImGui::IsMouseClicked(0)
+		&& !is_dragging_at_all)
 	{
-		gCurrent_editor_state->active_dragger_id = pID; // Start drag
-		dragging = true;
+		// Start drag
+		gCurrent_editor_state->active_dragger_id = pID;
+		is_dragging_this = true;
 	}
-	else if (!ImGui::IsMouseDown(0) && dragging)
+	else if (!ImGui::IsMouseDown(0) && is_dragging_this)
 	{
-		gCurrent_editor_state->active_dragger_id = 0; // End drag
-		dragging = true; // Return true for one more frame after the mouse is released
-						 // so the user can handle mouse-released events.
+		// End drag
+		gCurrent_editor_state->active_dragger_id = 0;
+
+		// Return true for one more frame after the mouse is released
+		// so the user can handle mouse-released events.
+		is_dragging_this = true;
 	}
-	return dragging;
+	return is_dragging_this;
 }
 
 bool drag_behavior(ImGuiID pID, bool pHovered, float* pX, float* pY)
