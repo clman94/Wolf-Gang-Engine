@@ -77,24 +77,45 @@ private:
 			return &mCurrent;
 		}
 
-		iterator_impl previous()
+		iterator_impl previous() const
 		{
 			return{ mNode->previous };
 		}
 
-		iterator_impl next()
+		iterator_impl next() const
 		{
 			return{ mNode->next };
 		}
 
-		iterator_impl parent()
+		iterator_impl parent() const
 		{
 			return{ mNode->parent };
 		}
 
-		iterator_impl child()
+		iterator_impl child() const
 		{
 			return{ mNode->child };
+		}
+
+		bool empty() const
+		{
+			return mNode->child == nullptr;
+		}
+
+		bool is_directory() const
+		{
+			return !mNode->userdata;
+		}
+
+		path get_path() const
+		{
+			if (!is_valid())
+				return{};
+
+			path result;
+			for (auto i = mNode; i != nullptr; i = i->parent)
+				result.push_front(i->name);
+			return result;
 		}
 
 		// Advance to the next node

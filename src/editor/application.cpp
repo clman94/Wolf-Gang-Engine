@@ -797,58 +797,107 @@ private:
 	}
 
 private:
+	static void show_asset_directory_tree(const core::asset_manager::file_structure::const_iterator& pIterator)
+	{
+		using const_iterator = core::asset_manager::file_structure::const_iterator;
+
+		if (pIterator.empty())
+		{
+			ImGui::TreeNodeEx(pIterator.name().c_str(), ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen);
+		}
+		else if (ImGui::TreeNode(pIterator.name().c_str()))
+		{
+			for (auto i = pIterator.child(); i != const_iterator{}; ++i)
+			{
+				if (i.is_directory())
+					show_asset_directory_tree(i);
+			}
+			ImGui::TreePop();
+		}
+	}
+
 	void show_asset_manager()
 	{
 		if (ImGui::Begin("Asset Manager"))
 		{
-			static filesystem::path current_path;
+			using const_iterator = core::asset_manager::file_structure::const_iterator;
+			const_iterator root = mAsset_manager.get_file_structure().find({});
+			ImGui::BeginChild("DirectoryTree", { 200, 0 }, true);
+			show_asset_directory_tree(root);
+			ImGui::EndChild();
 
-			ImGui::Columns(2, "_AssetColumns");
-			ImGui::SetColumnWidth(0, 100);
+			ImGui::SameLine();
 
-			ImGui::TextUnformatted("Type:");
-			ImGui::NextColumn();
-			ImGui::TextUnformatted("Path:");
-			ImGui::NextColumn();
-			
-			/*auto root = mAsset_manager.get_file_structure().find(current_path);
+			const math::vec2 file_preview_size = { 100, 100 };
 
-			for (auto& i : root.child())
+			ImGui::BeginChild("FileList", { 0, 0 }, true);
+			for (auto i = root.child(); i != const_iterator{}; ++i)
 			{
-				core::asset::ptr asset = i.second->has_value() ? i.second->value() : core::asset::ptr{};
-				if (asset)
-				{
-					const bool asset_is_selected = mContext.get_selection<selection_type::asset>() == asset;
-					if (ImGui::Selectable(i.first->c_str(), asset_is_selected))
-						mContext.set_selection(asset);
-				}
+				// Skip Directories or if it doesn't look like an asset
+				if (i.is_directory() || !i.userdata())
+					continue;
+
+				ImGui::PushID(i.get_node());
+
+				const core::asset::ptr asset = *i.userdata();
+				const bool asset_is_selected = mContext.get_selection<selection_type::asset>() == asset;
+
+				ImGui::BeginGroup();
+
+				// Draw preview
+				if (asset->get_type() == "texture")
+					ImGui::ImageButton(core::cast_asset<graphics::texture>(asset),
+						file_preview_size - math::vec2(ImGui::GetStyle().FramePadding) * 2);
 				else
+					ImGui::Button("No preview", file_preview_size);
+
+				// Draw text
+				ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + file_preview_size.x);
+				ImGui::Text(i.name().c_str());
+				ImGui::PopTextWrapPos();
+
+				ImGui::EndGroup();
+				ImGui::SameLine();
+
+				// Allow asset to be dragged
+				if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
 				{
-					if (ImGui::Selectable(i.first->c_str()))
-					{
-						current_path = root.child();
-					}
-				}
-			}*/
-			
-			for (auto& i : mAsset_manager.get_asset_list())
-			{
-				ImGui::PushID(i->get_id().to_hash32());
-				const bool asset_is_selected = mContext.get_selection<selection_type::asset>() == i;
-				if (ImGui::Selectable(i->get_type().c_str(), asset_is_selected, ImGuiSelectableFlags_SpanAllColumns))
-					mContext.set_selection(i);
-				if (ImGui::BeginDragDropSource())
-				{
-					ImGui::SetDragDropPayload((i->get_type() + "Asset").c_str(), &i->get_id(), sizeof(util::uuid));
-					ImGui::Text("Asset: %s", i->get_path().string().c_str());
+					ImGui::SetDragDropPayload((asset->get_type() + "Asset").c_str(), &asset->get_id(), sizeof(util::uuid));
+					ImGui::Text("Asset: %s", asset->get_path().string().c_str());
 					ImGui::EndDragDropSource();
 				}
-				ImGui::NextColumn();
-				ImGui::TextUnformatted(i->get_path().string().c_str());
-				ImGui::NextColumn();
+
+				// Select the asset when clicked
+				if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0))
+					mContext.set_selection(asset);
+
+				auto dl = ImGui::GetWindowDrawList();
+
+				// Calculate item aabb that includes the item spacing
+				math::vec2 item_min = math::vec2(ImGui::GetItemRectMin())
+					- math::vec2(ImGui::GetStyle().ItemSpacing) / 2;
+				math::vec2 item_max = math::vec2(ImGui::GetItemRectMax())
+					+ math::vec2(ImGui::GetStyle().ItemSpacing) / 2;
+
+				// Draw the background
+				if (ImGui::IsItemHovered())
+				{
+					dl->AddRectFilled(item_min, item_max,
+						ImGui::GetColorU32(ImGuiCol_ButtonHovered), ImGui::GetStyle().FrameRounding);
+				}
+				else if (asset_is_selected)
+				{
+					dl->AddRectFilled(item_min, item_max,
+						ImGui::GetColorU32(ImGuiCol_ButtonActive), ImGui::GetStyle().FrameRounding);
+				}
+
+				// If there isn't any room left in this line, create a new one.
+				if (ImGui::GetContentRegionAvailWidth() < file_preview_size.x)
+					ImGui::NewLine();
+
 				ImGui::PopID();
 			}
-			ImGui::Columns();
+			ImGui::EndChild();
 		}
 		ImGui::End();
 	}
@@ -908,6 +957,7 @@ private:
 
 		if (ImGui::Begin("Viewport", NULL, ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_HorizontalScrollbar))
 		{
+			ImGui::DockSpace(ImGui::GetID("SomeWindowThing"), ImVec2(0, 50), ImGuiDockNodeFlags_KeepAliveOnly | ImGuiDockNodeFlags_NoSplit);
 			static bool show_center_point = true;
 			static bool is_grid_enabled = false;
 			static graphics::color grid_color{ 1, 1, 1, 0.7f };

@@ -20,6 +20,7 @@ class asset_manager
 public:
 	using asset_factory = std::function<asset::ptr(const filesystem::path&, asset_config::ptr)>;
 	using asset_container = std::vector<asset::ptr>;
+	using file_structure = filesystem::file_structure<asset::ptr>;
 
 	// TODO: Implement the filesystem_interface as the only means of
 	//   loading assets.
@@ -97,7 +98,7 @@ public:
 		return ptr;
 	}
 
-	const filesystem::file_structure<asset::ptr>& get_file_structure() const
+	const file_structure& get_file_structure() const
 	{
 		return mFile_structure;
 	}
@@ -114,7 +115,7 @@ private:
 	std::map<std::string, std::string> mAsset_resource_extensions; // { [extension], [asset type] }
 	std::map<std::string, std::string> mAsset_config_extensions; // { [extension], [asset type] }
 	std::vector<asset::ptr> mAsset_list;
-	filesystem::file_structure<asset::ptr> mFile_structure;
+	file_structure mFile_structure;
 	filesystem::path mRoot_dir;
 	filesystem::filesystem_interface* mFilesystem{ nullptr };
 };
