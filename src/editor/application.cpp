@@ -243,6 +243,9 @@ public:
 
 	static void preview_image(const char* pStr_id, const graphics::texture::ptr& pTexture, const math::vec2& pSize, const math::rect& pFrame_rect)
 	{
+		if (pSize.x <= 0 || pSize.y <= 0)
+			return;
+
 		// Scale the size of the image to preserve the aspect ratio but still fit in the
 		// specified area.
 		math::vec2 scaled_size =
@@ -286,8 +289,9 @@ public:
 
 		if (ImGui::CollapsingHeader("Atlas", ImGuiTreeNodeFlags_DefaultOpen))
 		{
+			static float atlas_list_height = 200;
 			// Atlas list
-			ImGui::BeginChild("_AtlasList", { 0, 200 }, true);
+			ImGui::BeginChild("_AtlasList", { 0, atlas_list_height }, true);
 			ImGui::Columns(2, "_Previews", false);
 			ImGui::SetColumnWidth(0, 75 + ImGui::GetStyle().WindowPadding.x + ImGui::GetStyle().ItemSpacing.x);
 			for (auto& i : texture->get_raw_atlas())
@@ -310,6 +314,8 @@ public:
 			}
 			ImGui::Columns();
 			ImGui::EndChild();
+
+			ImGui::HorizontalSplitter("AtlasListSplitter", &atlas_list_height);
 
 			if (ImGui::Button("Add"))
 			{
@@ -336,7 +342,11 @@ public:
 
 				if (ImGui::CollapsingHeader("Preview", ImGuiTreeNodeFlags_DefaultOpen))
 				{
-					preview_image("LargePreviewImage", texture, { ImGui::GetWindowContentRegionWidth(), 200 }, selected_animation->frame_rect);
+					static float preview_image_height = 200;
+					ImGui::BeginChild("PreviewImageChild", { 0, preview_image_height }, true, ImGuiWindowFlags_NoInputs);
+					preview_image("LargePreviewImage", texture, ImGui::GetWindowContentRegionSize(), selected_animation->frame_rect);
+					ImGui::EndChild();
+					ImGui::HorizontalSplitter("PreviewImageSplitter", &preview_image_height);
 
 					ImGui::Button("Play");
 					static int a = 1;
@@ -837,17 +847,24 @@ private:
 	{
 		if (ImGui::Begin("Asset Manager"))
 		{
+			static float directory_tree_width = 200;
 			using const_iterator = core::asset_manager::file_structure::const_iterator;
 			const_iterator root = mAsset_manager.get_file_structure().find("images");
-			ImGui::BeginChild("DirectoryTree", { 200, 0 }, true);
+
+			ImGui::BeginChild("DirectoryTree", { directory_tree_width, 0 }, true);
 			show_asset_directory_tree(root);
 			ImGui::EndChild();
+
+			ImGui::SameLine();
+
+			ImGui::VerticalSplitter("DirectoryTreeSplitter", &directory_tree_width);
 
 			ImGui::SameLine();
 
 			const math::vec2 file_preview_size = { 100, 100 };
 
 			ImGui::BeginChild("FileList", { 0, 0 }, true);
+
 			for (auto i = root.child(); i != const_iterator{}; ++i)
 			{
 				// Skip Directories or if it doesn't look like an asset

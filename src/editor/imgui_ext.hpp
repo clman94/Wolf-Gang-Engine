@@ -171,4 +171,9 @@ inline bool DragScroll(int pMouseButton, float pLockThreshold = -1)
 	return false;
 }
 
+bool VerticalSplitter(const char* pStr_id, float* pDelta, float pWidth = 5);
+bool HorizontalSplitter(const char* pStr_id, float* pDelta, float pWidth = 5);
+
+ImVec2 GetWindowContentRegionSize();
+
 } // namespace ImGui
