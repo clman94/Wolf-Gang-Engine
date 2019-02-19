@@ -349,6 +349,7 @@ public:
 				preview_image("LargePreviewImage", texture, ImGui::GetWindowContentRegionSize(), selected_animation->frame_rect);
 				ImGui::EndChild();
 				ImGui::HorizontalSplitter("PreviewImageSplitter", &preview_image_height);
+				preview_image_height = math::max(preview_image_height, 30.f);
 
 				ImGui::Button("Play");
 				static int a = 1;
