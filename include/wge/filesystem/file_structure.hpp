@@ -113,7 +113,7 @@ private:
 				return{};
 
 			path result;
-			for (auto i = mNode; i != nullptr; i = i->parent)
+			for (auto i = mNode; i != nullptr && i->parent != nullptr; i = i->parent)
 				result.push_front(i->name);
 			return result;
 		}

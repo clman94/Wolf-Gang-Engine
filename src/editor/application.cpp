@@ -34,6 +34,7 @@
 #include <GLFW/glfw3.h>
 #include <wge/graphics/glfw_backend.hpp>
 
+#include <variant>
 #include <functional>
 
 namespace wge::editor
@@ -824,48 +825,77 @@ private:
 	}
 
 private:
-	static void show_asset_directory_tree(const core::asset_manager::file_structure::const_iterator& pIterator)
+	static void show_asset_directory_tree(const core::asset_manager::file_structure::const_iterator& pIterator, filesystem::path& pDirectory, bool pSkip = true)
 	{
 		using const_iterator = core::asset_manager::file_structure::const_iterator;
+		
+		bool open = false;
 
-		if (pIterator.empty())
+		if (!pSkip)
 		{
-			ImGui::TreeNodeEx(pIterator.name().c_str(), ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen);
+			const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+			if (pIterator.empty())
+				ImGui::TreeNodeEx(pIterator.name().c_str(), flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen);
+			else
+				open = ImGui::TreeNodeEx(pIterator.name().c_str(), flags);
+
+			// Set the directory
+			if (ImGui::IsItemClicked())
+				pDirectory = pIterator.get_path();
 		}
-		else if (ImGui::TreeNode(pIterator.name().c_str()))
+
+		if (open || pSkip)
 		{
+			// Show subdirectories
 			for (auto i = pIterator.child(); i != const_iterator{}; ++i)
 			{
 				if (i.is_directory())
-					show_asset_directory_tree(i);
+					show_asset_directory_tree(i, pDirectory, false);
 			}
-			ImGui::TreePop();
 		}
+
+		if (open)
+			ImGui::TreePop();
 	}
 
 	void show_asset_manager()
 	{
 		if (ImGui::Begin("Asset Manager"))
 		{
+			static filesystem::path path = "";
 			static float directory_tree_width = 200;
 			using const_iterator = core::asset_manager::file_structure::const_iterator;
-			const_iterator root = mAsset_manager.get_file_structure().find("images");
+			const_iterator root = mAsset_manager.get_file_structure().find("");
 
 			ImGui::BeginChild("DirectoryTree", { directory_tree_width, 0 }, true);
-			show_asset_directory_tree(root);
+			show_asset_directory_tree(root, path);
 			ImGui::EndChild();
 
-			ImGui::SameLine();
+			const_iterator current_directory = mAsset_manager.get_file_structure().find(path);
 
+			ImGui::SameLine();
 			ImGui::VerticalSplitter("DirectoryTreeSplitter", &directory_tree_width);
 
 			ImGui::SameLine();
+			ImGui::BeginGroup();
+
+			ImGui::PushID("PathList");
+			for (std::size_t i = 0; i < path.size(); ++i)
+			{
+				if (ImGui::Button(path[i].c_str()))
+				{
+					path.erase(path.begin() + i + 1, path.end());
+					break;
+				}
+				if (i < path.size() - 1)
+					ImGui::SameLine();
+			}
+			ImGui::PopID();
 
 			const math::vec2 file_preview_size = { 100, 100 };
 
 			ImGui::BeginChild("FileList", { 0, 0 }, true);
-
-			for (auto i = root.child(); i != const_iterator{}; ++i)
+			for (auto i = current_directory.child(); i != const_iterator{}; ++i)
 			{
 				// Skip Directories or if it doesn't look like an asset
 				if (i.is_directory() || !i.userdata())
@@ -932,6 +962,8 @@ private:
 				ImGui::PopID();
 			}
 			ImGui::EndChild();
+
+			ImGui::EndGroup();
 		}
 		ImGui::End();
 	}
