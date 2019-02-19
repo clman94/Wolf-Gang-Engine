@@ -97,6 +97,14 @@ private:
 			return{ mNode->child };
 		}
 
+		bool has_subdirectories() const
+		{
+			for (auto i = mNode->child; i != nullptr; i = i->next)
+				if (i->child != nullptr)
+					return true;
+			return false;
+		}
+
 		bool empty() const
 		{
 			return mNode->child == nullptr;

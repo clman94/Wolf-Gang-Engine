@@ -834,10 +834,11 @@ private:
 		if (!pSkip)
 		{
 			const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
-			if (pIterator.empty())
-				ImGui::TreeNodeEx(pIterator.name().c_str(), flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen);
-			else
+
+			if (pIterator.has_subdirectories())
 				open = ImGui::TreeNodeEx(pIterator.name().c_str(), flags);
+			else
+				ImGui::TreeNodeEx(pIterator.name().c_str(), flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen);
 
 			// Set the directory
 			if (ImGui::IsItemClicked())
@@ -882,12 +883,14 @@ private:
 			ImGui::PushID("PathList");
 			for (std::size_t i = 0; i < path.size(); ++i)
 			{
+				const bool last_item = i == path.size() - 1;
 				if (ImGui::Button(path[i].c_str()))
 				{
+					// TODO: Click the last item will open a last popup to select a different directory..?
 					path.erase(path.begin() + i + 1, path.end());
 					break;
 				}
-				if (i < path.size() - 1)
+				if (!last_item)
 					ImGui::SameLine();
 			}
 			ImGui::PopID();
