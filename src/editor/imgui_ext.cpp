@@ -30,7 +30,7 @@ bool Splitter(const char* pStr_id, float* pDelta, float pWidth, bool pIs_horizon
 	InvisibleButton("Splitter", size);
 
 	// This will help us check if the mouse left the button
-	// So we don't end up locking the mouse cursor type to "Hand"
+	// So we don't end up locking the mouse cursor type to "Arrow"
 	// When we arn't hovering it.
 	bool* was_hovered = GetStateStorage()->GetBoolRef(GetID("WasHovered"), false);
 	bool hovered = IsItemHovered();
@@ -39,7 +39,7 @@ bool Splitter(const char* pStr_id, float* pDelta, float pWidth, bool pIs_horizon
 	if (hovered || active)
 		SetMouseCursor(pIs_horizontal ? ImGuiMouseCursor_ResizeNS : ImGuiMouseCursor_ResizeEW);
 	else if (*was_hovered)
-		SetMouseCursor(ImGuiMouseCursor_Hand);
+		SetMouseCursor(ImGuiMouseCursor_Arrow);
 
 	*was_hovered = hovered;
 
