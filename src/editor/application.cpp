@@ -335,49 +335,49 @@ public:
 			ImGui::SameLine();
 			if (ImGui::Button("Open Sprite Editor"))
 				open_sprite_editor();
+		}
 
-			if (graphics::animation* selected_animation = texture->get_animation(mSelected_animation_id))
+		if (graphics::animation* selected_animation = texture->get_animation(mSelected_animation_id))
+		{
+			ImGui::PushID("_AnimationSettings");
+
+			if (ImGui::CollapsingHeader("Preview", ImGuiTreeNodeFlags_DefaultOpen))
 			{
-				ImGui::PushID("_AnimationSettings");
+				static float preview_image_height = 200;
+				ImGui::BeginChild("PreviewImageChild", { 0, preview_image_height }, true, ImGuiWindowFlags_NoInputs);
+				preview_image("LargePreviewImage", texture, ImGui::GetWindowContentRegionSize(), selected_animation->frame_rect);
+				ImGui::EndChild();
+				ImGui::HorizontalSplitter("PreviewImageSplitter", &preview_image_height);
 
-				if (ImGui::CollapsingHeader("Preview", ImGuiTreeNodeFlags_DefaultOpen))
-				{
-					static float preview_image_height = 200;
-					ImGui::BeginChild("PreviewImageChild", { 0, preview_image_height }, true, ImGuiWindowFlags_NoInputs);
-					preview_image("LargePreviewImage", texture, ImGui::GetWindowContentRegionSize(), selected_animation->frame_rect);
-					ImGui::EndChild();
-					ImGui::HorizontalSplitter("PreviewImageSplitter", &preview_image_height);
-
-					ImGui::Button("Play");
-					static int a = 1;
-					const std::string format = "%d/" + std::to_string(selected_animation->frames);
-					ImGui::SliderInt("Frame", &a, 1, selected_animation->frames, format.c_str());
-				}
-				if (ImGui::CollapsingHeader("Basic", ImGuiTreeNodeFlags_DefaultOpen))
-				{
-					ImGui::InputText("Name", &selected_animation->name);
-					if (ImGui::IsItemDeactivatedAfterEdit())
-					{
-						std::string temp = std::move(selected_animation->name);
-						selected_animation->name = make_unique_animation_name(texture, temp);
-						on_change();
-					}
-					ImGui::DragFloat2("Position", selected_animation->frame_rect.position.components); check_if_edited();
-					ImGui::DragFloat2("Size", selected_animation->frame_rect.size.components); check_if_edited();
-				}
-				if (ImGui::CollapsingHeader("Animation", ImGuiTreeNodeFlags_DefaultOpen))
-				{
-					int frame_count = static_cast<int>(selected_animation->frames);
-					if (ImGui::InputInt("Frame Count", &frame_count))
-					{
-						// Limit the minimun to 1
-						selected_animation->frames = math::max<std::size_t>(static_cast<std::size_t>(frame_count), 1);
-						on_change();
-					}
-					ImGui::InputFloat("Interval", &selected_animation->interval, 0.01f, 0.1f, "%.3f Seconds"); check_if_edited();
-				}
-				ImGui::PopID();
+				ImGui::Button("Play");
+				static int a = 1;
+				const std::string format = "%d/" + std::to_string(selected_animation->frames);
+				ImGui::SliderInt("Frame", &a, 1, selected_animation->frames, format.c_str());
 			}
+			if (ImGui::CollapsingHeader("Basic", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				ImGui::InputText("Name", &selected_animation->name);
+				if (ImGui::IsItemDeactivatedAfterEdit())
+				{
+					std::string temp = std::move(selected_animation->name);
+					selected_animation->name = make_unique_animation_name(texture, temp);
+					on_change();
+				}
+				ImGui::DragFloat2("Position", selected_animation->frame_rect.position.components); check_if_edited();
+				ImGui::DragFloat2("Size", selected_animation->frame_rect.size.components); check_if_edited();
+			}
+			if (ImGui::CollapsingHeader("Animation", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				int frame_count = static_cast<int>(selected_animation->frames);
+				if (ImGui::InputInt("Frame Count", &frame_count))
+				{
+					// Limit the minimun to 1
+					selected_animation->frames = math::max<std::size_t>(static_cast<std::size_t>(frame_count), 1);
+					on_change();
+				}
+				ImGui::InputFloat("Interval", &selected_animation->interval, 0.01f, 0.1f, "%.3f Seconds"); check_if_edited();
+			}
+			ImGui::PopID();
 		}
 	}
 
