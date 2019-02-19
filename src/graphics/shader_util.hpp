@@ -4,24 +4,12 @@
 #include <string>
 #include <cassert>
 #include <fstream>
+#include <wge/logging/log.hpp>
 
 namespace wge::graphics
 {
 
-inline std::string load_file_as_string(const std::string& pPath)
-{
-	std::ifstream stream(pPath.c_str());
-	if (!stream.good())
-	{
-		std::cout << "Could not load file \"" << pPath << "\"\n";
-		return{};
-	}
-	std::stringstream sstr;
-	sstr << stream.rdbuf();
-	return sstr.str();
-}
-
-inline bool compile_shader(GLuint pGL_shader, const std::string & pSource)
+inline bool compile_shader(GLuint pGL_shader, const std::string& pSource)
 {
 	// Compile Shader
 	const char * source_ptr = pSource.c_str();
@@ -38,20 +26,16 @@ inline bool compile_shader(GLuint pGL_shader, const std::string & pSource)
 		// A compilation error occured. Print the message.
 		std::vector<char> message(log_length + 1);
 		glGetShaderInfoLog(pGL_shader, log_length, NULL, &message[0]);
-		printf("%s\n", &message[0]);
+		log::error() << "Error compiling shader: " << &message[0] << log::endm;
 		return false;
 	}
 
 	return true;
 }
 
-inline GLuint load_shaders(const std::string & pVertex_path, const std::string & pFragment_path)
+inline GLuint load_shaders(const std::string& pVertex_source, const std::string& pFragment_source)
 {
-	// Load sources
-	std::string vertex_str = load_file_as_string(pVertex_path);
-	std::string fragment_str = load_file_as_string(pFragment_path);
-
-	if (vertex_str.empty() || fragment_str.empty())
+	if (pVertex_source.empty() || pFragment_source.empty())
 		return 0;
 
 	// Create the shader objects
@@ -59,8 +43,8 @@ inline GLuint load_shaders(const std::string & pVertex_path, const std::string &
 	GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
 
 	// Compile the shaders
-	compile_shader(vertex_shader, vertex_str);
-	compile_shader(fragment_shader, fragment_str);
+	compile_shader(vertex_shader, pVertex_source);
+	compile_shader(fragment_shader, pFragment_source);
 
 	// Link the shaders to a program
 	GLuint program_id = glCreateProgram();
@@ -78,7 +62,7 @@ inline GLuint load_shaders(const std::string & pVertex_path, const std::string &
 		// An error occured
 		std::vector<char> message(log_length + 1);
 		glGetProgramInfoLog(program_id, log_length, NULL, &message[0]);
-		printf("%s\n", &message[0]);
+		log::error() << "Error linking shaders: " << &message[0] << log::endm;
 		return 0;
 	}
 

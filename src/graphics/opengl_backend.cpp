@@ -2,7 +2,8 @@
 #include <wge/graphics/opengl_framebuffer.hpp>
 #include <wge/graphics/opengl_texture.hpp>
 #include <wge/logging/log.hpp>
-#include "shader_util.inl"
+#include "shader_util.hpp"
+#include "opengl_shaders.hpp"
 
 #include <GL/glew.h>
 
@@ -64,12 +65,12 @@ public:
 		glDebugMessageCallback(opengl_message_callback, 0);
 
 		mShader_texture = load_shaders(
-			"./editor/shaders/vert_texture.glsl",
-			"./editor/shaders/frag_texture.glsl"
+			shaders::vertex_texture,
+			shaders::fragment_texture
 		);
 		mShader_color = load_shaders(
-			"./editor/shaders/vert_color.glsl",
-			"./editor/shaders/frag_color.glsl"
+			shaders::vertex_color,
+			shaders::fragment_color
 		);
 
 		glGenVertexArrays(1, &mVAO_id);
