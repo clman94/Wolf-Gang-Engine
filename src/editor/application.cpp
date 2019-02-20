@@ -21,6 +21,7 @@
 #include <wge/core/behavior_system.hpp>
 #include <wge/math/transform.hpp>
 #include <wge/util/ptr.hpp>
+#include <wge/scripting/angelscript_script.hpp>
 
 #include "editor.hpp"
 #include "history.hpp"
@@ -405,23 +406,6 @@ private:
 	util::uuid mSelected_animation_id;
 };
 
-class mybehavior :
-	public core::behavior_instance
-{
-public:
-	virtual ~mybehavior() {}
-	virtual void on_update(float pDelta, core::game_object pObject) override
-	{
-		auto& pLayer = pObject.get_layer();
-		//auto transform = pObject.get_component<core::transform_component>();
-		//transform->set_position(transform->get_position() + math::vec2(0.1f, 0) * pDelta);
-
-		if (auto physics = pObject.get_component<physics::physics_component>())
-		{
-			physics->apply_force(math::vec2(0.1f, 0));
-		}
-	}
-};
 
 class application
 {
@@ -657,18 +641,14 @@ private:
 		});
 		mAsset_manager.register_resource_extension("texture", ".png");
 
-		mAsset_manager.register_asset("behavior",
+		/*mAsset_manager.register_asset("behavior",
 			[&](const filesystem::path& pPath, core::asset_config::ptr pConfig) -> core::asset::ptr
 		{
 			auto ptr = std::make_shared<core::behavior>(pConfig);
 			ptr->set_path(pPath);
-			ptr->set_instance_factory([](const core::behavior&)
-			{
-				return std::make_shared<mybehavior>();
-			});
 			return ptr;
 		});
-		mAsset_manager.register_resource_extension("behavior", ".as");
+		mAsset_manager.register_resource_extension("behavior", ".as");*/
 
 		mAsset_manager.set_root_directory(".");
 		mAsset_manager.load_assets();
@@ -826,38 +806,40 @@ private:
 	}
 
 private:
-	static void show_asset_directory_tree(const core::asset_manager::file_structure::const_iterator& pIterator, filesystem::path& pDirectory, bool pSkip = true)
+	static void show_asset_directory_tree(const core::asset_manager::file_structure::const_iterator& pIterator, filesystem::path& pDirectory)
 	{
 		using const_iterator = core::asset_manager::file_structure::const_iterator;
 		
+		const bool is_root = pIterator.parent() == const_iterator{};
+
 		bool open = false;
 
-		if (!pSkip)
+		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+		const char* name = is_root ? "Assets" : pIterator.name().c_str();
+		if (pIterator.has_subdirectories())
+			open = ImGui::TreeNodeEx(name, flags);
+		else
+			ImGui::TreeNodeEx(name, flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen);
+
+		// Set the directory
+		if (ImGui::IsItemClicked())
 		{
-			const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
-
-			if (pIterator.has_subdirectories())
-				open = ImGui::TreeNodeEx(pIterator.name().c_str(), flags);
+			if (is_root)
+				pDirectory.clear();
 			else
-				ImGui::TreeNodeEx(pIterator.name().c_str(), flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen);
-
-			// Set the directory
-			if (ImGui::IsItemClicked())
 				pDirectory = pIterator.get_path();
 		}
 
-		if (open || pSkip)
+		if (open)
 		{
 			// Show subdirectories
 			for (auto i = pIterator.child(); i != const_iterator{}; ++i)
 			{
 				if (i.is_directory())
-					show_asset_directory_tree(i, pDirectory, false);
+					show_asset_directory_tree(i, pDirectory);
 			}
-		}
-
-		if (open)
 			ImGui::TreePop();
+		}
 	}
 
 	void show_asset_manager()
