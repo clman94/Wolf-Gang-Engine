@@ -69,7 +69,9 @@ public:
 	// Returns true if this component can calculate an aabb
 	// from its data.
 	virtual bool has_aabb() const { return false; }
+	// Returns the aabb in world space
 	virtual math::aabb get_screen_aabb() const { return{}; }
+	// Returns the aabb relative to its "center" (usually its transform).
 	virtual math::aabb get_local_aabb() const { return{}; }
 
 	// Get the object this component is registered to
@@ -77,6 +79,13 @@ public:
 	void set_object(const game_object& pObj) noexcept;
 
 	const util::uuid& get_instance_id() const noexcept;
+
+	// Remove this component from its object.
+	// Pointers to this component and any component of the same type are still valid until
+	// the end of the frame.
+	void destroy() noexcept;
+	// Returns true if this component will be destroyed at the end of the frame.
+	bool will_be_destroyed() const noexcept;
 
 protected:
 	virtual json on_serialize(serialize_type) const { return json{}; }
@@ -86,6 +95,7 @@ private:
 	std::string mName;
 	util::uuid mObject_id;
 	util::uuid mInstance_id;
+	bool mWill_be_destroyed{ false };
 };
 
 } // namespace wge::core

@@ -12,12 +12,6 @@ game_object::game_object() noexcept :
 {
 }
 
-game_object::game_object(layer& pLayer) noexcept :
-	mLayer(&pLayer),
-	mData(nullptr)
-{
-}
-
 game_object::game_object(layer& pLayer, object_data& pData) noexcept :
 	mLayer(&pLayer),
 	mData(&pData)
@@ -122,9 +116,10 @@ void game_object::remove_component(std::size_t pIndex)
 	get_layer().remove_component(comp_entry.type, comp_entry.id);
 }
 
-void game_object::remove_components()
+void game_object::remove_all_components()
 {
 	assert_valid_reference();
+	get_layer().remove_all_components(*this);
 }
 
 const std::string& game_object::get_name() const

@@ -44,7 +44,6 @@ class game_object
 {
 public:
 	game_object() noexcept;
-	game_object(layer&) noexcept;
 	game_object(layer&, object_data&) noexcept;
 
 	// Check if this object has a component of a specific id
@@ -62,7 +61,9 @@ public:
 	template <typename T>
 	T* add_component();
 	component* add_component(const component_type& pType);
-	// Get the amount of components assigned to this object
+	// Get the amount of components assigned to this object.
+	// Note: If a component is removed, this will not update until
+	// the end of the frame.
 	std::size_t get_component_count() const;
 	// Get a component by its index
 	component* get_component_at(std::size_t pIndex);
@@ -79,7 +80,7 @@ public:
 	// Remove component at index
 	void remove_component(std::size_t pIndex);
 	// Remove all components
-	void remove_components();
+	void remove_all_components();
 
 	// Get the name of this object.
 	const std::string& get_name() const;
@@ -90,7 +91,7 @@ public:
 	// Remove this object from the layer.
 	// It is recommended that you discard any game_object objects because this
 	// function will remove the data they are pointing to, thus leaving
-	// them in an invalid state.
+	// them in an invalid state. TODO: Add some form of tracking.
 	void destroy();
 
 	// Get a reference to the layer this object belongs to.
@@ -109,6 +110,7 @@ public:
 		return is_valid();
 	}
 
+	// Returns true if this is a valid reference to an object.
 	bool is_valid() const noexcept
 	{
 		return mData != nullptr;
@@ -121,7 +123,6 @@ public:
 	}
 
 	bool operator==(const game_object& pObj) const noexcept;
-
 
 private:
 	void assert_valid_reference() const;

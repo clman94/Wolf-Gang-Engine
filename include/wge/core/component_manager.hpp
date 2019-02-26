@@ -32,7 +32,7 @@ public:
 	T* get_first_component(const util::uuid& pObject_id)
 	{
 		for (auto& i : get_container<T>())
-			if (i.get_object_id() == pObject_id)
+			if (i.get_object_id() == pObject_id && !i.will_be_destroyed())
 				return &i;
 		return nullptr;
 	}
@@ -76,6 +76,15 @@ public:
 	{
 		for (auto& i : mContainers)
 			i.second->remove_object(pObject_id);
+	}
+
+	// Run cleanup of marked components. Returns the amount of components destroyed.
+	std::size_t cleanup(const std::function<void(component*)>& pBefore_destroy_callback)
+	{
+		std::size_t total = 0;
+		for (auto& i : mContainers)
+			total += i.second->clean_marked_components(pBefore_destroy_callback);
+		return total;
 	}
 
 private:

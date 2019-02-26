@@ -31,6 +31,10 @@ public:
 
 	// Remove all components that reference this entity
 	virtual void remove_object(const util::uuid& pObject_id) = 0;
+
+	// Remove all components that are marked for destruction.
+	// Returns the amount of components destroyed.
+	virtual std::size_t clean_marked_components(const std::function<void(component*)>& pBefore_destroy_callback) = 0;
 };
 
 template <typename T>
@@ -62,7 +66,7 @@ public:
 	{
 		component_ptr_list result;
 		for (auto& i : mStorage)
-			if (i.get_object_id() == pObject_id)
+			if (i.get_object_id() == pObject_id && !i.will_be_destroyed())
 				result.push_back(&i);
 		return result;
 	}
@@ -70,7 +74,7 @@ public:
 	virtual component* get_first_component(const util::uuid& pObject_id) override
 	{
 		for (auto& i : mStorage)
-			if (i.get_object_id() == pObject_id)
+			if (i.get_object_id() == pObject_id && !i.will_be_destroyed())
 				return &i;
 		return nullptr;
 	}
@@ -83,16 +87,31 @@ public:
 	virtual component* get_component(const util::uuid& pComponent_id) override
 	{
 		for (auto& i : mStorage)
-			if (i.get_instance_id() == pComponent_id)
+			if (i.get_instance_id() == pComponent_id && !i.will_be_destroyed())
 				return &i;
 		return nullptr;
 	}
 
 	virtual void remove_object(const util::uuid& pObject_id) override
 	{
+		// Mark all the components for destruction.
 		for (std::size_t i = 0; i < mStorage.size(); i++)
 			if (mStorage[i].get_object_id() == pObject_id)
+				mStorage[i].destroy();
+	}
+
+	virtual std::size_t clean_marked_components(const std::function<void(component*)>& pBefore_destroy_callback) override
+	{
+		std::size_t original = mStorage.size();
+		for (std::size_t i = 0; i < mStorage.size(); i++)
+		{
+			if (mStorage[i].will_be_destroyed())
+			{
+				pBefore_destroy_callback(&mStorage[i]);
 				mStorage.erase(mStorage.begin() + i--);
+			}
+		}
+		return original - mStorage.size();
 	}
 
 	iterator begin() noexcept

@@ -36,6 +36,14 @@ std::size_t object_manager::get_object_count() const noexcept
 	return mObjects.size();
 }
 
+bool object_manager::has_object(const util::uuid & pId) const noexcept
+{
+	for (auto& i : mObjects)
+		if (i.id == pId)
+			return true;
+	return false;
+}
+
 void object_manager::register_component(component* pComponent)
 {
 	auto data = get_object_data(pComponent->get_object_id());

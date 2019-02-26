@@ -103,18 +103,18 @@ void layer::remove_object(const game_object& mObj)
 
 game_object layer::get_object(std::size_t pIndex)
 {
-	auto data = mObject_manager.get_object_data(pIndex);
+	object_data* data = mObject_manager.get_object_data(pIndex);
 	if (!data)
-		return{ *this };
+		return{};
 	return{ *this, *data };
 }
 
 game_object layer::get_object(const util::uuid& pId)
 {
-	auto data = mObject_manager.get_object_data(pId);
-	if (data)
-		return{ *this, *data };
-	return{ *this };
+	object_data* data = mObject_manager.get_object_data(pId);
+	if (!data)
+		return{};
+	return{ *this, *data };
 }
 
 std::size_t layer::get_object_count() const noexcept
@@ -149,6 +149,11 @@ void layer::remove_component(int pType, const util::uuid& pId)
 	const util::uuid& obj_id = comp->get_object_id();
 	mObject_manager.unregister_component(obj_id, pId);
 	mComponent_manager.remove_component(pType, pId);
+}
+
+void layer::remove_all_components(const game_object& pObject)
+{
+	mComponent_manager.remove_object(pObject.get_instance_id());
 }
 
 context & layer::get_context() const noexcept
@@ -195,6 +200,17 @@ void layer::postupdate(float pDelta)
 	pDelta *= mTime_scale;
 	for (auto& i : mSystems)
 		i->postupdate(pDelta);
+}
+
+std::size_t layer::cleanup()
+{
+	return mComponent_manager.cleanup([this](component* pComponent)
+	{
+		// Make sure to unregister the component from the object manager
+		// before deleting.
+		if (mObject_manager.has_object(pComponent->get_object_id()))
+			mObject_manager.unregister_component(pComponent);
+	});
 }
 
 } // namespace wge::core

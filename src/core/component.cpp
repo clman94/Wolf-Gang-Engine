@@ -50,4 +50,14 @@ const util::uuid& component::get_instance_id() const noexcept
 	return mInstance_id;
 }
 
+void component::destroy() noexcept
+{
+	mWill_be_destroyed = true;
+}
+
+bool component::will_be_destroyed() const noexcept
+{
+	return mWill_be_destroyed;
+}
+
 } // namespace wge::core

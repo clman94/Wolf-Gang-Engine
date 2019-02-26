@@ -497,6 +497,14 @@ private:
 				}
 			}
 
+			// Run cleanup for components.
+			for (auto& i : mGame_context.get_layer_container())
+			{
+				std::size_t total = i->cleanup();
+				if (total > 0)
+					log::debug() << "Cleaned " << total << " component(s) from layer \"" << i->get_name() << "\"" << log::endm;
+			}
+
 			end_frame();
 		}
 		shutdown();
@@ -869,7 +877,7 @@ private:
 				const bool last_item = i == path.size() - 1;
 				if (ImGui::Button(path[i].c_str()))
 				{
-					// TODO: Click the last item will open a last popup to select a different directory..?
+					// TODO: Clicking the last item will open a popup to select a different directory..?
 					path.erase(path.begin() + i + 1, path.end());
 					break;
 				}

@@ -88,12 +88,15 @@ public:
 	// Remove a component of a specific instance id and type.
 	void remove_component(int pType, const util::uuid& pId);
 
+	// Remove all components from an object.
+	void remove_all_components(const game_object& pObject);
+
 	// Populate these pointers with all the components this object has.
 	// However, it will return false if it couldn't find them all.
 	template <typename Tfirst, typename...Trest>
 	[[nodiscard]] bool retrieve_components(game_object pObj, Tfirst*& pFirst, Trest*&...pRest);
 
-	// Calls a callable for each component specified by the first parameter.
+	// Calls pCallable for each component specified by the first parameter.
 	// Each component parameter should be a non-const reference and derive from
 	// the component class.
 	// Example:
@@ -104,7 +107,7 @@ public:
 	//    // the first transform component of the owning game_object.
 	//    layer.for_each([&](sprite_component& pTarget, transform_component& pTransform) {});
 	//    
-	//    // You can also get the curent game object by adding a `game_object` parameter at the start.
+	//    // You can also get the current game object by adding a `game_object` parameter at the start.
 	//    layer.for_each([&](game_object pObject, sprite_component& pTarget) {})
 	//
 	template <typename T>
@@ -128,6 +131,9 @@ public:
 	void preupdate(float pDelta);
 	void update(float pDelta);
 	void postupdate(float pDelta);
+
+	// Run cleanup of components. Returns the amount of components removed.
+	std::size_t cleanup();
 
 private:
 	template <typename Tcomponent, typename...Tdependencies>
@@ -209,6 +215,9 @@ inline void layer::for_each_impl(const std::function<void(Tcomponent&, Tdependen
 {
 	for (auto& i : mComponent_manager.get_container<Tcomponent>())
 	{
+		if (i.will_be_destroyed())
+			continue;
+
 		if constexpr (sizeof...(Tdependencies) == 0)
 		{
 			// No dependencies

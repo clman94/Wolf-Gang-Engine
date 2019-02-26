@@ -46,6 +46,8 @@ public:
 
 	std::size_t get_object_count() const noexcept;
 
+	bool has_object(const util::uuid& pId) const noexcept;
+
 	// Registers a component
 	void register_component(component* pComponent);
 	// Unregister a component
