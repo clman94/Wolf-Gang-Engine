@@ -173,7 +173,7 @@ public:
 		return ogl_framebuffer;
 	}
 
-	virtual texture_impl::ptr create_texture_implementation() override
+	virtual texture_impl::ptr create_texture_impl() override
 	{
 		return std::make_shared<opengl_texture_impl>();
 	}

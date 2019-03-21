@@ -24,9 +24,12 @@ inline void Image(const wge::graphics::framebuffer::ptr& mFramebuffer, const ImV
 }
 
 // Draws a texture
-inline void Image(wge::graphics::texture::ptr mTexture, const ImVec2& pSize = ImVec2(0, 0), const ImVec2& pUV0 = ImVec2(0, 0), const ImVec2& pUV1 = ImVec2(1, 1))
+inline void Image(wge::core::asset::ptr mTexture, const ImVec2& pSize = ImVec2(0, 0), const ImVec2& pUV0 = ImVec2(0, 0), const ImVec2& pUV1 = ImVec2(1, 1))
 {
-	auto impl = std::dynamic_pointer_cast<wge::graphics::opengl_texture_impl>(mTexture->get_implementation());
+	auto res = mTexture->get_resource<wge::graphics::texture>();
+	if (!res)
+		return;
+	auto impl = std::dynamic_pointer_cast<wge::graphics::opengl_texture_impl>(res->get_implementation());
 	ImGui::Image((void*)impl->get_gl_texture(), pSize, pUV0, pUV1);
 }
 
@@ -39,9 +42,12 @@ inline bool ImageButton(const wge::graphics::framebuffer::ptr& mFramebuffer, con
 }
 
 // Draws a texture
-inline bool ImageButton(wge::graphics::texture::ptr mTexture, const ImVec2& pSize = ImVec2(0, 0), const ImVec2& pUV0 = ImVec2(0, 0), const ImVec2& pUV1 = ImVec2(1, 1))
+inline bool ImageButton(wge::core::asset::ptr mTexture, const ImVec2& pSize = ImVec2(0, 0), const ImVec2& pUV0 = ImVec2(0, 0), const ImVec2& pUV1 = ImVec2(1, 1))
 {
-	auto impl = std::dynamic_pointer_cast<wge::graphics::opengl_texture_impl>(mTexture->get_implementation());
+	auto res = mTexture->get_resource<wge::graphics::texture>();
+	if (!res)
+		return false;
+	auto impl = std::dynamic_pointer_cast<wge::graphics::opengl_texture_impl>(res->get_implementation());
 	return ImGui::ImageButton((void*)impl->get_gl_texture(), pSize, pUV0, pUV1);
 }
 

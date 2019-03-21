@@ -46,7 +46,7 @@ public:
 		return std::make_shared<null_framebuffer>();
 	}
 
-	virtual texture_impl::ptr create_texture_implementation() override
+	virtual texture_impl::ptr create_texture_impl() override
 	{
 		return {};
 	}

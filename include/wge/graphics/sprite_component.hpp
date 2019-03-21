@@ -35,9 +35,9 @@ public:
 	bool set_animation(const util::uuid& pId) noexcept;
 
 	// Set the texture from a texture pointer.
-	void set_texture(const texture::ptr& pAsset) noexcept;
+	void set_texture(const core::asset::ptr& pAsset) noexcept;
 	// Get the current texture
-	texture::ptr get_texture() const noexcept;
+	core::asset::ptr get_texture() const noexcept;
 
 	virtual bool has_aabb() const override { return true; }
 	virtual math::aabb get_screen_aabb() const override { return mSceen_aabb; };
@@ -49,7 +49,7 @@ protected:
 
 private:
 	math::aabb mSceen_aabb, mLocal_aabb;
-	texture::ptr mTexture;
+	core::asset::ptr mTexture;
 	math::vec2 mOffset, mAnchor{ math::anchor::topleft };
 	util::uuid mAnimation_id;
 };

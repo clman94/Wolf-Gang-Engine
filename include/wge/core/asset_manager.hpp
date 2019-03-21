@@ -2,7 +2,6 @@
 
 #include <wge/core/asset.hpp>
 #include <wge/core/serialize_type.hpp>
-#include <wge/core/serializable.hpp>
 #include <wge/core/system.hpp>
 #include <wge/filesystem/filesystem_interface.hpp>
 #include <wge/util/ptr.hpp>
@@ -18,7 +17,7 @@ namespace wge::core
 class asset_manager
 {
 public:
-	using asset_factory = std::function<asset::ptr(const filesystem::path&, asset_config::ptr)>;
+	using resource_factory = std::function<void(asset::ptr&)>;
 	using asset_container = std::vector<asset::ptr>;
 	using file_structure = filesystem::file_structure<asset::ptr>;
 
@@ -26,48 +25,25 @@ public:
 	//   loading assets.
 	void set_filesystem(filesystem::filesystem_interface* pFilesystem);
 
-	template <typename T>
-	void register_asset(const std::string& pType);
-	void register_asset(const std::string& pType, const asset_factory& pFactory);
-
 	// Manually add an asset
 	void add_asset(const asset::ptr& pAsset);
 
 	// Find an asset by its relative path.
 	// Returns empty if it is not found.
-	asset::ptr find_asset(const filesystem::path& pPath) const noexcept;
+	asset::ptr get_asset(const filesystem::path& pPath) const noexcept;
 	// Find an asset by its uid.
 	// Returns empty when it it not found.
-	asset::ptr find_asset(const util::uuid& pUID) const noexcept;
+	asset::ptr get_asset(const util::uuid& pUID) const noexcept;
 
 	bool has_asset(const util::uuid& pUID) const noexcept;
 	bool has_asset(const asset::ptr& pAsset) const noexcept;
 
-	// Find an asset by its relative path.
-	// Returns empty if it is not found.
-	// It will automatically be casted to T.
-	template <typename T>
-	asset::tptr<T> get_asset(const filesystem::path& pPath) const
-	{
-		return cast_asset<T>(find_asset(pPath));
-	}
-	// Find an asset by its id.
-	// Returns empty if it is not found.
-	// It will automatically be casted to T.
-	template <typename T>
-	asset::tptr<T> get_asset(const util::uuid& pUID) const
-	{
-		return cast_asset<T>(find_asset(pUID));
-	}
+	// Find and cast a resource asset.
+	// Returns empty if it was not found.
+	template <typename T = resource>
+	resource::tptr<T> get_resource(const filesystem::path& pPath) const;
 
-	// Register a new configuration asset
-	void register_config_extension(const std::string& pType, const std::string& pExtension);
-	// Register a new resource asset
-	void register_resource_extension(const std::string& pType, const std::string& pExtension);
-
-	// Register an asset specifically for serialized data.
-	// This will automatically call register_asset for serialized_asset.
-	void register_serial_config_extension(const std::string& pType, const std::string& pExtension);
+	void register_resource_factory(const std::string pType, const resource_factory& pFactory);
 
 	// Set the root directory to find all assets.
 	// Note: This affects the relative path of all assets.
@@ -79,24 +55,10 @@ public:
 
 	const asset_container& get_asset_list() const;
 
-	// Create a configuration asset
-	asset::ptr create_configuration_asset(const std::string& pType, const filesystem::path& pPath);
+	asset::ptr import_resource(const filesystem::path& pResource_path, const std::string& pType);
+	void import_all_with_ext(const std::string& pExtension, const std::string& pType);
 
-
-	serialized_asset::ptr create_serialized_asset(const filesystem::path& pPath, const std::string& pType, const json& pData)
-	{
-		auto config = std::make_shared<asset_config>();
-		config->set_path(mRoot_dir / pPath);
-		config->set_type(pType);
-		config->set_metadata(pData);
-		config->set_id(util::generate_uuid());
-		config->save();
-
-		serialized_asset::ptr ptr = std::make_shared<serialized_asset>(config);
-		ptr->set_path(pPath);
-		add_asset(ptr);
-		return ptr;
-	}
+	asset::ptr create_asset(const filesystem::path& pPath, const std::string& pType, const json& pMetadata = {});
 
 	const file_structure& get_file_structure() const
 	{
@@ -107,29 +69,25 @@ private:
 	// Turn an absolute path into a relative path to the root directory
 	filesystem::path make_relative_to_root(const filesystem::path& pPath) const;
 
-	void load_configuration_asset(const filesystem::path& pPath, const std::string& pType);
-	void load_resource_asset(const filesystem::path& pPath, const std::string& pType);
-
 private:
-	std::map<std::string, asset_factory> mAsset_factories; // { [asset type], [factory] }
-	std::map<std::string, std::string> mAsset_resource_extensions; // { [extension], [asset type] }
-	std::map<std::string, std::string> mAsset_config_extensions; // { [extension], [asset type] }
+	std::map<std::string, resource_factory> mResource_factories; // { [asset type], [factory] }
 	std::vector<asset::ptr> mAsset_list;
 	file_structure mFile_structure;
 	filesystem::path mRoot_dir;
 	filesystem::filesystem_interface* mFilesystem{ nullptr };
 };
 
+
+// Find and cast a resource asset.
+// Returns empty if it was not found.
+
 template<typename T>
-inline void asset_manager::register_asset(const std::string& pType)
+inline resource::tptr<T> asset_manager::get_resource(const filesystem::path & pPath) const
 {
-	mAsset_factories[pType] =
-		[](const filesystem::path& pPath, asset_config::ptr pConfig) -> asset::ptr
-	{
-		auto ptr = std::make_shared<T>(pConfig);
-		ptr->set_path(pPath);
-		return ptr;
-	};
+	asset::ptr ptr = get_asset(pPath);
+	if (!ptr)
+		return{};
+	return ptr->get_resource<T>();
 }
 
 } // namespace wge::core

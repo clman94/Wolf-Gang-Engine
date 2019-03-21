@@ -42,13 +42,13 @@ public:
 };
 
 class texture :
-	public core::asset
+	public core::resource
 {
 public:
 	using atlas_container = std::vector<animation>;
 	using ptr = tptr<texture>;
 
-	texture(const core::asset_config::ptr& pConfig);
+	texture();
 	virtual ~texture();
 
 	void set_implementation(const texture_impl::ptr& pImpl) noexcept;
@@ -85,14 +85,9 @@ public:
 	atlas_container& get_raw_atlas() noexcept;
 	const atlas_container& get_raw_atlas() const noexcept;
 
-protected:
-	virtual void on_before_save_config() const;
-
 private:
-	// Update the configuration with the current atlas
-	void update_metadata() const;
-	// Load the atlas from the metadata
-	void load_metadata();
+	virtual json get_metadata() const override;
+	virtual void set_metadata(const json& pJson) override;
 
 private:
 	texture_impl::ptr mImpl;
@@ -100,6 +95,7 @@ private:
 	bool mSmooth;
 	unsigned char* mPixels;
 	atlas_container mAtlas;
+	// util::uuid mDefault_animation; // TODO: Use instead of a "Default" animation
 };
 
 } // namespace wge::graphics

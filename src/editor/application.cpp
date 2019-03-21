@@ -11,14 +11,12 @@
 #include <wge/graphics/sprite_component.hpp>
 #include <wge/scripting/script.hpp>
 #include <wge/core/asset_manager.hpp>
-#include <wge/graphics/texture_asset_loader.hpp>
 #include <wge/graphics/framebuffer.hpp>
 #include <wge/filesystem/file_input_stream.hpp>
 #include <wge/filesystem/exception.hpp>
 #include <wge/graphics/renderer.hpp>
 #include <wge/util/unique_names.hpp>
 #include <wge/graphics/graphics.hpp>
-#include <wge/core/behavior_system.hpp>
 #include <wge/math/transform.hpp>
 #include <wge/util/ptr.hpp>
 #include <wge/scripting/angelscript_script.hpp>
@@ -124,7 +122,7 @@ public:
 			auto selection = mContext->get_selection<selection_type::asset>();
 			if (selection && selection->get_type() == "texture")
 			{
-				auto texture = core::cast_asset<graphics::texture>(selection);
+				auto texture = selection->get_resource<graphics::texture>();
 
 				float* zoom = ImGui::GetStateStorage()->GetFloatRef(ImGui::GetID("_Zoom"), 0);
 
@@ -144,7 +142,7 @@ public:
 
 				ImGui::DrawAlphaCheckerBoard(image_position, image_size);
 
-				ImGui::Image(texture, image_size);
+				ImGui::Image(selection, image_size);
 
 				// Right and bottom padding
 				ImGui::SameLine();
@@ -287,7 +285,7 @@ public:
 		};
 
 		auto selection = mContext->get_selection<selection_type::asset>();
-		auto texture = core::cast_asset<graphics::texture>(selection);
+		auto texture = selection->get_resource<graphics::texture>();
 
 		if (ImGui::CollapsingHeader("Atlas", ImGuiTreeNodeFlags_DefaultOpen))
 		{
@@ -636,36 +634,21 @@ private:
 		mFactory.register_component<physics::box_collider_component>();
 		mGame_context.set_factory(&mFactory);
 
-		mAsset_manager.register_asset<core::asset>("scene");
-		mAsset_manager.register_serial_config_extension("scene", ".wgescene");
-		mAsset_manager.register_serial_config_extension("gameobject", ".wgegameobject");
-		mAsset_manager.register_serial_config_extension("layer", ".wgelayer");
-
-		mAsset_manager.register_asset("texture",
-			[&](const filesystem::path& pPath, core::asset_config::ptr pConfig) -> core::asset::ptr
+		mAsset_manager.register_resource_factory("texture",
+			[&](core::asset::ptr& pAsset)
 		{
-			auto ptr = std::make_shared<graphics::texture>(pConfig);
-			ptr->set_implementation(mGraphics.get_graphics_backend()->create_texture_implementation());
-			ptr->set_path(pPath);
-			auto path = pConfig->get_path();
+			auto res = std::make_shared<graphics::texture>();
+			res->set_implementation(mGraphics.get_graphics_backend()->create_texture_impl());
+			filesystem::path path = pAsset->get_file_path();
 			path.remove_extension();
-			ptr->load(path.string());
-			return ptr;
+			res->load(path.string());
+			pAsset->set_resource(res);
 		});
-		mAsset_manager.register_resource_extension("texture", ".png");
-
-		/*mAsset_manager.register_asset("behavior",
-			[&](const filesystem::path& pPath, core::asset_config::ptr pConfig) -> core::asset::ptr
-		{
-			auto ptr = std::make_shared<core::behavior>(pConfig);
-			ptr->set_path(pPath);
-			return ptr;
-		});
-		mAsset_manager.register_resource_extension("behavior", ".as");*/
 
 		mAsset_manager.set_root_directory(".");
 		mAsset_manager.load_assets();
-		
+		mAsset_manager.import_all_with_ext(".png", "texture");
+
 		auto layer = mGame_context.add_layer();
 		layer->set_name("Layer1");
 		layer->add_system<graphics::renderer>();
@@ -676,7 +659,7 @@ private:
 		auto obj = layer->add_object();
 		obj.add_component<core::transform_component>();
 		auto sprite = obj.add_component<graphics::sprite_component>();
-		sprite->set_texture(mAsset_manager.get_asset<graphics::texture>("mytex.png"));
+		sprite->set_texture(mAsset_manager.get_asset("mytex.png"));
 	}
 
 	void init_inspectors()
@@ -730,7 +713,7 @@ private:
 			if (ImGui::DragFloat2("Offset", offset.components))
 				sprite->set_offset(offset);
 
-			graphics::texture::ptr tex = sprite->get_texture();
+			core::asset::ptr tex = sprite->get_texture();
 			std::string inputtext = tex ? tex->get_path().string().c_str() : "None";
 			ImGui::BeginGroup();
 			if (tex)
@@ -741,8 +724,9 @@ private:
 				}
 				ImGui::SameLine();
 				ImGui::BeginGroup();
-				ImGui::Text("Size: %i, %i", tex->get_width(), tex->get_height());
-				ImGui::Text("Animations: %u", tex->get_raw_atlas().size());
+				auto res = tex->get_resource<graphics::texture>();
+				ImGui::Text("Size: %i, %i", res->get_width(), res->get_height());
+				ImGui::Text("Animations: %u", res->get_raw_atlas().size());
 				ImGui::EndGroup();
 			}
 			ImGui::InputText("Texture", &inputtext, ImGuiInputTextFlags_ReadOnly);
@@ -753,7 +737,7 @@ private:
 				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("textureAsset"))
 				{
 					const util::uuid& id = *(const util::uuid*)payload->Data;
-					auto asset = mAsset_manager.get_asset<graphics::texture>(id);
+					auto asset = mAsset_manager.get_asset(id);
 					sprite->set_texture(asset);
 				}
 				ImGui::EndDragDropTarget();
@@ -761,7 +745,7 @@ private:
 		});
 
 		// Inspector for behavior_component
-		mInspectors.add_inspector(core::behavior_component::COMPONENT_ID,
+		/*mInspectors.add_inspector(core::behavior_component::COMPONENT_ID,
 			[this](core::component* pComponent)
 		{
 			auto comp = dynamic_cast<core::behavior_component*>(pComponent);
@@ -777,12 +761,12 @@ private:
 				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("behaviorAsset"))
 				{
 					const util::uuid& id = *(const util::uuid*)payload->Data;
-					auto asset = mAsset_manager.get_asset<core::behavior>(id);
+					auto asset = mAsset_manager.get_asset(id);
 					comp->set_behavior(asset);
 				}
 				ImGui::EndDragDropTarget();
 			}
-		});
+		});*/
 
 		mInspectors.add_inspector(physics::physics_component::COMPONENT_ID,
 			[](core::component* pComponent)
@@ -909,7 +893,7 @@ private:
 
 				// Draw preview
 				if (asset->get_type() == "texture")
-					ImGui::ImageButton(core::cast_asset<graphics::texture>(asset),
+					ImGui::ImageButton(asset,
 						file_preview_size - math::vec2(ImGui::GetStyle().FramePadding) * 2);
 				else
 					ImGui::Button("No preview", file_preview_size);
@@ -1090,8 +1074,8 @@ private:
 					{
 						core::game_object obj = selected_layer->add_object();
 						const util::uuid& id = *(const util::uuid*)payload->Data;
-						auto asset = mAsset_manager.find_asset(id);
-						obj.deserialize(asset->get_config()->get_metadata());
+						auto asset = mAsset_manager.get_asset(id);
+						obj.deserialize(asset->get_metadata());
 						if (auto transform = obj.get_component<core::transform_component>())
 							transform->set_position(visual_editor::get_mouse_position());
 						mContext.set_selection(obj);
@@ -1099,9 +1083,9 @@ private:
 					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("layerAsset"))
 					{
 						const util::uuid& id = *(const util::uuid*)payload->Data;
-						auto asset = mAsset_manager.find_asset(id);
+						auto asset = mAsset_manager.get_asset(id);
 						auto new_layer = mGame_context.add_layer();
-						new_layer->deserialize(asset->get_config()->get_metadata());
+						new_layer->deserialize(asset->get_metadata());
 						mContext.set_selection(new_layer);
 					}
 					ImGui::EndDragDropTarget();
@@ -1235,8 +1219,7 @@ private:
 				if (ImGui::Button("Save"))
 				{
 					json data = object->serialize(core::serialize_type::properties);
-					auto path_with_extension = ensure_extension(destination, ".wgegameobject");
-					mAsset_manager.create_serialized_asset(path_with_extension, "gameobject", data);
+					mAsset_manager.create_asset(destination, "gameobject", data);
 					ImGui::CloseCurrentPopup();
 				}
 				ImGui::EndMenu();
@@ -1307,8 +1290,7 @@ private:
 				if (ImGui::Button("Save"))
 				{
 					json data = layer->serialize(core::serialize_type::properties);
-					auto path_with_extension = ensure_extension(destination, ".wgelayer");
-					mAsset_manager.create_serialized_asset(path_with_extension, "layer", data);
+					mAsset_manager.create_asset(destination, "layer", data);
 					ImGui::CloseCurrentPopup();
 				}
 				ImGui::EndMenu();
@@ -1387,9 +1369,9 @@ private:
 		ImGui::InputText("Name", &path, ImGuiInputTextFlags_ReadOnly);
 		ImGui::LabelText("Asset ID", pAsset->get_id().to_string().c_str());
 
-		std::string description = pAsset->get_config()->get_description();
+		std::string description = pAsset->get_description();
 		if (ImGui::InputText("Description", &description))
-			pAsset->get_config()->set_description(description);
+			pAsset->set_description(description);
 		if (ImGui::IsItemDeactivatedAfterEdit())
 			mContext.add_modified_asset(pAsset);
 
@@ -1443,20 +1425,6 @@ private:
 				math::vec2 gravity = physics->get_gravity();
 				if (ImGui::DragFloat2("Gravity", gravity.components))
 					physics->set_gravity(gravity);
-			}
-			ImGui::EndTabItem();
-		}
-
-		if (ImGui::BeginTabItem("Behaviors"))
-		{
-			auto sys = pLayer.get_system<core::behavior_system>();
-			if (!sys)
-			{
-				if (ImGui::Button("Enable"))
-					pLayer.add_system<core::behavior_system>();
-			}
-			else
-			{
 			}
 			ImGui::EndTabItem();
 		}
@@ -1520,10 +1488,6 @@ private:
 				pObj.add_component<physics::box_collider_component>();
 			if (ImGui::Selectable("Sprite"))
 				pObj.add_component<graphics::sprite_component>();
-			if (ImGui::Selectable("Behavior"))
-				pObj.add_component<core::behavior_component>();
-			//if (ImGui::Selectable("Script"))
-			//	mSelected_node->add_component<script_component>();
 			ImGui::EndCombo();
 		}
 	}

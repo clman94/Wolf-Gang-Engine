@@ -14,7 +14,8 @@ json sprite_component::on_serialize(core::serialize_type pType) const
 		result["offset"] = mOffset;
 		result["texture"] = mTexture ? json(mTexture->get_id()) : json();
 
-		const animation* anim = mTexture ? mTexture->get_animation(mAnimation_id) : nullptr;
+		texture::ptr res = mTexture->get_resource<texture>();
+		const animation* anim = mTexture ? res->get_animation(mAnimation_id) : nullptr;
 		result["animation-name"] = anim ? json(anim->name) : json();
 		result["animation-id"] = anim ? json(anim->id) : json();
 	}
@@ -28,18 +29,20 @@ void sprite_component::on_deserialize(const core::game_object& pObj, const json&
 	{
 		auto asset_mgr = pObj.get_context().get_asset_manager();
 		util::uuid id = pJson["texture"];
-		mTexture = asset_mgr->get_asset<texture>(id);
+		mTexture = asset_mgr->get_asset(id);
 	}
 	if (!pJson["animation-id"].is_null())
 	{
 		mAnimation_id = pJson["animation-id"];
 
+		texture::ptr res = mTexture->get_resource<texture>();
+
 		// Check if this id is correct
-		if (!mTexture->get_animation(mAnimation_id))
+		if (!res->get_animation(mAnimation_id))
 		{
 			// Use the name of the animation as a backup
 			std::string name = pJson["animation-name"];
-			if (auto anim = mTexture->get_animation(name))
+			if (auto anim = res->get_animation(name))
 				mAnimation_id = anim->id;
 		}
 	}
@@ -50,13 +53,14 @@ void sprite_component::create_batch(core::transform_component& pTransform, rende
 	// No texture
 	if (!mTexture)
 		return;
+	texture::ptr res = mTexture->get_resource<texture>();
 
 	batch_builder batch;
-	batch.set_texture(mTexture);
+	batch.set_texture(res);
 
-	const math::vec2 texture_size = mTexture->get_size();
+	const math::vec2 texture_size = res->get_size();
 
-	const animation* anim = mTexture->get_animation(mAnimation_id);
+	const animation* anim = res->get_animation(mAnimation_id);
 	if (!anim)
 		return;
 
@@ -125,7 +129,8 @@ math::vec2 sprite_component::get_anchor() const noexcept
 bool sprite_component::set_animation(const std::string& pName) noexcept
 {
 	WGE_ASSERT(mTexture);
-	if (auto anim = mTexture->get_animation(pName))
+	auto res = mTexture->get_resource<texture>();
+	if (auto anim = res->get_animation(pName))
 	{
 		mAnimation_id = anim->id;
 		return true;
@@ -136,7 +141,8 @@ bool sprite_component::set_animation(const std::string& pName) noexcept
 bool sprite_component::set_animation(const util::uuid& pId) noexcept
 {
 	WGE_ASSERT(mTexture);
-	if (mTexture->get_animation(pId))
+	auto res = mTexture->get_resource<texture>();
+	if (res->get_animation(pId))
 	{
 		mAnimation_id = pId;
 		return true;
@@ -144,13 +150,13 @@ bool sprite_component::set_animation(const util::uuid& pId) noexcept
 	return false;
 }
 
-void sprite_component::set_texture(const texture::ptr& pAsset) noexcept
+void sprite_component::set_texture(const core::asset::ptr& pAsset) noexcept
 {
 	mTexture = pAsset;
 	set_animation("Default");
 }
 
-texture::ptr sprite_component::get_texture() const noexcept
+core::asset::ptr sprite_component::get_texture() const noexcept
 {
 	return mTexture;
 }

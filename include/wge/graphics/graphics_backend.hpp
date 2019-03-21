@@ -47,7 +47,7 @@ public:
 	virtual void initialize() = 0;
 	virtual void render_batch(const framebuffer::ptr& mFramebuffer, const math::mat44& pProjection, const render_batch_2d& pBatch) = 0;
 	virtual framebuffer::ptr create_framebuffer() = 0;
-	virtual texture_impl::ptr create_texture_implementation() = 0;
+	virtual texture_impl::ptr create_texture_impl() = 0;
 };
 
 } // namespace wge::graphics

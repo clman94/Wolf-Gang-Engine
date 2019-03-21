@@ -30,8 +30,7 @@ json animation::serialize() const
 	return result;
 }
 
-texture::texture(const core::asset_config::ptr& pConfig) :
-	asset(pConfig),
+texture::texture() :
 	mWidth(0),
 	mHeight(0),
 	mSmooth(false),
@@ -71,7 +70,6 @@ void texture::load(const std::string& pFilepath)
 		mImpl->create_from_pixels(pixels, mWidth, mHeight, mChannels);
 	stbi_image_free(mPixels);
 	mPixels = pixels;
-	load_metadata();
 }
 
 void texture::load(const filesystem::stream::ptr& pStream, std::size_t pSize)
@@ -95,7 +93,6 @@ void texture::load(const filesystem::stream::ptr& pStream, std::size_t pSize)
 		mImpl->create_from_pixels(pixels, mWidth, mHeight, mChannels);
 	stbi_image_free(mPixels);
 	mPixels = pixels;
-	load_metadata();
 }
 
 int texture::get_width() const noexcept
@@ -150,25 +147,20 @@ const texture::atlas_container& texture::get_raw_atlas() const noexcept
 	return mAtlas;
 }
 
-void texture::on_before_save_config() const
-{
-	update_metadata();
-}
-
-void texture::update_metadata() const
+json texture::get_metadata() const
 {
 	json result;
 	for (const auto& i : mAtlas)
 		result["atlas"].push_back(i.serialize());
-	get_config()->set_metadata(result);
+	return result;
 }
 
-void texture::load_metadata()
+void texture::set_metadata(const json& pJson)
 {
 	mAtlas.clear();
-	if (!get_config()->get_metadata().is_null())
+	if (!pJson.is_null())
 	{
-		const json& atlas = get_config()->get_metadata()["atlas"];
+		const json& atlas = pJson["atlas"];
 		for (const json& i : atlas)
 			mAtlas.emplace_back(i);
 	}
@@ -177,7 +169,7 @@ void texture::load_metadata()
 		animation& def_animation = mAtlas.emplace_back();
 		def_animation.name = "Default";
 		def_animation.id = util::generate_uuid();
-		def_animation.frame_rect = math::rect(0, 0, mWidth, mHeight);
+		def_animation.frame_rect = math::rect(0, 0, static_cast<float>(mWidth), static_cast<float>(mHeight));
 	}
 }
 

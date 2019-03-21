@@ -6,7 +6,6 @@
 #include <stdexcept>
 
 #include <wge/logging/log.hpp>
-#include <wge/core/asset_config.hpp>
 #include <wge/core/serialize_type.hpp>
 #include <wge/core/component_type.hpp>
 #include <wge/util/json_helpers.hpp>
