@@ -34,6 +34,12 @@ public:
 	// Unload any data
 	virtual void unload() {}
 
+	virtual void reload()
+	{
+		unload();
+		load();
+	}
+
 	// Returns true when this asset is ready to be used.
 	// Defaults true if this wasn't overridden.
 	virtual bool is_loaded() const

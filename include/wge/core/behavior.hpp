@@ -20,7 +20,7 @@ public:
 	virtual json serialize(serialize_type) { return{}; }
 	virtual void deserialize(const json&) {}
 
-	virtual void on_update(float pDelta, game_object pObject) {}
+	virtual void on_update(float pDelta, const game_object& pObject) {}
 };
 
 class behavior :
@@ -28,27 +28,14 @@ class behavior :
 {
 public:
 	using ptr = std::shared_ptr<behavior>;
-	using instance_factory_function = std::function<behavior_instance::ptr(const behavior&)>;
 
 	behavior(asset_config::ptr pConfig) :
 		asset(pConfig)
 	{}
 
-	void set_instance_factory(const instance_factory_function& pFactory) noexcept
-	{
-		mFactory = pFactory;
-	}
+	virtual ~behavior() {}
 
-	behavior_instance::ptr create_instance() const
-	{
-		if (mFactory)
-			return mFactory(*this);
-		else
-			return{};
-	}
-
-private:
-	instance_factory_function mFactory;
+	virtual behavior_instance::ptr create_instance() const = 0;
 };
 
 } // namespace wge::scripting::behavior

@@ -28,7 +28,6 @@ namespace detail
 
 using generic_function = std::function<void(asIScriptGeneric*)>;
 
-
 template <typename Tret, typename Tclass, typename...Tparams, typename Tinstance>
 auto bind_mem_fn(Tret(Tclass::* pFunc)(Tparams...), Tinstance&& pInstance)
 {

@@ -34,7 +34,7 @@ public:
 
 	// Remove all components that are marked for destruction.
 	// Returns the amount of components destroyed.
-	virtual std::size_t clean_marked_components(const std::function<void(component*)>& pBefore_destroy_callback) = 0;
+	virtual std::size_t clean_marked_components(const std::function<void(component*)>& pBefore_destroy_callback = {}) = 0;
 };
 
 template <typename T>
@@ -107,7 +107,8 @@ public:
 		{
 			if (mStorage[i].will_be_destroyed())
 			{
-				pBefore_destroy_callback(&mStorage[i]);
+				if (pBefore_destroy_callback)
+					pBefore_destroy_callback(&mStorage[i]);
 				mStorage.erase(mStorage.begin() + i--);
 			}
 		}

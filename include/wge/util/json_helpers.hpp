@@ -5,6 +5,7 @@
 #include <wge/util/strongly_typed_id.hpp>
 
 #include <string_view>
+#include <optional>
 
 namespace wge
 {
@@ -16,10 +17,18 @@ using nlohmann::json;
 namespace wge::util
 {
 
+template <typename T>
+inline std::optional<T> optional_deserialize(const json& pJson)
+{
+	if (pJson.find(pItem) != pJson.end())
+		return static_cast<T>(pJson);
+	return{};
+}
+
 // Deserialize json value only if it exists.
 // Returns true if the item has been deserialized.
 template <typename T>
-inline bool optional_deserialize(const wge::json& pJson, const std::string_view& pItem, T& pDestination)
+inline bool optional_deserialize(const json& pJson, const std::string_view& pItem, T& pDestination)
 {
 	if (pJson.find(pItem) != pJson.end())
 	{
@@ -30,7 +39,7 @@ inline bool optional_deserialize(const wge::json& pJson, const std::string_view&
 }
 
 template <typename T, typename Tdefault>
-inline bool optional_deserialize(const wge::json& pJson, const std::string_view& pItem, T& pDestination, Tdefault&& pDefault)
+inline bool optional_deserialize(const json& pJson, const std::string_view& pItem, T& pDestination, Tdefault&& pDefault)
 {
 	if (!optional_deserialize(pJson, pItem, pDestination))
 	{
@@ -84,7 +93,7 @@ class uuid;
 void to_json(nlohmann::json& pJson, const uuid& pUuid);
 void from_json(const nlohmann::json& pJson, uuid& pUuid);
 
-} // namespace wge::core
+} // namespace wge::util
 
 struct b2Vec2;
 void to_json(nlohmann::json&, const b2Vec2&);

@@ -79,7 +79,7 @@ public:
 	}
 
 	// Run cleanup of marked components. Returns the amount of components destroyed.
-	std::size_t cleanup(const std::function<void(component*)>& pBefore_destroy_callback)
+	std::size_t cleanup(const std::function<void(component*)>& pBefore_destroy_callback = {})
 	{
 		std::size_t total = 0;
 		for (auto& i : mContainers)

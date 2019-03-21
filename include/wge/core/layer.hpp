@@ -49,7 +49,7 @@ public:
 	T* add_system(Targs&&...pArgs);
 
 	// Set the name of this layer
-	void set_name(const std::string_view& pName) noexcept;
+	void set_name(const std::string& pName) noexcept;
 	// Get the name of this layer
 	const std::string& get_name() const noexcept;
 
@@ -108,7 +108,7 @@ public:
 	//    layer.for_each([&](sprite_component& pTarget, transform_component& pTransform) {});
 	//    
 	//    // You can also get the current game object by adding a `game_object` parameter at the start.
-	//    layer.for_each([&](game_object pObject, sprite_component& pTarget) {})
+	//    layer.for_each([&](game_object pObject, sprite_component& pTarget) {});
 	//
 	template <typename T>
 	void for_each(T&& pCallable);
@@ -176,7 +176,7 @@ inline T* layer::add_component(const game_object & pObj)
 }
 
 template<typename T>
-inline T* layer::get_first_component(const game_object & pObj)
+inline T* layer::get_first_component(const game_object& pObj)
 {
 	return mComponent_manager.get_first_component<T>(pObj.get_instance_id());
 }
@@ -188,7 +188,7 @@ inline component_storage<T>& layer::get_component_container()
 }
 
 template<typename Tfirst, typename...Trest>
-inline bool layer::retrieve_components(game_object pObj, Tfirst *& pFirst, Trest *& ...pRest)
+inline bool layer::retrieve_components(game_object pObj, Tfirst*& pFirst, Trest*& ...pRest)
 {
 	auto comp = mComponent_manager.get_first_component<Tfirst>(pObj.get_instance_id());
 	if (!comp)

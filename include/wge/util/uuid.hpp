@@ -37,6 +37,8 @@ public:
 
 	hash::hash32_t to_hash32() const noexcept;
 
+	bool is_valid() const noexcept;
+
 private:
 	std::array<std::uint8_t, 16> mBytes{ { 0 } };
 };

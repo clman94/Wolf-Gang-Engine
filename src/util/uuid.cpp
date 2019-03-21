@@ -79,6 +79,14 @@ hash::hash32_t uuid::to_hash32() const noexcept
 	return hash::hash32(&mBytes[0], 16);
 }
 
+bool uuid::is_valid() const noexcept
+{
+	for (auto i : mBytes)
+		if (i != 0)
+			return true;
+	return false;
+}
+
 uuid generate_uuid()
 {
 	std::random_device device;

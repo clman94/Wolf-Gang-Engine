@@ -419,6 +419,8 @@ public:
 	{
 		// Only glfw and opengl is supported for editing
 		mGraphics.initialize(graphics::window_backend_type::glfw, graphics::backend_type::opengl);
+
+		// Store the glfw backend for initializing imgui's glfw backend
 		mGLFW_backend = std::dynamic_pointer_cast<graphics::glfw_window_backend>(mGraphics.get_window_backend());
 		mViewport_framebuffer = mGraphics.get_graphics_backend()->create_framebuffer();
 
@@ -448,7 +450,9 @@ private:
 
 			if (ImGui::BeginMainMenuBar())
 			{
+				// Just an aesthetic
 				ImGui::TextColored({ 0.5, 0.5, 0.5, 1 }, "WGE");
+
 				if (ImGui::BeginMenu("Project"))
 				{
 					ImGui::MenuItem("New");
@@ -486,7 +490,7 @@ private:
 			// Clear the framebuffer with black
 			mViewport_framebuffer->clear({ 0, 0, 0, 1 });
 
-			// Render all layers with the renderer system enabled
+			// Render all layers with the renderer system
 			for (auto& i : mGame_context.get_layer_container())
 			{
 				if (auto renderer = i->get_system<graphics::renderer>())
@@ -560,6 +564,7 @@ private:
 		ImGui_ImplGlfw_InitForOpenGL(mGLFW_backend->get_window(), true);
 		ImGui_ImplOpenGL3_Init("#version 150");
 
+		// Lets use a somewhat better font
 		auto font = ImGui::GetIO().Fonts->AddFontFromFileTTF("./editor/Roboto-Medium.ttf", 16);
 		if (font == NULL)
 		{

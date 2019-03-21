@@ -1,5 +1,6 @@
 #include <wge/core/layer.hpp>
 #include <wge/core/context.hpp>
+#include <wge/util/uuid_rerouter.hpp>
 
 namespace wge::core
 {
@@ -31,6 +32,8 @@ json layer::serialize(serialize_type pType)
 
 void layer::deserialize(const json& pJson)
 {
+	util::uuid_rerouter rerouter;
+
 	mName = pJson["name"];
 	mTime_scale = pJson["timescale"];
 	mRecieve_update = pJson["enabled"];
@@ -72,7 +75,7 @@ system* layer::get_system(const std::string& pName) const
 	return nullptr;
 }
 
-void layer::set_name(const std::string_view& pName) noexcept
+void layer::set_name(const std::string& pName) noexcept
 {
 	mName = pName;
 }
