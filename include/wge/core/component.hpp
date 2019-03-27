@@ -6,6 +6,7 @@
 #include <wge/math/aabb.hpp>
 #include <wge/core/serialize_type.hpp>
 #include <wge/core/component_type.hpp>
+#include <wge/core/component_storage.hpp>
 #include <wge/util/uuid.hpp>
 #include <wge/util/json_helpers.hpp>
 
@@ -85,7 +86,7 @@ public:
 	// the end of the frame.
 	void destroy() noexcept;
 	// Returns true if this component will be destroyed at the end of the frame.
-	bool will_be_destroyed() const noexcept;
+	bool is_unused() const noexcept;
 
 protected:
 	virtual json on_serialize(serialize_type) const { return json{}; }
@@ -95,7 +96,7 @@ private:
 	std::string mName;
 	util::uuid mObject_id;
 	util::uuid mInstance_id;
-	bool mWill_be_destroyed{ false };
+	bool mUnused{ false };
 };
 
 } // namespace wge::core

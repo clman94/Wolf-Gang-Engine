@@ -21,17 +21,17 @@ public:
 	std::string name;
 	util::uuid id;
 
-	struct component_entry
-	{
-		component_type type;
-		util::uuid id;
-	};
-	std::vector<component_entry> components;
+	// This allows us to track which components this object
+	//   has and quickly lookup components.
+	std::vector<component*> components;
 	
 	const object_tracker& get_tracker() const noexcept
 	{
 		return mTracker;
 	}
+
+	// Remove unused components from the components list.
+	void cleanup_unused_components();
 
 private:
 	object_tracker mTracker;

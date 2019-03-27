@@ -25,7 +25,7 @@ inline std::vector<filesystem::path> get_absolute_path_list(const filesystem::pa
 	return result;
 }
 
-void asset_manager::set_filesystem(filesystem::filesystem_interface * pFilesystem)
+void asset_manager::set_filesystem(filesystem::filesystem_interface* pFilesystem)
 {
 	mFilesystem = pFilesystem;
 }

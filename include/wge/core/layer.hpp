@@ -91,11 +91,6 @@ public:
 	// Remove all components from an object.
 	void remove_all_components(const game_object& pObject);
 
-	// Populate these pointers with all the components this object has.
-	// However, it will return false if it couldn't find them all.
-	template <typename Tfirst, typename...Trest>
-	[[nodiscard]] bool retrieve_components(game_object pObj, Tfirst*& pFirst, Trest*&...pRest);
-
 	// Calls pCallable for each component specified by the first parameter.
 	// Each component parameter should be a non-const reference and derive from
 	// the component class.
@@ -131,9 +126,6 @@ public:
 	void preupdate(float pDelta);
 	void update(float pDelta);
 	void postupdate(float pDelta);
-
-	// Run cleanup of components. Returns the amount of components removed.
-	std::size_t cleanup();
 
 private:
 	template <typename Tcomponent, typename...Tdependencies>
@@ -187,19 +179,6 @@ inline component_storage<T>& layer::get_component_container()
 	return mComponent_manager.get_container<T>();
 }
 
-template<typename Tfirst, typename...Trest>
-inline bool layer::retrieve_components(game_object pObj, Tfirst*& pFirst, Trest*& ...pRest)
-{
-	auto comp = mComponent_manager.get_first_component<Tfirst>(pObj.get_instance_id());
-	if (!comp)
-		return false;
-	pFirst = comp;
-	if constexpr (sizeof...(pRest) == 0)
-		return true;
-	else
-		return retrieve_components(pObj, pRest...);
-}
-
 template<typename Tcomponent, typename...Tdependencies>
 inline void layer::for_each_impl(const std::function<void(game_object, Tcomponent&, Tdependencies&...)>& pCallable)
 {
@@ -215,7 +194,8 @@ inline void layer::for_each_impl(const std::function<void(Tcomponent&, Tdependen
 {
 	for (auto& i : mComponent_manager.get_container<Tcomponent>())
 	{
-		if (i.will_be_destroyed())
+		// Skip unused
+		if (i.is_unused())
 			continue;
 
 		if constexpr (sizeof...(Tdependencies) == 0)
@@ -228,7 +208,7 @@ inline void layer::for_each_impl(const std::function<void(Tcomponent&, Tdependen
 			// Retrieve dependencies
 			game_object obj = get_object(i.get_object_id());
 			std::tuple<Tdependencies*...> dependency_pointers;
-			if (retrieve_components(obj, std::get<Tdependencies*>(dependency_pointers)...))
+			if (obj.unwrap_components(std::get<Tdependencies*>(dependency_pointers)...))
 			{
 				pCallable(i, *std::get<Tdependencies*>(dependency_pointers)...);
 			}

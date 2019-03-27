@@ -75,6 +75,9 @@ public:
 		// Requires the "int COMPONENT_ID" COMPONENT_ID member
 		typename = std::enable_if<has_component_id_member<T>::value>::type>
 	T* get_component() const;
+	// Find the first all of these components. Returns true when all of them are found.
+	template <typename Tfirst, typename...Trest>
+	bool unwrap_components(Tfirst*& pFirst, Trest*& ...pRest);
 	void move_component(std::size_t pFrom, std::size_t pTo);
 	// Remove component at index
 	void remove_component(std::size_t pIndex);
@@ -148,6 +151,20 @@ template<class T, typename>
 inline T* game_object::get_component() const
 {
 	return static_cast<T*>(get_component(T::COMPONENT_ID));
+}
+
+template<typename Tfirst, typename ...Trest>
+inline bool game_object::unwrap_components(Tfirst*& pFirst, Trest*& ...pRest)
+{
+	assert_valid_reference();
+	auto comp = get_component<Tfirst>();
+	if (!comp)
+		return false;
+	pFirst = comp;
+	if constexpr (sizeof...(pRest) == 0)
+		return true;
+	else
+		return unwrap_components(pRest...);
 }
 
 } // namespace wge::core

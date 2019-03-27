@@ -52,12 +52,12 @@ const util::uuid& component::get_instance_id() const noexcept
 
 void component::destroy() noexcept
 {
-	mWill_be_destroyed = true;
+	mUnused = true;
 }
 
-bool component::will_be_destroyed() const noexcept
+bool component::is_unused() const noexcept
 {
-	return mWill_be_destroyed;
+	return mUnused;
 }
 
 } // namespace wge::core

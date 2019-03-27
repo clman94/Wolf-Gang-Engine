@@ -149,9 +149,8 @@ component* layer::get_component(const component_type& pType, const util::uuid& p
 void layer::remove_component(int pType, const util::uuid& pId)
 {
 	component* comp = get_component(pType, pId);
-	const util::uuid& obj_id = comp->get_object_id();
-	mObject_manager.unregister_component(obj_id, pId);
-	mComponent_manager.remove_component(pType, pId);
+	if (comp)
+		comp->destroy();
 }
 
 void layer::remove_all_components(const game_object& pObject)
@@ -159,7 +158,7 @@ void layer::remove_all_components(const game_object& pObject)
 	mComponent_manager.remove_object(pObject.get_instance_id());
 }
 
-context & layer::get_context() const noexcept
+context& layer::get_context() const noexcept
 {
 	return mContext;
 }
@@ -203,17 +202,6 @@ void layer::postupdate(float pDelta)
 	pDelta *= mTime_scale;
 	for (auto& i : mSystems)
 		i->postupdate(pDelta);
-}
-
-std::size_t layer::cleanup()
-{
-	return mComponent_manager.cleanup([this](component* pComponent)
-	{
-		// Make sure to unregister the component from the object manager
-		// before deleting.
-		if (mObject_manager.has_object(pComponent->get_object_id()))
-			mObject_manager.unregister_component(pComponent);
-	});
 }
 
 } // namespace wge::core

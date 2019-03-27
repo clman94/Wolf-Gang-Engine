@@ -14,6 +14,14 @@ object_data::~object_data()
 	*mTracker = false;
 }
 
+void object_data::cleanup_unused_components()
+{
+	for (std::size_t i = 0; i < components.size(); i++)
+		if (components[i]->is_unused() ||
+			components[i]->get_object_id() != id)
+			components.erase(components.begin() + i--);
+}
+
 object_data& object_manager::add_object()
 {
 	return mObjects.emplace_back();
@@ -36,7 +44,7 @@ std::size_t object_manager::get_object_count() const noexcept
 	return mObjects.size();
 }
 
-bool object_manager::has_object(const util::uuid & pId) const noexcept
+bool object_manager::has_object(const util::uuid& pId) const noexcept
 {
 	for (auto& i : mObjects)
 		if (i.id == pId)
@@ -48,7 +56,7 @@ void object_manager::register_component(component* pComponent)
 {
 	auto data = get_object_data(pComponent->get_object_id());
 	WGE_ASSERT(data);
-	data->components.push_back({ pComponent->get_component_id(), pComponent->get_instance_id() });
+	data->components.push_back(pComponent);
 }
 
 void object_manager::unregister_component(component* pComponent)
@@ -62,7 +70,7 @@ void object_manager::unregister_component(const util::uuid& pObj_id, const util:
 	WGE_ASSERT(data);
 	for (std::size_t i = 0; i < data->components.size(); i++)
 	{
-		if (data->components[i].id == pComp_id)
+		if (data->components[i]->get_instance_id() == pComp_id)
 		{
 			data->components.erase(data->components.begin() + i);
 			break;

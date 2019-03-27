@@ -77,12 +77,8 @@ private:
 	filesystem::filesystem_interface* mFilesystem{ nullptr };
 };
 
-
-// Find and cast a resource asset.
-// Returns empty if it was not found.
-
 template<typename T>
-inline resource::tptr<T> asset_manager::get_resource(const filesystem::path & pPath) const
+inline resource::tptr<T> asset_manager::get_resource(const filesystem::path& pPath) const
 {
 	asset::ptr ptr = get_asset(pPath);
 	if (!ptr)

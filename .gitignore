@@ -2,3 +2,4 @@ build
 bin
 resources
 3rdparty/glew/glew.pc
+.vscode

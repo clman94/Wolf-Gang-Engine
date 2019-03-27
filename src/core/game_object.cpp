@@ -22,7 +22,7 @@ bool game_object::has_component(const component_type& pType) const
 {
 	assert_valid_reference();
 	for (auto& i : mData->components)
-		if (i.type == pType)
+		if (i->get_component_id() == pType)
 			return true;
 	return false;
 }
@@ -33,11 +33,8 @@ json game_object::serialize(serialize_type pType) const
 	json result;
 	result["name"] = get_name();
 	result["id"] = get_instance_id();
-	for (const auto& i : mData->components)
-	{
-		component* comp = get_layer().get_component(i.type, i.id);
-		result["components"].push_back(comp->serialize(pType));
-	}
+	for (auto& i : mData->components)
+		result["components"].push_back(i->serialize(pType));
 	return result;
 }
 
@@ -62,37 +59,38 @@ component* game_object::add_component(const component_type& pType)
 std::size_t game_object::get_component_count() const
 {
 	assert_valid_reference();
+	mData->cleanup_unused_components();
 	return mData->components.size();
 }
 
 component* game_object::get_component_at(std::size_t pIndex)
 {
 	assert_valid_reference();
-	auto& comp_entry = mData->components[pIndex];
-	return get_layer().get_component(comp_entry.type, comp_entry.id);
+	mData->cleanup_unused_components();
+	return mData->components[pIndex];
 }
 
-component* game_object::get_component(const std::string & pName)
+component* game_object::get_component(const std::string& pName)
 {
 	assert_valid_reference();
+	mData->cleanup_unused_components();
 	for (auto& i : mData->components)
-	{
-		component* comp = get_layer().get_component(i.type, i.id);
-		if (comp->get_name() == pName)
-			return comp;
-	}
+		if (i->get_name() == pName)
+			return i;
 	return nullptr;
 }
 
 component* game_object::get_component(const component_type& pType) const
 {
 	assert_valid_reference();
+	mData->cleanup_unused_components();
 	return get_layer().get_first_component(*this, pType);
 }
 
 void game_object::move_component(std::size_t pFrom, std::size_t pTo)
 {
 	assert_valid_reference();
+	mData->cleanup_unused_components();
 	if (pFrom == pTo)
 		return;
 	if (pFrom < pTo)
@@ -112,8 +110,8 @@ void game_object::move_component(std::size_t pFrom, std::size_t pTo)
 void game_object::remove_component(std::size_t pIndex)
 {
 	assert_valid_reference();
-	auto& comp_entry = mData->components[pIndex];
-	get_layer().remove_component(comp_entry.type, comp_entry.id);
+	mData->cleanup_unused_components();
+	mData->components[pIndex]->destroy();
 }
 
 void game_object::remove_all_components()

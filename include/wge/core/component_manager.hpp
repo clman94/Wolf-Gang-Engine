@@ -17,7 +17,7 @@ public:
 	template <typename T>
 	T& add_component()
 	{
-		return get_container<T>().create_component();
+		return get_container<T>().add_component();
 	}
 
 	void remove_component(const component_type& pType, const util::uuid& pComponent_id)
@@ -32,10 +32,11 @@ public:
 	T* get_first_component(const util::uuid& pObject_id)
 	{
 		for (auto& i : get_container<T>())
-			if (i.get_object_id() == pObject_id && !i.will_be_destroyed())
+			if (i.get_object_id() == pObject_id && !i.is_unused())
 				return &i;
 		return nullptr;
 	}
+
 	// Get first component of this type for this object
 	component* get_first_component(const component_type& pType, const util::uuid& pObject_id)
 	{
@@ -63,6 +64,7 @@ public:
 			mContainers[T::COMPONENT_ID] = std::make_unique<storage_type>();
 		return *dynamic_cast<storage_type*>(mContainers[T::COMPONENT_ID].get());
 	}
+
 	component_storage_base* get_container(const component_type& pType)
 	{
 		auto iter = mContainers.find(pType);
@@ -76,15 +78,6 @@ public:
 	{
 		for (auto& i : mContainers)
 			i.second->remove_object(pObject_id);
-	}
-
-	// Run cleanup of marked components. Returns the amount of components destroyed.
-	std::size_t cleanup(const std::function<void(component*)>& pBefore_destroy_callback = {})
-	{
-		std::size_t total = 0;
-		for (auto& i : mContainers)
-			total += i.second->clean_marked_components(pBefore_destroy_callback);
-		return total;
 	}
 
 private:

@@ -499,14 +499,6 @@ private:
 				}
 			}
 
-			// Run cleanup for components.
-			for (auto& i : mGame_context.get_layer_container())
-			{
-				std::size_t total = i->cleanup();
-				if (total > 0)
-					log::debug() << "Cleaned " << total << " component(s) from layer \"" << i->get_name() << "\"" << log::endm;
-			}
-
 			end_frame();
 		}
 		shutdown();
@@ -1467,14 +1459,13 @@ private:
 			ImGui::SameLine();
 
 			bool delete_component = false;
-			delete_component = ImGui::Button("Delete");
+			if (ImGui::Button("Delete"))
+				pObj.remove_component(i);
 
 			if (open)
 				mInspectors.on_gui(comp);
 
 			ImGui::PopID();
-			if (delete_component)
-				pObj.remove_component(i--);
 		}
 
 		ImGui::Separator();

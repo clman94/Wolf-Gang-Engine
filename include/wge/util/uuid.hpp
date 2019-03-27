@@ -37,6 +37,7 @@ public:
 
 	hash::hash32_t to_hash32() const noexcept;
 
+	// Returns true when all values are 0
 	bool is_valid() const noexcept;
 
 private:
