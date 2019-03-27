@@ -1,8 +1,7 @@
 #pragma once
 
-#include <vector>
 #include <deque>
-#include <memory>
+
 #include <wge/util/uuid.hpp>
 
 namespace wge::core

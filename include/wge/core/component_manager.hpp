@@ -4,8 +4,6 @@
 #include <wge/core/component_type.hpp>
 
 #include <map>
-#include <any>
-#include <vector>
 
 namespace wge::core
 {

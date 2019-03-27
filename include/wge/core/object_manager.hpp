@@ -1,11 +1,11 @@
 #pragma once
 
+#include <list>
+#include <memory>
+
 #include <wge/core/game_object.hpp>
 #include <wge/core/component.hpp>
 #include <wge/util/uuid.hpp>
-#include <list>
-#include <utility>
-#include <optional>
 
 namespace wge::core
 {
