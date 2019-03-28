@@ -57,7 +57,7 @@ public:
 	[[nodiscard]] game_object add_object();
 	game_object add_object(const std::string& pName);
 	// Remove a game object
-	void remove_object(const game_object& mObj);
+	void remove_object(game_object& mObj);
 	// Get a game object at an index
 	game_object get_object(std::size_t pIndex);
 	// Get a game object by its instance id
@@ -71,13 +71,7 @@ public:
 	// Add a new component by type
 	component* add_component(const game_object& pObj, const component_type& pType);
 
-	// Get the first component of a specific type that refers to this game object
-	template <typename T>
-	T* get_first_component(const game_object& pObj);
-	// Get the first component of a specific type that refers to this game object
-	component* get_first_component(const game_object& pObj, const component_type& pType);
-
-	// Get a component by its instance it. The type is needed to check in
+	// Get a component by its instance id. The type is needed to check in
 	// the correct container.
 	component* get_component(const component_type& pType, const util::uuid& pId);
 
@@ -87,9 +81,6 @@ public:
 
 	// Remove a component of a specific instance id and type.
 	void remove_component(int pType, const util::uuid& pId);
-
-	// Remove all components from an object.
-	void remove_all_components(const game_object& pObject);
 
 	// Calls pCallable for each component specified by the first parameter.
 	// Each component parameter should be a non-const reference and derive from
@@ -165,12 +156,6 @@ inline T* layer::add_component(const game_object & pObj)
 	comp->set_object(pObj);
 	mObject_manager.register_component(comp);
 	return comp;
-}
-
-template<typename T>
-inline T* layer::get_first_component(const game_object& pObj)
-{
-	return mComponent_manager.get_first_component<T>(pObj.get_instance_id());
 }
 
 template<typename T>

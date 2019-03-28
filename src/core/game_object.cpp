@@ -84,7 +84,10 @@ component* game_object::get_component(const component_type& pType) const
 {
 	assert_valid_reference();
 	mData->cleanup_unused_components();
-	return get_layer().get_first_component(*this, pType);
+	for (auto& i : mData->components)
+		if (i->get_component_id() == pType)
+			return i;
+	return nullptr;
 }
 
 void game_object::move_component(std::size_t pFrom, std::size_t pTo)
@@ -117,7 +120,9 @@ void game_object::remove_component(std::size_t pIndex)
 void game_object::remove_all_components()
 {
 	assert_valid_reference();
-	get_layer().remove_all_components(*this);
+	for (auto& i : mData->components)
+		i->destroy();
+	mData->components.clear();
 }
 
 const std::string& game_object::get_name() const

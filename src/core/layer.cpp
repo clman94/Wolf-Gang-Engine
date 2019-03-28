@@ -98,9 +98,9 @@ game_object layer::add_object(const std::string& pName)
 	return obj;
 }
 
-void layer::remove_object(const game_object& mObj)
+void layer::remove_object(game_object& mObj)
 {
-	mComponent_manager.remove_object(mObj.get_instance_id());
+	mObj.remove_all_components();
 	mObject_manager.remove_object(mObj.get_instance_id());
 }
 
@@ -136,11 +136,6 @@ component* layer::add_component(const game_object& pObj, const component_type& p
 	return c;
 }
 
-component* layer::get_first_component(const game_object& pObj, const component_type& pType)
-{
-	return mComponent_manager.get_first_component(pType, pObj.get_instance_id());
-}
-
 component* layer::get_component(const component_type& pType, const util::uuid& pId)
 {
 	return mComponent_manager.get_component(pType, pId);
@@ -151,11 +146,6 @@ void layer::remove_component(int pType, const util::uuid& pId)
 	component* comp = get_component(pType, pId);
 	if (comp)
 		comp->destroy();
-}
-
-void layer::remove_all_components(const game_object& pObject)
-{
-	mComponent_manager.remove_object(pObject.get_instance_id());
 }
 
 context& layer::get_context() const noexcept

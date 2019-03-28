@@ -720,8 +720,12 @@ private:
 				ImGui::Text("Size: %i, %i", res->get_width(), res->get_height());
 				ImGui::Text("Animations: %u", res->get_raw_atlas().size());
 				ImGui::EndGroup();
+				ImGui::InputText("Texture", &inputtext, ImGuiInputTextFlags_ReadOnly);
 			}
-			ImGui::InputText("Texture", &inputtext, ImGuiInputTextFlags_ReadOnly);
+			else
+			{
+				ImGui::Button("Drop a texture asset here", ImVec2(-1, 100));
+			}
 			ImGui::EndGroup();
 
 			if (ImGui::BeginDragDropTarget())
@@ -890,6 +894,8 @@ private:
 				else
 					ImGui::Button("No preview", file_preview_size);
 
+				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), asset->get_type().c_str());
+
 				// Draw text
 				ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + file_preview_size.x);
 				ImGui::Text(i.name().c_str());
@@ -1030,10 +1036,6 @@ private:
 			if (mViewport_framebuffer->get_width() != width
 				|| mViewport_framebuffer->get_height() != height)
 				mViewport_framebuffer->resize(static_cast<int>(width), static_cast<int>(height));
-
-			ImVec2 topleft_cursor = ImGui::GetCursorScreenPos();
-			ImGui::Button("this thing");
-			ImGui::SetCursorScreenPos(topleft_cursor);
 			
 			ImGui::BeginFixedScrollRegion({ width, height }, { scroll_x_max, scroll_y_max });
 
@@ -1359,13 +1361,18 @@ private:
 	{
 		std::string path = pAsset->get_path().string();
 		ImGui::InputText("Name", &path, ImGuiInputTextFlags_ReadOnly);
-		ImGui::LabelText("Asset ID", pAsset->get_id().to_string().c_str());
 
 		std::string description = pAsset->get_description();
 		if (ImGui::InputText("Description", &description))
 			pAsset->set_description(description);
 		if (ImGui::IsItemDeactivatedAfterEdit())
 			mContext.add_modified_asset(pAsset);
+
+		if (ImGui::TreeNode("More Info"))
+		{
+			ImGui::LabelText("Asset ID", pAsset->get_id().to_string().c_str());
+			ImGui::TreePop();
+		}
 
 		if (mContext.is_asset_modified(pAsset))
 		{
@@ -1387,40 +1394,25 @@ private:
 		ImGui::Separator();
 		ImGui::BeginTabBar("LayerSystems");
 
-		if (ImGui::BeginTabItem("Rendering"))
 		{
-			auto renderer = pLayer.get_system<graphics::renderer>();
-			if (!renderer)
+			bool open = ImGui::CollapsingArrow("RendererCollArrow");
+			bool enabled = false;
+			ImGui::SameLine();
+			ImGui::Checkbox("Renderer", &enabled);
+			if (open)
 			{
-				if (ImGui::Button("Enable"))
-					pLayer.add_system<graphics::renderer>();
-			}
-			else
-			{
+				auto renderer = pLayer.get_system<graphics::renderer>();
 				float pixel_size = renderer->get_pixel_size();
 				if (ImGui::DragFloat("Pixel Size", &pixel_size, 0.01f))
 					renderer->set_pixel_size(pixel_size);
 			}
-			ImGui::EndTabItem();
 		}
-
-		if (ImGui::BeginTabItem("Physics"))
 		{
-			auto physics = pLayer.get_system<physics::physics_world>();
-			if (!physics)
-			{
-				if (ImGui::Button("Enable"))
-					pLayer.add_system<physics::physics_world>();
-			}
-			else
-			{
-				math::vec2 gravity = physics->get_gravity();
-				if (ImGui::DragFloat2("Gravity", gravity.components))
-					physics->set_gravity(gravity);
-			}
-			ImGui::EndTabItem();
+			bool open = ImGui::CollapsingArrow("PhysicsCollArrow");
+			bool enabled = false;
+			ImGui::SameLine();
+			ImGui::Checkbox("Physics", &enabled);
 		}
-
 		ImGui::EndTabBar();
 	}
 

@@ -82,10 +82,8 @@ public:
 	const util::uuid& get_instance_id() const noexcept;
 
 	// Remove this component from its object.
-	// Pointers to this component and any component of the same type are still valid until
-	// the end of the frame.
 	void destroy() noexcept;
-	// Returns true if this component will be destroyed at the end of the frame.
+	// Returns true if this component is currently unused by any object.
 	bool is_unused() const noexcept;
 
 protected:
