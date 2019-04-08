@@ -32,6 +32,8 @@ json layer::serialize(serialize_type pType)
 
 void layer::deserialize(const json& pJson)
 {
+	clear();
+
 	util::uuid_rerouter rerouter;
 
 	mName = pJson["name"];
@@ -192,6 +194,15 @@ void layer::postupdate(float pDelta)
 	pDelta *= mTime_scale;
 	for (auto& i : mSystems)
 		i->postupdate(pDelta);
+}
+
+void layer::clear()
+{
+	mTime_scale = 1;
+	mName.clear();
+	mSystems.clear();
+	mObject_manager.clear();
+	mComponent_manager.clear();
 }
 
 } // namespace wge::core

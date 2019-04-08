@@ -27,6 +27,11 @@ layer::ptr context::get_layer(std::size_t pIndex) const
 	return mLayers[pIndex];
 }
 
+layer::ptr context::create_unhandled_layer()
+{
+	return layer::create(*this);
+}
+
 layer::ptr context::add_layer()
 {
 	return mLayers.emplace_back(layer::create(*this));

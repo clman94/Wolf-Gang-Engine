@@ -6,6 +6,7 @@
 
 namespace wge::core
 {
+
 game_object::game_object() noexcept :
 	mLayer(nullptr),
 	mData(nullptr)
@@ -76,6 +77,16 @@ component* game_object::get_component(const std::string& pName)
 	mData->cleanup_unused_components();
 	for (auto& i : mData->components)
 		if (i->get_name() == pName)
+			return i;
+	return nullptr;
+}
+
+component* game_object::get_component_by_type(const std::string& pName)
+{
+	assert_valid_reference();
+	mData->cleanup_unused_components();
+	for (auto& i : mData->components)
+		if (i->get_component_name() == pName)
 			return i;
 	return nullptr;
 }

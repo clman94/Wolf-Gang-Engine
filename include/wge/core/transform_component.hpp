@@ -11,7 +11,7 @@ namespace wge::core
 class transform_component :
 	public component
 {
-	WGE_COMPONENT_SINGLE_INSTANCE("Transform 2D", 1);
+	WGE_COMPONENT_SINGLE_INSTANCE("Transform 2d", 1);
 public:
 	// Set the position of this transform
 	void set_position(const math::vec2& pVec) noexcept;

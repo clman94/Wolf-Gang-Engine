@@ -43,7 +43,7 @@ public:
 	template <typename T = resource>
 	resource::tptr<T> get_resource(const filesystem::path& pPath) const;
 
-	void register_resource_factory(const std::string pType, const resource_factory& pFactory);
+	void register_resource_factory(const std::string& pType, const resource_factory& pFactory);
 
 	// Set the root directory to find all assets.
 	// Note: This affects the relative path of all assets.

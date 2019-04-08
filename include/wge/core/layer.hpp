@@ -118,6 +118,8 @@ public:
 	void update(float pDelta);
 	void postupdate(float pDelta);
 
+	void clear();
+
 private:
 	template <typename Tcomponent, typename...Tdependencies>
 	void for_each_impl(const std::function<void(game_object, Tcomponent&, Tdependencies&...)>& pCallable);
@@ -179,8 +181,8 @@ inline void layer::for_each_impl(const std::function<void(Tcomponent&, Tdependen
 {
 	for (auto& i : mComponent_manager.get_container<Tcomponent>())
 	{
-		// Skip unused
-		if (i.is_unused())
+		// Skip unused or disabled
+		if (i.is_unused() || !i.is_enabled())
 			continue;
 
 		if constexpr (sizeof...(Tdependencies) == 0)

@@ -78,6 +78,11 @@ public:
 			i.second->remove_object(pObject_id);
 	}
 
+	void clear()
+	{
+		mContainers.clear();
+	}
+
 private:
 	std::map<component_type, std::unique_ptr<component_storage_base>> mContainers;
 };

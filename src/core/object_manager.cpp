@@ -93,4 +93,9 @@ object_data* object_manager::get_object_data(std::size_t pIndex)
 	return &(*i);
 }
 
+void object_manager::clear()
+{
+	mObjects.clear();
+}
+
 } // namespace wge::core

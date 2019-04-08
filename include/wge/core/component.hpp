@@ -81,6 +81,15 @@ public:
 
 	const util::uuid& get_instance_id() const noexcept;
 
+	void set_enabled(bool pEnabled) noexcept
+	{
+		mEnabled = pEnabled;
+	}
+	bool is_enabled() const noexcept
+	{
+		return mEnabled;
+	}
+
 	// Remove this component from its object.
 	void destroy() noexcept;
 	// Returns true if this component is currently unused by any object.
@@ -94,6 +103,7 @@ private:
 	std::string mName;
 	util::uuid mObject_id;
 	util::uuid mInstance_id;
+	bool mEnabled{ true };
 	bool mUnused{ false };
 };
 

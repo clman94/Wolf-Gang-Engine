@@ -19,7 +19,7 @@
 #include <wge/graphics/graphics.hpp>
 #include <wge/math/transform.hpp>
 #include <wge/util/ptr.hpp>
-#include <wge/scripting/angelscript_script.hpp>
+#include <wge/core/game_settings.hpp>
 
 #include "editor.hpp"
 #include "history.hpp"
@@ -27,6 +27,13 @@
 #include "component_inspector.hpp"
 #include "imgui_editor_tools.hpp"
 #include "imgui_ext.hpp"
+
+// Angelscript
+#include <angelscript.h>
+#include <scriptbuilder/scriptbuilder.h>
+#include <scripthandle/scripthandle.h>
+#include <scriptstdstring/scriptstdstring.h>
+#include <scriptarray/scriptarray.h>
 
 // GL
 #include <GL/glew.h>
@@ -82,6 +89,263 @@ inline bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr, bool pD
 	ImGui::PopID();
 	return *pOpen;
 }
+
+class behavior_component :
+	public core::component
+{
+	WGE_COMPONENT("Behavior", 9743);
+public:
+
+	~behavior_component()
+	{
+		if (mScript_object)
+			mScript_object->Release();
+	}
+
+	void set_classname(const std::string& pName)
+	{
+		mClassname = pName;
+	}
+
+	const std::string& get_classname() const noexcept
+	{
+		return mClassname;
+	}
+
+	void set_script_object(asIScriptObject* pObject)
+	{
+		if (mScript_object)
+			mScript_object->Release();
+		mScript_object = pObject;
+	}
+
+	asIScriptObject* get_script_object()
+	{
+		return mScript_object;
+	}
+
+	void call_update()
+	{
+		if (mScript_object)
+		{
+			asIScriptEngine* engine = mScript_object->GetEngine();
+			asIScriptFunction* function = mScript_object->GetObjectType()->GetMethodByDecl("void update()");
+			asIScriptContext* ctx = engine->RequestContext();
+			ctx->Prepare(function);
+			ctx->SetObject(mScript_object);
+			if (ctx->Execute() == asEXECUTION_EXCEPTION)
+			{
+				log::error() << ctx->GetExceptionString() << log::endm;
+			}
+			engine->ReturnContext(ctx);
+		}
+	}
+
+private:
+	asIScriptObject* mScript_object{ nullptr };
+	std::string mClassname;
+};
+
+class script_engine
+{
+public:
+	script_engine()
+	{
+		mEngine = asCreateScriptEngine();
+
+		mEngine->SetMessageCallback(asFUNCTION(message_callback), 0, asCALL_CDECL);
+
+		RegisterStdString(mEngine);
+		RegisterScriptArray(mEngine, true);
+
+		int r = 0;
+
+		mEngine->SetDefaultNamespace("math");
+
+		r = mEngine->RegisterObjectType("vec2", sizeof(math::vec2), asOBJ_VALUE | asGetTypeTraits<math::vec2>() | asOBJ_APP_CLASS_ALLFLOATS); assert(r >= 0);
+		r = mEngine->RegisterObjectProperty("vec2", "float x", asOFFSET(math::vec2, x)); assert(r >= 0);
+		r = mEngine->RegisterObjectProperty("vec2", "float y", asOFFSET(math::vec2, y)); assert(r >= 0);
+		r = mEngine->RegisterObjectBehaviour("vec2", asBEHAVE_CONSTRUCT, "void f()", asFUNCTION(constructor<math::vec2>), asCALL_CDECL_OBJFIRST); assert(r >= 0);
+		r = mEngine->RegisterObjectBehaviour("vec2", asBEHAVE_CONSTRUCT, "void f(float, float)", asFUNCTION((constructor<math::vec2, float, float>)), asCALL_CDECL_OBJFIRST); assert(r >= 0);
+		r = mEngine->RegisterObjectBehaviour("vec2", asBEHAVE_CONSTRUCT, "void f(const math::vec2&in)", asFUNCTION((constructor<math::vec2, const math::vec2&>)), asCALL_CDECL_OBJFIRST); assert(r >= 0);
+		r = mEngine->RegisterObjectBehaviour("vec2", asBEHAVE_DESTRUCT, "void f()", asFUNCTION(destructor<math::vec2>), asCALL_CDECL_OBJLAST); assert(r >= 0);
+		r = mEngine->RegisterObjectMethod("vec2", "math::vec2& opAssign(const math::vec2&in)", asMETHOD(math::vec2, operator=), asCALL_THISCALL); assert(r >= 0);
+
+		mEngine->SetDefaultNamespace("core");
+		r = mEngine->RegisterObjectType("component", 0, asOBJ_REF | asOBJ_NOCOUNT); assert(r >= 0);
+
+		r = mEngine->RegisterObjectType("transform_component", 0, asOBJ_REF | asOBJ_NOCOUNT); assert(r >= 0);
+		r = mEngine->RegisterObjectMethod("transform_component", "math::vec2 get_position() const", asMETHOD(core::transform_component, get_position), asCALL_THISCALL); assert(r >= 0);
+		r = mEngine->RegisterObjectMethod("transform_component", "void set_position(const math::vec2 &in) const", asMETHOD(core::transform_component, set_position), asCALL_THISCALL); assert(r >= 0);
+		r = mEngine->RegisterObjectMethod("transform_component", "const component@ opImplCast() const", asFUNCTION((caster<core::transform_component, core::component>)), asCALL_CDECL_OBJLAST); assert(r >= 0);
+		r = mEngine->RegisterObjectMethod("component", "const transform_component@ opImplCast() const", asFUNCTION((caster<core::component, core::transform_component>)), asCALL_CDECL_OBJLAST); assert(r >= 0);
+		r = mEngine->RegisterObjectMethod("transform_component", "component@ opImplCast()", asFUNCTION((caster<core::transform_component, core::component>)), asCALL_CDECL_OBJLAST); assert(r >= 0);
+		r = mEngine->RegisterObjectMethod("component", "transform_component@ opImplCast()", asFUNCTION((caster<core::component, core::transform_component>)), asCALL_CDECL_OBJLAST); assert(r >= 0);
+
+		r = mEngine->RegisterObjectType("game_object", sizeof(core::game_object), asOBJ_VALUE | asGetTypeTraits<core::game_object>()); assert(r >= 0);
+		r = mEngine->RegisterObjectBehaviour("game_object", asBEHAVE_CONSTRUCT, "void f()", asFUNCTION(constructor<core::game_object>), asCALL_CDECL_OBJFIRST); assert(r >= 0);
+		r = mEngine->RegisterObjectBehaviour("game_object", asBEHAVE_CONSTRUCT, "void f(const core::game_object&in)", asFUNCTION((constructor<core::game_object, const core::game_object&>)), asCALL_CDECL_OBJFIRST); assert(r >= 0);
+		r = mEngine->RegisterObjectBehaviour("game_object", asBEHAVE_DESTRUCT, "void f()", asFUNCTION(destructor<core::game_object>), asCALL_CDECL_OBJLAST); assert(r >= 0);
+		r = mEngine->RegisterObjectMethod("game_object", "game_object& opAssign(const game_object&in)", asMETHODPR(core::game_object, operator=, (const core::game_object&), core::game_object&), asCALL_THISCALL); assert(r >= 0);
+		r = mEngine->RegisterObjectMethod("game_object", "component@ get_component_by_type(const string&in)", asMETHODPR(core::game_object, get_component_by_type, (const std::string&), core::component*), asCALL_THISCALL); assert(r >= 0);
+
+		mEngine->SetDefaultNamespace("");
+
+		r = mEngine->RegisterGlobalFunction("void dprint(const string&in)", asFUNCTION(dprint), asCALL_CDECL); assert(r >= 0);
+
+	}
+	~script_engine()
+	{
+		mEngine->ShutDownAndRelease();
+	}
+
+	void compile_scripts()
+	{
+		log::info() << "Script Engine: Compiling scripts..." << log::endm;
+		mBehavior_types.clear();
+
+		mBuilder.StartNewModule(mEngine, "Game");
+
+		std::size_t script_count = 0;
+		for (auto& i : system_fs::directory_iterator("./scripts"))
+			if (i.path().extension() == ".as")
+			{
+				mBuilder.AddSectionFromFile(i.path().string().c_str());
+				++script_count;
+			}
+
+		if (mBuilder.BuildModule() < 0)
+		{
+			log::error() << "Script Engine: Compilation error; Stopping" << log::endm;
+			return;
+		}
+
+		mMain_module = mBuilder.GetModule();
+
+		// Find all objects that inherit core::behavior
+		mMain_module->SetDefaultNamespace("core");
+		asITypeInfo* behavior_type = mMain_module->GetTypeInfoByName("behavior");
+		mMain_module->SetDefaultNamespace("");
+		std::size_t behavior_count = 0;
+		for (std::size_t i = 0; i < mMain_module->GetObjectTypeCount(); i++)
+		{
+			asITypeInfo* ti = mMain_module->GetObjectTypeByIndex(i);
+			if (ti->DerivesFrom(behavior_type) && ti != behavior_type)
+			{
+				mBehavior_types.push_back(ti);
+				++behavior_count;
+			}
+		}
+		log::info() << "Script Engine: Found " << behavior_count << " behavior class(es)" << log::endm;
+		log::info() << "Script Engine: Successfully compiled " << script_count << " files" << log::endm;
+	}
+
+	asIScriptObject* create_behavior_object(const std::string& pClassname, const core::game_object& pGame_object)
+	{
+		for (auto i : mBehavior_types)
+		{
+			const char* name = i->GetName();
+			if (pClassname == name)
+			{
+				std::string decl = std::string(i->GetName()) + "@ " + i->GetName() + "()";
+				asIScriptFunction *factory = i->GetFactoryByDecl(decl.c_str());
+				asIScriptContext* ctx = mEngine->RequestContext();
+				ctx->Prepare(factory);
+				ctx->Execute();
+				asIScriptObject *obj = *(asIScriptObject**)ctx->GetAddressOfReturnValue();
+				obj->AddRef();
+				mEngine->ReturnContext(ctx);
+				set_script_game_object(obj, pGame_object);
+				return obj;
+			}
+		}
+		return nullptr;
+	}
+
+private:
+	template<typename T, typename...Targs>
+	static void constructor(void* pMem, Targs... pArgs)
+	{
+		new(pMem) T(pArgs...);
+	}
+
+	template<typename T>
+	static void destructor(void* pMem)
+	{
+		((T*)pMem)->~T();
+	}
+
+	static void dprint(const std::string& pMessage)
+	{
+		log::debug() << pMessage << log::endm;
+	}
+
+	template <typename Tto, typename Tfrom>
+	static Tto* caster(Tfrom* pFrom)
+	{
+		return dynamic_cast<Tto*>(pFrom);
+	}
+
+	static void message_callback(const asSMessageInfo *msg, void *param)
+	{
+		const char *type = "ERR ";
+		if (msg->type == asMSGTYPE_WARNING)
+			type = "WARN";
+		else if (msg->type == asMSGTYPE_INFORMATION)
+			type = "INFO";
+		printf("%s (%d, %d) : %s : %s\n", msg->section, msg->row, msg->col, type, msg->message);
+	}
+
+private:
+
+	void set_script_game_object(asIScriptObject* pObj, const core::game_object& pGame_object)
+	{
+		asIScriptFunction* function = pObj->GetObjectType()->GetMethodByDecl("void set_object(const core::game_object&in)");
+		asIScriptContext* ctx = mEngine->RequestContext();
+		ctx->Prepare(function);
+		ctx->SetObject(pObj);
+		ctx->SetArgAddress(0, (void*)&pGame_object);
+		ctx->Execute();
+		mEngine->ReturnContext(ctx);
+	}
+
+	asIScriptEngine* mEngine{ nullptr };
+	asIScriptModule* mMain_module{ nullptr };
+	CScriptBuilder mBuilder;
+	std::vector<asITypeInfo*> mBehavior_types;
+
+};
+
+class script_system :
+	public core::system
+{
+	WGE_SYSTEM("Script", 23429);
+public:
+	script_system(core::layer& pLayer, script_engine& pEngine):
+		core::system(pLayer),
+		mEngine(&pEngine)
+	{
+	}
+
+	void update(float pDelta) override
+	{
+		get_layer().for_each([&](core::game_object pObject, behavior_component& pBehavior)
+		{
+			// Init the object if not already.
+			if (!pBehavior.get_script_object() &&
+				!pBehavior.get_classname().empty())
+			{
+				pBehavior.set_script_object(mEngine->create_behavior_object(pBehavior.get_classname(), pObject));
+			}
+
+			// Call update
+			pBehavior.call_update();
+		});
+	}
+
+private:
+	script_engine* mEngine{ nullptr };
+};
 
 inline void GLAPIENTRY opengl_message_callback(GLenum source,
 	GLenum type,
@@ -404,44 +668,162 @@ private:
 	util::uuid mSelected_animation_id;
 };
 
+class engine
+{
+public:
+	engine()
+	{
+		mFactory.register_system<graphics::renderer>();
+		mFactory.register_system<physics::physics_world>();
+		mFactory.register_component<core::transform_component>();
+		mFactory.register_component<graphics::sprite_component>();
+		mFactory.register_component<physics::physics_component>();
+		mFactory.register_component<physics::box_collider_component>();
+		mGame_context.set_factory(&mFactory);
+
+		mGame_context.set_asset_manager(&mAsset_manager);
+		mAsset_manager.register_resource_factory("texture",
+			[&](core::asset::ptr& pAsset)
+		{
+			auto res = std::make_shared<graphics::texture>();
+			res->set_implementation(mGraphics.get_graphics_backend()->create_texture_impl());
+			filesystem::path path = pAsset->get_file_path();
+			path.remove_extension();
+			res->load(path.string());
+			pAsset->set_resource(res);
+		});
+	}
+
+	void create_game(const filesystem::path& pDirectory)
+	{
+		mLoaded = false;
+		mSettings.save_new(pDirectory);
+
+		load_assets();
+
+		// Everything was successful!
+		mLoaded = true;
+	}
+
+	void load_game(const filesystem::path& pPath)
+	{
+		mLoaded = false;
+
+		if (!mSettings.load(pPath))
+		{
+			log::error() << "Cannot find/parse game configuration" << log::endm;
+			return;
+		}
+
+		load_assets();
+
+		// Everything was successful!
+		mLoaded = true;
+	}
+
+	void close_game()
+	{
+		mLoaded = false;
+		
+	}
+
+	void render_to(const graphics::framebuffer::ptr& pFrame_buffer, const math::vec2& pOffset, const math::vec2& pScale)
+	{
+		for (auto& i : mGame_context.get_layer_container())
+		{
+			if (auto renderer = i->get_system<graphics::renderer>())
+			{
+				renderer->set_framebuffer(pFrame_buffer);
+				renderer->set_render_view_to_framebuffer(pOffset, 1 / pScale);
+				renderer->render(mGraphics);
+			}
+		}
+	}
+
+	bool is_loaded() const
+	{
+		return mLoaded;
+	}
+
+	core::game_settings& get_settings() noexcept
+	{
+		return mSettings;
+	}
+
+	core::asset_manager& get_asset_manager() noexcept
+	{
+		return mAsset_manager;
+	}
+
+	core::context& get_context() noexcept
+	{
+		return mGame_context;
+	}
+
+	graphics::graphics& get_graphics() noexcept
+	{
+		return mGraphics;
+	}
+
+	script_engine& get_script_engine() noexcept
+	{
+		return mScripting;
+	}
+
+private:
+	void load_assets()
+	{
+		mAsset_manager.set_root_directory(mSettings.get_asset_directory());
+		mAsset_manager.load_assets();
+		mAsset_manager.import_all_with_ext(".png", "texture");
+	}
+
+private:
+	core::game_settings mSettings;
+	core::asset_manager mAsset_manager;
+	core::context mGame_context;
+	core::factory mFactory;
+
+	graphics::graphics mGraphics;
+
+	script_engine mScripting;
+
+	bool mLoaded{ false };
+};
 
 class application
 {
 public:
-	application()
-	{
-		mGame_context.set_asset_manager(&mAsset_manager);
-	}
-
 	int run()
 	{
-		// Only glfw and opengl is supported for editing
-		mGraphics.initialize(graphics::window_backend_type::glfw, graphics::backend_type::opengl);
-
-		// Store the glfw backend for initializing imgui's glfw backend
-		mGLFW_backend = std::dynamic_pointer_cast<graphics::glfw_window_backend>(mGraphics.get_window_backend());
-		mViewport_framebuffer = mGraphics.get_graphics_backend()->create_framebuffer();
-
+		init_graphics();
 		init_imgui();
-		init_game_context();
 		init_inspectors();
+
+		load_project("project");
 
 		mainloop();
 		return 0;
 	}
 
 private:
+	void init_graphics()
+	{
+		auto& g = mEngine.get_graphics();
+		// Only glfw and opengl is supported for editing
+		g.initialize(graphics::window_backend_type::glfw, graphics::backend_type::opengl);
+
+		// Store the glfw backend for initializing imgui's glfw backend
+		mGLFW_backend = std::dynamic_pointer_cast<graphics::glfw_window_backend>(g.get_window_backend());
+		mViewport_framebuffer = g.get_graphics_backend()->create_framebuffer();
+	}
+
 	void mainloop()
 	{
 		while (!glfwWindowShouldClose(mGLFW_backend->get_window()))
 		{
 			float delta = 1.f / 60.f;
 
-			if (mUpdate)
-			{
-				mGame_context.preupdate(delta);
-				mGame_context.update(delta);
-			}
 
 			new_frame();
 			main_viewport_dock();
@@ -457,7 +839,7 @@ private:
 					ImGui::MenuItem("Open");
 					ImGui::Separator();
 					//ImGui::MenuItem("Save", "Ctrl+S", false, mContext.are_there_modified_assets());
-					if (ImGui::MenuItem("Save All", "Ctrl+Alt+S", false, mContext.are_there_modified_assets()))
+					if (ImGui::MenuItem("Save All", "Ctrl+Alt+S", false, mContext.are_there_modified_assets() && mEngine.is_loaded()))
 						mContext.save_all_assets();
 					ImGui::Separator();
 					if (ImGui::BeginMenu("Recent"))
@@ -475,6 +857,13 @@ private:
 				ImGui::EndMainMenuBar();
 			}
 
+			if (mUpdate)
+			{
+				mEngine.get_context().preupdate(delta);
+				mEngine.get_context().update(delta);
+			}
+
+			show_log();
 			show_settings();
 			show_asset_manager();
 			show_viewport();
@@ -483,19 +872,19 @@ private:
 			mSprite_editor.on_gui();
 
 			if (mUpdate)
-				mGame_context.postupdate(delta);
+				mEngine.get_context().postupdate(delta);
 
 			// Clear the framebuffer with black
 			mViewport_framebuffer->clear({ 0, 0, 0, 1 });
 
 			// Render all layers with the renderer system
-			for (auto& i : mGame_context.get_layer_container())
+			for (auto& i : mEngine.get_context().get_layer_container())
 			{
 				if (auto renderer = i->get_system<graphics::renderer>())
 				{
 					renderer->set_framebuffer(mViewport_framebuffer);
 					renderer->set_render_view_to_framebuffer(mViewport_offset, 1 / mViewport_scale);
-					renderer->render(mGraphics);
+					renderer->render(mEngine.get_graphics());
 				}
 			}
 
@@ -545,6 +934,7 @@ private:
 
 	void init_imgui()
 	{
+		// Setup imgui, enable docking and dpi support
 		ImGui::CreateContext();
 		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
@@ -616,34 +1006,20 @@ private:
 		colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
 	}
 
-	void init_game_context()
+	void create_project(const filesystem::path& pPath)
 	{
-		mFactory.register_system<graphics::renderer>();
-		mFactory.register_system<physics::physics_world>();
-		mFactory.register_component<core::transform_component>();
-		mFactory.register_component<graphics::sprite_component>();
-		mFactory.register_component<physics::physics_component>();
-		mFactory.register_component<physics::box_collider_component>();
-		mGame_context.set_factory(&mFactory);
 
-		mAsset_manager.register_resource_factory("texture",
-			[&](core::asset::ptr& pAsset)
-		{
-			auto res = std::make_shared<graphics::texture>();
-			res->set_implementation(mGraphics.get_graphics_backend()->create_texture_impl());
-			filesystem::path path = pAsset->get_file_path();
-			path.remove_extension();
-			res->load(path.string());
-			pAsset->set_resource(res);
-		});
+	}
 
-		mAsset_manager.set_root_directory(".");
-		mAsset_manager.load_assets();
-		mAsset_manager.import_all_with_ext(".png", "texture");
+	void load_project(const filesystem::path& pPath)
+	{
+		mEngine.close_game();
+		mEngine.load_game(pPath);
 
-		auto layer = mGame_context.add_layer();
+		auto layer = mEngine.get_context().add_layer();
 		layer->set_name("Layer1");
 		layer->add_system<graphics::renderer>();
+		layer->add_system<script_system>(mEngine.get_script_engine());
 
 		auto renderer = layer->get_system<graphics::renderer>();
 		renderer->set_pixel_size(0.01f);
@@ -651,7 +1027,12 @@ private:
 		auto obj = layer->add_object();
 		obj.add_component<core::transform_component>();
 		auto sprite = obj.add_component<graphics::sprite_component>();
-		sprite->set_texture(mAsset_manager.get_asset("mytex.png"));
+		sprite->set_texture(mEngine.get_asset_manager().get_asset("mytex.png"));
+
+		auto behavior = obj.add_component<behavior_component>();
+		behavior->set_classname("thing");
+
+		mEngine.get_script_engine().compile_scripts();
 	}
 
 	void init_inspectors()
@@ -733,36 +1114,12 @@ private:
 				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("textureAsset"))
 				{
 					const util::uuid& id = *(const util::uuid*)payload->Data;
-					auto asset = mAsset_manager.get_asset(id);
+					auto asset = mEngine.get_asset_manager().get_asset(id);
 					sprite->set_texture(asset);
 				}
 				ImGui::EndDragDropTarget();
 			}
 		});
-
-		// Inspector for behavior_component
-		/*mInspectors.add_inspector(core::behavior_component::COMPONENT_ID,
-			[this](core::component* pComponent)
-		{
-			auto comp = dynamic_cast<core::behavior_component*>(pComponent);
-
-			auto behavior = comp->get_behavior();
-			ImGui::BeginGroup();
-			std::string inputtext = behavior ? behavior->get_path().string().c_str() : "None";
-			ImGui::InputText("Texture", &inputtext, ImGuiInputTextFlags_ReadOnly);
-			ImGui::EndGroup();
-
-			if (ImGui::BeginDragDropTarget())
-			{
-				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("behaviorAsset"))
-				{
-					const util::uuid& id = *(const util::uuid*)payload->Data;
-					auto asset = mAsset_manager.get_asset(id);
-					comp->set_behavior(asset);
-				}
-				ImGui::EndDragDropTarget();
-			}
-		});*/
 
 		mInspectors.add_inspector(physics::physics_component::COMPONENT_ID,
 			[](core::component* pComponent)
@@ -795,6 +1152,16 @@ private:
 			float rotation = math::degrees(collider->get_rotation());
 			if (ImGui::DragFloat("Rotation", &rotation))
 				collider->set_rotation(math::degrees(rotation));
+		});
+
+		mInspectors.add_inspector(behavior_component::COMPONENT_ID,
+			[](core::component* pComponent)
+		{
+			auto behavior = dynamic_cast<behavior_component*>(pComponent);
+
+			std::string classname = behavior->get_classname();
+			if (ImGui::InputText("Class Name", &classname))
+				behavior->set_classname(classname);
 		});
 	}
 
@@ -842,13 +1209,13 @@ private:
 			static filesystem::path path = "";
 			static float directory_tree_width = 200;
 			using const_iterator = core::asset_manager::file_structure::const_iterator;
-			const_iterator root = mAsset_manager.get_file_structure().find("");
+			const_iterator root = mEngine.get_asset_manager().get_file_structure().find("");
 
 			ImGui::BeginChild("DirectoryTree", { directory_tree_width, 0 }, true);
 			show_asset_directory_tree(root, path);
 			ImGui::EndChild();
 
-			const_iterator current_directory = mAsset_manager.get_file_structure().find(path);
+			const_iterator current_directory = mEngine.get_asset_manager().get_file_structure().find(path);
 
 			ImGui::SameLine();
 			ImGui::VerticalSplitter("DirectoryTreeSplitter", &directory_tree_width);
@@ -996,9 +1363,20 @@ private:
 			//ImGui::SameLine();
 			ImVec4 play_color = mUpdate ? ImVec4{ 0.4f, 0.1f, 0.1f, 1 } : ImVec4{ 0.1f, 0.4f, 0.1f, 1 };
 			ImGui::PushStyleColor(ImGuiCol_Button, play_color);
-			if (ImGui::Button(mUpdate ? "Pause" : "Play", { 70, 70 }))
+			if (ImGui::Button(mUpdate ? "Pause" : "Play"))
 				mUpdate = !mUpdate;
 			ImGui::PopStyleColor();
+
+			if (ImGui::Button("Build"))
+			{
+				// Clear the behavior components
+				for (auto& i : mEngine.get_context().get_layer_container())
+					i->for_each([](behavior_component& pBehavior)
+					{
+						pBehavior.set_script_object(nullptr);
+					});
+				mEngine.get_script_engine().compile_scripts();
+			}
 		}
 		ImGui::End();
 
@@ -1068,7 +1446,7 @@ private:
 					{
 						core::game_object obj = selected_layer->add_object();
 						const util::uuid& id = *(const util::uuid*)payload->Data;
-						auto asset = mAsset_manager.get_asset(id);
+						auto asset = mEngine.get_asset_manager().get_asset(id);
 						obj.deserialize(asset->get_metadata());
 						if (auto transform = obj.get_component<core::transform_component>())
 							transform->set_position(visual_editor::get_mouse_position());
@@ -1077,8 +1455,8 @@ private:
 					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("layerAsset"))
 					{
 						const util::uuid& id = *(const util::uuid*)payload->Data;
-						auto asset = mAsset_manager.get_asset(id);
-						auto new_layer = mGame_context.add_layer();
+						auto asset = mEngine.get_asset_manager().get_asset(id);
+						auto new_layer = mEngine.get_context().add_layer();
 						new_layer->deserialize(asset->get_metadata());
 						mContext.set_selection(new_layer);
 					}
@@ -1088,7 +1466,7 @@ private:
 				if (is_grid_enabled)
 					visual_editor::draw_grid(grid_color, 1);
 
-				for (auto& layer : mGame_context.get_layer_container())
+				for (auto& layer : mEngine.get_context().get_layer_container())
 				{
 					graphics::renderer* renderer = layer->get_system<graphics::renderer>();
 					if (!renderer)
@@ -1213,7 +1591,7 @@ private:
 				if (ImGui::Button("Save"))
 				{
 					json data = object->serialize(core::serialize_type::properties);
-					mAsset_manager.create_asset(destination, "gameobject", data);
+					mEngine.get_asset_manager().create_asset(destination, "gameobject", data);
 					ImGui::CloseCurrentPopup();
 				}
 				ImGui::EndMenu();
@@ -1235,7 +1613,7 @@ private:
 	void show_layers()
 	{
 		bool open_context_menu = false;
-		for (auto& i : mGame_context.get_layer_container())
+		for (auto& i : mEngine.get_context().get_layer_container())
 		{
 			ImGui::PushID(util::to_address(i));
 
@@ -1284,7 +1662,7 @@ private:
 				if (ImGui::Button("Save"))
 				{
 					json data = layer->serialize(core::serialize_type::properties);
-					mAsset_manager.create_asset(destination, "layer", data);
+					mEngine.get_asset_manager().create_asset(destination, "layer", data);
 					ImGui::CloseCurrentPopup();
 				}
 				ImGui::EndMenu();
@@ -1293,7 +1671,7 @@ private:
 			if (ImGui::MenuItem("Delete"))
 			{
 				mContext.reset_selection();
-				mGame_context.remove_layer(layer);
+				mEngine.get_context().remove_layer(layer);
 			}
 			ImGui::EndPopup();
 		}
@@ -1310,7 +1688,7 @@ private:
 				{
 					if (ImGui::MenuItem("Layer"))
 					{
-						mGame_context.add_layer();
+						mEngine.get_context().add_layer();
 					}
 					if (ImGui::MenuItem("Object 2D"))
 					{
@@ -1391,29 +1769,14 @@ private:
 		std::string name = pLayer.get_name();
 		if (ImGui::InputText("Name", &name))
 			pLayer.set_name(name);
-		ImGui::Separator();
-		ImGui::BeginTabBar("LayerSystems");
-
+		if (ImGui::TreeNode("Renderer"))
 		{
-			bool open = ImGui::CollapsingArrow("RendererCollArrow");
-			bool enabled = false;
-			ImGui::SameLine();
-			ImGui::Checkbox("Renderer", &enabled);
-			if (open)
-			{
-				auto renderer = pLayer.get_system<graphics::renderer>();
-				float pixel_size = renderer->get_pixel_size();
-				if (ImGui::DragFloat("Pixel Size", &pixel_size, 0.01f))
-					renderer->set_pixel_size(pixel_size);
-			}
+			auto renderer = pLayer.get_system<graphics::renderer>();
+			float pixel_size = renderer->get_pixel_size();
+			if (ImGui::DragFloat("Pixel Size", &pixel_size, 0.01f))
+				renderer->set_pixel_size(pixel_size);
+			ImGui::TreePop();
 		}
-		{
-			bool open = ImGui::CollapsingArrow("PhysicsCollArrow");
-			bool enabled = false;
-			ImGui::SameLine();
-			ImGui::Checkbox("Physics", &enabled);
-		}
-		ImGui::EndTabBar();
 	}
 
 	void show_component_inspector(core::game_object pObj)
@@ -1426,37 +1789,15 @@ private:
 		{
 			core::component* comp = pObj.get_component_at(i);
 			ImGui::PushID(comp);
-
-			if (i != 0)
-				ImGui::Separator();
-
-			bool open = collapsing_arrow("CollapsingArrow", nullptr, true);
-
+			bool enabled = comp->is_enabled();
+			if (ImGui::Checkbox("###Enabled", &enabled))
+				comp->set_enabled(enabled);
 			ImGui::SameLine();
+			if (ImGui::TreeNodeEx(comp->get_component_name().c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 			{
-				ImGui::PushItemWidth(150);
-				std::string name = comp->get_name();
-				if (ImGui::InputText("##NameInput", &name))
-					comp->set_name(name);
-				ImGui::PopItemWidth();
-			}
-
-			ImGui::SameLine();
-			ImGui::Text(comp->get_component_name().c_str());
-
-			ImGui::Dummy(ImVec2(ImGui::GetWindowContentRegionWidth()
-				- (ImGui::CalcTextSize("Delete ").x
-					+ ImGui::GetStyle().WindowPadding.x * 2
-					+ ImGui::GetStyle().FramePadding.x * 2), 1));
-			ImGui::SameLine();
-
-			bool delete_component = false;
-			if (ImGui::Button("Delete"))
-				pObj.remove_component(i);
-
-			if (open)
 				mInspectors.on_gui(comp);
-
+				ImGui::TreePop();
+			}
 			ImGui::PopID();
 		}
 
@@ -1475,6 +1816,68 @@ private:
 		}
 	}
 
+	void show_log()
+	{
+		const std::size_t log_limit = 256;
+
+		if (ImGui::Begin("Log", NULL, ImGuiWindowFlags_HorizontalScrollbar))
+		{
+			const auto& log = log::get_log();
+
+			// Helps keep track of changes in the log
+			static size_t last_log_size = 0;
+
+			// If the window is scrolled to the bottom, keep it at the bottom.
+			// To prevent it from locking the users mousewheel input, it will only lock the scroll
+			// when the log actually changes.
+			bool lock_scroll_at_bottom = ImGui::GetScrollY() == ImGui::GetScrollMaxY() && last_log_size != log.size();
+
+			ImGui::Columns(2, 0, false);
+			ImGui::SetColumnWidth(0, 60);
+
+			// Limit the amount of items that can be shown in log.
+			// This makes it more convenient to scroll and there is less to draw.
+			const bool exceeds_limit = log.size() >= log_limit;
+			const size_t start = exceeds_limit ? log.size() - log_limit : 0;
+			for (size_t i = start; i < log.size(); i++)
+			{
+				switch (log[i].severity_level)
+				{
+				case log::level::info:
+					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_Text]);
+					ImGui::TextUnformatted("Info");
+					break;
+				case log::level::debug:
+					ImGui::PushStyleColor(ImGuiCol_Text, { 0.5f, 1, 1, 1 }); // Cyan-ish
+					ImGui::TextUnformatted("Debug");
+					break;
+				case log::level::warning:
+					ImGui::PushStyleColor(ImGuiCol_Text, { 1, 1, 0.5f, 1 }); // Yellow-ish
+					ImGui::TextUnformatted("Warning");
+					break;
+				case log::level::error:
+					ImGui::PushStyleColor(ImGuiCol_Text, { 1, 0.5f, 0.5f, 1 }); // Red
+					ImGui::TextUnformatted("Error");
+					break;
+				}
+				ImGui::NextColumn();
+
+				// The actual message. Has the same color as the message type.
+				ImGui::TextUnformatted(log[i].string.c_str());
+				ImGui::PopStyleColor();
+
+				ImGui::NextColumn();
+			}
+
+			ImGui::Columns(1);
+
+			if (lock_scroll_at_bottom)
+				ImGui::SetScrollHere();
+			last_log_size = log.size();
+		}
+		ImGui::End();
+	}
+
 	core::layer* get_current_layer() const
 	{
 		if (auto layer = mContext.get_selection<selection_type::layer>())
@@ -1487,7 +1890,6 @@ private:
 	}
 
 private:
-	graphics::graphics mGraphics;
 	// ImGui needs access to some glfw specific objects
 	graphics::glfw_window_backend::ptr mGLFW_backend;
 
@@ -1500,10 +1902,7 @@ private:
 	math::vec2 mViewport_offset;
 	math::vec2 mViewport_scale{ 100, 100 };
 
-	core::context mGame_context;
-	filesystem::path mGame_path;
-	core::asset_manager mAsset_manager;
-	core::factory mFactory;
+	engine mEngine;
 
 	component_inspector mInspectors;
 

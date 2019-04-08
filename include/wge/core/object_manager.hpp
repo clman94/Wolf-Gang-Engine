@@ -59,6 +59,8 @@ public:
 	// Get object data by index
 	object_data* get_object_data(std::size_t pIndex);
 
+	void clear();
+
 private:
 	std::list<object_data> mObjects;
 };

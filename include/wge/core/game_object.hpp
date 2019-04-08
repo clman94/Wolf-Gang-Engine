@@ -49,7 +49,7 @@ public:
 	template <class T,
 		// Requires the "int COMPONENT_ID" member
 		typename = std::enable_if<has_component_id_member<T>::value>::type>
-		bool has_component() const;
+	bool has_component() const;
 
 	json serialize(serialize_type pType = serialize_type::all) const;
 	void deserialize(const json& pJson);
@@ -66,6 +66,7 @@ public:
 	component* get_component_at(std::size_t pIndex);
 	// Get component by name
 	component* get_component(const std::string& pName);
+	component* get_component_by_type(const std::string& pName);
 	// Get first component by id
 	component* get_component(const component_type& pType) const;
 	// Get first component by type

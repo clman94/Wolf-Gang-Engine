@@ -72,7 +72,7 @@ bool asset_manager::has_asset(const asset::ptr& pAsset) const noexcept
 	return false;
 }
 
-void asset_manager::register_resource_factory(const std::string pType, const resource_factory & pFactory)
+void asset_manager::register_resource_factory(const std::string& pType, const resource_factory& pFactory)
 {
 	mResource_factories[pType] = pFactory;
 }
