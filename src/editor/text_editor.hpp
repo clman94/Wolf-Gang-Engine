@@ -59,10 +59,6 @@ public:
 
 	void insert_character(char pChar);
 	void insert_text(const std::string_view& pView);
-	bool is_text_selected() const noexcept
-	{
-		return mSelection_start != mSelection_end;
-	}
 
 	void erase_range(const position& pStart, const position& pEnd);
 	void set_range_color(const position& pStart, const position& pEnd, palette_type pPalette);
@@ -72,8 +68,13 @@ public:
 	position get_selection_end() const noexcept;
 	std::string get_selected_text() const;
 	void select_all() noexcept;
-
+	bool is_text_selected() const noexcept
+	{
+		return mSelection_start != mSelection_end;
+	}
 	void erase_selection();
+	void deselect() noexcept;
+
 	void backspace();
 	void cursor_up();
 	void cursor_down();

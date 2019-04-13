@@ -1,5 +1,7 @@
 #include "text_editor.hpp"
 
+#include <GLFW/glfw3.h>
+
 namespace wge::editor
 {
 
@@ -140,6 +142,11 @@ void text_editor::erase_selection()
 	}
 }
 
+void text_editor::deselect() noexcept
+{
+	mSelection_start = mSelection_end = position{ 0, 0 };
+}
+
 void text_editor::backspace()
 {
 	// Only delete the selection if there is one.
@@ -190,6 +197,8 @@ void text_editor::cursor_up()
 		// Todo: Maintain the same column like most other editors do.
 		mCursor_position.column = std::min(mCursor_position.column, mLine_lengths[mCursor_position.line]);
 	}
+	if (!ImGui::GetIO().KeyShift)
+		deselect();
 }
 
 void text_editor::cursor_down()
@@ -205,6 +214,8 @@ void text_editor::cursor_down()
 		// Todo: Maintain the same column like most other editors do.
 		mCursor_position.column = std::min(mCursor_position.column, mLine_lengths[mCursor_position.line]);
 	}
+	if (!ImGui::GetIO().KeyShift)
+		deselect();
 }
 
 void text_editor::cursor_left()
@@ -219,6 +230,8 @@ void text_editor::cursor_left()
 	{
 		--mCursor_position.column;
 	}
+	if (!ImGui::GetIO().KeyShift)
+		deselect();
 }
 
 void text_editor::cursor_right()
@@ -234,6 +247,8 @@ void text_editor::cursor_right()
 	{
 		++mCursor_position.column;
 	}
+	if (!ImGui::GetIO().KeyShift)
+		deselect();
 }
 
 void text_editor::copy_to_clipboard()
@@ -535,11 +550,12 @@ void text_editor::handle_selection(const position& pPos)
 			mCursor_position.column > 0 &&
 			mText.at(get_character_index(mCursor_position) - 1) == '\n')
 			--mCursor_position.column;
-
-		if (ImGui::IsItemClicked(0))
-			mSelection_start = mCursor_position;
-		mSelection_end = mCursor_position;
 	}
+	if (ImGui::IsItemClicked(0) ||
+		(ImGui::IsKeyPressed(GLFW_KEY_LEFT_SHIFT) && !is_text_selected()))
+		mSelection_start = mCursor_position;
+	if (ImGui::IsItemActive() || ImGui::GetIO().KeyShift)
+		mSelection_end = mCursor_position;
 }
 
 void text_editor::handle_keyboard()
