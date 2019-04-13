@@ -27,6 +27,7 @@
 #include "component_inspector.hpp"
 #include "imgui_editor_tools.hpp"
 #include "imgui_ext.hpp"
+#include "text_editor.hpp"
 
 // Angelscript
 #include <angelscript.h>
@@ -42,9 +43,89 @@
 
 #include <variant>
 #include <functional>
+#include <future>
+/*
+namespace wge::util
+{
+
+template <typename T, std::size_t Tchuck_size>
+class chunked_queue
+{
+	using chunk = std::array<T, Tchuck_size>;
+	using chunk_list = std::list<chunk>;
+public:
+
+	void push(const T& pValue)
+	{
+		if (mChunks.empty() && is_chunk_full())
+			new_chunk();
+		*mChunk_end = pValue;
+		++mChunk_end;
+		++mSize;
+	}
+
+	void pop()
+	{
+		if (mChunks.back().begin() == mChunk_end)
+			pop_chunk();
+		else
+		{
+			--mChunk_end;
+			--mSize;
+		}
+	}
+
+private:
+	bool is_chunk_full() const
+	{
+		return !mChunks.empty() && mChunks.back().end() == mChunk_end;
+	}
+
+	void new_chunk()
+	{
+		mChunks.push_back();
+		mChunk_end = mChunks.back().begin();
+	}
+
+	void pop_chunk()
+	{
+		assert(mChunks.size() > 0);
+		mSize -= std::distance(mChunks.back().begin(), mChunk_end);
+		mChunks.pop_back();
+		mChunk_end = mChunks.back().end();
+	}
+
+private:
+	chunk::iterator mChunk_end;
+	chunk_list mChunks;
+	std::size_t mSize{ 0 };
+};
+
+}*/
 
 namespace wge::editor
 {
+
+struct task_info
+{
+	const char* name;
+	std::vector<const char*> flags;
+};
+
+// A manager for async tasks
+class task_manager
+{
+public:
+
+	template <typename T, typename...Targs>
+	auto run_task(const task_info& pTi, T&& pCallable, Targs&&...pArgs)
+	{
+		return std::async(std::launch::async, std::forward<T>(pCallable), std::forward<Targs...>(pArgs));
+	}
+
+private:
+
+};
 
 // Creates an imgui dockspace in the main window
 inline void main_viewport_dock()
@@ -794,6 +875,19 @@ private:
 class application
 {
 public:
+	text_edit mText_edit;
+
+	application()
+	{
+		// Clear the sandbox on a new selection
+		mContext.on_new_selection.connect(
+			[this]()
+		{
+			mSandbox.reset();
+		});
+
+	}
+
 	int run()
 	{
 		init_graphics();
@@ -801,6 +895,10 @@ public:
 		init_inspectors();
 
 		load_project("project");
+
+		auto a = mEngine.get_asset_manager().get_asset("pie");
+
+		mText_edit.set_text(a->get_metadata().dump(1, '\t'));
 
 		mainloop();
 		return 0;
@@ -823,8 +921,7 @@ private:
 		while (!glfwWindowShouldClose(mGLFW_backend->get_window()))
 		{
 			float delta = 1.f / 60.f;
-
-
+			
 			new_frame();
 			main_viewport_dock();
 
@@ -870,6 +967,12 @@ private:
 			show_objects();
 			show_inspector();
 			mSprite_editor.on_gui();
+
+			if (ImGui::Begin("EditorTest"))
+			{
+				mText_edit.render();
+			}
+			ImGui::End();
 
 			if (mUpdate)
 				mEngine.get_context().postupdate(delta);
@@ -945,18 +1048,18 @@ private:
 		ImGui_ImplOpenGL3_Init("#version 150");
 
 		// Lets use a somewhat better font
-		auto font = ImGui::GetIO().Fonts->AddFontFromFileTTF("./editor/Roboto-Medium.ttf", 16);
+		/*auto font = ImGui::GetIO().Fonts->AddFontFromFileTTF("./editor/Roboto-Medium.ttf", 16);
 		if (font == NULL)
 		{
 			log::error() << "Could not load editor font, aborting..." << log::endm;
 			std::abort();
-		}
+		}*/
 
 		// Theme
 		ImVec4* colors = ImGui::GetStyle().Colors;
 		colors[ImGuiCol_Text] = ImVec4(0.87f, 0.87f, 0.87f, 1.00f);
 		colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
-		colors[ImGuiCol_WindowBg] = ImVec4(0.06f, 0.06f, 0.06f, 1.00f);
+		colors[ImGuiCol_WindowBg] = ImVec4(0.06f, 0.06f, 0.06f, 0.70f);
 		colors[ImGuiCol_ChildBg] = ImVec4(1.00f, 1.00f, 1.00f, 0.00f);
 		colors[ImGuiCol_PopupBg] = ImVec4(0.08f, 0.08f, 0.08f, 0.94f);
 		colors[ImGuiCol_Border] = ImVec4(0.00f, 0.00f, 0.00f, 0.50f);
@@ -1737,8 +1840,12 @@ private:
 
 	void show_asset_inspector(const core::asset::ptr& pAsset)
 	{
+		assert(pAsset);
+
+		ImGui::LabelText("Type", pAsset->get_type().c_str());
+
 		std::string path = pAsset->get_path().string();
-		ImGui::InputText("Name", &path, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputText("Path", &path, ImGuiInputTextFlags_ReadOnly);
 
 		std::string description = pAsset->get_description();
 		if (ImGui::InputText("Description", &description))
@@ -1746,12 +1853,15 @@ private:
 		if (ImGui::IsItemDeactivatedAfterEdit())
 			mContext.add_modified_asset(pAsset);
 
+		// This info is not useful 100% of the time so it is normally hidded
+		// befind a closed tree node.
 		if (ImGui::TreeNode("More Info"))
 		{
-			ImGui::LabelText("Asset ID", pAsset->get_id().to_string().c_str());
+			ImGui::LabelText("UUID", pAsset->get_id().to_string().c_str());
 			ImGui::TreePop();
 		}
 
+		// Show a save button when the asset is modified so the user can save it.
 		if (mContext.is_asset_modified(pAsset))
 		{
 			if (ImGui::Button("Save", { -1, 0 }))
@@ -1760,8 +1870,36 @@ private:
 
 		ImGui::Separator();
 		
+		// Sprite editor
 		if (pAsset->get_type() == "texture")
 			mSprite_editor.on_inspector_gui();
+
+		// Show object in inspector
+		if (pAsset->get_type() == "gameobject")
+		{
+			// Create a new sandbox for new selections.
+			// Note: The sandbox is cleared after every selection.
+			if (!mSandbox)
+			{
+				mSandbox = mEngine.get_context().create_unhandled_layer();
+				auto obj = mSandbox->add_object();
+				obj.deserialize(pAsset->get_metadata());
+			}
+			
+			// Use the sandbox to to help us interpret the serialized data
+			// into a usable game object that we can be edited.
+			auto obj = mSandbox->get_object(0);
+			ImGui::BeginGroup();
+			show_component_inspector(obj);
+			ImGui::EndGroup();
+
+			// Serialize the object back into the asset after each edit.
+			if (ImGui::IsItemDeactivatedAfterEdit())
+			{
+				pAsset->set_metadata(obj.serialize());
+				mContext.add_modified_asset(pAsset);
+			}
+		}
 	}
 
 	void show_layer_inspector(core::layer& pLayer)
@@ -1784,7 +1922,9 @@ private:
 		std::string name = pObj.get_name();
 		if (ImGui::InputText("Name", &name))
 			pObj.set_name(name);
+
 		ImGui::Separator();
+
 		for (std::size_t i = 0; i < pObj.get_component_count(); i++)
 		{
 			core::component* comp = pObj.get_component_at(i);
@@ -1903,6 +2043,9 @@ private:
 	math::vec2 mViewport_scale{ 100, 100 };
 
 	engine mEngine;
+
+	// This layer is used for editing serialized objects and layers
+	core::layer::ptr mSandbox;
 
 	component_inspector mInspectors;
 

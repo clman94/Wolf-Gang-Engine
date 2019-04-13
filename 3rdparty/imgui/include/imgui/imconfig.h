@@ -57,11 +57,12 @@
         ImVec2(const wge::math::vec2& f) { x = f.x; y = f.y; }                       \
         operator wge::math::vec2() const { return wge::math::vec2(x,y); }
 
-/*
+#include <wge/graphics/color.hpp>
+
 #define IM_VEC4_CLASS_EXTRA                                                 \
-        ImVec4(const MyVec4& f) { x = f.x; y = f.y; z = f.z; w = f.w; }     \
-        operator MyVec4() const { return MyVec4(x,y,z,w); }
-*/
+        ImVec4(const wge::graphics::color& f) { x = f.r; y = f.g; z = f.b; w = f.a; }     \
+        operator wge::graphics::color() const { return wge::graphics::color(x,y,z,w); }
+
 
 //---- Use 32-bit vertex indices (default is 16-bit) to allow meshes with more than 64K vertices. Render function needs to support it.
 //#define ImDrawIdx unsigned int
