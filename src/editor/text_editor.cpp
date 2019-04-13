@@ -66,13 +66,19 @@ void text_editor::insert_text(const std::string_view& pView)
 {
 	if (is_text_selected())
 		erase_selection();
+
+	// Clean up the text by removing any unsupported line endings
+	std::string cleaned_str(pView);
+	auto iter = std::remove(cleaned_str.begin(), cleaned_str.end(), '\r');
+	cleaned_str.erase(iter, cleaned_str.end());
+
 	const position prev_pos = mCursor_position;
 	const std::size_t index = get_character_index(mCursor_position);
-	mText.insert(mText.begin() + index, pView.begin(), pView.end());
-	std::remove(mText.begin(), mText.end(), '\r');
-	mText_color.resize(mText.size());
+	mText.insert(mText.begin() + index, cleaned_str.begin(), cleaned_str.end());
+	mText_color.insert(mText_color.begin() + index, cleaned_str.size(), palette_type::default);
+
 	update_line_lengths();
-	mCursor_position = get_position_at(index + pView.size());
+	mCursor_position = get_position_at(index + cleaned_str.size());
 	highlight_range(prev_pos, mCursor_position);
 }
 
