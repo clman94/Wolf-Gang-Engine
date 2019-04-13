@@ -3,7 +3,7 @@
 namespace wge::editor
 {
 
-text_edit::text_edit()
+text_editor::text_editor()
 {
 	static language lang;
 	lang.keywords = { "if", "else", "while", "int", "do", "void", "const", "class", "char", "interface",
@@ -22,7 +22,7 @@ text_edit::text_edit()
 	};
 }
 
-void text_edit::set_text(const std::string& pText)
+void text_editor::set_text(const std::string& pText)
 {
 	mText = pText;
 	std::remove(mText.begin(), mText.end(), '\r');
@@ -32,12 +32,12 @@ void text_edit::set_text(const std::string& pText)
 	highlight_all();
 }
 
-const std::string text_edit::get_text() const noexcept
+const std::string text_editor::get_text() const noexcept
 {
 	return mText;
 }
 
-void text_edit::insert_character(char pChar)
+void text_editor::insert_character(char pChar)
 {
 	if (is_text_selected())
 		erase_selection();
@@ -50,6 +50,7 @@ void text_edit::insert_character(char pChar)
 		update_line_lengths();
 		highlight_line(mCursor_position.line);
 		++mCursor_position.line;
+		// TODO: Maintain indentation with the previous line.
 		highlight_line(mCursor_position.line);
 		mCursor_position.column = 0;
 	}
@@ -61,7 +62,7 @@ void text_edit::insert_character(char pChar)
 	}
 }
 
-void text_edit::insert_text(const std::string_view& pView)
+void text_editor::insert_text(const std::string_view& pView)
 {
 	if (is_text_selected())
 		erase_selection();
@@ -75,7 +76,7 @@ void text_edit::insert_text(const std::string_view& pView)
 	highlight_range(prev_pos, mCursor_position);
 }
 
-void text_edit::erase_range(const position& pStart, const position& pEnd)
+void text_editor::erase_range(const position& pStart, const position& pEnd)
 {
 	std::size_t index_start = get_character_index(pStart);
 	std::size_t index_end = get_character_index(pEnd);
@@ -85,42 +86,42 @@ void text_edit::erase_range(const position& pStart, const position& pEnd)
 	highlight_line(pStart.line);
 }
 
-void text_edit::set_range_color(const position& pStart, const position& pEnd, palette_type pPalette)
+void text_editor::set_range_color(const position& pStart, const position& pEnd, palette_type pPalette)
 {
 	std::size_t index_start = get_character_index(pStart);
 	std::size_t index_end = get_character_index(pEnd);
 	std::fill(mText_color.begin() + index_start, mText_color.begin() + index_end, pPalette);
 }
 
-std::string text_edit::get_range(const position & pStart, const position & pEnd) const
+std::string text_editor::get_range(const position & pStart, const position & pEnd) const
 {
 	std::size_t index_start = get_character_index(pStart);
 	std::size_t index_end = get_character_index(pEnd);
 	return std::string(mText.begin() + index_start, mText.begin() + index_end);
 }
 
-text_edit::position text_edit::get_selection_start() const noexcept
+text_editor::position text_editor::get_selection_start() const noexcept
 {
 	return mSelection_end < mSelection_start ? mSelection_end : mSelection_start;
 }
 
-text_edit::position text_edit::get_selection_end() const noexcept
+text_editor::position text_editor::get_selection_end() const noexcept
 {
 	return mSelection_end < mSelection_start ? mSelection_start : mSelection_end;
 }
 
-std::string text_edit::get_selected_text() const
+std::string text_editor::get_selected_text() const
 {
 	return get_range(get_selection_start(), get_selection_end());
 }
 
-void text_edit::select_all() noexcept
+void text_editor::select_all() noexcept
 {
 	mSelection_start = position{ 0, 0 };
 	mSelection_end = position{ get_line_count() - 1, mLine_lengths.back() };
 }
 
-void text_edit::erase_selection()
+void text_editor::erase_selection()
 {
 	if (is_text_selected())
 	{
@@ -130,7 +131,7 @@ void text_edit::erase_selection()
 	}
 }
 
-void text_edit::backspace()
+void text_editor::backspace()
 {
 	// Only delete the selection if there is one.
 	if (is_text_selected())
@@ -167,7 +168,7 @@ void text_edit::backspace()
 	highlight_line(mCursor_position.line);
 }
 
-void text_edit::cursor_up()
+void text_editor::cursor_up()
 {
 	if (mCursor_position.line == 0)
 	{
@@ -182,7 +183,7 @@ void text_edit::cursor_up()
 	}
 }
 
-void text_edit::cursor_down()
+void text_editor::cursor_down()
 {
 	if (mCursor_position.line == get_line_count() - 1)
 	{
@@ -197,7 +198,7 @@ void text_edit::cursor_down()
 	}
 }
 
-void text_edit::cursor_left()
+void text_editor::cursor_left()
 {
 	if (mCursor_position.column == 0 && mCursor_position.line != 0)
 	{
@@ -211,7 +212,7 @@ void text_edit::cursor_left()
 	}
 }
 
-void text_edit::cursor_right()
+void text_editor::cursor_right()
 {
 	if (mCursor_position.column >= mLine_lengths[mCursor_position.line] - 1 &&
 		mCursor_position.line != get_line_count() - 1)
@@ -226,19 +227,19 @@ void text_edit::cursor_right()
 	}
 }
 
-void text_edit::copy_to_clipboard()
+void text_editor::copy_to_clipboard()
 {
 	ImGui::SetClipboardText(get_selected_text().c_str());
 }
 
-void text_edit::paste_from_clipboard()
+void text_editor::paste_from_clipboard()
 {
 	const char* str = ImGui::GetClipboardText();
 	if (str)
 		insert_text(str);
 }
 
-void text_edit::render()
+void text_editor::render()
 {
 	ImGui::BeginChild("textedit");
 
@@ -274,11 +275,14 @@ void text_edit::render()
 		ImGui::EndPopup();
 	}
 	
-	math::vec2 pos = math::vec2(ImGui::GetMousePos()) - math::vec2(cursor_start);
-	std::size_t line = static_cast<std::size_t>(math::max(pos.y / line_height, 0.f));
-	std::size_t column = static_cast<std::size_t>(math::round(math::max(pos.x / character_width, 0.f)));
+	// Calculate mouse select
+	{
+		math::vec2 pos = math::vec2(ImGui::GetMousePos()) - math::vec2(cursor_start);
+		std::size_t line = static_cast<std::size_t>(math::max(pos.y / line_height, 0.f));
+		std::size_t column = static_cast<std::size_t>(math::round(math::max(pos.x / character_width, 0.f)));
 
-	handle_selection(position{ line, column });
+		handle_selection(position{ line, column });
+	}
 
 	if (mNeeds_highlight)
 	{
@@ -328,7 +332,7 @@ void text_edit::render()
 		{
 			std::string number_str = std::to_string(line + 1);
 			ImVec2 pos = line_pos;
-			pos.x -= character_width * number_str.size() + 1;
+			pos.x -= character_width * (number_str.size() + 1);
 			dl->AddText(pos, ImGui::GetColorU32(ImVec4(mPalette[(std::size_t)palette_type::line_number])), &number_str[0], &number_str.back() + 1);
 		}
 
@@ -435,7 +439,7 @@ inline std::size_t parse_string(const std::string_view& pView)
 	return (std::size_t)std::distance(pView.begin(), i);
 }
 
-void text_edit::highlight_line(std::size_t pLine)
+void text_editor::highlight_line(std::size_t pLine)
 {
 	if (mText.empty() || !mLanguage)
 		return;
@@ -477,25 +481,25 @@ void text_edit::highlight_line(std::size_t pLine)
 	}
 }
 
-void text_edit::highlight_range(const position& pStart, const position & pEnd)
+void text_editor::highlight_range(const position& pStart, const position & pEnd)
 {
 	for (std::size_t i = pStart.line; i <= pEnd.line; i++)
 		highlight_line(i);
 }
 
-void text_edit::highlight_all()
+void text_editor::highlight_all()
 {
 	reset_color();
 	for (std::size_t i = 0; i < get_line_count(); i++)
 		highlight_line(i);
 }
 
-void text_edit::reset_color()
+void text_editor::reset_color()
 {
 	std::fill(mText_color.begin(), mText_color.end(), palette_type::default);
 }
 
-void text_edit::update_line_lengths()
+void text_editor::update_line_lengths()
 {
 	mLine_lengths.clear();
 	mLine_lengths.push_back(0);
@@ -507,7 +511,7 @@ void text_edit::update_line_lengths()
 	}
 }
 
-void text_edit::handle_selection(const position& pPos)
+void text_editor::handle_selection(const position& pPos)
 {
 	if (ImGui::IsItemActive())
 	{
@@ -529,7 +533,7 @@ void text_edit::handle_selection(const position& pPos)
 	}
 }
 
-void text_edit::handle_keyboard()
+void text_editor::handle_keyboard()
 {
 	ImGuiIO& io = ImGui::GetIO();
 	io.WantCaptureKeyboard = true;
@@ -566,7 +570,7 @@ void text_edit::handle_keyboard()
 	}
 }
 
-math::vec2 text_edit::calc_text_size(const math::vec2& pCharacter_size) const
+math::vec2 text_editor::calc_text_size(const math::vec2& pCharacter_size) const
 {
 	math::vec2 result;
 	result.y = get_line_count() * pCharacter_size.y;
@@ -578,7 +582,7 @@ math::vec2 text_edit::calc_text_size(const math::vec2& pCharacter_size) const
 	return result;
 }
 
-std::size_t text_edit::get_character_index(const position& pPosition) const
+std::size_t text_editor::get_character_index(const position& pPosition) const
 {
 	std::size_t index = 0;
 	for (std::size_t i = 0; i < math::min(mLine_lengths.size(), pPosition.line); i++)
@@ -586,7 +590,7 @@ std::size_t text_edit::get_character_index(const position& pPosition) const
 	return index + pPosition.column;
 }
 
-std::string_view text_edit::get_line_view(std::size_t pLine) const
+std::string_view text_editor::get_line_view(std::size_t pLine) const
 {
 	auto begin = mText.begin() + get_character_index(position{ pLine, 0 });
 	if (begin == mText.end())
@@ -594,12 +598,12 @@ std::string_view text_edit::get_line_view(std::size_t pLine) const
 	return std::string_view(&*begin, mLine_lengths[pLine]);
 }
 
-char text_edit::get_character_at(const position& pPosition) const
+char text_editor::get_character_at(const position& pPosition) const
 {
 	return mText.at(get_character_index(pPosition));
 }
 
-text_edit::position text_edit::get_position_at(std::size_t pIndex) const
+text_editor::position text_editor::get_position_at(std::size_t pIndex) const
 {
 	position result;
 	std::size_t index = 0;
@@ -617,7 +621,7 @@ text_edit::position text_edit::get_position_at(std::size_t pIndex) const
 }
 
 
-std::size_t text_edit::calc_actual_columns(std::size_t pLine, std::size_t pColumn_wo_tabs) const
+std::size_t text_editor::calc_actual_columns(std::size_t pLine, std::size_t pColumn_wo_tabs) const
 {
 	std::size_t actual_column = pColumn_wo_tabs;
 	std::string_view line_str = get_line_view(pLine);
@@ -641,7 +645,7 @@ std::size_t text_edit::calc_actual_columns(std::size_t pLine, std::size_t pColum
 	return actual_column;
 }
 
-std::size_t text_edit::calc_line_distance(const position& pPosition) const
+std::size_t text_editor::calc_line_distance(const position& pPosition) const
 {
 	std::size_t dist = pPosition.column;
 	std::size_t character_index = get_character_index(position{ pPosition.line, 0 });

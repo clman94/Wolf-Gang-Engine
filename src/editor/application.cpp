@@ -44,88 +44,9 @@
 #include <variant>
 #include <functional>
 #include <future>
-/*
-namespace wge::util
-{
-
-template <typename T, std::size_t Tchuck_size>
-class chunked_queue
-{
-	using chunk = std::array<T, Tchuck_size>;
-	using chunk_list = std::list<chunk>;
-public:
-
-	void push(const T& pValue)
-	{
-		if (mChunks.empty() && is_chunk_full())
-			new_chunk();
-		*mChunk_end = pValue;
-		++mChunk_end;
-		++mSize;
-	}
-
-	void pop()
-	{
-		if (mChunks.back().begin() == mChunk_end)
-			pop_chunk();
-		else
-		{
-			--mChunk_end;
-			--mSize;
-		}
-	}
-
-private:
-	bool is_chunk_full() const
-	{
-		return !mChunks.empty() && mChunks.back().end() == mChunk_end;
-	}
-
-	void new_chunk()
-	{
-		mChunks.push_back();
-		mChunk_end = mChunks.back().begin();
-	}
-
-	void pop_chunk()
-	{
-		assert(mChunks.size() > 0);
-		mSize -= std::distance(mChunks.back().begin(), mChunk_end);
-		mChunks.pop_back();
-		mChunk_end = mChunks.back().end();
-	}
-
-private:
-	chunk::iterator mChunk_end;
-	chunk_list mChunks;
-	std::size_t mSize{ 0 };
-};
-
-}*/
 
 namespace wge::editor
 {
-
-struct task_info
-{
-	const char* name;
-	std::vector<const char*> flags;
-};
-
-// A manager for async tasks
-class task_manager
-{
-public:
-
-	template <typename T, typename...Targs>
-	auto run_task(const task_info& pTi, T&& pCallable, Targs&&...pArgs)
-	{
-		return std::async(std::launch::async, std::forward<T>(pCallable), std::forward<Targs...>(pArgs));
-	}
-
-private:
-
-};
 
 // Creates an imgui dockspace in the main window
 inline void main_viewport_dock()
@@ -875,7 +796,7 @@ private:
 class application
 {
 public:
-	text_edit mText_edit;
+	text_editor mText_edit;
 
 	application()
 	{
@@ -970,7 +891,9 @@ private:
 
 			if (ImGui::Begin("EditorTest"))
 			{
+				ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
 				mText_edit.render();
+				ImGui::PopFont();
 			}
 			ImGui::End();
 
@@ -1040,7 +963,7 @@ private:
 		// Setup imgui, enable docking and dpi support
 		ImGui::CreateContext();
 		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+		//ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports;
 		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts;
 		ImGui::GetIO().ConfigDockingWithShift = true;
@@ -1048,12 +971,14 @@ private:
 		ImGui_ImplOpenGL3_Init("#version 150");
 
 		// Lets use a somewhat better font
-		/*auto font = ImGui::GetIO().Fonts->AddFontFromFileTTF("./editor/Roboto-Medium.ttf", 16);
+		auto fonts = ImGui::GetIO().Fonts;
+		auto font = fonts->AddFontFromFileTTF("./editor/Roboto-Medium.ttf", 16);
 		if (font == NULL)
 		{
 			log::error() << "Could not load editor font, aborting..." << log::endm;
 			std::abort();
-		}*/
+		}
+		fonts->AddFontDefault();
 
 		// Theme
 		ImVec4* colors = ImGui::GetStyle().Colors;

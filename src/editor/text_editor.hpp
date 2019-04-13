@@ -8,7 +8,7 @@
 namespace wge::editor
 {
 
-class text_edit
+class text_editor
 {
 public:
 	enum class palette_type : std::size_t
@@ -50,7 +50,7 @@ public:
 		std::set<std::string> keywords;
 	};
 
-	text_edit();
+	text_editor();
 
 	void set_text(const std::string& pText);
 	const std::string get_text() const noexcept;
