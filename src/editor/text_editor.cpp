@@ -39,26 +39,17 @@ const std::string text_editor::get_text() const noexcept
 
 void text_editor::insert_character(char pChar)
 {
-	if (is_text_selected())
-		erase_selection();
-	std::size_t index = get_character_index(mCursor_position);
-	mText.insert(mText.begin() + index, pChar);
-	mText_color.insert(mText_color.begin() + index, palette_type::default);
-
+	// Copy indentation from the previous line
 	if (pChar == '\n')
 	{
-		update_line_lengths();
-		highlight_line(mCursor_position.line);
-		++mCursor_position.line;
-		// TODO: Maintain indentation with the previous line.
-		highlight_line(mCursor_position.line);
-		mCursor_position.column = 0;
+		std::string str;
+		str += pChar;
+		str += get_line_indentation(mCursor_position.line);
+		insert_text(str);
 	}
 	else
 	{
-		++mLine_lengths[mCursor_position.line];
-		++mCursor_position.column;
-		highlight_line(mCursor_position.line);
+		insert_text(std::string_view(&pChar, 1));
 	}
 }
 
@@ -73,12 +64,24 @@ void text_editor::insert_text(const std::string_view& pView)
 	cleaned_str.erase(iter, cleaned_str.end());
 
 	const position prev_pos = mCursor_position;
+
+	// Insert the text
 	const std::size_t index = get_character_index(mCursor_position);
 	mText.insert(mText.begin() + index, cleaned_str.begin(), cleaned_str.end());
 	mText_color.insert(mText_color.begin() + index, cleaned_str.size(), palette_type::default);
 
-	update_line_lengths();
-	mCursor_position = get_position_at(index + cleaned_str.size());
+	// We only need to update _all_ line lengths if there is an actual change in line counts
+	if (std::find(cleaned_str.begin(), cleaned_str.end(), '\n') != cleaned_str.end())
+	{
+		update_line_lengths();
+		mCursor_position = get_position_at(index + cleaned_str.size());
+	}
+	else
+	{
+		mLine_lengths[mCursor_position.line] += cleaned_str.length();
+		mCursor_position.column += cleaned_str.length();
+	}
+
 	highlight_range(prev_pos, mCursor_position);
 }
 
@@ -436,7 +439,7 @@ inline std::size_t parse_string(const std::string_view& pView)
 		{
 			++i; // Skip code
 		}
-		else if (*i == '\"')
+		else if (*i == '\"' || *i == '\'')
 		{
 			++i;
 			break;
@@ -478,7 +481,7 @@ void text_editor::highlight_line(std::size_t pLine)
 		}
 
 		// Strings
-		else if (*c == '\"')
+		else if (*c == '\"' || *c == '\'')
 		{
 			std::size_t length = parse_string(std::string_view(c, line_end - i));
 			std::fill(mText_color.begin() + i, mText_color.begin() + i + length, palette_type::string);
@@ -659,6 +662,18 @@ std::size_t text_editor::calc_line_distance(const position& pPosition) const
 		if (mText[character_index + i] == '\t')
 			dist += mTab_width - 1; // One space is already there.
 	return dist;
+}
+
+std::string_view text_editor::get_line_indentation(std::size_t pLine) const
+{
+	std::string_view view = get_line_view(pLine);
+	for (std::size_t i = 0; i < view.size(); i++)
+	{
+		char c = view[i];
+		if (c != '\t' && c != ' ')
+			return view.substr(0, i);
+	}
+	return{};
 }
 
 

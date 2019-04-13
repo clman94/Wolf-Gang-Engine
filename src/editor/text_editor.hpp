@@ -111,6 +111,8 @@ private:
 	std::size_t calc_actual_columns(std::size_t pLine, std::size_t pColumn_wo_tabs) const;
 	std::size_t calc_line_distance(const position& pPosition) const;
 
+	std::string_view get_line_indentation(std::size_t pLine) const;
+
 private:
 	std::array<graphics::color, (std::size_t)palette_type::count> mPalette;
 	std::vector<std::size_t> mLine_lengths;
