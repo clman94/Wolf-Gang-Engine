@@ -99,6 +99,7 @@ private:
 
 	void update_line_lengths();
 
+	void handle_shift_selection(const position& pLast_pos);
 	void handle_selection(const position& pPos);
 	void handle_keyboard();
 

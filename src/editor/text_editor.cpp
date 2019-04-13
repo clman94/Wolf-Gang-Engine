@@ -186,6 +186,7 @@ void text_editor::backspace()
 
 void text_editor::cursor_up()
 {
+	const position last_pos = mCursor_position;
 	if (mCursor_position.line == 0)
 	{
 		// Move to the start of the line if this is the first line.
@@ -197,12 +198,12 @@ void text_editor::cursor_up()
 		// Todo: Maintain the same column like most other editors do.
 		mCursor_position.column = std::min(mCursor_position.column, mLine_lengths[mCursor_position.line]);
 	}
-	if (!ImGui::GetIO().KeyShift)
-		deselect();
+	handle_shift_selection(last_pos);
 }
 
 void text_editor::cursor_down()
 {
+	const position last_pos = mCursor_position;
 	if (mCursor_position.line == get_line_count() - 1)
 	{
 		// Move to the end of the line if this is the last line.
@@ -214,12 +215,12 @@ void text_editor::cursor_down()
 		// Todo: Maintain the same column like most other editors do.
 		mCursor_position.column = std::min(mCursor_position.column, mLine_lengths[mCursor_position.line]);
 	}
-	if (!ImGui::GetIO().KeyShift)
-		deselect();
+	handle_shift_selection(last_pos);
 }
 
 void text_editor::cursor_left()
 {
+	const position last_pos = mCursor_position;
 	if (mCursor_position.column == 0 && mCursor_position.line != 0)
 	{
 		// Go to the end of the previous line
@@ -230,12 +231,12 @@ void text_editor::cursor_left()
 	{
 		--mCursor_position.column;
 	}
-	if (!ImGui::GetIO().KeyShift)
-		deselect();
+	handle_shift_selection(last_pos);
 }
 
 void text_editor::cursor_right()
 {
+	const position last_pos = mCursor_position;
 	if (mCursor_position.column >= mLine_lengths[mCursor_position.line] - 1 &&
 		mCursor_position.line != get_line_count() - 1)
 	{
@@ -247,8 +248,7 @@ void text_editor::cursor_right()
 	{
 		++mCursor_position.column;
 	}
-	if (!ImGui::GetIO().KeyShift)
-		deselect();
+	handle_shift_selection(last_pos);
 }
 
 void text_editor::copy_to_clipboard()
@@ -535,6 +535,18 @@ void text_editor::update_line_lengths()
 	}
 }
 
+void text_editor::handle_shift_selection(const position& pLast_pos)
+{
+	if (ImGui::GetIO().KeyShift)
+	{
+		if (!is_text_selected())
+			mSelection_start = pLast_pos;
+		mSelection_end = mCursor_position;
+	}
+	else
+		deselect();
+}
+
 void text_editor::handle_selection(const position& pPos)
 {
 	if (ImGui::IsItemActive())
@@ -551,10 +563,10 @@ void text_editor::handle_selection(const position& pPos)
 			mText.at(get_character_index(mCursor_position) - 1) == '\n')
 			--mCursor_position.column;
 	}
-	if (ImGui::IsItemClicked(0) ||
-		(ImGui::IsKeyPressed(GLFW_KEY_LEFT_SHIFT) && !is_text_selected()))
+
+	if (ImGui::IsItemClicked(0) && !ImGui::GetIO().KeyShift)
 		mSelection_start = mCursor_position;
-	if (ImGui::IsItemActive() || ImGui::GetIO().KeyShift)
+	if (ImGui::IsItemActive())
 		mSelection_end = mCursor_position;
 }
 
