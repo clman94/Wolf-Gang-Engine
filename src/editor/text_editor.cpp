@@ -256,6 +256,12 @@ void text_editor::cursor_right()
 	handle_shift_selection(last_pos);
 }
 
+void text_editor::cut_to_clipboard()
+{
+	copy_to_clipboard();
+	erase_selection();
+}
+
 void text_editor::copy_to_clipboard()
 {
 	ImGui::SetClipboardText(get_selected_text().c_str());
@@ -589,6 +595,8 @@ void text_editor::handle_keyboard()
 		select_all();
 	else if (ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_C)))
 		copy_to_clipboard();
+	else if (ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_X)))
+		cut_to_clipboard();
 	else if (ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_V)))
 		paste_from_clipboard();
 	else if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace)))

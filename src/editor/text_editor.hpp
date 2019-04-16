@@ -82,6 +82,7 @@ public:
 	void cursor_left();
 	void cursor_right();
 
+	void cut_to_clipboard();
 	void copy_to_clipboard();
 	void paste_from_clipboard();
 
