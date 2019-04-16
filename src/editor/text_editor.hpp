@@ -89,7 +89,7 @@ public:
 		return mLine_lengths.size();
 	}
 
-	void render();
+	void render(const ImVec2& pSize);
 
 private:
 	void highlight_line(std::size_t pLine);
@@ -132,3 +132,10 @@ private:
 };
 
 } // namespace wge::editor
+
+namespace ImGui
+{
+
+bool CodeEditor(const char* pID, std::string& pText, const ImVec2& pSize = { 0, 0 });
+
+}

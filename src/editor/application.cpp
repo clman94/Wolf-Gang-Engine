@@ -148,6 +148,14 @@ private:
 	std::string mClassname;
 };
 
+class event_component :
+	public core::component
+{
+	WGE_COMPONENT("Event", 543);
+public:
+	std::string code;
+};
+
 class script_engine
 {
 public:
@@ -681,6 +689,7 @@ public:
 		mFactory.register_component<graphics::sprite_component>();
 		mFactory.register_component<physics::physics_component>();
 		mFactory.register_component<physics::box_collider_component>();
+		mFactory.register_component<behavior_component>();
 		mGame_context.set_factory(&mFactory);
 
 		mGame_context.set_asset_manager(&mAsset_manager);
@@ -892,7 +901,7 @@ private:
 			if (ImGui::Begin("EditorTest"))
 			{
 				ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-				mText_edit.render();
+				ImGui::CodeEditor("someeditor", mSomecode);
 				ImGui::PopFont();
 			}
 			ImGui::End();
@@ -1968,6 +1977,8 @@ private:
 	math::vec2 mViewport_scale{ 100, 100 };
 
 	engine mEngine;
+
+	std::string mSomecode;
 
 	// This layer is used for editing serialized objects and layers
 	core::layer::ptr mSandbox;

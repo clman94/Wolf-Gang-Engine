@@ -1,7 +1,5 @@
 #include "text_editor.hpp"
 
-#include <GLFW/glfw3.h>
-
 namespace wge::editor
 {
 
@@ -27,7 +25,11 @@ text_editor::text_editor()
 void text_editor::set_text(const std::string& pText)
 {
 	mText = pText;
-	std::remove(mText.begin(), mText.end(), '\r');
+
+	// Remove unsupported line endings
+	auto iter = std::remove(mText.begin(), mText.end(), '\r');
+	mText.erase(iter, mText.end());
+
 	mText_color.resize(mText.size());
 	reset_color();
 	update_line_lengths();
@@ -70,13 +72,13 @@ void text_editor::insert_text(const std::string_view& pView)
 	// Insert the text
 	const std::size_t index = get_character_index(mCursor_position);
 	mText.insert(mText.begin() + index, cleaned_str.begin(), cleaned_str.end());
-	mText_color.insert(mText_color.begin() + index, cleaned_str.size(), palette_type::default);
+	mText_color.insert(mText_color.begin() + index, cleaned_str.length(), palette_type::default);
 
 	// We only need to update _all_ line lengths if there is an actual change in line counts
 	if (std::find(cleaned_str.begin(), cleaned_str.end(), '\n') != cleaned_str.end())
 	{
 		update_line_lengths();
-		mCursor_position = get_position_at(index + cleaned_str.size());
+		mCursor_position = get_position_at(index + cleaned_str.length());
 	}
 	else
 	{
@@ -263,9 +265,9 @@ void text_editor::paste_from_clipboard()
 		insert_text(str);
 }
 
-void text_editor::render()
+void text_editor::render(const ImVec2& pSize)
 {
-	ImGui::BeginChild("textedit");
+	ImGui::BeginChild("textedit", pSize);
 
 	if (ImGui::IsWindowFocused())
 	{
@@ -646,9 +648,17 @@ text_editor::position text_editor::get_position_at(std::size_t pIndex) const
 	std::size_t index = 0;
 	for (auto i : mLine_lengths)
 	{
-		if (index + i >= pIndex)
+		if (index + i > pIndex)
 		{
 			result.column = pIndex - index;
+			break;
+		}
+
+		// We ended up after the '\n' character so
+		// let's go to the next line instead.
+		else if (index + i == pIndex)
+		{
+			++result.line;
 			break;
 		}
 		++result.line;
@@ -656,7 +666,6 @@ text_editor::position text_editor::get_position_at(std::size_t pIndex) const
 	}
 	return result;
 }
-
 
 std::size_t text_editor::calc_actual_columns(std::size_t pLine, std::size_t pColumn_wo_tabs) const
 {
@@ -706,3 +715,36 @@ std::string_view text_editor::get_line_indentation(std::size_t pLine) const
 
 
 } // namespace wge::editor
+
+
+bool ImGui::CodeEditor(const char* pID, std::string& pText, const ImVec2& pSize)
+{
+	using namespace wge::editor;
+
+	static std::map<ImGuiID, text_editor> gEditors;
+
+	ImGuiID id = ImGui::GetID(pID);
+
+	const bool first_time = gEditors.find(id) == gEditors.end();
+
+	text_editor& editor = gEditors[id];
+
+	ImGui::PushID(pID);
+
+	bool modified = false;
+	if (editor.get_text() != pText || first_time)
+	{
+		editor.set_text(pText);
+		editor.render(pSize);
+	}
+	else
+	{
+		editor.render(pSize);
+		pText = editor.get_text();
+		modified = true;
+	}
+
+	ImGui::PopID();
+	
+	return modified;
+}
