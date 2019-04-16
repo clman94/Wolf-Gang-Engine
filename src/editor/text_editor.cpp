@@ -8,7 +8,8 @@ text_editor::text_editor()
 	static language lang;
 	lang.keywords = { "if", "else", "while", "int", "do", "void", "const", "class", "char", "interface",
 		"return", "switch", "case", "break", "continue", "for", "default", "private", "public", "enum",
-		"bool", "long", "unsigned", "true", "false", "null", "float", "double", "namespace", "this" };
+		"bool", "long", "unsigned", "true", "false", "null", "float", "double", "namespace", "this", "then", "end" };
+	lang.singleline_comment = "--";
 	mLanguage = &lang;
 	mPalette =
 	{
@@ -196,9 +197,10 @@ void text_editor::cursor_up()
 	}
 	else
 	{
+		std::size_t prev_distance = calc_line_distance(mCursor_position);
 		--mCursor_position.line;
-		// Todo: Maintain the same column like most other editors do.
-		mCursor_position.column = std::min(mCursor_position.column, mLine_lengths[mCursor_position.line]);
+		mCursor_position.column = calc_actual_columns(mCursor_position.line, prev_distance);
+		mCursor_position = correct_position(mCursor_position);
 	}
 	handle_shift_selection(last_pos);
 }
@@ -213,9 +215,10 @@ void text_editor::cursor_down()
 	}
 	else
 	{
+		std::size_t prev_distance = calc_line_distance(mCursor_position);
 		++mCursor_position.line;
-		// Todo: Maintain the same column like most other editors do.
-		mCursor_position.column = std::min(mCursor_position.column, mLine_lengths[mCursor_position.line]);
+		mCursor_position.column = calc_actual_columns(mCursor_position.line, prev_distance);
+		mCursor_position = correct_position(mCursor_position);
 	}
 	handle_shift_selection(last_pos);
 }
@@ -480,7 +483,8 @@ void text_editor::highlight_line(std::size_t pLine)
 		const char* c = &mText[i];
 
 		// Comments
-		if (line_begin + 1 != line_end && *c == '/' && *(c + 1) == '/')
+		if (line_begin + mLanguage->singleline_comment.length() <= line_end &&
+			std::string_view(&mText[i], mLanguage->singleline_comment.length()) == mLanguage->singleline_comment)
 		{
 			std::fill(mText_color.begin() + i, mText_color.begin() + line_end, palette_type::comments);
 			break; // Comments use the rest of the line.
@@ -494,7 +498,7 @@ void text_editor::highlight_line(std::size_t pLine)
 			{
 				std::fill(mText_color.begin() + i, mText_color.begin() + i + identifier.size(), palette_type::keyword);
 			}
-			i += identifier.size();
+			i += identifier.size() - 1;
 		}
 
 		// Strings
@@ -695,7 +699,7 @@ std::size_t text_editor::calc_line_distance(const position& pPosition) const
 {
 	std::size_t dist = pPosition.column;
 	std::size_t character_index = get_character_index(position{ pPosition.line, 0 });
-	for (std::size_t i = 0; i < pPosition.column; i++)
+	for (std::size_t i = 0; i < std::min(pPosition.column, mLine_lengths[pPosition.line]); i++)
 		if (mText[character_index + i] == '\t')
 			dist += mTab_width - 1; // One space is already there.
 	return dist;
@@ -713,6 +717,21 @@ std::string_view text_editor::get_line_indentation(std::size_t pLine) const
 	return{};
 }
 
+text_editor::position text_editor::correct_position(const position& pPosition) const
+{
+	position result = pPosition;
+	if (pPosition.line >= get_line_count())
+	{
+		result.line = get_line_count() - 1;
+		result.column = mLine_lengths.back();
+	}
+	if (pPosition.line < get_line_count() - 1 &&
+		pPosition.column >= mLine_lengths[pPosition.line])
+	{
+		result.column = mLine_lengths[pPosition.line] - 1;
+	}
+	return result;
+}
 
 } // namespace wge::editor
 
@@ -732,6 +751,7 @@ bool ImGui::CodeEditor(const char* pID, std::string& pText, const ImVec2& pSize)
 	ImGui::PushID(pID);
 
 	bool modified = false;
+	// Update the widget's text on first time or when it changes outside the editor.
 	if (editor.get_text() != pText || first_time)
 	{
 		editor.set_text(pText);

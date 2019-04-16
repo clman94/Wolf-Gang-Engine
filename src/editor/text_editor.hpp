@@ -48,6 +48,7 @@ public:
 	{
 	public:
 		std::set<std::string> keywords;
+		std::string singleline_comment;
 	};
 
 	text_editor();
@@ -114,6 +115,8 @@ private:
 	std::size_t calc_line_distance(const position& pPosition) const;
 
 	std::string_view get_line_indentation(std::size_t pLine) const;
+
+	position correct_position(const position& pPosition) const;
 
 private:
 	std::array<graphics::color, (std::size_t)palette_type::count> mPalette;
