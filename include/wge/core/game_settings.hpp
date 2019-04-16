@@ -40,8 +40,11 @@ public:
 		std::ifstream stream(mPath.string().c_str());
 		if (!stream)
 			return false;
+
 		json j = json::parse(stream);
 		mName = j["name"];
+
+		return true;
 	}
 
 	bool save()
