@@ -133,6 +133,11 @@ component* layer::add_component(const game_object& pObj, const component_type& p
 	if (!f)
 		return nullptr;
 	component* c = f->create_component(pType, mComponent_manager);
+	if (!c)
+	{
+		log::error() << "Could not create component with id " << pType << log::endm;
+		return nullptr;
+	}
 	c->set_object(pObj);
 	mObject_manager.register_component(c);
 	return c;

@@ -10,3 +10,9 @@
 [submodule "3rdparty/catch2"]
 	path = 3rdparty/catch2
 	url = https://github.com/catchorg/Catch2.git
+[submodule "3rdparty/sol"]
+	path = 3rdparty/sol
+	url = https://github.com/ThePhD/sol2.git
+[submodule "3rdparty/lua"]
+	path = 3rdparty/lua
+	url = https://github.com/lua/lua.git

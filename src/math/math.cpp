@@ -122,12 +122,12 @@ vec2 vec2::operator - () const noexcept
 	return { -x, -y };
 }
 
-vec2 vec2::operator * (const float& pR) const noexcept
+vec2 vec2::operator * (float pR) const noexcept
 {
 	return { x * pR, y * pR };
 }
 
-vec2 vec2::operator / (const float& pR) const noexcept
+vec2 vec2::operator / (float pR) const noexcept
 {
 	return { x / pR, y / pR };
 }

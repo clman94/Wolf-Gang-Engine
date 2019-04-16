@@ -47,6 +47,8 @@ void game_object::deserialize(const json& pJson)
 	for (auto& i : pJson["components"])
 	{
 		component* c = add_component(i["type"]);
+		if (!c)
+			continue;
 		c->deserialize(*this, i);
 	}
 }

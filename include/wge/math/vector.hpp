@@ -61,8 +61,8 @@ public:
 	vec2 operator - () const noexcept;
 
 	// Scalar operations
-	vec2 operator * (const float& pR) const noexcept;
-	vec2 operator / (const float& pR) const noexcept;
+	vec2 operator * (float pR) const noexcept;
+	vec2 operator / (float pR) const noexcept;
 
 	// Vector assignments
 	vec2& operator = (const vec2& pR) noexcept;

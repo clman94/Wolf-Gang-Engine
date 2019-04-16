@@ -41,6 +41,8 @@
 #include <GLFW/glfw3.h>
 #include <wge/graphics/glfw_backend.hpp>
 
+#include <sol/sol.hpp>
+
 #include <variant>
 #include <functional>
 #include <future>
@@ -148,12 +150,128 @@ private:
 	std::string mClassname;
 };
 
+class lua_script_engine
+{
+public:
+	lua_script_engine()
+	{
+		state["dprint"] = sol::overload(
+			[](const std::string& pVal) { log::debug() << pVal << log::endm; },
+			[](double pVal) { log::debug() << pVal << log::endm; }
+			);
+
+		sol::table t_math = state.create_named_table("math");
+		t_math["sin"] = [](float pRad) { return math::sin(pRad); };
+		t_math["cos"] = [](float pRad) { return math::cos(pRad); };
+		t_math.new_usertype<math::vec2>("vec2",
+			sol::call_constructor, sol::constructors<math::vec2(), math::vec2(float, float)>(),
+			"x", &math::vec2::x,
+			"y", &math::vec2::y,
+			sol::meta_function::addition, &math::vec2::operator+,
+			sol::meta_function::subtraction, static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator-),
+			sol::meta_function::multiplication, sol::overload(
+				static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator*),
+				static_cast<math::vec2(math::vec2::*)(float) const>(&math::vec2::operator*)
+				),
+			sol::meta_function::division, static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator/),
+			sol::meta_function::equal_to, static_cast<bool(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator==)
+			);
+	}
+
+	sol::state state;
+};
+
+class event_state_component :
+	public core::component
+{
+	WGE_COMPONENT("Event State", 9233);
+public:
+	sol::environment environment;
+};
+
 class event_component :
 	public core::component
 {
-	WGE_COMPONENT("Event", 543);
 public:
 	std::string code;
+};
+
+namespace event_components
+{
+
+class on_update :
+	public event_component
+{
+	WGE_COMPONENT("Event: Update", 9234);
+};
+
+class on_create :
+	public event_component
+{
+	WGE_COMPONENT("Event: Create", 9235);
+public:
+	bool first_time{ true };
+};
+
+}
+
+class script_system :
+	public core::system
+{
+	WGE_SYSTEM("Script", 8423);
+public:
+	script_system(core::layer& pLayer, lua_script_engine& pEngine) :
+		core::system(pLayer),
+		mEngine(&pEngine)
+	{}
+
+	void update(float pDelta) override
+	{
+		// Setup the environments if needed
+		get_layer().for_each([&](core::game_object pObj, event_state_component& pState)
+		{
+			if (!pState.environment.valid())
+			{
+				pState.environment = sol::environment(mEngine->state, sol::create, mEngine->state.globals());
+
+				auto get_position = [pObj]() -> math::vec2
+				{
+					auto transform = pObj.get_component<core::transform_component>();
+					return transform->get_position();
+				};
+				auto set_position = [pObj](const math::vec2& pPos)
+				{
+					auto transform = pObj.get_component<core::transform_component>();
+					transform->set_position(pPos);
+				};
+				//pState.environment["position"] = sol::property(get_position, set_position);
+				pState.environment["set_position"] = set_position;
+			}
+		});
+
+		get_layer().for_each([&](
+			event_components::on_create& pOn_create,
+			event_state_component& pState)
+		{
+			if (pOn_create.first_time)
+			{
+				mEngine->state.safe_script(pOn_create.code, pState.environment);
+				pOn_create.first_time = false;
+			}
+
+		});
+
+		get_layer().for_each([&](
+			event_components::on_update& pOn_update, 
+			event_state_component& pState)
+		{
+			mEngine->state.safe_script(pOn_update.code, pState.environment);
+
+		});
+	}
+
+private:
+	lua_script_engine* mEngine;
 };
 
 class script_engine
@@ -324,37 +442,6 @@ private:
 	CScriptBuilder mBuilder;
 	std::vector<asITypeInfo*> mBehavior_types;
 
-};
-
-class script_system :
-	public core::system
-{
-	WGE_SYSTEM("Script", 23429);
-public:
-	script_system(core::layer& pLayer, script_engine& pEngine):
-		core::system(pLayer),
-		mEngine(&pEngine)
-	{
-	}
-
-	void update(float pDelta) override
-	{
-		get_layer().for_each([&](core::game_object pObject, behavior_component& pBehavior)
-		{
-			// Init the object if not already.
-			if (!pBehavior.get_script_object() &&
-				!pBehavior.get_classname().empty())
-			{
-				pBehavior.set_script_object(mEngine->create_behavior_object(pBehavior.get_classname(), pObject));
-			}
-
-			// Call update
-			pBehavior.call_update();
-		});
-	}
-
-private:
-	script_engine* mEngine{ nullptr };
 };
 
 inline void GLAPIENTRY opengl_message_callback(GLenum source,
@@ -703,6 +790,7 @@ public:
 			res->load(path.string());
 			pAsset->set_resource(res);
 		});
+
 	}
 
 	void create_game(const filesystem::path& pDirectory)
@@ -776,7 +864,7 @@ public:
 		return mGraphics;
 	}
 
-	script_engine& get_script_engine() noexcept
+	lua_script_engine& get_script_engine() noexcept
 	{
 		return mScripting;
 	}
@@ -797,7 +885,7 @@ private:
 
 	graphics::graphics mGraphics;
 
-	script_engine mScripting;
+	lua_script_engine mScripting;
 
 	bool mLoaded{ false };
 };
@@ -1065,11 +1153,11 @@ private:
 		obj.add_component<core::transform_component>();
 		auto sprite = obj.add_component<graphics::sprite_component>();
 		sprite->set_texture(mEngine.get_asset_manager().get_asset("mytex.png"));
+		obj.add_component<event_state_component>();
 
-		auto behavior = obj.add_component<behavior_component>();
-		behavior->set_classname("thing");
+		obj.add_component<event_components::on_create>();
+		obj.add_component<event_components::on_update>();
 
-		mEngine.get_script_engine().compile_scripts();
 	}
 
 	void init_inspectors()
@@ -1200,6 +1288,19 @@ private:
 			if (ImGui::InputText("Class Name", &classname))
 				behavior->set_classname(classname);
 		});
+
+		auto event_comp_func = [](core::component* pComponent)
+		{
+			auto e = dynamic_cast<event_component*>(pComponent);
+			ImGui::PushID(e);
+			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+			ImGui::CodeEditor("Editor", e->code, { 0, 200 });
+			ImGui::PopFont();
+			ImGui::PopID();
+		};
+
+		mInspectors.add_inspector(event_components::on_create::COMPONENT_ID, event_comp_func);
+		mInspectors.add_inspector(event_components::on_update::COMPONENT_ID, event_comp_func);
 	}
 
 private:
@@ -1404,16 +1505,6 @@ private:
 				mUpdate = !mUpdate;
 			ImGui::PopStyleColor();
 
-			if (ImGui::Button("Build"))
-			{
-				// Clear the behavior components
-				for (auto& i : mEngine.get_context().get_layer_container())
-					i->for_each([](behavior_component& pBehavior)
-					{
-						pBehavior.set_script_object(nullptr);
-					});
-				mEngine.get_script_engine().compile_scripts();
-			}
 		}
 		ImGui::End();
 

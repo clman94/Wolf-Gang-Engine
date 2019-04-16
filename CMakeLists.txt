@@ -167,6 +167,19 @@ source_group("Box2d Sources" FILES ${BOX2D_SOURCES})
 source_group("Box2d Headers" FILES ${BOX2D_HEADERS})
 include_directories("${WGE_3RDPARTY_DIR}/box2d")
 
+# Lua
+file(GLOB_RECURSE LUA_SOURCES "${WGE_3RDPARTY_DIR}/lua/*.c")
+file(GLOB_RECURSE LUA_HEADERS "${WGE_3RDPARTY_DIR}/lua/*.h")
+source_group("Lua Sources" FILES ${LUA_SOURCES})
+source_group("Lua Headers" FILES ${LUA_HEADERS})
+include_directories("${WGE_3RDPARTY_DIR}/lua")
+
+# sol
+file(GLOB_RECURSE SOL_HEADERS "${WGE_3RDPARTY_DIR}/sol/include/sol/*.hpp")
+source_group("Sol Headers" FILES ${SOL_HEADERS})
+include_directories("${WGE_3RDPARTY_DIR}/sol/include")
+
+
 # Combine all the sources into one package :)
 set(ALL_SOURCES
 	${STB_HEADERS}
@@ -175,6 +188,9 @@ set(ALL_SOURCES
 	${IMGUI_SOURCES}
 	${BOX2D_HEADERS}
 	${BOX2D_SOURCES}
+	${LUA_SOURCES}
+	${LUA_HEADERS}
+	${SOL_HEADERS}
 	${ANGELSCRIPT_ADDONS}
 	${WGE_ALL_HEADERS}
 	${WGE_ALL_SOURCES}
