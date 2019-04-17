@@ -44,12 +44,12 @@ const std::string text_editor::get_text() const noexcept
 
 void text_editor::insert_character(char pChar)
 {
-	// Copy indentation from the previous line
 	if (pChar == '\n')
 	{
 		std::string str;
 		str += pChar;
-		str += get_line_indentation(mCursor_position.line);
+		// Copy indentation from the previous line
+		str += get_line_indentation(mCursor_position);
 		insert_text(str);
 	}
 	else
@@ -60,8 +60,7 @@ void text_editor::insert_character(char pChar)
 
 void text_editor::insert_text(const std::string_view& pView)
 {
-	if (is_text_selected())
-		erase_selection();
+	erase_selection();
 
 	// Clean up the text by removing any unsupported line endings
 	std::string cleaned_str(pView);
@@ -328,22 +327,12 @@ void text_editor::render(const ImVec2& pSize)
 	// Draw a box around the line where the cursor is at.
 	{
 		ImVec2 a(
-			cursor_start.x,
+			cursor_start.x + ImGui::GetScrollX(),
 			cursor_start.y + line_height * mCursor_position.line);
 		ImVec2 b(
-			a.x + ImGui::GetWindowContentRegionWidth(),
+			dl->GetClipRectMax().x,
 			a.y + line_height);
-		dl->AddRectFilled(a, b, ImGui::GetColorU32(mPalette[(std::size_t)palette_type::line]));
-	}
-
-	// Draw cursor
-	{
-		float offset = 0;
-		ImVec2 a(
-			cursor_start.x + character_width * calc_line_distance(mCursor_position),
-			cursor_start.y + line_height * mCursor_position.line);
-		ImVec2 b(a.x, a.y + line_height);
-		dl->AddLine(a, b, ImGui::GetColorU32(ImVec4(1, 1, 1, 1)), 1);
+		dl->AddRect(a, b, ImGui::GetColorU32(mPalette[(std::size_t)palette_type::line]), 0, 15, 3);
 	}
 
 	position selection_start = mSelection_start;
@@ -357,19 +346,38 @@ void text_editor::render(const ImVec2& pSize)
 	std::size_t end_line = static_cast<std::size_t>(math::ceil((ImGui::GetScrollY() + ImGui::GetWindowHeight()) / line_height));
 	end_line = math::min(end_line, get_line_count());
 
+	// Draw line numbers
+	for (std::size_t line = start_line; line < end_line; line++)
+	{
+		std::string number_str = std::to_string(line + 1);
+
+		ImVec2 pos = cursor_start;
+		pos.y += line_height * line;
+		// Offset the line numbers so they are to the left of the text.
+		pos.x -= character_width * (number_str.size() + 1);
+		// Offset them again so they are always visible.
+		pos.x += ImGui::GetScrollX();
+
+		dl->AddText(pos, ImGui::GetColorU32(ImVec4(mPalette[(std::size_t)palette_type::line_number])), &number_str[0], &number_str.back() + 1);
+	}
+
+	dl->PushClipRect(cursor_start + ImVec2(ImGui::GetScrollX(), 0), cursor_start + ImGui::GetWindowContentRegionMax(), true);
+
+	// Draw cursor
+	{
+		float offset = 0;
+		ImVec2 a(
+			cursor_start.x + character_width * calc_line_distance(mCursor_position),
+			cursor_start.y + line_height * mCursor_position.line);
+		ImVec2 b(a.x, a.y + line_height);
+		dl->AddLine(a, b, ImGui::GetColorU32(ImVec4(1, 1, 1, 1)), 1);
+	}
+
 	std::size_t line_start_index = get_character_index(position{ start_line, 0 });
 	for (std::size_t line = start_line; line < end_line; line++)
 	{
 		ImVec2 line_pos = cursor_start;
 		line_pos.y += line_height * line;
-
-		// Draw line number
-		{
-			std::string number_str = std::to_string(line + 1);
-			ImVec2 pos = line_pos;
-			pos.x -= character_width * (number_str.size() + 1);
-			dl->AddText(pos, ImGui::GetColorU32(ImVec4(mPalette[(std::size_t)palette_type::line_number])), &number_str[0], &number_str.back() + 1);
-		}
 
 		// Draw selection
 		if (selection_start != selection_end &&
@@ -431,6 +439,8 @@ void text_editor::render(const ImVec2& pSize)
 
 		line_start_index += mLine_lengths[line];
 	}
+
+	dl->PopClipRect();
 
 	ImGui::EndChild();
 }
@@ -517,7 +527,7 @@ void text_editor::highlight_line(std::size_t pLine)
 	}
 }
 
-void text_editor::highlight_range(const position& pStart, const position & pEnd)
+void text_editor::highlight_range(const position& pStart, const position& pEnd)
 {
 	for (std::size_t i = pStart.line; i <= pEnd.line; i++)
 		highlight_line(i);
@@ -638,7 +648,7 @@ std::size_t text_editor::get_character_index(const position& pPosition) const
 	std::size_t index = 0;
 	for (std::size_t i = 0; i < math::min(mLine_lengths.size(), pPosition.line); i++)
 		index += mLine_lengths[i];
-	return index + pPosition.column;
+	return math::min(index + pPosition.column, mText.length());
 }
 
 std::string_view text_editor::get_line_view(std::size_t pLine) const
@@ -676,7 +686,7 @@ text_editor::position text_editor::get_position_at(std::size_t pIndex) const
 		++result.line;
 		index += i;
 	}
-	return result;
+	return correct_position(result);
 }
 
 std::size_t text_editor::calc_actual_columns(std::size_t pLine, std::size_t pColumn_wo_tabs) const
@@ -713,16 +723,17 @@ std::size_t text_editor::calc_line_distance(const position& pPosition) const
 	return dist;
 }
 
-std::string_view text_editor::get_line_indentation(std::size_t pLine) const
+std::string_view text_editor::get_line_indentation(const position& pPosition) const
 {
-	std::string_view view = get_line_view(pLine);
-	for (std::size_t i = 0; i < view.size(); i++)
+	std::string_view view = get_line_view(pPosition.line);
+	std::size_t i = 0;
+	for (; i < view.length(); i++)
 	{
 		char c = view[i];
 		if (c != '\t' && c != ' ')
-			return view.substr(0, i);
+			break;
 	}
-	return{};
+	return view.substr(0, std::min(i, pPosition.column));
 }
 
 text_editor::position text_editor::correct_position(const position& pPosition) const
@@ -733,7 +744,7 @@ text_editor::position text_editor::correct_position(const position& pPosition) c
 		result.line = get_line_count() - 1;
 		result.column = mLine_lengths.back();
 	}
-	if (pPosition.line < get_line_count() - 1 &&
+	else if (pPosition.line < get_line_count() - 1 &&
 		pPosition.column >= mLine_lengths[pPosition.line])
 	{
 		result.column = mLine_lengths[pPosition.line] - 1;

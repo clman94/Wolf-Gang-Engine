@@ -115,7 +115,7 @@ private:
 	std::size_t calc_actual_columns(std::size_t pLine, std::size_t pColumn_wo_tabs) const;
 	std::size_t calc_line_distance(const position& pPosition) const;
 
-	std::string_view get_line_indentation(std::size_t pLine) const;
+	std::string_view get_line_indentation(const position& pPosition) const;
 
 	position correct_position(const position& pPosition) const;
 

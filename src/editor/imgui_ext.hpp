@@ -182,4 +182,18 @@ bool HorizontalSplitter(const char* pStr_id, float* pDelta, float pWidth = 5);
 
 ImVec2 GetWindowContentRegionSize();
 
+
+
 } // namespace ImGui
+
+// Operators for ImVec2
+
+inline ImVec2 operator+(const ImVec2& pA, const ImVec2& pB) noexcept
+{
+	return { pA.x + pB.x, pA.y + pB.y };
+}
+
+inline ImVec2 operator-(const ImVec2& pA, const ImVec2& pB) noexcept
+{
+	return { pA.x - pB.x, pA.y - pB.y };
+}
