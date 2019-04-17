@@ -26,6 +26,8 @@ public:
 		return true;
 	}
 
+	virtual void save() {}
+
 	// Returns metadata containing settings for this resource.
 	virtual json get_metadata() const { return{}; }
 	virtual void set_metadata(const json& pJson) {}

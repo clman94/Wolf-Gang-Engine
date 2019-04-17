@@ -94,66 +94,51 @@ inline bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr, bool pD
 	return *pOpen;
 }
 
-class behavior_component :
-	public core::component
+class script :
+	public core::resource
 {
-	WGE_COMPONENT("Behavior", 9743);
 public:
+	std::string source;
 
-	~behavior_component()
+	void load(const filesystem::path& pPath)
 	{
-		if (mScript_object)
-			mScript_object->Release();
-	}
-
-	void set_classname(const std::string& pName)
-	{
-		mClassname = pName;
-	}
-
-	const std::string& get_classname() const noexcept
-	{
-		return mClassname;
-	}
-
-	void set_script_object(asIScriptObject* pObject)
-	{
-		if (mScript_object)
-			mScript_object->Release();
-		mScript_object = pObject;
-	}
-
-	asIScriptObject* get_script_object()
-	{
-		return mScript_object;
-	}
-
-	void call_update()
-	{
-		if (mScript_object)
+		filesystem::file_stream stream;
+		try
 		{
-			asIScriptEngine* engine = mScript_object->GetEngine();
-			asIScriptFunction* function = mScript_object->GetObjectType()->GetMethodByDecl("void update()");
-			asIScriptContext* ctx = engine->RequestContext();
-			ctx->Prepare(function);
-			ctx->SetObject(mScript_object);
-			if (ctx->Execute() == asEXECUTION_EXCEPTION)
-			{
-				log::error() << ctx->GetExceptionString() << log::endm;
-			}
-			engine->ReturnContext(ctx);
+			stream.open(pPath, filesystem::stream_access::read);
+			source = stream.read_all();
+		}
+		catch (const filesystem::io_error& e)
+		{
+			log::error() << e.what() << log::endm;
+			log::error() << "Couldn't load resource" << log::endm;
+		}
+	}
+
+	virtual void save() override
+	{
+		filesystem::file_stream stream;
+		try
+		{
+			stream.open(mFile_path, filesystem::stream_access::write);
+			stream.write(source);
+		}
+		catch (const filesystem::io_error& e)
+		{
+			log::error() << e.what() << log::endm;
+			log::error() << "Couldn't save resource" << log::endm;
 		}
 	}
 
 private:
-	asIScriptObject* mScript_object{ nullptr };
-	std::string mClassname;
+	filesystem::path mFile_path;
 };
 
 class lua_script_engine
 {
 public:
-	lua_script_engine()
+	lua_script_engine(core::asset_manager& mAsset_manager) :
+		mAsset_manager(&mAsset_manager)
 	{
 		state["dprint"] = sol::overload(
 			[](const std::string& pVal) { log::debug() << pVal << log::endm; },
@@ -177,8 +162,38 @@ public:
 			sol::meta_function::equal_to, static_cast<bool(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator==)
 			);
 	}
+	
+	~lua_script_engine()
+	{
+		// Clear the environment first to prevent hanging references
+		main_environment = sol::environment{};
+	}
 
+	void run_scripts()
+	{
+		main_environment = sol::environment(state, sol::create, state.globals());
+		for (auto& i : mAsset_manager->get_asset_list())
+		{
+			if (i->get_type() == "script")
+			{
+				auto res = i->get_resource<script>();
+				try
+				{
+					state.safe_script(res->source, main_environment);
+				}
+				catch (sol::error& e)
+				{
+					log::error() << e.what() << log::endm;
+				}
+			}
+		}
+	}
+
+	sol::environment main_environment;
 	sol::state state;
+
+private:
+	core::asset_manager* mAsset_manager;
 };
 
 class event_state_component :
@@ -232,7 +247,7 @@ public:
 		{
 			if (!pState.environment.valid())
 			{
-				pState.environment = sol::environment(mEngine->state, sol::create, mEngine->state.globals());
+				pState.environment = sol::environment(mEngine->state, sol::create, mEngine->main_environment);
 
 				auto get_position = [pObj]() -> math::vec2
 				{
@@ -245,7 +260,12 @@ public:
 					transform->set_position(pPos);
 				};
 				//pState.environment["position"] = sol::property(get_position, set_position);
+				pState.environment["get_position"] = get_position;
 				pState.environment["set_position"] = set_position;
+				pState.environment["move"] = [get_position, set_position](const math::vec2& pDirection)
+				{
+					set_position(get_position() + pDirection);
+				};
 			}
 		});
 
@@ -265,183 +285,21 @@ public:
 			event_components::on_update& pOn_update, 
 			event_state_component& pState)
 		{
-			mEngine->state.safe_script(pOn_update.code, pState.environment);
+			try
+			{
+				mEngine->state.safe_script(pOn_update.code, pState.environment);
+			}
+			catch (const sol::error& e)
+			{
+
+				std::cout << "an expected error has occurred: " << e.what() << std::endl;
+			}
 
 		});
 	}
 
 private:
 	lua_script_engine* mEngine;
-};
-
-class script_engine
-{
-public:
-	script_engine()
-	{
-		mEngine = asCreateScriptEngine();
-
-		mEngine->SetMessageCallback(asFUNCTION(message_callback), 0, asCALL_CDECL);
-
-		RegisterStdString(mEngine);
-		RegisterScriptArray(mEngine, true);
-
-		int r = 0;
-
-		mEngine->SetDefaultNamespace("math");
-
-		r = mEngine->RegisterObjectType("vec2", sizeof(math::vec2), asOBJ_VALUE | asGetTypeTraits<math::vec2>() | asOBJ_APP_CLASS_ALLFLOATS); assert(r >= 0);
-		r = mEngine->RegisterObjectProperty("vec2", "float x", asOFFSET(math::vec2, x)); assert(r >= 0);
-		r = mEngine->RegisterObjectProperty("vec2", "float y", asOFFSET(math::vec2, y)); assert(r >= 0);
-		r = mEngine->RegisterObjectBehaviour("vec2", asBEHAVE_CONSTRUCT, "void f()", asFUNCTION(constructor<math::vec2>), asCALL_CDECL_OBJFIRST); assert(r >= 0);
-		r = mEngine->RegisterObjectBehaviour("vec2", asBEHAVE_CONSTRUCT, "void f(float, float)", asFUNCTION((constructor<math::vec2, float, float>)), asCALL_CDECL_OBJFIRST); assert(r >= 0);
-		r = mEngine->RegisterObjectBehaviour("vec2", asBEHAVE_CONSTRUCT, "void f(const math::vec2&in)", asFUNCTION((constructor<math::vec2, const math::vec2&>)), asCALL_CDECL_OBJFIRST); assert(r >= 0);
-		r = mEngine->RegisterObjectBehaviour("vec2", asBEHAVE_DESTRUCT, "void f()", asFUNCTION(destructor<math::vec2>), asCALL_CDECL_OBJLAST); assert(r >= 0);
-		r = mEngine->RegisterObjectMethod("vec2", "math::vec2& opAssign(const math::vec2&in)", asMETHOD(math::vec2, operator=), asCALL_THISCALL); assert(r >= 0);
-
-		mEngine->SetDefaultNamespace("core");
-		r = mEngine->RegisterObjectType("component", 0, asOBJ_REF | asOBJ_NOCOUNT); assert(r >= 0);
-
-		r = mEngine->RegisterObjectType("transform_component", 0, asOBJ_REF | asOBJ_NOCOUNT); assert(r >= 0);
-		r = mEngine->RegisterObjectMethod("transform_component", "math::vec2 get_position() const", asMETHOD(core::transform_component, get_position), asCALL_THISCALL); assert(r >= 0);
-		r = mEngine->RegisterObjectMethod("transform_component", "void set_position(const math::vec2 &in) const", asMETHOD(core::transform_component, set_position), asCALL_THISCALL); assert(r >= 0);
-		r = mEngine->RegisterObjectMethod("transform_component", "const component@ opImplCast() const", asFUNCTION((caster<core::transform_component, core::component>)), asCALL_CDECL_OBJLAST); assert(r >= 0);
-		r = mEngine->RegisterObjectMethod("component", "const transform_component@ opImplCast() const", asFUNCTION((caster<core::component, core::transform_component>)), asCALL_CDECL_OBJLAST); assert(r >= 0);
-		r = mEngine->RegisterObjectMethod("transform_component", "component@ opImplCast()", asFUNCTION((caster<core::transform_component, core::component>)), asCALL_CDECL_OBJLAST); assert(r >= 0);
-		r = mEngine->RegisterObjectMethod("component", "transform_component@ opImplCast()", asFUNCTION((caster<core::component, core::transform_component>)), asCALL_CDECL_OBJLAST); assert(r >= 0);
-
-		r = mEngine->RegisterObjectType("game_object", sizeof(core::game_object), asOBJ_VALUE | asGetTypeTraits<core::game_object>()); assert(r >= 0);
-		r = mEngine->RegisterObjectBehaviour("game_object", asBEHAVE_CONSTRUCT, "void f()", asFUNCTION(constructor<core::game_object>), asCALL_CDECL_OBJFIRST); assert(r >= 0);
-		r = mEngine->RegisterObjectBehaviour("game_object", asBEHAVE_CONSTRUCT, "void f(const core::game_object&in)", asFUNCTION((constructor<core::game_object, const core::game_object&>)), asCALL_CDECL_OBJFIRST); assert(r >= 0);
-		r = mEngine->RegisterObjectBehaviour("game_object", asBEHAVE_DESTRUCT, "void f()", asFUNCTION(destructor<core::game_object>), asCALL_CDECL_OBJLAST); assert(r >= 0);
-		r = mEngine->RegisterObjectMethod("game_object", "game_object& opAssign(const game_object&in)", asMETHODPR(core::game_object, operator=, (const core::game_object&), core::game_object&), asCALL_THISCALL); assert(r >= 0);
-		r = mEngine->RegisterObjectMethod("game_object", "component@ get_component_by_type(const string&in)", asMETHODPR(core::game_object, get_component_by_type, (const std::string&), core::component*), asCALL_THISCALL); assert(r >= 0);
-
-		mEngine->SetDefaultNamespace("");
-
-		r = mEngine->RegisterGlobalFunction("void dprint(const string&in)", asFUNCTION(dprint), asCALL_CDECL); assert(r >= 0);
-
-	}
-	~script_engine()
-	{
-		mEngine->ShutDownAndRelease();
-	}
-
-	void compile_scripts()
-	{
-		log::info() << "Script Engine: Compiling scripts..." << log::endm;
-		mBehavior_types.clear();
-
-		mBuilder.StartNewModule(mEngine, "Game");
-
-		std::size_t script_count = 0;
-		for (auto& i : system_fs::directory_iterator("./scripts"))
-			if (i.path().extension() == ".as")
-			{
-				mBuilder.AddSectionFromFile(i.path().string().c_str());
-				++script_count;
-			}
-
-		if (mBuilder.BuildModule() < 0)
-		{
-			log::error() << "Script Engine: Compilation error; Stopping" << log::endm;
-			return;
-		}
-
-		mMain_module = mBuilder.GetModule();
-
-		// Find all objects that inherit core::behavior
-		mMain_module->SetDefaultNamespace("core");
-		asITypeInfo* behavior_type = mMain_module->GetTypeInfoByName("behavior");
-		mMain_module->SetDefaultNamespace("");
-		std::size_t behavior_count = 0;
-		for (std::size_t i = 0; i < mMain_module->GetObjectTypeCount(); i++)
-		{
-			asITypeInfo* ti = mMain_module->GetObjectTypeByIndex(i);
-			if (ti->DerivesFrom(behavior_type) && ti != behavior_type)
-			{
-				mBehavior_types.push_back(ti);
-				++behavior_count;
-			}
-		}
-		log::info() << "Script Engine: Found " << behavior_count << " behavior class(es)" << log::endm;
-		log::info() << "Script Engine: Successfully compiled " << script_count << " files" << log::endm;
-	}
-
-	asIScriptObject* create_behavior_object(const std::string& pClassname, const core::game_object& pGame_object)
-	{
-		for (auto i : mBehavior_types)
-		{
-			const char* name = i->GetName();
-			if (pClassname == name)
-			{
-				std::string decl = std::string(i->GetName()) + "@ " + i->GetName() + "()";
-				asIScriptFunction *factory = i->GetFactoryByDecl(decl.c_str());
-				asIScriptContext* ctx = mEngine->RequestContext();
-				ctx->Prepare(factory);
-				ctx->Execute();
-				asIScriptObject *obj = *(asIScriptObject**)ctx->GetAddressOfReturnValue();
-				obj->AddRef();
-				mEngine->ReturnContext(ctx);
-				set_script_game_object(obj, pGame_object);
-				return obj;
-			}
-		}
-		return nullptr;
-	}
-
-private:
-	template<typename T, typename...Targs>
-	static void constructor(void* pMem, Targs... pArgs)
-	{
-		new(pMem) T(pArgs...);
-	}
-
-	template<typename T>
-	static void destructor(void* pMem)
-	{
-		((T*)pMem)->~T();
-	}
-
-	static void dprint(const std::string& pMessage)
-	{
-		log::debug() << pMessage << log::endm;
-	}
-
-	template <typename Tto, typename Tfrom>
-	static Tto* caster(Tfrom* pFrom)
-	{
-		return dynamic_cast<Tto*>(pFrom);
-	}
-
-	static void message_callback(const asSMessageInfo *msg, void *param)
-	{
-		const char *type = "ERR ";
-		if (msg->type == asMSGTYPE_WARNING)
-			type = "WARN";
-		else if (msg->type == asMSGTYPE_INFORMATION)
-			type = "INFO";
-		printf("%s (%d, %d) : %s : %s\n", msg->section, msg->row, msg->col, type, msg->message);
-	}
-
-private:
-
-	void set_script_game_object(asIScriptObject* pObj, const core::game_object& pGame_object)
-	{
-		asIScriptFunction* function = pObj->GetObjectType()->GetMethodByDecl("void set_object(const core::game_object&in)");
-		asIScriptContext* ctx = mEngine->RequestContext();
-		ctx->Prepare(function);
-		ctx->SetObject(pObj);
-		ctx->SetArgAddress(0, (void*)&pGame_object);
-		ctx->Execute();
-		mEngine->ReturnContext(ctx);
-	}
-
-	asIScriptEngine* mEngine{ nullptr };
-	asIScriptModule* mMain_module{ nullptr };
-	CScriptBuilder mBuilder;
-	std::vector<asITypeInfo*> mBehavior_types;
-
 };
 
 inline void GLAPIENTRY opengl_message_callback(GLenum source,
@@ -768,7 +626,8 @@ private:
 class engine
 {
 public:
-	engine()
+	engine() :
+		mScripting(mAsset_manager)
 	{
 		mFactory.register_system<graphics::renderer>();
 		mFactory.register_system<physics::physics_world>();
@@ -776,7 +635,6 @@ public:
 		mFactory.register_component<graphics::sprite_component>();
 		mFactory.register_component<physics::physics_component>();
 		mFactory.register_component<physics::box_collider_component>();
-		mFactory.register_component<behavior_component>();
 		mGame_context.set_factory(&mFactory);
 
 		mGame_context.set_asset_manager(&mAsset_manager);
@@ -791,6 +649,15 @@ public:
 			pAsset->set_resource(res);
 		});
 
+		mAsset_manager.register_resource_factory("script",
+			[&](core::asset::ptr& pAsset)
+		{
+			auto res = std::make_shared<script>();
+			filesystem::path path = pAsset->get_file_path();
+			path.remove_extension();
+			res->load(path);
+			pAsset->set_resource(res);
+		});
 	}
 
 	~engine()
@@ -881,6 +748,7 @@ private:
 		mAsset_manager.set_root_directory(mSettings.get_asset_directory());
 		mAsset_manager.load_assets();
 		mAsset_manager.import_all_with_ext(".png", "texture");
+		mAsset_manager.import_all_with_ext(".lua", "script");
 	}
 
 private:
@@ -1164,6 +1032,7 @@ private:
 		obj.add_component<event_components::on_create>();
 		obj.add_component<event_components::on_update>();
 
+		mEngine.get_script_engine().run_scripts();
 	}
 
 	void init_inspectors()
@@ -1283,16 +1152,6 @@ private:
 			float rotation = math::degrees(collider->get_rotation());
 			if (ImGui::DragFloat("Rotation", &rotation))
 				collider->set_rotation(math::degrees(rotation));
-		});
-
-		mInspectors.add_inspector(behavior_component::COMPONENT_ID,
-			[](core::component* pComponent)
-		{
-			auto behavior = dynamic_cast<behavior_component*>(pComponent);
-
-			std::string classname = behavior->get_classname();
-			if (ImGui::InputText("Class Name", &classname))
-				behavior->set_classname(classname);
 		});
 
 		auto event_comp_func = [](core::component* pComponent)

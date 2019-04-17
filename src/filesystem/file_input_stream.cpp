@@ -105,7 +105,8 @@ std::size_t file_stream::read(char* pData, std::size_t pRequested_size)
 		throw io_error("Reading from stream with no read access");
 
 	std::size_t last_position = tell();
-	try {
+	try
+	{
 		mStream.read(pData, pRequested_size);
 	}
 	catch (const std::fstream::failure& e)
@@ -115,13 +116,26 @@ std::size_t file_stream::read(char* pData, std::size_t pRequested_size)
 	return tell() - last_position;
 }
 
+std::string file_stream::read_all()
+{
+	try
+	{
+		return std::string(std::istreambuf_iterator<char>(mStream), {});
+	}
+	catch (const std::fstream::failure& e)
+	{
+		throw io_error("Error reading from stream: (std::fstream::failure) " + std::string(e.what()));
+	}
+}
+
 std::size_t file_stream::write(const char* pData, std::size_t pSize)
 {
 	if (!(mAccess & stream_access::write))
 		throw io_error("Writing to stream with no write access");
 
 	std::size_t last_position = tell();
-	try {
+	try
+	{
 		mStream.write(pData, pSize);
 	}
 	catch (const std::fstream::failure& e)

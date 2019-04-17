@@ -28,6 +28,7 @@ public:
 	virtual bool is_good() override;
 
 	virtual std::size_t read(char* pData, std::size_t pRequested_size) override;
+	std::string read_all();
 	virtual std::size_t write(const char* pData, std::size_t pSize) override;
 	using stream::write;
 

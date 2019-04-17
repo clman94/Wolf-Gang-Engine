@@ -76,7 +76,10 @@ void asset::save() const
 	data["description"] = mDescription;
 	data["metadata"] = mMetadata;
 	if (mResource)
+	{
 		data["resource-metadata"] = mResource->get_metadata();
+		save();
+	}
 
 	filesystem::file_stream out;
 	out.open(mFile_path, filesystem::stream_access::write);
