@@ -793,6 +793,12 @@ public:
 
 	}
 
+	~engine()
+	{
+		// Clean up the scene first to prevent hanging references.
+		mGame_context.clear();
+	}
+
 	void create_game(const filesystem::path& pDirectory)
 	{
 		mLoaded = false;

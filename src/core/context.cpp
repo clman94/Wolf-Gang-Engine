@@ -110,4 +110,9 @@ void context::postupdate(float pDelta)
 		i->postupdate(pDelta);
 }
 
+void context::clear()
+{
+	mLayers.clear();
+}
+
 } // namespace wge::core

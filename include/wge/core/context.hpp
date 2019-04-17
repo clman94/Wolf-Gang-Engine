@@ -74,6 +74,8 @@ public:
 	void update(float pDelta);
 	void postupdate(float pDelta);
 
+	void clear();
+
 private:
 	layer_container mLayers;
 	factory* mFactory{ nullptr };
