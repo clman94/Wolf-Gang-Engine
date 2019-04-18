@@ -2,6 +2,8 @@
 #include <wge/filesystem/file_input_stream.hpp>
 #include <wge/filesystem/exception.hpp>
 
+#include <sstream>
+
 namespace wge::filesystem
 {
 
@@ -120,7 +122,9 @@ std::string file_stream::read_all()
 {
 	try
 	{
-		return std::string(std::istreambuf_iterator<char>(mStream), {});
+		std::stringstream sstr;
+		sstr << mStream.rdbuf();
+		return sstr.str();
 	}
 	catch (const std::fstream::failure& e)
 	{

@@ -102,11 +102,13 @@ public:
 
 	void load(const filesystem::path& pPath)
 	{
-		filesystem::file_stream stream;
+		std::ifstream stream(pPath.string().c_str());
 		try
 		{
-			stream.open(pPath, filesystem::stream_access::read);
-			source = stream.read_all();
+			std::stringstream sstr;
+			sstr << stream.rdbuf();
+			source = sstr.str();
+			mFile_path = pPath;
 		}
 		catch (const filesystem::io_error& e)
 		{
@@ -275,7 +277,14 @@ public:
 		{
 			if (pOn_create.first_time)
 			{
-				mEngine->state.safe_script(pOn_create.code, pState.environment);
+				try
+				{
+					mEngine->state.safe_script(pOn_create.code, pState.environment);
+				}
+				catch (const sol::error& e)
+				{
+					std::cout << "an expected error has occurred: " << e.what() << std::endl;
+				}
 				pOn_create.first_time = false;
 			}
 
@@ -291,7 +300,6 @@ public:
 			}
 			catch (const sol::error& e)
 			{
-
 				std::cout << "an expected error has occurred: " << e.what() << std::endl;
 			}
 
