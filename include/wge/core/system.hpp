@@ -23,6 +23,8 @@ class layer;
 class system
 {
 public:
+	using uptr = std::unique_ptr<system>;
+
 	system(layer& pLayer) :
 		mLayer(pLayer)
 	{}

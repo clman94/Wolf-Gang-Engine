@@ -8,6 +8,7 @@
 namespace wge::editor
 {
 
+// Inspired by ImGuiColorTextEdit
 class text_editor
 {
 public:
@@ -47,8 +48,9 @@ public:
 	class language
 	{
 	public:
-		std::set<std::string> keywords;
-		std::string singleline_comment;
+		std::vector<std::string_view> keywords;
+		std::vector<std::string_view> operators;
+		std::string_view singleline_comment;
 	};
 
 	text_editor();
@@ -98,7 +100,7 @@ private:
 	void highlight_range(const position& pStart, const position& pEnd);
 	void highlight_all();
 	void reset_color();
-
+	
 	void update_line_lengths();
 
 	void handle_shift_selection(const position& pLast_pos);

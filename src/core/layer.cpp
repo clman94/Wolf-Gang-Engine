@@ -1,3 +1,5 @@
+
+#include <wge/core/engine.hpp>
 #include <wge/core/layer.hpp>
 #include <wge/core/context.hpp>
 #include <wge/util/uuid_rerouter.hpp>
@@ -40,17 +42,10 @@ void layer::deserialize(const json& pJson)
 	mTime_scale = pJson["timescale"];
 	mRecieve_update = pJson["enabled"];
 
-	factory* factory = get_context().get_factory();
+	const factory& factory = get_engine().get_factory();
 	for (auto& i : pJson["systems"])
 	{
-		int type = i["type"];
-		system* sys = factory->create_system(type, *this);
-		if (!sys)
-		{
-			log::info() << "In layer \"" << mName << "\"" << log::endm;
-			log::error() << "Factory failed to create system with type " << type << log::endm;
-			continue;
-		}
+		system* sys = add_system(i["type"]);
 		sys->deserialize(i);
 	}
 
@@ -74,6 +69,21 @@ system* layer::get_system(const std::string& pName) const
 	for (auto& i : mSystems)
 		if (i->get_system_name() == pName)
 			return i.get();
+	return nullptr;
+}
+
+system* layer::add_system(int pType)
+{
+	// This system already exists.
+	if (system* sys = get_system(pType))
+		return sys;
+
+	// Create a new one, otherwise.
+	const factory& factory = get_engine().get_factory();
+	if (system::uptr sys = factory.create_system(pType, *this))
+	{
+		return mSystems.emplace_back(std::move(sys)).get();
+	}
 	return nullptr;
 }
 
@@ -106,6 +116,12 @@ void layer::remove_object(game_object& mObj)
 	mObject_manager.remove_object(mObj.get_instance_id());
 }
 
+void layer::remove_all_objects()
+{
+	mObject_manager.clear();
+	mComponent_manager.clear();
+}
+
 game_object layer::get_object(std::size_t pIndex)
 {
 	object_data* data = mObject_manager.get_object_data(pIndex);
@@ -129,10 +145,8 @@ std::size_t layer::get_object_count() const noexcept
 
 component* layer::add_component(const game_object& pObj, const component_type& pType)
 {
-	factory* f = get_context().get_factory();
-	if (!f)
-		return nullptr;
-	component* c = f->create_component(pType, mComponent_manager);
+	const factory& f = get_engine().get_factory();
+	component* c = f.create_component(pType, mComponent_manager);
 	if (!c)
 	{
 		log::error() << "Could not create component with id " << pType << log::endm;
@@ -208,6 +222,11 @@ void layer::clear()
 	mSystems.clear();
 	mObject_manager.clear();
 	mComponent_manager.clear();
+}
+
+engine& layer::get_engine() const noexcept
+{
+	return mContext.get_engine();
 }
 
 } // namespace wge::core

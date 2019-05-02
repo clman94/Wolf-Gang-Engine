@@ -18,7 +18,7 @@ file_stream::~file_stream()
 {
 }
 
-bool file_stream::open(const path & pPath, stream_access pAccess)
+bool file_stream::open(const path& pPath, stream_access pAccess)
 {
 	auto flags = std::fstream::binary | std::fstream::ate;
 	flags |= pAccess & stream_access::read ? std::fstream::in : 0;

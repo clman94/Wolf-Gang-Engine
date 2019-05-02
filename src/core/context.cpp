@@ -1,5 +1,6 @@
 #include <wge/core/context.hpp>
 #include <wge/util/ptr.hpp>
+#include <wge/core/engine.hpp>
 
 namespace wge::core
 {
@@ -12,7 +13,7 @@ component* factory::create_component(const component_type& pType, component_mana
 	return iter->second(pManager);
 }
 
-system* factory::create_system(int pType, layer& pLayer) const
+system::uptr factory::create_system(int pType, layer& pLayer) const
 {
 	auto iter = mSystem_factories.find(pType);
 	if (iter == mSystem_factories.end())
@@ -67,29 +68,19 @@ void context::remove_layer(const layer::ptr& pPtr)
 	remove_layer(util::to_address(pPtr));
 }
 
-const context::layer_container& context::get_layer_container() const noexcept
+const context::layers& context::get_layer_container() const noexcept
 {
 	return mLayers;
 }
 
-void context::set_asset_manager(asset_manager * pAsset_manager) noexcept
+asset_manager& context::get_asset_manager() noexcept
 {
-	mAsset_manager = pAsset_manager;
+	return mEngine.get_asset_manager();
 }
 
-asset_manager* context::get_asset_manager() const noexcept
+const factory& context::get_factory() const noexcept
 {
-	return mAsset_manager;
-}
-
-void context::set_factory(factory* pFactory) noexcept
-{
-	mFactory = pFactory;
-}
-
-factory* context::get_factory() const noexcept
-{
-	return mFactory;
+	return mEngine.get_factory();
 }
 
 void context::preupdate(float pDelta)

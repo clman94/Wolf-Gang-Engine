@@ -15,6 +15,7 @@
 namespace wge::core
 {
 
+class engine;
 class context;
 
 // A layer is a self-contained collection of objects
@@ -22,6 +23,7 @@ class context;
 class layer
 {
 public:
+	using uptr = std::unique_ptr<layer>;
 	using ptr = std::shared_ptr<layer>;
 	using wptr = std::weak_ptr<layer>;
 
@@ -44,9 +46,14 @@ public:
 	// Get a system by name
 	system* get_system(const std::string& pName) const;
 
-	// Emplace a new system
+	// Create a system that was not registered in the factory.
 	template <typename T, typename...Targs>
-	T* add_system(Targs&&...pArgs);
+	T* add_unregistered_system(Targs&&...);
+	// Create a new system that was registered in the factory.
+	template <typename T>
+	T* add_system();
+	// Create a new system that was registered in the factory.
+	system* add_system(int pType);
 
 	// Set the name of this layer
 	void set_name(const std::string& pName) noexcept;
@@ -58,6 +65,7 @@ public:
 	game_object add_object(const std::string& pName);
 	// Remove a game object
 	void remove_object(game_object& mObj);
+	void remove_all_objects();
 	// Get a game object at an index
 	game_object get_object(std::size_t pIndex);
 	// Get a game object by its instance id
@@ -120,6 +128,8 @@ public:
 
 	void clear();
 
+	engine& get_engine() const noexcept;
+
 private:
 	template <typename Tcomponent, typename...Tdependencies>
 	void for_each_impl(const std::function<void(game_object, Tcomponent&, Tdependencies&...)>& pCallable);
@@ -131,7 +141,7 @@ private:
 	float mTime_scale{ 1 };
 	bool mRecieve_update{ true };
 	std::string mName;
-	std::reference_wrapper<context> mContext;
+	context& mContext;
 	std::vector<std::unique_ptr<system>> mSystems;
 	component_manager mComponent_manager;
 	object_manager mObject_manager;
@@ -144,11 +154,19 @@ inline T* layer::get_system() const
 }
 
 template<typename T, typename ...Targs>
-inline T* layer::add_system(Targs&&...pArgs)
+inline T* layer::add_unregistered_system(Targs&&...pArgs)
 {
 	auto ptr = new T(*this, pArgs...);
 	mSystems.emplace_back(ptr);
 	return ptr;
+}
+
+// Create a new system that was registered in the factory.
+
+template<typename T>
+inline T* layer::add_system()
+{
+	return static_cast<T*>(add_system(T::SYSTEM_ID));
 }
 
 template<typename T>

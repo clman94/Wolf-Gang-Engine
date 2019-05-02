@@ -78,7 +78,7 @@ void asset::save() const
 	if (mResource)
 	{
 		data["resource-metadata"] = mResource->get_metadata();
-		save();
+		mResource->save();
 	}
 
 	filesystem::file_stream out;

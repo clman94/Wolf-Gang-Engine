@@ -4,84 +4,98 @@
 #include <wge/core/asset.hpp>
 #include <wge/core/layer.hpp>
 #include <wge/core/game_object.hpp>
+#include <wge/core/engine.hpp>
 
 #include <wge/util/signal.hpp>
 
 #include <functional>
 #include <optional>
+#include <vector>
+#include <memory>
+#include <tuple>
 
 namespace wge::editor
 {
 
-enum class selection_type
+class context;
+
+class asset_editor
 {
-	asset,
-	layer,
-	game_object,
+public:
+	using uptr = std::unique_ptr<asset_editor>;
+
+	asset_editor(context& pContext, const core::asset::ptr& pAsset) noexcept :
+		mContext(pContext),
+		mAsset(pAsset)
+	{}
+	virtual ~asset_editor() {}
+
+	virtual void on_gui() = 0;
+
+	const core::asset::ptr& get_asset() const noexcept
+	{
+		return mAsset;
+	}
+
+	context& get_context() const noexcept
+	{
+		return mContext;
+	}
+
+	void mark_asset_modified() const;
+
+protected:
+	// Reference for convenience
+	context& mContext;
+
+	core::asset::ptr mAsset;
 };
 
 class context
 {
+private:
+	using editor_factory = std::function<asset_editor::uptr(const core::asset::ptr&)>;
+
 public:
-	using modified_asset_list = std::vector<core::asset::ptr>;
+	using modified_assets = std::vector<core::asset::ptr>;
 
 	void add_modified_asset(const core::asset::ptr& pAsset);
-	void mark_selection_as_modified();
 	bool is_asset_modified(const core::asset::ptr& pAsset) const;
 	bool are_there_modified_assets() const noexcept;
 	void save_asset(const core::asset::ptr& pAsset);
 	void save_all_assets();
-	modified_asset_list& get_unsaved_assets() noexcept;
+	modified_assets& get_unsaved_assets() noexcept;
 
-	template<selection_type Ttype>
-	auto get_selection() const noexcept
+	core::engine& get_engine() noexcept
 	{
-		if constexpr (Ttype == selection_type::asset)
-			return mAsset_selection.lock();
-		if constexpr (Ttype == selection_type::layer)
-			return mLayer_selection.lock();
-		if constexpr (Ttype == selection_type::game_object)
-			return mObject_selection;
+		return mEngine;
 	}
 
-	// Set the currently selected asset
-	void set_selection(const core::asset::ptr& pAsset)
-	{
-		reset_selection();
-		mAsset_selection = pAsset;
-		on_new_selection();
-	}
-	// Set the currently selected layer
-	void set_selection(const core::layer::ptr& pLayer)
-	{
-		reset_selection();
-		mLayer_selection = pLayer;
-		on_new_selection();
-	}
-	// Set the currently selected object
-	void set_selection(const core::game_object& pObject)
-	{
-		reset_selection();
-		mObject_selection = pObject;
-		on_new_selection();
-	}
-
-	void reset_selection()
-	{
-		mAsset_selection.reset();
-		mLayer_selection.reset();
-		mObject_selection.reset();
-		on_new_selection();
-	}
-
-	util::signal<void()> on_new_selection;
+	template <typename T, typename...Targs>
+	void register_editor(const std::string& pAsset_type, Targs&&...);
+	void open_editor(const core::asset::ptr& pAsset);
+	void close_editor(const core::asset::ptr& pAsset);
+	void show_editor_guis() const;
+	bool is_editor_open_for(const core::asset::ptr& pAsset) const;
 
 private:
-	core::asset::wptr mAsset_selection;
-	core::layer::wptr mLayer_selection;
-	std::optional<core::game_object> mObject_selection;
-
-	modified_asset_list mUnsaved_assets;
+	modified_assets mUnsaved_assets;
+	core::engine mEngine;
+	std::map<std::string, editor_factory> mEditor_factories;
+	std::vector<asset_editor::uptr> mAsset_editors;
 };
+
+template<typename T, typename...Targs>
+inline void context::register_editor(const std::string& pAsset_type, Targs&&...pExtra_args)
+{
+	mEditor_factories[pAsset_type] =
+		[this, pExtra_args = std::tuple<Targs...>(std::forward<Targs>(pExtra_args)...)](const core::asset::ptr& pAsset)
+			-> asset_editor::uptr
+	{
+		auto args = std::tuple_cat(std::tie(*this, pAsset), pExtra_args);
+		auto make_unique_wrapper = [](auto&...pArgs) { return std::make_unique<T>(pArgs...); };
+		return std::apply(make_unique_wrapper, args);
+	};
+}
 
 } // namespace wge::editor

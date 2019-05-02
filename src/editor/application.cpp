@@ -9,7 +9,6 @@
 #include <wge/physics/physics_component.hpp>
 #include <wge/physics/physics_world.hpp>
 #include <wge/graphics/sprite_component.hpp>
-#include <wge/scripting/script.hpp>
 #include <wge/core/asset_manager.hpp>
 #include <wge/graphics/framebuffer.hpp>
 #include <wge/filesystem/file_input_stream.hpp>
@@ -29,19 +28,10 @@
 #include "imgui_ext.hpp"
 #include "text_editor.hpp"
 
-// Angelscript
-#include <angelscript.h>
-#include <scriptbuilder/scriptbuilder.h>
-#include <scripthandle/scripthandle.h>
-#include <scriptstdstring/scriptstdstring.h>
-#include <scriptarray/scriptarray.h>
-
 // GL
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <wge/graphics/glfw_backend.hpp>
-
-#include <sol/sol.hpp>
 
 #include <variant>
 #include <functional>
@@ -94,222 +84,6 @@ inline bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr, bool pD
 	return *pOpen;
 }
 
-class script :
-	public core::resource
-{
-public:
-	std::string source;
-
-	void load(const filesystem::path& pPath)
-	{
-		std::ifstream stream(pPath.string().c_str());
-		try
-		{
-			std::stringstream sstr;
-			sstr << stream.rdbuf();
-			source = sstr.str();
-			mFile_path = pPath;
-		}
-		catch (const filesystem::io_error& e)
-		{
-			log::error() << e.what() << log::endm;
-			log::error() << "Couldn't load resource" << log::endm;
-		}
-	}
-
-	virtual void save() override
-	{
-		filesystem::file_stream stream;
-		try
-		{
-			stream.open(mFile_path, filesystem::stream_access::write);
-			stream.write(source);
-		}
-		catch (const filesystem::io_error& e)
-		{
-			log::error() << e.what() << log::endm;
-			log::error() << "Couldn't save resource" << log::endm;
-		}
-	}
-
-private:
-	filesystem::path mFile_path;
-};
-
-class lua_script_engine
-{
-public:
-	lua_script_engine(core::asset_manager& mAsset_manager) :
-		mAsset_manager(&mAsset_manager)
-	{
-		state["dprint"] = sol::overload(
-			[](const std::string& pVal) { log::debug() << pVal << log::endm; },
-			[](double pVal) { log::debug() << pVal << log::endm; }
-			);
-
-		sol::table t_math = state.create_named_table("math");
-		t_math["sin"] = [](float pRad) { return math::sin(pRad); };
-		t_math["cos"] = [](float pRad) { return math::cos(pRad); };
-		t_math.new_usertype<math::vec2>("vec2",
-			sol::call_constructor, sol::constructors<math::vec2(), math::vec2(float, float)>(),
-			"x", &math::vec2::x,
-			"y", &math::vec2::y,
-			sol::meta_function::addition, &math::vec2::operator+,
-			sol::meta_function::subtraction, static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator-),
-			sol::meta_function::multiplication, sol::overload(
-				static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator*),
-				static_cast<math::vec2(math::vec2::*)(float) const>(&math::vec2::operator*)
-				),
-			sol::meta_function::division, static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator/),
-			sol::meta_function::equal_to, static_cast<bool(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator==)
-			);
-	}
-	
-	~lua_script_engine()
-	{
-		// Clear the environment first to prevent hanging references
-		main_environment = sol::environment{};
-	}
-
-	void run_scripts()
-	{
-		main_environment = sol::environment(state, sol::create, state.globals());
-		for (auto& i : mAsset_manager->get_asset_list())
-		{
-			if (i->get_type() == "script")
-			{
-				auto res = i->get_resource<script>();
-				try
-				{
-					state.safe_script(res->source, main_environment);
-				}
-				catch (sol::error& e)
-				{
-					log::error() << e.what() << log::endm;
-				}
-			}
-		}
-	}
-
-	sol::environment main_environment;
-	sol::state state;
-
-private:
-	core::asset_manager* mAsset_manager;
-};
-
-class event_state_component :
-	public core::component
-{
-	WGE_COMPONENT("Event State", 9233);
-public:
-	sol::environment environment;
-};
-
-class event_component :
-	public core::component
-{
-public:
-	std::string code;
-};
-
-namespace event_components
-{
-
-class on_update :
-	public event_component
-{
-	WGE_COMPONENT("Event: Update", 9234);
-};
-
-class on_create :
-	public event_component
-{
-	WGE_COMPONENT("Event: Create", 9235);
-public:
-	bool first_time{ true };
-};
-
-}
-
-class script_system :
-	public core::system
-{
-	WGE_SYSTEM("Script", 8423);
-public:
-	script_system(core::layer& pLayer, lua_script_engine& pEngine) :
-		core::system(pLayer),
-		mEngine(&pEngine)
-	{}
-
-	void update(float pDelta) override
-	{
-		// Setup the environments if needed
-		get_layer().for_each([&](core::game_object pObj, event_state_component& pState)
-		{
-			if (!pState.environment.valid())
-			{
-				pState.environment = sol::environment(mEngine->state, sol::create, mEngine->main_environment);
-
-				auto get_position = [pObj]() -> math::vec2
-				{
-					auto transform = pObj.get_component<core::transform_component>();
-					return transform->get_position();
-				};
-				auto set_position = [pObj](const math::vec2& pPos)
-				{
-					auto transform = pObj.get_component<core::transform_component>();
-					transform->set_position(pPos);
-				};
-				//pState.environment["position"] = sol::property(get_position, set_position);
-				pState.environment["get_position"] = get_position;
-				pState.environment["set_position"] = set_position;
-				pState.environment["move"] = [get_position, set_position](const math::vec2& pDirection)
-				{
-					set_position(get_position() + pDirection);
-				};
-			}
-		});
-
-		get_layer().for_each([&](
-			event_components::on_create& pOn_create,
-			event_state_component& pState)
-		{
-			if (pOn_create.first_time)
-			{
-				try
-				{
-					mEngine->state.safe_script(pOn_create.code, pState.environment);
-				}
-				catch (const sol::error& e)
-				{
-					std::cout << "an expected error has occurred: " << e.what() << std::endl;
-				}
-				pOn_create.first_time = false;
-			}
-
-		});
-
-		get_layer().for_each([&](
-			event_components::on_update& pOn_update, 
-			event_state_component& pState)
-		{
-			try
-			{
-				mEngine->state.safe_script(pOn_update.code, pState.environment);
-			}
-			catch (const sol::error& e)
-			{
-				std::cout << "an expected error has occurred: " << e.what() << std::endl;
-			}
-
-		});
-	}
-
-private:
-	lua_script_engine* mEngine;
-};
-
 inline void GLAPIENTRY opengl_message_callback(GLenum source,
 	GLenum type,
 	GLuint id,
@@ -318,152 +92,214 @@ inline void GLAPIENTRY opengl_message_callback(GLenum source,
 	const GLchar* message,
 	const void* userParam);
 
-class sprite_editor
+class object_editor :
+	public asset_editor
 {
 public:
-	sprite_editor(context& pContext) :
-		mContext(&pContext)
+	object_editor(context& pContext, const core::asset::ptr& pAsset, component_inspector& pInspectors) :
+		asset_editor(pContext, pAsset),
+		mInspectors(&pInspectors)
 	{
-		mConnection_on_new_selection = pContext.on_new_selection.connect(
-			[&]()
-		{
-			mSelected_animation_id = util::uuid{};
-		});
-
-		// Tell the context that the asset was modified
-		on_change.connect([this]()
-		{
-			mContext->mark_selection_as_modified();
-		});
+		mSandbox = pContext.get_engine().get_context().create_unhandled_layer();
+		mObject = mSandbox->add_object();
+		mObject.deserialize(pAsset->get_metadata());
 	}
 
-	virtual ~sprite_editor()
+	virtual void on_gui() override
 	{
-		mConnection_on_new_selection.disconnect();
+		assert(mInspectors);
+		const std::string title = get_asset()->get_path().string() + "##" + get_asset()->get_id().to_string();
+		if (ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_HorizontalScrollbar))
+		{
+			std::string name = mObject.get_name();
+			if (ImGui::InputText("Name", &name))
+				mObject.set_name(name);
+			if (ImGui::IsItemDeactivatedAfterEdit())
+				mark_asset_modified();
+
+			ImGui::Separator();
+
+			for (std::size_t i = 0; i < mObject.get_component_count(); i++)
+			{
+				core::component* comp = mObject.get_component_at(i);
+				ImGui::PushID(comp);
+
+				bool enabled = comp->is_enabled();
+				if (ImGui::Checkbox("##Enabled", &enabled))
+					comp->set_enabled(enabled);
+				if (ImGui::IsItemDeactivatedAfterEdit())
+					mark_asset_modified();
+
+				ImGui::SameLine();
+
+				if (ImGui::TreeNodeEx(comp->get_component_name().c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+				{
+					mInspectors->on_gui(comp);
+					ImGui::TreePop();
+				}
+
+				ImGui::PopID();
+			}
+
+			ImGui::Separator();
+			if (ImGui::BeginCombo("##Add Component", "Add Component"))
+			{
+				if (ImGui::Selectable("Transform 2D"))
+					mObject.add_component<core::transform_component>();
+				if (ImGui::Selectable("Physics"))
+					mObject.add_component<physics::physics_component>();
+				if (ImGui::Selectable("Box Collider"))
+					mObject.add_component<physics::box_collider_component>();
+				if (ImGui::Selectable("Sprite"))
+					mObject.add_component<graphics::sprite_component>();
+				ImGui::EndCombo();
+			}
+		}
+		ImGui::End();
 	}
+
+private:
+	core::game_object mObject;
+	core::layer::ptr mSandbox;
+	component_inspector* mInspectors;
+};
+
+class sprite_editor :
+	public asset_editor
+{
+public:
+	sprite_editor(context& pContext, const core::asset::ptr& pAsset) :
+		asset_editor(pContext, pAsset)
+	{}
 
 	void on_gui()
 	{
-		if (ImGui::Begin("Sprite Editor", nullptr, ImGuiWindowFlags_HorizontalScrollbar))
+		const std::string title = get_asset()->get_path().string() + "##" + get_asset()->get_id().to_string();
+		if (ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_HorizontalScrollbar))
 		{
-			auto selection = mContext->get_selection<selection_type::asset>();
-			if (selection && selection->get_type() == "texture")
+			ImGui::BeginChild("AtlasInfo", ImVec2(mAtlas_info_width, 0));
+			atlas_info_pane();
+			ImGui::EndChild();
+
+			ImGui::SameLine();
+			ImGui::VerticalSplitter("AtlasInfoSplitter", &mAtlas_info_width);
+
+			ImGui::SameLine();
+			ImGui::BeginChild("SpriteEditorViewport");
+
+			auto texture = get_asset()->get_resource<graphics::texture>();
+
+			float* zoom = ImGui::GetStateStorage()->GetFloatRef(ImGui::GetID("_Zoom"), 0);
+
+			const ImVec2 last_cursor = ImGui::GetCursorPos();
+			ImGui::BeginGroup();
+
+			const float scale = std::powf(2, *zoom);
+			const ImVec2 image_size = texture->get_size() * scale;
+
+			// Top and left padding
+			ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
+			ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
+			ImGui::SameLine();
+
+			// Store the cursor so we can position things on top of the image
+			const ImVec2 image_position = ImGui::GetCursorScreenPos();
+
+			ImGui::DrawAlphaCheckerBoard(image_position, image_size);
+
+			ImGui::Image(get_asset(), image_size);
+
+			// Right and bottom padding
+			ImGui::SameLine();
+			ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
+			ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
+			ImGui::EndGroup();
+
+			// Draw grid
+			if (*zoom > 2)
 			{
-				auto texture = selection->get_resource<graphics::texture>();
+				ImGui::DrawGridLines(image_position,
+					ImVec2(image_position.x + image_size.x, image_position.y + image_size.y),
+					{ 0, 1, 1, 0.2f }, scale);
+			}
 
-				float* zoom = ImGui::GetStateStorage()->GetFloatRef(ImGui::GetID("_Zoom"), 0);
+			// Overlap with an invisible button to recieve input
+			ImGui::SetCursorPos(last_cursor);
+			ImGui::InvisibleButton("_Input", ImVec2(image_size.x + ImGui::GetWindowWidth(), image_size.y + ImGui::GetWindowHeight()));
 
-				const ImVec2 last_cursor = ImGui::GetCursorPos();
-				ImGui::BeginGroup();
+			visual_editor::begin("_SomeEditor", { image_position.x, image_position.y }, { 0, 0 }, { scale, scale });
 
-				const float scale = std::powf(2, *zoom);
-				const ImVec2 image_size((float)texture->get_width() * scale, (float)texture->get_height() * scale);
+			// Draw the rectangles for the frames
+			for (const auto& i : texture->get_raw_atlas())
+				visual_editor::draw_rect(i.frame_rect, { 0, 1, 1, 0.5f });
 
-				// Top and left padding
-				ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
-				ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
-				ImGui::SameLine();
+			const bool was_dragging = visual_editor::is_dragging();
 
-				// Store the cursor so we can position things on top of the image
-				const ImVec2 image_position = ImGui::GetCursorScreenPos();
+			// Get the pointer to the selected animation
+			graphics::animation* selected_animation = texture->get_animation(mSelected_animation_id);
 
-				ImGui::DrawAlphaCheckerBoard(image_position, image_size);
+			// Modify selected
+			if (selected_animation)
+			{
+				visual_editor::begin_snap({ 1, 1 });
 
-				ImGui::Image(selection, image_size);
+				// Edit the selection
+				visual_editor::box_edit box_edit(selected_animation->frame_rect);
+				box_edit.resize(visual_editor::edit_type::rect);
+				box_edit.drag(visual_editor::edit_type::rect);
+				selected_animation->frame_rect = box_edit.get_rect();
 
-				// Right and bottom padding
-				ImGui::SameLine();
-				ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
-				ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
-				ImGui::EndGroup();
+				// Limit the minimum size to +1 pixel so the user isn't using 0 or negitive numbers
+				selected_animation->frame_rect.size = math::max(selected_animation->frame_rect.size, math::vec2(1, 1));
 
-				// Draw grid
-				if (*zoom > 2)
+				// Notify a change in the asset
+				if (box_edit.is_dragging() && ImGui::IsMouseReleased(0))
+					on_change();
+
+				visual_editor::end_snap();
+			}
+
+			// Select a new one
+			if (!was_dragging && ImGui::IsItemHovered() && ImGui::IsMouseReleased(0))
+			{
+				// Find all overlapping frames that the mouse is hovering
+				std::vector<graphics::animation*> mOverlapping;
+				for (auto& i : texture->get_raw_atlas())
+					if (i.frame_rect.intersects(visual_editor::get_mouse_position()))
+						mOverlapping.push_back(&i);
+
+				if (!mOverlapping.empty())
 				{
-					ImGui::DrawGridLines(image_position,
-						ImVec2(image_position.x + image_size.x, image_position.y + image_size.y),
-						{ 0, 1, 1, 0.2f }, scale);
-				}
-
-				// Overlap with an invisible button to recieve input
-				ImGui::SetCursorPos(last_cursor);
-				ImGui::InvisibleButton("_Input", ImVec2(image_size.x + ImGui::GetWindowWidth(), image_size.y + ImGui::GetWindowHeight()));
-
-				visual_editor::begin("_SomeEditor", { image_position.x, image_position.y }, { 0, 0 }, { scale, scale });
-
-				// Draw the rectangles for the frames
-				for (const auto& i : texture->get_raw_atlas())
-					visual_editor::draw_rect(i.frame_rect, { 0, 1, 1, 0.5f });
-
-				const bool was_dragging = visual_editor::is_dragging();
-
-				// Get the pointer to the selected animation
-				graphics::animation* selected_animation = texture->get_animation(mSelected_animation_id);
-
-				// Modify selected
-				if (selected_animation)
-				{
-					visual_editor::begin_snap({ 1, 1 });
-
-					// Edit the selection
-					visual_editor::box_edit box_edit(selected_animation->frame_rect);
-					box_edit.resize(visual_editor::edit_type::rect);
-					box_edit.drag(visual_editor::edit_type::rect);
-					selected_animation->frame_rect = box_edit.get_rect();
-
-					// Limit the minimum size to +1 pixel so the user isn't using 0 or negitive numbers
-					selected_animation->frame_rect.size = math::max(selected_animation->frame_rect.size, math::vec2(1, 1));
-
-					if (box_edit.is_dragging() && ImGui::IsMouseReleased(0))
-						on_change();
-
-					visual_editor::end_snap();
-				}
-
-				// Select a new one
-				if (!was_dragging && ImGui::IsItemHovered() && ImGui::IsMouseReleased(0))
-				{
-					// Find all overlapping frames that the mouse is hovering
-					std::vector<graphics::animation*> mOverlapping;
-					for (auto& i : texture->get_raw_atlas())
-						if (i.frame_rect.intersects(visual_editor::get_mouse_position()))
-							mOverlapping.push_back(&i);
-
-					if (!mOverlapping.empty())
-					{
-						// Check if the currently selected animation is being selected again
-						// and cycle through the overlapping animations each click.
-						auto iter = std::find(mOverlapping.begin(), mOverlapping.end(), selected_animation);
-						if (iter == mOverlapping.end() || iter + 1 == mOverlapping.end())
-							selected_animation = mOverlapping.front(); // Start/loop to front
-						else
-							selected_animation = *(iter + 1); // Next item
-						mSelected_animation_id = selected_animation->id;
-					}
-				}
-
-				visual_editor::end();
-
-				if (ImGui::IsItemHovered())
-				{
-					// Zoom with ctrl and mousewheel
-					if (ImGui::GetIO().KeyCtrl && ImGui::GetIO().MouseWheel != 0)
-					{
-						*zoom += ImGui::GetIO().MouseWheel;
-						const float new_scale = std::powf(2, *zoom);
-						const float ratio_changed = new_scale / scale;
-						ImGui::SetScrollX(ImGui::GetScrollX() * ratio_changed);
-						ImGui::SetScrollY(ImGui::GetScrollY() * ratio_changed);
-					}
-
-					// Hold middle mouse button to scroll
-					ImGui::DragScroll(2);
+					// Check if the currently selected animation is being selected again
+					// and cycle through the overlapping animations each click.
+					auto iter = std::find(mOverlapping.begin(), mOverlapping.end(), selected_animation);
+					if (iter == mOverlapping.end() || iter + 1 == mOverlapping.end())
+						selected_animation = mOverlapping.front(); // Start/loop to front
+					else
+						selected_animation = *(iter + 1); // Next item
+					mSelected_animation_id = selected_animation->id;
 				}
 			}
-			else
+
+			visual_editor::end();
+
+			if (ImGui::IsItemHovered())
 			{
-				ImGui::TextUnformatted("No texture asset selected");
+				// Zoom with ctrl and mousewheel
+				if (ImGui::GetIO().KeyCtrl && ImGui::GetIO().MouseWheel != 0)
+				{
+					*zoom += ImGui::GetIO().MouseWheel;
+					const float new_scale = std::powf(2, *zoom);
+					const float ratio_changed = new_scale / scale;
+					ImGui::SetScrollX(ImGui::GetScrollX() * ratio_changed);
+					ImGui::SetScrollY(ImGui::GetScrollY() * ratio_changed);
+				}
+
+				// Hold middle mouse button to scroll
+				ImGui::DragScroll(2);
 			}
+
+			ImGui::EndChild();
 		}
 		ImGui::End();
 	}
@@ -475,10 +311,11 @@ public:
 
 		// Scale the size of the image to preserve the aspect ratio but still fit in the
 		// specified area.
+		const float aspect_ratio = pFrame_rect.size.x / pFrame_rect.size.y;
 		math::vec2 scaled_size =
 		{
-			math::min(pFrame_rect.size.x * (pSize.y / pFrame_rect.size.y), pSize.x),
-			math::min(pFrame_rect.size.y * (pSize.x / pFrame_rect.size.x), pSize.y)
+			math::min(pSize.y * aspect_ratio, pSize.x),
+			math::min(pSize.x / aspect_ratio, pSize.y)
 		};
 
 		// Center the position
@@ -502,7 +339,7 @@ public:
 		ImGui::InvisibleButton(pStr_id, pSize);
 	}
 
-	void on_inspector_gui()
+	void atlas_info_pane()
 	{
 		const auto open_sprite_editor = []()
 		{
@@ -511,8 +348,7 @@ public:
 			ImGui::End();
 		};
 
-		auto selection = mContext->get_selection<selection_type::asset>();
-		auto texture = selection->get_resource<graphics::texture>();
+		auto texture = get_asset()->get_resource<graphics::texture>();
 
 		if (ImGui::CollapsingHeader("Atlas", ImGuiTreeNodeFlags_DefaultOpen))
 		{
@@ -558,10 +394,6 @@ public:
 			{
 				on_change();
 			}
-
-			ImGui::SameLine();
-			if (ImGui::Button("Open Sprite Editor"))
-				open_sprite_editor();
 		}
 
 		if (graphics::animation* selected_animation = texture->get_animation(mSelected_animation_id))
@@ -621,171 +453,230 @@ private:
 
 	void check_if_edited()
 	{
-		if (ImGui::IsItemDeactivated())
-			on_change();
+		get_context().add_modified_asset(get_asset());
 	}
 
 private:
-	context* mContext;
-	util::connection mConnection_on_new_selection;
 	util::uuid mSelected_animation_id;
+	float mAtlas_info_width = 200;
 };
 
-class engine
+class script_editor :
+	public asset_editor
 {
 public:
-	engine() :
-		mScripting(mAsset_manager)
-	{
-		mFactory.register_system<graphics::renderer>();
-		mFactory.register_system<physics::physics_world>();
-		mFactory.register_component<core::transform_component>();
-		mFactory.register_component<graphics::sprite_component>();
-		mFactory.register_component<physics::physics_component>();
-		mFactory.register_component<physics::box_collider_component>();
-		mGame_context.set_factory(&mFactory);
+	script_editor(context& pContext, const core::asset::ptr& pAsset) :
+		asset_editor(pContext, pAsset)
+	{}
 
-		mGame_context.set_asset_manager(&mAsset_manager);
-		mAsset_manager.register_resource_factory("texture",
-			[&](core::asset::ptr& pAsset)
+	virtual void on_gui() override
+	{
+		const std::string title = get_asset()->get_path().string() + "##" + get_asset()->get_id().to_string();
+		if (ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_HorizontalScrollbar))
 		{
-			auto res = std::make_shared<graphics::texture>();
-			res->set_implementation(mGraphics.get_graphics_backend()->create_texture_impl());
-			filesystem::path path = pAsset->get_file_path();
-			path.remove_extension();
-			res->load(path.string());
-			pAsset->set_resource(res);
-		});
+			auto source = get_asset()->get_resource<scripting::script>();
 
-		mAsset_manager.register_resource_factory("script",
-			[&](core::asset::ptr& pAsset)
-		{
-			auto res = std::make_shared<script>();
-			filesystem::path path = pAsset->get_file_path();
-			path.remove_extension();
-			res->load(path);
-			pAsset->set_resource(res);
-		});
-	}
-
-	~engine()
-	{
-		// Clean up the scene first to prevent hanging references.
-		mGame_context.clear();
-	}
-
-	void create_game(const filesystem::path& pDirectory)
-	{
-		mLoaded = false;
-		mSettings.save_new(pDirectory);
-
-		load_assets();
-
-		// Everything was successful!
-		mLoaded = true;
-	}
-
-	void load_game(const filesystem::path& pPath)
-	{
-		mLoaded = false;
-
-		if (!mSettings.load(pPath))
-		{
-			log::error() << "Cannot find/parse game configuration" << log::endm;
-			return;
+			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+			if (ImGui::CodeEditor("CodeEditor", source->source))
+				mark_asset_modified();
+			ImGui::PopFont();
 		}
-
-		load_assets();
-
-		// Everything was successful!
-		mLoaded = true;
+		ImGui::End();
 	}
+};
 
-	void close_game()
-	{
-		mLoaded = false;
-		
-	}
+class asset_manager_window
+{
+public:
+	asset_manager_window(context& pContext, core::asset_manager& pAsset_manager) :
+		mContext(pContext),
+		mAsset_manager(pAsset_manager)
+	{}
 
-	void render_to(const graphics::framebuffer::ptr& pFrame_buffer, const math::vec2& pOffset, const math::vec2& pScale)
+	void on_gui()
 	{
-		for (auto& i : mGame_context.get_layer_container())
+		if (ImGui::Begin("Asset Manager"))
 		{
-			if (auto renderer = i->get_system<graphics::renderer>())
+			static filesystem::path path = "";
+			static float directory_tree_width = 200;
+			using const_iterator = core::asset_manager::file_structure::const_iterator;
+			const_iterator root = mAsset_manager.get_file_structure().find("");
+
+			ImGui::BeginChild("DirectoryTree", { directory_tree_width, 0 }, true);
+			show_asset_directory_tree(root, path);
+			ImGui::EndChild();
+
+			const_iterator current_directory = mAsset_manager.get_file_structure().find(path);
+
+			ImGui::SameLine();
+			ImGui::VerticalSplitter("DirectoryTreeSplitter", &directory_tree_width);
+
+			ImGui::SameLine();
+			ImGui::BeginGroup();
+
+			ImGui::PushID("PathList");
+			for (std::size_t i = 0; i < path.size(); ++i)
 			{
-				renderer->set_framebuffer(pFrame_buffer);
-				renderer->set_render_view_to_framebuffer(pOffset, 1 / pScale);
-				renderer->render(mGraphics);
+				const bool last_item = i == path.size() - 1;
+				if (ImGui::Button(path[i].c_str()))
+				{
+					// TODO: Clicking the last item will open a popup to select a different directory..?
+					path.erase(path.begin() + i + 1, path.end());
+					break;
+				}
+				if (!last_item)
+					ImGui::SameLine();
 			}
+			ImGui::PopID();
+
+			const math::vec2 file_preview_size = { 100, 100 };
+
+			ImGui::BeginChild("FileList", { 0, 0 }, true);
+			for (auto i = current_directory.child(); i != const_iterator{}; ++i)
+			{
+				// Skip Directories or if it doesn't look like an asset
+				if (i.is_directory() || !i.userdata())
+					continue;
+
+				ImGui::PushID(i.get_node());
+
+				const core::asset::ptr asset = *i.userdata();
+				const bool is_asset_selected = mSelected_asset == asset;
+
+				ImGui::BeginGroup();
+
+				// Draw preview
+				if (asset->get_type() == "texture")
+					ImGui::ImageButton(asset,
+						file_preview_size - math::vec2(ImGui::GetStyle().FramePadding) * 2);
+				else
+					ImGui::Button("No preview", file_preview_size);
+
+				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), asset->get_type().c_str());
+
+				// Draw text
+				ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + file_preview_size.x);
+				ImGui::Text(i.name().c_str());
+				ImGui::PopTextWrapPos();
+
+				ImGui::EndGroup();
+				ImGui::SameLine();
+
+				// Allow asset to be dragged
+				if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+				{
+					ImGui::SetDragDropPayload((asset->get_type() + "Asset").c_str(), &asset->get_id(), sizeof(util::uuid));
+					ImGui::Text("Asset: %s", asset->get_path().string().c_str());
+					ImGui::EndDragDropSource();
+				}
+
+				// Select the asset when clicked
+				if (ImGui::IsItemClicked())
+					mSelected_asset = asset;
+				if (ImGui::IsItemClicked() && ImGui::IsMouseDoubleClicked(0))
+					mContext.open_editor(mSelected_asset);
+
+				auto dl = ImGui::GetWindowDrawList();
+
+				// Calculate item aabb that includes the item spacing
+				math::vec2 item_min = math::vec2(ImGui::GetItemRectMin())
+					- math::vec2(ImGui::GetStyle().ItemSpacing) / 2;
+				math::vec2 item_max = math::vec2(ImGui::GetItemRectMax())
+					+ math::vec2(ImGui::GetStyle().ItemSpacing) / 2;
+
+				// Draw the background
+				if (ImGui::IsItemHovered())
+				{
+					dl->AddRectFilled(item_min, item_max,
+						ImGui::GetColorU32(ImGuiCol_ButtonHovered), ImGui::GetStyle().FrameRounding);
+				}
+				else if (is_asset_selected)
+				{
+					dl->AddRectFilled(item_min, item_max,
+						ImGui::GetColorU32(ImGuiCol_ButtonActive), ImGui::GetStyle().FrameRounding);
+				}
+
+				// If there isn't any room left in this line, create a new one.
+				if (ImGui::GetContentRegionAvailWidth() < file_preview_size.x)
+					ImGui::NewLine();
+
+				ImGui::PopID();
+			}
+			ImGui::EndChild();
+
+			ImGui::EndGroup();
+		}
+		ImGui::End();
+	}
+
+private:
+	static void show_asset_directory_tree(const core::asset_manager::file_structure::const_iterator& pIterator, filesystem::path& pDirectory)
+	{
+		using const_iterator = core::asset_manager::file_structure::const_iterator;
+
+		const bool is_root = pIterator.parent() == const_iterator{};
+
+		bool open = false;
+
+		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+		const char* name = is_root ? "Assets" : pIterator.name().c_str();
+		if (pIterator.has_subdirectories())
+			open = ImGui::TreeNodeEx(name, flags);
+		else
+			ImGui::TreeNodeEx(name, flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen);
+
+		// Set the directory
+		if (ImGui::IsItemClicked())
+		{
+			if (is_root)
+				pDirectory.clear();
+			else
+				pDirectory = pIterator.get_path();
+		}
+
+		if (open)
+		{
+			// Show subdirectories
+			for (auto i = pIterator.child(); i != const_iterator{}; ++i)
+			{
+				if (i.is_directory())
+					show_asset_directory_tree(i, pDirectory);
+			}
+			ImGui::TreePop();
 		}
 	}
 
-	bool is_loaded() const
-	{
-		return mLoaded;
-	}
+private:
+	context& mContext;
+	core::asset_manager& mAsset_manager;
+	core::asset::ptr mSelected_asset;
+};
 
-	core::game_settings& get_settings() noexcept
-	{
-		return mSettings;
-	}
+class scene_editor :
+	public asset_editor
+{
+public:
+	scene_editor(context& pContext, const core::asset::ptr& pAsset) noexcept :
+		asset_editor(pContext, pAsset)
+	{}
 
-	core::asset_manager& get_asset_manager() noexcept
+	virtual void on_gui() override
 	{
-		return mAsset_manager;
-	}
 
-	core::context& get_context() noexcept
-	{
-		return mGame_context;
-	}
-
-	graphics::graphics& get_graphics() noexcept
-	{
-		return mGraphics;
-	}
-
-	lua_script_engine& get_script_engine() noexcept
-	{
-		return mScripting;
 	}
 
 private:
-	void load_assets()
-	{
-		mAsset_manager.set_root_directory(mSettings.get_asset_directory());
-		mAsset_manager.load_assets();
-		mAsset_manager.import_all_with_ext(".png", "texture");
-		mAsset_manager.import_all_with_ext(".lua", "script");
-	}
 
-private:
-	core::game_settings mSettings;
-	core::asset_manager mAsset_manager;
-	core::context mGame_context;
-	core::factory mFactory;
-
-	graphics::graphics mGraphics;
-
-	lua_script_engine mScripting;
-
-	bool mLoaded{ false };
 };
 
 class application
 {
 public:
-	text_editor mText_edit;
-
 	application()
 	{
-		// Clear the sandbox on a new selection
-		mContext.on_new_selection.connect(
-			[this]()
-		{
-			mSandbox.reset();
-		});
-
+		mContext.register_editor<sprite_editor>("texture");
+		mContext.register_editor<object_editor>("gameobject", mInspectors);
+		mContext.register_editor<script_editor>("script");
 	}
 
 	int run()
@@ -795,10 +686,6 @@ public:
 		init_inspectors();
 
 		load_project("project");
-
-		auto a = mEngine.get_asset_manager().get_asset("pie");
-
-		mText_edit.set_text(a->get_metadata().dump(1, '\t'));
 
 		mainloop();
 		return 0;
@@ -862,20 +749,13 @@ private:
 
 			show_log();
 			show_settings();
-			show_asset_manager();
-			show_viewport();
-			show_objects();
-			show_inspector();
-			mSprite_editor.on_gui();
+			//show_viewport();
+			//show_objects();
+			//show_inspector();
+			mAsset_manager_window.on_gui();
+			mContext.show_editor_guis();
 
-			if (ImGui::Begin("EditorTest"))
-			{
-				ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-				ImGui::CodeEditor("someeditor", mSomecode);
-				ImGui::PopFont();
-			}
-			ImGui::End();
-
+			// Post update happens after the editor but before rendering.
 			if (mUpdate)
 				mEngine.get_context().postupdate(delta);
 
@@ -1026,7 +906,7 @@ private:
 		auto layer = mEngine.get_context().add_layer();
 		layer->set_name("Layer1");
 		layer->add_system<graphics::renderer>();
-		layer->add_system<script_system>(mEngine.get_script_engine());
+		layer->add_system<scripting::script_system>();
 
 		auto renderer = layer->get_system<graphics::renderer>();
 		renderer->set_pixel_size(0.01f);
@@ -1035,12 +915,12 @@ private:
 		obj.add_component<core::transform_component>();
 		auto sprite = obj.add_component<graphics::sprite_component>();
 		sprite->set_texture(mEngine.get_asset_manager().get_asset("mytex.png"));
-		obj.add_component<event_state_component>();
+		obj.add_component<scripting::event_state_component>();
 
-		obj.add_component<event_components::on_create>();
-		obj.add_component<event_components::on_update>();
+		obj.add_component<scripting::event_components::on_create>();
+		obj.add_component<scripting::event_components::on_update>();
 
-		mEngine.get_script_engine().run_scripts();
+		mEngine.get_script_engine().execute_global_scripts(mAsset_manager);
 	}
 
 	void init_inspectors()
@@ -1099,10 +979,10 @@ private:
 			ImGui::BeginGroup();
 			if (tex)
 			{
-				if (ImGui::ImageButton(tex, { 100, 100 }))
-				{
-					mContext.set_selection(tex);
-				}
+				const bool is_selected = ImGui::ImageButton(tex, { 100, 100 });
+				ImGui::QuickToolTip("Open Sprite Editor");
+				if (is_selected)
+					mContext.open_editor(tex);
 				ImGui::SameLine();
 				ImGui::BeginGroup();
 				auto res = tex->get_resource<graphics::texture>();
@@ -1164,169 +1044,19 @@ private:
 
 		auto event_comp_func = [](core::component* pComponent)
 		{
-			auto e = dynamic_cast<event_component*>(pComponent);
+			auto e = dynamic_cast<scripting::event_component*>(pComponent);
 			ImGui::PushID(e);
 			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-			ImGui::CodeEditor("Editor", e->code, { 0, 200 });
+			ImGui::CodeEditor("Editor", e->source, { 0, 200 });
 			ImGui::PopFont();
 			ImGui::PopID();
 		};
 
-		mInspectors.add_inspector(event_components::on_create::COMPONENT_ID, event_comp_func);
-		mInspectors.add_inspector(event_components::on_update::COMPONENT_ID, event_comp_func);
+		mInspectors.add_inspector(scripting::event_components::on_create::COMPONENT_ID, event_comp_func);
+		mInspectors.add_inspector(scripting::event_components::on_update::COMPONENT_ID, event_comp_func);
 	}
 
 private:
-	static void show_asset_directory_tree(const core::asset_manager::file_structure::const_iterator& pIterator, filesystem::path& pDirectory)
-	{
-		using const_iterator = core::asset_manager::file_structure::const_iterator;
-		
-		const bool is_root = pIterator.parent() == const_iterator{};
-
-		bool open = false;
-
-		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
-		const char* name = is_root ? "Assets" : pIterator.name().c_str();
-		if (pIterator.has_subdirectories())
-			open = ImGui::TreeNodeEx(name, flags);
-		else
-			ImGui::TreeNodeEx(name, flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen);
-
-		// Set the directory
-		if (ImGui::IsItemClicked())
-		{
-			if (is_root)
-				pDirectory.clear();
-			else
-				pDirectory = pIterator.get_path();
-		}
-
-		if (open)
-		{
-			// Show subdirectories
-			for (auto i = pIterator.child(); i != const_iterator{}; ++i)
-			{
-				if (i.is_directory())
-					show_asset_directory_tree(i, pDirectory);
-			}
-			ImGui::TreePop();
-		}
-	}
-
-	void show_asset_manager()
-	{
-		if (ImGui::Begin("Asset Manager"))
-		{
-			static filesystem::path path = "";
-			static float directory_tree_width = 200;
-			using const_iterator = core::asset_manager::file_structure::const_iterator;
-			const_iterator root = mEngine.get_asset_manager().get_file_structure().find("");
-
-			ImGui::BeginChild("DirectoryTree", { directory_tree_width, 0 }, true);
-			show_asset_directory_tree(root, path);
-			ImGui::EndChild();
-
-			const_iterator current_directory = mEngine.get_asset_manager().get_file_structure().find(path);
-
-			ImGui::SameLine();
-			ImGui::VerticalSplitter("DirectoryTreeSplitter", &directory_tree_width);
-
-			ImGui::SameLine();
-			ImGui::BeginGroup();
-
-			ImGui::PushID("PathList");
-			for (std::size_t i = 0; i < path.size(); ++i)
-			{
-				const bool last_item = i == path.size() - 1;
-				if (ImGui::Button(path[i].c_str()))
-				{
-					// TODO: Clicking the last item will open a popup to select a different directory..?
-					path.erase(path.begin() + i + 1, path.end());
-					break;
-				}
-				if (!last_item)
-					ImGui::SameLine();
-			}
-			ImGui::PopID();
-
-			const math::vec2 file_preview_size = { 100, 100 };
-
-			ImGui::BeginChild("FileList", { 0, 0 }, true);
-			for (auto i = current_directory.child(); i != const_iterator{}; ++i)
-			{
-				// Skip Directories or if it doesn't look like an asset
-				if (i.is_directory() || !i.userdata())
-					continue;
-
-				ImGui::PushID(i.get_node());
-
-				const core::asset::ptr asset = *i.userdata();
-				const bool asset_is_selected = mContext.get_selection<selection_type::asset>() == asset;
-
-				ImGui::BeginGroup();
-
-				// Draw preview
-				if (asset->get_type() == "texture")
-					ImGui::ImageButton(asset,
-						file_preview_size - math::vec2(ImGui::GetStyle().FramePadding) * 2);
-				else
-					ImGui::Button("No preview", file_preview_size);
-
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), asset->get_type().c_str());
-
-				// Draw text
-				ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + file_preview_size.x);
-				ImGui::Text(i.name().c_str());
-				ImGui::PopTextWrapPos();
-
-				ImGui::EndGroup();
-				ImGui::SameLine();
-
-				// Allow asset to be dragged
-				if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
-				{
-					ImGui::SetDragDropPayload((asset->get_type() + "Asset").c_str(), &asset->get_id(), sizeof(util::uuid));
-					ImGui::Text("Asset: %s", asset->get_path().string().c_str());
-					ImGui::EndDragDropSource();
-				}
-
-				// Select the asset when clicked
-				if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(0))
-					mContext.set_selection(asset);
-
-				auto dl = ImGui::GetWindowDrawList();
-
-				// Calculate item aabb that includes the item spacing
-				math::vec2 item_min = math::vec2(ImGui::GetItemRectMin())
-					- math::vec2(ImGui::GetStyle().ItemSpacing) / 2;
-				math::vec2 item_max = math::vec2(ImGui::GetItemRectMax())
-					+ math::vec2(ImGui::GetStyle().ItemSpacing) / 2;
-
-				// Draw the background
-				if (ImGui::IsItemHovered())
-				{
-					dl->AddRectFilled(item_min, item_max,
-						ImGui::GetColorU32(ImGuiCol_ButtonHovered), ImGui::GetStyle().FrameRounding);
-				}
-				else if (asset_is_selected)
-				{
-					dl->AddRectFilled(item_min, item_max,
-						ImGui::GetColorU32(ImGuiCol_ButtonActive), ImGui::GetStyle().FrameRounding);
-				}
-
-				// If there isn't any room left in this line, create a new one.
-				if (ImGui::GetContentRegionAvailWidth() < file_preview_size.x)
-					ImGui::NewLine();
-
-				ImGui::PopID();
-			}
-			ImGui::EndChild();
-
-			ImGui::EndGroup();
-		}
-		ImGui::End();
-	}
-
 	bool create_aabb_from_object(core::game_object& pObj, math::aabb& pAABB)
 	{
 		bool has_aabb = false;
@@ -1361,7 +1091,7 @@ private:
 		}
 		ImGui::End();
 	}
-
+	/*
 	void show_viewport()
 	{
 		if (ImGui::Begin("Game"))
@@ -1451,7 +1181,6 @@ private:
 						obj.deserialize(asset->get_metadata());
 						if (auto transform = obj.get_component<core::transform_component>())
 							transform->set_position(visual_editor::get_mouse_position());
-						mContext.set_selection(obj);
 					}
 					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("layerAsset"))
 					{
@@ -1459,7 +1188,6 @@ private:
 						auto asset = mEngine.get_asset_manager().get_asset(id);
 						auto new_layer = mEngine.get_context().add_layer();
 						new_layer->deserialize(asset->get_metadata());
-						mContext.set_selection(new_layer);
 					}
 					ImGui::EndDragDropTarget();
 				}
@@ -1518,8 +1246,8 @@ private:
 							visual_editor::push_transform(transform->get_transform());
 							if (aabb.intersect(visual_editor::get_mouse_position()))
 							{
-								if (ImGui::IsItemClicked())
-									mContext.set_selection(obj);
+								if (ImGui::IsItemClicked());
+									// TODO: Show info about this object instance
 								visual_editor::draw_rect(aabb, { 1, 1, 1, 1 });
 							}
 							visual_editor::pop_transform();
@@ -1736,69 +1464,7 @@ private:
 		ImGui::End();
 	}
 
-	void show_asset_inspector(const core::asset::ptr& pAsset)
-	{
-		assert(pAsset);
-
-		ImGui::LabelText("Type", pAsset->get_type().c_str());
-
-		std::string path = pAsset->get_path().string();
-		ImGui::InputText("Path", &path, ImGuiInputTextFlags_ReadOnly);
-
-		std::string description = pAsset->get_description();
-		if (ImGui::InputText("Description", &description))
-			pAsset->set_description(description);
-		if (ImGui::IsItemDeactivatedAfterEdit())
-			mContext.add_modified_asset(pAsset);
-
-		// This info is not useful 100% of the time so it is normally hidded
-		// befind a closed tree node.
-		if (ImGui::TreeNode("More Info"))
-		{
-			ImGui::LabelText("UUID", pAsset->get_id().to_string().c_str());
-			ImGui::TreePop();
-		}
-
-		// Show a save button when the asset is modified so the user can save it.
-		if (mContext.is_asset_modified(pAsset))
-		{
-			if (ImGui::Button("Save", { -1, 0 }))
-				mContext.save_asset(pAsset);
-		}
-
-		ImGui::Separator();
-		
-		// Sprite editor
-		if (pAsset->get_type() == "texture")
-			mSprite_editor.on_inspector_gui();
-
-		// Show object in inspector
-		if (pAsset->get_type() == "gameobject")
-		{
-			// Create a new sandbox for new selections.
-			// Note: The sandbox is cleared after every selection.
-			if (!mSandbox)
-			{
-				mSandbox = mEngine.get_context().create_unhandled_layer();
-				auto obj = mSandbox->add_object();
-				obj.deserialize(pAsset->get_metadata());
-			}
-			
-			// Use the sandbox to to help us interpret the serialized data
-			// into a usable game object that we can be edited.
-			auto obj = mSandbox->get_object(0);
-			ImGui::BeginGroup();
-			show_component_inspector(obj);
-			ImGui::EndGroup();
-
-			// Serialize the object back into the asset after each edit.
-			if (ImGui::IsItemDeactivatedAfterEdit())
-			{
-				pAsset->set_metadata(obj.serialize());
-				mContext.add_modified_asset(pAsset);
-			}
-		}
-	}
+	
 
 	void show_layer_inspector(core::layer& pLayer)
 	{
@@ -1852,7 +1518,7 @@ private:
 				pObj.add_component<graphics::sprite_component>();
 			ImGui::EndCombo();
 		}
-	}
+	}*/
 
 	void show_log()
 	{
@@ -1916,17 +1582,6 @@ private:
 		ImGui::End();
 	}
 
-	core::layer* get_current_layer() const
-	{
-		if (auto layer = mContext.get_selection<selection_type::layer>())
-			return &(*layer);
-
-		if (auto obj = mContext.get_selection<selection_type::game_object>())
-			return &obj->get_layer();
-
-		return nullptr;
-	}
-
 private:
 	// ImGui needs access to some glfw specific objects
 	graphics::glfw_window_backend::ptr mGLFW_backend;
@@ -1940,18 +1595,17 @@ private:
 	math::vec2 mViewport_offset;
 	math::vec2 mViewport_scale{ 100, 100 };
 
-	engine mEngine;
+	// Reference the the context's game engine for convenience.
+	core::engine& mEngine{ mContext.get_engine() };
+	core::asset_manager& mAsset_manager{ mContext.get_engine().get_asset_manager() };
+	scripting::lua_engine& mLua_engine{ mContext.get_engine().get_script_engine() };
+	graphics::graphics& mGraphics{ mContext.get_engine().get_graphics() };
 
-	std::string mSomecode;
-
-	// This layer is used for editing serialized objects and layers
-	core::layer::ptr mSandbox;
+	asset_manager_window mAsset_manager_window{ mContext, mAsset_manager };
 
 	component_inspector mInspectors;
 
 	bool mUpdate{ false };
-
-	sprite_editor mSprite_editor{ mContext };
 };
 
 void GLAPIENTRY opengl_message_callback(GLenum source,

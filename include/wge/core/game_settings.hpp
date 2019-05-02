@@ -55,6 +55,7 @@ public:
 		filesystem::file_stream out;
 		out.open(mPath, filesystem::stream_access::write);
 		out.write(result.dump(2));
+		return true;
 	}
 
 	bool save_new(const filesystem::path& pDirectory)

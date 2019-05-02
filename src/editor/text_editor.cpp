@@ -6,9 +6,17 @@ namespace wge::editor
 text_editor::text_editor()
 {
 	static language lang;
-	lang.keywords = { "if", "else", "while", "int", "do", "void", "const", "class", "char", "interface",
-		"return", "switch", "case", "break", "continue", "for", "default", "private", "public", "enum",
-		"bool", "long", "unsigned", "true", "false", "null", "float", "double", "namespace", "this", "then", "end" };
+	lang.keywords = { "and", "break", "do", "else", "elseif", "end", "false",
+		"for", "function", "if", "in", "local", "nil", "not", "or", "repeat",
+		"return", "then", "true", "until", "while" };
+	
+	lang.operators = { "+", "-", "*", "/", "%", "^", "#", "==", "~=", "<=",
+		">=", "<", ">", "=", "(", ")", "{", "}", "[", "]", ";", ":", ",",
+		".", "..", "..." };
+	// Sort longest to shortest
+	std::sort(lang.operators.begin(), lang.operators.end(),
+		[](const std::string_view& a, const std::string_view& b) { return a.length() < b.length(); });
+	
 	lang.singleline_comment = "--";
 	mLanguage = &lang;
 	mPalette =
@@ -406,7 +414,6 @@ void text_editor::render(const ImVec2& pSize)
 		std::string_view line_str(&mText[line_start_index], mLine_lengths[line]);
 		std::size_t start = 0;
 		palette_type prevcolor = palette_type::default;
-
 		for (std::size_t i = 0; i < line_str.size(); i++)
 		{
 			char c = line_str[i];
@@ -510,7 +517,8 @@ void text_editor::highlight_line(std::size_t pLine)
 		else if (is_letter(*c))
 		{
 			std::string_view identifier = parse_identifier(std::string_view(c, line_end - i));
-			if (mLanguage->keywords.find(std::string(identifier)) != mLanguage->keywords.end())
+			if (std::find(mLanguage->keywords.begin(), mLanguage->keywords.end(), identifier)
+				!= mLanguage->keywords.end())
 			{
 				std::fill(mText_color.begin() + i, mText_color.begin() + i + identifier.size(), palette_type::keyword);
 			}
