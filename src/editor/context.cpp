@@ -10,9 +10,7 @@ void asset_editor::mark_asset_modified() const
 
 void context::add_modified_asset(const core::asset::ptr& pAsset)
 {
-	if (!pAsset)
-		return;
-	if (std::find(mUnsaved_assets.begin(), mUnsaved_assets.end(), pAsset) == mUnsaved_assets.end())
+	if (pAsset && !is_asset_modified(pAsset))
 		mUnsaved_assets.push_back(pAsset);
 }
 

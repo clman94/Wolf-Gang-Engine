@@ -787,8 +787,8 @@ bool ImGui::CodeEditor(const char* pID, std::string& pText, const ImVec2& pSize)
 	else
 	{
 		editor.render(pSize);
+		modified = editor.get_text() != pText;
 		pText = editor.get_text();
-		modified = true;
 	}
 
 	ImGui::PopID();

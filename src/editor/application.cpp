@@ -109,7 +109,8 @@ public:
 	{
 		assert(mInspectors);
 		const std::string title = get_asset()->get_path().string() + "##" + get_asset()->get_id().to_string();
-		if (ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_HorizontalScrollbar))
+		if (ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_HorizontalScrollbar |
+			(mContext.is_asset_modified(get_asset()) ? ImGuiWindowFlags_UnsavedDocument : 0)))
 		{
 			std::string name = mObject.get_name();
 			if (ImGui::InputText("Name", &name))
@@ -175,7 +176,8 @@ public:
 	void on_gui()
 	{
 		const std::string title = get_asset()->get_path().string() + "##" + get_asset()->get_id().to_string();
-		if (ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_HorizontalScrollbar))
+		if (ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_HorizontalScrollbar |
+			(mContext.is_asset_modified(get_asset()) ? ImGuiWindowFlags_UnsavedDocument : 0)))
 		{
 			ImGui::BeginChild("AtlasInfo", ImVec2(mAtlas_info_width, 0));
 			atlas_info_pane();
@@ -472,7 +474,8 @@ public:
 	virtual void on_gui() override
 	{
 		const std::string title = get_asset()->get_path().string() + "##" + get_asset()->get_id().to_string();
-		if (ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_HorizontalScrollbar))
+		if (ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_HorizontalScrollbar |
+			(mContext.is_asset_modified(get_asset()) ? ImGuiWindowFlags_UnsavedDocument : 0)))
 		{
 			auto source = get_asset()->get_resource<scripting::script>();
 
