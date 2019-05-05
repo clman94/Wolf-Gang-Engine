@@ -75,7 +75,7 @@ public:
 	void register_editor(const std::string& pAsset_type, Targs&&...);
 	void open_editor(const core::asset::ptr& pAsset);
 	void close_editor(const core::asset::ptr& pAsset);
-	void show_editor_guis() const;
+	void show_editor_guis();
 	bool is_editor_open_for(const core::asset::ptr& pAsset) const;
 
 private:

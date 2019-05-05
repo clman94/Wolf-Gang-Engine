@@ -1,5 +1,7 @@
 #include "context.hpp"
 
+#include <imgui/imgui.h>
+
 namespace wge::editor
 {
 
@@ -51,23 +53,46 @@ void context::open_editor(const core::asset::ptr& pAsset)
 	if (is_editor_open_for(pAsset))
 		return;
 	auto iter = mEditor_factories.find(pAsset->get_type());
-	if (iter == mEditor_factories.end())
+	if (iter != mEditor_factories.end())
+	{
+		mAsset_editors.push_back(iter->second(pAsset));
+	}
+	else
 	{
 		log::error() << "No editor registered for asset type \"" << pAsset->get_type() << "\"" << log::endm;
-		return;
 	}
-	mAsset_editors.push_back(iter->second(pAsset));
 }
 
 void context::close_editor(const core::asset::ptr& pAsset)
 {
-	
+	for (std::size_t i = 0; i < mAsset_editors.size(); i++)
+		if (mAsset_editors[i]->get_asset() == pAsset)
+			mAsset_editors.erase(mAsset_editors.begin() + i);
 }
 
-void context::show_editor_guis() const
+void context::show_editor_guis()
 {
-	for (const auto& i : mAsset_editors)
-		i->on_gui();
+	for (std::size_t i = 0; i < mAsset_editors.size(); i++)
+	{
+		asset_editor* editor = mAsset_editors[i].get();
+		auto& asset = editor->get_asset();
+
+		bool is_window_open = true;
+		
+		// Construct a title with the id as the stringified asset id so the name can change freely
+		// without affecting the window.
+		const std::string title = asset->get_path().string() + "##" + asset->get_id().to_string();
+
+		ImGuiWindowFlags flags = is_asset_modified(asset) ? ImGuiWindowFlags_UnsavedDocument : 0;
+
+		if (ImGui::Begin(title.c_str(), &is_window_open, flags))
+			editor->on_gui();
+		ImGui::End();
+
+		// Close button was pressed so we must delete this editor.
+		if (!is_window_open)
+			mAsset_editors.erase(mAsset_editors.begin() + i--);
+	}
 }
 
 bool context::is_editor_open_for(const core::asset::ptr& pAsset) const

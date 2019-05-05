@@ -108,55 +108,49 @@ public:
 	virtual void on_gui() override
 	{
 		assert(mInspectors);
-		const std::string title = get_asset()->get_path().string() + "##" + get_asset()->get_id().to_string();
-		if (ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_HorizontalScrollbar |
-			(mContext.is_asset_modified(get_asset()) ? ImGuiWindowFlags_UnsavedDocument : 0)))
+		std::string name = mObject.get_name();
+		if (ImGui::InputText("Name", &name))
+			mObject.set_name(name);
+		if (ImGui::IsItemDeactivatedAfterEdit())
+			mark_asset_modified();
+
+		ImGui::Separator();
+
+		for (std::size_t i = 0; i < mObject.get_component_count(); i++)
 		{
-			std::string name = mObject.get_name();
-			if (ImGui::InputText("Name", &name))
-				mObject.set_name(name);
+			core::component* comp = mObject.get_component_at(i);
+			ImGui::PushID(comp);
+
+			bool enabled = comp->is_enabled();
+			if (ImGui::Checkbox("##Enabled", &enabled))
+				comp->set_enabled(enabled);
 			if (ImGui::IsItemDeactivatedAfterEdit())
 				mark_asset_modified();
 
-			ImGui::Separator();
+			ImGui::SameLine();
 
-			for (std::size_t i = 0; i < mObject.get_component_count(); i++)
+			if (ImGui::TreeNodeEx(comp->get_component_name().c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 			{
-				core::component* comp = mObject.get_component_at(i);
-				ImGui::PushID(comp);
-
-				bool enabled = comp->is_enabled();
-				if (ImGui::Checkbox("##Enabled", &enabled))
-					comp->set_enabled(enabled);
-				if (ImGui::IsItemDeactivatedAfterEdit())
-					mark_asset_modified();
-
-				ImGui::SameLine();
-
-				if (ImGui::TreeNodeEx(comp->get_component_name().c_str(), ImGuiTreeNodeFlags_DefaultOpen))
-				{
-					mInspectors->on_gui(comp);
-					ImGui::TreePop();
-				}
-
-				ImGui::PopID();
+				mInspectors->on_gui(comp);
+				ImGui::TreePop();
 			}
 
-			ImGui::Separator();
-			if (ImGui::BeginCombo("##Add Component", "Add Component"))
-			{
-				if (ImGui::Selectable("Transform 2D"))
-					mObject.add_component<core::transform_component>();
-				if (ImGui::Selectable("Physics"))
-					mObject.add_component<physics::physics_component>();
-				if (ImGui::Selectable("Box Collider"))
-					mObject.add_component<physics::box_collider_component>();
-				if (ImGui::Selectable("Sprite"))
-					mObject.add_component<graphics::sprite_component>();
-				ImGui::EndCombo();
-			}
+			ImGui::PopID();
 		}
-		ImGui::End();
+
+		ImGui::Separator();
+		if (ImGui::BeginCombo("##Add Component", "Add Component"))
+		{
+			if (ImGui::Selectable("Transform 2D"))
+				mObject.add_component<core::transform_component>();
+			if (ImGui::Selectable("Physics"))
+				mObject.add_component<physics::physics_component>();
+			if (ImGui::Selectable("Box Collider"))
+				mObject.add_component<physics::box_collider_component>();
+			if (ImGui::Selectable("Sprite"))
+				mObject.add_component<graphics::sprite_component>();
+			ImGui::EndCombo();
+		}
 	}
 
 private:
@@ -175,135 +169,129 @@ public:
 
 	void on_gui()
 	{
-		const std::string title = get_asset()->get_path().string() + "##" + get_asset()->get_id().to_string();
-		if (ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_HorizontalScrollbar |
-			(mContext.is_asset_modified(get_asset()) ? ImGuiWindowFlags_UnsavedDocument : 0)))
+		ImGui::BeginChild("AtlasInfo", ImVec2(mAtlas_info_width, 0));
+		atlas_info_pane();
+		ImGui::EndChild();
+
+		ImGui::SameLine();
+		ImGui::VerticalSplitter("AtlasInfoSplitter", &mAtlas_info_width);
+
+		ImGui::SameLine();
+		ImGui::BeginChild("SpriteEditorViewport", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
+
+		auto texture = get_asset()->get_resource<graphics::texture>();
+
+		float* zoom = ImGui::GetStateStorage()->GetFloatRef(ImGui::GetID("_Zoom"), 0);
+
+		const ImVec2 last_cursor = ImGui::GetCursorPos();
+		ImGui::BeginGroup();
+
+		const float scale = std::powf(2, *zoom);
+		const ImVec2 image_size = texture->get_size() * scale;
+
+		// Top and left padding
+		ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
+		ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
+		ImGui::SameLine();
+
+		// Store the cursor so we can position things on top of the image
+		const ImVec2 image_position = ImGui::GetCursorScreenPos();
+
+		ImGui::DrawAlphaCheckerBoard(image_position, image_size);
+
+		ImGui::Image(get_asset(), image_size);
+
+		// Right and bottom padding
+		ImGui::SameLine();
+		ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
+		ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
+		ImGui::EndGroup();
+
+		// Draw grid
+		if (*zoom > 2)
 		{
-			ImGui::BeginChild("AtlasInfo", ImVec2(mAtlas_info_width, 0));
-			atlas_info_pane();
-			ImGui::EndChild();
-
-			ImGui::SameLine();
-			ImGui::VerticalSplitter("AtlasInfoSplitter", &mAtlas_info_width);
-
-			ImGui::SameLine();
-			ImGui::BeginChild("SpriteEditorViewport");
-
-			auto texture = get_asset()->get_resource<graphics::texture>();
-
-			float* zoom = ImGui::GetStateStorage()->GetFloatRef(ImGui::GetID("_Zoom"), 0);
-
-			const ImVec2 last_cursor = ImGui::GetCursorPos();
-			ImGui::BeginGroup();
-
-			const float scale = std::powf(2, *zoom);
-			const ImVec2 image_size = texture->get_size() * scale;
-
-			// Top and left padding
-			ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
-			ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
-			ImGui::SameLine();
-
-			// Store the cursor so we can position things on top of the image
-			const ImVec2 image_position = ImGui::GetCursorScreenPos();
-
-			ImGui::DrawAlphaCheckerBoard(image_position, image_size);
-
-			ImGui::Image(get_asset(), image_size);
-
-			// Right and bottom padding
-			ImGui::SameLine();
-			ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
-			ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
-			ImGui::EndGroup();
-
-			// Draw grid
-			if (*zoom > 2)
-			{
-				ImGui::DrawGridLines(image_position,
-					ImVec2(image_position.x + image_size.x, image_position.y + image_size.y),
-					{ 0, 1, 1, 0.2f }, scale);
-			}
-
-			// Overlap with an invisible button to recieve input
-			ImGui::SetCursorPos(last_cursor);
-			ImGui::InvisibleButton("_Input", ImVec2(image_size.x + ImGui::GetWindowWidth(), image_size.y + ImGui::GetWindowHeight()));
-
-			visual_editor::begin("_SomeEditor", { image_position.x, image_position.y }, { 0, 0 }, { scale, scale });
-
-			// Draw the rectangles for the frames
-			for (const auto& i : texture->get_raw_atlas())
-				visual_editor::draw_rect(i.frame_rect, { 0, 1, 1, 0.5f });
-
-			const bool was_dragging = visual_editor::is_dragging();
-
-			// Get the pointer to the selected animation
-			graphics::animation* selected_animation = texture->get_animation(mSelected_animation_id);
-
-			// Modify selected
-			if (selected_animation)
-			{
-				visual_editor::begin_snap({ 1, 1 });
-
-				// Edit the selection
-				visual_editor::box_edit box_edit(selected_animation->frame_rect);
-				box_edit.resize(visual_editor::edit_type::rect);
-				box_edit.drag(visual_editor::edit_type::rect);
-				selected_animation->frame_rect = box_edit.get_rect();
-
-				// Limit the minimum size to +1 pixel so the user isn't using 0 or negitive numbers
-				selected_animation->frame_rect.size = math::max(selected_animation->frame_rect.size, math::vec2(1, 1));
-
-				// Notify a change in the asset
-				if (box_edit.is_dragging() && ImGui::IsMouseReleased(0))
-					on_change();
-
-				visual_editor::end_snap();
-			}
-
-			// Select a new one
-			if (!was_dragging && ImGui::IsItemHovered() && ImGui::IsMouseReleased(0))
-			{
-				// Find all overlapping frames that the mouse is hovering
-				std::vector<graphics::animation*> mOverlapping;
-				for (auto& i : texture->get_raw_atlas())
-					if (i.frame_rect.intersects(visual_editor::get_mouse_position()))
-						mOverlapping.push_back(&i);
-
-				if (!mOverlapping.empty())
-				{
-					// Check if the currently selected animation is being selected again
-					// and cycle through the overlapping animations each click.
-					auto iter = std::find(mOverlapping.begin(), mOverlapping.end(), selected_animation);
-					if (iter == mOverlapping.end() || iter + 1 == mOverlapping.end())
-						selected_animation = mOverlapping.front(); // Start/loop to front
-					else
-						selected_animation = *(iter + 1); // Next item
-					mSelected_animation_id = selected_animation->id;
-				}
-			}
-
-			visual_editor::end();
-
-			if (ImGui::IsItemHovered())
-			{
-				// Zoom with ctrl and mousewheel
-				if (ImGui::GetIO().KeyCtrl && ImGui::GetIO().MouseWheel != 0)
-				{
-					*zoom += ImGui::GetIO().MouseWheel;
-					const float new_scale = std::powf(2, *zoom);
-					const float ratio_changed = new_scale / scale;
-					ImGui::SetScrollX(ImGui::GetScrollX() * ratio_changed);
-					ImGui::SetScrollY(ImGui::GetScrollY() * ratio_changed);
-				}
-
-				// Hold middle mouse button to scroll
-				ImGui::DragScroll(2);
-			}
-
-			ImGui::EndChild();
+			ImGui::DrawGridLines(image_position,
+				ImVec2(image_position.x + image_size.x, image_position.y + image_size.y),
+				{ 0, 1, 1, 0.2f }, scale);
 		}
-		ImGui::End();
+
+		// Overlap with an invisible button to recieve input
+		ImGui::SetCursorPos(last_cursor);
+		ImGui::InvisibleButton("_Input", ImVec2(image_size.x + ImGui::GetWindowWidth(), image_size.y + ImGui::GetWindowHeight()));
+
+		visual_editor::begin("_SomeEditor", { image_position.x, image_position.y }, { 0, 0 }, { scale, scale });
+
+		// Draw the rectangles for the frames
+		for (const auto& i : texture->get_raw_atlas())
+			visual_editor::draw_rect(i.frame_rect, { 0, 1, 1, 0.5f });
+
+		const bool was_dragging = visual_editor::is_dragging();
+
+		// Get the pointer to the selected animation
+		graphics::animation* selected_animation = texture->get_animation(mSelected_animation_id);
+
+		// Modify selected
+		if (selected_animation)
+		{
+			visual_editor::begin_snap({ 1, 1 });
+
+			// Edit the selection
+			visual_editor::box_edit box_edit(selected_animation->frame_rect);
+			box_edit.resize(visual_editor::edit_type::rect);
+			box_edit.drag(visual_editor::edit_type::rect);
+			selected_animation->frame_rect = box_edit.get_rect();
+
+			// Limit the minimum size to +1 pixel so the user isn't using 0 or negitive numbers
+			selected_animation->frame_rect.size = math::max(selected_animation->frame_rect.size, math::vec2(1, 1));
+
+			// Notify a change in the asset
+			if (box_edit.is_dragging() && ImGui::IsMouseReleased(0))
+				on_change();
+
+			visual_editor::end_snap();
+		}
+
+		// Select a new one
+		if (!was_dragging && ImGui::IsItemHovered() && ImGui::IsMouseReleased(0))
+		{
+			// Find all overlapping frames that the mouse is hovering
+			std::vector<graphics::animation*> mOverlapping;
+			for (auto& i : texture->get_raw_atlas())
+				if (i.frame_rect.intersects(visual_editor::get_mouse_position()))
+					mOverlapping.push_back(&i);
+
+			if (!mOverlapping.empty())
+			{
+				// Check if the currently selected animation is being selected again
+				// and cycle through the overlapping animations each click.
+				auto iter = std::find(mOverlapping.begin(), mOverlapping.end(), selected_animation);
+				if (iter == mOverlapping.end() || iter + 1 == mOverlapping.end())
+					selected_animation = mOverlapping.front(); // Start/loop to front
+				else
+					selected_animation = *(iter + 1); // Next item
+				mSelected_animation_id = selected_animation->id;
+			}
+		}
+
+		visual_editor::end();
+
+		if (ImGui::IsItemHovered())
+		{
+			// Zoom with ctrl and mousewheel
+			if (ImGui::GetIO().KeyCtrl && ImGui::GetIO().MouseWheel != 0)
+			{
+				*zoom += ImGui::GetIO().MouseWheel;
+				const float new_scale = std::powf(2, *zoom);
+				const float ratio_changed = new_scale / scale;
+				ImGui::SetScrollX(ImGui::GetScrollX() * ratio_changed);
+				ImGui::SetScrollY(ImGui::GetScrollY() * ratio_changed);
+			}
+
+			// Hold middle mouse button to scroll
+			ImGui::DragScroll(2);
+		}
+
+		ImGui::EndChild();
 	}
 
 	static void preview_image(const char* pStr_id, const graphics::texture::ptr& pTexture, const math::vec2& pSize, const math::rect& pFrame_rect)
@@ -455,7 +443,8 @@ private:
 
 	void check_if_edited()
 	{
-		get_context().add_modified_asset(get_asset());
+		if (ImGui::IsItemDeactivatedAfterEdit())
+			get_context().add_modified_asset(get_asset());
 	}
 
 private:
@@ -473,18 +462,12 @@ public:
 
 	virtual void on_gui() override
 	{
-		const std::string title = get_asset()->get_path().string() + "##" + get_asset()->get_id().to_string();
-		if (ImGui::Begin(title.c_str(), nullptr, ImGuiWindowFlags_HorizontalScrollbar |
-			(mContext.is_asset_modified(get_asset()) ? ImGuiWindowFlags_UnsavedDocument : 0)))
-		{
-			auto source = get_asset()->get_resource<scripting::script>();
+		auto source = get_asset()->get_resource<scripting::script>();
 
-			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-			if (ImGui::CodeEditor("CodeEditor", source->source))
-				mark_asset_modified();
-			ImGui::PopFont();
-		}
-		ImGui::End();
+		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+		if (ImGui::CodeEditor("CodeEditor", source->source))
+			mark_asset_modified();
+		ImGui::PopFont();
 	}
 };
 
