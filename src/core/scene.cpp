@@ -1,6 +1,7 @@
 #include <wge/core/scene.hpp>
 #include <wge/util/ptr.hpp>
 #include <wge/core/engine.hpp>
+#include <wge/filesystem/file_input_stream.hpp>
 
 namespace wge::core
 {
