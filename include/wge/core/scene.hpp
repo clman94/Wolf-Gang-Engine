@@ -55,24 +55,28 @@ class engine;
 class scene
 {
 public:
-	using layers = std::vector<layer::ptr>;
+	using uptr = std::unique_ptr<scene>;
+	using layers = std::vector<layer::uptr>;
 
 	scene(engine& pEngine) :
-		mEngine(pEngine)
+		mEngine(&pEngine)
 	{}
 
 	// Get a layer to a specific index
-	layer::ptr get_layer(std::size_t pIndex) const;
+	[[nodiscard]] layer* get_layer(std::size_t pIndex) const;
 
-	// Creates a layer that references this context but is not
-	// managed by it. Used by the editor.
-	[[nodiscard]] layer::ptr create_freestanding_layer();
-	layer::ptr add_layer();
-	layer::ptr add_layer(const std::string& pName);
-	layer::ptr add_layer(const std::string& pName, std::size_t pInsert);
+	// Creates a layer that is not owned by this scene object.
+	[[nodiscard]] layer::uptr create_freestanding_layer();
+	layer* add_layer();
+	layer* add_layer(const std::string& pName);
+	layer* add_layer(const std::string& pName, std::size_t pInsert);
+	// Give ownership of a layer to this object.
+	layer* add_layer(layer::uptr&);
+	// Take ownership of a layer from this object.
+	layer::uptr release_layer(const layer&);
 
-	void remove_layer(const layer* pPtr);
-	void remove_layer(const layer::ptr& pPtr);
+	// Returns true if the layer was successfully removed.
+	bool remove_layer(const layer& pPtr);
 
 	const layers& get_layer_container() const noexcept;
 
@@ -82,16 +86,13 @@ public:
 
 	void clear();
 
-	engine& get_engine() const noexcept
-	{
-		return mEngine;
-	}
+	engine& get_engine() const noexcept;
 	asset_manager& get_asset_manager() noexcept;
 	const factory& get_factory() const noexcept;
 
 private:
 	layers mLayers;
-	engine& mEngine;
+	engine* mEngine;
 };
 
 } // namespace wge::core

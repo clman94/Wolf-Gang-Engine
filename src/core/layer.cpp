@@ -8,7 +8,7 @@ namespace wge::core
 {
 
 layer::layer(scene& pScene) noexcept :
-	mScene(pScene)
+	mScene(&pScene)
 {}
 
 json layer::serialize(serialize_type pType)
@@ -171,7 +171,8 @@ void layer::remove_component(int pType, const util::uuid& pId)
 
 scene& layer::get_scene() const noexcept
 {
-	return mScene;
+	assert(mScene);
+	return *mScene;
 }
 
 void layer::set_enabled(bool pEnabled) noexcept
@@ -226,7 +227,7 @@ void layer::clear()
 
 engine& layer::get_engine() const noexcept
 {
-	return mScene.get_engine();
+	return mScene->get_engine();
 }
 
 } // namespace wge::core

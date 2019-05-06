@@ -24,8 +24,6 @@ class layer
 {
 public:
 	using uptr = std::unique_ptr<layer>;
-	using ptr = std::shared_ptr<layer>;
-	using wptr = std::weak_ptr<layer>;
 
 	// Create a new layer object
 	[[nodiscard]] static uptr create(scene& pScene)
@@ -138,10 +136,10 @@ private:
 	void for_each_impl(const std::function<void(Tcomponent&, Tdependencies&...)>& pCallable);
 
 private:
+	scene* mScene;
 	float mTime_scale{ 1 };
 	bool mRecieve_update{ true };
 	std::string mName;
-	scene& mScene;
 	std::vector<std::unique_ptr<system>> mSystems;
 	component_manager mComponent_manager;
 	object_manager mObject_manager;

@@ -155,7 +155,7 @@ public:
 
 private:
 	core::game_object mObject;
-	core::layer::ptr mSandbox;
+	core::layer::uptr mSandbox;
 	component_inspector* mInspectors;
 };
 
