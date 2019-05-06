@@ -40,7 +40,7 @@
 namespace wge::core
 {
 
-class context;
+class scene;
 class game_object;
 class asset_manager;
 

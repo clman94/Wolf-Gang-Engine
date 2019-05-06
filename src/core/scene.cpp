@@ -1,4 +1,4 @@
-#include <wge/core/context.hpp>
+#include <wge/core/scene.hpp>
 #include <wge/util/ptr.hpp>
 #include <wge/core/engine.hpp>
 
@@ -21,37 +21,37 @@ system::uptr factory::create_system(int pType, layer& pLayer) const
 	return iter->second(pLayer);
 }
 
-layer::ptr context::get_layer(std::size_t pIndex) const
+layer::ptr scene::get_layer(std::size_t pIndex) const
 {
 	if (pIndex >= mLayers.size())
 		return{};
 	return mLayers[pIndex];
 }
 
-layer::ptr context::create_unhandled_layer()
+layer::ptr scene::create_freestanding_layer()
 {
 	return layer::create(*this);
 }
 
-layer::ptr context::add_layer()
+layer::ptr scene::add_layer()
 {
 	return mLayers.emplace_back(layer::create(*this));
 }
 
-layer::ptr context::add_layer(const std::string& pName)
+layer::ptr scene::add_layer(const std::string& pName)
 {
 	auto l = add_layer();
 	l->set_name(pName);
 	return l;
 }
 
-layer::ptr context::add_layer(const std::string& pName, std::size_t pInsert)
+layer::ptr scene::add_layer(const std::string& pName, std::size_t pInsert)
 {
 	mLayers.insert(mLayers.begin() + pInsert, layer::create(*this));
 	return mLayers[pInsert];
 }
 
-void context::remove_layer(const layer* pPtr)
+void scene::remove_layer(const layer* pPtr)
 {
 	for (std::size_t i = 0; i < mLayers.size(); i++)
 	{
@@ -63,45 +63,45 @@ void context::remove_layer(const layer* pPtr)
 	}
 }
 
-void context::remove_layer(const layer::ptr& pPtr)
+void scene::remove_layer(const layer::ptr& pPtr)
 {
 	remove_layer(util::to_address(pPtr));
 }
 
-const context::layers& context::get_layer_container() const noexcept
+const scene::layers& scene::get_layer_container() const noexcept
 {
 	return mLayers;
 }
 
-asset_manager& context::get_asset_manager() noexcept
+asset_manager& scene::get_asset_manager() noexcept
 {
 	return mEngine.get_asset_manager();
 }
 
-const factory& context::get_factory() const noexcept
+const factory& scene::get_factory() const noexcept
 {
 	return mEngine.get_factory();
 }
 
-void context::preupdate(float pDelta)
+void scene::preupdate(float pDelta)
 {
 	for (auto& i : mLayers)
 		i->preupdate(pDelta);
 }
 
-void context::update(float pDelta)
+void scene::update(float pDelta)
 {
 	for (auto& i : mLayers)
 		i->update(pDelta);
 }
 
-void context::postupdate(float pDelta)
+void scene::postupdate(float pDelta)
 {
 	for (auto& i : mLayers)
 		i->postupdate(pDelta);
 }
 
-void context::clear()
+void scene::clear()
 {
 	mLayers.clear();
 }

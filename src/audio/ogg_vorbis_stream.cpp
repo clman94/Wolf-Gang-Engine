@@ -1,6 +1,7 @@
 #include <wge/audio/ogg_vorbis_stream.hpp>
 
 #include <stb/stb_vorbis.h>
+#include <wge/math/math.hpp>
 
 #include <iostream>
 
@@ -68,7 +69,7 @@ int ogg_vorbis_stream::get_samples() const
 	return mDuration_samples;
 }
 
-int ogg_vorbis_stream::read(short * pSamples, int mSize)
+int ogg_vorbis_stream::read(short* pSamples, int mSize)
 {
 	int amount = stb_vorbis_get_samples_short_interleaved(mVorbis_stream, mChannels, pSamples, mSize);
 	return amount * mChannels;
@@ -81,7 +82,8 @@ void ogg_vorbis_stream::seek_beginning()
 
 int ogg_vorbis_stream::seek_time(float pSeconds)
 {
-	return stb_vorbis_seek(mVorbis_stream, mSample_rate*pSeconds);
+	float sample = math::max(math::floor(static_cast<float>(mSample_rate)*pSeconds), 0.f);
+	return stb_vorbis_seek(mVorbis_stream, static_cast<unsigned int>(sample));
 }
 
 int ogg_vorbis_stream::seek_sample(int pSample)

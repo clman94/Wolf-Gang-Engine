@@ -10,7 +10,7 @@ namespace wge::core
 {
 
 engine::engine() :
-	mGame_context(*this)
+	mScene(*this)
 {
 	mFactory.register_system<graphics::renderer>();
 	mFactory.register_system<physics::physics_world>();
@@ -49,7 +49,7 @@ engine::engine() :
 engine::~engine()
 {
 	// Clean up the scene first to prevent hanging references.
-	mGame_context.clear();
+	mScene.clear();
 }
 
 void engine::create_game(const filesystem::path& pDirectory)
@@ -87,7 +87,7 @@ void engine::close_game()
 
 void engine::render_to(const graphics::framebuffer::ptr& pFrame_buffer, const math::vec2& pOffset, const math::vec2& pScale)
 {
-	for (auto& i : mGame_context.get_layer_container())
+	for (auto& i : mScene.get_layer_container())
 	{
 		if (auto renderer = i->get_system<graphics::renderer>())
 		{

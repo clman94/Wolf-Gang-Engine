@@ -1,14 +1,14 @@
 
 #include <wge/core/engine.hpp>
 #include <wge/core/layer.hpp>
-#include <wge/core/context.hpp>
+#include <wge/core/scene.hpp>
 #include <wge/util/uuid_rerouter.hpp>
 
 namespace wge::core
 {
 
-layer::layer(context& pContext) noexcept :
-	mContext(pContext)
+layer::layer(scene& pScene) noexcept :
+	mScene(pScene)
 {}
 
 json layer::serialize(serialize_type pType)
@@ -169,9 +169,9 @@ void layer::remove_component(int pType, const util::uuid& pId)
 		comp->destroy();
 }
 
-context& layer::get_context() const noexcept
+scene& layer::get_scene() const noexcept
 {
-	return mContext;
+	return mScene;
 }
 
 void layer::set_enabled(bool pEnabled) noexcept
@@ -226,7 +226,7 @@ void layer::clear()
 
 engine& layer::get_engine() const noexcept
 {
-	return mContext.get_engine();
+	return mScene.get_engine();
 }
 
 } // namespace wge::core

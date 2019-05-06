@@ -1,6 +1,6 @@
 #include <wge/core/component.hpp>
 #include <wge/core/game_object.hpp>
-#include <wge/core/context.hpp>
+#include <wge/core/scene.hpp>
 #include <wge/core/asset_manager.hpp>
 
 namespace wge::core

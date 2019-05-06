@@ -1,6 +1,6 @@
 #pragma once
 
-#include <wge/core/context.hpp>
+#include <wge/core/scene.hpp>
 #include <wge/core/game_settings.hpp>
 #include <wge/graphics/graphics.hpp>
 #include <wge/scripting/lua_engine.hpp>
@@ -32,9 +32,9 @@ public:
 		return mAsset_manager;
 	}
 
-	core::context& get_context() noexcept
+	core::scene& get_scene() noexcept
 	{
-		return mGame_context;
+		return mScene;
 	}
 
 	graphics::graphics& get_graphics() noexcept
@@ -58,7 +58,7 @@ private:
 private:
 	core::game_settings mSettings;
 	core::asset_manager mAsset_manager;
-	core::context mGame_context;
+	core::scene mScene;
 	core::factory mFactory;
 
 	graphics::graphics mGraphics;

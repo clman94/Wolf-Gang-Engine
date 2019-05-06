@@ -27,7 +27,7 @@ void sprite_component::on_deserialize(const core::game_object& pObj, const json&
 	mOffset = pJson["offset"];
 	if (!pJson["texture"].is_null())
 	{
-		auto& asset_mgr = pObj.get_context().get_asset_manager();
+		auto& asset_mgr = pObj.get_scene().get_asset_manager();
 		util::uuid id = pJson["texture"];
 		mTexture = asset_mgr.get_asset(id);
 	}

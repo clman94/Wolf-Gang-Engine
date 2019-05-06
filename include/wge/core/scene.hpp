@@ -52,22 +52,21 @@ private:
 
 class engine;
 
-class context
+class scene
 {
 public:
 	using layers = std::vector<layer::ptr>;
 
-	context(engine& pEngine) :
+	scene(engine& pEngine) :
 		mEngine(pEngine)
 	{}
-
 
 	// Get a layer to a specific index
 	layer::ptr get_layer(std::size_t pIndex) const;
 
 	// Creates a layer that references this context but is not
 	// managed by it. Used by the editor.
-	[[nodiscard]] layer::ptr create_unhandled_layer();
+	[[nodiscard]] layer::ptr create_freestanding_layer();
 	layer::ptr add_layer();
 	layer::ptr add_layer(const std::string& pName);
 	layer::ptr add_layer(const std::string& pName, std::size_t pInsert);

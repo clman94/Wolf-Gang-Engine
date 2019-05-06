@@ -76,9 +76,9 @@ std::size_t file_stream::tell()
 {
 	try {
 		if (mAccess & stream_access::read)
-			return mStream.tellg();
+			return static_cast<std::size_t>(mStream.tellg());
 		else
-			return mStream.tellp();
+			return static_cast<std::size_t>(mStream.tellp());
 	}
 	catch (const std::fstream::failure& e)
 	{

@@ -17,7 +17,7 @@ struct has_component_id_member : std::false_type {};
 template <typename T>
 struct has_component_id_member <T, decltype((void)T::COMPONENT_ID, 0)> : std::true_type {};
 
-class context;
+class scene;
 class layer;
 class component;
 class object_data;
@@ -101,7 +101,7 @@ public:
 	// the source layer.
 	layer& get_layer() const;
 
-	context& get_context() const;
+	scene& get_scene() const;
 
 	// Get the id that uniquely identifies this object
 	const util::uuid& get_instance_id() const;

@@ -22,12 +22,12 @@ text_editor::text_editor()
 	mPalette =
 	{
 		graphics::color{ 1, 1, 1, 1 },
-		graphics::color{ 0.5, 0.5, 1, 1 },
-		graphics::color{ 0.9, 0.7, 0.6, 1 },
-		graphics::color{ 0.5, 1, 0.5, 1 },
-		graphics::color{ 0.9, 0.9, 0.5, 0.3 },
-		graphics::color{ 0.9, 0.8, 0.5, 0.3 },
-		graphics::color{ 0.5, 0.8, 0.8, 1 },
+		graphics::color{ 0.5f, 0.5f, 1, 1 },
+		graphics::color{ 0.9f, 0.7f, 0.6f, 1 },
+		graphics::color{ 0.5f, 1, 0.5f, 1 },
+		graphics::color{ 0.9f, 0.9f, 0.5f, 0.3f },
+		graphics::color{ 0.9f, 0.8f, 0.5f, 0.3f },
+		graphics::color{ 0.5f, 0.8f, 0.8f, 1 },
 	};
 }
 
@@ -393,13 +393,13 @@ void text_editor::render(const ImVec2& pSize)
 		{
 			float start = 0;
 			if (line == selection_start.line)
-				start = calc_line_distance(selection_start);
+				start = static_cast<float>(calc_line_distance(selection_start));
 
 			float end;
 			if (line == selection_end.line)
-				end = calc_line_distance(selection_end);
+				end = static_cast<float>(calc_line_distance(selection_end));
 			else
-				end = calc_line_distance(position{ line, mLine_lengths[line] });
+				end = static_cast<float>(calc_line_distance(position{ line, mLine_lengths[line] }));
 
 			ImVec2 a(
 				line_pos.x + start * character_width,
@@ -634,8 +634,8 @@ void text_editor::handle_keyboard()
 	else
 	{
 		for (auto i : io.InputCharacters)
-			if (i != 0)
-				insert_character(i);
+			if (i != 0 && i < 128)
+				insert_character(static_cast<char>(i));
 	}
 }
 

@@ -1,7 +1,7 @@
 
 #include <wge/core/game_object.hpp>
 #include <wge/core/component.hpp>
-#include <wge/core/context.hpp>
+#include <wge/core/scene.hpp>
 #include <wge/core/layer.hpp>
 
 namespace wge::core
@@ -163,10 +163,10 @@ layer& game_object::get_layer() const
 	return *mLayer;
 }
 
-context& game_object::get_context() const
+scene& game_object::get_scene() const
 {
 	assert_valid_reference();
-	return get_layer().get_context();
+	return get_layer().get_scene();
 }
 
 const util::uuid& game_object::get_instance_id() const

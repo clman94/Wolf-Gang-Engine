@@ -7,7 +7,7 @@ namespace wge::editor
 
 void asset_editor::mark_asset_modified() const
 {
-	mContext.add_modified_asset(mAsset);
+	mContext->add_modified_asset(mAsset);
 }
 
 void context::add_modified_asset(const core::asset::ptr& pAsset)

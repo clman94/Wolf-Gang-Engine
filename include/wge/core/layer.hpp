@@ -16,7 +16,7 @@ namespace wge::core
 {
 
 class engine;
-class context;
+class scene;
 
 // A layer is a self-contained collection of objects
 // with its own set of systems acting upon those objects.
@@ -28,12 +28,12 @@ public:
 	using wptr = std::weak_ptr<layer>;
 
 	// Create a new layer object
-	[[nodiscard]] static ptr create(context& pContext)
+	[[nodiscard]] static uptr create(scene& pScene)
 	{
-		return std::make_shared<layer>(pContext);
+		return std::make_unique<layer>(pScene);
 	}
 
-	layer(context& pContext) noexcept;
+	layer(scene&) noexcept;
 
 	json serialize(serialize_type);
 	void deserialize(const json&);
@@ -108,7 +108,7 @@ public:
 	void for_each(T&& pCallable);
 
 	// Get the context.
-	context& get_context() const noexcept;
+	scene& get_scene() const noexcept;
 
 	// Set whether or not this layer will recieve updates.
 	// Note: This does not affect the update methods in this class
@@ -141,7 +141,7 @@ private:
 	float mTime_scale{ 1 };
 	bool mRecieve_update{ true };
 	std::string mName;
-	context& mContext;
+	scene& mScene;
 	std::vector<std::unique_ptr<system>> mSystems;
 	component_manager mComponent_manager;
 	object_manager mObject_manager;
@@ -170,7 +170,7 @@ inline T* layer::add_system()
 }
 
 template<typename T>
-inline T* layer::add_component(const game_object & pObj)
+inline T* layer::add_component(const game_object& pObj)
 {
 	auto* comp = &mComponent_manager.add_component<T>();
 	comp->set_object(pObj);

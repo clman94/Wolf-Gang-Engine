@@ -3,7 +3,7 @@
 
 #include <wge/logging/log.hpp>
 #include <wge/filesystem/path.hpp>
-#include <wge/core/context.hpp>
+#include <wge/core/scene.hpp>
 #include <wge/core/transform_component.hpp>
 #include <wge/physics/box_collider_component.hpp>
 #include <wge/physics/physics_component.hpp>
@@ -100,7 +100,7 @@ public:
 		asset_editor(pContext, pAsset),
 		mInspectors(&pInspectors)
 	{
-		mSandbox = pContext.get_engine().get_context().create_unhandled_layer();
+		mSandbox = pContext.get_engine().get_scene().create_freestanding_layer();
 		mObject = mSandbox->add_object();
 		mObject.deserialize(pAsset->get_metadata());
 	}
@@ -733,8 +733,8 @@ private:
 
 			if (mUpdate)
 			{
-				mEngine.get_context().preupdate(delta);
-				mEngine.get_context().update(delta);
+				mEngine.get_scene().preupdate(delta);
+				mEngine.get_scene().update(delta);
 			}
 
 			show_log();
@@ -747,13 +747,13 @@ private:
 
 			// Post update happens after the editor but before rendering.
 			if (mUpdate)
-				mEngine.get_context().postupdate(delta);
+				mEngine.get_scene().postupdate(delta);
 
 			// Clear the framebuffer with black
 			mViewport_framebuffer->clear({ 0, 0, 0, 1 });
 
 			// Render all layers with the renderer system
-			for (auto& i : mEngine.get_context().get_layer_container())
+			for (auto& i : mEngine.get_scene().get_layer_container())
 			{
 				if (auto renderer = i->get_system<graphics::renderer>())
 				{
@@ -893,7 +893,7 @@ private:
 		mEngine.close_game();
 		mEngine.load_game(pPath);
 
-		auto layer = mEngine.get_context().add_layer();
+		auto layer = mEngine.get_scene().add_layer();
 		layer->set_name("Layer1");
 		layer->add_system<graphics::renderer>();
 		layer->add_system<scripting::script_system>();
