@@ -70,6 +70,11 @@ void context::close_editor(const core::asset::ptr& pAsset)
 			mAsset_editors.erase(mAsset_editors.begin() + i);
 }
 
+void context::close_all_editors()
+{
+	mAsset_editors.clear();
+}
+
 void context::show_editor_guis()
 {
 	for (std::size_t i = 0; i < mAsset_editors.size(); i++)

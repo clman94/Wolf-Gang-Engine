@@ -722,6 +722,10 @@ private:
 				}
 				if (ImGui::BeginMenu("Windows"))
 				{
+					if (ImGui::MenuItem("Close all editors"))
+					{
+						mContext.close_all_editors();
+					}
 					ImGui::EndMenu();
 				}
 				ImGui::EndMainMenuBar();

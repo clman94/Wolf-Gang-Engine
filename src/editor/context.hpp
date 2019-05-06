@@ -25,7 +25,7 @@ public:
 	using uptr = std::unique_ptr<asset_editor>;
 
 	asset_editor(context& pContext, const core::asset::ptr& pAsset) noexcept :
-		mContext(pContext),
+		mContext(&pContext),
 		mAsset(pAsset)
 	{}
 	virtual ~asset_editor() {}
@@ -39,15 +39,13 @@ public:
 
 	context& get_context() const noexcept
 	{
-		return mContext;
+		return *mContext;
 	}
 
 	void mark_asset_modified() const;
 
-protected:
-	// Reference for convenience
-	context& mContext;
-
+private:
+	context* mContext;
 	core::asset::ptr mAsset;
 };
 
@@ -75,12 +73,15 @@ public:
 	void register_editor(const std::string& pAsset_type, Targs&&...);
 	void open_editor(const core::asset::ptr& pAsset);
 	void close_editor(const core::asset::ptr& pAsset);
+	void close_all_editors();
 	void show_editor_guis();
 	bool is_editor_open_for(const core::asset::ptr& pAsset) const;
 
 private:
-	modified_assets mUnsaved_assets;
 	core::engine mEngine;
+
+	// Any assets that are changed need to be added here.
+	modified_assets mUnsaved_assets;
 	std::map<std::string, editor_factory> mEditor_factories;
 	std::vector<asset_editor::uptr> mAsset_editors;
 };
@@ -89,6 +90,7 @@ template<typename T, typename...Targs>
 inline void context::register_editor(const std::string& pAsset_type, Targs&&...pExtra_args)
 {
 	mEditor_factories[pAsset_type] =
+		// This uses a tuple to help capture lvalues as references and copy rvalues.
 		[this, pExtra_args = std::tuple<Targs...>(std::forward<Targs>(pExtra_args)...)](const core::asset::ptr& pAsset)
 			-> asset_editor::uptr
 	{
