@@ -155,6 +155,11 @@ inline vec2 swap_xy(const vec2& a) noexcept
 	return vec2(a).swap_xy();
 }
 
+inline float dot(const vec2& pA, const vec2& pB)
+{
+	return pA.x * pB.x + pA.y * pB.y;
+}
+
 template <>
 inline auto max<vec2>(const vec2& pL, const vec2& pR) noexcept
 {

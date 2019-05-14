@@ -119,6 +119,8 @@ void lua_engine::register_math_api()
 		sol::meta_function::to_string, &math::vec2::to_string,
 		sol::meta_function::unary_minus, static_cast<math::vec2(math::vec2::*)() const>(&math::vec2::operator-)
 		);
+	t_math["dot"] = &math::dot;
+	t_math["normal"] = &math::normalize<math::vec2>;
 }
 
 void script_system::update(float pDelta)
