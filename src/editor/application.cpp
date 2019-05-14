@@ -100,7 +100,7 @@ public:
 		asset_editor(pContext, pAsset),
 		mInspectors(&pInspectors)
 	{
-		mSandbox = pContext.get_engine().get_scene().create_freestanding_layer();
+		mSandbox = core::layer::create(pContext.get_engine().get_scene());
 		mObject = mSandbox->add_object();
 		mObject.deserialize(pAsset->get_metadata());
 	}
@@ -139,7 +139,8 @@ public:
 		}
 
 		ImGui::Separator();
-		if (ImGui::BeginCombo("##Add Component", "Add Component"))
+
+		if (ImGui::BeginCombo("##Add Component", "Add Component", ImGuiComboFlags_NoArrowButton))
 		{
 			if (ImGui::Selectable("Transform 2D"))
 				mObject.add_component<core::transform_component>();
@@ -149,6 +150,12 @@ public:
 				mObject.add_component<physics::box_collider_component>();
 			if (ImGui::Selectable("Sprite"))
 				mObject.add_component<graphics::sprite_component>();
+			if (ImGui::Selectable("Event State"))
+				mObject.add_component<scripting::event_state_component>();
+			if (ImGui::Selectable("Event: On Create"))
+				mObject.add_component<scripting::event_components::on_create>();
+			if (ImGui::Selectable("Event: On Update"))
+				mObject.add_component<scripting::event_components::on_update>();
 			ImGui::EndCombo();
 		}
 	}
@@ -488,6 +495,15 @@ public:
 			using const_iterator = core::asset_manager::file_structure::const_iterator;
 			const_iterator root = mAsset_manager.get_file_structure().find("");
 
+			if (ImGui::BeginCombo("##NewAsset", "New Asset", ImGuiComboFlags_NoArrowButton))
+			{
+				if (ImGui::Selectable("Object"))
+				{
+					
+				}
+				ImGui::EndCombo();
+			}
+
 			ImGui::BeginChild("DirectoryTree", { directory_tree_width, 0 }, true);
 			show_asset_directory_tree(root, path);
 			ImGui::EndChild();
@@ -819,15 +835,20 @@ private:
 		ImGui_ImplGlfw_InitForOpenGL(mGLFW_backend->get_window(), true);
 		ImGui_ImplOpenGL3_Init("#version 150");
 
-		// Lets use a somewhat better font
+		// Lets use a somewhat better set of fonts
 		auto fonts = ImGui::GetIO().Fonts;
-		auto font = fonts->AddFontFromFileTTF("./editor/Roboto-Medium.ttf", 16);
-		if (font == NULL)
+
+		if (fonts->AddFontFromFileTTF("./editor/Roboto-Regular.ttf", 18) == NULL)
 		{
-			log::error() << "Could not load editor font, aborting..." << log::endm;
-			std::abort();
+			log::error() << "Could not load RobotoMono-Regular font. Using default." << log::endm;
+			fonts->AddFontDefault();
 		}
-		fonts->AddFontDefault();
+
+		if (fonts->AddFontFromFileTTF("./editor/RobotoMono-Regular.ttf", 18) == NULL)
+		{
+			log::error() << "Could not load RobotoMono-Regular font. Using default." << log::endm;
+			fonts->AddFontDefault();
+		}
 
 		// Theme
 		ImVec4* colors = ImGui::GetStyle().Colors;
@@ -934,7 +955,7 @@ private:
 				return clicked;
 			};
 
-			auto transform = dynamic_cast<core::transform_component*>(pComponent);
+			auto transform = static_cast<core::transform_component*>(pComponent);
 			math::vec2 position = transform->get_position();
 			if (ImGui::DragFloat2("Position", position.components))
 				transform->set_position(position);
@@ -959,7 +980,7 @@ private:
 		mInspectors.add_inspector(graphics::sprite_component::COMPONENT_ID,
 			[this](core::component* pComponent)
 		{
-			auto sprite = dynamic_cast<graphics::sprite_component*>(pComponent);
+			auto sprite = static_cast<graphics::sprite_component*>(pComponent);
 			math::vec2 offset = sprite->get_offset();
 			if (ImGui::DragFloat2("Offset", offset.components))
 				sprite->set_offset(offset);
@@ -1002,7 +1023,7 @@ private:
 		mInspectors.add_inspector(physics::physics_component::COMPONENT_ID,
 			[](core::component* pComponent)
 		{
-			auto physics = dynamic_cast<physics::physics_component*>(pComponent);
+			auto physics = static_cast<physics::physics_component*>(pComponent);
 			std::array options = { "Dynamic", "Static" };
 			if (ImGui::BeginCombo("Type", options[physics->get_type()]))
 			{
@@ -1017,7 +1038,7 @@ private:
 		mInspectors.add_inspector(physics::box_collider_component::COMPONENT_ID,
 			[](core::component* pComponent)
 		{
-			auto collider = dynamic_cast<physics::box_collider_component*>(pComponent);
+			auto collider = static_cast<physics::box_collider_component*>(pComponent);
 
 			math::vec2 offset = collider->get_offset();
 			if (ImGui::DragFloat2("Offset", offset.components))
@@ -1031,6 +1052,84 @@ private:
 			if (ImGui::DragFloat("Rotation", &rotation))
 				collider->set_rotation(math::degrees(rotation));
 		});
+
+		// Inspector for event_state_component
+		mInspectors.add_inspector(scripting::event_state_component::COMPONENT_ID,
+			[](core::component* pComponent)
+		{
+			static float properties_height = 100;
+			auto comp = static_cast<scripting::event_state_component*>(pComponent);
+			ImGui::BeginChild("Properties", ImVec2(0, properties_height), true);
+			ImGui::Columns(4, nullptr, false);
+			ImGui::SetColumnWidth(0, 30);
+			ImGui::NextColumn();
+			ImGui::TextUnformatted("Type"); ImGui::NextColumn();
+			ImGui::TextUnformatted("Name"); ImGui::NextColumn();
+			ImGui::TextUnformatted("Value"); ImGui::NextColumn();
+
+			for (std::size_t i = 0 ; i < comp->properties.size(); i++)
+			{
+				ImGui::PushID(i);
+
+				if (ImGui::Button("X"))
+				{
+					comp->properties.erase(comp->properties.begin() + i--);
+					ImGui::PopID();
+					continue;
+				}
+				ImGui::NextColumn();
+
+				auto& prop = comp->properties[i];
+
+				const char* type_names[] = { "Integer", "Float", "Vector 2D", "String" };
+				if (ImGui::BeginCombo("##Type", type_names[prop.value.index()]))
+				{
+					if (ImGui::Selectable(type_names[0]))
+						prop.value = 0;
+					if (ImGui::Selectable(type_names[1]))
+						prop.value = 0.f;
+					if (ImGui::Selectable(type_names[2]))
+						prop.value = math::vec2{};
+					if (ImGui::Selectable(type_names[3]))
+						prop.value = std::string{};
+					ImGui::EndCombo();
+				}
+
+				ImGui::NextColumn();
+
+				ImGui::InputText("##Name", &prop.name);
+				if (ImGui::IsItemDeactivatedAfterEdit())
+					prop.name = scripting::make_valid_identifier(prop.name);
+
+				ImGui::NextColumn();
+
+				assert(prop.value.index() < 4);
+				switch (prop.value.index())
+				{
+				case 0:
+					ImGui::InputInt("##Value", &std::get<int>(prop.value));
+					break;
+				case 1:
+					ImGui::InputFloat("##Value", &std::get<float>(prop.value));
+					break;
+				case 2:
+					ImGui::InputFloat2("##Value", std::get<math::vec2>(prop.value).components);
+					break;
+				case 3:
+					ImGui::InputText("##Value", &std::get<std::string>(prop.value));
+					break;
+				}
+
+				ImGui::NextColumn();
+				ImGui::PopID();
+			}
+			ImGui::Columns(1);
+			ImGui::EndChild();
+			ImGui::HorizontalSplitter("PropertiesSplitter", &properties_height);
+			if (ImGui::Button("Add"))
+				comp->properties.emplace_back();
+		});
+
 
 		auto event_comp_func = [](core::component* pComponent)
 		{

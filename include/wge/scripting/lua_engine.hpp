@@ -16,6 +16,9 @@
 
 #include <sol/sol.hpp>
 
+#include <variant>
+#include <vector>
+
 namespace wge::scripting
 {
 
@@ -89,13 +92,19 @@ class event_state_component :
 {
 	WGE_COMPONENT("Event State", 9233);
 public:
+	using property_value = std::variant<int, float, math::vec2, std::string>;
+	struct property
+	{
+		std::string name;
+		property_value value{ 0 };
+	};
+	std::vector<property> properties;
 	sol::environment environment;
 };
 
 class event_component :
 	public core::component
 {
-	WGE_COMPONENT("Event State", 63133);
 public:
 	std::string source;
 };
@@ -134,5 +143,7 @@ public:
 private:
 	lua_engine& mLua_engine;
 };
+
+std::string make_valid_identifier(const std::string_view& pStr);
 
 } // namespace wge::scripting
