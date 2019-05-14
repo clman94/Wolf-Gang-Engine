@@ -148,6 +148,16 @@ void script_system::update(float pDelta)
 		if (!pState.environment.valid())
 		{
 			pState.environment = mLua_engine.create_object_environment(pObj);
+			for (const auto& i : pState.properties)
+			{
+				if (!i.name.empty())
+				{
+					std::visit([&](auto& val)
+					{
+						pState.environment[i.name] = val;
+					}, i.value);
+				}
+			}
 		}
 	});
 
