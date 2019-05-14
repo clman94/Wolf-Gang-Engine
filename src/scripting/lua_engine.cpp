@@ -104,6 +104,7 @@ void lua_engine::register_math_api()
 	t_math["clamp"] = &math::clamp<float>;
 	t_math["sqrt"] = &math::sqrt<float>;
 	t_math["mod"] = &math::mod<float>;
+	t_math["pow"] = &math::pow<float>;
 	t_math.new_usertype<math::vec2>("vec2",
 		sol::call_constructor, sol::constructors<math::vec2(), math::vec2(float, float), math::vec2(const math::vec2&)>(),
 		"x", &math::vec2::x,
@@ -120,7 +121,9 @@ void lua_engine::register_math_api()
 		sol::meta_function::unary_minus, static_cast<math::vec2(math::vec2::*)() const>(&math::vec2::operator-)
 		);
 	t_math["dot"] = &math::dot;
-	t_math["normal"] = &math::normalize<math::vec2>;
+	t_math["normal"] = &math::normal<math::vec2>;
+	t_math["magnitude"] = &math::magnitude;
+	t_math["distance"] = &math::distance;
 }
 
 void script_system::update(float pDelta)
@@ -167,6 +170,22 @@ void script_system::update(float pDelta)
 	{
 		run_script(pOn_update.source, pState.environment);
 	});
+}
+
+std::string make_valid_identifier(const std::string_view & pStr)
+{
+	std::string result(pStr);
+	for (auto& i : result)
+	{
+		if (!(i >= 'a' && i <= 'z' ||
+			i >= 'A' && i <= 'Z' ||
+			i >= '0' && i <= '9' ||
+			i == '_'))
+			i = '_';
+	}
+	if (!result.empty() && result[0] >= '0' && result[0] <= '9')
+		result[0] = '_';
+	return result;
 }
 
 } // namespace wge::scripting

@@ -121,7 +121,7 @@ inline constexpr vec2 swizzle(const vec2& pVec, Tx pX, Ty pY) noexcept
 }
 
 template<>
-inline vec2 normalize<vec2>(const vec2& a) noexcept
+inline vec2 normal<vec2>(const vec2& a) noexcept
 {
 	return vec2(a).normalize();
 }
@@ -158,6 +158,16 @@ inline vec2 swap_xy(const vec2& a) noexcept
 inline float dot(const vec2& pA, const vec2& pB)
 {
 	return pA.x * pB.x + pA.y * pB.y;
+}
+
+inline float magnitude(const vec2& pA)
+{
+	return pA.magnitude();
+}
+
+inline float distance(const vec2& pA, const vec2& pB)
+{
+	return pA.distance(pB);
 }
 
 template <>
