@@ -95,6 +95,7 @@ public:
 class event_component :
 	public core::component
 {
+	WGE_COMPONENT("Event State", 63133);
 public:
 	std::string source;
 };
