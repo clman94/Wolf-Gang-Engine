@@ -283,29 +283,27 @@ void text_editor::paste_from_clipboard()
 
 void text_editor::render(const ImVec2& pSize)
 {
-	ImGui::BeginChild("textedit", pSize);
+	ImGui::BeginChild("textedit", pSize, false, ImGuiWindowFlags_HorizontalScrollbar);
 
 	if (ImGui::IsWindowFocused())
 	{
-		if (ImGui::IsWindowHovered())
-			ImGui::SetMouseCursor(ImGuiMouseCursor_TextInput);
 		handle_keyboard();
 	}
-
 	const float character_width = ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1, " ").x;
 	const float line_height = ImGui::GetTextLineHeightWithSpacing();
+	const float left_margin = character_width * 6;
 
 	ImDrawList* dl = ImGui::GetWindowDrawList();
 	ImVec2 cursor_start = ImGui::GetCursorScreenPos();
 
 	// Offset the render to the right so we can fit in line numbers
-	cursor_start.x += character_width * 6;
+	cursor_start.x += left_margin;
 
-
-	math::vec2 edit_size = calc_text_size({ character_width , line_height });
-	edit_size.x = math::max(edit_size.x, ImGui::GetWindowContentRegionWidth());
+	math::vec2 edit_size = calc_text_size({ character_width, line_height });
+	edit_size.x = math::max(edit_size.x + left_margin, (dl->GetClipRectMax() - dl->GetClipRectMin()).x);
 	edit_size.y = math::max(edit_size.y, ImGui::GetWindowContentRegionMax().y);
 
+	// Create an invisible button so the user can interact with it
 	ImGui::InvisibleButton("interaction", edit_size);
 
 	if (ImGui::BeginPopupContextWindow("EditPopup"))
@@ -333,6 +331,7 @@ void text_editor::render(const ImVec2& pSize)
 	}
 
 	// Draw a box around the line where the cursor is at.
+	if (!is_text_selected())
 	{
 		ImVec2 a(
 			cursor_start.x + ImGui::GetScrollX(),
@@ -369,7 +368,7 @@ void text_editor::render(const ImVec2& pSize)
 		dl->AddText(pos, ImGui::GetColorU32(ImVec4(mPalette[(std::size_t)palette_type::line_number])), &number_str[0], &number_str.back() + 1);
 	}
 
-	dl->PushClipRect(cursor_start + ImVec2(ImGui::GetScrollX(), 0), cursor_start + ImGui::GetWindowContentRegionMax(), true);
+	dl->PushClipRect(cursor_start + ImVec2(ImGui::GetScrollX(), 0), dl->GetClipRectMax(), true);
 
 	// Draw cursor
 	{
@@ -450,6 +449,8 @@ void text_editor::render(const ImVec2& pSize)
 	dl->PopClipRect();
 
 	ImGui::EndChild();
+	if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
+		ImGui::SetMouseCursor(ImGuiMouseCursor_TextInput);
 }
 
 static constexpr bool is_letter(char pC) noexcept
