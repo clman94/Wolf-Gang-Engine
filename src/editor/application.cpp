@@ -144,18 +144,41 @@ public:
 		{
 			if (ImGui::Selectable("Transform 2D"))
 				mObject.add_component<core::transform_component>();
+			ImGui::DescriptiveToolTip("Give your object space",
+				"This transform represents the position, rotation, and scale of this object in 2d space. Use with sprite and other 2d graphics for the best effect.");
+
 			if (ImGui::Selectable("Physics"))
 				mObject.add_component<physics::physics_component>();
+			ImGui::DescriptiveToolTip("Let's get physical",
+				"This component allows this object to interact with physics in your world.");
+
 			if (ImGui::Selectable("Box Collider"))
 				mObject.add_component<physics::box_collider_component>();
+			ImGui::DescriptiveToolTip("Give this object a collidable box",
+				"Works best with a physics component.");
+
 			if (ImGui::Selectable("Sprite"))
 				mObject.add_component<graphics::sprite_component>();
+			ImGui::QuickToolTip("Give this object a sprite to render");
+
 			if (ImGui::Selectable("Event State"))
 				mObject.add_component<scripting::event_state_component>();
-			if (ImGui::Selectable("Event: On Create"))
-				mObject.add_component<scripting::event_components::on_create>();
-			if (ImGui::Selectable("Event: On Update"))
-				mObject.add_component<scripting::event_components::on_update>();
+			ImGui::DescriptiveToolTip("Let's get interactive!",
+				"Start adding events to turn this stale component pasta into something spectacularly interactive!");
+			
+			if (ImGui::BeginMenu("Events"))
+			{
+				if (ImGui::Selectable("Create"))
+					mObject.add_component<scripting::event_components::on_create>();
+				ImGui::QuickToolTip("Do someting when this object is instantiated");
+
+				if (ImGui::Selectable("Update"))
+					mObject.add_component<scripting::event_components::on_update>();
+				ImGui::QuickToolTip("Do something every frame");
+
+				ImGui::EndMenu();
+			}
+
 			ImGui::EndCombo();
 		}
 	}
@@ -499,7 +522,12 @@ public:
 			{
 				if (ImGui::Selectable("Object"))
 				{
-					
+					json object_data =
+					{
+						{"name", "New Object"},
+						{"components", json::array({}) }
+					};
+					mAsset_manager.create_asset(root.get_path() / "empty_object", "gameobject", object_data);
 				}
 				ImGui::EndCombo();
 			}
@@ -1059,75 +1087,87 @@ private:
 		{
 			static float properties_height = 100;
 			auto comp = static_cast<scripting::event_state_component*>(pComponent);
-			ImGui::BeginChild("Properties", ImVec2(0, properties_height), true);
-			ImGui::Columns(4, nullptr, false);
-			ImGui::SetColumnWidth(0, 30);
-			ImGui::NextColumn();
-			ImGui::TextUnformatted("Type"); ImGui::NextColumn();
-			ImGui::TextUnformatted("Name"); ImGui::NextColumn();
-			ImGui::TextUnformatted("Value"); ImGui::NextColumn();
 
-			for (std::size_t i = 0 ; i < comp->properties.size(); i++)
+			bool properties_is_open = ImGui::CollapsingHeader("Properties");
+			ImGui::DescriptiveToolTip("This lists the properties for your object",
+				"Each of these properties are automatically added as variables in your event scripts. They can be used to change the behavior of individual instances in your scene.");
+			if (properties_is_open)
 			{
-				ImGui::PushID(i);
+				ImGui::BeginChild("Properties", ImVec2(0, properties_height), true);
+				ImGui::Columns(4, nullptr, false);
+				ImGui::SetColumnWidth(0, 30);
+				ImGui::NextColumn();
+				ImGui::TextUnformatted("Type"); ImGui::NextColumn();
+				ImGui::TextUnformatted("Name"); ImGui::NextColumn();
+				ImGui::TextUnformatted("Value"); ImGui::NextColumn();
 
-				if (ImGui::Button("X"))
+				for (std::size_t i = 0; i < comp->properties.size(); i++)
 				{
-					comp->properties.erase(comp->properties.begin() + i--);
+					ImGui::PushID(i);
+
+					if (ImGui::Button("X"))
+					{
+						comp->properties.erase(comp->properties.begin() + i--);
+						ImGui::PopID();
+						continue;
+					}
+					ImGui::NextColumn();
+
+					auto& prop = comp->properties[i];
+
+					const char* type_names[] = { "Integer", "Float", "Vector 2D", "String" };
+					bool type_combo_is_open = ImGui::BeginCombo("##Type", type_names[prop.value.index()]);
+					ImGui::QuickToolTip("Set the type for this property");
+					if (type_combo_is_open)
+					{
+						if (ImGui::Selectable(type_names[0]))
+							prop.value = 0;
+						if (ImGui::Selectable(type_names[1]))
+							prop.value = 0.f;
+						if (ImGui::Selectable(type_names[2]))
+							prop.value = math::vec2{};
+						if (ImGui::Selectable(type_names[3]))
+							prop.value = std::string{};
+						ImGui::EndCombo();
+					}
+
+					ImGui::NextColumn();
+
+					ImGui::InputText("##Name", &prop.name);
+					if (ImGui::IsItemDeactivatedAfterEdit())
+						prop.name = scripting::make_valid_identifier(prop.name);
+					ImGui::DescriptiveToolTip("Name of this property",
+						"This needs to be a valid lua identifier because these will be added as variables in your event scripts.");
+
+					ImGui::NextColumn();
+
+					assert(prop.value.index() < 4);
+					switch (prop.value.index())
+					{
+					case 0:
+						ImGui::InputInt("##Value", &std::get<int>(prop.value));
+						break;
+					case 1:
+						ImGui::InputFloat("##Value", &std::get<float>(prop.value));
+						break;
+					case 2:
+						ImGui::InputFloat2("##Value", std::get<math::vec2>(prop.value).components);
+						break;
+					case 3:
+						ImGui::InputText("##Value", &std::get<std::string>(prop.value));
+						break;
+					}
+					ImGui::QuickToolTip("Set the default value for this property");
+
+					ImGui::NextColumn();
 					ImGui::PopID();
-					continue;
 				}
-				ImGui::NextColumn();
-
-				auto& prop = comp->properties[i];
-
-				const char* type_names[] = { "Integer", "Float", "Vector 2D", "String" };
-				if (ImGui::BeginCombo("##Type", type_names[prop.value.index()]))
-				{
-					if (ImGui::Selectable(type_names[0]))
-						prop.value = 0;
-					if (ImGui::Selectable(type_names[1]))
-						prop.value = 0.f;
-					if (ImGui::Selectable(type_names[2]))
-						prop.value = math::vec2{};
-					if (ImGui::Selectable(type_names[3]))
-						prop.value = std::string{};
-					ImGui::EndCombo();
-				}
-
-				ImGui::NextColumn();
-
-				ImGui::InputText("##Name", &prop.name);
-				if (ImGui::IsItemDeactivatedAfterEdit())
-					prop.name = scripting::make_valid_identifier(prop.name);
-
-				ImGui::NextColumn();
-
-				assert(prop.value.index() < 4);
-				switch (prop.value.index())
-				{
-				case 0:
-					ImGui::InputInt("##Value", &std::get<int>(prop.value));
-					break;
-				case 1:
-					ImGui::InputFloat("##Value", &std::get<float>(prop.value));
-					break;
-				case 2:
-					ImGui::InputFloat2("##Value", std::get<math::vec2>(prop.value).components);
-					break;
-				case 3:
-					ImGui::InputText("##Value", &std::get<std::string>(prop.value));
-					break;
-				}
-
-				ImGui::NextColumn();
-				ImGui::PopID();
+				ImGui::Columns(1);
+				ImGui::EndChild();
+				ImGui::HorizontalSplitter("PropertiesSplitter", &properties_height);
+				if (ImGui::Button("Add"))
+					comp->properties.emplace_back();
 			}
-			ImGui::Columns(1);
-			ImGui::EndChild();
-			ImGui::HorizontalSplitter("PropertiesSplitter", &properties_height);
-			if (ImGui::Button("Add"))
-				comp->properties.emplace_back();
 		});
 
 
