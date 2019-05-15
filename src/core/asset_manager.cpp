@@ -56,6 +56,14 @@ asset::ptr asset_manager::get_asset(const util::uuid& pUID) const noexcept
 	return{};
 }
 
+bool asset_manager::has_asset(const filesystem::path & pPath) const noexcept
+{
+	for (auto& i : mAsset_list)
+		if (i->get_path() == pPath)
+			return true;
+	return false;
+}
+
 bool asset_manager::has_asset(const util::uuid& pUID) const noexcept
 {
 	for (auto& i : mAsset_list)
@@ -172,6 +180,11 @@ static filesystem::path append_asset_extension(const filesystem::path& pPath)
 
 asset::ptr asset_manager::create_asset(const filesystem::path& pPath, const std::string& pType, const json& pMetadata)
 {
+	if (has_asset(pPath))
+	{
+		log::error() << "Could not create asset " << std::quoted(pPath.string()) << "; it already exists" << log::endm;
+		return{};
+	}
 	auto config = std::make_shared<asset>();
 	config->set_file_path(mRoot_dir / append_asset_extension(pPath));
 	config->set_path(pPath);

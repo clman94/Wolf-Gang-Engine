@@ -35,6 +35,7 @@ public:
 	// Returns empty when it it not found.
 	asset::ptr get_asset(const util::uuid& pUID) const noexcept;
 
+	bool has_asset(const filesystem::path& pPath) const noexcept;
 	bool has_asset(const util::uuid& pUID) const noexcept;
 	bool has_asset(const asset::ptr& pAsset) const noexcept;
 
