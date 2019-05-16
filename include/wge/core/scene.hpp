@@ -24,17 +24,15 @@ public:
 		mEngine(&pEngine)
 	{}
 
-	// Get a layer to a specific index
+	// Get a layer by index
 	[[nodiscard]] layer* get_layer(std::size_t pIndex) const;
 
-	// Creates a layer that is not owned by this scene object.
-	[[nodiscard]] layer::uptr create_freestanding_layer();
 	layer* add_layer();
 	layer* add_layer(const std::string& pName);
 	layer* add_layer(const std::string& pName, std::size_t pInsert);
-	// Give ownership of a layer to this object.
+	// Give ownership of a layer to this scene.
 	layer* add_layer(layer::uptr&);
-	// Take ownership of a layer from this object.
+	// Take ownership of a layer from this scene.
 	layer::uptr release_layer(const layer&);
 
 	// Returns true if the layer was successfully removed.
@@ -49,7 +47,7 @@ public:
 	void clear();
 
 	engine& get_engine() const noexcept;
-	asset_manager& get_asset_manager() noexcept;
+	asset_manager& get_asset_manager() const noexcept;
 	const factory& get_factory() const noexcept;
 
 private:

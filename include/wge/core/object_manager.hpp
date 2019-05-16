@@ -6,6 +6,7 @@
 #include <wge/core/game_object.hpp>
 #include <wge/core/component.hpp>
 #include <wge/util/uuid.hpp>
+#include <wge/core/asset.hpp>
 
 namespace wge::core
 {
@@ -20,6 +21,11 @@ public:
 
 	std::string name;
 	util::uuid id;
+
+	// This is the asset that was instanced by this object.
+	// This will be null if this object isn't an instance of
+	// an asset.
+	asset::ptr source_asset;
 
 	// This allows us to track which components this object
 	//   has and quickly lookup components.

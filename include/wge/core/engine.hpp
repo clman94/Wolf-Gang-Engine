@@ -61,9 +61,7 @@ private:
 	core::asset_manager mAsset_manager;
 	core::scene mScene;
 	core::factory mFactory;
-
 	graphics::graphics mGraphics;
-
 	scripting::lua_engine mLua_engine;
 
 	bool mLoaded{ false };

@@ -126,7 +126,7 @@ public:
 	bool first_time{ true };
 };
 
-}
+} // namespace event_components
 
 class script_system :
 	public core::system

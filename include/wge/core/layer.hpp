@@ -159,8 +159,6 @@ inline T* layer::add_unregistered_system(Targs&&...pArgs)
 	return ptr;
 }
 
-// Create a new system that was registered in the factory.
-
 template<typename T>
 inline T* layer::add_system()
 {

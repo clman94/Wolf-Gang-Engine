@@ -45,12 +45,16 @@ void game_object::deserialize(const json& pJson)
 	//set_instance_id(pJson["id"]);
 	set_name(pJson["name"]);
 	for (auto& i : pJson["components"])
-	{
-		component* c = add_component(i["type"]);
-		if (!c)
-			continue;
-		c->deserialize(*this, i);
-	}
+		if (component* c = add_component(i["type"]))
+			c->deserialize(*this, i);
+}
+
+void game_object::deserialize(const asset::ptr& pAsset)
+{
+	assert(pAsset);
+	assert(pAsset->get_type() == "gameobject");
+	deserialize(pAsset->get_metadata());
+	mData->source_asset = pAsset;
 }
 
 component* game_object::add_component(const component_type& pType)
@@ -167,6 +171,18 @@ scene& game_object::get_scene() const
 {
 	assert_valid_reference();
 	return get_layer().get_scene();
+}
+
+bool game_object::is_instanced() const noexcept
+{
+	assert_valid_reference();
+	return static_cast<bool>(mData->source_asset);
+}
+
+asset::ptr game_object::get_asset() const
+{
+	assert_valid_reference();
+	return mData->source_asset;
 }
 
 const util::uuid& game_object::get_instance_id() const

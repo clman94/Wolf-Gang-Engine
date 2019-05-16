@@ -36,8 +36,6 @@ void layer::deserialize(const json& pJson)
 {
 	clear();
 
-	util::uuid_rerouter rerouter;
-
 	mName = pJson["name"];
 	mTime_scale = pJson["timescale"];
 	mRecieve_update = pJson["enabled"];

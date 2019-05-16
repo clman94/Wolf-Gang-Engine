@@ -13,11 +13,6 @@ layer* scene::get_layer(std::size_t pIndex) const
 	return mLayers[pIndex].get();
 }
 
-layer::uptr scene::create_freestanding_layer()
-{
-	return layer::create(*this);
-}
-
 layer* scene::add_layer()
 {
 	return mLayers.emplace_back(layer::create(*this)).get();
@@ -79,7 +74,7 @@ engine& scene::get_engine() const noexcept
 	return *mEngine;
 }
 
-asset_manager& scene::get_asset_manager() noexcept
+asset_manager& scene::get_asset_manager() const noexcept
 {
 	return mEngine->get_asset_manager();
 }

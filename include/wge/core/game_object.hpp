@@ -7,6 +7,7 @@
 #include <wge/core/serialize_type.hpp>
 #include <wge/core/component_type.hpp>
 #include <wge/util/json_helpers.hpp>
+#include <wge/core/asset.hpp>
 
 namespace wge::core
 {
@@ -53,6 +54,7 @@ public:
 
 	json serialize(serialize_type pType = serialize_type::all) const;
 	void deserialize(const json& pJson);
+	void deserialize(const asset::ptr& pAsset);
 
 	// Create a new component for this object
 	template <typename T>
@@ -74,7 +76,7 @@ public:
 		// Requires the "int COMPONENT_ID" COMPONENT_ID member
 		typename = std::enable_if<has_component_id_member<T>::value>::type>
 	T* get_component() const;
-	// Find the first all of these components. Returns true when all of them are found.
+	// Find the first of all of these components. Returns true when all of them are found.
 	template <typename Tfirst, typename...Trest>
 	bool unwrap_components(Tfirst*& pFirst, Trest*& ...pRest);
 	void move_component(std::size_t pFrom, std::size_t pTo);
@@ -100,8 +102,10 @@ public:
 	// reconstruct this object in the destination layer and remove it in
 	// the source layer.
 	layer& get_layer() const;
-
 	scene& get_scene() const;
+
+	bool is_instanced() const noexcept;
+	asset::ptr get_asset() const;
 
 	// Get the id that uniquely identifies this object
 	const util::uuid& get_instance_id() const;
