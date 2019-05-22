@@ -9,6 +9,7 @@
 #include <wge/math/rect.hpp>
 #include <wge/core/asset.hpp>
 #include <wge/filesystem/filesystem_interface.hpp>
+#include <wge/graphics/image.hpp>
 
 namespace wge::graphics
 {
@@ -36,7 +37,7 @@ class texture_impl
 public:
 	using ptr = std::shared_ptr<texture_impl>;
 	virtual ~texture_impl() {}
-	virtual void create_from_pixels(unsigned char* pBuffer, int pWidth, int pHeight, int mChannels) = 0;
+	virtual void create_from_image(const image&) = 0;
 	virtual void set_smooth(bool pSmooth) = 0;
 	virtual bool is_smooth() const = 0;
 };
@@ -48,17 +49,13 @@ public:
 	using atlas_container = std::vector<animation>;
 	using ptr = tptr<texture>;
 
-	texture();
-	virtual ~texture();
+	virtual ~texture() {}
 
 	void set_implementation(const texture_impl::ptr& pImpl) noexcept;
 	texture_impl::ptr get_implementation() const noexcept;
 
 	// Load a texture from a file
 	void load(const std::string& pFilepath);
-
-	// Load texture from a stream. If pSize = 0, the rest of the stream will be used.
-	void load(const filesystem::stream::ptr& pStream, std::size_t pSize = 0);
 
 	// Get width of texture in pixels
 	int get_width() const noexcept;
@@ -91,9 +88,8 @@ private:
 
 private:
 	texture_impl::ptr mImpl;
-	int mWidth, mHeight, mChannels;
-	bool mSmooth;
-	unsigned char* mPixels;
+	bool mSmooth{ false };
+	image mImage;
 	atlas_container mAtlas;
 	// util::uuid mDefault_animation; // TODO: Use instead of a "Default" animation
 };

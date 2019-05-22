@@ -15,7 +15,7 @@ public:
 		glDeleteTextures(1, &mGL_texture);
 	}
 
-	virtual void create_from_pixels(unsigned char* pBuffer, int pWidth, int pHeight, int mChannels) override
+	virtual void create_from_image(const image& pImage) override
 	{
 		if (!mGL_texture)
 		{
@@ -25,7 +25,7 @@ public:
 
 		// Give the image to OpenGL
 		glBindTexture(GL_TEXTURE_2D, mGL_texture);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, pWidth, pHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pBuffer);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, pImage.get_width(), pImage.get_height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, pImage.get_raw());
 		glBindTexture(GL_TEXTURE_2D, 0);
 
 		update_filtering();

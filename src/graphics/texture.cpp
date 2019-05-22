@@ -30,25 +30,14 @@ json animation::serialize() const
 	return result;
 }
 
-texture::texture() :
-	mWidth(0),
-	mHeight(0),
-	mSmooth(false),
-	mPixels(nullptr)
-{}
-
-texture::~texture()
-{
-	stbi_image_free(mPixels);
-}
 
 void texture::set_implementation(const texture_impl::ptr& pImpl) noexcept
 {
 	mImpl = pImpl;
-	if (mPixels && mImpl)
+	if (mImage.is_valid() && mImpl)
 	{
 		// Recreate the texture with the new implementation
-		mImpl->create_from_pixels(mPixels, mWidth, mHeight, mChannels);
+		mImpl->create_from_image(mImage);
 		mImpl->set_smooth(mSmooth);
 	}
 }
@@ -60,54 +49,24 @@ texture_impl::ptr texture::get_implementation() const noexcept
 
 void texture::load(const std::string& pFilepath)
 {
-	stbi_uc* pixels = stbi_load(pFilepath.c_str(), &mWidth, &mHeight, &mChannels, 4);
-	if (!pixels)
-	{
-		std::cout << "Failed to open image\n";
-		return;
-	}
+	mImage.load_file(pFilepath);
 	if (mImpl)
-		mImpl->create_from_pixels(pixels, mWidth, mHeight, mChannels);
-	stbi_image_free(mPixels);
-	mPixels = pixels;
-}
-
-void texture::load(const filesystem::stream::ptr& pStream, std::size_t pSize)
-{
-	// Determine length of stream if size is 0.
-	pSize = (pSize == 0 ? pStream->length() - pStream->tell() : pSize);
-
-	// Read the bytes from the stream
-	std::vector<char> data;
-	data.resize(pSize);
-	std::size_t bytes_read = pStream->read(&data[0], pSize);
-
-	// Decode the image
-	stbi_uc* pixels = stbi_load_from_memory(reinterpret_cast<unsigned char*>(&data[0]), bytes_read, &mWidth, &mHeight, &mChannels, 4);
-	if (!pixels)
-	{
-		std::cout << "Failed to open image\n";
-		return;
-	}
-	if (mImpl)
-		mImpl->create_from_pixels(pixels, mWidth, mHeight, mChannels);
-	stbi_image_free(mPixels);
-	mPixels = pixels;
+		mImpl->create_from_image(mImage);
 }
 
 int texture::get_width() const noexcept
 {
-	return mWidth;
+	return mImage.get_width();
 }
 
 int texture::get_height() const noexcept
 {
-	return mHeight;
+	return mImage.get_height();
 }
 
 math::vec2 texture::get_size() const noexcept
 {
-	return{ static_cast<float>(mWidth), static_cast<float>(mHeight) };
+	return mImage.get_size();
 }
 
 void texture::set_smooth(bool pEnabled) noexcept
@@ -169,7 +128,7 @@ void texture::set_metadata(const json& pJson)
 		animation& def_animation = mAtlas.emplace_back();
 		def_animation.name = "Default";
 		def_animation.id = util::generate_uuid();
-		def_animation.frame_rect = math::rect(0, 0, static_cast<float>(mWidth), static_cast<float>(mHeight));
+		def_animation.frame_rect = math::rect(math::vec2(0, 0), mImage.get_size());
 	}
 }
 
