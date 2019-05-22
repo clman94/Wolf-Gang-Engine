@@ -16,6 +16,8 @@ class uuid
 public:
 	uuid() = default;
 
+	uuid(const std::string_view& pStr);
+
 	template <typename Titer>
 	uuid(Titer pBegin, Titer pEnd)
 	{
@@ -27,10 +29,12 @@ public:
 	bool operator == (const uuid& pR) const noexcept;
 	bool operator != (const uuid& pR) const noexcept;
 
-	// Returns the difference between the first byte of both uuids that differ.
+	// Returns the difference between the first bytes of both uuids that differ.
 	int compare(const uuid& pR) const noexcept;
 
 	std::string to_string() const;
+
+	bool parse(const std::string_view& pStr);
 
 	json to_json() const;
 	void from_json(const json& pJson);

@@ -1,15 +1,39 @@
 #include <wge/util/uuid.hpp>
+#include <wge/logging/log.hpp>
 
 #include <random>
+#include <cctype>
 
 namespace wge::util
 {
+
+static std::uint8_t from_hex_char(char pC)
+{
+	if (pC >= '0' && pC <= '9')
+		return static_cast<std::uint8_t>(pC - '0');
+	else if (pC >= 'a' && pC <= 'f')
+		return static_cast<std::uint8_t>(pC - 'a') + 10;
+	else if (pC >= 'A' && pC <= 'F')
+		return static_cast<std::uint8_t>(pC - 'A') + 10;
+	else
+		return 0;
+}
+
+static std::uint8_t from_hex(const char* pSrc)
+{
+	return (from_hex_char(pSrc[0]) << 4) + from_hex_char(pSrc[1]);
+}
 
 static void put_hex(char* pDest, std::uint8_t pVal)
 {
 	constexpr const char* chars = "0123456789abcdef";
 	pDest[0] = chars[pVal >> 4];
 	pDest[1] = chars[pVal & 0x0f];
+}
+
+inline uuid::uuid(const std::string_view& pStr)
+{
+	parse(pStr);
 }
 
 bool uuid::operator < (const uuid& pR) const noexcept
@@ -64,14 +88,50 @@ std::string uuid::to_string() const
 	return result;
 }
 
-json uuid::to_json() const
+bool uuid::parse(const std::string_view& pStr)
 {
-	return mBytes;
+	if (pStr.length() != 36)
+		return false;
+
+	mBytes[0] = from_hex(&pStr[0]);
+	mBytes[1] = from_hex(&pStr[2]);
+	mBytes[2] = from_hex(&pStr[4]);
+	mBytes[3] = from_hex(&pStr[6]);
+
+	mBytes[4] = from_hex(&pStr[9]);
+	mBytes[5] = from_hex(&pStr[11]);
+
+	mBytes[6] = from_hex(&pStr[14]);
+	mBytes[7] = from_hex(&pStr[16]);
+
+	mBytes[8] = from_hex(&pStr[19]);
+	mBytes[9] = from_hex(&pStr[21]);
+
+	mBytes[10] = from_hex(&pStr[24]);
+	mBytes[11] = from_hex(&pStr[26]);
+	mBytes[12] = from_hex(&pStr[28]);
+	mBytes[13] = from_hex(&pStr[30]);
+	mBytes[14] = from_hex(&pStr[32]);
+	mBytes[15] = from_hex(&pStr[34]);
+
+	return true;
 }
 
-void uuid::from_json(const json & pJson)
+json uuid::to_json() const
 {
-	mBytes = pJson;
+	return to_string();
+}
+
+void uuid::from_json(const json& pJson)
+{
+	if (pJson.is_string() && pJson.get_ref<const json::string_t&>().length() == 36)
+		parse(pJson);
+	else if (pJson.is_array() && pJson.size() == 16)
+		mBytes = pJson;
+	else
+	{
+		log::error() << "Could not parse json uuid" << log::endm;
+	}
 }
 
 hash::hash32_t uuid::to_hash32() const noexcept
@@ -90,8 +150,7 @@ bool uuid::is_valid() const noexcept
 uuid generate_uuid()
 {
 	std::random_device device;
-	std::seed_seq seed{ device(), device(), device(), device(), device() };
-	std::mt19937 generator{ seed };
+	std::mt19937 generator{ device() };
 	std::uniform_int_distribution<std::uint32_t> distribution{ 0, 255 };
 	std::array<std::uint8_t, 16> bytes;
 	for (auto& i : bytes)
