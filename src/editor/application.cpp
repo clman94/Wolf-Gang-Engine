@@ -412,7 +412,20 @@ public:
 			ImGui::SameLine();
 			if (ImGui::Button("Delete"))
 			{
-				on_change();
+				auto iter = std::find_if(
+					texture->get_raw_atlas().begin(),
+					texture->get_raw_atlas().end(),
+					[&](auto& i) { return i.id == mSelected_animation_id; });
+				if (iter != texture->get_raw_atlas().end())
+				{
+					// Set the next animation after this one as selected
+					if (iter + 1 != texture->get_raw_atlas().end())
+						mSelected_animation_id = (iter + 1)->id;
+
+					// Remove it
+					texture->get_raw_atlas().erase(iter);
+				}
+				mark_asset_modified();
 			}
 		}
 
