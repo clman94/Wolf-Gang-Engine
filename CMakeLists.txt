@@ -184,8 +184,6 @@ include_directories("${WGE_3RDPARTY_DIR}/sol/include")
 set(ALL_SOURCES
 	${STB_HEADERS}
 	${STB_SOURCES}
-	${IMGUI_HEADERS}
-	${IMGUI_SOURCES}
 	${BOX2D_HEADERS}
 	${BOX2D_SOURCES}
 	${LUA_SOURCES}
@@ -251,6 +249,8 @@ include_directories("${WGE_3RDPARTY_DIR}/stb/include")
 # Editor project
 add_executable(WgeEditor
 	"${WGE_SOURCE_DIR}/main.cpp" 
+	${IMGUI_HEADERS}
+	${IMGUI_SOURCES}
 	${WGE_EDITOR_HEADERS}
 	${WGE_EDITOR_SOURCES}
 	)
