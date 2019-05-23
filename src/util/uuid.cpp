@@ -51,7 +51,7 @@ bool uuid::operator != (const uuid& pR) const noexcept
 	return compare(pR) != 0;
 }
 
-int uuid::compare(const uuid & pR) const noexcept
+int uuid::compare(const uuid& pR) const noexcept
 {
 	for (std::size_t i = 0; i < 16; ++i)
 		if (mBytes[i] != pR.mBytes[i])

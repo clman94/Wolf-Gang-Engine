@@ -276,7 +276,7 @@ public:
 
 			// Notify a change in the asset
 			if (box_edit.is_dragging() && ImGui::IsMouseReleased(0))
-				on_change();
+				mark_asset_modified();
 
 			visual_editor::end_snap();
 		}
@@ -406,7 +406,7 @@ public:
 				animation.frame_rect = math::rect({ 0, 0 }, texture->get_size());
 				animation.name = make_unique_animation_name(texture, "NewEntry");
 				animation.id = util::generate_uuid();
-				on_change();
+				mark_asset_modified();
 			}
 
 			ImGui::SameLine();
@@ -441,7 +441,7 @@ public:
 				{
 					std::string temp = std::move(selected_animation->name);
 					selected_animation->name = make_unique_animation_name(texture, temp);
-					on_change();
+					mark_asset_modified();
 				}
 				ImGui::DragFloat2("Position", selected_animation->frame_rect.position.components); check_if_edited();
 				ImGui::DragFloat2("Size", selected_animation->frame_rect.size.components); check_if_edited();
@@ -453,15 +453,13 @@ public:
 				{
 					// Limit the minimun to 1
 					selected_animation->frames = math::max<std::size_t>(static_cast<std::size_t>(frame_count), 1);
-					on_change();
+					mark_asset_modified();
 				}
 				ImGui::InputFloat("Interval", &selected_animation->interval, 0.01f, 0.1f, "%.3f Seconds"); check_if_edited();
 			}
 			ImGui::PopID();
 		}
 	}
-
-	util::signal<void()> on_change;
 
 private:
 	static std::string make_unique_animation_name(graphics::texture::ptr pTexture, const std::string& pName)
@@ -474,7 +472,7 @@ private:
 	void check_if_edited()
 	{
 		if (ImGui::IsItemDeactivatedAfterEdit())
-			get_context().add_modified_asset(get_asset());
+			mark_asset_modified();
 	}
 
 private:
@@ -1002,7 +1000,6 @@ private:
 			if (reset_context_menu("scalereset"))
 				transform->set_scale(math::vec2(0, 0));
 		});
-
 
 		// Inspector for sprite_component
 		mInspectors.add_inspector(graphics::sprite_component::COMPONENT_ID,
