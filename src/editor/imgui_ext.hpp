@@ -34,7 +34,7 @@ inline void DescriptiveToolTip(const char* pMessage, const char* pDescription)
 		ImGui::BeginTooltip();
 		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 30.0f);
 		ImGui::TextUnformatted(pMessage);
-		ImGui::TextColored(ImVec4(0.6, 0.6, 0.6, 1), pDescription);
+		ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1), pDescription);
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
 	}
