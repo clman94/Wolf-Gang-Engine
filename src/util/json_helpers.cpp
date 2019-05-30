@@ -6,6 +6,8 @@
 #include <wge/math/vector.hpp>
 #include <wge/math/rect.hpp>
 #include <wge/util/uuid.hpp>
+#include <wge/filesystem/path.hpp>
+
 using namespace wge;
 
 void wge::math::to_json(nlohmann::json & pJson, const math::vec2 & pVec)
@@ -70,4 +72,14 @@ void wge::util::to_json(nlohmann::json & pJson, const uuid & pUuid)
 void wge::util::from_json(const nlohmann::json & pJson, uuid & pUuid)
 {
 	pUuid.from_json(pJson);
+}
+
+void wge::filesystem::to_json(nlohmann::json & pJson, const path & pPath)
+{
+	pJson = pPath.string();
+}
+
+void wge::filesystem::from_json(const nlohmann::json & pJson, path & pPath)
+{
+	pPath.parse(pJson);
 }

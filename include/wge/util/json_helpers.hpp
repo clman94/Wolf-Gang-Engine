@@ -90,11 +90,20 @@ void from_json(const nlohmann::json& pJson, strongly_typed_id<T, Tvalue>& pId)
 }
 
 class uuid;
-void to_json(nlohmann::json& pJson, const uuid& pUuid);
-void from_json(const nlohmann::json& pJson, uuid& pUuid);
+void to_json(nlohmann::json&, const uuid&);
+void from_json(const nlohmann::json&, uuid&);
 
 } // namespace wge::util
 
 struct b2Vec2;
 void to_json(nlohmann::json&, const b2Vec2&);
 void from_json(const nlohmann::json&, b2Vec2&);
+
+namespace wge::filesystem
+{
+
+class path;
+void to_json(nlohmann::json&, const path&);
+void from_json(const nlohmann::json&, path&);
+
+} // namespace wge::filesystem
