@@ -18,6 +18,7 @@
 
 #include <variant>
 #include <vector>
+#include <memory>
 
 namespace wge::scripting
 {
@@ -106,6 +107,7 @@ public:
 private:
 	void register_api();
 	void register_math_api();
+	void register_physics_api();
 };
 
 class event_state_component :

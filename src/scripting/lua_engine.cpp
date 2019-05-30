@@ -101,24 +101,25 @@ void lua_engine::register_api()
 	);
 
 	register_math_api();
+	register_physics_api();
 }
 
 void lua_engine::register_math_api()
 {
-	sol::table t_math = state.create_named_table("math");
-	t_math["pi"] = math::pi;
-	t_math["sin"] = [](float pRad) { return math::sin(pRad); };
-	t_math["cos"] = [](float pRad) { return math::cos(pRad); };
-	t_math["abs"] = &math::abs<float>;
-	t_math["floor"] = &math::floor<float>;
-	t_math["round"] = &math::round<float>;
-	t_math["max"] = &math::max<float>;
-	t_math["min"] = &math::min<float>;
-	t_math["clamp"] = &math::clamp<float>;
-	t_math["sqrt"] = &math::sqrt<float>;
-	t_math["mod"] = &math::mod<float>;
-	t_math["pow"] = &math::pow<float>;
-	t_math.new_usertype<math::vec2>("vec2",
+	sol::table t = state.create_named_table("math");
+	t["pi"] = math::pi;
+	t["sin"] = [](float pRad) { return math::sin(pRad); };
+	t["cos"] = [](float pRad) { return math::cos(pRad); };
+	t["abs"] = &math::abs<float>;
+	t["floor"] = &math::floor<float>;
+	t["round"] = &math::round<float>;
+	t["max"] = &math::max<float>;
+	t["min"] = &math::min<float>;
+	t["clamp"] = &math::clamp<float>;
+	t["sqrt"] = &math::sqrt<float>;
+	t["mod"] = &math::mod<float>;
+	t["pow"] = &math::pow<float>;
+	t.new_usertype<math::vec2>("vec2",
 		sol::call_constructor, sol::constructors<math::vec2(), math::vec2(float, float), math::vec2(const math::vec2&)>(),
 		"x", &math::vec2::x,
 		"y", &math::vec2::y,
@@ -133,10 +134,56 @@ void lua_engine::register_math_api()
 		sol::meta_function::to_string, &math::vec2::to_string,
 		sol::meta_function::unary_minus, static_cast<math::vec2(math::vec2::*)() const>(&math::vec2::operator-)
 		);
-	t_math["dot"] = &math::dot;
-	t_math["normal"] = &math::normal<math::vec2>;
-	t_math["magnitude"] = &math::magnitude;
-	t_math["distance"] = &math::distance;
+	t["dot"] = &math::dot;
+	t["normal"] = &math::normal<math::vec2>;
+	t["magnitude"] = &math::magnitude;
+	t["distance"] = &math::distance;
+	t.new_usertype<math::transform>("transform",
+		"position", &math::transform::position,
+		"scale", &math::transform::scale);
+	t.new_usertype<math::rect>("rect",
+		sol::call_constructor, sol::constructors<math::rect(),
+			math::rect(const math::vec2&, const math::vec2&),
+			math::rect(float, float, float, float), math::rect(const math::rect&)>(),
+		"x", &math::rect::x,
+		"y", &math::rect::y,
+		"width", &math::rect::width,
+		"height", &math::rect::height,
+		"position", &math::rect::position,
+		"size", &math::rect::size);
+}
+
+class b2_quick_query_callback :
+	public b2QueryCallback
+{
+public:
+	virtual bool ReportFixture(b2Fixture* fixture) override
+	{
+		has_collision = true;
+		return false;
+	}
+
+	bool has_collision = false;
+};
+
+void lua_engine::register_physics_api()
+{
+	sol::table t = state.create_named_table("physics");
+	t["test_aabb"] = [this](const core::layer& pLayer, const math::vec2& a, const math::vec2& b)
+	{
+		if (auto world = pLayer.get_system<physics::physics_world>())
+		{
+			b2_quick_query_callback callback;
+			b2AABB aabb;
+			aabb.lowerBound.x = a.x;
+			aabb.lowerBound.y = a.y;
+			aabb.upperBound.x = b.x;
+			aabb.upperBound.y = b.y;
+			world->get_world()->QueryAABB(&callback, aabb);
+			return callback.has_collision;
+		}
+		return false;
+	};
 }
 
 void script_system::update(float pDelta)
