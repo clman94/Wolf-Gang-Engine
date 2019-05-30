@@ -83,8 +83,8 @@ public:
 	const atlas_container& get_raw_atlas() const noexcept;
 
 private:
-	virtual json get_metadata() const override;
-	virtual void set_metadata(const json& pJson) override;
+	virtual json serialize_data() const override;
+	virtual void deserialize_data(const json& pJson) override;
 
 private:
 	texture_impl::ptr mImpl;

@@ -106,7 +106,7 @@ const texture::atlas_container& texture::get_raw_atlas() const noexcept
 	return mAtlas;
 }
 
-json texture::get_metadata() const
+json texture::serialize_data() const
 {
 	json result;
 	for (const auto& i : mAtlas)
@@ -114,7 +114,7 @@ json texture::get_metadata() const
 	return result;
 }
 
-void texture::set_metadata(const json& pJson)
+void texture::deserialize_data(const json& pJson)
 {
 	mAtlas.clear();
 	if (!pJson.is_null())

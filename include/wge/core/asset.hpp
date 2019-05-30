@@ -29,8 +29,13 @@ public:
 	virtual void save() {}
 
 	// Returns metadata containing settings for this resource.
-	virtual json get_metadata() const { return{}; }
-	virtual void set_metadata(const json& pJson) {}
+	virtual json serialize_data() const { return{}; }
+	virtual void deserialize_data(const json& pJson) {}
+};
+
+class resource_serializer
+{
+
 };
 
 template <typename Tto, typename Tfrom>
@@ -120,6 +125,5 @@ private:
 	// Resource-specific metadata is cached here until this asset is assigned a resource object.
 	json mResource_metadata_cache;
 };
-
 
 } // namespace wge::core

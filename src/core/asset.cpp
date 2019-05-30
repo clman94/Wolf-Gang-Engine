@@ -77,7 +77,7 @@ void asset::save() const
 	data["metadata"] = mMetadata;
 	if (mResource)
 	{
-		data["resource-metadata"] = mResource->get_metadata();
+		j["resource-metadata"] = mResource->serialize_data();
 		mResource->save();
 	}
 
@@ -120,7 +120,7 @@ void asset::set_resource(const resource::ptr & pResource) noexcept
 void asset::update_resource_metadata() const
 {
 	if (mResource)
-		mResource->set_metadata(mResource_metadata_cache);
+		mResource->deserialize_data(mResource_metadata_cache);
 }
 
 } // namespace wge::core
