@@ -26,7 +26,15 @@ class script :
 	public core::resource
 {
 public:
+	using ptr = std::shared_ptr<script>;
+
 	std::string source;
+	sol::protected_function function;
+
+	bool is_compiled() const noexcept
+	{
+		return function.valid();
+	}
 
 	void load(const filesystem::path& pPath)
 	{
@@ -60,6 +68,17 @@ public:
 		}
 	}
 
+	void save(const filesystem::path& pPath)
+	{
+		mFile_path = pPath;
+		save();
+	}
+
+	const filesystem::path& get_source_path() const noexcept
+	{
+		return mFile_path;
+	}
+
 private:
 	filesystem::path mFile_path;
 };
@@ -77,8 +96,10 @@ public:
 	// Update the delta. Do this before each layer.
 	void update_delta(float pSeconds);
 
+	bool compile_script(script& pScript);
+
 	// This environment stores all global data from global scripts
-	sol::environment main_environment;
+	sol::environment global_environment;
 
 	sol::state state;
 
@@ -106,6 +127,7 @@ class event_component :
 	public core::component
 {
 public:
+	script::ptr source_script;
 	std::string source;
 };
 

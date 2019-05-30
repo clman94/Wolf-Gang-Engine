@@ -1,4 +1,6 @@
 #include <wge/scripting/lua_engine.hpp>
+#include <wge/physics/physics_world.hpp>
+#include <Box2D/Dynamics/b2World.h>
 
 namespace wge::scripting
 {
@@ -11,13 +13,13 @@ lua_engine::lua_engine()
 lua_engine::~lua_engine()
 {
 	// Clear the environment first to prevent hanging references
-	main_environment = sol::environment{};
+	global_environment = sol::environment{};
 }
 
 void lua_engine::execute_global_scripts(core::asset_manager& pAsset_manager)
 {
 	// Reset the global environment
-	main_environment = sol::environment(state, sol::create, state.globals());
+	global_environment = sol::environment(state, sol::create, state.globals());
 
 	// Run all global scripts
 	for (auto& i : pAsset_manager.get_asset_list())
@@ -27,7 +29,7 @@ void lua_engine::execute_global_scripts(core::asset_manager& pAsset_manager)
 			auto res = i->get_resource<script>();
 			try
 			{
-				state.safe_script(res->source, main_environment, i->get_path().string(), sol::load_mode::text);
+				state.safe_script(res->source, global_environment, i->get_path().string(), sol::load_mode::text);
 			}
 			catch (sol::error& e)
 			{
@@ -39,7 +41,7 @@ void lua_engine::execute_global_scripts(core::asset_manager& pAsset_manager)
 
 sol::environment lua_engine::create_object_environment(const core::game_object& pObj)
 {
-	sol::environment env(state, sol::create, main_environment);
+	sol::environment env(state, sol::create, global_environment);
 
 	env["this"] = env;
 
@@ -62,12 +64,23 @@ sol::environment lua_engine::create_object_environment(const core::game_object& 
 		set_position(get_position() + pDirection);
 	};
 
+	env["this_layer"] = std::ref(pObj.get_layer());
+
 	return env;
 }
 
 void lua_engine::update_delta(float pSeconds)
 {
 	state["delta"] = pSeconds;
+}
+
+bool lua_engine::compile_script(script& pScript)
+{
+	sol::load_result result = state.load(pScript.source, pScript.get_source_path().string());
+	if (!result.valid())
+		return false;
+	pScript.function = result.get<sol::protected_function>();
+	return true;
 }
 
 void lua_engine::register_api()
@@ -148,6 +161,8 @@ void script_system::update(float pDelta)
 		if (!pState.environment.valid())
 		{
 			pState.environment = mLua_engine.create_object_environment(pObj);
+
+			// Added the properties as variables.
 			for (const auto& i : pState.properties)
 			{
 				if (!i.name.empty())
@@ -182,17 +197,19 @@ void script_system::update(float pDelta)
 	});
 }
 
-std::string make_valid_identifier(const std::string_view & pStr)
+std::string make_valid_identifier(const std::string_view& pStr)
 {
 	std::string result(pStr);
 	for (auto& i : result)
 	{
+		// Replace all characters that are not valid with "_"
 		if (!(i >= 'a' && i <= 'z' ||
 			i >= 'A' && i <= 'Z' ||
 			i >= '0' && i <= '9' ||
 			i == '_'))
 			i = '_';
 	}
+	// If the first character is a digit, replace it with "_"
 	if (!result.empty() && result[0] >= '0' && result[0] <= '9')
 		result[0] = '_';
 	return result;
