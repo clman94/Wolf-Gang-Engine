@@ -3,24 +3,24 @@
 namespace wge::filesystem
 {
 
-path::path(const char * pString)
+path::path(const char* pString)
 {
 	parse(pString);
 }
 
-path::path(const std::string & pString)
+path::path(const std::string& pString)
 {
 	parse(pString);
 }
 
-path::path(const system_fs::path & pPath)
+path::path(const system_fs::path& pPath)
 {
 	for (auto& i : pPath)
 		mPath.push_back(i.string());
 	simplify();
 }
 
-bool path::parse(const std::string & pString, const std::set<char>& pSeparators)
+bool path::parse(const std::string_view& pString, const std::set<char>& pSeparators)
 {
 	if (pString.empty())
 		return false;
@@ -54,7 +54,7 @@ bool path::parse(const std::string & pString, const std::set<char>& pSeparators)
 	return true;
 }
 
-bool path::in_directory(const path & pPath) const
+bool path::in_directory(const path& pPath) const
 {
 	if (pPath.mPath.size() >= mPath.size()) // too big
 		return false;
@@ -296,12 +296,12 @@ void path::simplify()
 	}
 }
 
-void path::push_front(const std::string & pStr)
+void path::push_front(const std::string& pStr)
 {
 	mPath.push_front(pStr);
 }
 
-void path::push_back(const std::string & pStr)
+void path::push_back(const std::string& pStr)
 {
 	mPath.push_back(pStr);
 }
@@ -311,7 +311,7 @@ void path::erase(iterator pBegin, iterator pEnd)
 	mPath.erase(pBegin, pEnd);
 }
 
-path wge::filesystem::make_relative_to(const path & pFrom_directory, const path & pTarget_file)
+path wge::filesystem::make_relative_to(const path& pFrom_directory, const path& pTarget_file)
 {
 	if (!pTarget_file.in_directory(pFrom_directory))
 		return {};

@@ -3,6 +3,7 @@
 #include <string>
 #include <set>
 #include <deque>
+#include <string_view>
 
 #include <filesystem>
 namespace system_fs = std::filesystem;
@@ -11,7 +12,6 @@ namespace system_fs = std::filesystem;
 
 namespace wge::filesystem
 {
-
 
 // An filepath-like class that doesn't associate with any one filesystem.
 // This has some inpiration from the boost::filesystem::path.
@@ -28,7 +28,7 @@ public:
 	path(const system_fs::path& pPath);
 
 	// Parse a filepath. Returns true if successful.
-	bool parse(const std::string& pString, const std::set<char>& pSeparators = { '\\', '/' });
+	bool parse(const std::string_view& pString, const std::set<char>& pSeparators = { '\\', '/' });
 
 	// Check if first part of this path is the same.
 	// E.g. "dir/file.exe" in_directory "dir" => True
@@ -115,4 +115,4 @@ private:
 // make_relative_to("dir", "dir2/file.exe") => "" Cannot resolve relative path
 path make_relative_to(const path& pFrom_directory, const path& pTarget_file);
 
-}
+} // namespace wge::filesystem
