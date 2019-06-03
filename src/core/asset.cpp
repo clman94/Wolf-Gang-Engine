@@ -21,24 +21,26 @@ bool asset::load_file(const filesystem::path& pSystem_path)
 	mFile_path = pSystem_path;
 
 	// Load all the settings
-	json data = json::parse(str);
-	mType = data["type"];
-	mId = data["id"];
-	mDescription = data["description"];
-	mMetadata = data["metadata"];
-	mResource_metadata_cache = data["resource-metadata"];
+	json j = json::parse(str);
+	mName = j["name"];
+	mType = j["type"];
+	mId = j["id"];
+	mDescription = j["description"];
+	mMetadata = j["metadata"];
+	mResource_metadata_cache = j["resource-metadata"];
+	mParent = j["parent"];
 	update_resource_metadata();
 	return true;
 }
 
-const filesystem::path& asset::get_path() const noexcept
+const std::string& asset::get_name() const noexcept
 {
-	return mPath;
+	return mName;
 }
 
-void asset::set_path(const filesystem::path& pPath)
+void asset::set_name(const std::string& pName)
 {
-	mPath = pPath;
+	mName = pName;
 }
 
 const filesystem::path& asset::get_file_path() const noexcept
@@ -70,20 +72,22 @@ void asset::save() const
 {
 	assert(!mFile_path.empty());
 
-	json data;
-	data["type"] = mType;
-	data["id"] = mId;
-	data["description"] = mDescription;
-	data["metadata"] = mMetadata;
+	json j;
+	j["name"] = mName;
+	j["type"] = mType;
+	j["id"] = mId;
+	j["description"] = mDescription;
+	j["metadata"] = mMetadata;
 	if (mResource)
 	{
 		j["resource-metadata"] = mResource->serialize_data();
 		mResource->save();
 	}
+	j["parent"] = mParent;
 
 	filesystem::file_stream out;
 	out.open(mFile_path, filesystem::stream_access::write);
-	out.write(data.dump(2));
+	out.write(j.dump(2));
 }
 
 const std::string& asset::get_description() const noexcept
@@ -111,10 +115,26 @@ bool asset::is_resource() const noexcept
 	return (bool)mResource;
 }
 
-void asset::set_resource(const resource::ptr & pResource) noexcept
+void asset::set_resource(resource::uptr pResource) noexcept
 {
-	mResource = pResource;
+	mResource = std::move(pResource);
 	update_resource_metadata();
+}
+
+const util::uuid& asset::get_parent_id() const noexcept
+{
+	return mParent;
+}
+
+void asset::set_parent_id(const util::uuid& pId) noexcept
+{
+	mParent = pId;
+}
+
+void asset::set_parent(const asset::ptr& pAsset) noexcept
+{
+	assert(pAsset);
+	mParent = pAsset->get_id();
 }
 
 void asset::update_resource_metadata() const

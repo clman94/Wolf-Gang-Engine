@@ -12,13 +12,11 @@ namespace wge::core
 class resource
 {
 public:
-	template<typename T>
-	using tptr = std::shared_ptr<T>;
-	using ptr = std::shared_ptr<resource>;
+	using uptr = std::unique_ptr<resource>;
 
 	virtual ~resource() {}
 
-	virtual void load() {}
+	virtual void load(const filesystem::path& pDirectory, const std::string& pName) {}
 	virtual void unload() {}
 
 	virtual bool is_loaded() const
@@ -28,21 +26,15 @@ public:
 
 	virtual void save() {}
 
-	// Returns metadata containing settings for this resource.
+	// Make sure the resource to unloaded when you actually change the path of
+	// it so any streams are cleaned up. This function should be used
+	// to notify this resource about the change in path.
+	virtual void update_source_path(const filesystem::path& pDirectory, const std::string& mName) {}
+
+	// Serialize any settings from this resource.
 	virtual json serialize_data() const { return{}; }
 	virtual void deserialize_data(const json& pJson) {}
 };
-
-class resource_serializer
-{
-
-};
-
-template <typename Tto, typename Tfrom>
-[[nodiscard]] inline resource::tptr<Tto> cast_resource(const resource::tptr<Tfrom>& pFrom) noexcept
-{
-	return std::dynamic_pointer_cast<Tto>(pFrom);
-}
 
 // Assets are file-like objects that contain data and resources for a project.
 class asset final
@@ -56,12 +48,11 @@ public:
 	// Load a file.
 	bool load_file(const filesystem::path& pSystem_path);
 
-	// Save the assets configuration to its file.
+	// Save the assets configuration to its source file.
 	void save() const;
 
-	// This path will be used to locate this asset.
-	const filesystem::path& get_path() const noexcept;
-	void set_path(const filesystem::path& pPath);
+	const std::string& get_name() const noexcept;
+	void set_name(const std::string& pName);
 
 	// Get path to the configuration file on the hard-drive.
 	const filesystem::path& get_file_path() const noexcept;
@@ -82,32 +73,33 @@ public:
 	bool is_resource() const noexcept;
 
 	template <typename T = resource>
-	resource::tptr<T> get_resource() const noexcept
+	T* get_resource() const noexcept
 	{
-		return cast_resource<T>(mResource);
+		return dynamic_cast<T*>(mResource.get());
 	}
-	void set_resource(const resource::ptr& pResource) noexcept;
+	void set_resource(resource::uptr pResource) noexcept;
+
+	const util::uuid& get_parent_id() const noexcept;
+	void set_parent_id(const util::uuid& pId) noexcept;
+	void set_parent(const asset::ptr& pAsset) noexcept;
 
 private:
 	void update_resource_metadata() const;
 
 private:
+	util::uuid mParent;
+
 	// Stores the resource.
-	resource::ptr mResource;
+	resource::uptr mResource;
 
 	// This is that path that the asset manager uses to
 	// locate assets.
-	filesystem::path mPath;
+	std::string mName;
 
-	// This is the system path used to locate
-	// the configuration file on the systems hard-drive.
-	// May be empty if this asset does not come from the
-	// systems hard-driive such as a pack file.
+	// File path to the asset's source file on the systems disk.
 	filesystem::path mFile_path;
 
 	// A string identifying the type of an asset.
-	// TODO: Consider using something less heavy
-	//   for quicker indexing.
 	std::string mType;
 
 	// An optional description of this asset.
@@ -124,6 +116,48 @@ private:
 
 	// Resource-specific metadata is cached here until this asset is assigned a resource object.
 	json mResource_metadata_cache;
+};
+
+// Keeps a reference to an asset but gives
+// pointer-like access to a casted resource.
+template <typename T>
+class resource_handle
+{
+public:
+	resource_handle() = default;
+	resource_handle(const core::asset::ptr& pAsset) :
+		mAsset(pAsset)
+	{}
+
+	T& operator*() const noexcept
+	{
+		assert(mAsset);
+		return *mAsset->get_resource<T>();
+	}
+
+	T* operator->() const noexcept
+	{
+		assert(mAsset);
+		return mAsset->get_resource<T>();
+	}
+
+	const asset::ptr& get_asset() const noexcept
+	{
+		return mAsset;
+	}
+
+	bool is_valid() const noexcept
+	{
+		return static_cast<bool>(mAsset);
+	}
+
+	operator bool() const noexcept
+	{
+		return is_valid();
+	}
+
+private:
+	core::asset::ptr mAsset;
 };
 
 } // namespace wge::core

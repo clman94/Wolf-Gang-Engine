@@ -47,7 +47,7 @@ class texture :
 {
 public:
 	using atlas_container = std::vector<animation>;
-	using ptr = tptr<texture>;
+	using handle = core::resource_handle<texture>;
 
 	virtual ~texture() {}
 
@@ -55,7 +55,7 @@ public:
 	texture_impl::ptr get_implementation() const noexcept;
 
 	// Load a texture from a file
-	void load(const std::string& pFilepath);
+	virtual void load(const filesystem::path& pDirectory, const std::string& pName) override;
 
 	// Get width of texture in pixels
 	int get_width() const noexcept;
@@ -82,11 +82,14 @@ public:
 	atlas_container& get_raw_atlas() noexcept;
 	const atlas_container& get_raw_atlas() const noexcept;
 
+	virtual void update_source_path(const filesystem::path& pDirectory, const std::string& pName) override;
+
 private:
 	virtual json serialize_data() const override;
 	virtual void deserialize_data(const json& pJson) override;
 
 private:
+	filesystem::path mPath;
 	texture_impl::ptr mImpl;
 	bool mSmooth{ false };
 	image mImage;

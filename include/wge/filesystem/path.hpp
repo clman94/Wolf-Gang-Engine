@@ -66,6 +66,8 @@ public:
 	// Pop the top item. E.g  "dir/file.exe" => "dir"
 	std::string pop_filepath();
 
+	void add_extension(const std::string_view& pExt);
+
 	// Removed the extension.
 	// Returns true if an extension was removed.
 	bool remove_extension();

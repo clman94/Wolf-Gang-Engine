@@ -36,6 +36,45 @@
 #include <variant>
 #include <functional>
 #include <future>
+#include <unordered_map>
+#include <array>
+
+namespace wge::core
+{
+
+class texture_importer :
+	public importer
+{
+public:
+	virtual asset::ptr import(asset_manager& pAsset_mgr, const filesystem::path& pSystem_path) override
+	{
+		auto tex = std::make_shared<asset>();
+		tex->set_name(pSystem_path.stem());
+		tex->set_type("texture");
+		
+		// Create a new subdirectory for the asset's storage.
+		auto directory = pAsset_mgr.get_root_directory() / pAsset_mgr.generate_asset_directory_name(tex);
+		system_fs::create_directory(directory);
+		tex->set_file_path(directory / (tex->get_name() + ".wga"));
+
+		// Copy the texture file.
+		system_fs::copy_file(pSystem_path, directory / (tex->get_name() + ".png"));
+
+		// Create the new resource
+		auto res = pAsset_mgr.create_resource("texture");
+		res->load(directory, tex->get_name());
+		tex->set_resource(std::move(res));
+
+		// Save the configuration
+		tex->save();
+
+		pAsset_mgr.add_asset(tex);
+
+		return tex;
+	}
+};
+
+} // namespace wge::core
 
 namespace wge::editor
 {
@@ -227,6 +266,7 @@ public:
 		// Store the cursor so we can position things on top of the image
 		const ImVec2 image_position = ImGui::GetCursorScreenPos();
 
+		// A checker board will help us "see" the alpha channel of the image
 		ImGui::DrawAlphaCheckerBoard(image_position, image_size);
 
 		ImGui::Image(get_asset(), image_size);
@@ -324,7 +364,7 @@ public:
 		ImGui::EndChild();
 	}
 
-	static void preview_image(const char* pStr_id, const graphics::texture::ptr& pTexture, const math::vec2& pSize, const math::rect& pFrame_rect)
+	static void preview_image(const char* pStr_id, const graphics::texture::handle& pTexture, const math::vec2& pSize, const math::rect& pFrame_rect)
 	{
 		if (pSize.x <= 0 || pSize.y <= 0)
 			return;
@@ -368,7 +408,7 @@ public:
 			ImGui::End();
 		};
 
-		auto texture = get_asset()->get_resource<graphics::texture>();
+		graphics::texture::handle texture = get_asset();
 
 		if (ImGui::CollapsingHeader("Atlas", ImGuiTreeNodeFlags_DefaultOpen))
 		{
@@ -475,7 +515,7 @@ public:
 	}
 
 private:
-	static std::string make_unique_animation_name(graphics::texture::ptr pTexture, const std::string& pName)
+	static std::string make_unique_animation_name(const graphics::texture::handle& pTexture, const std::string& pName)
 	{
 		return util::create_unique_name(pName,
 			pTexture->get_raw_atlas().begin(), pTexture->get_raw_atlas().end(),
@@ -522,32 +562,34 @@ public:
 
 	void on_gui()
 	{
-		if (ImGui::Begin("Asset Manager"))
+		if (ImGui::Begin("Project", 0, ImGuiWindowFlags_MenuBar))
 		{
-			static filesystem::path path = "";
-			static float directory_tree_width = 200;
-			using const_iterator = core::asset_manager::file_structure::const_iterator;
-			const_iterator root = mAsset_manager.get_file_structure().find("");
-
-			if (ImGui::BeginCombo("##NewAsset", "New Asset", ImGuiComboFlags_NoArrowButton))
+			if (ImGui::BeginMenuBar())
 			{
-				if (ImGui::Selectable("Object"))
+				if (ImGui::MenuItem("Update Asset Directory"))
 				{
-					json object_data =
-					{
-						{"name", "New Object"},
-						{"components", json::array({}) }
-					};
-					mAsset_manager.create_asset(root.get_path() / "empty_object", "gameobject", object_data);
+					mAsset_manager.update_directory_structure();
+				}
+				ImGui::EndMenuBar();
+			}
+
+			static core::asset::ptr current_folder;
+			static float directory_tree_width = 200;
+
+			const filesystem::path current_path = mAsset_manager.get_asset_path(current_folder);
+
+			if (ImGui::BeginCombo("##New", "New", ImGuiComboFlags_NoArrowButton))
+			{
+				if (ImGui::Selectable("Folder"))
+				{
+					mAsset_manager.create_folder(current_path / "new_folder");
 				}
 				ImGui::EndCombo();
 			}
 
 			ImGui::BeginChild("DirectoryTree", { directory_tree_width, 0 }, true);
-			show_asset_directory_tree(root, path);
+			show_asset_directory_tree(current_folder);
 			ImGui::EndChild();
-
-			const_iterator current_directory = mAsset_manager.get_file_structure().find(path);
 
 			ImGui::SameLine();
 			ImGui::VerticalSplitter("DirectoryTreeSplitter", &directory_tree_width);
@@ -556,93 +598,38 @@ public:
 			ImGui::BeginGroup();
 
 			ImGui::PushID("PathList");
-			for (std::size_t i = 0; i < path.size(); ++i)
+			for (std::size_t i = 0; i < current_path.size(); ++i)
 			{
-				const bool last_item = i == path.size() - 1;
-				if (ImGui::Button(path[i].c_str()))
+				const bool last_item = i == current_path.size() - 1;
+				if (ImGui::Button(current_path[i].c_str()))
 				{
 					// TODO: Clicking the last item will open a popup to select a different directory..?
-					path.erase(path.begin() + i + 1, path.end());
+					auto new_path = current_path;
+					new_path.erase(new_path.begin() + i, new_path.end());
+					current_folder = mAsset_manager.get_asset(new_path);
 					break;
 				}
-				if (!last_item)
-					ImGui::SameLine();
+				ImGui::SameLine();
 			}
+			ImGui::NewLine();
+
 			ImGui::PopID();
 
 			const math::vec2 file_preview_size = { 100, 100 };
 
 			ImGui::BeginChild("FileList", { 0, 0 }, true);
-			for (auto i = current_directory.child(); i != const_iterator{}; ++i)
+			mAsset_manager.for_each_child(current_folder, [&](auto& i)
 			{
-				// Skip Directories or if it doesn't look like an asset
-				if (i.is_directory() || !i.userdata())
-					continue;
-
-				ImGui::PushID(i.get_node());
-
-				const core::asset::ptr asset = *i.userdata();
-				const bool is_asset_selected = mSelected_asset == asset;
-
-				ImGui::BeginGroup();
-
-				// Draw preview
-				if (asset->get_type() == "texture")
-					ImGui::ImageButton(asset,
-						file_preview_size - math::vec2(ImGui::GetStyle().FramePadding) * 2);
-				else
-					ImGui::Button("No preview", file_preview_size);
-
-				ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), asset->get_type().c_str());
-
-				// Draw text
-				ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + file_preview_size.x);
-				ImGui::Text(i.name().c_str());
-				ImGui::PopTextWrapPos();
-
-				ImGui::EndGroup();
-				ImGui::SameLine();
-
-				// Allow asset to be dragged
-				if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+				// Skip folders
+				if (i->get_type() != "folder")
 				{
-					ImGui::SetDragDropPayload((asset->get_type() + "Asset").c_str(), &asset->get_id(), sizeof(util::uuid));
-					ImGui::Text("Asset: %s", asset->get_path().string().c_str());
-					ImGui::EndDragDropSource();
+					asset_tile(i, file_preview_size);
+
+					// If there isn't any room left in this line, create a new one.
+					if (ImGui::GetContentRegionAvailWidth() < file_preview_size.x)
+						ImGui::NewLine();
 				}
-
-				// Select the asset when clicked
-				if (ImGui::IsItemClicked())
-					mSelected_asset = asset;
-				if (ImGui::IsItemClicked() && ImGui::IsMouseDoubleClicked(0))
-					mContext.open_editor(mSelected_asset);
-
-				auto dl = ImGui::GetWindowDrawList();
-
-				// Calculate item aabb that includes the item spacing
-				math::vec2 item_min = math::vec2(ImGui::GetItemRectMin())
-					- math::vec2(ImGui::GetStyle().ItemSpacing) / 2;
-				math::vec2 item_max = math::vec2(ImGui::GetItemRectMax())
-					+ math::vec2(ImGui::GetStyle().ItemSpacing) / 2;
-
-				// Draw the background
-				if (ImGui::IsItemHovered())
-				{
-					dl->AddRectFilled(item_min, item_max,
-						ImGui::GetColorU32(ImGuiCol_ButtonHovered), ImGui::GetStyle().FrameRounding);
-				}
-				else if (is_asset_selected)
-				{
-					dl->AddRectFilled(item_min, item_max,
-						ImGui::GetColorU32(ImGuiCol_ButtonActive), ImGui::GetStyle().FrameRounding);
-				}
-
-				// If there isn't any room left in this line, create a new one.
-				if (ImGui::GetContentRegionAvailWidth() < file_preview_size.x)
-					ImGui::NewLine();
-
-				ImGui::PopID();
-			}
+			});
 			ImGui::EndChild();
 
 			ImGui::EndGroup();
@@ -651,40 +638,100 @@ public:
 	}
 
 private:
-	static void show_asset_directory_tree(const core::asset_manager::file_structure::const_iterator& pIterator, filesystem::path& pDirectory)
+	void show_asset_directory_tree(core::asset::ptr& pCurrent_folder, const core::asset::ptr& pAsset = {})
 	{
-		using const_iterator = core::asset_manager::file_structure::const_iterator;
-
-		const bool is_root = pIterator.parent() == const_iterator{};
-
+		const bool is_root = !pAsset;
 		bool open = false;
 
 		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
-		const char* name = is_root ? "Assets" : pIterator.name().c_str();
-		if (pIterator.has_subdirectories())
-			open = ImGui::TreeNodeEx(name, flags);
-		else
+		const char* name = is_root ? "Assets" : pAsset->get_name().c_str();
+		if (pAsset && !mAsset_manager.has_subfolders(pAsset))
 			ImGui::TreeNodeEx(name, flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen);
+		else
+			open = ImGui::TreeNodeEx(name, flags);
 
 		// Set the directory
 		if (ImGui::IsItemClicked())
 		{
 			if (is_root)
-				pDirectory.clear();
+				pCurrent_folder = core::asset::ptr{};
 			else
-				pDirectory = pIterator.get_path();
+				pCurrent_folder = pAsset;
 		}
 
 		if (open)
 		{
 			// Show subdirectories
-			for (auto i = pIterator.child(); i != const_iterator{}; ++i)
+			mAsset_manager.for_each_child(pAsset, [&](auto& i)
 			{
-				if (i.is_directory())
-					show_asset_directory_tree(i, pDirectory);
-			}
+				if (i->get_type() == "folder")
+					show_asset_directory_tree(pCurrent_folder, i);
+			});
+
 			ImGui::TreePop();
 		}
+	}
+
+	void asset_tile(const core::asset::ptr& pAsset, const math::vec2& pSize)
+	{
+		ImGui::PushID(&*pAsset);
+
+		const bool is_asset_selected = mSelected_asset == pAsset;
+
+		ImGui::BeginGroup();
+
+		// Draw preview
+		if (pAsset->get_type() == "texture")
+			ImGui::ImageButton(pAsset,
+				pSize - math::vec2(ImGui::GetStyle().FramePadding) * 2);
+		else
+			ImGui::Button("No preview", pSize);
+
+		ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), pAsset->get_type().c_str());
+
+		// Draw text
+		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + pSize.x);
+		ImGui::Text(pAsset->get_name().c_str());
+		ImGui::PopTextWrapPos();
+
+		ImGui::EndGroup();
+		ImGui::SameLine();
+
+		// Allow asset to be dragged
+		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+		{
+			ImGui::SetDragDropPayload((pAsset->get_type() + "Asset").c_str(), &pAsset->get_id(), sizeof(util::uuid));
+			ImGui::Text("Asset: %s", mAsset_manager.get_asset_path(pAsset).string().c_str());
+			ImGui::EndDragDropSource();
+		}
+
+		// Select the asset when clicked
+		if (ImGui::IsItemClicked())
+			mSelected_asset = pAsset;
+		if (ImGui::IsItemClicked() && ImGui::IsMouseDoubleClicked(0))
+			mContext.open_editor(mSelected_asset);
+
+		auto dl = ImGui::GetWindowDrawList();
+
+		// Calculate item aabb that includes the item spacing
+		math::vec2 item_min = math::vec2(ImGui::GetItemRectMin())
+			- math::vec2(ImGui::GetStyle().ItemSpacing) / 2;
+		math::vec2 item_max = math::vec2(ImGui::GetItemRectMax())
+			+ math::vec2(ImGui::GetStyle().ItemSpacing) / 2;
+
+		// Draw the background
+		if (ImGui::IsItemHovered())
+		{
+			dl->AddRectFilled(item_min, item_max,
+				ImGui::GetColorU32(ImGuiCol_ButtonHovered), ImGui::GetStyle().FrameRounding);
+		}
+		else if (is_asset_selected)
+		{
+			dl->AddRectFilled(item_min, item_max,
+				ImGui::GetColorU32(ImGuiCol_ButtonActive), ImGui::GetStyle().FrameRounding);
+		}
+
+		ImGui::PopID();
 	}
 
 private:
@@ -1024,7 +1071,7 @@ private:
 				sprite->set_offset(offset);
 
 			core::asset::ptr tex = sprite->get_texture();
-			std::string inputtext = tex ? tex->get_path().string().c_str() : "None";
+			std::string inputtext = tex ? mAsset_manager.get_asset_path(tex).string().c_str() : "None";
 			ImGui::BeginGroup();
 			if (tex)
 			{

@@ -88,6 +88,19 @@ std::string uuid::to_string() const
 	return result;
 }
 
+std::string uuid::to_shortened_string() const
+{
+	std::string result;
+	result.resize(12);
+	put_hex(&result[0], mBytes[10]);
+	put_hex(&result[2], mBytes[11]);
+	put_hex(&result[4], mBytes[12]);
+	put_hex(&result[6], mBytes[13]);
+	put_hex(&result[8], mBytes[14]);
+	put_hex(&result[10], mBytes[15]);
+	return result;
+}
+
 bool uuid::parse(const std::string_view& pStr)
 {
 	if (pStr.length() != 36)

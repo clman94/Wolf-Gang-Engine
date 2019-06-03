@@ -25,25 +25,14 @@ engine::engine() :
 	mFactory.register_component<scripting::event_components::on_update>();
 
 	mAsset_manager.register_resource_factory("texture",
-		[&](core::asset::ptr& pAsset)
+		[&]()
 	{
-		auto res = std::make_shared<graphics::texture>();
+		auto res = std::make_unique<graphics::texture>();
 		res->set_implementation(mGraphics.get_graphics_backend()->create_texture_impl());
-		filesystem::path path = pAsset->get_file_path();
-		path.remove_extension();
-		res->load(path.string());
-		pAsset->set_resource(res);
+		return res;
 	});
 
-	mAsset_manager.register_resource_factory("script",
-		[&](core::asset::ptr& pAsset)
-	{
-		auto res = std::make_shared<scripting::script>();
-		filesystem::path path = pAsset->get_file_path();
-		path.remove_extension();
-		res->load(path);
-		pAsset->set_resource(res);
-	});
+	mAsset_manager.register_default_resource_factory<scripting::script>("script");
 }
 
 engine::~engine()
@@ -107,8 +96,6 @@ void engine::load_assets()
 {
 	mAsset_manager.set_root_directory(mSettings.get_asset_directory());
 	mAsset_manager.load_assets();
-	mAsset_manager.import_all_with_ext(".png", "texture");
-	mAsset_manager.import_all_with_ext(".lua", "script");
 }
 
 } // namespace wge::core

@@ -33,6 +33,8 @@ public:
 	int compare(const uuid& pR) const noexcept;
 
 	std::string to_string() const;
+	// Outputs only the last 12 digits of the uuid.
+	std::string to_shortened_string() const;
 
 	bool parse(const std::string_view& pStr);
 

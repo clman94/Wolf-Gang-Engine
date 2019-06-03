@@ -27,7 +27,7 @@ class script :
 	public core::resource
 {
 public:
-	using ptr = std::shared_ptr<script>;
+	using handle = core::resource_handle<script>;
 
 	std::string source;
 	sol::protected_function function;
@@ -37,15 +37,16 @@ public:
 		return function.valid();
 	}
 
-	void load(const filesystem::path& pPath)
+	virtual void load(const filesystem::path& pDirectory, const std::string& pName) override
 	{
-		std::ifstream stream(pPath.string().c_str());
+		auto path = pDirectory / (pName + ".lua");
 		try
 		{
+			std::ifstream stream(path.string().c_str());
 			std::stringstream sstr;
 			sstr << stream.rdbuf();
 			source = sstr.str();
-			mFile_path = pPath;
+			mFile_path = path;
 		}
 		catch (const filesystem::io_error& e)
 		{
@@ -78,6 +79,14 @@ public:
 	const filesystem::path& get_source_path() const noexcept
 	{
 		return mFile_path;
+	}
+
+	virtual void update_source_path(const filesystem::path& pDirectory, const std::string& pName) override
+	{
+		auto old_path = pDirectory / mFile_path.filename();
+		auto new_path = pDirectory / (pName + ".lua");
+		system_fs::rename(old_path, new_path);
+		mFile_path = std::move(new_path);
 	}
 
 private:
@@ -129,7 +138,7 @@ class event_component :
 	public core::component
 {
 public:
-	script::ptr source_script;
+	script::handle source_script;
 	std::string source;
 };
 

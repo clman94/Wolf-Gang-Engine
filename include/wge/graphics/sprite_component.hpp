@@ -49,7 +49,7 @@ protected:
 
 private:
 	math::aabb mSceen_aabb, mLocal_aabb;
-	core::asset::ptr mTexture;
+	texture::handle mTexture;
 	math::vec2 mOffset, mAnchor{ math::anchor::topleft };
 	util::uuid mAnimation_id;
 };

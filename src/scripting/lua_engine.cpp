@@ -29,7 +29,7 @@ void lua_engine::execute_global_scripts(core::asset_manager& pAsset_manager)
 			auto res = i->get_resource<script>();
 			try
 			{
-				state.safe_script(res->source, global_environment, i->get_path().string(), sol::load_mode::text);
+				state.safe_script(res->source, global_environment, pAsset_manager.get_asset_path(i).string(), sol::load_mode::text);
 			}
 			catch (sol::error& e)
 			{

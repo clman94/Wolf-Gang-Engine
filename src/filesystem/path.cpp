@@ -167,6 +167,12 @@ std::string path::pop_filepath()
 	return temp;
 }
 
+void path::add_extension(const std::string_view& pExt)
+{
+	if (!mPath.empty())
+		mPath.back() += pExt;
+}
+
 bool path::remove_extension()
 {
 	if (mPath.empty())

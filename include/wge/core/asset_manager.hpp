@@ -17,9 +17,8 @@ namespace wge::core
 class asset_manager
 {
 public:
-	using resource_factory = std::function<void(asset::ptr&)>;
+	using resource_factory = std::function<resource::uptr()>;
 	using asset_container = std::vector<asset::ptr>;
-	using file_structure = filesystem::file_structure<asset::ptr>;
 
 	// TODO: Implement the filesystem_interface as the only means of
 	//   loading assets.
@@ -39,12 +38,20 @@ public:
 	bool has_asset(const util::uuid& pUID) const noexcept;
 	bool has_asset(const asset::ptr& pAsset) const noexcept;
 
+	bool remove_asset(const asset::ptr& pAsset);
+
+	filesystem::path get_asset_path(const core::asset::ptr& pAsset) const;
+
 	// Find and cast a resource asset.
 	// Returns empty if it was not found.
 	template <typename T = resource>
-	resource::tptr<T> get_resource(const filesystem::path& pPath) const;
+	resource_handle<T> get_resource(const filesystem::path& pPath) const;
 
 	void register_resource_factory(const std::string& pType, const resource_factory& pFactory);
+	template <typename T>
+	void register_default_resource_factory(const std::string& pType);
+
+	resource::uptr create_resource(const std::string& pType) const;
 
 	// Set the root directory to find all assets.
 	// Note: This affects the relative path of all assets.
@@ -56,15 +63,29 @@ public:
 
 	const asset_container& get_asset_list() const;
 
-	asset::ptr import_resource(const filesystem::path& pResource_path, const std::string& pType);
-	void import_all_with_ext(const std::string& pExtension, const std::string& pType);
-
 	asset::ptr create_asset(const filesystem::path& pPath, const std::string& pType, const json& pMetadata = {});
 
-	const file_structure& get_file_structure() const
-	{
-		return mFile_structure;
-	}
+	// Create an asset representing a folder.
+	asset::ptr create_folder(const filesystem::path& pPath);
+
+	// Calls pCallable for each asset that is a child of pParent.
+	template <typename Tcallable>
+	void for_each_child(const asset::ptr& pParent, Tcallable&& pCallable) const;
+
+	bool has_children(const asset::ptr& pParent) const;
+	bool has_subfolders(const asset::ptr& pParent) const;
+	std::vector<asset::ptr> get_children(const asset::ptr& pParent) const;
+	std::vector<asset::ptr> get_children_recursive(const asset::ptr& pParent) const;
+	asset::ptr find_child(const asset::ptr& pParent, const std::string_view& pName) const;
+
+	// This generates a folder for the asset's data to be placed.
+	filesystem::path create_asset_storage(const asset::ptr& pAsset);
+
+	// Generates the name of the directory used to store an asset.
+	// "dir.dir.name-000000000000"
+	std::string generate_asset_directory_name(const asset::ptr& pAsset) const;
+	void update_directory_structure();
+	void save_all_configuration();
 
 private:
 	// Turn an absolute path into a relative path to the root directory
@@ -73,18 +94,68 @@ private:
 private:
 	std::map<std::string, resource_factory> mResource_factories; // { [asset type], [factory] }
 	std::vector<asset::ptr> mAsset_list;
-	file_structure mFile_structure;
 	filesystem::path mRoot_dir;
 	filesystem::filesystem_interface* mFilesystem{ nullptr };
 };
 
-template<typename T>
-inline resource::tptr<T> asset_manager::get_resource(const filesystem::path& pPath) const
+class importer
 {
-	asset::ptr ptr = get_asset(pPath);
-	if (!ptr)
+public:
+	// Import an asset/resource from the user's system.
+	virtual asset::ptr import(asset_manager&, const filesystem::path& pSystem_path) = 0;
+};
+
+class import_chooser
+{
+public:
+
+	void bind_importor_to_extension(const std::string& pExt, std::unique_ptr<importer> pImporter)
+	{
+		mImportors[pExt] = std::move(pImporter);
+	}
+
+	asset::ptr import(asset_manager& pAsset_mgr, const filesystem::path& pSystem_path) const
+	{
+		auto iter = mImportors.find(pSystem_path.extension());
+		if (iter != mImportors.end())
+		{
+			assert(iter->second);
+			return iter->second->import(pAsset_mgr, pSystem_path);
+		}
 		return{};
-	return ptr->get_resource<T>();
+	}
+
+private:
+	std::map<std::string, std::unique_ptr<importer>> mImportors;
+};
+
+template<typename T>
+inline resource_handle<T> asset_manager::get_resource(const filesystem::path& pPath) const
+{
+	return{ get_asset(pPath) };
+}
+
+template<typename T>
+inline void asset_manager::register_default_resource_factory(const std::string& pType)
+{
+	register_resource_factory(pType, []() { return std::make_unique<T>(); });
+}
+
+template<typename Tcallable>
+inline void asset_manager::for_each_child(const asset::ptr& pParent, Tcallable&& pCallable) const
+{
+	if (pParent)
+	{
+		for (const auto& i : mAsset_list)
+			if (i->get_parent_id() == pParent->get_id())
+				pCallable(i);
+	}
+	else
+	{
+		for (const auto& i : mAsset_list)
+			if (!i->get_parent_id().is_valid())
+				pCallable(i);
+	}
 }
 
 } // namespace wge::core

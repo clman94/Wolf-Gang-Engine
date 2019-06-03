@@ -12,9 +12,9 @@ json sprite_component::on_serialize(core::serialize_type pType) const
 	if (pType & core::serialize_type::properties)
 	{
 		result["offset"] = mOffset;
-		result["texture"] = mTexture ? json(mTexture->get_id()) : json();
+		result["texture"] = mTexture ? json(mTexture.get_asset()->get_id()) : json();
 
-		texture::ptr res = mTexture->get_resource<texture>();
+		texture::handle res = mTexture;
 		const animation* anim = mTexture ? res->get_animation(mAnimation_id) : nullptr;
 		result["animation-name"] = anim ? json(anim->name) : json();
 		result["animation-id"] = anim ? json(anim->id) : json();
@@ -35,7 +35,7 @@ void sprite_component::on_deserialize(const core::game_object& pObj, const json&
 	{
 		mAnimation_id = pJson["animation-id"];
 
-		texture::ptr res = mTexture->get_resource<texture>();
+		texture::handle res = mTexture;
 
 		// Check if this id is correct
 		if (!res->get_animation(mAnimation_id))
@@ -53,7 +53,7 @@ void sprite_component::create_batch(core::transform_component& pTransform, rende
 	// No texture
 	if (!mTexture)
 		return;
-	texture::ptr res = mTexture->get_resource<texture>();
+	texture::handle res = mTexture;
 
 	batch_builder batch;
 	batch.set_texture(res);
@@ -129,8 +129,7 @@ math::vec2 sprite_component::get_anchor() const noexcept
 bool sprite_component::set_animation(const std::string& pName) noexcept
 {
 	WGE_ASSERT(mTexture);
-	auto res = mTexture->get_resource<texture>();
-	if (auto anim = res->get_animation(pName))
+	if (auto anim = mTexture->get_animation(pName))
 	{
 		mAnimation_id = anim->id;
 		return true;
@@ -141,8 +140,7 @@ bool sprite_component::set_animation(const std::string& pName) noexcept
 bool sprite_component::set_animation(const util::uuid& pId) noexcept
 {
 	WGE_ASSERT(mTexture);
-	auto res = mTexture->get_resource<texture>();
-	if (res->get_animation(pId))
+	if (mTexture->get_animation(pId))
 	{
 		mAnimation_id = pId;
 		return true;
@@ -153,12 +151,13 @@ bool sprite_component::set_animation(const util::uuid& pId) noexcept
 void sprite_component::set_texture(const core::asset::ptr& pAsset) noexcept
 {
 	mTexture = pAsset;
-	set_animation("Default");
+	if (mTexture)
+		set_animation("Default");
 }
 
 core::asset::ptr sprite_component::get_texture() const noexcept
 {
-	return mTexture;
+	return mTexture.get_asset();
 }
 
 } // namespace wge::graphics

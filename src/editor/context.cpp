@@ -86,7 +86,7 @@ void context::show_editor_guis()
 		
 		// Construct a title with the id as the stringified asset id so the name can change freely
 		// without affecting the window.
-		const std::string title = asset->get_path().string() + "##" + asset->get_id().to_string();
+		const std::string title = asset->get_name() + "##" + asset->get_id().to_string();
 
 		ImGuiWindowFlags flags = is_asset_modified(asset) ? ImGuiWindowFlags_UnsavedDocument : 0;
 
