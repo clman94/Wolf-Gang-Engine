@@ -13,8 +13,9 @@ namespace system_fs = std::filesystem;
 namespace wge::filesystem
 {
 
-// An filepath-like class that doesn't associate with any one filesystem.
-// This has some inpiration from the boost::filesystem::path.
+// This path class represents a generic path.
+// It is very similar to std::filesystem::path but it
+// doesn't do any system-specific operations.
 class path
 {
 public:

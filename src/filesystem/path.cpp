@@ -50,7 +50,9 @@ bool path::parse(const std::string_view& pString, const std::set<char>& pSeparat
 
 	// This condition is false when there is a separator at the end e.g. "dir/"
 	} while (segment_begin_iter != pString.end());
+
 	simplify();
+
 	return true;
 }
 
@@ -215,7 +217,16 @@ system_fs::path path::to_system_path() const
 {
 	system_fs::path path;
 	for (const auto& i : mPath)
+	{
 		path /= i;
+
+		// Add a separator if the last segment ends with a ':'.
+		// std::filesystem::path will otherwise not add a separator after the ':' which is
+		// not what we want (right now anyway).
+		if (!i.empty() && i.back() == ':')
+			path /= std::basic_string(1, system_fs::path::preferred_separator);
+
+	}
 	return path;
 }
 
