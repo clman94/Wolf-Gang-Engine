@@ -58,7 +58,16 @@ public:
 		tex->set_file_path(directory / (tex->get_name() + ".wga"));
 
 		// Copy the texture file.
-		system_fs::copy_file(pSystem_path, directory / (tex->get_name() + ".png"));
+		auto dest = directory / (tex->get_name() + ".png");
+		try {
+			system_fs::copy_file(pSystem_path, dest);
+		}
+		catch (const std::filesystem::filesystem_error& e)
+		{
+			log::error() << "Failed to copy texture from " << pSystem_path << log::endm;
+			log::error() << "Failed with exception " << std::quoted(e.what()) << log::endm;
+			return{};
+		}
 
 		// Create the new resource
 		auto res = pAsset_mgr.create_resource("texture");
@@ -564,8 +573,20 @@ public:
 	{
 		if (ImGui::Begin("Project", 0, ImGuiWindowFlags_MenuBar))
 		{
+			static core::asset::ptr current_folder;
+			const filesystem::path current_path = mAsset_manager.get_asset_path(current_folder);
+
 			if (ImGui::BeginMenuBar())
 			{
+				if (ImGui::BeginMenu("New..."))
+				{
+					if (ImGui::Selectable("Folder"))
+					{
+						mAsset_manager.create_folder(current_path / "new_folder");
+					}
+					ImGui::EndMenu();
+				}
+
 				if (ImGui::MenuItem("Update Asset Directory"))
 				{
 					mAsset_manager.update_directory_structure();
@@ -573,19 +594,7 @@ public:
 				ImGui::EndMenuBar();
 			}
 
-			static core::asset::ptr current_folder;
 			static float directory_tree_width = 200;
-
-			const filesystem::path current_path = mAsset_manager.get_asset_path(current_folder);
-
-			if (ImGui::BeginCombo("##New", "New", ImGuiComboFlags_NoArrowButton))
-			{
-				if (ImGui::Selectable("Folder"))
-				{
-					mAsset_manager.create_folder(current_path / "new_folder");
-				}
-				ImGui::EndCombo();
-			}
 
 			ImGui::BeginChild("DirectoryTree", { directory_tree_width, 0 }, true);
 			show_asset_directory_tree(current_folder);
@@ -757,6 +766,71 @@ private:
 
 };
 
+class drop_import_handler
+{
+public:
+	drop_import_handler(core::asset_manager& pAsset_manager) :
+		mAsset_manager(&pAsset_manager)
+	{}
+
+	~drop_import_handler()
+	{
+		mCallback_connection.disconnect();
+	}
+
+	void register_callback_to(decltype(graphics::window_backend::on_file_drop)& pCallback)
+	{
+		mCallback_connection = pCallback.connect([&](int pCount, const char** pPaths)
+		{
+			for (int i = 0; i < pCount; i++)
+			{
+				filesystem::path path = pPaths[i];
+				if (path.extension() == ".png")
+					mPaths.push_back(std::move(path));
+			}
+		});
+	}
+
+	void on_gui()
+	{
+		if (!mPaths.empty())
+			ImGui::OpenPopup("Import Assets");
+
+		if (ImGui::BeginPopupModal("Import Assets", 0, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			ImGui::BeginChild("AssetsToImport", ImVec2(400, 300), true);
+
+			for (auto& i : mPaths)
+				ImGui::Selectable(i.string().c_str());
+
+			ImGui::EndChild();
+			if (ImGui::Button("Import"))
+			{
+				core::texture_importer importer;
+				for (auto& i : mPaths)
+				{
+					importer.import(*mAsset_manager, i);
+				}
+				mPaths.clear();
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Cancel"))
+			{
+				mPaths.clear();
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::EndPopup();
+		}
+	}
+
+private:
+	core::asset_manager* mAsset_manager;
+	std::vector<filesystem::path> mPaths;
+	util::connection mCallback_connection;
+};
+
 class application
 {
 public:
@@ -789,6 +863,8 @@ private:
 		// Store the glfw backend for initializing imgui's glfw backend
 		mGLFW_backend = std::dynamic_pointer_cast<graphics::glfw_window_backend>(g.get_window_backend());
 		mViewport_framebuffer = g.get_graphics_backend()->create_framebuffer();
+
+		mDrop_import_handler.register_callback_to(mGLFW_backend->on_file_drop);
 	}
 
 	void mainloop()
@@ -844,6 +920,7 @@ private:
 			//show_viewport();
 			//show_objects();
 			//show_inspector();
+			mDrop_import_handler.on_gui();
 			mAsset_manager_window.on_gui();
 			mContext.show_editor_guis();
 
@@ -1788,6 +1865,7 @@ private:
 	graphics::graphics& mGraphics{ mContext.get_engine().get_graphics() };
 
 	asset_manager_window mAsset_manager_window{ mContext, mAsset_manager };
+	drop_import_handler mDrop_import_handler{ mAsset_manager };
 
 	component_inspector mInspectors;
 

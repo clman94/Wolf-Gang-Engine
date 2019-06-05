@@ -7,6 +7,7 @@
 #include <wge/util/signal.hpp>
 
 #include <memory>
+#include <functional>
 
 namespace wge::graphics
 {
@@ -29,12 +30,15 @@ public:
 	using ptr = std::shared_ptr<window_backend>;
 	static ptr create(window_backend_type pType, backend_type pFor_backend);
 
+	using file_drop_callback = std::function<void(const std::string&)>;
+
 	virtual ~window_backend() {}
 	virtual int get_display_width() = 0;
 	virtual int get_display_height() = 0;
 	virtual void refresh() = 0;
 
 	util::signal<void()> on_close;
+	util::signal<void(int, const char**)> on_file_drop;
 };
 
 class graphics_backend

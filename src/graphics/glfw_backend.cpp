@@ -28,6 +28,14 @@ glfw_window_backend::glfw_window_backend()
 
 	// Match the monitors refresh rate (VSync)
 	glfwSwapInterval(1);
+
+	glfwSetWindowUserPointer(mWindow, this);
+
+	glfwSetDropCallback(mWindow, [](GLFWwindow* pWindow, int pCount, const char** pPaths)
+	{
+		glfw_window_backend* window = static_cast<glfw_window_backend*>(glfwGetWindowUserPointer(pWindow));
+		window->on_file_drop(pCount, pPaths);
+	});
 }
 
 glfw_window_backend::~glfw_window_backend()

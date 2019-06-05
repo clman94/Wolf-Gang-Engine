@@ -26,8 +26,8 @@ public:
 
 	virtual void save() {}
 
-	// Make sure the resource to unloaded when you actually change the path of
-	// it so any streams are cleaned up. This function should be used
+	// Make sure the resource is unloaded when you move it around
+	// so any streams are cleaned up. This function should be used
 	// to notify this resource about the change in path.
 	virtual void update_source_path(const filesystem::path& pDirectory, const std::string& mName) {}
 

@@ -40,9 +40,9 @@ public:
 	using ptr = std::shared_ptr<slot>;
 	using wptr = std::weak_ptr<slot>;
 
-	template <typename Tcallable, typename...Targs>
-	slot(Tcallable&& pCallable, Targs&&...pArgs) :
-		mFunction(std::bind(std::forward<Tcallable>(pCallable), std::forward<Targs>(pArgs)...))
+	template <typename Tcallable>
+	slot(Tcallable&& pCallable) :
+		mFunction(std::forward<Tcallable>(pCallable))
 	{}
 
 	// Track a shared_ptr object
