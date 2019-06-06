@@ -1019,7 +1019,7 @@ public:
 
 		auto editor_dock_id = ImGui::GetID("EditorDock");
 
-		ImGui::BeginChild("LeftPanel", ImVec2(200, 0));
+		ImGui::BeginChild("LeftPanel", ImVec2(300, 0));
 
 		std::string mut_name = get_asset()->get_name();
 		if (ImGui::InputText("Name", &mut_name))
