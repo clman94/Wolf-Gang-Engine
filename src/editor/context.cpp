@@ -53,7 +53,7 @@ context::modified_assets& context::get_unsaved_assets() noexcept
 	return mUnsaved_assets;
 }
 
-void context::open_editor(const core::asset::ptr& pAsset)
+asset_editor* context::open_editor(const core::asset::ptr& pAsset)
 {
 	assert(pAsset);
 
@@ -61,7 +61,7 @@ void context::open_editor(const core::asset::ptr& pAsset)
 	if (auto editor = get_editor(pAsset))
 	{
 		editor->focus_window();
-		return;
+		return editor;
 	}
 
 	// Create a new editor for this asset.
@@ -69,11 +69,14 @@ void context::open_editor(const core::asset::ptr& pAsset)
 	if (iter != mEditor_factories.end())
 	{
 		mAsset_editors.push_back(iter->second(pAsset));
+		return mAsset_editors.back().get();
 	}
 	else
 	{
 		log::error() << "No editor registered for asset type \"" << pAsset->get_type() << "\"" << log::endm;
 	}
+
+	return nullptr;
 }
 
 void context::close_editor(const core::asset::ptr& pAsset)
@@ -103,6 +106,11 @@ void context::show_editor_guis()
 
 		ImGuiWindowFlags flags = is_asset_modified(asset) ? ImGuiWindowFlags_UnsavedDocument : 0;
 
+		if (editor->get_dock_family_id() != 0)
+		{
+			ImGuiDockFamily family(editor->get_dock_family_id());
+			ImGui::SetNextWindowDockFamily(&family);
+		}
 		if (ImGui::Begin(title.c_str(), &is_window_open, flags))
 		{
 			if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))

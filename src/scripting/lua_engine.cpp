@@ -251,7 +251,7 @@ void script_system::update(float pDelta)
 	});
 }
 
-std::string make_valid_identifier(const std::string_view& pStr)
+std::string make_valid_identifier(const std::string_view& pStr, const std::string_view& pDefault)
 {
 	std::string result(pStr);
 	for (auto& i : result)

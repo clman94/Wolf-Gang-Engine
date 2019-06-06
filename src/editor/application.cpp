@@ -29,6 +29,8 @@
 #include "imgui_ext.hpp"
 #include "text_editor.hpp"
 
+#include <imgui/imgui_internal.h>
+
 // GL
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -1015,11 +1017,19 @@ public:
 	{
 		core::asset_manager& asset_manager = get_context().get_engine().get_asset_manager();
 
+		auto editor_dock_id = ImGui::GetID("EditorDock");
+
+		ImGui::BeginChild("LeftPanel", ImVec2(200, 0));
+
 		std::string mut_name = get_asset()->get_name();
 		if (ImGui::InputText("Name", &mut_name))
 		{
 			get_asset()->set_name(mut_name);
 			mark_asset_modified();
+		}
+		if (ImGui::IsItemDeactivatedAfterEdit())
+		{
+			get_asset()->set_name(scripting::make_valid_identifier(get_asset()->get_name()));
 		}
 
 		auto generator = get_asset()->get_resource<core::eventful_sprite_object_generator>();
@@ -1032,8 +1042,7 @@ public:
 		}
 
 		ImGui::Text("Events:");
-		ImGui::BeginChild("Events", ImVec2(0, 300), true);
-	
+		ImGui::BeginChild("Events", ImVec2(0, 0), true);
 		for (auto[type, asset_id] : util::ipair{ generator->events })
 		{
 			auto event_name = generator->event_typenames[type];
@@ -1042,23 +1051,36 @@ public:
 				get_context().is_editor_open_for(asset_id), ImGuiSelectableFlags_AllowDoubleClick)
 				&& ImGui::IsMouseDoubleClicked(0))
 			{
+				core::asset::ptr asset;
 				if (asset_id.is_valid())
 				{
-					auto asset = asset_manager.get_asset(asset_id);
-					get_context().open_editor(asset);
+					asset = asset_manager.get_asset(asset_id);
 				}
 				else
 				{
-					auto asset = create_event_script(event_name);
+					asset = create_event_script(event_name);
 					asset_id = asset->get_id();
-					get_context().open_editor(asset);
 					mark_asset_modified();
+				}
+
+				if (auto editor = get_context().open_editor(asset))
+				{
+					auto window_str_id = "###" + asset->get_id().to_string();
+					if (!ImGui::DockBuilderGetNode(editor_dock_id))
+						ImGui::DockBuilderAddNode(editor_dock_id, ImVec2(0, 0));
+					ImGui::DockBuilderDockWindow(window_str_id.c_str(), editor_dock_id);
+					ImGui::DockBuilderFinish(editor_dock_id);
+					editor->set_dock_family_id(editor_dock_id);
 				}
 			}
 		}
+		ImGui::EndChild();
 
 		ImGui::EndChild();
 
+		ImGui::SameLine();
+		ImGuiDockFamily dock_family(editor_dock_id);
+		ImGui::DockSpace(editor_dock_id, ImVec2(0, 0), ImGuiDockNodeFlags_None, &dock_family);
 	}
 
 private:

@@ -185,6 +185,6 @@ private:
 	lua_engine& mLua_engine;
 };
 
-std::string make_valid_identifier(const std::string_view& pStr);
+std::string make_valid_identifier(const std::string_view& pStr, const std::string_view& pDefault = "Blank");
 
 } // namespace wge::scripting

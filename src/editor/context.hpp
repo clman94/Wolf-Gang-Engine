@@ -46,9 +46,13 @@ public:
 
 	void mark_asset_modified() const;
 
+	void set_dock_family_id(unsigned int id) { mDock_family_id = id; }
+	unsigned int get_dock_family_id() { return mDock_family_id; }
+
 private:
 	context* mContext;
 	core::asset::ptr mAsset;
+	unsigned int mDock_family_id{ 0 };
 };
 
 class context
@@ -73,13 +77,14 @@ public:
 
 	template <typename T, typename...Targs>
 	void register_editor(const std::string& pAsset_type, Targs&&...);
-	void open_editor(const core::asset::ptr& pAsset);
+	asset_editor* open_editor(const core::asset::ptr& pAsset);
 	void close_editor(const core::asset::ptr& pAsset);
 	void close_all_editors();
 	void show_editor_guis();
 	bool is_editor_open_for(const core::asset::ptr& pAsset) const;
 	bool is_editor_open_for(const util::uuid& pAsset_id) const;
 	asset_editor* get_editor(const core::asset::ptr& pAsset) const;
+
 
 private:
 	core::engine mEngine;
