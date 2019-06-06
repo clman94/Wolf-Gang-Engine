@@ -1051,6 +1051,7 @@ public:
 				get_context().is_editor_open_for(asset_id), ImGuiSelectableFlags_AllowDoubleClick)
 				&& ImGui::IsMouseDoubleClicked(0))
 			{
+				bool first_time = false;
 				core::asset::ptr asset;
 				if (asset_id.is_valid())
 				{
@@ -1061,9 +1062,11 @@ public:
 					asset = create_event_script(event_name);
 					asset_id = asset->get_id();
 					mark_asset_modified();
+					first_time = true;
 				}
 
-				if (auto editor = get_context().open_editor(asset))
+				auto editor = get_context().open_editor(asset);
+				if (editor && first_time)
 				{
 					auto window_str_id = "###" + asset->get_id().to_string();
 					if (!ImGui::DockBuilderGetNode(editor_dock_id))
@@ -1080,6 +1083,8 @@ public:
 
 		ImGui::SameLine();
 		ImGuiDockFamily dock_family(editor_dock_id);
+		// Event script editors are given a dedicated dockspace where they spawn. This helps
+		// remove clutter windows popping up everywhere and adds more organization altogether.
 		ImGui::DockSpace(editor_dock_id, ImVec2(0, 0), ImGuiDockNodeFlags_None, &dock_family);
 	}
 
