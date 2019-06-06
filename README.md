@@ -1,8 +1,6 @@
 # Wolf-Gang Engine
 
-Simply, the greatest open-source game engine boosting evolutionary 2D graphics beyond the boundaries of modern computing to unimaginable degrees... Also it's not done yet so it can't do anything ye~ waitwaitwait WAIT! But when it is, it will be THE BEST in the industry. You believe me, *right?*
-
-In all seriousness, this engine is meant to provide a simple platform for creating your own 2d games quick and easy. It is inspired by Unity3d and various other fantastic engines out there! With its own quirks, of course.
+This is 2d engine that is meant to provide a simple platform for creating your own 2d games quick and easy. It features the ECS pattern as the framework for objects in a scene.
 
 It is still under heavy development so there isn't much to show here but here's a list of goals in mind:
 - Versatile and easy to use editor with satisfying visual feedback.

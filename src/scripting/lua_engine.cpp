@@ -21,8 +21,15 @@ void lua_engine::execute_global_scripts(core::asset_manager& pAsset_manager)
 	// Reset the global environment
 	global_environment = sol::environment(state, sol::create, state.globals());
 
+	auto global_script_folder = pAsset_manager.get_asset("GlobalScripts");
+	if (!global_script_folder || global_script_folder->get_type() != "folder")
+	{
+		log::warning() << "\"GlobalScripts\" folder does not exist" << log::endm;
+		return;
+	}
+
 	// Run all global scripts
-	for (auto& i : pAsset_manager.get_asset_list())
+	for (auto& i : pAsset_manager.get_children_recursive(global_script_folder))
 	{
 		if (i->get_type() == "script")
 		{

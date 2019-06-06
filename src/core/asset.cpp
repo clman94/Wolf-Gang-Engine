@@ -133,13 +133,15 @@ void asset::set_parent_id(const util::uuid& pId) noexcept
 
 void asset::set_parent(const asset::ptr& pAsset) noexcept
 {
-	assert(pAsset);
-	mParent = pAsset->get_id();
+	if (pAsset)
+		mParent = pAsset->get_id();
+	else
+		mParent = util::uuid{};
 }
 
 void asset::update_resource_metadata() const
 {
-	if (mResource)
+	if (mResource && !mResource_metadata_cache.is_null())
 		mResource->deserialize_data(mResource_metadata_cache);
 }
 

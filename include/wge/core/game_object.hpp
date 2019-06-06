@@ -18,6 +18,7 @@ struct has_component_id_member : std::false_type {};
 template <typename T>
 struct has_component_id_member <T, decltype((void)T::COMPONENT_ID, 0)> : std::true_type {};
 
+class engine;
 class scene;
 class layer;
 class component;
@@ -102,6 +103,7 @@ public:
 	// reconstruct this object in the destination layer and remove it in
 	// the source layer.
 	layer& get_layer() const;
+	engine& get_engine() const;
 	scene& get_scene() const;
 
 	bool is_instanced() const noexcept;

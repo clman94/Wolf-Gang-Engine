@@ -42,6 +42,8 @@ public:
 		return *mContext;
 	}
 
+	void focus_window() const noexcept;
+
 	void mark_asset_modified() const;
 
 private:
@@ -76,6 +78,8 @@ public:
 	void close_all_editors();
 	void show_editor_guis();
 	bool is_editor_open_for(const core::asset::ptr& pAsset) const;
+	bool is_editor_open_for(const util::uuid& pAsset_id) const;
+	asset_editor* get_editor(const core::asset::ptr& pAsset) const;
 
 private:
 	core::engine mEngine;

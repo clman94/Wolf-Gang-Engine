@@ -132,6 +132,19 @@ std::string asset_manager::generate_asset_directory_name(const asset::ptr& pAsse
 	return  "[" + pAsset->get_id().to_shortened_string() + "] " + path.string('.');
 }
 
+filesystem::path asset_manager::create_asset_storage(const core::asset::ptr& pAsset) const
+{
+	auto directory = mRoot_dir / generate_asset_directory_name(pAsset);
+	system_fs::create_directory(directory);
+	return directory;
+}
+
+void asset_manager::store_asset(const core::asset::ptr& pAsset) const
+{
+	auto directory = mRoot_dir / generate_asset_directory_name(pAsset);
+	pAsset->set_file_path(directory / (pAsset->get_name() + ".wga"));
+}
+
 void asset_manager::update_directory_structure()
 {
 	for (const auto& i : mAsset_list)

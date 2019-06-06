@@ -84,6 +84,10 @@ public:
 	// Generates the name of the directory used to store an asset.
 	// "dir.dir.name-000000000000"
 	std::string generate_asset_directory_name(const asset::ptr& pAsset) const;
+
+	filesystem::path create_asset_storage(const core::asset::ptr& pAsset) const;
+	void store_asset(const core::asset::ptr& pAsset) const;
+
 	void update_directory_structure();
 	void save_all_configuration();
 

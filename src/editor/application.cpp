@@ -19,6 +19,7 @@
 #include <wge/math/transform.hpp>
 #include <wge/util/ptr.hpp>
 #include <wge/core/game_settings.hpp>
+#include <Wge/util/ipair.hpp>
 
 #include "editor.hpp"
 #include "history.hpp"
@@ -39,8 +40,129 @@
 #include <unordered_map>
 #include <array>
 
+
+
 namespace wge::core
 {
+
+// I know you hate effort and so do I. Your average ECS game engine
+// requires you to dink around with these unappealing thingamajiggers
+// called components and that takes too much effort. So, why not have something
+// generate components for us?
+// Object generators are resources that will do just that. Give them some info,
+// and they will generate the required components with a fancy ui and possibly more
+// context aware debug messages.
+class object_generator :
+	public resource
+{
+public:
+	virtual ~object_generator() {}
+	virtual void generate_object(core::game_object&) = 0;
+};
+
+// If you ever used GameMakerStudio, you might be familiar with
+// what might be happening here.
+class eventful_sprite_object_generator :
+	public object_generator
+{
+public:
+	enum class event_type
+	{
+		create,
+		update,
+		count,
+	};
+	static constexpr std::array<const char*, 2> event_typenames = { "create", "update" };
+
+	// Asset id for the default sprite.
+	util::uuid display_sprite;
+	// Lists the ids for the scripts assets for each event type.
+	std::array<util::uuid, static_cast<unsigned>(event_type::count)> events;
+
+	void load_directory(const filesystem::path& pDir)
+	{
+		mDirectory = pDir;
+	}
+
+	virtual void save() override {}
+
+	virtual void generate_object(core::game_object& pObj) override
+	{
+		auto& asset_manager = pObj.get_engine().get_asset_manager();
+
+		pObj.add_component<core::transform_component>();
+
+		if (display_sprite.is_valid())
+		{
+			auto sprite = pObj.add_component<graphics::sprite_component>();
+			sprite->set_texture(asset_manager.get_asset(display_sprite));
+		}
+
+		if (!events.empty())
+		{
+			pObj.add_component<scripting::event_state_component>();
+
+			for (const auto& [type, asset_id] : util::ipair{ events })
+			{
+				scripting::event_component* comp = nullptr;
+				switch (static_cast<event_type>(type))
+				{
+				case event_type::create:
+					comp = pObj.add_component<scripting::event_components::on_create>();
+					break;
+				case event_type::update:
+					comp = pObj.add_component<scripting::event_components::on_update>();
+					break;
+				}
+				assert(comp);
+				if (auto asset = asset_manager.get_asset(asset_id))
+					comp->source_script = asset;
+				else
+					log::error() << "Could not load event script; Invalid id" << log::endm;
+			}
+		}
+	}
+
+	virtual json serialize_data() const override
+	{
+		json j;
+		json& jevents = j["events"];
+		for (const auto& [type, asset_id] : util::ipair{ events })
+		{
+			json jevent;
+			const char* event_name = event_typenames[type];
+			jevent["type"] = event_name;
+			jevent["id"] = asset_id;
+			jevents.push_back(jevent);
+		}
+		j["sprite"] = display_sprite;
+
+		return j;
+	}
+
+	virtual void deserialize_data(const json& pJson) override
+	{
+		const json& jevents = pJson["events"];
+		for (const auto& i : jevents)
+		{
+			// Find the index for this event name.
+			for (auto[index, name] : util::ipair{ event_typenames })
+			{
+				if (name == i["type"])
+				{
+					// Assign the id to that index.
+					events[index] = i["id"];
+					break;
+				}
+			}
+		}
+
+		display_sprite = pJson["sprite"];
+	}
+
+private:
+	filesystem::path mDirectory;
+};
 
 class texture_importer :
 	public importer
@@ -64,7 +186,7 @@ public:
 		}
 		catch (const std::filesystem::filesystem_error& e)
 		{
-			log::error() << "Failed to copy texture from " << pSystem_path << log::endm;
+			log::error() << "Failed to copy texture from " << pSystem_path.string() << log::endm;
 			log::error() << "Failed with exception " << std::quoted(e.what()) << log::endm;
 			return{};
 		}
@@ -584,6 +706,17 @@ public:
 					{
 						mAsset_manager.create_folder(current_path / "new_folder");
 					}
+
+					if (ImGui::Selectable("Eventful Sprite"))
+					{
+						auto asset = std::make_shared<core::asset>();
+						asset->set_name("New_Object");
+						asset->set_parent(current_folder);
+						asset->set_type("eventful-sprite");
+						asset->set_resource(std::make_unique<core::eventful_sprite_object_generator>());
+						mAsset_manager.store_asset(asset);
+						mAsset_manager.add_asset(asset);
+					}
 					ImGui::EndMenu();
 				}
 
@@ -607,10 +740,10 @@ public:
 			ImGui::BeginGroup();
 
 			ImGui::PushID("PathList");
-			for (std::size_t i = 0; i < current_path.size(); ++i)
+			for (auto[i, segment] : util::ipair{ current_path })
 			{
 				const bool last_item = i == current_path.size() - 1;
-				if (ImGui::Button(current_path[i].c_str()))
+				if (ImGui::Button(segment.c_str()))
 				{
 					// TODO: Clicking the last item will open a popup to select a different directory..?
 					auto new_path = current_path;
@@ -831,6 +964,125 @@ private:
 	util::connection mCallback_connection;
 };
 
+static bool texture_asset_input(core::asset::ptr& pAsset, context& pContext, const core::asset_manager& pAsset_manager)
+{
+	std::string inputtext = pAsset ? pAsset_manager.get_asset_path(pAsset).string().c_str() : "None";
+	ImGui::BeginGroup();
+	if (pAsset)
+	{
+		const bool is_selected = ImGui::ImageButton(pAsset, { 100, 100 });
+		ImGui::QuickToolTip("Open Sprite Editor");
+		if (is_selected)
+			pContext.open_editor(pAsset);
+		ImGui::SameLine();
+		ImGui::BeginGroup();
+		auto res = pAsset->get_resource<graphics::texture>();
+		ImGui::Text("Size: %i, %i", res->get_width(), res->get_height());
+		ImGui::Text("Animations: %u", res->get_raw_atlas().size());
+		ImGui::EndGroup();
+		ImGui::InputText("Texture", &inputtext, ImGuiInputTextFlags_ReadOnly);
+	}
+	else
+	{
+		ImGui::Button("Drop a texture asset here", ImVec2(-1, 100));
+	}
+	ImGui::EndGroup();
+
+	bool asset_dropped = false;
+
+	if (ImGui::BeginDragDropTarget())
+	{
+		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("textureAsset"))
+		{
+			const util::uuid& id = *(const util::uuid*)payload->Data;
+			pAsset = pAsset_manager.get_asset(id);
+			asset_dropped = true;
+		}
+		ImGui::EndDragDropTarget();
+	}
+	return asset_dropped;
+}
+
+class eventful_sprite_editor :
+	public asset_editor
+{
+public:
+	eventful_sprite_editor(context& pContext, const core::asset::ptr& pAsset) noexcept :
+		asset_editor(pContext, pAsset)
+	{}
+
+	virtual void on_gui() override
+	{
+		core::asset_manager& asset_manager = get_context().get_engine().get_asset_manager();
+
+		std::string mut_name = get_asset()->get_name();
+		if (ImGui::InputText("Name", &mut_name))
+		{
+			get_asset()->set_name(mut_name);
+			mark_asset_modified();
+		}
+
+		auto generator = get_asset()->get_resource<core::eventful_sprite_object_generator>();
+
+		core::asset::ptr sprite = asset_manager.get_asset(generator->display_sprite);
+		if (texture_asset_input(sprite, get_context(), asset_manager))
+		{
+			generator->display_sprite = sprite->get_id();
+			mark_asset_modified();
+		}
+
+		ImGui::Text("Events:");
+		ImGui::BeginChild("Events", ImVec2(0, 300), true);
+	
+		for (auto[type, asset_id] : util::ipair{ generator->events })
+		{
+			auto event_name = generator->event_typenames[type];
+			if (ImGui::Selectable(
+				event_name,
+				get_context().is_editor_open_for(asset_id), ImGuiSelectableFlags_AllowDoubleClick)
+				&& ImGui::IsMouseDoubleClicked(0))
+			{
+				if (asset_id.is_valid())
+				{
+					auto asset = asset_manager.get_asset(asset_id);
+					get_context().open_editor(asset);
+				}
+				else
+				{
+					auto asset = create_event_script(event_name);
+					asset_id = asset->get_id();
+					get_context().open_editor(asset);
+					mark_asset_modified();
+				}
+			}
+		}
+
+		ImGui::EndChild();
+
+	}
+
+private:
+	core::asset::ptr create_event_script(const char* pName)
+	{
+		core::asset_manager& asset_manager = get_context().get_engine().get_asset_manager();
+
+		auto asset = std::make_shared<core::asset>();
+		asset->set_name(pName);
+		asset->set_parent(get_asset());
+		asset->set_type("script");
+		asset->set_resource(asset_manager.create_resource("script"));
+		asset_manager.store_asset(asset);
+
+		auto script = asset->get_resource<scripting::script>();
+		script->save(asset->get_file_path().parent(), pName);
+		asset->save();
+
+		asset_manager.add_asset(asset);
+
+		return asset;
+	}
+};
+
 class application
 {
 public:
@@ -839,6 +1091,8 @@ public:
 		mContext.register_editor<sprite_editor>("texture");
 		mContext.register_editor<object_editor>("gameobject", mInspectors);
 		mContext.register_editor<script_editor>("script");
+		mContext.register_editor<eventful_sprite_editor>("eventful-sprite");
+		mAsset_manager.register_default_resource_factory<core::eventful_sprite_object_generator>("eventful-sprite");
 	}
 
 	int run()

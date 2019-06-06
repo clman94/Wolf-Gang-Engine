@@ -1,9 +1,15 @@
 #include "context.hpp"
 
 #include <imgui/imgui.h>
+#include <GLFW/glfw3.h>
 
 namespace wge::editor
 {
+
+void asset_editor::focus_window() const noexcept
+{
+	ImGui::SetWindowFocus(("###" + mAsset->get_id().to_string()).c_str());
+}
 
 void asset_editor::mark_asset_modified() const
 {
@@ -50,8 +56,15 @@ context::modified_assets& context::get_unsaved_assets() noexcept
 void context::open_editor(const core::asset::ptr& pAsset)
 {
 	assert(pAsset);
-	if (is_editor_open_for(pAsset))
+
+	// If the editor already exists, set the focus on its window.
+	if (auto editor = get_editor(pAsset))
+	{
+		editor->focus_window();
 		return;
+	}
+
+	// Create a new editor for this asset.
 	auto iter = mEditor_factories.find(pAsset->get_type());
 	if (iter != mEditor_factories.end())
 	{
@@ -86,12 +99,24 @@ void context::show_editor_guis()
 		
 		// Construct a title with the id as the stringified asset id so the name can change freely
 		// without affecting the window.
-		const std::string title = asset->get_name() + "##" + asset->get_id().to_string();
+		const std::string title = asset->get_name() + "###" + asset->get_id().to_string();
 
 		ImGuiWindowFlags flags = is_asset_modified(asset) ? ImGuiWindowFlags_UnsavedDocument : 0;
 
 		if (ImGui::Begin(title.c_str(), &is_window_open, flags))
+		{
+			if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
+			{
+				ImGuiIO& io = ImGui::GetIO();
+				bool ctrl = io.KeyCtrl;
+				bool alt = io.KeyAlt;
+				if (ctrl && !alt && ImGui::IsKeyPressed(GLFW_KEY_S))
+				{
+					save_asset(editor->get_asset());
+				}
+			}
 			editor->on_gui();
+		}
 		ImGui::End();
 
 		// Close button was pressed so we must delete this editor.
@@ -106,6 +131,22 @@ bool context::is_editor_open_for(const core::asset::ptr& pAsset) const
 		if (i->get_asset() == pAsset)
 			return true;
 	return false;
+}
+
+bool context::is_editor_open_for(const util::uuid & pAsset_id) const
+{
+	for (const auto& i : mAsset_editors)
+		if (i->get_asset()->get_id() == pAsset_id)
+			return true;
+	return false;
+}
+
+asset_editor* context::get_editor(const core::asset::ptr & pAsset) const
+{
+	for (const auto& i : mAsset_editors)
+		if (i->get_asset() == pAsset)
+			return i.get();
+	return nullptr;
 }
 
 } // namespace wge::editor

@@ -76,6 +76,11 @@ public:
 		save();
 	}
 
+	void save(const filesystem::path& pDirectory, const std::string& pName)
+	{
+		save(pDirectory / (pName + ".lua"));
+	}
+
 	const filesystem::path& get_source_path() const noexcept
 	{
 		return mFile_path;
@@ -83,9 +88,12 @@ public:
 
 	virtual void update_source_path(const filesystem::path& pDirectory, const std::string& pName) override
 	{
-		auto old_path = pDirectory / mFile_path.filename();
 		auto new_path = pDirectory / (pName + ".lua");
-		system_fs::rename(old_path, new_path);
+		if (!mFile_path.empty())
+		{
+			auto old_path = pDirectory / mFile_path.filename();
+			system_fs::rename(old_path, new_path);
+		}
 		mFile_path = std::move(new_path);
 	}
 

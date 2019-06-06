@@ -167,6 +167,12 @@ layer& game_object::get_layer() const
 	return *mLayer;
 }
 
+engine& game_object::get_engine() const
+{
+	assert_valid_reference();
+	return mLayer->get_engine();
+}
+
 scene& game_object::get_scene() const
 {
 	assert_valid_reference();
