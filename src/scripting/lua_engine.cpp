@@ -18,9 +18,12 @@ lua_engine::~lua_engine()
 
 void lua_engine::execute_global_scripts(core::asset_manager& pAsset_manager)
 {
-	// Reset the global environment
+	// Reset the global environment so we can start fresh.
 	global_environment = sol::environment(state, sol::create, state.globals());
 
+	// Get the folder for global scripts. We have a dedicated folder
+	// so scripts from objects aren't being executed as well which would break things.
+	// TODO: Let the dev choose the name of the folder.
 	auto global_script_folder = pAsset_manager.get_asset("GlobalScripts");
 	if (!global_script_folder || global_script_folder->get_type() != "folder")
 	{
@@ -29,21 +32,22 @@ void lua_engine::execute_global_scripts(core::asset_manager& pAsset_manager)
 	}
 
 	// Run all global scripts
-	for (auto& i : pAsset_manager.get_children_recursive(global_script_folder))
+	pAsset_manager.for_each_child_recursive(global_script_folder,
+		[&](const core::asset::ptr& pAsset)
 	{
-		if (i->get_type() == "script")
+		if (pAsset->get_type() == "script")
 		{
-			auto res = i->get_resource<script>();
+			auto res = pAsset->get_resource<script>();
 			try
 			{
-				state.safe_script(res->source, global_environment, pAsset_manager.get_asset_path(i).string(), sol::load_mode::text);
+				state.safe_script(res->source, global_environment, pAsset_manager.get_asset_path(pAsset).string(), sol::load_mode::text);
 			}
 			catch (sol::error& e)
 			{
 				log::error() << e.what() << log::endm;
 			}
 		}
-	}
+	});
 }
 
 sol::environment lua_engine::create_object_environment(const core::game_object& pObj)
@@ -125,6 +129,7 @@ void lua_engine::register_math_api()
 	t["clamp"] = &math::clamp<float>;
 	t["sqrt"] = &math::sqrt<float>;
 	t["mod"] = &math::mod<float>;
+	t["pmod"] = &math::positive_modulus<float>;
 	t["pow"] = &math::pow<float>;
 	t.new_usertype<math::vec2>("vec2",
 		sol::call_constructor, sol::constructors<math::vec2(), math::vec2(float, float), math::vec2(const math::vec2&)>(),
@@ -139,7 +144,8 @@ void lua_engine::register_math_api()
 		sol::meta_function::division, static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator/),
 		sol::meta_function::equal_to, static_cast<bool(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator==),
 		sol::meta_function::to_string, &math::vec2::to_string,
-		sol::meta_function::unary_minus, static_cast<math::vec2(math::vec2::*)() const>(&math::vec2::operator-)
+		sol::meta_function::unary_minus, static_cast<math::vec2(math::vec2::*)() const>(&math::vec2::operator-),
+		sol::meta_function::to_string, &math::vec2::to_string
 		);
 	t["dot"] = &math::dot;
 	t["normal"] = &math::normal<math::vec2>;

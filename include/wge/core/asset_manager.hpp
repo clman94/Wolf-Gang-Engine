@@ -72,6 +72,10 @@ public:
 	template <typename Tcallable>
 	void for_each_child(const asset::ptr& pParent, Tcallable&& pCallable) const;
 
+	// Calls pCallable for each child and subchild of pParent.
+	template <typename Tcallable>
+	void for_each_child_recursive(const asset::ptr& pParent, Tcallable&& pCallable) const;
+
 	bool has_children(const asset::ptr& pParent) const;
 	bool has_subfolders(const asset::ptr& pParent) const;
 	std::vector<asset::ptr> get_children(const asset::ptr& pParent) const;
@@ -160,6 +164,17 @@ inline void asset_manager::for_each_child(const asset::ptr& pParent, Tcallable&&
 			if (!i->get_parent_id().is_valid())
 				pCallable(i);
 	}
+}
+
+template<typename Tcallable>
+inline void asset_manager::for_each_child_recursive(const asset::ptr& pParent, Tcallable&& pCallable) const
+{
+	for_each_child(pParent,
+		[this, pCallable = std::forward<Tcallable>(pCallable)](const asset::ptr& pAsset)
+	{
+		pCallable(pAsset);
+		for_each_child_recursive(pAsset, pCallable);
+	});
 }
 
 } // namespace wge::core
