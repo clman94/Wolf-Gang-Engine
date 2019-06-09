@@ -188,7 +188,7 @@ bool context::is_editor_open_for(const util::uuid & pAsset_id) const
 asset_editor* context::get_editor(const core::asset::ptr & pAsset) const
 {
 	for (const auto& i : mAsset_editors)
-		if (i->get_asset() == pAsset)
+		if (i && i->get_asset() == pAsset)
 			return i.get();
 	return nullptr;
 }

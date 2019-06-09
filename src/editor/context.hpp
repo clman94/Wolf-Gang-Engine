@@ -99,7 +99,8 @@ private:
 	std::map<std::string, editor_factory> mEditor_factories;
 
 	// We don't want iterators to be invalidated while we are
-	// adding and removing editors so editors are stored in a linked list.
+	// adding and removing editors so lets just store the editors
+	// in a linked list.
 	std::list<asset_editor::uptr> mAsset_editors;
 
 };
