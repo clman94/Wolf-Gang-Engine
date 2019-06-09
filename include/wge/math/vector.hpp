@@ -53,30 +53,30 @@ public:
 	bool is_zero() const noexcept;
 
 	// Vector operations
-	vec2 operator + (const vec2& pR) const noexcept;
-	vec2 operator - (const vec2& pR) const noexcept;
-	vec2 operator * (const vec2& pR) const noexcept;
-	vec2 operator / (const vec2& pR) const noexcept;
+	vec2 operator + (const vec2&) const noexcept;
+	vec2 operator - (const vec2&) const noexcept;
+	vec2 operator * (const vec2&) const noexcept;
+	vec2 operator / (const vec2&) const noexcept;
 
 	vec2 operator - () const noexcept;
 
 	// Scalar operations
-	vec2 operator * (float pR) const noexcept;
-	vec2 operator / (float pR) const noexcept;
+	vec2 operator * (float) const noexcept;
+	vec2 operator / (float) const noexcept;
 
 	// Vector assignments
-	vec2& operator = (const vec2& pR) noexcept;
-	vec2& operator += (const vec2& pR) noexcept;
-	vec2& operator -= (const vec2& pR) noexcept;
-	vec2& operator *= (const vec2& pR) noexcept;
-	vec2& operator /= (const vec2& pR) noexcept;
+	vec2& operator = (const vec2&) noexcept;
+	vec2& operator += (const vec2&) noexcept;
+	vec2& operator -= (const vec2&) noexcept;
+	vec2& operator *= (const vec2&) noexcept;
+	vec2& operator /= (const vec2&) noexcept;
 
 	// Scalar assignments
-	vec2& operator *= (const float& pR) noexcept;
-	vec2& operator /= (const float& pR) noexcept;
+	vec2& operator *= (const float&) noexcept;
+	vec2& operator /= (const float&) noexcept;
 
-	bool operator == (const vec2& pR) const noexcept;
-	bool operator != (const vec2& pR) const noexcept;
+	bool operator == (const vec2&) const noexcept;
+	bool operator != (const vec2&) const noexcept;
 
 	// Returns format "([x], [y])"
 	std::string to_string() const;
@@ -155,17 +155,17 @@ inline vec2 swap_xy(const vec2& a) noexcept
 	return vec2(a).swap_xy();
 }
 
-inline float dot(const vec2& pA, const vec2& pB)
+inline float dot(const vec2& pA, const vec2& pB) noexcept
 {
 	return pA.x * pB.x + pA.y * pB.y;
 }
 
-inline float magnitude(const vec2& pA)
+inline float magnitude(const vec2& pA) noexcept
 {
 	return pA.magnitude();
 }
 
-inline float distance(const vec2& pA, const vec2& pB)
+inline float distance(const vec2& pA, const vec2& pB) noexcept
 {
 	return pA.distance(pB);
 }
