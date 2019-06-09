@@ -2,6 +2,7 @@
 
 #include <imgui/imgui.h>
 #include <GLFW/glfw3.h>
+#include <wge/util/ipair.hpp>
 
 namespace wge::editor
 {
@@ -81,21 +82,51 @@ asset_editor* context::open_editor(const core::asset::ptr& pAsset)
 
 void context::close_editor(const core::asset::ptr& pAsset)
 {
-	for (std::size_t i = 0; i < mAsset_editors.size(); i++)
-		if (mAsset_editors[i]->get_asset() == pAsset)
-			mAsset_editors.erase(mAsset_editors.begin() + i);
+	for (auto iter = mAsset_editors.begin(); iter != mAsset_editors.end(); ++iter)
+	{
+		if (!*iter)
+			continue;
+		asset_editor* editor = iter->get();
+		if (editor->get_asset() == pAsset)
+		{
+			editor->on_close();
+			iter->reset();
+			break;
+		}
+	}
+}
+
+void context::close_editor(const util::uuid& pIds)
+{
+	for (auto iter = mAsset_editors.begin(); iter != mAsset_editors.end(); ++iter)
+	{
+		if (!*iter)
+			continue;
+		asset_editor* editor = iter->get();
+		if (editor->get_asset()->get_id() == pIds)
+		{
+			editor->on_close();
+			iter->reset();
+			break;
+		}
+	}
 }
 
 void context::close_all_editors()
 {
+	for (const auto& i : mAsset_editors)
+		i->on_close();
 	mAsset_editors.clear();
 }
 
 void context::show_editor_guis()
 {
-	for (std::size_t i = 0; i < mAsset_editors.size(); i++)
+	for (auto iter = mAsset_editors.begin(); iter != mAsset_editors.end(); ++iter)
 	{
-		asset_editor* editor = mAsset_editors[i].get();
+		if (!*iter)
+			continue;
+
+		asset_editor* editor = iter->get();
 		auto& asset = editor->get_asset();
 
 		bool is_window_open = true;
@@ -129,14 +160,19 @@ void context::show_editor_guis()
 
 		// Close button was pressed so we must delete this editor.
 		if (!is_window_open)
-			mAsset_editors.erase(mAsset_editors.begin() + i--);
+		{
+			editor->on_close();
+			iter->reset();
+		}
 	}
+
+	erase_deleted_editors();
 }
 
 bool context::is_editor_open_for(const core::asset::ptr& pAsset) const
 {
 	for (const auto& i : mAsset_editors)
-		if (i->get_asset() == pAsset)
+		if (i && i->get_asset() == pAsset)
 			return true;
 	return false;
 }
@@ -144,7 +180,7 @@ bool context::is_editor_open_for(const core::asset::ptr& pAsset) const
 bool context::is_editor_open_for(const util::uuid & pAsset_id) const
 {
 	for (const auto& i : mAsset_editors)
-		if (i->get_asset()->get_id() == pAsset_id)
+		if (i && i->get_asset()->get_id() == pAsset_id)
 			return true;
 	return false;
 }
@@ -155,6 +191,18 @@ asset_editor* context::get_editor(const core::asset::ptr & pAsset) const
 		if (i->get_asset() == pAsset)
 			return i.get();
 	return nullptr;
+}
+
+void context::erase_deleted_editors()
+{
+	auto iter = mAsset_editors.begin();
+	while (iter != mAsset_editors.end())
+	{
+		if (*iter)
+			++iter;
+		else
+			mAsset_editors.erase(iter++);
+	}
 }
 
 } // namespace wge::editor

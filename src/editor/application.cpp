@@ -1088,6 +1088,14 @@ public:
 		ImGui::DockSpace(editor_dock_id, ImVec2(0, 0), ImGuiDockNodeFlags_None, &dock_family);
 	}
 
+	virtual void on_close() override
+	{
+		auto generator = get_asset()->get_resource<core::eventful_sprite_object_generator>();
+		for (auto& i : generator->events)
+			if (i.is_valid())
+				get_context().close_editor(i);
+	}
+
 private:
 	core::asset::ptr create_event_script(const char* pName)
 	{

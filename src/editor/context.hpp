@@ -13,6 +13,7 @@
 #include <vector>
 #include <memory>
 #include <tuple>
+#include <list>
 
 namespace wge::editor
 {
@@ -31,6 +32,7 @@ public:
 	virtual ~asset_editor() {}
 
 	virtual void on_gui() = 0;
+	virtual void on_close() {}
 
 	const core::asset::ptr& get_asset() const noexcept
 	{
@@ -79,12 +81,15 @@ public:
 	void register_editor(const std::string& pAsset_type, Targs&&...);
 	asset_editor* open_editor(const core::asset::ptr& pAsset);
 	void close_editor(const core::asset::ptr& pAsset);
+	void close_editor(const util::uuid& pIds);
 	void close_all_editors();
 	void show_editor_guis();
 	bool is_editor_open_for(const core::asset::ptr& pAsset) const;
 	bool is_editor_open_for(const util::uuid& pAsset_id) const;
 	asset_editor* get_editor(const core::asset::ptr& pAsset) const;
 
+private:
+	void erase_deleted_editors();
 
 private:
 	core::engine mEngine;
@@ -92,7 +97,11 @@ private:
 	// Any assets that are changed need to be added here.
 	modified_assets mUnsaved_assets;
 	std::map<std::string, editor_factory> mEditor_factories;
-	std::vector<asset_editor::uptr> mAsset_editors;
+
+	// We don't want iterators to be invalidated while we are
+	// adding and removing editors so editors are stored in a linked list.
+	std::list<asset_editor::uptr> mAsset_editors;
+
 };
 
 template<typename T, typename...Targs>
