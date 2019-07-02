@@ -129,7 +129,7 @@ std::string asset_manager::generate_asset_directory_name(const asset::ptr& pAsse
 {
 	assert(pAsset);
 	auto path = get_asset_path(pAsset);
-	return  "[" + pAsset->get_id().to_shortened_string() + "] " + path.string('.');
+	return path.string('.') + "[" + pAsset->get_id().to_shortened_string() + "]";
 }
 
 filesystem::path asset_manager::create_asset_storage(const core::asset::ptr& pAsset) const
