@@ -73,6 +73,10 @@ class rect;
 void to_json(nlohmann::json&, const rect&);
 void from_json(const nlohmann::json&, rect&);
 
+class transform;
+void to_json(nlohmann::json&, const transform&);
+void from_json(const nlohmann::json&, transform&);
+
 } // namespace wge::math
 
 namespace wge::util
