@@ -25,10 +25,7 @@ class asset_editor
 public:
 	using uptr = std::unique_ptr<asset_editor>;
 
-	asset_editor(context& pContext, const core::asset::ptr& pAsset) noexcept :
-		mContext(&pContext),
-		mAsset(pAsset)
-	{}
+	asset_editor(context& pContext, const core::asset::ptr& pAsset) noexcept;
 	virtual ~asset_editor() {}
 
 	virtual void on_gui() = 0;
@@ -50,11 +47,26 @@ public:
 
 	void set_dock_family_id(unsigned int id) { mDock_family_id = id; }
 	unsigned int get_dock_family_id() { return mDock_family_id; }
+	void set_dock(unsigned int pId);
+	const std::string& get_window_str_id() const noexcept;
+
+	bool is_visible() const noexcept { return mIs_visible; }
+	void set_visible(bool pVisible) noexcept { mIs_visible = pVisible; }
+
+	void set_parent_editor_id(const util::uuid& pAsset_id) noexcept { mParent_editor_asset_id = pAsset_id; }
+	const util::uuid& get_parent_editor_id() const noexcept { return mParent_editor_asset_id; }
+
+protected:
+	core::asset_manager& get_asset_manager() const noexcept;
 
 private:
+	std::string mWindow_str_id;
 	context* mContext;
 	core::asset::ptr mAsset;
+	bool mIs_visible = true;
 	unsigned int mDock_family_id{ 0 };
+
+	util::uuid mParent_editor_asset_id;
 };
 
 class context
@@ -79,7 +91,7 @@ public:
 
 	template <typename T, typename...Targs>
 	void register_editor(const std::string& pAsset_type, Targs&&...);
-	asset_editor* open_editor(const core::asset::ptr& pAsset);
+	asset_editor* open_editor(const core::asset::ptr& pAsset, unsigned int pDock_id = 0);
 	void close_editor(const core::asset::ptr& pAsset);
 	void close_editor(const util::uuid& pIds);
 	void close_all_editors();
@@ -87,11 +99,27 @@ public:
 	bool is_editor_open_for(const core::asset::ptr& pAsset) const;
 	bool is_editor_open_for(const util::uuid& pAsset_id) const;
 	asset_editor* get_editor(const core::asset::ptr& pAsset) const;
+	asset_editor* get_editor(const util::uuid& pId) const;
+
+	void set_default_dock_id(unsigned int pId) noexcept
+	{
+		mDefault_dock_id = pId;
+	}
+
+	unsigned int get_default_dock_id() const noexcept
+	{
+		return mDefault_dock_id;
+	}
 
 private:
 	void erase_deleted_editors();
 
 private:
+
+	// This is the imgui dock id for the dockspace
+	// that newly opened editors will spawn in.
+	unsigned int mDefault_dock_id = 0;
+
 	core::engine mEngine;
 
 	// Any assets that are changed need to be added here.

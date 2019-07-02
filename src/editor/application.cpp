@@ -28,6 +28,7 @@
 #include "imgui_editor_tools.hpp"
 #include "imgui_ext.hpp"
 #include "text_editor.hpp"
+#include "icon_codepoints.hpp"
 
 #include <imgui/imgui_internal.h>
 
@@ -41,8 +42,6 @@
 #include <future>
 #include <unordered_map>
 #include <array>
-
-
 
 namespace wge::core
 {
@@ -74,18 +73,19 @@ public:
 		update,
 		count,
 	};
+	static constexpr std::array<const char*, 2> event_display_name = {
+		ICON_FA_PENCIL " Create",
+		ICON_FA_STEP_FORWARD " Update"
+	};
 	static constexpr std::array<const char*, 2> event_typenames = { "create", "update" };
 
 	// Asset id for the default sprite.
 	util::uuid display_sprite;
+
 	// Lists the ids for the scripts assets for each event type.
 	std::array<util::uuid, static_cast<unsigned>(event_type::count)> events;
 
-	void load_directory(const filesystem::path& pDir)
-	{
-		mDirectory = pDir;
-	}
-
+public:
 	virtual void save() override {}
 
 	virtual void generate_object(core::game_object& pObj) override
@@ -161,9 +161,6 @@ public:
 
 		display_sprite = pJson["sprite"];
 	}
-
-private:
-	filesystem::path mDirectory;
 };
 
 class texture_importer :
@@ -213,7 +210,7 @@ namespace wge::editor
 {
 
 // Creates an imgui dockspace in the main window
-inline void main_viewport_dock()
+inline void main_viewport_dock(ImGuiID pDock_id)
 {
 	ImGuiViewport* viewport = ImGui::GetMainViewport();
 	ImGui::SetNextWindowPos(viewport->Pos);
@@ -232,7 +229,7 @@ inline void main_viewport_dock()
 	ImGui::PopStyleVar(3);
 	
 	ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;//ImGuiDockNodeFlags_PassthruDockspace;
-	ImGui::DockSpace(ImGui::GetID("_Dockspace"), ImVec2(0.0f, 0.0f), dockspace_flags);
+	ImGui::DockSpace(pDock_id, ImVec2(0.0f, 0.0f), dockspace_flags);
 
 	ImGui::End();
 }
@@ -695,7 +692,7 @@ public:
 
 	void on_gui()
 	{
-		if (ImGui::Begin("Project", 0, ImGuiWindowFlags_MenuBar))
+		if (ImGui::Begin(ICON_FA_FOLDER " Project", 0, ImGuiWindowFlags_MenuBar))
 		{
 			static core::asset::ptr current_folder;
 			const filesystem::path current_path = mAsset_manager.get_asset_path(current_folder);
@@ -1015,9 +1012,7 @@ public:
 
 	virtual void on_gui() override
 	{
-		core::asset_manager& asset_manager = get_context().get_engine().get_asset_manager();
-
-		auto editor_dock_id = ImGui::GetID("EditorDock");
+		mSCript_editor_dock_id = ImGui::GetID("EditorDock");
 
 		ImGui::BeginChild("LeftPanel", ImVec2(300, 0));
 
@@ -1034,58 +1029,17 @@ public:
 
 		auto generator = get_asset()->get_resource<core::eventful_sprite_object_generator>();
 
-		core::asset::ptr sprite = asset_manager.get_asset(generator->display_sprite);
-		if (texture_asset_input(sprite, get_context(), asset_manager))
-		{
-			generator->display_sprite = sprite->get_id();
-			mark_asset_modified();
-		}
-
-		ImGui::Text("Events:");
-		ImGui::BeginChild("Events", ImVec2(0, 0), true);
-		for (auto[type, asset_id] : util::ipair{ generator->events })
-		{
-			auto event_name = generator->event_typenames[type];
-			if (ImGui::Selectable(
-				event_name,
-				get_context().is_editor_open_for(asset_id), ImGuiSelectableFlags_AllowDoubleClick)
-				&& ImGui::IsMouseDoubleClicked(0))
-			{
-				bool first_time = false;
-				core::asset::ptr asset;
-				if (asset_id.is_valid())
-				{
-					asset = asset_manager.get_asset(asset_id);
-				}
-				else
-				{
-					asset = create_event_script(event_name);
-					asset_id = asset->get_id();
-					mark_asset_modified();
-					first_time = true;
-				}
-
-				auto editor = get_context().open_editor(asset);
-				if (editor && first_time)
-				{
-					auto window_str_id = "###" + asset->get_id().to_string();
-					if (!ImGui::DockBuilderGetNode(editor_dock_id))
-						ImGui::DockBuilderAddNode(editor_dock_id, ImVec2(0, 0));
-					ImGui::DockBuilderDockWindow(window_str_id.c_str(), editor_dock_id);
-					ImGui::DockBuilderFinish(editor_dock_id);
-					editor->set_dock_family_id(editor_dock_id);
-				}
-			}
-		}
-		ImGui::EndChild();
+		display_sprite_input(generator);
+		display_event_list(generator);
 
 		ImGui::EndChild();
 
 		ImGui::SameLine();
-		ImGuiDockFamily dock_family(editor_dock_id);
+
+		ImGuiDockFamily dock_family(mSCript_editor_dock_id);
 		// Event script editors are given a dedicated dockspace where they spawn. This helps
 		// remove clutter windows popping up everywhere and adds more organization altogether.
-		ImGui::DockSpace(editor_dock_id, ImVec2(0, 0), ImGuiDockNodeFlags_None, &dock_family);
+		ImGui::DockSpace(mSCript_editor_dock_id, ImVec2(0, 0), ImGuiDockNodeFlags_None, &dock_family);
 	}
 
 	virtual void on_close() override
@@ -1094,6 +1048,50 @@ public:
 		for (auto& i : generator->events)
 			if (i.is_valid())
 				get_context().close_editor(i);
+	}
+
+private:
+	void display_sprite_input(core::eventful_sprite_object_generator* pGenerator)
+	{
+		core::asset::ptr sprite = get_asset_manager().get_asset(pGenerator->display_sprite);
+		if (texture_asset_input(sprite, get_context(), get_asset_manager()))
+		{
+			pGenerator->display_sprite = sprite->get_id();
+			mark_asset_modified();
+		}
+	}
+
+	void display_event_list(core::eventful_sprite_object_generator* pGenerator)
+	{
+		ImGui::Text("Events:");
+		ImGui::BeginChild("Events", ImVec2(0, 0), true);
+		for (auto[type, asset_id] : util::ipair{ pGenerator->events })
+		{
+			const char const* event_name = pGenerator->event_display_name[type];
+			const bool editor_already_open = get_context().is_editor_open_for(asset_id);
+			if (ImGui::Selectable(
+				event_name,
+				editor_already_open, ImGuiSelectableFlags_AllowDoubleClick)
+				&& !editor_already_open && ImGui::IsMouseDoubleClicked(0))
+			{
+				bool first_time = false;
+				core::asset::ptr asset;
+				if (asset_id.is_valid())
+				{
+					asset = get_asset_manager().get_asset(asset_id);
+				}
+				else
+				{
+					asset = create_event_script(event_name);
+					asset_id = asset->get_id();
+					mark_asset_modified();
+					first_time = true;
+				}
+				auto editor = get_context().open_editor(asset, mSCript_editor_dock_id);
+				editor->set_dock_family_id(mSCript_editor_dock_id);
+			}
+		}
+		ImGui::EndChild();
 	}
 
 private:
@@ -1116,6 +1114,8 @@ private:
 
 		return asset;
 	}
+
+	ImGuiID mSCript_editor_dock_id;
 };
 
 class application
@@ -1163,17 +1163,19 @@ private:
 			float delta = 1.f / 60.f;
 			
 			new_frame();
-			main_viewport_dock();
+
+			mContext.set_default_dock_id(ImGui::GetID("_MainDockId"));
+			main_viewport_dock(mContext.get_default_dock_id());
 
 			if (ImGui::BeginMainMenuBar())
 			{
 				// Just an aesthetic
 				ImGui::TextColored({ 0.5, 0.5, 0.5, 1 }, "WGE");
 
-				if (ImGui::BeginMenu("Project"))
+				if (ImGui::BeginMenu(ICON_FA_HOME " Project"))
 				{
-					ImGui::MenuItem("New");
-					ImGui::MenuItem("Open");
+					ImGui::MenuItem(" New");
+					ImGui::MenuItem(" Open");
 					ImGui::Separator();
 					//ImGui::MenuItem("Save", "Ctrl+S", false, mContext.are_there_modified_assets());
 					if (ImGui::MenuItem("Save All", "Ctrl+Alt+S", false, mContext.are_there_modified_assets() && mEngine.is_loaded()))
@@ -1296,11 +1298,24 @@ private:
 			fonts->AddFontDefault();
 		}
 
+		static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+		ImFontConfig icons_config;
+		icons_config.MergeMode = true;
+		icons_config.PixelSnapH = true;
+		icons_config.GlyphMinAdvanceX = 14;
+		icons_config.GlyphMaxAdvanceX = 14;
+		if (fonts->AddFontFromFileTTF("./editor/forkawesome-webfont.ttf", 18, &icons_config, icons_ranges) == NULL)
+		{
+			log::error() << "Could not load forkawesome-webfont.ttf font." << log::endm;
+			fonts->AddFontDefault();
+		}
+
 		if (fonts->AddFontFromFileTTF("./editor/RobotoMono-Regular.ttf", 18) == NULL)
 		{
 			log::error() << "Could not load RobotoMono-Regular font. Using default." << log::endm;
 			fonts->AddFontDefault();
 		}
+
 
 		// Theme
 		ImVec4* colors = ImGui::GetStyle().Colors;
@@ -1631,7 +1646,7 @@ private:
 
 	void show_settings()
 	{
-		if (ImGui::Begin("Settings"))
+		if (ImGui::Begin(ICON_FA_COG " Settings"))
 		{
 			ImGui::BeginTabBar("SettingsTabBar");
 			if (ImGui::BeginTabItem("Style"))

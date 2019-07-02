@@ -4,17 +4,44 @@
 #include <GLFW/glfw3.h>
 #include <wge/util/ipair.hpp>
 
+#include <imgui/imgui_internal.h> // For dock builder functions
+
 namespace wge::editor
 {
 
+asset_editor::asset_editor(context& pContext, const core::asset::ptr& pAsset) noexcept :
+	mContext(&pContext),
+	mAsset(pAsset)
+{
+	mWindow_str_id = "###" + mAsset->get_id().to_string();
+}
 void asset_editor::focus_window() const noexcept
 {
-	ImGui::SetWindowFocus(("###" + mAsset->get_id().to_string()).c_str());
+	ImGui::SetWindowFocus(mWindow_str_id.c_str());
 }
 
 void asset_editor::mark_asset_modified() const
 {
 	mContext->add_modified_asset(mAsset);
+}
+
+void asset_editor::set_dock(unsigned int pId)
+{
+	assert(mAsset);
+	if (!ImGui::DockBuilderGetNode(pId))
+		ImGui::DockBuilderAddNode(pId, ImVec2(0, 0));
+	ImGui::DockBuilderDockWindow(mWindow_str_id.c_str(), pId);
+	ImGui::DockBuilderFinish(pId);
+}
+
+const std::string& asset_editor::get_window_str_id() const noexcept
+{
+	return mWindow_str_id;
+}
+
+core::asset_manager & asset_editor::get_asset_manager() const noexcept
+{
+	return mContext->get_engine().get_asset_manager();
 }
 
 void context::add_modified_asset(const core::asset::ptr& pAsset)
@@ -54,7 +81,7 @@ context::modified_assets& context::get_unsaved_assets() noexcept
 	return mUnsaved_assets;
 }
 
-asset_editor* context::open_editor(const core::asset::ptr& pAsset)
+asset_editor* context::open_editor(const core::asset::ptr& pAsset, unsigned int pDock_id)
 {
 	assert(pAsset);
 
@@ -70,7 +97,18 @@ asset_editor* context::open_editor(const core::asset::ptr& pAsset)
 	if (iter != mEditor_factories.end())
 	{
 		mAsset_editors.push_back(iter->second(pAsset));
-		return mAsset_editors.back().get();
+		asset_editor* editor = mAsset_editors.back().get();
+		if (pDock_id == 0)
+		{
+			editor->set_dock(mDefault_dock_id);
+		}
+		else
+		{
+			editor->set_dock(pDock_id);
+			editor->set_dock_family_id(pDock_id);
+		}
+		
+		return editor;
 	}
 	else
 	{
@@ -114,8 +152,6 @@ void context::close_editor(const util::uuid& pIds)
 
 void context::close_all_editors()
 {
-	for (const auto& i : mAsset_editors)
-		i->on_close();
 	mAsset_editors.clear();
 }
 
@@ -127,8 +163,13 @@ void context::show_editor_guis()
 			continue;
 
 		asset_editor* editor = iter->get();
+		if (!editor->is_visible())
+			continue;
+
 		auto& asset = editor->get_asset();
 
+		// True until the 'X' button on the top right of the
+		// window is clicked.
 		bool is_window_open = true;
 		
 		// Construct a title with the id as the stringified asset id so the name can change freely
@@ -177,7 +218,7 @@ bool context::is_editor_open_for(const core::asset::ptr& pAsset) const
 	return false;
 }
 
-bool context::is_editor_open_for(const util::uuid & pAsset_id) const
+bool context::is_editor_open_for(const util::uuid& pAsset_id) const
 {
 	for (const auto& i : mAsset_editors)
 		if (i && i->get_asset()->get_id() == pAsset_id)
@@ -185,10 +226,18 @@ bool context::is_editor_open_for(const util::uuid & pAsset_id) const
 	return false;
 }
 
-asset_editor* context::get_editor(const core::asset::ptr & pAsset) const
+asset_editor* context::get_editor(const core::asset::ptr& pAsset) const
 {
 	for (const auto& i : mAsset_editors)
 		if (i && i->get_asset() == pAsset)
+			return i.get();
+	return nullptr;
+}
+
+asset_editor * context::get_editor(const util::uuid& pId) const
+{
+	for (const auto& i : mAsset_editors)
+		if (i && i->get_asset()->get_id() == pId)
 			return i.get();
 	return nullptr;
 }
