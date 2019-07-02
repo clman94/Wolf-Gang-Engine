@@ -47,13 +47,10 @@ std::vector<asset::ptr> asset_manager::get_children(const asset::ptr& pParent) c
 std::vector<asset::ptr> asset_manager::get_children_recursive(const asset::ptr& pParent) const
 {
 	std::vector<asset::ptr> result;
-	auto children = get_children(pParent);
-	for (const auto& i : children)
+	for_each_child_recursive(pParent, [&result](const asset::ptr& pChild)
 	{
-		auto subchildren = get_children_recursive(i);
-		result.insert(result.end(), subchildren.begin(), subchildren.end());
-	}
-	result.insert(result.end(), children.begin(), children.end());
+		result.push_back(pChild);
+	});
 	return result;
 }
 
@@ -288,6 +285,11 @@ bool asset_manager::remove_asset(const asset::ptr& pAsset)
 {
 	if (!pAsset)
 		return false;
+
+	// Remove all children assets.
+	auto all_children = get_children_recursive(pAsset);
+	for (const auto& i : all_children)
+		remove_asset(i);
 
 	// Get the path to the asset's parent directory.
 	auto dir_path = pAsset->get_file_path().parent();
