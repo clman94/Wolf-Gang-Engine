@@ -46,25 +46,8 @@
 namespace wge::core
 {
 
-// I know you hate effort and so do I. Your average ECS game engine
-// requires you to dink around with these unappealing thingamajiggers
-// called components and that takes too much effort. So, why not have something
-// generate components for us?
-// Object generators are resources that will do just that. Give them some info,
-// and they will generate the required components with a fancy ui and possibly more
-// context aware debug messages.
-class object_generator :
+class object_resource :
 	public resource
-{
-public:
-	virtual ~object_generator() {}
-	virtual void generate_object(core::game_object&) = 0;
-};
-
-// If you ever used GameMakerStudio, you might be familiar with
-// what might be happening here.
-class eventful_sprite_object_generator :
-	public object_generator
 {
 public:
 	enum class event_type
@@ -88,7 +71,7 @@ public:
 public:
 	virtual void save() override {}
 
-	virtual void generate_object(core::game_object& pObj) override
+	void generate_object(core::game_object& pObj)
 	{
 		auto& asset_manager = pObj.get_engine().get_asset_manager();
 
@@ -160,6 +143,53 @@ public:
 		}
 
 		display_sprite = pJson["sprite"];
+	}
+};
+
+class scene_resource :
+	public resource
+{
+public:
+	struct object_instance
+	{
+		// Unique name of instance.
+		std::string name;
+		math::transform transform;
+		util::uuid asset_id;
+	};
+
+	std::vector<object_instance> instances;
+
+public:
+	virtual json serialize_data() const override
+	{
+		json j;
+		for (const object_instance& i : instances)
+		{
+			json j_inst;
+			j_inst["name"] = i.name;
+			j_inst["transform"] = i.transform;
+			j_inst["id"] = i.asset_id;
+			j["instances"].push_back(j_inst);
+		}
+		return j;
+	}
+
+	virtual void deserialize_data(const json& pJson) override
+	{
+		for (const json& i : pJson["instances"])
+		{
+			object_instance inst;
+			inst.name = i["name"];
+			inst.transform = i["transform"];
+			inst.asset_id = i["id"];
+			instances.emplace_back(std::move(inst));
+		}
+	}
+
+	void generate_scene(core::scene& pScene) const
+	{
+		pScene.add_layer("Game");
 	}
 };
 
@@ -692,7 +722,7 @@ public:
 
 	void on_gui()
 	{
-		if (ImGui::Begin(ICON_FA_FOLDER " Project", 0, ImGuiWindowFlags_MenuBar))
+		if (ImGui::Begin(ICON_FA_FOLDER " Assets", 0, ImGuiWindowFlags_MenuBar))
 		{
 			static core::asset::ptr current_folder;
 			const filesystem::path current_path = mAsset_manager.get_asset_path(current_folder);
@@ -701,21 +731,35 @@ public:
 			{
 				if (ImGui::BeginMenu("New..."))
 				{
-					if (ImGui::Selectable("Folder"))
+					if (ImGui::MenuItem("Folder"))
 					{
 						mAsset_manager.create_folder(current_path / "new_folder");
 					}
 
-					if (ImGui::Selectable("Eventful Sprite"))
+					if (ImGui::MenuItem("Object"))
 					{
 						auto asset = std::make_shared<core::asset>();
 						asset->set_name("New_Object");
 						asset->set_parent(current_folder);
-						asset->set_type("eventful-sprite");
-						asset->set_resource(std::make_unique<core::eventful_sprite_object_generator>());
+						asset->set_type("gameobject");
+						asset->set_resource(std::make_unique<core::object_resource>());
 						mAsset_manager.store_asset(asset);
+						asset->save();
 						mAsset_manager.add_asset(asset);
 					}
+
+					if (ImGui::MenuItem("Scene"))
+					{
+						auto asset = std::make_shared<core::asset>();
+						asset->set_name("New_Scene");
+						asset->set_parent(current_folder);
+						asset->set_type("scene");
+						asset->set_resource(std::make_unique<core::scene_resource>());
+						mAsset_manager.store_asset(asset);
+						asset->save();
+						mAsset_manager.add_asset(asset);
+					}
+
 					ImGui::EndMenu();
 				}
 
@@ -887,15 +931,262 @@ class scene_editor :
 public:
 	scene_editor(context& pContext, const core::asset::ptr& pAsset) noexcept :
 		asset_editor(pContext, pAsset)
-	{}
+	{
+		auto& graphics = pContext.get_engine().get_graphics();
+		mViewport_framebuffer = graphics.get_graphics_backend()->create_framebuffer();
+
+		auto layer = core::layer::create(pContext.get_engine().get_scene());
+		auto renderer = layer->add_system<graphics::renderer>();
+		renderer->set_framebuffer(mViewport_framebuffer);
+		renderer->set_pixel_size(0.01f);
+		layer->add_system<scripting::script_system>();
+		layer->add_system<physics::physics_world>();
+		mSelected_layer = layer.get();
+		mLayers.emplace_back(std::move(layer));
+	}
 
 	virtual void on_gui() override
 	{
+		auto scene = get_asset()->get_resource<core::scene_resource>();
 
+		ImGui::BeginChild("SidePanelSettings", ImVec2(200, 0));
+
+		ImGui::TextUnformatted("Layers");
+		ImGui::BeginChild("Layers", ImVec2(0, 300), true);
+		{
+			ImGui::PushID(0);
+			if (ImGui::Selectable(mLayers.back()->get_name().c_str(), mSelected_layer == mLayers.back().get()))
+				mSelected_layer = mLayers.back().get();
+			ImGui::PopID();
+		}
+		ImGui::EndChild();
+
+		ImGui::TextUnformatted("Instances");
+		ImGui::BeginChild("Instances", ImVec2(0, 0), true);
+		if (mSelected_layer)
+		{
+			for (std::size_t i = 0; i < mSelected_layer->get_object_count(); i++)
+			{
+				ImGui::PushID(i);
+				core::game_object obj = mSelected_layer->get_object(i);
+				if (ImGui::Selectable(obj.get_name().c_str(), obj.get_instance_id() == mSelected_object_id))
+					mSelected_object_id = obj.get_instance_id();
+				ImGui::PopID();
+			}
+		}
+		ImGui::EndChild(); // Instances
+
+		ImGui::EndChild(); // SidePanelSettings
+
+		ImGui::SameLine();
+
+		ImGui::BeginChild("Scene", ImVec2(0, 0), true);
+
+		show_viewport();
+
+		ImGui::EndChild(); // Scene
+	}
+
+	void show_viewport(core::scene_resource* resource)
+	{
+		core::engine& engine = get_context().get_engine();
+
+		static bool show_center_point = true;
+		static bool is_grid_enabled = true;
+		static graphics::color grid_color{ 1, 1, 1, 0.7f };
+		static bool show_collision = false;
+
+		/*if (ImGui::BeginMenuBar())
+		{
+			if (ImGui::BeginMenu("View"))
+			{
+				ImGui::MenuItem("Object", NULL, false, false);
+				ImGui::Checkbox("Center Point", &show_center_point);
+				ImGui::Separator();
+				ImGui::MenuItem("Grid", NULL, false, false);
+				ImGui::Checkbox("Enable Grid", &is_grid_enabled);
+				ImGui::ColorEdit4("Grid Color", grid_color.components, ImGuiColorEditFlags_NoInputs);
+
+				ImGui::Separator();
+				ImGui::MenuItem("Physics", NULL, false, false);
+				ImGui::Checkbox("Collision", &show_collision);
+				ImGui::EndMenu();
+			}
+			ImGui::EndMenuBar();
+		}*/
+
+		float width = ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x * 2 - ImGui::GetStyle().ScrollbarSize;
+		float height = ImGui::GetWindowHeight() - ImGui::GetCursorPos().y - ImGui::GetStyle().WindowPadding.y - ImGui::GetStyle().ScrollbarSize;
+		float scroll_x_max = width * 2;
+		float scroll_y_max = height * 2;
+
+		if (mViewport_framebuffer->get_width() != width
+			|| mViewport_framebuffer->get_height() != height)
+			mViewport_framebuffer->resize(static_cast<int>(width), static_cast<int>(height));
+
+		ImGui::BeginFixedScrollRegion({ width, height }, { scroll_x_max, scroll_y_max });
+
+		ImVec2 cursor = ImGui::GetCursorScreenPos();
+
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0, 0, 0, 0));
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0, 0, 0, 0));
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0);
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+
+		ImGui::ImageButton(mViewport_framebuffer, ImVec2(width, height));
+
+		ImGui::PopStyleVar(2);
+		ImGui::PopStyleColor(3);
+
+		// Middle mouse to drag
+		if (ImGui::IsItemHovered())
+			ImGui::DragScroll(2, 1);
+
+		mViewport_offset = (math::vec2(ImGui::GetScrollX(), ImGui::GetScrollY()) / mViewport_scale);
+
+		visual_editor::begin("_SceneEditor", { cursor.x, cursor.y }, mViewport_offset, mViewport_scale);
+		{
+			if (ImGui::BeginDragDropTarget() && mSelected_layer)
+			{
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("gameobjectAsset"))
+				{
+					// Retrieve the object asset from the payload.
+					const util::uuid& id = *(const util::uuid*)payload->Data;
+					auto asset = engine.get_asset_manager().get_asset(id);
+					auto object_resource = asset->get_resource<core::object_resource>();
+
+					// Generate the object
+					core::game_object obj = mSelected_layer->add_object();
+					object_resource->generate_object(obj);
+					obj.set_asset(asset);
+					
+					// Set the transform to the position it was dropped at.
+					if (auto transform = obj.get_component<core::transform_component>())
+						transform->set_position(visual_editor::get_mouse_position());
+				}
+				ImGui::EndDragDropTarget();
+			}
+
+			if (is_grid_enabled)
+				visual_editor::draw_grid(grid_color, 1);
+
+			for (auto& layer : mLayers)
+			{
+				graphics::renderer* renderer = layer->get_system<graphics::renderer>();
+				if (!renderer)
+					continue;
+				// Make sure we are working with the viewports framebuffer
+				renderer->set_framebuffer(mViewport_framebuffer);
+
+				if (show_collision)
+				{
+					auto& box_collider_container = layer->get_component_container<physics::box_collider_component>();
+					for (auto& i : box_collider_container)
+					{
+						auto transform = layer->get_object(i.get_object_id()).get_component<core::transform_component>();
+						if (!transform)
+							continue;
+						visual_editor::push_transform(transform->get_transform());
+						math::transform box_transform;
+						box_transform.position = i.get_offset();
+						box_transform.rotation = i.get_rotation();
+						visual_editor::push_transform(box_transform);
+						visual_editor::draw_rect(math::rect({ 0, 0 }, i.get_size()), { 0, 1, 0, 0.8f });
+						visual_editor::pop_transform(2);
+					}
+				}
+
+				for (std::size_t i = 0; i < layer->get_object_count(); i++)
+				{
+					auto obj = layer->get_object(i);
+					auto transform = obj.get_component<core::transform_component>();
+					if (!transform)
+						continue;
+
+					const bool is_object_selected = obj.get_instance_id() == mSelected_object_id;
+
+					math::aabb aabb;
+					if (create_aabb_from_object(obj, aabb))
+					{
+						if (is_object_selected)
+						{
+							visual_editor::box_edit box_edit(aabb, transform->get_transform());
+							box_edit.resize(visual_editor::edit_type::transform);
+							box_edit.drag(visual_editor::edit_type::transform);
+							transform->set_transform(box_edit.get_transform());
+							if (box_edit.is_dragging())
+							{
+							}
+						}
+
+						visual_editor::push_transform(transform->get_transform());
+						if (aabb.intersect(visual_editor::get_mouse_position()))
+						{
+							if (ImGui::IsItemClicked())
+								mSelected_object_id = obj.get_instance_id();
+							// TODO: Show info about this object instance
+							visual_editor::draw_rect(aabb, { 1, 1, 1, 1 });
+						}
+						visual_editor::pop_transform();
+					}
+
+					// Draw center point
+					if (is_object_selected && show_center_point)
+					{
+						visual_editor::draw_circle(transform->get_position(), 5, { 1, 1, 1, 0.6f }, 3.f);
+					}
+				}
+			}
+		}
+		visual_editor::end();
+
+		// Clear the framebuffer with black.
+		mViewport_framebuffer->clear({ 0, 0, 0, 1 });
+
+		// Render all layers.
+		for (auto& i : mLayers)
+		{
+			if (auto renderer = i->get_system<graphics::renderer>())
+			{
+				renderer->set_framebuffer(mViewport_framebuffer);
+				renderer->set_render_view_to_framebuffer(mViewport_offset, 1 / mViewport_scale);
+				renderer->render(engine.get_graphics());
+			}
+		}
+
+		ImGui::EndFixedScrollRegion();
+	}
+
+	static bool create_aabb_from_object(core::game_object& pObj, math::aabb& pAABB)
+	{
+		bool has_aabb = false;
+		for (std::size_t comp_idx = 0; comp_idx < pObj.get_component_count(); comp_idx++)
+		{
+			auto comp = pObj.get_component_at(comp_idx);
+			if (comp->has_aabb())
+			{
+				if (!has_aabb)
+				{
+					pAABB = comp->get_local_aabb();
+					has_aabb = true;
+				}
+				else
+					pAABB.merge(comp->get_local_aabb());
+			}
+		}
+		return has_aabb;
 	}
 
 private:
+	core::layer* mSelected_layer = nullptr;
+	util::uuid mSelected_object_id;
+	std::vector<core::layer::uptr> mLayers;
 
+	graphics::framebuffer::ptr mViewport_framebuffer;
+	math::vec2 mViewport_offset;
+	math::vec2 mViewport_scale{ 100, 100 };
 };
 
 class drop_import_handler
@@ -1027,7 +1318,7 @@ public:
 			get_asset()->set_name(scripting::make_valid_identifier(get_asset()->get_name()));
 		}
 
-		auto generator = get_asset()->get_resource<core::eventful_sprite_object_generator>();
+		auto generator = get_asset()->get_resource<core::object_resource>();
 
 		display_sprite_input(generator);
 		display_event_list(generator);
@@ -1038,20 +1329,20 @@ public:
 
 		ImGuiDockFamily dock_family(mSCript_editor_dock_id);
 		// Event script editors are given a dedicated dockspace where they spawn. This helps
-		// remove clutter windows popping up everywhere and adds more organization altogether.
+		// remove clutter windows popping up everywhere.
 		ImGui::DockSpace(mSCript_editor_dock_id, ImVec2(0, 0), ImGuiDockNodeFlags_None, &dock_family);
 	}
 
 	virtual void on_close() override
 	{
-		auto generator = get_asset()->get_resource<core::eventful_sprite_object_generator>();
+		auto generator = get_asset()->get_resource<core::object_resource>();
 		for (auto& i : generator->events)
 			if (i.is_valid())
 				get_context().close_editor(i);
 	}
 
 private:
-	void display_sprite_input(core::eventful_sprite_object_generator* pGenerator)
+	void display_sprite_input(core::object_resource* pGenerator)
 	{
 		core::asset::ptr sprite = get_asset_manager().get_asset(pGenerator->display_sprite);
 		if (texture_asset_input(sprite, get_context(), get_asset_manager()))
@@ -1061,13 +1352,13 @@ private:
 		}
 	}
 
-	void display_event_list(core::eventful_sprite_object_generator* pGenerator)
+	void display_event_list(core::object_resource* pGenerator)
 	{
 		ImGui::Text("Events:");
 		ImGui::BeginChild("Events", ImVec2(0, 0), true);
 		for (auto[type, asset_id] : util::ipair{ pGenerator->events })
 		{
-			const char const* event_name = pGenerator->event_display_name[type];
+			const char* event_name = pGenerator->event_display_name[type];
 			const bool editor_already_open = get_context().is_editor_open_for(asset_id);
 			if (ImGui::Selectable(
 				event_name,
@@ -1082,7 +1373,7 @@ private:
 				}
 				else
 				{
-					asset = create_event_script(event_name);
+					asset = create_event_script(pGenerator->event_typenames[type]);
 					asset_id = asset->get_id();
 					mark_asset_modified();
 					first_time = true;
@@ -1124,10 +1415,12 @@ public:
 	application()
 	{
 		mContext.register_editor<sprite_editor>("texture");
-		mContext.register_editor<object_editor>("gameobject", mInspectors);
+		//mContext.register_editor<object_editor>("gameobject", mInspectors);
 		mContext.register_editor<script_editor>("script");
-		mContext.register_editor<eventful_sprite_editor>("eventful-sprite");
-		mAsset_manager.register_default_resource_factory<core::eventful_sprite_object_generator>("eventful-sprite");
+		mContext.register_editor<scene_editor>("scene");
+		mContext.register_editor<eventful_sprite_editor>("gameobject");
+		mAsset_manager.register_default_resource_factory<core::object_resource>("gameobject");
+		mAsset_manager.register_default_resource_factory<core::scene_resource>("scene");
 	}
 
 	int run()
@@ -1219,19 +1512,7 @@ private:
 			if (mUpdate)
 				mEngine.get_scene().postupdate(delta);
 
-			// Clear the framebuffer with black
-			mViewport_framebuffer->clear({ 0, 0, 0, 1 });
 
-			// Render all layers with the renderer system
-			for (auto& i : mEngine.get_scene().get_layer_container())
-			{
-				if (auto renderer = i->get_system<graphics::renderer>())
-				{
-					renderer->set_framebuffer(mViewport_framebuffer);
-					renderer->set_render_view_to_framebuffer(mViewport_offset, 1 / mViewport_scale);
-					renderer->render(mEngine.get_graphics());
-				}
-			}
 
 			end_frame();
 		}
@@ -2162,7 +2443,7 @@ private:
 	math::vec2 mViewport_offset;
 	math::vec2 mViewport_scale{ 100, 100 };
 
-	// Reference the the context's game engine for convenience.
+	// Reference the game engine for convenience.
 	core::engine& mEngine{ mContext.get_engine() };
 	core::asset_manager& mAsset_manager{ mContext.get_engine().get_asset_manager() };
 	scripting::lua_engine& mLua_engine{ mContext.get_engine().get_script_engine() };

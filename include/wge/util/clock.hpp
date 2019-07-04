@@ -2,9 +2,7 @@
 
 #include <chrono>
 
-namespace wge
-{
-namespace util
+namespace wge::util
 {
 
 // Get time since start of application in seconds.
@@ -41,5 +39,4 @@ private:
 	bool mIs_paused;
 };
 
-} // namespace util
-} // namespace wge
+} // namespace wge::util

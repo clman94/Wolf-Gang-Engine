@@ -119,13 +119,13 @@ public:
 
 	void bind_importor_to_extension(const std::string& pExt, std::unique_ptr<importer> pImporter)
 	{
-		mImportors[pExt] = std::move(pImporter);
+		mImporters[pExt] = std::move(pImporter);
 	}
 
 	asset::ptr import(asset_manager& pAsset_mgr, const filesystem::path& pSystem_path) const
 	{
-		auto iter = mImportors.find(pSystem_path.extension());
-		if (iter != mImportors.end())
+		auto iter = mImporters.find(pSystem_path.extension());
+		if (iter != mImporters.end())
 		{
 			assert(iter->second);
 			return iter->second->import(pAsset_mgr, pSystem_path);
@@ -134,7 +134,7 @@ public:
 	}
 
 private:
-	std::map<std::string, std::unique_ptr<importer>> mImportors;
+	std::map<std::string, std::unique_ptr<importer>> mImporters;
 };
 
 template<typename T>

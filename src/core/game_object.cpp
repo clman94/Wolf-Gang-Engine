@@ -185,6 +185,12 @@ bool game_object::is_instanced() const noexcept
 	return static_cast<bool>(mData->source_asset);
 }
 
+void game_object::set_asset(const core::asset::ptr& pAsset) noexcept
+{
+	assert_valid_reference();
+	mData->source_asset = pAsset;
+}
+
 asset::ptr game_object::get_asset() const
 {
 	assert_valid_reference();

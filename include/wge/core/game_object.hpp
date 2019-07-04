@@ -107,6 +107,7 @@ public:
 	scene& get_scene() const;
 
 	bool is_instanced() const noexcept;
+	void set_asset(const core::asset::ptr&) noexcept;
 	asset::ptr get_asset() const;
 
 	// Get the id that uniquely identifies this object

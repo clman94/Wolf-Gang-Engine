@@ -19,7 +19,9 @@ class engine;
 class scene;
 
 // A layer is a self-contained collection of objects
-// with its own set of systems acting upon those objects.
+// with its own set of systems acting upon the components
+// those objects.
+// In short, this is where all the ECS goodies happen.
 class layer
 {
 public:
