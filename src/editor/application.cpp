@@ -982,12 +982,12 @@ public:
 
 		ImGui::BeginChild("Scene", ImVec2(0, 0), true);
 
-		show_viewport();
+		show_viewport(scene);
 
 		ImGui::EndChild(); // Scene
 	}
 
-	void show_viewport(core::scene_resource* resource)
+	void show_viewport(core::scene_resource* pScene)
 	{
 		core::engine& engine = get_context().get_engine();
 
