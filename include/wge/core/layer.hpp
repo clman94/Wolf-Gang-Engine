@@ -49,7 +49,7 @@ public:
 	// Create a system that was not registered in the factory.
 	template <typename T, typename...Targs>
 	T* add_unregistered_system(Targs&&...);
-	// Create a new system that was registered in the factory.
+	// Uses the current factory to construct the system.
 	template <typename T>
 	T* add_system();
 	// Create a new system that was registered in the factory.

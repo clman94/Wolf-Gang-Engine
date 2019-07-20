@@ -36,8 +36,8 @@ public:
 };
 
 // Game objects represent collections of components
-// in a layer. This class mainly acts as a handle
-// to an object in a layer and generally contains only
+// in a layer. This class acts as a handle
+// to an object in a layer and contains only
 // pointers.
 class game_object
 {
@@ -112,6 +112,7 @@ public:
 
 	// Get the id that uniquely identifies this object
 	const util::uuid& get_instance_id() const;
+	void set_instance_id(const util::uuid& pId);
 
 	operator bool() const noexcept
 	{

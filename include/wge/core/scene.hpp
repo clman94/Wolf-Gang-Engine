@@ -46,6 +46,11 @@ public:
 
 	void clear();
 
+	// For each system T, call pCallable.
+	// Tcallable should be void(layer&, T&)
+	template <typename T, typename Tcallable>
+	void for_each_system(Tcallable&& pCallable);
+
 	engine& get_engine() const noexcept;
 	asset_manager& get_asset_manager() const noexcept;
 	const factory& get_factory() const noexcept;
@@ -54,5 +59,13 @@ private:
 	layers mLayers;
 	engine* mEngine;
 };
+
+template<typename T, typename Tcallable>
+inline void scene::for_each_system(Tcallable&& pCallable)
+{
+	for (auto& i : mLayers)
+		if (auto sys = i->get_system<T>())
+			pCallable(*i.get(), *sys);
+}
 
 } // namespace wge::core

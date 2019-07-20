@@ -155,6 +155,7 @@ public:
 		// Unique name of instance.
 		std::string name;
 		math::transform transform;
+		util::uuid id;
 		util::uuid asset_id;
 	};
 
@@ -169,7 +170,8 @@ public:
 			json j_inst;
 			j_inst["name"] = i.name;
 			j_inst["transform"] = i.transform;
-			j_inst["id"] = i.asset_id;
+			j_inst["id"] = i.id;
+			j_inst["asset_id"] = i.asset_id;
 			j["instances"].push_back(j_inst);
 		}
 		return j;
@@ -182,7 +184,8 @@ public:
 			object_instance inst;
 			inst.name = i["name"];
 			inst.transform = i["transform"];
-			inst.asset_id = i["id"];
+			inst.id = i["id"];
+			inst.asset_id = i["asset_id"];
 			instances.emplace_back(std::move(inst));
 		}
 	}
@@ -943,11 +946,14 @@ public:
 		layer->add_system<physics::physics_world>();
 		mSelected_layer = layer.get();
 		mLayers.emplace_back(std::move(layer));
+
+		mScene = get_asset()->get_resource<core::scene_resource>();
+		for (auto& i : mScene->instances)
+			generate_instance(i);
 	}
 
 	virtual void on_gui() override
 	{
-		auto scene = get_asset()->get_resource<core::scene_resource>();
 
 		ImGui::BeginChild("SidePanelSettings", ImVec2(200, 0));
 
@@ -982,12 +988,29 @@ public:
 
 		ImGui::BeginChild("Scene", ImVec2(0, 0), true);
 
-		show_viewport(scene);
+		show_viewport();
 
 		ImGui::EndChild(); // Scene
 	}
 
-	void show_viewport(core::scene_resource* pScene)
+	virtual void on_save() override
+	{
+		auto resource = get_asset()->get_resource<core::scene_resource>();
+		resource->instances.clear();
+
+		for (std::size_t i = 0; i < mSelected_layer->get_object_count(); i++)
+		{
+			core::game_object obj = mSelected_layer->get_object(i);
+			core::scene_resource::object_instance& inst = resource->instances.emplace_back();
+			inst.asset_id = obj.get_asset()->get_id();
+			inst.id = obj.get_instance_id();
+			inst.name = obj.get_name();
+			if (auto transform = obj.get_component<core::transform_component>())
+				inst.transform = transform->get_transform();
+		}
+	}
+
+	void show_viewport()
 	{
 		core::engine& engine = get_context().get_engine();
 
@@ -1054,14 +1077,8 @@ public:
 				{
 					// Retrieve the object asset from the payload.
 					const util::uuid& id = *(const util::uuid*)payload->Data;
-					auto asset = engine.get_asset_manager().get_asset(id);
-					auto object_resource = asset->get_resource<core::object_resource>();
+					auto obj = new_instance(id);
 
-					// Generate the object
-					core::game_object obj = mSelected_layer->add_object();
-					object_resource->generate_object(obj);
-					obj.set_asset(asset);
-					
 					// Set the transform to the position it was dropped at.
 					if (auto transform = obj.get_component<core::transform_component>())
 						transform->set_position(visual_editor::get_mouse_position());
@@ -1159,6 +1176,41 @@ public:
 		ImGui::EndFixedScrollRegion();
 	}
 
+	core::game_object new_instance(util::uuid pAsset)
+	{
+		core::engine& engine = get_context().get_engine();
+		auto asset = engine.get_asset_manager().get_asset(pAsset);
+		auto object_resource = asset->get_resource<core::object_resource>();
+
+		// Generate the object
+		core::game_object obj = mSelected_layer->add_object();
+		object_resource->generate_object(obj);
+		obj.set_asset(asset);
+
+		mark_asset_modified();
+
+		return obj;
+	}
+
+	core::game_object generate_instance(const core::scene_resource::object_instance& pData)
+	{
+		core::engine& engine = get_context().get_engine();
+		auto asset = engine.get_asset_manager().get_asset(pData.asset_id);
+		auto object_resource = asset->get_resource<core::object_resource>();
+
+		// Generate the object
+		core::game_object obj = mSelected_layer->add_object();
+		obj.set_instance_id(pData.id);
+		obj.set_name(pData.name);
+		object_resource->generate_object(obj);
+		obj.set_asset(asset);
+
+		if (auto transform = obj.get_component<core::transform_component>())
+			transform->set_transform(pData.transform);
+
+		return obj;
+	}
+
 	static bool create_aabb_from_object(core::game_object& pObj, math::aabb& pAABB)
 	{
 		bool has_aabb = false;
@@ -1183,6 +1235,8 @@ private:
 	core::layer* mSelected_layer = nullptr;
 	util::uuid mSelected_object_id;
 	std::vector<core::layer::uptr> mLayers;
+
+	core::scene_resource* mScene = nullptr;
 
 	graphics::framebuffer::ptr mViewport_framebuffer;
 	math::vec2 mViewport_offset;
@@ -1560,25 +1614,26 @@ private:
 
 	void init_imgui()
 	{
-		// Setup imgui, enable docking and dpi support
+		// Setup imgui, enable docking and dpi support.
 		ImGui::CreateContext();
 		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-		//ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+		//ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // Viewports are disabled for now. Might make it an optional setting later.
 		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports;
 		ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts;
 		ImGui::GetIO().ConfigDockingWithShift = true;
 		ImGui_ImplGlfw_InitForOpenGL(mGLFW_backend->get_window(), true);
 		ImGui_ImplOpenGL3_Init("#version 150");
 
-		// Lets use a somewhat better set of fonts
 		auto fonts = ImGui::GetIO().Fonts;
 
+		// This will be our default font. It is quite a bit better than imguis builtin one.
 		if (fonts->AddFontFromFileTTF("./editor/Roboto-Regular.ttf", 18) == NULL)
 		{
 			log::error() << "Could not load RobotoMono-Regular font. Using default." << log::endm;
 			fonts->AddFontDefault();
 		}
 
+		// Setup the icon font so we can fancy things up.
 		static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
 		ImFontConfig icons_config;
 		icons_config.MergeMode = true;
@@ -1591,6 +1646,7 @@ private:
 			fonts->AddFontDefault();
 		}
 
+		// Used in the code editor.
 		if (fonts->AddFontFromFileTTF("./editor/RobotoMono-Regular.ttf", 18) == NULL)
 		{
 			log::error() << "Could not load RobotoMono-Regular font. Using default." << log::endm;

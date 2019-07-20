@@ -65,12 +65,23 @@ void context::save_asset(const core::asset::ptr& pAsset)
 	auto iter = std::find(mUnsaved_assets.begin(), mUnsaved_assets.end(), pAsset);
 	if (iter == mUnsaved_assets.end())
 		return;
+	if (auto editor = get_editor(*iter))
+	{
+		editor->on_save();
+		if (!editor->is_visible())
+		{
+			editor->on_close();
+			iter->reset();
+		}
+	}
 	(*iter)->save();
 	mUnsaved_assets.erase(iter);
 }
 
 void context::save_all_assets()
 {
+	for (auto& i : mAsset_editors)
+		i->on_save();
 	for (auto& i : mUnsaved_assets)
 		i->save();
 	mUnsaved_assets.clear();
@@ -88,6 +99,7 @@ asset_editor* context::open_editor(const core::asset::ptr& pAsset, unsigned int 
 	// If the editor already exists, set the focus on its window.
 	if (auto editor = get_editor(pAsset))
 	{
+		editor->set_visible(true);
 		editor->focus_window();
 		return editor;
 	}
@@ -199,15 +211,15 @@ void context::show_editor_guis()
 		}
 		ImGui::End();
 
-		// Close button was pressed so we must delete this editor.
 		if (!is_window_open)
 		{
-			editor->on_close();
-			iter->reset();
+			if (is_asset_modified(editor->get_asset()))
+				editor->set_visible(false);
+			else
+				iter->reset();
 		}
+		erase_deleted_editors();
 	}
-
-	erase_deleted_editors();
 }
 
 bool context::is_editor_open_for(const core::asset::ptr& pAsset) const
@@ -221,7 +233,8 @@ bool context::is_editor_open_for(const core::asset::ptr& pAsset) const
 bool context::is_editor_open_for(const util::uuid& pAsset_id) const
 {
 	for (const auto& i : mAsset_editors)
-		if (i && i->get_asset()->get_id() == pAsset_id)
+		if (i && i->get_asset()->get_id() == pAsset_id &&
+			i->is_visible())
 			return true;
 	return false;
 }

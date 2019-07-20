@@ -203,6 +203,12 @@ const util::uuid& game_object::get_instance_id() const
 	return mData->id;
 }
 
+void game_object::set_instance_id(const util::uuid& pId)
+{
+	assert_valid_reference();
+	mData->id = pId;
+}
+
 bool game_object::operator==(const game_object& pObj) const noexcept
 {
 	return mData && pObj.mData && mData->id == pObj.mData->id;

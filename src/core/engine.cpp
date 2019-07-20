@@ -76,15 +76,24 @@ void engine::close_game()
 
 void engine::render_to(const graphics::framebuffer::ptr& pFrame_buffer, const math::vec2& pOffset, const math::vec2& pScale)
 {
-	for (auto& i : mScene.get_layer_container())
+	mScene.for_each_system<graphics::renderer>(
+		[&](layer&, graphics::renderer& pRenderer)
 	{
-		if (auto renderer = i->get_system<graphics::renderer>())
-		{
-			renderer->set_framebuffer(pFrame_buffer);
-			renderer->set_render_view_to_framebuffer(pOffset, 1 / pScale);
-			renderer->render(mGraphics);
-		}
-	}
+		pRenderer.set_framebuffer(pFrame_buffer);
+		pRenderer.set_render_view_to_framebuffer(pOffset, 1 / pScale);
+		pRenderer.render(mGraphics);
+	});
+}
+
+void engine::step()
+{
+	float delta = 1.f / 60.f;
+
+	mLua_engine.update_delta(delta);
+
+	mScene.preupdate(delta);
+	mScene.update(delta);
+	mScene.postupdate(delta);
 }
 
 bool engine::is_loaded() const

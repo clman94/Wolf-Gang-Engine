@@ -29,6 +29,7 @@ public:
 	virtual ~asset_editor() {}
 
 	virtual void on_gui() = 0;
+	virtual void on_save() {}
 	virtual void on_close() {}
 
 	const core::asset::ptr& get_asset() const noexcept

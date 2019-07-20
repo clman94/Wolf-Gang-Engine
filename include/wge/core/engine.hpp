@@ -21,6 +21,8 @@ public:
 
 	void render_to(const graphics::framebuffer::ptr& pFrame_buffer, const math::vec2& pOffset, const math::vec2& pScale);
 	
+	void step();
+
 	bool is_loaded() const;
 
 	core::game_settings& get_settings() noexcept
