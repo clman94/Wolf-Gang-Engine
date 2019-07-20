@@ -218,8 +218,8 @@ void context::show_editor_guis()
 			else
 				iter->reset();
 		}
-		erase_deleted_editors();
 	}
+	erase_deleted_editors();
 }
 
 bool context::is_editor_open_for(const core::asset::ptr& pAsset) const
