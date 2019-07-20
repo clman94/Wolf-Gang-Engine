@@ -1135,6 +1135,7 @@ public:
 							transform->set_transform(box_edit.get_transform());
 							if (box_edit.is_dragging())
 							{
+								mark_asset_modified();
 							}
 						}
 
