@@ -5,7 +5,6 @@
 #include <wge/core/system.hpp>
 #include <wge/filesystem/filesystem_interface.hpp>
 #include <wge/util/ptr.hpp>
-#include <wge/filesystem/file_structure.hpp>
 
 #include <vector>
 #include <map>
