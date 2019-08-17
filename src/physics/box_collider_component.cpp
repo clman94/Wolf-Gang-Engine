@@ -34,7 +34,7 @@ json box_collider_component::on_serialize(core::serialize_type pType) const
 	return result;
 }
 
-void box_collider_component::on_deserialize(const core::game_object& pObject, const json& pJson)
+void box_collider_component::on_deserialize(const core::asset_manager&, const json& pJson)
 {
 	mOffset = pJson["offset"];
 	mSize = pJson["size"];

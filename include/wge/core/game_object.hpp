@@ -23,6 +23,7 @@ class scene;
 class layer;
 class component;
 class object_data;
+class asset_manager;
 
 // Exception thrown when a game_object that references no real game object
 // attempts to access/modify that game object.
@@ -54,8 +55,8 @@ public:
 	bool has_component() const;
 
 	json serialize(serialize_type pType = serialize_type::all) const;
-	void deserialize(const json& pJson);
-	void deserialize(const asset::ptr& pAsset);
+	void deserialize(const asset_manager&, const json& pJson);
+	void deserialize(const asset_manager&, const asset::ptr& pAsset);
 
 	// Create a new component for this object
 	template <typename T>
@@ -103,8 +104,6 @@ public:
 	// reconstruct this object in the destination layer and remove it in
 	// the source layer.
 	layer& get_layer() const;
-	engine& get_engine() const;
-	scene& get_scene() const;
 
 	bool is_instanced() const noexcept;
 	void set_asset(const core::asset::ptr&) noexcept;

@@ -9,6 +9,7 @@
 #include <wge/core/component_storage.hpp>
 #include <wge/util/uuid.hpp>
 #include <wge/util/json_helpers.hpp>
+#include <wge/core/asset_manager.hpp>
 
 // Use this in your component to define the needed information the engine
 // needs.
@@ -56,7 +57,7 @@ public:
 	// Some components require extra info to completely
 	// recreate its data so the game object that owns this component
 	// must be provided.
-	void deserialize(const game_object&, const json&);
+	void deserialize(const asset_manager&, const json&);
 
 	// Get the name of the component type
 	virtual std::string get_component_name() const = 0;
@@ -97,7 +98,7 @@ public:
 
 protected:
 	virtual json on_serialize(serialize_type) const { return json{}; }
-	virtual	void on_deserialize(const game_object& pObject, const json&) {}
+	virtual	void on_deserialize(const asset_manager&, const json&) {}
 
 private:
 	std::string mName;

@@ -19,10 +19,10 @@ json component::serialize(serialize_type pType) const
 	return result;
 }
 
-void component::deserialize(const game_object& pObj, const json& pJson)
+void component::deserialize(const asset_manager& pAsset_mgr, const json& pJson)
 {
 	mName = pJson["name"];
-	on_deserialize(pObj, pJson["data"]);
+	on_deserialize(pAsset_mgr, pJson["data"]);
 }
 
 const void component::set_name(const std::string & pName) noexcept

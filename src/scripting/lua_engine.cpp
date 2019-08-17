@@ -205,7 +205,7 @@ void script_system::update(float pDelta)
 	{
 		try
 		{
-			mLua_engine.state.safe_script(pSource, pEnv);
+			mLua_engine->state.safe_script(pSource, pEnv);
 		}
 		catch (const sol::error& e)
 		{
@@ -213,14 +213,14 @@ void script_system::update(float pDelta)
 		}
 	};
 
-	mLua_engine.update_delta(pDelta);
+	mLua_engine->update_delta(pDelta);
 
 	// Setup the environments if needed
 	get_layer().for_each([&](core::game_object pObj, event_state_component& pState)
 	{
 		if (!pState.environment.valid())
 		{
-			pState.environment = mLua_engine.create_object_environment(pObj);
+			pState.environment = mLua_engine->create_object_environment(pObj);
 
 			// Added the properties as variables.
 			for (const auto& i : pState.properties)

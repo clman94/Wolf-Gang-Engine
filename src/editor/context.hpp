@@ -116,7 +116,6 @@ private:
 	void erase_deleted_editors();
 
 private:
-
 	// This is the imgui dock id for the dockspace
 	// that newly opened editors will spawn in.
 	unsigned int mDefault_dock_id = 0;
@@ -131,7 +130,6 @@ private:
 	// adding and removing editors so lets just store the editors
 	// in a linked list.
 	std::list<asset_editor::uptr> mAsset_editors;
-
 };
 
 template<typename T, typename...Targs>

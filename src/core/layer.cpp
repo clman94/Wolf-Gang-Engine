@@ -7,8 +7,8 @@
 namespace wge::core
 {
 
-layer::layer(scene& pScene) noexcept :
-	mScene(&pScene)
+layer::layer(const factory& pFactory) noexcept :
+	mFactory(&pFactory)
 {}
 
 json layer::serialize(serialize_type pType)
@@ -32,7 +32,7 @@ json layer::serialize(serialize_type pType)
 	return result;
 }
 
-void layer::deserialize(const json& pJson)
+void layer::deserialize(const asset_manager& pAsset_mgr, const json& pJson)
 {
 	clear();
 
@@ -40,7 +40,6 @@ void layer::deserialize(const json& pJson)
 	mTime_scale = pJson["timescale"];
 	mRecieve_update = pJson["enabled"];
 
-	const factory& factory = get_engine().get_factory();
 	for (auto& i : pJson["systems"])
 	{
 		system* sys = add_system(i["type"]);
@@ -50,7 +49,7 @@ void layer::deserialize(const json& pJson)
 	for (auto& i : pJson["objects"])
 	{
 		game_object obj = add_object();
-		obj.deserialize(i);
+		obj.deserialize(pAsset_mgr, i);
 	}
 }
 
@@ -76,9 +75,10 @@ system* layer::add_system(int pType)
 	if (system* sys = get_system(pType))
 		return sys;
 
+	assert(mFactory);
+
 	// Create a new one, otherwise.
-	const factory& factory = get_engine().get_factory();
-	if (system::uptr sys = factory.create_system(pType, *this))
+	if (system::uptr sys = mFactory->create_system(pType, *this))
 	{
 		return mSystems.emplace_back(std::move(sys)).get();
 	}
@@ -143,8 +143,7 @@ std::size_t layer::get_object_count() const noexcept
 
 component* layer::add_component(const game_object& pObj, const component_type& pType)
 {
-	const factory& f = get_engine().get_factory();
-	component* c = f.create_component(pType, mComponent_manager);
+	component* c = mFactory->create_component(pType, mComponent_manager);
 	if (!c)
 	{
 		log::error() << "Could not create component with id " << pType << log::endm;
@@ -165,12 +164,6 @@ void layer::remove_component(int pType, const util::uuid& pId)
 	component* comp = get_component(pType, pId);
 	if (comp)
 		comp->destroy();
-}
-
-scene& layer::get_scene() const noexcept
-{
-	assert(mScene);
-	return *mScene;
 }
 
 void layer::set_enabled(bool pEnabled) noexcept
@@ -221,11 +214,6 @@ void layer::clear()
 	mSystems.clear();
 	mObject_manager.clear();
 	mComponent_manager.clear();
-}
-
-engine& layer::get_engine() const noexcept
-{
-	return mScene->get_engine();
 }
 
 } // namespace wge::core

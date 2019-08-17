@@ -176,13 +176,13 @@ class script_system :
 public:
 	script_system(core::layer& pLayer, lua_engine& pLua_engine) :
 		core::system(pLayer),
-		mLua_engine(pLua_engine)
+		mLua_engine(&pLua_engine)
 	{}
 
 	void update(float pDelta) override;
 
 private:
-	lua_engine& mLua_engine;
+	lua_engine* mLua_engine;
 };
 
 std::string make_valid_identifier(const std::string_view& pStr, const std::string_view& pDefault = "Blank");

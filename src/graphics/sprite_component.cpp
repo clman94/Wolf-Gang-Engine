@@ -22,14 +22,13 @@ json sprite_component::on_serialize(core::serialize_type pType) const
 	return result;
 }
 
-void sprite_component::on_deserialize(const core::game_object& pObj, const json& pJson)
+void sprite_component::on_deserialize(const core::asset_manager& pAsset_mgr, const json& pJson)
 {
 	mOffset = pJson["offset"];
 	if (!pJson["texture"].is_null())
 	{
-		auto& asset_mgr = pObj.get_scene().get_asset_manager();
 		util::uuid id = pJson["texture"];
-		mTexture = asset_mgr.get_asset(id);
+		mTexture = pAsset_mgr.get_asset(id);
 	}
 	if (!pJson["animation-id"].is_null())
 	{

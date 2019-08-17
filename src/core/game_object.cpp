@@ -39,21 +39,21 @@ json game_object::serialize(serialize_type pType) const
 	return result;
 }
 
-void game_object::deserialize(const json& pJson)
+void game_object::deserialize(const asset_manager& pAsset_mgr, const json& pJson)
 {
 	assert_valid_reference();
 	//set_instance_id(pJson["id"]);
 	set_name(pJson["name"]);
 	for (auto& i : pJson["components"])
 		if (component* c = add_component(i["type"]))
-			c->deserialize(*this, i);
+			c->deserialize(pAsset_mgr, i);
 }
 
-void game_object::deserialize(const asset::ptr& pAsset)
+void game_object::deserialize(const asset_manager& pAsset_mgr, const asset::ptr& pAsset)
 {
 	assert(pAsset);
 	assert(pAsset->get_type() == "gameobject");
-	deserialize(pAsset->get_metadata());
+	deserialize(pAsset_mgr, pAsset->get_metadata());
 	mData->source_asset = pAsset;
 }
 
@@ -165,18 +165,6 @@ layer& game_object::get_layer() const
 {
 	assert_valid_reference();
 	return *mLayer;
-}
-
-engine& game_object::get_engine() const
-{
-	assert_valid_reference();
-	return mLayer->get_engine();
-}
-
-scene& game_object::get_scene() const
-{
-	assert_valid_reference();
-	return get_layer().get_scene();
 }
 
 bool game_object::is_instanced() const noexcept

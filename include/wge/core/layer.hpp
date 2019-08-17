@@ -5,6 +5,7 @@
 #include <wge/core/component_manager.hpp>
 #include <wge/core/object_manager.hpp>
 #include <wge/core/component_type.hpp>
+#include <wge/core/factory.hpp>
 
 #include <string>
 #include <string_view>
@@ -28,15 +29,15 @@ public:
 	using uptr = std::unique_ptr<layer>;
 
 	// Create a new layer object
-	[[nodiscard]] static uptr create(scene& pScene)
+	[[nodiscard]] static uptr create(const factory& pFactory)
 	{
-		return std::make_unique<layer>(pScene);
+		return std::make_unique<layer>(pFactory);
 	}
 
-	layer(scene&) noexcept;
+	layer(const factory&) noexcept;
 
 	json serialize(serialize_type);
-	void deserialize(const json&);
+	void deserialize(const asset_manager&, const json&);
 
 	// Get a system by its type
 	template <typename T>
@@ -107,9 +108,6 @@ public:
 	template <typename T>
 	void for_each(T&& pCallable);
 
-	// Get the context.
-	scene& get_scene() const noexcept;
-
 	// Set whether or not this layer will recieve updates.
 	// Note: This does not affect the update methods in this class
 	//   so they are still callable.
@@ -128,8 +126,6 @@ public:
 
 	void clear();
 
-	engine& get_engine() const noexcept;
-
 private:
 	template <typename Tcomponent, typename...Tdependencies>
 	void for_each_impl(const std::function<void(game_object, Tcomponent&, Tdependencies&...)>& pCallable);
@@ -138,7 +134,7 @@ private:
 	void for_each_impl(const std::function<void(Tcomponent&, Tdependencies&...)>& pCallable);
 
 private:
-	scene* mScene;
+	const factory* mFactory;
 	float mTime_scale{ 1 };
 	bool mRecieve_update{ true };
 	std::string mName;
@@ -222,6 +218,7 @@ inline void layer::for_each_impl(const std::function<void(Tcomponent&, Tdependen
 template<typename T>
 inline void layer::for_each(T&& pCallable)
 {
+	// Just for simplicity, this will be using std::function to deduce the arguments for us.
 	for_each_impl(std::function(std::forward<T>(pCallable)));
 }
 

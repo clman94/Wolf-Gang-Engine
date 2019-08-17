@@ -41,7 +41,7 @@ public:
 
 protected:
 	virtual json on_serialize(core::serialize_type) const override;
-	virtual void on_deserialize(const core::game_object& pObject, const json&) override;
+	virtual void on_deserialize(const core::asset_manager&, const json&) override;
 
 	// Update a shape to the current transform
 	void update_shape(const math::vec2& pScale, b2PolygonShape* pShape);

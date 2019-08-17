@@ -52,7 +52,7 @@ json physics_component::on_serialize(core::serialize_type pType) const
 	return result;
 }
 
-void physics_component::on_deserialize(const core::game_object& pObject, const json& pJson)
+void physics_component::on_deserialize(const core::asset_manager&, const json& pJson)
 {
 	set_type(pJson["type"]);
 	if (pJson.find("runtime-state") != pJson.end())

@@ -15,7 +15,7 @@ layer* scene::get_layer(std::size_t pIndex) const
 
 layer* scene::add_layer()
 {
-	return mLayers.emplace_back(layer::create(*this)).get();
+	return mLayers.emplace_back(layer::create(mEngine->get_factory())).get();
 }
 
 layer* scene::add_layer(const std::string& pName)
@@ -27,7 +27,7 @@ layer* scene::add_layer(const std::string& pName)
 
 layer* scene::add_layer(const std::string& pName, std::size_t pInsert)
 {
-	return mLayers.insert(mLayers.begin() + pInsert, layer::create(*this))->get();
+	return mLayers.insert(mLayers.begin() + pInsert, layer::create(mEngine->get_factory()))->get();
 }
 
 layer* scene::add_layer(layer::uptr& pPtr)

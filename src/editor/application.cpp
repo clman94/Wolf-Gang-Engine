@@ -71,16 +71,14 @@ public:
 public:
 	virtual void save() override {}
 
-	void generate_object(core::game_object& pObj)
+	void generate_object(core::game_object& pObj, const asset_manager& pAsset_mgr)
 	{
-		auto& asset_manager = pObj.get_engine().get_asset_manager();
-
 		pObj.add_component<core::transform_component>();
 
 		if (display_sprite.is_valid())
 		{
 			auto sprite = pObj.add_component<graphics::sprite_component>();
-			sprite->set_texture(asset_manager.get_asset(display_sprite));
+			sprite->set_texture(pAsset_mgr.get_asset(display_sprite));
 		}
 
 		if (!events.empty())
@@ -100,7 +98,7 @@ public:
 					break;
 				}
 				assert(comp);
-				if (auto asset = asset_manager.get_asset(asset_id))
+				if (auto asset = pAsset_mgr.get_asset(asset_id))
 					comp->source_script = asset;
 				else
 					log::error() << "Could not load event script; Invalid id" << log::endm;
@@ -158,7 +156,7 @@ public:
 		util::uuid id;
 		util::uuid asset_id;
 	};
-
+	 
 	std::vector<object_instance> instances;
 
 public:
@@ -190,9 +188,37 @@ public:
 		}
 	}
 
-	void generate_scene(core::scene& pScene) const
+	static core::game_object generate_instance(core::layer& pLayer, const core::asset_manager& pAsset_mgr, const object_instance& pData)
 	{
-		pScene.add_layer("Game");
+		auto asset = pAsset_mgr.get_asset(pData.asset_id);
+		auto object_resource = asset->get_resource<core::object_resource>();
+
+		// Generate the object
+		core::game_object obj = pLayer.add_object(pData.name);
+		obj.set_instance_id(pData.id);
+		object_resource->generate_object(obj, pAsset_mgr);
+		obj.set_asset(asset);
+
+		if (auto transform = obj.get_component<core::transform_component>())
+			transform->set_transform(pData.transform);
+
+		return obj;
+	}
+
+	void generate_layer(core::layer& pLayer, const core::asset_manager& pAsset_mgr) const
+	{
+		auto renderer = pLayer.add_system<graphics::renderer>();
+		renderer->set_pixel_size(0.01f);
+		pLayer.add_system<scripting::script_system>();
+		pLayer.add_system<physics::physics_world>();
+		for (auto& i : instances)
+			generate_instance(pLayer, pAsset_mgr, i);
+	}
+
+	void generate_scene(core::scene& pScene, const core::asset_manager& pAsset_mgr) const
+	{
+		auto layer = pScene.add_layer("Game");
+		generate_layer(*layer, pAsset_mgr);
 	}
 };
 
@@ -302,9 +328,11 @@ public:
 		asset_editor(pContext, pAsset),
 		mInspectors(&pInspectors)
 	{
-		mSandbox = core::layer::create(pContext.get_engine().get_scene());
+		mSandbox = core::layer::create(pContext.get_engine().get_factory());
 		mObject = mSandbox->add_object();
-		mObject.deserialize(pAsset->get_metadata());
+		mObject.deserialize(
+			pContext.get_engine().get_asset_manager(),
+			pAsset->get_metadata());
 	}
 
 	virtual void on_gui() override
@@ -935,28 +963,26 @@ public:
 	scene_editor(context& pContext, const core::asset::ptr& pAsset) noexcept :
 		asset_editor(pContext, pAsset)
 	{
+		// Create a framebuffer for the scene to be rendered to.
 		auto& graphics = pContext.get_engine().get_graphics();
 		mViewport_framebuffer = graphics.get_graphics_backend()->create_framebuffer();
 
-		auto layer = core::layer::create(pContext.get_engine().get_scene());
-		auto renderer = layer->add_system<graphics::renderer>();
-		renderer->set_framebuffer(mViewport_framebuffer);
-		renderer->set_pixel_size(0.01f);
-		layer->add_system<scripting::script_system>();
-		layer->add_system<physics::physics_world>();
+		mScene = get_asset()->get_resource<core::scene_resource>();
+
+		// Generate the layer.
+		auto layer = core::layer::create(pContext.get_engine().get_factory());
+		mScene->generate_layer(*layer, pContext.get_engine().get_asset_manager());
 		mSelected_layer = layer.get();
 		mLayers.emplace_back(std::move(layer));
-
-		mScene = get_asset()->get_resource<core::scene_resource>();
-		for (auto& i : mScene->instances)
-			generate_instance(i);
 	}
 
 	virtual void on_gui() override
 	{
-
 		ImGui::BeginChild("SidePanelSettings", ImVec2(200, 0));
+		if (ImGui::Button("Run"))
+		{
 
+		}
 		ImGui::TextUnformatted("Layers");
 		ImGui::BeginChild("Layers", ImVec2(0, 300), true);
 		{
@@ -1185,7 +1211,7 @@ public:
 
 		// Generate the object
 		core::game_object obj = mSelected_layer->add_object();
-		object_resource->generate_object(obj);
+		object_resource->generate_object(obj, get_asset_manager());
 		obj.set_asset(asset);
 
 		mark_asset_modified();
@@ -1203,7 +1229,7 @@ public:
 		core::game_object obj = mSelected_layer->add_object();
 		obj.set_instance_id(pData.id);
 		obj.set_name(pData.name);
-		object_resource->generate_object(obj);
+		object_resource->generate_object(obj, get_asset_manager());
 		obj.set_asset(asset);
 
 		if (auto transform = obj.get_component<core::transform_component>())
