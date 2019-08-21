@@ -16,9 +16,6 @@
 namespace wge::core
 {
 
-class engine;
-class scene;
-
 // A layer is a self-contained collection of objects
 // with its own set of systems acting upon the components
 // those objects.

@@ -10,7 +10,7 @@ namespace wge::core
 {
 
 engine::engine() :
-	mScene(*this)
+	mScene(mFactory)
 {
 	mFactory.register_system<graphics::renderer>();
 	mFactory.register_system<physics::physics_world>();

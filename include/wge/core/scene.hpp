@@ -12,16 +12,14 @@
 namespace wge::core
 {
 
-class engine;
-
 class scene
 {
 public:
 	using uptr = std::unique_ptr<scene>;
 	using layers = std::vector<layer::uptr>;
 
-	scene(engine& pEngine) :
-		mEngine(&pEngine)
+	scene(factory& pFactory) :
+		mFactory(&pFactory)
 	{}
 
 	// Get a layer by index
@@ -51,13 +49,11 @@ public:
 	template <typename T, typename Tcallable>
 	void for_each_system(Tcallable&& pCallable);
 
-	engine& get_engine() const noexcept;
-	asset_manager& get_asset_manager() const noexcept;
 	const factory& get_factory() const noexcept;
 
 private:
 	layers mLayers;
-	engine* mEngine;
+	factory* mFactory;
 };
 
 template<typename T, typename Tcallable>
