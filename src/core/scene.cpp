@@ -49,7 +49,6 @@ layer::uptr scene::release_layer(const layer& pLayer)
 	return{};
 }
 
-
 bool scene::remove_layer(const layer& pLayer)
 {
 	for (std::size_t i = 0; i < mLayers.size(); i++)
@@ -67,7 +66,6 @@ const scene::layers& scene::get_layer_container() const noexcept
 {
 	return mLayers;
 }
-
 
 const factory& scene::get_factory() const noexcept
 {

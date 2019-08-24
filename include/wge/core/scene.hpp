@@ -18,7 +18,7 @@ public:
 	using uptr = std::unique_ptr<scene>;
 	using layers = std::vector<layer::uptr>;
 
-	scene(factory& pFactory) :
+	scene(const factory& pFactory) :
 		mFactory(&pFactory)
 	{}
 
@@ -53,7 +53,7 @@ public:
 
 private:
 	layers mLayers;
-	factory* mFactory;
+	const factory* mFactory;
 };
 
 template<typename T, typename Tcallable>
