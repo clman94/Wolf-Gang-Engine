@@ -961,19 +961,18 @@ class scene_editor :
 {
 public:
 	scene_editor(context& pContext, const core::asset::ptr& pAsset) noexcept :
-		asset_editor(pContext, pAsset)
+		asset_editor(pContext, pAsset),
+		mScene(pContext.get_engine().get_factory())
 	{
 		// Create a framebuffer for the scene to be rendered to.
 		auto& graphics = pContext.get_engine().get_graphics();
 		mViewport_framebuffer = graphics.get_graphics_backend()->create_framebuffer();
 
-		mScene = get_asset()->get_resource<core::scene_resource>();
+		mScene_resource = get_asset()->get_resource<core::scene_resource>();
 
 		// Generate the layer.
-		auto layer = core::layer::create(pContext.get_engine().get_factory());
-		mScene->generate_layer(*layer, pContext.get_engine().get_asset_manager());
-		mSelected_layer = layer.get();
-		mLayers.emplace_back(std::move(layer));
+		auto layer = mScene.add_layer();
+		mScene_resource->generate_layer(*layer, pContext.get_engine().get_asset_manager());
 	}
 
 	virtual void on_gui() override
@@ -985,10 +984,12 @@ public:
 		}
 		ImGui::TextUnformatted("Layers");
 		ImGui::BeginChild("Layers", ImVec2(0, 300), true);
+		for (const auto& i : mScene.get_layer_container())
 		{
-			ImGui::PushID(0);
-			if (ImGui::Selectable(mLayers.back()->get_name().c_str(), mSelected_layer == mLayers.back().get()))
-				mSelected_layer = mLayers.back().get();
+			ImGui::PushID(i.get());
+
+			if (ImGui::Selectable(i->get_name().c_str(), mSelected_layer == i.get()))
+				mSelected_layer = i.get();
 			ImGui::PopID();
 		}
 		ImGui::EndChild();
@@ -1012,11 +1013,30 @@ public:
 
 		ImGui::SameLine();
 
-		ImGui::BeginChild("Scene", ImVec2(0, 0), true);
+		static float viewport_width = -100;
+		ImGui::BeginChild("Scene", ImVec2(viewport_width, 0), true);
 
 		show_viewport();
 
 		ImGui::EndChild(); // Scene
+		ImGui::SameLine();
+		ImGui::VerticalSplitter("ViewportInspectorSplitter", &viewport_width);
+		ImGui::SameLine();
+		ImGui::BeginChild("InspectorSidePanel", ImVec2(-viewport_width, 0));
+		if (mSelected_layer && mSelected_object_id.is_valid())
+		{
+			ImGui::TextUnformatted("Selected Object Settings");
+			auto obj = mSelected_layer->get_object(mSelected_object_id);
+			std::string name = obj.get_name();
+			if (ImGui::InputText("Name", &name))
+				obj.set_name(name);
+			if (ImGui::IsItemDeactivatedAfterEdit())
+			{
+				obj.set_name(scripting::make_valid_identifier(name));
+				mark_asset_modified();
+			}
+		}
+		ImGui::EndChild();
 	}
 
 	virtual void on_save() override
@@ -1115,7 +1135,7 @@ public:
 			if (is_grid_enabled)
 				visual_editor::draw_grid(grid_color, 1);
 
-			for (auto& layer : mLayers)
+			for (auto& layer : mScene.get_layer_container())
 			{
 				graphics::renderer* renderer = layer->get_system<graphics::renderer>();
 				if (!renderer)
@@ -1190,16 +1210,12 @@ public:
 		mViewport_framebuffer->clear({ 0, 0, 0, 1 });
 
 		// Render all layers.
-		for (auto& i : mLayers)
+		mScene.for_each_system<graphics::renderer>([&](core::layer&, graphics::renderer& pRenderer)
 		{
-			if (auto renderer = i->get_system<graphics::renderer>())
-			{
-				renderer->set_framebuffer(mViewport_framebuffer);
-				renderer->set_render_view_to_framebuffer(mViewport_offset, 1 / mViewport_scale);
-				renderer->render(engine.get_graphics());
-			}
-		}
-
+			pRenderer.set_framebuffer(mViewport_framebuffer);
+			pRenderer.set_render_view_to_framebuffer(mViewport_offset, 1 / mViewport_scale);
+			pRenderer.render(engine.get_graphics());
+		});
 		ImGui::EndFixedScrollRegion();
 	}
 
@@ -1261,9 +1277,9 @@ public:
 private:
 	core::layer* mSelected_layer = nullptr;
 	util::uuid mSelected_object_id;
-	std::vector<core::layer::uptr> mLayers;
+	core::scene mScene;
 
-	core::scene_resource* mScene = nullptr;
+	core::scene_resource* mScene_resource = nullptr;
 
 	graphics::framebuffer::ptr mViewport_framebuffer;
 	math::vec2 mViewport_offset;
