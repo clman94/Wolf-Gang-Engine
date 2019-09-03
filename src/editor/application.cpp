@@ -960,9 +960,13 @@ class scene_editor :
 	public asset_editor
 {
 public:
-	scene_editor(context& pContext, const core::asset::ptr& pAsset) noexcept :
+	// TODO: Implement a better and more generic messaging method at some point.
+	using on_game_run_callback = std::function<void(const core::asset::ptr&)>;
+
+	scene_editor(context& pContext, const core::asset::ptr& pAsset, const on_game_run_callback& pRun_callback) noexcept :
 		asset_editor(pContext, pAsset),
-		mScene(pContext.get_engine().get_factory())
+		mScene(pContext.get_engine().get_factory()),
+		mOn_game_run_callback(pRun_callback)
 	{
 		// Create a framebuffer for the scene to be rendered to.
 		auto& graphics = pContext.get_engine().get_graphics();
@@ -978,9 +982,14 @@ public:
 	virtual void on_gui() override
 	{
 		ImGui::BeginChild("SidePanelSettings", ImVec2(200, 0));
-		if (ImGui::Button("Run"))
+		if (ImGui::Button("Run") && mOn_game_run_callback)
 		{
-
+			// Make sure the actual asset data is up to date before
+			// we start the scene.
+			update_asset_data();
+			// Invoke the callback. I may consider using a better
+			// messaging mechanism later.
+			mOn_game_run_callback(get_asset());
 		}
 		ImGui::TextUnformatted("Layers");
 		ImGui::BeginChild("Layers", ImVec2(0, 300), true);
@@ -1039,14 +1048,15 @@ public:
 		ImGui::EndChild();
 	}
 
-	virtual void on_save() override
+	void update_asset_data()
 	{
 		auto resource = get_asset()->get_resource<core::scene_resource>();
 		resource->instances.clear();
 
-		for (std::size_t i = 0; i < mSelected_layer->get_object_count(); i++)
+		auto layer = mScene.get_layer(0);
+		for (std::size_t i = 0; i < layer->get_object_count(); i++)
 		{
-			core::game_object obj = mSelected_layer->get_object(i);
+			core::game_object obj = layer->get_object(i);
 			core::scene_resource::object_instance& inst = resource->instances.emplace_back();
 			inst.asset_id = obj.get_asset()->get_id();
 			inst.id = obj.get_instance_id();
@@ -1054,6 +1064,11 @@ public:
 			if (auto transform = obj.get_component<core::transform_component>())
 				inst.transform = transform->get_transform();
 		}
+	}
+
+	virtual void on_save() override
+	{
+		update_asset_data();
 	}
 
 	void show_viewport()
@@ -1237,6 +1252,12 @@ public:
 
 	core::game_object generate_instance(const core::scene_resource::object_instance& pData)
 	{
+		if (!mSelected_layer)
+		{
+			log::error() << "No selected layer to add object instance"; 
+			return{};
+		}
+
 		core::engine& engine = get_context().get_engine();
 		auto asset = engine.get_asset_manager().get_asset(pData.asset_id);
 		auto object_resource = asset->get_resource<core::object_resource>();
@@ -1284,6 +1305,8 @@ private:
 	graphics::framebuffer::ptr mViewport_framebuffer;
 	math::vec2 mViewport_offset;
 	math::vec2 mViewport_scale{ 100, 100 };
+
+	on_game_run_callback mOn_game_run_callback;
 };
 
 class drop_import_handler
@@ -1506,6 +1529,85 @@ private:
 	ImGuiID mSCript_editor_dock_id;
 };
 
+class game_viewport
+{
+public:
+	game_viewport(core::engine& pEngine) :
+		mEngine(&pEngine)
+	{}
+
+	void open_scene(const core::asset::ptr& pAsset)
+	{
+		mEngine->get_scene().clear();
+		if (auto resource = pAsset->get_resource<core::scene_resource>())
+		{
+			resource->generate_scene(mEngine->get_scene(), mEngine->get_asset_manager());
+			mRunning = true;
+			mIs_loaded = true;
+		}
+		else
+		{
+			log::error() << "Asset is not a scene." << log::endm;
+		}
+	}
+
+	void init_viewport()
+	{
+		auto& g = mEngine->get_graphics();
+		mViewport_framebuffer = g.get_graphics_backend()->create_framebuffer();
+		mViewport_framebuffer->resize(500, 500);
+	}
+
+	void step()
+	{
+		auto& scene = mEngine->get_scene();
+
+		float delta = 1.f / 60.f;
+
+		if (mRunning)
+		{
+			scene.preupdate(delta);
+			scene.update(delta);
+			scene.postupdate(delta);
+		}
+
+		// Clear the framebuffer with black.
+		mViewport_framebuffer->clear({ 0, 0, 0, 1 });
+
+		// Render all layers.
+		scene.for_each_system<graphics::renderer>([&](core::layer&, graphics::renderer& pRenderer)
+		{
+			pRenderer.set_framebuffer(mViewport_framebuffer);
+			pRenderer.set_render_view_to_framebuffer(math::vec2(0, 0), math::vec2(1.f, 1.f) / 100.f);
+			pRenderer.render(mEngine->get_graphics());
+		});
+	}
+
+	void on_gui()
+	{
+		if (ImGui::Begin("Game##GameViewport"))
+		{
+			if (mIs_loaded)
+			{
+				ImGui::Image(mViewport_framebuffer, ImVec2(500, 500));
+				step();
+			}
+			else
+			{
+				ImGui::TextUnformatted("No game to display... yet");
+			}
+		}
+		ImGui::End();
+	}
+
+private:
+	bool mRunning = false;
+	bool mIs_loaded = false;
+	graphics::framebuffer::ptr mViewport_framebuffer;
+
+	core::engine* mEngine;
+};
+
 class application
 {
 public:
@@ -1514,17 +1616,21 @@ public:
 		mContext.register_editor<sprite_editor>("texture");
 		//mContext.register_editor<object_editor>("gameobject", mInspectors);
 		mContext.register_editor<script_editor>("script");
-		mContext.register_editor<scene_editor>("scene");
+		mContext.register_editor<scene_editor>("scene", mOn_game_run);
 		mContext.register_editor<eventful_sprite_editor>("gameobject");
-		mAsset_manager.register_default_resource_factory<core::object_resource>("gameobject");
-		mAsset_manager.register_default_resource_factory<core::scene_resource>("scene");
+		mEngine.get_asset_manager().register_default_resource_factory<core::object_resource>("gameobject");
+		mEngine.get_asset_manager().register_default_resource_factory<core::scene_resource>("scene");
+
+		mOn_game_run.connect([this](const core::asset::ptr& pAsset) {
+			mGame_viewport.open_scene(pAsset);
+		});
 	}
 
 	int run()
 	{
 		init_graphics();
 		init_imgui();
-		init_inspectors();
+		mGame_viewport.init_viewport();
 
 		load_project("project");
 
@@ -1541,7 +1647,6 @@ private:
 
 		// Store the glfw backend for initializing imgui's glfw backend
 		mGLFW_backend = std::dynamic_pointer_cast<graphics::glfw_window_backend>(g.get_window_backend());
-		mViewport_framebuffer = g.get_graphics_backend()->create_framebuffer();
 
 		mDrop_import_handler.register_callback_to(mGLFW_backend->on_file_drop);
 	}
@@ -1550,8 +1655,6 @@ private:
 	{
 		while (!glfwWindowShouldClose(mGLFW_backend->get_window()))
 		{
-			float delta = 1.f / 60.f;
-			
 			new_frame();
 
 			mContext.set_default_dock_id(ImGui::GetID("_MainDockId"));
@@ -1590,12 +1693,6 @@ private:
 				ImGui::EndMainMenuBar();
 			}
 
-			if (mUpdate)
-			{
-				mEngine.get_scene().preupdate(delta);
-				mEngine.get_scene().update(delta);
-			}
-
 			show_log();
 			show_settings();
 			//show_viewport();
@@ -1604,12 +1701,7 @@ private:
 			mDrop_import_handler.on_gui();
 			mAsset_manager_window.on_gui();
 			mContext.show_editor_guis();
-
-			// Post update happens after the editor but before rendering.
-			if (mUpdate)
-				mEngine.get_scene().postupdate(delta);
-
-
+			mGame_viewport.on_gui();
 
 			end_frame();
 		}
@@ -1778,229 +1870,7 @@ private:
 		obj.add_component<scripting::event_components::on_create>();
 		obj.add_component<scripting::event_components::on_update>();
 
-		mEngine.get_script_engine().execute_global_scripts(mAsset_manager);
-	}
-
-	void init_inspectors()
-	{
-		// Inspector for transform_component
-		mInspectors.add_inspector(core::transform_component::COMPONENT_ID,
-			[](core::component* pComponent)
-		{
-			auto reset_context_menu = [](const char* pId)->bool
-			{
-				bool clicked = false;
-				if (ImGui::BeginPopupContextItem(pId))
-				{
-					if (ImGui::Button("Reset"))
-					{
-						clicked = true;
-						ImGui::CloseCurrentPopup();
-					}
-					ImGui::EndPopup();
-				}
-				return clicked;
-			};
-
-			auto transform = static_cast<core::transform_component*>(pComponent);
-			math::vec2 position = transform->get_position();
-			if (ImGui::DragFloat2("Position", position.components))
-				transform->set_position(position);
-			if (reset_context_menu("posreset"))
-				transform->set_position(math::vec2(0, 0));
-
-			float rotation = math::degrees(transform->get_rotation());
-			if (ImGui::DragFloat("Rotation", &rotation, 1, 0, 0, "%.3f degrees"))
-				transform->set_rotaton(math::degrees(rotation));
-			if (reset_context_menu("rotreset"))
-				transform->set_rotaton(0);
-
-			math::vec2 scale = transform->get_scale();
-			if (ImGui::DragFloat2("Scale", scale.components, 0.01f))
-				transform->set_scale(scale);
-			if (reset_context_menu("scalereset"))
-				transform->set_scale(math::vec2(0, 0));
-		});
-
-		// Inspector for sprite_component
-		mInspectors.add_inspector(graphics::sprite_component::COMPONENT_ID,
-			[this](core::component* pComponent)
-		{
-			auto sprite = static_cast<graphics::sprite_component*>(pComponent);
-			math::vec2 offset = sprite->get_offset();
-			if (ImGui::DragFloat2("Offset", offset.components))
-				sprite->set_offset(offset);
-
-			core::asset::ptr tex = sprite->get_texture();
-			std::string inputtext = tex ? mAsset_manager.get_asset_path(tex).string().c_str() : "None";
-			ImGui::BeginGroup();
-			if (tex)
-			{
-				const bool is_selected = ImGui::ImageButton(tex, { 100, 100 });
-				ImGui::QuickToolTip("Open Sprite Editor");
-				if (is_selected)
-					mContext.open_editor(tex);
-				ImGui::SameLine();
-				ImGui::BeginGroup();
-				auto res = tex->get_resource<graphics::texture>();
-				ImGui::Text("Size: %i, %i", res->get_width(), res->get_height());
-				ImGui::Text("Animations: %u", res->get_raw_atlas().size());
-				ImGui::EndGroup();
-				ImGui::InputText("Texture", &inputtext, ImGuiInputTextFlags_ReadOnly);
-			}
-			else
-			{
-				ImGui::Button("Drop a texture asset here", ImVec2(-1, 100));
-			}
-			ImGui::EndGroup();
-
-			if (ImGui::BeginDragDropTarget())
-			{
-				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("textureAsset"))
-				{
-					const util::uuid& id = *(const util::uuid*)payload->Data;
-					auto asset = mEngine.get_asset_manager().get_asset(id);
-					sprite->set_texture(asset);
-				}
-				ImGui::EndDragDropTarget();
-			}
-		});
-
-		mInspectors.add_inspector(physics::physics_component::COMPONENT_ID,
-			[](core::component* pComponent)
-		{
-			auto physics = static_cast<physics::physics_component*>(pComponent);
-			std::array options = { "Dynamic", "Static" };
-			if (ImGui::BeginCombo("Type", options[physics->get_type()]))
-			{
-				for (std::size_t i = 0; i < options.size(); i++)
-					if (ImGui::Selectable(options[i]))
-						physics->set_type(i);
-				ImGui::EndCombo();
-			}
-		});
-
-		// Inspector for box_collider_component
-		mInspectors.add_inspector(physics::box_collider_component::COMPONENT_ID,
-			[](core::component* pComponent)
-		{
-			auto collider = static_cast<physics::box_collider_component*>(pComponent);
-
-			math::vec2 offset = collider->get_offset();
-			if (ImGui::DragFloat2("Offset", offset.components))
-				collider->set_offset(offset);
-
-			math::vec2 size = collider->get_size();
-			if (ImGui::DragFloat2("Size", size.components))
-				collider->set_size(size);
-
-			float rotation = math::degrees(collider->get_rotation());
-			if (ImGui::DragFloat("Rotation", &rotation))
-				collider->set_rotation(math::degrees(rotation));
-		});
-
-		// Inspector for event_state_component
-		mInspectors.add_inspector(scripting::event_state_component::COMPONENT_ID,
-			[](core::component* pComponent)
-		{
-			static float properties_height = 100;
-			auto comp = static_cast<scripting::event_state_component*>(pComponent);
-
-			bool properties_is_open = ImGui::CollapsingHeader("Properties");
-			ImGui::DescriptiveToolTip("This lists the properties for your object",
-				"Each of these properties are automatically added as variables in your event scripts. They can be used to change the behavior of individual instances in your scene.");
-			if (properties_is_open)
-			{
-				ImGui::BeginChild("Properties", ImVec2(0, properties_height), true);
-				ImGui::Columns(4, nullptr, false);
-				ImGui::SetColumnWidth(0, 30);
-				ImGui::NextColumn();
-				ImGui::TextUnformatted("Type"); ImGui::NextColumn();
-				ImGui::TextUnformatted("Name"); ImGui::NextColumn();
-				ImGui::TextUnformatted("Value"); ImGui::NextColumn();
-
-				for (std::size_t i = 0; i < comp->properties.size(); i++)
-				{
-					ImGui::PushID(i);
-
-					if (ImGui::Button("X"))
-					{
-						comp->properties.erase(comp->properties.begin() + i--);
-						ImGui::PopID();
-						continue;
-					}
-					ImGui::NextColumn();
-
-					auto& prop = comp->properties[i];
-
-					const char* type_names[] = { "Integer", "Float", "Vector 2D", "String" };
-					bool type_combo_is_open = ImGui::BeginCombo("##Type", type_names[prop.value.index()]);
-					ImGui::QuickToolTip("Set the type for this property");
-					if (type_combo_is_open)
-					{
-						if (ImGui::Selectable(type_names[0]))
-							prop.value = 0;
-						if (ImGui::Selectable(type_names[1]))
-							prop.value = 0.f;
-						if (ImGui::Selectable(type_names[2]))
-							prop.value = math::vec2{};
-						if (ImGui::Selectable(type_names[3]))
-							prop.value = std::string{};
-						ImGui::EndCombo();
-					}
-
-					ImGui::NextColumn();
-
-					ImGui::InputText("##Name", &prop.name);
-					if (ImGui::IsItemDeactivatedAfterEdit())
-						prop.name = scripting::make_valid_identifier(prop.name);
-					ImGui::DescriptiveToolTip("Name of this property",
-						"This needs to be a valid lua identifier because these will be added as variables in your event scripts.");
-
-					ImGui::NextColumn();
-
-					assert(prop.value.index() < 4);
-					switch (prop.value.index())
-					{
-					case 0:
-						ImGui::InputInt("##Value", &std::get<int>(prop.value));
-						break;
-					case 1:
-						ImGui::InputFloat("##Value", &std::get<float>(prop.value));
-						break;
-					case 2:
-						ImGui::InputFloat2("##Value", std::get<math::vec2>(prop.value).components);
-						break;
-					case 3:
-						ImGui::InputText("##Value", &std::get<std::string>(prop.value));
-						break;
-					}
-					ImGui::QuickToolTip("Set the default value for this property");
-
-					ImGui::NextColumn();
-					ImGui::PopID();
-				}
-				ImGui::Columns(1);
-				ImGui::EndChild();
-				ImGui::HorizontalSplitter("PropertiesSplitter", &properties_height);
-				if (ImGui::Button("Add"))
-					comp->properties.emplace_back();
-			}
-		});
-
-
-		auto event_comp_func = [](core::component* pComponent)
-		{
-			auto e = dynamic_cast<scripting::event_component*>(pComponent);
-			ImGui::PushID(e);
-			ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-			ImGui::CodeEditor("Editor", e->source, { 0, 200 });
-			ImGui::PopFont();
-			ImGui::PopID();
-		};
-
-		mInspectors.add_inspector(scripting::event_components::on_create::COMPONENT_ID, event_comp_func);
-		mInspectors.add_inspector(scripting::event_components::on_update::COMPONENT_ID, event_comp_func);
+		mEngine.get_script_engine().execute_global_scripts(mEngine.get_asset_manager());
 	}
 
 private:
@@ -2105,23 +1975,16 @@ private:
 	// ImGui needs access to some glfw specific objects
 	graphics::glfw_window_backend::ptr mGLFW_backend;
 
+	util::signal<void(const core::asset::ptr&)> mOn_game_run;
+
 	context mContext;
-
-	bool mDragging{ false };
-	math::vec2 mDrag_offset;
-
-	graphics::framebuffer::ptr mViewport_framebuffer;
-	math::vec2 mViewport_offset;
-	math::vec2 mViewport_scale{ 100, 100 };
 
 	// Reference the game engine for convenience.
 	core::engine& mEngine{ mContext.get_engine() };
-	core::asset_manager& mAsset_manager{ mContext.get_engine().get_asset_manager() };
-	scripting::lua_engine& mLua_engine{ mContext.get_engine().get_script_engine() };
-	graphics::graphics& mGraphics{ mContext.get_engine().get_graphics() };
 
-	asset_manager_window mAsset_manager_window{ mContext, mAsset_manager };
-	drop_import_handler mDrop_import_handler{ mAsset_manager };
+	asset_manager_window mAsset_manager_window{ mContext, mEngine.get_asset_manager() };
+	drop_import_handler mDrop_import_handler{ mEngine.get_asset_manager() };
+	game_viewport mGame_viewport{ mEngine };
 
 	component_inspector mInspectors;
 
