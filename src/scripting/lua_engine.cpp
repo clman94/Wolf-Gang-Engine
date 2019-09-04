@@ -244,7 +244,7 @@ void script_system::update(float pDelta)
 		if (pOn_create.first_time)
 		{
 			pOn_create.first_time = false;
-			run_script(pOn_create.source, pState.environment);
+			run_script(pOn_create.get_source(), pState.environment);
 		}
 	});
 
@@ -253,7 +253,7 @@ void script_system::update(float pDelta)
 		event_components::on_update& pOn_update,
 		event_state_component& pState)
 	{
-		run_script(pOn_update.source, pState.environment);
+		run_script(pOn_update.get_source(), pState.environment);
 	});
 }
 

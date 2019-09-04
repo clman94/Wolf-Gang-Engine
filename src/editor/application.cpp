@@ -1542,7 +1542,7 @@ public:
 		if (auto resource = pAsset->get_resource<core::scene_resource>())
 		{
 			resource->generate_scene(mEngine->get_scene(), mEngine->get_asset_manager());
-			mRunning = true;
+			mIs_running = true;
 			mIs_loaded = true;
 		}
 		else
@@ -1562,25 +1562,15 @@ public:
 	{
 		auto& scene = mEngine->get_scene();
 
-		float delta = 1.f / 60.f;
-
-		if (mRunning)
+		if (mIs_running)
 		{
-			scene.preupdate(delta);
-			scene.update(delta);
-			scene.postupdate(delta);
+			mEngine->step();
 		}
 
 		// Clear the framebuffer with black.
 		mViewport_framebuffer->clear({ 0, 0, 0, 1 });
 
-		// Render all layers.
-		scene.for_each_system<graphics::renderer>([&](core::layer&, graphics::renderer& pRenderer)
-		{
-			pRenderer.set_framebuffer(mViewport_framebuffer);
-			pRenderer.set_render_view_to_framebuffer(math::vec2(0, 0), math::vec2(1.f, 1.f) / 100.f);
-			pRenderer.render(mEngine->get_graphics());
-		});
+		mEngine->render_to(mViewport_framebuffer, math::vec2(0, 0), math::vec2(1.f, 1.f) * 100.f);
 	}
 
 	void on_gui()
@@ -1601,7 +1591,7 @@ public:
 	}
 
 private:
-	bool mRunning = false;
+	bool mIs_running = false;
 	bool mIs_loaded = false;
 	graphics::framebuffer::ptr mViewport_framebuffer;
 

@@ -147,7 +147,11 @@ class event_component :
 {
 public:
 	script::handle source_script;
-	std::string source;
+	const std::string& get_source() const
+	{
+		WGE_ASSERT(source_script);
+		return source_script->source;
+	}
 };
 
 namespace event_components
