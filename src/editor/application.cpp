@@ -1538,17 +1538,27 @@ public:
 
 	void open_scene(const core::asset::ptr& pAsset)
 	{
+		if (!pAsset)
+		{
+			log::error() << "No asset to generate scene with." << log::endm;
+			return;
+		}
 		mEngine->get_scene().clear();
 		if (auto resource = pAsset->get_resource<core::scene_resource>())
 		{
 			resource->generate_scene(mEngine->get_scene(), mEngine->get_asset_manager());
-			mIs_running = true;
 			mIs_loaded = true;
+			mAsset = pAsset;
 		}
 		else
 		{
 			log::error() << "Asset is not a scene." << log::endm;
 		}
+	}
+
+	void restart()
+	{
+		open_scene(mAsset);
 	}
 
 	void init_viewport()
@@ -1560,8 +1570,6 @@ public:
 
 	void step()
 	{
-		auto& scene = mEngine->get_scene();
-
 		if (mIs_running)
 		{
 			mEngine->step();
@@ -1577,6 +1585,19 @@ public:
 	{
 		if (ImGui::Begin("Game##GameViewport"))
 		{
+			// Play/pause button.
+			if (ImGui::Button(mIs_running ? ICON_FA_PAUSE " Pause" : ICON_FA_PLAY "Play"))
+			{
+				mIs_running = !mIs_running;
+			}
+
+			// Restart button.
+			ImGui::SameLine();
+			if (ImGui::Button(ICON_FA_UNDO " Restart"))
+			{
+				restart();
+			}
+
 			if (mIs_loaded)
 			{
 				ImGui::Image(mViewport_framebuffer, ImVec2(500, 500));
@@ -1595,6 +1616,7 @@ private:
 	bool mIs_loaded = false;
 	graphics::framebuffer::ptr mViewport_framebuffer;
 
+	core::asset::ptr mAsset;
 	core::engine* mEngine;
 };
 
