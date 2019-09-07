@@ -10,7 +10,7 @@ namespace wge::core
 bool asset_manager::has_children(const asset::ptr& pParent) const
 {
 	for (const auto& i : mAsset_list)
-		if (i->get_parent_id() == pParent->get_id())
+		if (i && i->get_parent_id() == pParent->get_id())
 			return true;
 	return false;
 }
@@ -18,7 +18,7 @@ bool asset_manager::has_children(const asset::ptr& pParent) const
 bool asset_manager::has_subfolders(const asset::ptr& pParent) const
 {
 	for (const auto& i : mAsset_list)
-		if (i->get_parent_id() == pParent->get_id()
+		if (i && i->get_parent_id() == pParent->get_id()
 			&& i->get_type() == "folder")
 			return true;
 	return false;
@@ -27,20 +27,10 @@ bool asset_manager::has_subfolders(const asset::ptr& pParent) const
 std::vector<asset::ptr> asset_manager::get_children(const asset::ptr& pParent) const
 {
 	std::vector<asset::ptr> result;
-	if (pParent)
+	for_each_child(pParent, [&result](const asset::ptr& pChild)
 	{
-		// Find all assets with this parent.
-		for (const auto& i : mAsset_list)
-			if (i->get_parent_id() == pParent->get_id())
-				result.push_back(i);
-	}
-	else
-	{
-		// Get root folder assets.
-		for (const auto& i : mAsset_list)
-			if (!i->get_parent_id().is_valid())
-				result.push_back(i);
-	}
+		result.push_back(pChild);
+	});
 	return result;
 }
 
@@ -60,7 +50,7 @@ asset::ptr asset_manager::find_child(const asset::ptr& pParent, const std::strin
 	{
 		// Find all assets with this parent.
 		for (const auto& i : mAsset_list)
-			if (i->get_parent_id() == pParent->get_id() &&
+			if (i && i->get_parent_id() == pParent->get_id() &&
 				i->get_name() == pName)
 				return i;
 	}
@@ -68,7 +58,7 @@ asset::ptr asset_manager::find_child(const asset::ptr& pParent, const std::strin
 	{
 		// Asset is in root directory.
 		for (const auto& i : mAsset_list)
-			if (!i->get_parent_id().is_valid()
+			if (i && !i->get_parent_id().is_valid()
 				&& i->get_name() == pName)
 				return i;
 	}
@@ -296,7 +286,7 @@ bool asset_manager::remove_asset(const asset::ptr& pAsset)
 	assert(!dir_path.empty());
 
 	// Remove the directory.
-	bool success = system_fs::remove(dir_path);
+	bool success = system_fs::remove_all(dir_path);
 
 	// Remove it from the asset manager.
 	auto iter = std::remove(mAsset_list.begin(), mAsset_list.end(), pAsset);

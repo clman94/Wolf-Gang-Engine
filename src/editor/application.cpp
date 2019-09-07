@@ -19,7 +19,9 @@
 #include <wge/math/transform.hpp>
 #include <wge/util/ptr.hpp>
 #include <wge/core/game_settings.hpp>
-#include <Wge/util/ipair.hpp>
+#include <wge/util/ipair.hpp>
+#include <wge/core/object_resource.hpp>
+#include <wge/core/scene_resource.hpp>
 
 #include "editor.hpp"
 #include "history.hpp"
@@ -29,6 +31,7 @@
 #include "imgui_ext.hpp"
 #include "text_editor.hpp"
 #include "icon_codepoints.hpp"
+#include "asset_manager_window.hpp"
 
 #include <imgui/imgui_internal.h>
 
@@ -46,181 +49,6 @@
 namespace wge::core
 {
 
-class object_resource :
-	public resource
-{
-public:
-	enum class event_type
-	{
-		create,
-		update,
-		count,
-	};
-	static constexpr std::array<const char*, 2> event_display_name = {
-		ICON_FA_PENCIL " Create",
-		ICON_FA_STEP_FORWARD " Update"
-	};
-	static constexpr std::array<const char*, 2> event_typenames = { "create", "update" };
-
-	// Asset id for the default sprite.
-	util::uuid display_sprite;
-
-	// Lists the ids for the scripts assets for each event type.
-	std::array<util::uuid, static_cast<unsigned>(event_type::count)> events;
-
-public:
-	virtual void save() override {}
-
-	void generate_object(core::game_object& pObj, const asset_manager& pAsset_mgr)
-	{
-		pObj.add_component<core::transform_component>();
-
-		if (display_sprite.is_valid())
-		{
-			auto sprite = pObj.add_component<graphics::sprite_component>();
-			sprite->set_texture(pAsset_mgr.get_asset(display_sprite));
-		}
-
-		if (!events.empty())
-		{
-			pObj.add_component<scripting::event_state_component>();
-
-			for (const auto& [type, asset_id] : util::ipair{ events })
-			{
-				scripting::event_component* comp = nullptr;
-				switch (static_cast<event_type>(type))
-				{
-				case event_type::create:
-					comp = pObj.add_component<scripting::event_components::on_create>();
-					break;
-				case event_type::update:
-					comp = pObj.add_component<scripting::event_components::on_update>();
-					break;
-				}
-				assert(comp);
-				if (auto asset = pAsset_mgr.get_asset(asset_id))
-					comp->source_script = asset;
-				else
-					log::error() << "Could not load event script; Invalid id" << log::endm;
-			}
-		}
-	}
-
-	virtual json serialize_data() const override
-	{
-		json j;
-		json& jevents = j["events"];
-		for (const auto& [type, asset_id] : util::ipair{ events })
-		{
-			json jevent;
-			const char* event_name = event_typenames[type];
-			jevent["type"] = event_name;
-			jevent["id"] = asset_id;
-			jevents.push_back(jevent);
-		}
-		j["sprite"] = display_sprite;
-
-		return j;
-	}
-
-	virtual void deserialize_data(const json& pJson) override
-	{
-		const json& jevents = pJson["events"];
-		for (const auto& i : jevents)
-		{
-			// Find the index for this event name.
-			for (auto[index, name] : util::ipair{ event_typenames })
-			{
-				if (name == i["type"])
-				{
-					// Assign the id to that index.
-					events[index] = i["id"];
-					break;
-				}
-			}
-		}
-
-		display_sprite = pJson["sprite"];
-	}
-};
-
-class scene_resource :
-	public resource
-{
-public:
-	struct object_instance
-	{
-		// Unique name of instance.
-		std::string name;
-		math::transform transform;
-		util::uuid id;
-		util::uuid asset_id;
-	};
-	 
-	std::vector<object_instance> instances;
-
-public:
-	virtual json serialize_data() const override
-	{
-		json j;
-		for (const object_instance& i : instances)
-		{
-			json j_inst;
-			j_inst["name"] = i.name;
-			j_inst["transform"] = i.transform;
-			j_inst["id"] = i.id;
-			j_inst["asset_id"] = i.asset_id;
-			j["instances"].push_back(j_inst);
-		}
-		return j;
-	}
-
-	virtual void deserialize_data(const json& pJson) override
-	{
-		for (const json& i : pJson["instances"])
-		{
-			object_instance inst;
-			inst.name = i["name"];
-			inst.transform = i["transform"];
-			inst.id = i["id"];
-			inst.asset_id = i["asset_id"];
-			instances.emplace_back(std::move(inst));
-		}
-	}
-
-	static core::game_object generate_instance(core::layer& pLayer, const core::asset_manager& pAsset_mgr, const object_instance& pData)
-	{
-		auto asset = pAsset_mgr.get_asset(pData.asset_id);
-		auto object_resource = asset->get_resource<core::object_resource>();
-
-		// Generate the object
-		core::game_object obj = pLayer.add_object(pData.name);
-		obj.set_instance_id(pData.id);
-		object_resource->generate_object(obj, pAsset_mgr);
-		obj.set_asset(asset);
-
-		if (auto transform = obj.get_component<core::transform_component>())
-			transform->set_transform(pData.transform);
-
-		return obj;
-	}
-
-	void generate_layer(core::layer& pLayer, const core::asset_manager& pAsset_mgr) const
-	{
-		auto renderer = pLayer.add_system<graphics::renderer>();
-		renderer->set_pixel_size(0.01f);
-		pLayer.add_system<scripting::script_system>();
-		pLayer.add_system<physics::physics_world>();
-		for (auto& i : instances)
-			generate_instance(pLayer, pAsset_mgr, i);
-	}
-
-	void generate_scene(core::scene& pScene, const core::asset_manager& pAsset_mgr) const
-	{
-		auto layer = pScene.add_layer("Game");
-		generate_layer(*layer, pAsset_mgr);
-	}
-};
 
 class texture_importer :
 	public importer
@@ -743,218 +571,6 @@ public:
 	}
 };
 
-class asset_manager_window
-{
-public:
-	asset_manager_window(context& pContext, core::asset_manager& pAsset_manager) :
-		mContext(pContext),
-		mAsset_manager(pAsset_manager)
-	{}
-
-	void on_gui()
-	{
-		if (ImGui::Begin(ICON_FA_FOLDER " Assets", 0, ImGuiWindowFlags_MenuBar))
-		{
-			static core::asset::ptr current_folder;
-			const filesystem::path current_path = mAsset_manager.get_asset_path(current_folder);
-
-			if (ImGui::BeginMenuBar())
-			{
-				if (ImGui::BeginMenu("New..."))
-				{
-					if (ImGui::MenuItem("Folder"))
-					{
-						mAsset_manager.create_folder(current_path / "new_folder");
-					}
-
-					if (ImGui::MenuItem("Object"))
-					{
-						auto asset = std::make_shared<core::asset>();
-						asset->set_name("New_Object");
-						asset->set_parent(current_folder);
-						asset->set_type("gameobject");
-						asset->set_resource(std::make_unique<core::object_resource>());
-						mAsset_manager.store_asset(asset);
-						asset->save();
-						mAsset_manager.add_asset(asset);
-					}
-
-					if (ImGui::MenuItem("Scene"))
-					{
-						auto asset = std::make_shared<core::asset>();
-						asset->set_name("New_Scene");
-						asset->set_parent(current_folder);
-						asset->set_type("scene");
-						asset->set_resource(std::make_unique<core::scene_resource>());
-						mAsset_manager.store_asset(asset);
-						asset->save();
-						mAsset_manager.add_asset(asset);
-					}
-
-					ImGui::EndMenu();
-				}
-
-				if (ImGui::MenuItem("Update Asset Directory"))
-				{
-					mAsset_manager.update_directory_structure();
-				}
-				ImGui::EndMenuBar();
-			}
-
-			static float directory_tree_width = 200;
-
-			ImGui::BeginChild("DirectoryTree", { directory_tree_width, 0 }, true);
-			show_asset_directory_tree(current_folder);
-			ImGui::EndChild();
-
-			ImGui::SameLine();
-			ImGui::VerticalSplitter("DirectoryTreeSplitter", &directory_tree_width);
-
-			ImGui::SameLine();
-			ImGui::BeginGroup();
-
-			ImGui::PushID("PathList");
-			for (auto[i, segment] : util::ipair{ current_path })
-			{
-				const bool last_item = i == current_path.size() - 1;
-				if (ImGui::Button(segment.c_str()))
-				{
-					// TODO: Clicking the last item will open a popup to select a different directory..?
-					auto new_path = current_path;
-					new_path.erase(new_path.begin() + i, new_path.end());
-					current_folder = mAsset_manager.get_asset(new_path);
-					break;
-				}
-				ImGui::SameLine();
-			}
-			ImGui::NewLine();
-
-			ImGui::PopID();
-
-			const math::vec2 file_preview_size = { 100, 100 };
-
-			ImGui::BeginChild("FileList", { 0, 0 }, true);
-			mAsset_manager.for_each_child(current_folder, [&](auto& i)
-			{
-				// Skip folders
-				if (i->get_type() != "folder")
-				{
-					asset_tile(i, file_preview_size);
-
-					// If there isn't any room left in this line, create a new one.
-					if (ImGui::GetContentRegionAvailWidth() < file_preview_size.x)
-						ImGui::NewLine();
-				}
-			});
-			ImGui::EndChild();
-
-			ImGui::EndGroup();
-		}
-		ImGui::End();
-	}
-
-private:
-	void show_asset_directory_tree(core::asset::ptr& pCurrent_folder, const core::asset::ptr& pAsset = {})
-	{
-		const bool is_root = !pAsset;
-		bool open = false;
-
-		const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
-		const char* name = is_root ? "Assets" : pAsset->get_name().c_str();
-		if (pAsset && !mAsset_manager.has_subfolders(pAsset))
-			ImGui::TreeNodeEx(name, flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen);
-		else
-			open = ImGui::TreeNodeEx(name, flags);
-
-		// Set the directory
-		if (ImGui::IsItemClicked())
-		{
-			if (is_root)
-				pCurrent_folder = core::asset::ptr{};
-			else
-				pCurrent_folder = pAsset;
-		}
-
-		if (open)
-		{
-			// Show subdirectories
-			mAsset_manager.for_each_child(pAsset, [&](auto& i)
-			{
-				if (i->get_type() == "folder")
-					show_asset_directory_tree(pCurrent_folder, i);
-			});
-
-			ImGui::TreePop();
-		}
-	}
-
-	void asset_tile(const core::asset::ptr& pAsset, const math::vec2& pSize)
-	{
-		ImGui::PushID(&*pAsset);
-
-		const bool is_asset_selected = mSelected_asset == pAsset;
-
-		ImGui::BeginGroup();
-
-		// Draw preview
-		if (pAsset->get_type() == "texture")
-			ImGui::ImageButton(pAsset,
-				pSize - math::vec2(ImGui::GetStyle().FramePadding) * 2);
-		else
-			ImGui::Button("No preview", pSize);
-
-		ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), pAsset->get_type().c_str());
-
-		// Draw text
-		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + pSize.x);
-		ImGui::Text(pAsset->get_name().c_str());
-		ImGui::PopTextWrapPos();
-
-		ImGui::EndGroup();
-		ImGui::SameLine();
-
-		// Allow asset to be dragged
-		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
-		{
-			ImGui::SetDragDropPayload((pAsset->get_type() + "Asset").c_str(), &pAsset->get_id(), sizeof(util::uuid));
-			ImGui::Text("Asset: %s", mAsset_manager.get_asset_path(pAsset).string().c_str());
-			ImGui::EndDragDropSource();
-		}
-
-		// Select the asset when clicked
-		if (ImGui::IsItemClicked())
-			mSelected_asset = pAsset;
-		if (ImGui::IsItemClicked() && ImGui::IsMouseDoubleClicked(0))
-			mContext.open_editor(mSelected_asset);
-
-		auto dl = ImGui::GetWindowDrawList();
-
-		// Calculate item aabb that includes the item spacing
-		math::vec2 item_min = math::vec2(ImGui::GetItemRectMin())
-			- math::vec2(ImGui::GetStyle().ItemSpacing) / 2;
-		math::vec2 item_max = math::vec2(ImGui::GetItemRectMax())
-			+ math::vec2(ImGui::GetStyle().ItemSpacing) / 2;
-
-		// Draw the background
-		if (ImGui::IsItemHovered())
-		{
-			dl->AddRectFilled(item_min, item_max,
-				ImGui::GetColorU32(ImGuiCol_ButtonHovered), ImGui::GetStyle().FrameRounding);
-		}
-		else if (is_asset_selected)
-		{
-			dl->AddRectFilled(item_min, item_max,
-				ImGui::GetColorU32(ImGuiCol_ButtonActive), ImGui::GetStyle().FrameRounding);
-		}
-
-		ImGui::PopID();
-	}
-
-private:
-	context& mContext;
-	core::asset_manager& mAsset_manager;
-	core::asset::ptr mSelected_asset;
-};
 
 class scene_editor :
 	public asset_editor
@@ -1416,6 +1032,12 @@ static bool texture_asset_input(core::asset::ptr& pAsset, context& pContext, con
 class eventful_sprite_editor :
 	public asset_editor
 {
+private:
+	static constexpr std::array<const char*, 2> event_display_name = {
+		ICON_FA_PENCIL " Create",
+		ICON_FA_STEP_FORWARD " Update"
+	};
+
 public:
 	eventful_sprite_editor(context& pContext, const core::asset::ptr& pAsset) noexcept :
 		asset_editor(pContext, pAsset)
@@ -1478,7 +1100,7 @@ private:
 		ImGui::BeginChild("Events", ImVec2(0, 0), true);
 		for (auto[type, asset_id] : util::ipair{ pGenerator->events })
 		{
-			const char* event_name = pGenerator->event_display_name[type];
+			const char* event_name = event_display_name[type];
 			const bool editor_already_open = get_context().is_editor_open_for(asset_id);
 			if (ImGui::Selectable(
 				event_name,

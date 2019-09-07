@@ -154,13 +154,13 @@ inline void asset_manager::for_each_child(const asset::ptr& pParent, Tcallable&&
 	if (pParent)
 	{
 		for (const auto& i : mAsset_list)
-			if (i->get_parent_id() == pParent->get_id())
+			if (i && i->get_parent_id() == pParent->get_id())
 				pCallable(i);
 	}
 	else
 	{
 		for (const auto& i : mAsset_list)
-			if (!i->get_parent_id().is_valid())
+			if (i && !i->get_parent_id().is_valid())
 				pCallable(i);
 	}
 }

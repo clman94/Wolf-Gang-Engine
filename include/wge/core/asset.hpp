@@ -78,7 +78,7 @@ public:
 		return dynamic_cast<T*>(mResource.get());
 	}
 	void set_resource(resource::uptr pResource) noexcept;
-
+	
 	const util::uuid& get_parent_id() const noexcept;
 	void set_parent_id(const util::uuid& pId) noexcept;
 	void set_parent(const asset::ptr& pAsset) noexcept;
