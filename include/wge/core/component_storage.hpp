@@ -45,7 +45,7 @@ public:
 
 	T& add_component()
 	{
-		// Find a slot that is unsed and reinitialize it.
+		// Find a slot that is unused and reinitialize it.
 		for (auto& i : mStorage)
 			if (i.is_unused())
 				return i = T{};

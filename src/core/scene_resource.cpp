@@ -12,7 +12,7 @@ namespace wge::core
 json scene_resource::serialize_data() const
 {
 	json j;
-	for (const object_instance& i : instances)
+	for (const instance& i : instances)
 	{
 		json j_inst;
 		j_inst["name"] = i.name;
@@ -28,7 +28,7 @@ void scene_resource::deserialize_data(const json& pJson)
 {
 	for (const json& i : pJson["instances"])
 	{
-		object_instance inst;
+		instance inst;
 		inst.name = i["name"];
 		inst.transform = i["transform"];
 		inst.id = i["id"];
@@ -37,7 +37,7 @@ void scene_resource::deserialize_data(const json& pJson)
 	}
 }
 
-core::game_object scene_resource::generate_instance(core::layer& pLayer, const core::asset_manager& pAsset_mgr, const object_instance& pData)
+core::game_object scene_resource::generate_instance(core::layer& pLayer, const core::asset_manager& pAsset_mgr, const instance& pData)
 {
 	auto asset = pAsset_mgr.get_asset(pData.asset_id);
 	auto object_resource = asset->get_resource<core::object_resource>();

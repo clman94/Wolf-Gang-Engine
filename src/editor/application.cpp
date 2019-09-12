@@ -49,7 +49,6 @@
 namespace wge::core
 {
 
-
 class texture_importer :
 	public importer
 {
@@ -591,8 +590,7 @@ public:
 		mScene_resource = get_asset()->get_resource<core::scene_resource>();
 
 		// Generate the layer.
-		auto layer = mScene.add_layer();
-		mScene_resource->generate_layer(*layer, pContext.get_engine().get_asset_manager());
+		mScene_resource->generate_scene(mScene, pContext.get_engine().get_asset_manager());
 	}
 
 	virtual void on_gui() override
@@ -673,7 +671,7 @@ public:
 		for (std::size_t i = 0; i < layer->get_object_count(); i++)
 		{
 			core::game_object obj = layer->get_object(i);
-			core::scene_resource::object_instance& inst = resource->instances.emplace_back();
+			core::scene_resource::instance& inst = resource->instances.emplace_back();
 			inst.asset_id = obj.get_asset()->get_id();
 			inst.id = obj.get_instance_id();
 			inst.name = obj.get_name();
@@ -850,6 +848,7 @@ public:
 		ImGui::EndFixedScrollRegion();
 	}
 
+	// Generate a new instance from an object asset.
 	core::game_object new_instance(util::uuid pAsset)
 	{
 		core::engine& engine = get_context().get_engine();
@@ -862,31 +861,6 @@ public:
 		obj.set_asset(asset);
 
 		mark_asset_modified();
-
-		return obj;
-	}
-
-	core::game_object generate_instance(const core::scene_resource::object_instance& pData)
-	{
-		if (!mSelected_layer)
-		{
-			log::error() << "No selected layer to add object instance"; 
-			return{};
-		}
-
-		core::engine& engine = get_context().get_engine();
-		auto asset = engine.get_asset_manager().get_asset(pData.asset_id);
-		auto object_resource = asset->get_resource<core::object_resource>();
-
-		// Generate the object
-		core::game_object obj = mSelected_layer->add_object();
-		obj.set_instance_id(pData.id);
-		obj.set_name(pData.name);
-		object_resource->generate_object(obj, get_asset_manager());
-		obj.set_asset(asset);
-
-		if (auto transform = obj.get_component<core::transform_component>())
-			transform->set_transform(pData.transform);
 
 		return obj;
 	}
