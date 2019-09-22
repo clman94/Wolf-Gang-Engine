@@ -1164,6 +1164,54 @@ public:
 		mViewport_framebuffer->resize(500, 500);
 	}
 
+	void register_input()
+	{
+		auto& state = mEngine->get_script_engine().state;
+		auto input = state.create_named_table("input");
+
+		state.new_enum<int>("key", {
+			{"left", GLFW_KEY_LEFT},
+			{"right", GLFW_KEY_RIGHT},
+			{"up", GLFW_KEY_UP},
+			{"down", GLFW_KEY_DOWN},
+			{"a", GLFW_KEY_A},
+			{"b", GLFW_KEY_B},
+			{"c", GLFW_KEY_C},
+			{"d", GLFW_KEY_D},
+			{"e", GLFW_KEY_E},
+			{"f", GLFW_KEY_F},
+			{"g", GLFW_KEY_G},
+			{"h", GLFW_KEY_H},
+			{"i", GLFW_KEY_I},
+			{"j", GLFW_KEY_J},
+			{"k", GLFW_KEY_K},
+			{"l", GLFW_KEY_L},
+			{"m", GLFW_KEY_M},
+			{"n", GLFW_KEY_N},
+			{"o", GLFW_KEY_O},
+			{"p", GLFW_KEY_P},
+			{"q", GLFW_KEY_K},
+			{"r", GLFW_KEY_R},
+			{"s", GLFW_KEY_S},
+			{"t", GLFW_KEY_T},
+			{"u", GLFW_KEY_U},
+			{"v", GLFW_KEY_V},
+			{"w", GLFW_KEY_W},
+			{"x", GLFW_KEY_X},
+			{"y", GLFW_KEY_Y},
+			{"z", GLFW_KEY_Z},
+			});
+
+		input["pressed"] = [this](int pKey) -> bool
+		{
+			return mCan_take_input && ImGui::IsKeyPressed(pKey, false);
+		};
+		input["down"] = [this](int pKey) -> bool
+		{
+			return mCan_take_input && ImGui::IsKeyDown(pKey);
+		};
+	}
+
 	void step()
 	{
 		if (mIs_running)
@@ -1197,6 +1245,7 @@ public:
 			if (mIs_loaded)
 			{
 				ImGui::Image(mViewport_framebuffer, ImVec2(500, 500));
+				mCan_take_input = ImGui::IsWindowFocused();
 				step();
 			}
 			else
@@ -1210,6 +1259,7 @@ public:
 private:
 	bool mIs_running = false;
 	bool mIs_loaded = false;
+	bool mCan_take_input = false;
 	graphics::framebuffer::ptr mViewport_framebuffer;
 
 	core::asset::ptr mAsset;
@@ -1239,6 +1289,7 @@ public:
 		init_graphics();
 		init_imgui();
 		mGame_viewport.init_viewport();
+		mGame_viewport.register_input();
 
 		load_project("project");
 

@@ -135,6 +135,7 @@ void lua_engine::register_math_api()
 		sol::call_constructor, sol::constructors<math::vec2(), math::vec2(float, float), math::vec2(const math::vec2&)>(),
 		"x", &math::vec2::x,
 		"y", &math::vec2::y,
+		"normalize", &math::vec2::normalize,
 		sol::meta_function::addition, &math::vec2::operator+,
 		sol::meta_function::subtraction, static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator-),
 		sol::meta_function::multiplication, sol::overload(
