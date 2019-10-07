@@ -714,7 +714,7 @@ public:
 		}*/
 
 		float width = ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x * 2 - ImGui::GetStyle().ScrollbarSize;
-		float height = ImGui::GetWindowHeight() - ImGui::GetCursorPos().y - ImGui::GetStyle().WindowPadding.y - ImGui::GetStyle().ScrollbarSize;
+		float height = ImGui::GetWindowHeight() - ImGui::GetCursorPos().y - ImGui::GetStyle().WindowPadding.y * 2 - ImGui::GetStyle().ScrollbarSize;
 		float scroll_x_max = width * 2;
 		float scroll_y_max = height * 2;
 
@@ -1190,7 +1190,7 @@ public:
 			{"n", GLFW_KEY_N},
 			{"o", GLFW_KEY_O},
 			{"p", GLFW_KEY_P},
-			{"q", GLFW_KEY_K},
+			{"q", GLFW_KEY_Q},
 			{"r", GLFW_KEY_R},
 			{"s", GLFW_KEY_S},
 			{"t", GLFW_KEY_T},
