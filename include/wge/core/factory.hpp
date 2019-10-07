@@ -13,6 +13,8 @@ class system;
 class component;
 class layer;
 
+// The factory is the center hub for dependency injection for our
+// components and systems.
 class factory
 {
 public:
@@ -30,6 +32,7 @@ public:
 	void register_system(Targs&&...pExtra_args)
 	{
 		mSystem_factories[T::SYSTEM_ID] =
+			// This will capture rvalues as values and lvalues as references.
 			[pExtra_args = std::tuple<Targs...>(std::forward<Targs>(pExtra_args)...)](layer& pLayer)
 			->system::uptr
 		{
