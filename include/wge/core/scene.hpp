@@ -28,9 +28,7 @@ public:
 	layer* add_layer();
 	layer* add_layer(const std::string& pName);
 	layer* add_layer(const std::string& pName, std::size_t pInsert);
-	// Give ownership of a layer to this scene.
-	layer* add_layer(layer::uptr&);
-	// Take ownership of a layer from this scene.
+	layer* add_layer(layer::uptr);
 	layer::uptr release_layer(const layer&);
 
 	// Returns true if the layer was successfully removed.

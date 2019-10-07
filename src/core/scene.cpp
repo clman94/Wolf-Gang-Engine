@@ -30,7 +30,7 @@ layer* scene::add_layer(const std::string& pName, std::size_t pInsert)
 	return mLayers.insert(mLayers.begin() + pInsert, layer::create(*mFactory))->get();
 }
 
-layer* scene::add_layer(layer::uptr& pPtr)
+layer* scene::add_layer(layer::uptr pPtr)
 {
 	return mLayers.emplace_back(std::move(pPtr)).get();
 }
