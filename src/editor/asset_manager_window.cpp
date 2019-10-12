@@ -151,6 +151,7 @@ void asset_manager_window::show_asset_directory_tree(core::asset::ptr& pCurrent_
 		ImGui::TreePop();
 	}
 }
+
 void asset_manager_window::asset_tile(const core::asset::ptr & pAsset, const math::vec2 & pSize)
 {
 	ImGui::PushID(&*pAsset);

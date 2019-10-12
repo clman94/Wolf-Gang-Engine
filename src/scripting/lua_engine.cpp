@@ -142,7 +142,10 @@ void lua_engine::register_math_api()
 			static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator*),
 			static_cast<math::vec2(math::vec2::*)(float) const>(&math::vec2::operator*)
 		),
-		sol::meta_function::division, static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator/),
+		sol::meta_function::division, sol::overload(
+			static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator/),
+			static_cast<math::vec2(math::vec2::*)(float) const>(&math::vec2::operator/)
+		),
 		sol::meta_function::equal_to, static_cast<bool(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator==),
 		sol::meta_function::to_string, &math::vec2::to_string,
 		sol::meta_function::unary_minus, static_cast<math::vec2(math::vec2::*)() const>(&math::vec2::operator-),
@@ -165,6 +168,7 @@ void lua_engine::register_math_api()
 		"height", &math::rect::height,
 		"position", &math::rect::position,
 		"size", &math::rect::size);
+
 }
 
 class b2_quick_query_callback :
@@ -187,12 +191,12 @@ void lua_engine::register_physics_api()
 	{
 		if (auto world = pLayer.get_system<physics::physics_world>())
 		{
-			b2_quick_query_callback callback;
 			b2AABB aabb;
 			aabb.lowerBound.x = a.x;
 			aabb.lowerBound.y = a.y;
 			aabb.upperBound.x = b.x;
 			aabb.upperBound.y = b.y;
+			b2_quick_query_callback callback;
 			world->get_world()->QueryAABB(&callback, aabb);
 			return callback.has_collision;
 		}

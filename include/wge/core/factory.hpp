@@ -15,6 +15,7 @@ class layer;
 
 // The factory is the center hub for dependency injection for our
 // components and systems.
+// It also allows us to generate components and systems generically.
 class factory
 {
 public:
