@@ -31,32 +31,9 @@ static void put_hex(char* pDest, std::uint8_t pVal)
 	pDest[1] = chars[pVal & 0x0f];
 }
 
-inline uuid::uuid(const std::string_view& pStr)
+uuid::uuid(const std::string_view& pStr)
 {
 	parse(pStr);
-}
-
-bool uuid::operator < (const uuid& pR) const noexcept
-{
-	return compare(pR) < 0;
-}
-
-bool uuid::operator == (const uuid& pR) const noexcept
-{
-	return compare(pR) == 0;
-}
-
-bool uuid::operator != (const uuid& pR) const noexcept
-{
-	return compare(pR) != 0;
-}
-
-int uuid::compare(const uuid& pR) const noexcept
-{
-	for (std::size_t i = 0; i < 16; ++i)
-		if (mBytes[i] != pR.mBytes[i])
-			return static_cast<int>(mBytes[i]) - static_cast<int>(pR.mBytes[i]);
-	return 0;
 }
 
 std::string uuid::to_string() const
@@ -145,19 +122,6 @@ void uuid::from_json(const json& pJson)
 	{
 		log::error() << "Could not parse json uuid" << log::endm;
 	}
-}
-
-hash::hash32_t uuid::to_hash32() const noexcept
-{
-	return hash::hash32(&mBytes[0], 16);
-}
-
-bool uuid::is_valid() const noexcept
-{
-	for (auto i : mBytes)
-		if (i != 0)
-			return true;
-	return false;
 }
 
 uuid generate_uuid()
