@@ -6,7 +6,7 @@
 #include <wge/math/anchor.hpp>
 #include <wge/math/aabb.hpp>
 #include <wge/math/vector.hpp>
-#include <wge/core/transform_component.hpp>
+#include <wge/math/transform.hpp>
 #include <wge/graphics/texture.hpp>
 
 namespace wge::graphics
@@ -14,13 +14,11 @@ namespace wge::graphics
 
 class renderer;
 
-class sprite_component :
-	public core::component
+class sprite_component
 {
-	WGE_COMPONENT("Sprite", 12409);
 public:
 	// Creates a batch
-	void create_batch(core::transform_component& pTransform, renderer& pRenderer);
+	void create_batch(math::transform& pTransform, renderer& pRenderer);
 
 	// Set the offset of the image in pixels
 	void set_offset(const math::vec2& pOffset) noexcept;
@@ -38,14 +36,6 @@ public:
 	void set_texture(const core::asset::ptr& pAsset) noexcept;
 	// Get the current texture
 	core::asset::ptr get_texture() const noexcept;
-
-	virtual bool has_aabb() const override { return true; }
-	virtual math::aabb get_screen_aabb() const override { return mSceen_aabb; };
-	virtual math::aabb get_local_aabb() const override { return mLocal_aabb; };
-
-protected:
-	virtual json on_serialize(core::serialize_type) const override;
-	virtual void on_deserialize(const core::asset_manager&, const json&) override;
 
 private:
 	math::aabb mSceen_aabb, mLocal_aabb;

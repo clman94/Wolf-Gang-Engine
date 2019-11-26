@@ -19,16 +19,6 @@ class layer;
 class factory
 {
 public:
-	template <typename T>
-	void register_component()
-	{
-		mComponent_factories[T::COMPONENT_ID] =
-			[](component_manager& pManager) -> component*
-		{
-			return &pManager.add_component<T>();
-		};
-	}
-
 	template <typename T, typename...Targs>
 	void register_system(Targs&&...pExtra_args)
 	{
@@ -47,9 +37,7 @@ public:
 	system::uptr create_system(int pType, layer& pLayer) const;
 
 private:
-	using component_factory = std::function<component*(component_manager&)>;
 	using system_factory = std::function<system::uptr(layer&)>;
-	std::map<component_type, component_factory> mComponent_factories;
 	std::map<int, system_factory> mSystem_factories;
 };
 

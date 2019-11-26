@@ -29,7 +29,7 @@ public:
 public:
 	virtual void save() override {}
 
-	void generate_object(core::game_object& pObj, const asset_manager& pAsset_mgr);
+	void generate_object(core::object& pObj, const asset_manager& pAsset_mgr);
 
 	virtual json serialize_data() const override;
 	virtual void deserialize_data(const json& pJson) override;

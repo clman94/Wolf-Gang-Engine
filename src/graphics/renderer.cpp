@@ -6,6 +6,7 @@
 
 #include <wge/graphics/renderer.hpp>
 #include <wge/graphics/framebuffer.hpp>
+#include <wge/math/transform.hpp>
 #include <wge/math/transformations.hpp>
 #include <wge/graphics/graphics.hpp>
 
@@ -70,11 +71,11 @@ math::vec2 renderer::screen_to_world(const math::vec2& pVec) const noexcept
 
 void renderer::render(graphics& pGraphics)
 {
-	get_layer().for_each(
-		[&](sprite_component& pSprite, core::transform_component& pTransform)
+	for (auto [id, sprite, transform] :
+		get_layer().each<sprite_component, math::transform>())
 	{
-		pSprite.create_batch(pTransform, *this);
-	});
+		sprite.create_batch(transform, *this);
+	}
 
 	sort_batches();
 

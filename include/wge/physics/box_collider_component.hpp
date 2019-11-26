@@ -13,10 +13,8 @@ namespace wge::physics
 
 class physics_component;
 
-class box_collider_component :
-	public core::component
+class box_collider_component
 {
-	WGE_COMPONENT("Box Collider", 268);
 public:
 	box_collider_component();
 	virtual ~box_collider_component();
@@ -40,9 +38,6 @@ public:
 	void update_current_shape(const math::vec2& pScale);
 
 protected:
-	virtual json on_serialize(core::serialize_type) const override;
-	virtual void on_deserialize(const core::asset_manager&, const json&) override;
-
 	// Update a shape to the current transform
 	void update_shape(const math::vec2& pScale, b2PolygonShape* pShape);
 

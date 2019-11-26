@@ -1,8 +1,8 @@
 #include <wge/physics/physics_world.hpp>
 #include <wge/physics/physics_component.hpp>
 #include <wge/physics/box_collider_component.hpp>
+#include <wge/math/transform.hpp>
 
-#include <wge/core/transform_component.hpp>
 #include <wge/core/layer.hpp>
 
 #include <Box2D/Box2D.h>
@@ -35,44 +35,36 @@ b2World* physics_world::get_world() const
 void physics_world::preupdate(float pDelta)
 {
 	// Create all the bodies
-	get_layer().for_each(
-		[&](core::game_object pObj,
-			physics_component& pPhysics,
-			core::transform_component& pTransform)
+	for (auto [id, physics, transform] : get_layer().each<physics_component, math::transform>())
 	{
-		if (!pPhysics.mBody)
+		if (!physics.mBody)
 		{
 			b2BodyDef body_def;
-			body_def.position.x = pTransform.get_position().x;
-			body_def.position.y = pTransform.get_position().y;
-			body_def.angle = pTransform.get_rotation();
-			body_def.type = pPhysics.get_b2Body_type();
+			body_def.position.x = transform.position.x;
+			body_def.position.y = transform.position.y;
+			body_def.angle = transform.rotation;
+			body_def.type = physics.get_b2Body_type();
 			//body_def.userData = obj.get_instance_id().get_value();
-			pPhysics.mBody = mWorld->CreateBody(&body_def);
-			pPhysics.mBody->ResetMassData();
-			log::debug() << WGE_LI << pObj.get_name() << ": New Physics Body" << log::endm;
+			physics.mBody = mWorld->CreateBody(&body_def);
+			physics.mBody->ResetMassData();
 		}
-	});
+	}
 
 	// Create all the fixtures
-	get_layer().for_each(
-		[&](core::game_object pObj,
-			box_collider_component& pCollider,
-			physics_component& pPhysics,
-			core::transform_component& pTransform)
+	for (auto [id, collider, physics, transform] :
+		get_layer().each<box_collider_component, physics_component, math::transform>())
 	{
-		if (!pCollider.mFixture && pPhysics.mBody)
+		if (!collider.mFixture && physics.mBody)
 		{
 			b2FixtureDef fixture_def;
 			b2PolygonShape shape;
-			pCollider.update_shape(pTransform.get_scale(), &shape);
+			collider.update_shape(transform.scale, &shape);
 			fixture_def.shape = &shape;
 			fixture_def.density = 1;
-			pCollider.mFixture = pPhysics.create_fixture(fixture_def);
-			pPhysics.mBody->ResetMassData();
-			log::debug() << WGE_LI << pObj.get_name() << ": New Collider" << log::endm;
+			collider.mFixture = physics.create_fixture(fixture_def);
+			physics.mBody->ResetMassData();
 		}
-	});
+	}
 
 	// Calculate physics
 	mWorld->Step(pDelta, 1, 1);
@@ -82,39 +74,35 @@ void physics_world::preupdate(float pDelta)
 void physics_world::postupdate(float pDelta)
 {
 	// Update the body to the transform of the transform component
-	get_layer().for_each(
-		[&](physics_component& pPhysics, core::transform_component& pTransform)
+	for (auto [id, physics, transform] : get_layer().each<physics_component, math::transform>())
 	{
-		if (pPhysics.mBody)
+		if (physics.mBody)
 		{
-			math::vec2 position = pTransform.get_position();
-			math::radians rotation = pTransform.get_rotation();
-			pPhysics.mBody->SetTransform({ position.x, position.y }, rotation);
+			math::vec2 position = transform.position;
+			math::radians rotation = transform.rotation;
+			physics.mBody->SetTransform({ position.x, position.y }, rotation);
 		}
-	});
+	}
 
 	// Update the shapes
-	get_layer().for_each(
-		[&](box_collider_component& pCollider,
-			core::transform_component& pTransform)
+	for (auto [id, collider, transform] : get_layer().each<box_collider_component, math::transform>())
 	{
 		// FIXME: Only update when the transform's scale actually changes.
-		pCollider.update_current_shape(pTransform.get_scale());
-	});
+		collider.update_current_shape(transform.scale);
+	}
 }
 
 void physics_world::update_object_transforms()
-{	
-	get_layer().for_each(
-		[&](physics_component& pPhysics, core::transform_component& pTransform)
+{
+	for (auto [id, physics, transform] : get_layer().each<physics_component, math::transform>())
 	{
-		if (pPhysics.mBody)
+		if (physics.mBody)
 		{
-			b2Vec2 position = pPhysics.mBody->GetPosition();
-			pTransform.set_position({ position.x, position.y });
-			pTransform.set_rotaton(math::radians(pPhysics.mBody->GetAngle()));
+			b2Vec2 position = physics.mBody->GetPosition();
+			transform.position = math::vec2{ position.x, position.y };
+			transform.rotation = math::radians(physics.mBody->GetAngle());
 		}
-	});
+	}
 }
 
 } // namespacw wge::physics

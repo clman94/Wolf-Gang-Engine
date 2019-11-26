@@ -11,101 +11,53 @@
 #include <wge/util/json_helpers.hpp>
 #include <wge/core/asset_manager.hpp>
 
-// Use this in your component to define the needed information the engine
-// needs.
-//
-// class mycomponent :
-//     public core::component
-// {
-//     WGE_COMPONENT("My Component", 32);
-// public:
-//     /* ... */
-// };
-//
-#define WGE_COMPONENT(name__, id__) \
-	public: \
-	static constexpr wge::core::component_type COMPONENT_ID = id__; \
-	static constexpr const char* COMPONENT_NAME = name__; \
-	static constexpr bool COMPONENT_SINGLE_INSTANCE = false; \
-	virtual const wge::core::component_type& get_component_id() const override { return COMPONENT_ID; } \
-	virtual std::string get_component_name() const override { return COMPONENT_NAME; }
-#define WGE_COMPONENT_SINGLE_INSTANCE(name__, id__) \
-	public: \
-	static constexpr wge::core::component_type COMPONENT_ID = id__; \
-	static constexpr const char* COMPONENT_NAME = name__; \
-	static constexpr bool COMPONENT_SINGLE_INSTANCE = true; \
-	virtual const wge::core::component_type& get_component_id() const override { return COMPONENT_ID; } \
-	virtual std::string get_component_name() const override { return COMPONENT_NAME; }
-#define WGE_SYSTEM_COMPONENT(name__, id__) WGE_COMPONENT_SINGLE_INSTANCE(name__, id__)
-
 namespace wge::core
 {
 
-class scene;
-class game_object;
-class asset_manager;
-
-class component
+template <typename T>
+class handle
 {
 public:
-	component() noexcept;
-	virtual ~component() {}
+	using storage = component_storage<T>;
 
-	// Save the current state of this component
-	json serialize(serialize_type = serialize_type::all) const;
-	// Load the current state of this component.
-	// Some components require extra info to completely
-	// recreate its data so the game object that owns this component
-	// must be provided.
-	void deserialize(const asset_manager&, const json&);
+	handle() = default;
+	handle(object_id pId, storage& pStorage) :
+		mId(pId),
+		mStorage(&pStorage)
+	{}
 
-	// Get the name of the component type
-	virtual std::string get_component_name() const = 0;
-	// Get the value representing the component type
-	virtual const wge::core::component_type& get_component_id() const = 0;
-
-	// Unique name of component instance
-	const void set_name(const std::string& pName) noexcept;
-	const std::string& get_name() const noexcept;
-
-	// Returns true if this component can calculate an aabb
-	// from its data.
-	virtual bool has_aabb() const { return false; }
-	// Returns the aabb in world space
-	virtual math::aabb get_screen_aabb() const { return{}; }
-	// Returns the aabb relative to its "center" (usually its transform).
-	virtual math::aabb get_local_aabb() const { return{}; }
-
-	// Get the object this component is registered to
-	const util::uuid& get_object_id() const noexcept;
-	void set_object(const game_object& pObj) noexcept;
-
-	const util::uuid& get_instance_id() const noexcept;
-
-	void set_enabled(bool pEnabled) noexcept
+	object_id get_object_id() const noexcept
 	{
-		mEnabled = pEnabled;
-	}
-	bool is_enabled() const noexcept
-	{
-		return mEnabled;
+		assert(is_valid());
+		return mId;
 	}
 
-	// Remove this component from its object.
-	void destroy() noexcept;
-	// Returns true if this component is currently unused by any object.
-	bool is_unused() const noexcept;
+	bool is_valid() const noexcept
+	{
+		return mStorage != nullptr && mStorage->has_component(mId);
+	}
 
-protected:
-	virtual json on_serialize(serialize_type) const { return json{}; }
-	virtual	void on_deserialize(const asset_manager&, const json&) {}
+	T* operator->() const noexcept
+	{
+		assert(is_valid());
+		return mStorage->get(mId);
+	}
+
+	T& operator*() const noexcept
+	{
+		assert(is_valid());
+		return mStorage->get(mId);
+	}
+
+	void reset() noexcept
+	{
+		mId = invalid_id;
+		mStorage = nullptr;
+	}
 
 private:
-	std::string mName;
-	util::uuid mObject_id;
-	util::uuid mInstance_id;
-	bool mEnabled{ true };
-	bool mUnused{ false };
+	object_id mId;
+	component_storage<T>* mStorage = nullptr;
 };
 
 } // namespace wge::core

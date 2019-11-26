@@ -6,9 +6,9 @@
 namespace wge::core
 {
 
-void object_resource::generate_object(core::game_object& pObj, const asset_manager& pAsset_mgr)
+void object_resource::generate_object(core::object& pObj, const asset_manager& pAsset_mgr)
 {
-	pObj.add_component<core::transform_component>();
+	pObj.add_component<math::transform>();
 
 	if (display_sprite.is_valid())
 	{
@@ -20,7 +20,7 @@ void object_resource::generate_object(core::game_object& pObj, const asset_manag
 	{
 		pObj.add_component<scripting::event_state_component>();
 
-		for (const auto&[type, asset_id] : util::ipair{ events })
+		for (auto[type, asset_id] : util::ipair{ events })
 		{
 			scripting::event_component* comp = nullptr;
 			switch (static_cast<event_type>(type))
@@ -45,7 +45,7 @@ json object_resource::serialize_data() const
 {
 	json j;
 	json& jevents = j["events"];
-	for (const auto&[type, asset_id] : util::ipair{ events })
+	for (auto[type, asset_id] : util::ipair{ events })
 	{
 		json jevent;
 		const char* event_name = event_typenames[type];

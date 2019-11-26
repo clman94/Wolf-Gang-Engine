@@ -1,6 +1,5 @@
 #include <wge/physics/physics_component.hpp>
 #include <wge/physics/physics_world.hpp>
-#include <wge/core/transform_component.hpp>
 #include <wge/logging/log.hpp>
 
 #include <Box2D/Box2D.h>
@@ -30,37 +29,6 @@ physics_component::~physics_component()
 	}
 }
 
-json physics_component::on_serialize(core::serialize_type pType) const
-{
-	json result;
-
-	if (pType & core::serialize_type::properties)
-	{
-		result["type"] = mType;
-	}
-
-	if (pType & core::serialize_type::runtime_state)
-	{
-		// b2Body not created yet? Cache it all for later when it is
-		// created.
-		if (!mBody_instance_cache.empty())
-			result["runtime-state"] = mBody_instance_cache;
-		else if (mBody)
-			result["runtime-state"] = serialize_body();
-	}
-
-	return result;
-}
-
-void physics_component::on_deserialize(const core::asset_manager&, const json& pJson)
-{
-	set_type(pJson["type"]);
-	if (pJson.find("runtime-state") != pJson.end())
-		mBody_instance_cache = pJson["runtime-state"];
-	else
-		mBody_instance_cache.clear();
-}
-
 void physics_component::set_type(int pType)
 {
 	mType = pType;
@@ -83,7 +51,6 @@ void physics_component::set_linear_velocity(const math::vec2 & pVec)
 		serialize_and_cache_body();
 		mBody_instance_cache["linear-velocity"] = pVec;
 	}
-
 }
 
 math::vec2 physics_component::get_linear_velocity() const

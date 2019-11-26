@@ -8,31 +8,48 @@
 #include <wge/core/component_type.hpp>
 #include <wge/util/json_helpers.hpp>
 #include <wge/core/asset.hpp>
+#include <wge/core/component.hpp>
+#include <wge/core/object_id.hpp>
 
 namespace wge::core
 {
 
-// This template is used to check if a type has the "COMPONENT_ID" member.
-template <typename T, typename = int>
-struct has_component_id_member : std::false_type {};
-template <typename T>
-struct has_component_id_member <T, decltype((void)T::COMPONENT_ID, 0)> : std::true_type {};
+struct object_info
+{
+	std::string name;
+	// This is the asset that was instanced by this object.
+	// This will be null if this object isn't an instance of
+	// an asset.
+	asset::ptr source_asset;
 
-class engine;
-class scene;
+	struct registed_component
+	{
+		std::size_t hint;
+		component_type type;
+	};
+	std::vector<registed_component> mRegistered_components;
+
+	registed_component* get_component_info(const component_type& pType) noexcept
+	{
+		for (auto& i : mRegistered_components)
+			if (i.type == pType)
+				return &i;
+		return nullptr;
+	}
+};
+
 class layer;
 class component;
-class object_data;
 class asset_manager;
 
-// Exception thrown when a game_object that references no real game object
+// Exception thrown when a object that references no real game object
 // attempts to access/modify that game object.
 class invalid_game_object :
 	public std::runtime_error
 {
 public:
 	invalid_game_object() :
-		std::runtime_error("Attempting to access game object with invalid reference.")
+		std::runtime_error("Attempting to access object with invalid reference.")
 	{}
 };
 
@@ -40,52 +57,38 @@ public:
 // in a layer. This class acts as a handle
 // to an object in a layer and contains only
 // pointers.
-class game_object
+class object
 {
 public:
-	game_object() noexcept;
-	game_object(layer&, object_data&) noexcept;
+	object() noexcept;
+	object(layer&, const handle<object_info>&) noexcept;
 
 	// Check if this object has a component of a specific id
 	bool has_component(const component_type& pType) const;
 	// Check if this object has a component of a type
-	template <class T,
-		// Requires the "int COMPONENT_ID" member
-		typename = std::enable_if<has_component_id_member<T>::value>::type>
+	template <class T>
 	bool has_component() const;
-
-	json serialize(serialize_type pType = serialize_type::all) const;
-	void deserialize(const asset_manager&, const json& pJson);
-	void deserialize(const asset_manager&, const asset::ptr& pAsset);
 
 	// Create a new component for this object
 	template <typename T>
 	T* add_component();
-	component* add_component(const component_type& pType);
 	// Get the amount of components assigned to this object.
 	// Note: If a component is removed, this will not update until
 	// the end of the frame.
 	std::size_t get_component_count() const;
-	// Get a component by its index
-	component* get_component_at(std::size_t pIndex);
-	// Get component by name
-	component* get_component(const std::string& pName);
-	component* get_component_by_type(const std::string& pName);
-	// Get first component by id
-	component* get_component(const component_type& pType) const;
 	// Get first component by type
-	template <class T,
-		// Requires the "int COMPONENT_ID" COMPONENT_ID member
-		typename = std::enable_if<has_component_id_member<T>::value>::type>
+	template <class T>
 	T* get_component() const;
 	// Find the first of all of these components. Returns true when all of them are found.
 	template <typename Tfirst, typename...Trest>
 	bool unwrap_components(Tfirst*& pFirst, Trest*& ...pRest);
 	void move_component(std::size_t pFrom, std::size_t pTo);
-	// Remove component at index
-	void remove_component(std::size_t pIndex);
-	// Remove all components
-	void remove_all_components();
+
+	template <typename T>
+	bool remove_component()
+	{
+		return mLayer->remove_component<T>(mInfo.get_object_id());
+	}
 
 	// Get the name of this object.
 	const std::string& get_name() const;
@@ -94,7 +97,7 @@ public:
 	void set_name(const std::string& pName);
 
 	// Remove this object from the layer.
-	// It is recommended that you discard any game_object objects because this
+	// It is recommended that you discard any object objects because this
 	// function will remove the data they are pointing to, thus leaving
 	// them in an invalid state. TODO: Add some form of tracking.
 	void destroy();
@@ -110,8 +113,7 @@ public:
 	asset::ptr get_asset() const;
 
 	// Get the id that uniquely identifies this object
-	const util::uuid& get_instance_id() const;
-	void set_instance_id(const util::uuid& pId);
+	object_id get_id() const;
 
 	operator bool() const noexcept
 	{
@@ -121,46 +123,46 @@ public:
 	// Returns true if this is a valid reference to an object.
 	bool is_valid() const noexcept
 	{
-		return mData != nullptr;
+		return mInfo.is_valid() && mLayer != nullptr;
 	}
 
 	void reset() noexcept
 	{
 		mLayer = nullptr;
-		mData = nullptr;
+		mInfo.reset();
 	}
 
-	bool operator==(const game_object& pObj) const noexcept;
+	bool operator==(const object& pObj) const noexcept;
 
 private:
 	void assert_valid_reference() const;
 
 private:
 	layer* mLayer;
-	object_data* mData;
+	handle<object_info> mInfo;
 };
 
-template<class T, typename>
-inline bool game_object::has_component() const
+template<class T>
+inline bool object::has_component() const
 {
-	return has_component(T::COMPONENT_ID);
+	return has_component(component_type::from<T>());
 }
 
 template<typename T>
-inline T* game_object::add_component()
+inline T* object::add_component()
 {
 	assert_valid_reference();
-	return get_layer().add_component<T>(*this);
+	return get_layer().add_component<T>(get_id());
 }
 
-template<class T, typename>
-inline T* game_object::get_component() const
+template<class T>
+inline T* object::get_component() const
 {
-	return static_cast<T*>(get_component(T::COMPONENT_ID));
+	return mLayer->get_storage<T>().get(get_id());
 }
 
 template<typename Tfirst, typename ...Trest>
-inline bool game_object::unwrap_components(Tfirst*& pFirst, Trest*& ...pRest)
+inline bool object::unwrap_components(Tfirst*& pFirst, Trest*& ...pRest)
 {
 	assert_valid_reference();
 	auto comp = get_component<Tfirst>();

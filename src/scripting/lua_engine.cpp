@@ -1,13 +1,14 @@
 #include <wge/scripting/lua_engine.hpp>
 #include <wge/physics/physics_world.hpp>
 #include <Box2D/Dynamics/b2World.h>
+#include <wge/core/object_resource.hpp>
+#include <wge/math/transform.hpp>
 
 namespace wge::scripting
 {
 
 lua_engine::lua_engine()
 {
-	register_api();
 }
 
 lua_engine::~lua_engine()
@@ -50,7 +51,7 @@ void lua_engine::execute_global_scripts(core::asset_manager& pAsset_manager)
 	});
 }
 
-sol::environment lua_engine::create_object_environment(const core::game_object& pObj)
+sol::environment lua_engine::create_object_environment(const core::object& pObj)
 {
 	sol::environment env(state, sol::create, global_environment);
 
@@ -58,13 +59,11 @@ sol::environment lua_engine::create_object_environment(const core::game_object& 
 
 	auto get_position = [pObj]() -> math::vec2
 	{
-		auto transform = pObj.get_component<core::transform_component>();
-		return transform->get_position();
+		return pObj.get_component<math::transform>()->position;
 	};
 	auto set_position = [pObj](const math::vec2& pPos)
 	{
-		auto transform = pObj.get_component<core::transform_component>();
-		transform->set_position(pPos);
+		pObj.get_component<math::transform>()->position = pPos;
 	};
 
 	//env["position"] = sol::property(get_position, set_position);
@@ -94,7 +93,7 @@ bool lua_engine::compile_script(script& pScript)
 	return true;
 }
 
-void lua_engine::register_api()
+void lua_engine::register_core_api()
 {
 	state.open_libraries(sol::lib::base, sol::lib::coroutine, sol::lib::string, sol::lib::table);
 	state["table"]["haskey"] = [](sol::table pTable, sol::object pKey) -> bool
@@ -110,9 +109,31 @@ void lua_engine::register_api()
 		[](const std::string& pVal) { log::debug() << pVal << log::endm; },
 		[](double pVal) { log::debug() << pVal << log::endm; }
 	);
+}
 
-	register_math_api();
-	register_physics_api();
+void lua_engine::register_asset_api(core::asset_manager& pAsset_manager)
+{
+}
+
+void lua_engine::register_layer_api(core::asset_manager& pAsset_manager)
+{
+	state["create_instance"] = [this, &pAsset_manager](core::layer& pLayer, std::string_view pStr) -> sol::table
+	{
+		if (auto asset = pAsset_manager.get_asset(filesystem::path(pStr)))
+		{
+			auto res = asset->get_resource<core::object_resource>();
+			if (!res)
+				log::error() << "Asset is not an instantiable object" << log::endm;
+			auto obj = pLayer.add_object();
+			res->generate_object(obj, pAsset_manager);
+			if (auto comp = obj.get_component<event_state_component>())
+			{
+				comp->environment = create_object_environment(obj);
+				return comp->environment;
+			}
+		}
+		return{};
+	};
 }
 
 void lua_engine::register_math_api()
@@ -132,7 +153,9 @@ void lua_engine::register_math_api()
 	t["pmod"] = &math::positive_modulus<float>;
 	t["pow"] = &math::pow<float>;
 	t.new_usertype<math::vec2>("vec2",
-		sol::call_constructor, sol::constructors<math::vec2(), math::vec2(float, float), math::vec2(const math::vec2&)>(),
+		sol::call_constructor, sol::constructors<math::vec2(),
+			math::vec2(const math::vec2&),
+			math::vec2(float, float)>(),
 		"x", &math::vec2::x,
 		"y", &math::vec2::y,
 		"normalize", &math::vec2::normalize,
@@ -160,8 +183,9 @@ void lua_engine::register_math_api()
 		"scale", &math::transform::scale);
 	t.new_usertype<math::rect>("rect",
 		sol::call_constructor, sol::constructors<math::rect(),
+			math::rect(const math::rect&),
 			math::rect(const math::vec2&, const math::vec2&),
-			math::rect(float, float, float, float), math::rect(const math::rect&)>(),
+			math::rect(float, float, float, float)>(),
 		"x", &math::rect::x,
 		"y", &math::rect::y,
 		"width", &math::rect::width,
@@ -221,48 +245,47 @@ void script_system::update(float pDelta)
 	mLua_engine->update_delta(pDelta);
 
 	// Setup the environments if needed
-	get_layer().for_each([&](core::game_object pObj, event_state_component& pState)
+
+	for (auto& [id, state] : get_layer().each<event_state_component>())
 	{
-		if (!pState.environment.valid())
+		if (!state.environment.valid())
 		{
-			pState.environment = mLua_engine->create_object_environment(pObj);
+			state.environment = mLua_engine->create_object_environment(get_layer().get_object(id));
 
 			// Added the properties as variables.
-			for (const auto& i : pState.properties)
+			for (const auto& i : state.properties)
 			{
 				if (!i.name.empty())
 				{
 					std::visit([&](auto& val)
 					{
-						pState.environment[i.name] = val;
+						state.environment[i.name] = val;
 					}, i.value);
 				}
 			}
 		}
-	});
+	}
 
 	// Event: Create
-	get_layer().for_each([&](
-		event_components::on_create& pOn_create,
-		event_state_component& pState)
+	for (auto& [id, on_create, state] :
+		get_layer().each<event_components::on_create, event_state_component>())
 	{
-		if (pOn_create.first_time)
+		if (on_create.first_time)
 		{
-			pOn_create.first_time = false;
-			run_script(pOn_create.get_source(), pState.environment);
+			on_create.first_time = false;
+			run_script(on_create.get_source(), state.environment);
 		}
-	});
+	}
 
 	// Event: Update
-	get_layer().for_each([&](
-		event_components::on_update& pOn_update,
-		event_state_component& pState)
+	for (auto& [id, on_update, state] :
+		get_layer().each<event_components::on_update, event_state_component>())
 	{
-		run_script(pOn_update.get_source(), pState.environment);
-	});
+		run_script(on_update.get_source(), state.environment);
+	}
 }
 
-std::string make_valid_identifier(const std::string_view& pStr, const std::string_view& pDefault)
+std::string make_valid_identifier(std::string_view pStr, const std::string_view pDefault)
 {
 	std::string result(pStr);
 	for (auto& i : result)

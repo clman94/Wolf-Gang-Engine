@@ -1,6 +1,5 @@
 #include <wge/core/engine.hpp>
 
-#include <wge/core/transform_component.hpp>
 #include <wge/physics/box_collider_component.hpp>
 #include <wge/physics/physics_component.hpp>
 #include <wge/physics/physics_world.hpp>
@@ -16,13 +15,11 @@ engine::engine() :
 	mFactory.register_system<physics::physics_world>();
 	mFactory.register_system<scripting::script_system>(mLua_engine);
 
-	mFactory.register_component<core::transform_component>();
-	mFactory.register_component<graphics::sprite_component>();
-	mFactory.register_component<physics::physics_component>();
-	mFactory.register_component<physics::box_collider_component>();
-	mFactory.register_component<scripting::event_state_component>();
-	mFactory.register_component<scripting::event_components::on_create>();
-	mFactory.register_component<scripting::event_components::on_update>();
+	mLua_engine.register_core_api();
+	mLua_engine.register_asset_api(mAsset_manager);
+	mLua_engine.register_layer_api(mAsset_manager);
+	mLua_engine.register_math_api();
+	mLua_engine.register_physics_api();
 
 	mAsset_manager.register_resource_factory("texture",
 		[&]()

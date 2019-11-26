@@ -1,10 +1,13 @@
 #pragma once
 
+#include <iterator>
+#include "ptr_adaptor.hpp"
+
 namespace wge::util
 {
 
 // This is a janky utility for creating index-value pairs for
-// containers. Should only be used in for-each loops.
+// containers.
 // Example:
 //   std::array arr = { "Hello", " " , "world" };
 //   for (auto [index, value] : util::ipair{ arr })
@@ -18,30 +21,52 @@ public:
 	class iterator
 	{
 	public:
-		iterator(const Titer& pIter) :
+		constexpr iterator(const Titer& pIter) :
 			mIter(pIter)
 		{}
 
-		bool operator==(const iterator& pIter) const
+		constexpr bool operator==(const iterator& pIter) const
 		{
 			return mIter == pIter.mIter;
 		}
 
-		bool operator!=(const iterator& pIter) const
+		constexpr bool operator!=(const iterator& pIter) const
 		{
 			return mIter != pIter.mIter;
 		}
 
-		iterator& operator++()
+		constexpr iterator& operator++()
 		{
-			++mIter;
-			++mIndex;
+			next();
 			return *this;
 		}
 
-		auto operator*() const noexcept
+		constexpr iterator operator++(int)
 		{
-			return std::pair<std::size_t, decltype(mIter.operator*())>{ mIndex, *mIter };
+			auto temp = *this;
+			next();
+			return temp;
+		}
+
+		constexpr void next()
+		{
+			++mIter;
+			++mIndex;
+		}
+
+		constexpr auto get() const noexcept
+		{
+			return std::pair<std::size_t, typename std::iterator_traits<Titer>::reference>{ mIndex, *mIter };
+		}
+
+		constexpr auto operator->() const noexcept
+		{
+			return util::ptr_adaptor{ get() };
+		}
+
+		constexpr auto operator*() const noexcept
+		{
+			return get();
 		}
 
 	private:
@@ -49,18 +74,21 @@ public:
 		Titer mIter;
 	};
 
-	ipair(T& pContainer) :
+	template <typename Titer>
+	iterator(const Titer&)->iterator<Titer>;
+
+	constexpr ipair(T& pContainer) :
 		mContainer(&pContainer)
 	{}
 
-	auto begin() const
+	constexpr auto begin() const
 	{
-		return iterator<decltype(mContainer->begin())>(mContainer->begin());
+		return iterator{ std::begin(*mContainer) };
 	}
 
-	auto end() const
+	constexpr auto end() const
 	{
-		return iterator<decltype(mContainer->end())>(mContainer->end());
+		return iterator{ std::end(*mContainer) };
 	}
 
 private:

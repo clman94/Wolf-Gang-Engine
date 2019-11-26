@@ -1,6 +1,5 @@
 #include <wge/core/scene_resource.hpp>
 #include <wge/core/object_resource.hpp>
-#include <wge/core/transform_component.hpp>
 #include <wge/core/layer.hpp>
 #include <wge/graphics/renderer.hpp>
 #include <wge/scripting/lua_engine.hpp>
@@ -37,20 +36,18 @@ void scene_resource::deserialize_data(const json& pJson)
 	}
 }
 
-core::game_object scene_resource::generate_instance(core::layer& pLayer, const core::asset_manager& pAsset_mgr, const instance& pData)
+core::object scene_resource::generate_instance(core::layer& pLayer, const core::asset_manager& pAsset_mgr, const instance& pData)
 {
 	auto asset = pAsset_mgr.get_asset(pData.asset_id);
 	auto object_resource = asset->get_resource<core::object_resource>();
 
 	// Generate the object
-	core::game_object obj = pLayer.add_object(pData.name);
-	obj.set_instance_id(pData.id);
+	core::object obj = pLayer.add_object(pData.name);
 	object_resource->generate_object(obj, pAsset_mgr);
 	obj.set_asset(asset);
 
-	if (auto transform = obj.get_component<core::transform_component>())
-		transform->set_transform(pData.transform);
-
+	if (auto transform = obj.get_component<math::transform>())
+		*transform = pData.transform;
 	return obj;
 }
 

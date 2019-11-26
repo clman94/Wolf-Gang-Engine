@@ -6,48 +6,7 @@
 namespace wge::graphics
 {
 
-json sprite_component::on_serialize(core::serialize_type pType) const
-{
-	json result;
-	if (pType & core::serialize_type::properties)
-	{
-		result["offset"] = mOffset;
-		result["texture"] = mTexture ? json(mTexture.get_asset()->get_id()) : json();
-
-		texture::handle res = mTexture;
-		const animation* anim = mTexture ? res->get_animation(mAnimation_id) : nullptr;
-		result["animation-name"] = anim ? json(anim->name) : json();
-		result["animation-id"] = anim ? json(anim->id) : json();
-	}
-	return result;
-}
-
-void sprite_component::on_deserialize(const core::asset_manager& pAsset_mgr, const json& pJson)
-{
-	mOffset = pJson["offset"];
-	if (!pJson["texture"].is_null())
-	{
-		util::uuid id = pJson["texture"];
-		mTexture = pAsset_mgr.get_asset(id);
-	}
-	if (!pJson["animation-id"].is_null())
-	{
-		mAnimation_id = pJson["animation-id"];
-
-		texture::handle res = mTexture;
-
-		// Check if this id is correct
-		if (!res->get_animation(mAnimation_id))
-		{
-			// Use the name of the animation as a backup
-			std::string name = pJson["animation-name"];
-			if (auto anim = res->get_animation(name))
-				mAnimation_id = anim->id;
-		}
-	}
-}
-
-void sprite_component::create_batch(core::transform_component& pTransform, renderer& pRenderer)
+void sprite_component::create_batch(math::transform& pTransform, renderer& pRenderer)
 {
 	// No texture
 	if (!mTexture)
@@ -91,7 +50,7 @@ void sprite_component::create_batch(core::transform_component& pTransform, rende
 			mLocal_aabb.merge(verts[i].position);
 
 		// Transform the points
-		verts[i].position = pTransform.get_transform() * verts[i].position;
+		verts[i].position = pTransform * verts[i].position;
 
 		// Calc aabb after transform
 		if (i == 0)

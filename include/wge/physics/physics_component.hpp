@@ -16,10 +16,8 @@ namespace wge::physics
 
 class physics_world;
 
-class physics_component :
-	public core::component
+class physics_component
 {
-	WGE_COMPONENT("Physics", 5431);
 public:
 	enum {
 		type_rigidbody,
@@ -44,10 +42,6 @@ public:
 	void set_fixed_rotation(bool pSet);
 
 	b2Fixture* create_fixture(const b2FixtureDef& pDef);
-
-protected:
-	virtual json on_serialize(core::serialize_type) const override;
-	virtual void on_deserialize(const core::asset_manager& pObject, const json& pJson) override;
 
 private:
 	// Get the box2d body type

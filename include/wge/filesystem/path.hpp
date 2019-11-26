@@ -23,7 +23,7 @@ public:
 	typedef container::iterator iterator;
 	typedef container::const_iterator const_iterator;
 
-	path() {}
+	path() = default;
 	path(const char* pString);
 	path(const std::string& pString);
 	path(const system_fs::path& pPath);
@@ -76,8 +76,6 @@ public:
 	// Get size of path (amount of items)
 	std::size_t size() const;
 
-	path& operator=(const path& pRight);
-
 	// Append this path
 	path& operator/=(const path& pRight);
 	// Append and return a new path
@@ -106,6 +104,9 @@ public:
 	void erase(iterator pBegin, iterator pEnd);
 
 private:
+	// Removes periods in the middle of the path. "a/./b/c" => "a/b/c"
+	// Removes ".." and the item before it but keeps them stacked at the beginning
+	// of the path. "a/../b/c" => "b/c" and "../b/../../c" => "../../c"
 	void simplify();
 
 private:

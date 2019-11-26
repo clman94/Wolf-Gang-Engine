@@ -1,6 +1,5 @@
 #include <wge/physics/box_collider_component.hpp>
 #include <wge/physics/physics_component.hpp>
-#include <wge/core/transform_component.hpp>
 #include <wge/logging/log.hpp>
 
 #include <Box2D/Box2D.h>
@@ -19,27 +18,6 @@ box_collider_component::box_collider_component() :
 
 box_collider_component::~box_collider_component()
 {
-}
-
-json box_collider_component::on_serialize(core::serialize_type pType) const
-{
-	json result;
-	if (pType & core::serialize_type::properties)
-	{
-		result["offset"] = mOffset;
-		result["size"] = mSize;
-		result["rotation"] = mRotation;
-		result["sensor"] = mIs_sensor;
-	}
-	return result;
-}
-
-void box_collider_component::on_deserialize(const core::asset_manager&, const json& pJson)
-{
-	mOffset = pJson["offset"];
-	mSize = pJson["size"];
-	mRotation = pJson["rotation"];
-	set_sensor(pJson["sensor"]);
 }
 
 void box_collider_component::set_offset(const math::vec2 & pOffset)

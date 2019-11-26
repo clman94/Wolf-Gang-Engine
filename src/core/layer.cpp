@@ -11,48 +11,6 @@ layer::layer(const factory& pFactory) noexcept :
 	mFactory(&pFactory)
 {}
 
-json layer::serialize(serialize_type pType)
-{
-	json result;
-	if (pType & serialize_type::properties)
-	{
-		result["name"] = mName;
-		result["timescale"] = mTime_scale;
-		result["enabled"] = mRecieve_update;
-	}
-
-	json& j_systems = result["systems"];
-	for (auto& i : mSystems)
-		j_systems.push_back(i->serialize(pType));
-
-	json& j_objects = result["objects"];
-	for (std::size_t i = 0; i < get_object_count(); i++)
-		j_objects.push_back(get_object(i).serialize(pType));
-
-	return result;
-}
-
-void layer::deserialize(const asset_manager& pAsset_mgr, const json& pJson)
-{
-	clear();
-
-	mName = pJson["name"];
-	mTime_scale = pJson["timescale"];
-	mRecieve_update = pJson["enabled"];
-
-	for (auto& i : pJson["systems"])
-	{
-		system* sys = add_system(i["type"]);
-		sys->deserialize(i);
-	}
-
-	for (auto& i : pJson["objects"])
-	{
-		game_object obj = add_object();
-		obj.deserialize(pAsset_mgr, i);
-	}
-}
-
 system* layer::get_system(int pID) const
 {
 	for (auto& i : mSystems)
@@ -95,75 +53,35 @@ const std::string& layer::get_name() const noexcept
 	return mName;
 }
 
-game_object layer::add_object()
+object layer::add_object()
 {
-	auto& data = mObject_manager.add_object();
-	return{ *this, data };
+	object_id id = object_id_generator::get();
+	mComponent_manager.add_component<object_info>(id);
+	return get_object(id);
 }
 
-game_object layer::add_object(const std::string& pName)
+object layer::add_object(const std::string& pName)
 {
-	game_object obj = add_object();
-	obj.set_name(pName);
-	return obj;
+	object_id id = object_id_generator::get();
+	auto& info = mComponent_manager.add_component<object_info>(id);
+	info.name = pName;
+	return get_object(id);
 }
 
-void layer::remove_object(game_object& mObj)
+void layer::remove_object(const object_id& pObject_id)
 {
-	mObj.remove_all_components();
-	mObject_manager.remove_object(mObj.get_instance_id());
+	object_id_generator::reclaim(pObject_id);
+	mComponent_manager.remove_object(pObject_id);
 }
 
 void layer::remove_all_objects()
 {
-	mObject_manager.clear();
 	mComponent_manager.clear();
-}
-
-game_object layer::get_object(std::size_t pIndex)
-{
-	object_data* data = mObject_manager.get_object_data(pIndex);
-	if (!data)
-		return{};
-	return{ *this, *data };
-}
-
-game_object layer::get_object(const util::uuid& pId)
-{
-	object_data* data = mObject_manager.get_object_data(pId);
-	if (!data)
-		return{};
-	return{ *this, *data };
 }
 
 std::size_t layer::get_object_count() const noexcept
 {
-	return mObject_manager.get_object_count();
-}
-
-component* layer::add_component(const game_object& pObj, const component_type& pType)
-{
-	component* c = mFactory->create_component(pType, mComponent_manager);
-	if (!c)
-	{
-		log::error() << "Could not create component with id " << pType << log::endm;
-		return nullptr;
-	}
-	c->set_object(pObj);
-	mObject_manager.register_component(c);
-	return c;
-}
-
-component* layer::get_component(const component_type& pType, const util::uuid& pId)
-{
-	return mComponent_manager.get_component(pType, pId);
-}
-
-void layer::remove_component(int pType, const util::uuid& pId)
-{
-	component* comp = get_component(pType, pId);
-	if (comp)
-		comp->destroy();
+	return get_storage<object_info>().size();
 }
 
 void layer::set_enabled(bool pEnabled) noexcept
@@ -212,7 +130,9 @@ void layer::clear()
 	mTime_scale = 1;
 	mName.clear();
 	mSystems.clear();
-	mObject_manager.clear();
+
+	for (auto i : *this)
+		object_id_generator::reclaim(i.get_id());
 	mComponent_manager.clear();
 }
 

@@ -192,12 +192,6 @@ size_t path::size() const
 	return mPath.size();
 }
 
-path& path::operator=(const path& pRight)
-{
-	mPath = pRight.mPath;
-	return *this;
-}
-
 bool path::operator==(const path& pRight) const
 {
 	return is_same(pRight);

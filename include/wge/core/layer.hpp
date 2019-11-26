@@ -3,7 +3,6 @@
 #include <wge/core/game_object.hpp>
 #include <wge/core/system.hpp>
 #include <wge/core/component_manager.hpp>
-#include <wge/core/object_manager.hpp>
 #include <wge/core/component_type.hpp>
 #include <wge/core/factory.hpp>
 
@@ -23,6 +22,67 @@ namespace wge::core
 class layer
 {
 public:
+	class iterator
+	{
+		friend class layer;
+		using storage_iterator = component_storage<object_info>::iterator;
+
+		iterator(layer& pLayer, storage_iterator& pIter) :
+			mLayer(&pLayer),
+			mIter(pIter)
+		{}
+
+	public:
+		iterator() = default;
+
+		object get() const
+		{
+			return mLayer->get_object(mIter->first);
+		}
+
+		void next()
+		{
+			++mIter;
+		}
+
+		iterator& operator++()
+		{
+			next();
+			return *this;
+		}
+
+		iterator operator++(int)
+		{
+			iterator temp = *this;
+			next();
+			return temp;
+		}
+
+		bool operator==(const iterator& pR) const
+		{
+			return mIter == pR.mIter;
+		}
+
+		bool operator!=(const iterator& pR) const
+		{
+			return mIter != pR.mIter;
+		}
+
+		auto operator->() const
+		{
+			return util::ptr_adaptor{ get() };
+		}
+
+		object operator*() const
+		{
+			return get();
+		}
+
+	private:
+		layer* mLayer = nullptr;
+		storage_iterator mIter;
+	};
+
 	using uptr = std::unique_ptr<layer>;
 
 	// Create a new layer object
@@ -33,8 +93,8 @@ public:
 
 	layer(const factory&) noexcept;
 
-	json serialize(serialize_type);
-	void deserialize(const asset_manager&, const json&);
+	layer(const layer&) = delete;
+	layer& operator=(const layer&) = delete;
 
 	// Get a system by its type
 	template <typename T>
@@ -58,35 +118,66 @@ public:
 	// Get the name of this layer
 	const std::string& get_name() const noexcept;
 
-	// Create a new game object in this layer.
-	[[nodiscard]] game_object add_object();
-	game_object add_object(const std::string& pName);
+	// Create a new object in this layer.
+	[[nodiscard]] object add_object();
+	object add_object(const std::string& pName);
+	object get_object(object_id pId)
+	{
+		return object{ *this, make_handle<object_info>(pId) };
+	}
+	object get_object_at(std::size_t pIndex)
+	{
+		return get_object(mComponent_manager.get_storage<object_info>().at(pIndex).first);
+	}
 	// Remove a game object
-	void remove_object(game_object& mObj);
+	void remove_object(const object_id& pObject_id);
 	void remove_all_objects();
-	// Get a game object at an index
-	game_object get_object(std::size_t pIndex);
-	// Get a game object by its instance id
-	game_object get_object(const util::uuid& pId);
+	
+	template <typename T>
+	auto make_handle(object_id pId)
+	{
+		return handle{ pId, mComponent_manager.get_storage<T>() };
+	}
+
 	// Get the amount of game objects in this layer
 	std::size_t get_object_count() const noexcept;
 
-	// Add a new component to a game object
+	// Add a new component to an object
 	template <typename T>
-	T* add_component(const game_object& pObj);
-	// Add a new component by type
-	component* add_component(const game_object& pObj, const component_type& pType);
+	T* add_component(const object_id& pObject_id);
 
-	// Get a component by its instance id. The type is needed to check in
-	// the correct container.
-	component* get_component(const component_type& pType, const util::uuid& pId);
+	template <typename T>
+	T* get_component(const object_id& pObject_id)
+	{
+		return get_storage<T>().get(pObject_id);
+	}
+
+	template <typename T>
+	bool remove_component(const object_id& pObject_id)
+	{
+		get_storage<T>().remove(pObject_id);
+	}
 
 	// Get the container associated to a specific type of component.
 	template <typename T>
-	component_storage<T>& get_component_container();
+	component_storage<T>& get_storage();
 
-	// Remove a component of a specific instance id and type.
-	void remove_component(int pType, const util::uuid& pId);
+	// Get the container associated to a specific type of component.
+	template <typename T>
+	const component_storage<T>& get_storage() const;
+
+	template <typename T, typename...Tdeps>
+	auto each();
+
+	auto begin()
+	{
+		return iterator{ *this, get_storage<object_info>().begin() };
+	}
+
+	auto end()
+	{
+		return iterator{ *this, get_storage<object_info>().end() };
+	}
 
 	// Calls pCallable for each component specified by the first parameter.
 	// Each component parameter should be a non-const reference and derive from
@@ -96,14 +187,14 @@ public:
 	//    layer.for_each([&](sprite_component& pTarget) {});
 	//    
 	//    // This will iterate over each sprite component and will collect
-	//    // the first transform component of the owning game_object.
+	//    // the first transform component of the owning object.
 	//    layer.for_each([&](sprite_component& pTarget, transform_component& pTransform) {});
 	//    
 	//    // You can also get the current game object by adding a `game_object` parameter at the start.
-	//    layer.for_each([&](game_object pObject, sprite_component& pTarget) {});
+	//    layer.for_each([&](object pObject, sprite_component& pTarget) {});
 	//
-	template <typename T>
-	void for_each(T&& pCallable);
+	//template <typename T>
+	//void for_each(T&& pCallable);
 
 	// Set whether or not this layer will recieve updates.
 	// Note: This does not affect the update methods in this class
@@ -124,11 +215,11 @@ public:
 	void clear();
 
 private:
-	template <typename Tcomponent, typename...Tdependencies>
-	void for_each_impl(const std::function<void(game_object, Tcomponent&, Tdependencies&...)>& pCallable);
+	/*template <typename Tcomponent, typename...Tdependencies>
+	void for_each_impl(const std::function<void(object, Tcomponent&, Tdependencies&...)>& pCallable);
 
 	template <typename Tcomponent, typename...Tdependencies>
-	void for_each_impl(const std::function<void(Tcomponent&, Tdependencies&...)>& pCallable);
+	void for_each_impl(const std::function<void(Tcomponent&, Tdependencies&...)>& pCallable);*/
 
 private:
 	const factory* mFactory;
@@ -137,7 +228,113 @@ private:
 	std::string mName;
 	std::vector<std::unique_ptr<system>> mSystems;
 	component_manager mComponent_manager;
-	object_manager mObject_manager;
+};
+
+template <typename T, typename...Tdeps>
+class filter
+{
+public:
+	class iterator
+	{
+	public:
+		using storage_iterator = typename component_storage<T>::iterator;
+		iterator() = default;
+		explicit iterator(
+			storage_iterator pIter,
+			storage_iterator pEnd,
+			component_storage<Tdeps>&...pDeps_storage) :
+			mIter(pIter),
+			mEnd(pEnd),
+			mDeps_storage(&pDeps_storage...)
+		{
+			while (mIter != mEnd && !find_dependencies())
+				++mIter;
+		}
+
+		using value_type = std::tuple<object_id, T&, Tdeps&...>;
+
+		auto get() const noexcept
+		{
+			return value_type{ mIter->first, mIter->second, *std::get<Tdeps*>(mDeps)... };
+		}
+
+		auto operator->() const noexcept
+		{
+			return util::ptr_adaptor{ get() };
+		}
+
+		auto operator*() const noexcept
+		{
+			return get();
+		}
+
+		void next()
+		{
+			do {
+				++mIter;
+			} while (mIter != mEnd && !find_dependencies());
+		}
+
+		bool operator==(const iterator& pR) const noexcept
+		{
+			return mIter == pR.mIter;
+		}
+
+		bool operator!=(const iterator& pR) const noexcept
+		{
+			return mIter != pR.mIter;
+		}
+
+		iterator& operator++() noexcept
+		{
+			next();
+			return *this;
+		}
+
+		iterator operator++(int) noexcept
+		{
+			iterator temp = *this;
+			next();
+			return temp;
+		}
+
+	private:
+		bool find_dependencies() const noexcept
+		{
+			if constexpr (sizeof...(Tdeps) != 0)
+			{
+				const object_id& id = mIter->first;
+				mDeps = { std::get<component_storage<Tdeps>*>(mDeps_storage)->get(id)... };
+				if (!(std::get<Tdeps*>(mDeps) && ...))
+					return false;
+			}
+			return true;
+		}
+
+		mutable std::tuple<Tdeps *...> mDeps;
+		storage_iterator mIter;
+		storage_iterator mEnd;
+		std::tuple<component_storage<Tdeps> *...> mDeps_storage;
+	};
+
+	explicit filter(component_storage<T>& pContainer,
+		component_storage<Tdeps>&...pDeps) :
+		mBegin(pContainer.begin(), pContainer.end(), pDeps...),
+		mEnd(pContainer.end(), pContainer.end(), pDeps...)
+	{}
+
+	auto begin() const noexcept
+	{
+		return mBegin;
+	}
+
+	auto end() const noexcept
+	{
+		return mEnd;
+	}
+
+private:
+	iterator mBegin, mEnd;
 };
 
 template<typename T>
@@ -161,22 +358,31 @@ inline T* layer::add_system()
 }
 
 template<typename T>
-inline T* layer::add_component(const game_object& pObj)
+inline T* layer::add_component(const object_id& pObject_id)
 {
-	auto* comp = &mComponent_manager.add_component<T>();
-	comp->set_object(pObj);
-	mObject_manager.register_component(comp);
-	return comp;
+	return &mComponent_manager.add_component<T>(pObject_id);
 }
 
 template<typename T>
-inline component_storage<T>& layer::get_component_container()
+inline component_storage<T>& layer::get_storage()
 {
-	return mComponent_manager.get_container<T>();
+	return mComponent_manager.get_storage<T>();
+}
+template<typename T>
+inline const component_storage<T>& layer::get_storage() const
+{
+	return mComponent_manager.get_storage<T>();
 }
 
+template<typename T, typename ...Tdeps>
+inline auto layer::each()
+{
+	return filter<T, Tdeps...>{ get_storage<T>(), get_storage<Tdeps>()... };
+}
+
+/*
 template<typename Tcomponent, typename...Tdependencies>
-inline void layer::for_each_impl(const std::function<void(game_object, Tcomponent&, Tdependencies&...)>& pCallable)
+inline void layer::for_each_impl(const std::function<void(object, Tcomponent&, Tdependencies&...)>& pCallable)
 {
 	auto wrapper = [&](Tcomponent& pComp, Tdependencies&...pDep)
 	{
@@ -188,9 +394,9 @@ inline void layer::for_each_impl(const std::function<void(game_object, Tcomponen
 template<typename Tcomponent, typename...Tdependencies>
 inline void layer::for_each_impl(const std::function<void(Tcomponent&, Tdependencies&...)>& pCallable)
 {
-	for (auto& i : mComponent_manager.get_container<Tcomponent>())
+	for (auto& i : mComponent_manager.get_storage<Tcomponent>())
 	{
-		// Skip unused or disabled
+		// Skip unused or disabled components
 		if (i.is_unused() || !i.is_enabled())
 			continue;
 
@@ -202,7 +408,7 @@ inline void layer::for_each_impl(const std::function<void(Tcomponent&, Tdependen
 		else
 		{
 			// Retrieve dependencies
-			game_object obj = get_object(i.get_object_id());
+			object obj = get_object(i.get_object_id());
 			std::tuple<Tdependencies*...> dependency_pointers;
 			if (obj.unwrap_components(std::get<Tdependencies*>(dependency_pointers)...))
 			{
@@ -217,6 +423,6 @@ inline void layer::for_each(T&& pCallable)
 {
 	// Just for simplicity, this will be using std::function to deduce the arguments for us.
 	for_each_impl(std::function(std::forward<T>(pCallable)));
-}
+}*/
 
 } // namespace wge::core

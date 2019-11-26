@@ -8,7 +8,6 @@
 #include <wge/core/game_object.hpp>
 #include <wge/core/layer.hpp>
 #include <wge/core/component.hpp>
-#include <wge/core/transform_component.hpp>
 #include <wge/core/system.hpp>
 #include <wge/filesystem/file_input_stream.hpp>
 #include <wge/math/math.hpp>
@@ -110,7 +109,7 @@ public:
 	// Clear all global variables and then execute all global scripts.
 	void execute_global_scripts(core::asset_manager& mAsset_manager);
 	// Create a new environment for individual objects.
-	sol::environment create_object_environment(const core::game_object& pObj);
+	sol::environment create_object_environment(const core::object& pObj);
 	// Update the delta. Do this before each layer.
 	void update_delta(float pSeconds);
 
@@ -121,16 +120,15 @@ public:
 
 	sol::state state;
 
-private:
-	void register_api();
+	void register_core_api();
+	void register_asset_api(core::asset_manager& pAsset_manager);
+	void register_layer_api(core::asset_manager& pAsset_manager);
 	void register_math_api();
 	void register_physics_api();
 };
 
-class event_state_component :
-	public core::component
+class event_state_component
 {
-	WGE_COMPONENT("Event State", 9233);
 public:
 	using property_value = std::variant<int, float, math::vec2, std::string>;
 	struct property
@@ -142,8 +140,7 @@ public:
 	sol::environment environment;
 };
 
-class event_component :
-	public core::component
+class event_component
 {
 public:
 	script::handle source_script;
@@ -160,13 +157,11 @@ namespace event_components
 class on_update :
 	public event_component
 {
-	WGE_COMPONENT("Event: Update", 9234);
 };
 
 class on_create :
 	public event_component
 {
-	WGE_COMPONENT("Event: Create", 9235);
 public:
 	bool first_time{ true };
 };
@@ -189,6 +184,6 @@ private:
 	lua_engine* mLua_engine;
 };
 
-std::string make_valid_identifier(const std::string_view& pStr, const std::string_view& pDefault = "Blank");
+std::string make_valid_identifier(std::string_view pStr, std::string_view pDefault = "Blank");
 
 } // namespace wge::scripting

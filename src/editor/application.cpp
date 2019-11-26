@@ -4,7 +4,6 @@
 #include <wge/logging/log.hpp>
 #include <wge/filesystem/path.hpp>
 #include <wge/core/scene.hpp>
-#include <wge/core/transform_component.hpp>
 #include <wge/physics/box_collider_component.hpp>
 #include <wge/physics/physics_component.hpp>
 #include <wge/physics/physics_world.hpp>
@@ -26,7 +25,6 @@
 #include "editor.hpp"
 #include "history.hpp"
 #include "context.hpp"
-#include "component_inspector.hpp"
 #include "imgui_editor_tools.hpp"
 #include "imgui_ext.hpp"
 #include "text_editor.hpp"
@@ -146,105 +144,6 @@ inline void GLAPIENTRY opengl_message_callback(GLenum source,
 	GLsizei length,
 	const GLchar* message,
 	const void* userParam);
-
-class object_editor :
-	public asset_editor
-{
-public:
-	object_editor(context& pContext, const core::asset::ptr& pAsset, component_inspector& pInspectors) :
-		asset_editor(pContext, pAsset),
-		mInspectors(&pInspectors)
-	{
-		mSandbox = core::layer::create(pContext.get_engine().get_factory());
-		mObject = mSandbox->add_object();
-		mObject.deserialize(
-			pContext.get_engine().get_asset_manager(),
-			pAsset->get_metadata());
-	}
-
-	virtual void on_gui() override
-	{
-		assert(mInspectors);
-		std::string name = mObject.get_name();
-		if (ImGui::InputText("Name", &name))
-			mObject.set_name(name);
-		if (ImGui::IsItemDeactivatedAfterEdit())
-			mark_asset_modified();
-
-		ImGui::Separator();
-
-		for (std::size_t i = 0; i < mObject.get_component_count(); i++)
-		{
-			core::component* comp = mObject.get_component_at(i);
-			ImGui::PushID(comp);
-
-			bool enabled = comp->is_enabled();
-			if (ImGui::Checkbox("##Enabled", &enabled))
-				comp->set_enabled(enabled);
-			if (ImGui::IsItemDeactivatedAfterEdit())
-				mark_asset_modified();
-
-			ImGui::SameLine();
-
-			if (ImGui::TreeNodeEx(comp->get_component_name().c_str(), ImGuiTreeNodeFlags_DefaultOpen))
-			{
-				mInspectors->on_gui(comp);
-				ImGui::TreePop();
-			}
-
-			ImGui::PopID();
-		}
-
-		ImGui::Separator();
-
-		if (ImGui::BeginCombo("##Add Component", "Add Component", ImGuiComboFlags_NoArrowButton))
-		{
-			if (ImGui::Selectable("Transform 2D"))
-				mObject.add_component<core::transform_component>();
-			ImGui::DescriptiveToolTip("Give your object space",
-				"This transform represents the position, rotation, and scale of this object in 2d space. Use with sprite and other 2d graphics for the best effect.");
-
-			if (ImGui::Selectable("Physics"))
-				mObject.add_component<physics::physics_component>();
-			ImGui::DescriptiveToolTip("Let's get physical",
-				"This component allows this object to interact with physics in your world.");
-
-			if (ImGui::Selectable("Box Collider"))
-				mObject.add_component<physics::box_collider_component>();
-			ImGui::DescriptiveToolTip("Give this object a collidable box",
-				"Works best with a physics component.");
-
-			if (ImGui::Selectable("Sprite"))
-				mObject.add_component<graphics::sprite_component>();
-			ImGui::QuickToolTip("Give this object a sprite to render");
-
-			if (ImGui::Selectable("Event State"))
-				mObject.add_component<scripting::event_state_component>();
-			ImGui::DescriptiveToolTip("Let's get interactive!",
-				"Start adding events to turn this stale component pasta into something spectacularly interactive!");
-			
-			if (ImGui::BeginMenu("Events"))
-			{
-				if (ImGui::Selectable("Create"))
-					mObject.add_component<scripting::event_components::on_create>();
-				ImGui::QuickToolTip("Do someting when this object is instantiated");
-
-				if (ImGui::Selectable("Update"))
-					mObject.add_component<scripting::event_components::on_update>();
-				ImGui::QuickToolTip("Do something every frame");
-
-				ImGui::EndMenu();
-			}
-
-			ImGui::EndCombo();
-		}
-	}
-
-private:
-	core::game_object mObject;
-	core::layer::uptr mSandbox;
-	component_inspector* mInspectors;
-};
 
 class sprite_editor :
 	public asset_editor
@@ -570,7 +469,6 @@ public:
 	}
 };
 
-
 class scene_editor :
 	public asset_editor
 {
@@ -621,12 +519,11 @@ public:
 		ImGui::BeginChild("Instances", ImVec2(0, 0), true);
 		if (mSelected_layer)
 		{
-			for (std::size_t i = 0; i < mSelected_layer->get_object_count(); i++)
+			for (auto obj : *mSelected_layer)
 			{
-				ImGui::PushID(i);
-				core::game_object obj = mSelected_layer->get_object(i);
-				if (ImGui::Selectable(obj.get_name().c_str(), obj.get_instance_id() == mSelected_object_id))
-					mSelected_object_id = obj.get_instance_id();
+				ImGui::PushID(obj.get_id());
+				if (ImGui::Selectable(obj.get_name().c_str(), obj.get_id() == mSelected_object_id))
+					mSelected_object_id = obj.get_id();
 				ImGui::PopID();
 			}
 		}
@@ -646,7 +543,7 @@ public:
 		ImGui::VerticalSplitter("ViewportInspectorSplitter", &viewport_width);
 		ImGui::SameLine();
 		ImGui::BeginChild("InspectorSidePanel", ImVec2(-viewport_width, 0));
-		if (mSelected_layer && mSelected_object_id.is_valid())
+		if (mSelected_layer && mSelected_object_id != core::invalid_id)
 		{
 			ImGui::TextUnformatted("Selected Object Settings");
 			auto obj = mSelected_layer->get_object(mSelected_object_id);
@@ -670,13 +567,13 @@ public:
 		auto layer = mScene.get_layer(0);
 		for (std::size_t i = 0; i < layer->get_object_count(); i++)
 		{
-			core::game_object obj = layer->get_object(i);
+			core::object obj = layer->get_object(i);
 			core::scene_resource::instance& inst = resource->instances.emplace_back();
 			inst.asset_id = obj.get_asset()->get_id();
-			inst.id = obj.get_instance_id();
+			inst.id = obj.get_id();
 			inst.name = obj.get_name();
-			if (auto transform = obj.get_component<core::transform_component>())
-				inst.transform = transform->get_transform();
+			if (auto transform = obj.get_component<math::transform>())
+				inst.transform = *transform;
 		}
 	}
 
@@ -755,8 +652,8 @@ public:
 					auto obj = new_instance(id);
 
 					// Set the transform to the position it was dropped at.
-					if (auto transform = obj.get_component<core::transform_component>())
-						transform->set_position(visual_editor::get_mouse_position());
+					if (auto transform = obj.get_component<math::transform>())
+						transform->position = visual_editor::get_mouse_position();
 				}
 				ImGui::EndDragDropTarget();
 			}
@@ -774,51 +671,43 @@ public:
 
 				if (show_collision)
 				{
-					auto& box_collider_container = layer->get_component_container<physics::box_collider_component>();
-					for (auto& i : box_collider_container)
+					for (auto& [id, comp, transform] :
+						layer->each<physics::box_collider_component, math::transform>())
 					{
-						auto transform = layer->get_object(i.get_object_id()).get_component<core::transform_component>();
-						if (!transform)
-							continue;
-						visual_editor::push_transform(transform->get_transform());
+						visual_editor::push_transform(transform);
 						math::transform box_transform;
-						box_transform.position = i.get_offset();
-						box_transform.rotation = i.get_rotation();
+						box_transform.position = comp.get_offset();
+						box_transform.rotation = comp.get_rotation();
 						visual_editor::push_transform(box_transform);
-						visual_editor::draw_rect(math::rect({ 0, 0 }, i.get_size()), { 0, 1, 0, 0.8f });
+						visual_editor::draw_rect(math::rect({ 0, 0 }, comp.get_size()), { 0, 1, 0, 0.8f });
 						visual_editor::pop_transform(2);
 					}
 				}
 
-				for (std::size_t i = 0; i < layer->get_object_count(); i++)
+				for (auto [id, transform] : layer->each<math::transform>())
 				{
-					auto obj = layer->get_object(i);
-					auto transform = obj.get_component<core::transform_component>();
-					if (!transform)
-						continue;
-
-					const bool is_object_selected = obj.get_instance_id() == mSelected_object_id;
+					const bool is_object_selected = id == mSelected_object_id;
 
 					math::aabb aabb;
-					if (create_aabb_from_object(obj, aabb))
+					if (create_aabb_from_object(layer->get_object(id), aabb))
 					{
 						if (is_object_selected)
 						{
-							visual_editor::box_edit box_edit(aabb, transform->get_transform());
+							visual_editor::box_edit box_edit(aabb, transform);
 							box_edit.resize(visual_editor::edit_type::transform);
 							box_edit.drag(visual_editor::edit_type::transform);
-							transform->set_transform(box_edit.get_transform());
+							transform = box_edit.get_transform();
 							if (box_edit.is_dragging())
 							{
 								mark_asset_modified();
 							}
 						}
 
-						visual_editor::push_transform(transform->get_transform());
+						visual_editor::push_transform(transform);
 						if (aabb.intersect(visual_editor::get_mouse_position()))
 						{
 							if (ImGui::IsItemClicked())
-								mSelected_object_id = obj.get_instance_id();
+								mSelected_object_id = id;
 							// TODO: Show info about this object instance
 							visual_editor::draw_rect(aabb, { 1, 1, 1, 1 });
 						}
@@ -828,7 +717,7 @@ public:
 					// Draw center point
 					if (is_object_selected && show_center_point)
 					{
-						visual_editor::draw_circle(transform->get_position(), 5, { 1, 1, 1, 0.6f }, 3.f);
+						visual_editor::draw_circle(transform.position, 5, { 1, 1, 1, 0.6f }, 3.f);
 					}
 				}
 			}
@@ -849,14 +738,14 @@ public:
 	}
 
 	// Generate a new instance from an object asset.
-	core::game_object new_instance(util::uuid pAsset)
+	core::object new_instance(util::uuid pAsset)
 	{
 		core::engine& engine = get_context().get_engine();
 		auto asset = engine.get_asset_manager().get_asset(pAsset);
 		auto object_resource = asset->get_resource<core::object_resource>();
 
 		// Generate the object
-		core::game_object obj = mSelected_layer->add_object();
+		core::object obj = mSelected_layer->add_object();
 		object_resource->generate_object(obj, get_asset_manager());
 		obj.set_asset(asset);
 
@@ -865,9 +754,9 @@ public:
 		return obj;
 	}
 
-	static bool create_aabb_from_object(core::game_object& pObj, math::aabb& pAABB)
+	static bool create_aabb_from_object(core::object& pObj, math::aabb& pAABB)
 	{
-		bool has_aabb = false;
+		/*bool has_aabb = false;
 		for (std::size_t comp_idx = 0; comp_idx < pObj.get_component_count(); comp_idx++)
 		{
 			auto comp = pObj.get_component_at(comp_idx);
@@ -881,13 +770,13 @@ public:
 				else
 					pAABB.merge(comp->get_local_aabb());
 			}
-		}
-		return has_aabb;
+		}*/
+		return false;//has_aabb;
 	}
 
 private:
 	core::layer* mSelected_layer = nullptr;
-	util::uuid mSelected_object_id;
+	core::object_id mSelected_object_id = core::invalid_id;
 	core::scene mScene;
 
 	core::scene_resource* mScene_resource = nullptr;
@@ -1521,7 +1410,7 @@ private:
 		renderer->set_pixel_size(0.01f);
 
 		auto obj = layer->add_object();
-		obj.add_component<core::transform_component>();
+		obj.add_component<math::transform>();
 		auto sprite = obj.add_component<graphics::sprite_component>();
 		sprite->set_texture(mEngine.get_asset_manager().get_asset("mytex.png"));
 		obj.add_component<scripting::event_state_component>();
@@ -1533,26 +1422,6 @@ private:
 	}
 
 private:
-	bool create_aabb_from_object(core::game_object& pObj, math::aabb& pAABB)
-	{
-		bool has_aabb = false;
-		for (std::size_t comp_idx = 0; comp_idx < pObj.get_component_count(); comp_idx++)
-		{
-			auto comp = pObj.get_component_at(comp_idx);
-			if (comp->has_aabb())
-			{
-				if (!has_aabb)
-				{
-					pAABB = comp->get_local_aabb();
-					has_aabb = true;
-				}
-				else
-					pAABB.merge(comp->get_local_aabb());
-			}
-		}
-		return has_aabb;
-	}
-
 	void show_settings()
 	{
 		if (ImGui::Begin(ICON_FA_COG " Settings"))
@@ -1644,8 +1513,6 @@ private:
 	asset_manager_window mAsset_manager_window{ mContext, mEngine.get_asset_manager() };
 	drop_import_handler mDrop_import_handler{ mEngine.get_asset_manager() };
 	game_viewport mGame_viewport{ mEngine };
-
-	component_inspector mInspectors;
 
 	bool mUpdate{ false };
 };

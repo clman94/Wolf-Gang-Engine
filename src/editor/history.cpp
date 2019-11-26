@@ -3,17 +3,17 @@
 namespace wge::editor
 {
 
-void history::add(command::ptr pCommand)
+void history::add(command::uptr&& pCommand)
 {
 	mRedo.clear();
-	mUndo.push_back(pCommand);
+	mUndo.emplace_back(std::forward<command::uptr>(pCommand));
 	on_change();
 }
 
-void history::execute(command::ptr pCommand)
+void history::execute(command::uptr&& pCommand)
 {
 	pCommand->execute();
-	add(pCommand);
+	add(std::forward<command::uptr>(pCommand));
 }
 
 bool history::can_undo() const noexcept

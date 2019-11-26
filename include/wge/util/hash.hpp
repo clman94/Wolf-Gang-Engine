@@ -13,7 +13,7 @@ typedef std::uint64_t hash64_t;
 // FNV1a implementation
 // Hashes an array of bytes.
 template <typename Iiter>
-constexpr hash32_t hash32(Iiter pBegin, Iiter pEnd)
+constexpr hash32_t hash32(Iiter pBegin, Iiter pEnd) noexcept
 {
 	constexpr hash32_t basis = 0x811C9DC5;
 	constexpr hash32_t prime = 0x01000193;
@@ -26,7 +26,7 @@ constexpr hash32_t hash32(Iiter pBegin, Iiter pEnd)
 	return h;
 }
 
-constexpr hash32_t hash32(std::string_view pString)
+constexpr hash32_t hash32(std::string_view pString) noexcept
 {
 	return hash32(pString.begin(), pString.end());
 }
@@ -34,7 +34,7 @@ constexpr hash32_t hash32(std::string_view pString)
 // FNV1a implementation
 // Hashes an array of bytes.
 template <typename Iiter>
-constexpr hash64_t hash64(Iiter pBegin, Iiter pEnd)
+constexpr hash64_t hash64(Iiter pBegin, Iiter pEnd) noexcept
 {
 	constexpr hash64_t basis = 0xcbf29ce484222325;
 	constexpr hash64_t prime = 0x100000001B3;
@@ -47,19 +47,19 @@ constexpr hash64_t hash64(Iiter pBegin, Iiter pEnd)
 	return h;
 }
 
-constexpr hash64_t hash64(std::string_view pString)
+constexpr hash64_t hash64(std::string_view pString) noexcept
 {
 	return hash64(pString.begin(), pString.end());
 }
 
-constexpr hash32_t combine(const hash32_t& pA, const hash32_t& pB)
+constexpr hash32_t combine(const hash32_t& pA, const hash32_t& pB) noexcept
 {
 	return pA ^ pB;
 }
 
-constexpr hash64_t combine(const hash64_t& pA, const hash64_t& pB)
+constexpr hash64_t combine(const hash64_t& pA, const hash64_t& pB) noexcept
 {
 	return pA ^ pB;
 }
 
-}
+} // namespace wge::util::hash
