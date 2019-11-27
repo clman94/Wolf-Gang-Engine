@@ -67,14 +67,12 @@ void object::destroy()
 {
 	assert_valid_reference();;
 	get_layer().remove_object(get_id());
-	reset();
 }
 
 void object::destroy(queue_destruction_flag)
 {
 	assert_valid_reference();
 	get_layer().remove_object(get_id(), queue_destruction);
-	reset();
 }
 
 layer& object::get_layer() const
@@ -109,7 +107,7 @@ object_id object::get_id() const
 
 bool object::operator==(const object& pObj) const noexcept
 {
-	return mInfo.is_valid() && pObj.mInfo.is_valid() && mInfo.get_object_id() == pObj.mInfo.get_object_id();
+	return mInfo.is_valid() && pObj.mInfo.is_valid() && get_id() == pObj.get_id();
 }
 
 void object::assert_valid_reference() const

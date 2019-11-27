@@ -72,12 +72,14 @@ public:
 	template <typename T>
 	bool remove_component()
 	{
+		assert_valid_reference();
 		return mLayer->remove_component<T>(mInfo.get_object_id());
 	}
 
 	template <typename T>
 	bool remove_component(queue_destruction_flag)
 	{
+		assert_valid_reference();
 		return mLayer->remove_component<T>(mInfo.get_object_id(), queue_destruction);
 	}
 
