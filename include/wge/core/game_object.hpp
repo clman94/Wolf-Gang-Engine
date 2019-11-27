@@ -10,6 +10,7 @@
 #include <wge/core/asset.hpp>
 #include <wge/core/component.hpp>
 #include <wge/core/object_id.hpp>
+#include <wge/core/destruction_queue.hpp>
 
 namespace wge::core
 {
@@ -21,26 +22,10 @@ struct object_info
 	// This will be null if this object isn't an instance of
 	// an asset.
 	asset::ptr source_asset;
-
-	struct registed_component
-	{
-		std::size_t hint;
-		component_type type;
-	};
-	std::vector<registed_component> mRegistered_components;
-
-	registed_component* get_component_info(const component_type& pType) noexcept
-	{
-		for (auto& i : mRegistered_components)
-			if (i.type == pType)
-				return &i;
-		return nullptr;
-	}
+	std::vector<component_type> components;
 };
 
 class layer;
-class component;
-class asset_manager;
 
 // Exception thrown when a object that references no real game object
 // attempts to access/modify that game object.
@@ -90,6 +75,12 @@ public:
 		return mLayer->remove_component<T>(mInfo.get_object_id());
 	}
 
+	template <typename T>
+	bool remove_component(queue_destruction_flag)
+	{
+		return mLayer->remove_component<T>(mInfo.get_object_id(), queue_destruction);
+	}
+
 	// Get the name of this object.
 	const std::string& get_name() const;
 	// Set the name of this object. Use this to give meaningful identifiers
@@ -99,8 +90,9 @@ public:
 	// Remove this object from the layer.
 	// It is recommended that you discard any object objects because this
 	// function will remove the data they are pointing to, thus leaving
-	// them in an invalid state. TODO: Add some form of tracking.
+	// them in an invalid state.
 	void destroy();
+	void destroy(queue_destruction_flag);
 
 	// Get a reference to the layer this object belongs to.
 	// To actually move an object to a new layer, you will need to

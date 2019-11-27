@@ -1,6 +1,7 @@
 #pragma once
 
 #include <wge/util/uuid.hpp>
+#include <wge/logging/log.hpp>
 #include <queue>
 #include <cstddef>
 
@@ -13,7 +14,7 @@ constexpr object_id invalid_id = 0;
 struct object_id_generator
 {
 public:
-	static inline object_id get()
+	object_id get()
 	{
 		if (!available_ids.empty())
 		{
@@ -24,19 +25,25 @@ public:
 		return ++counter;
 	}
 
-	static inline void reclaim(object_id pId)
+	void reclaim(object_id pId)
 	{
-		available_ids.push(pId);
-		while (!available_ids.empty() && available_ids.top() == counter)
+		assert(pId != invalid_id);
+		if (pId <= counter)
 		{
-			--counter;
-			available_ids.pop();
+			available_ids.push(pId);
+			while (!available_ids.empty() && available_ids.top() == counter)
+			{
+				--counter;
+				available_ids.pop();
+			}
 		}
 	}
 
 private:
-	static inline std::priority_queue<object_id> available_ids;
-	static inline object_id counter = 0;
+	std::priority_queue<object_id> available_ids;
+	object_id counter = 0;
 };
+
+object_id_generator& get_global_generator();
 
 } // namespace wge::core

@@ -109,7 +109,7 @@ public:
 	// Clear all global variables and then execute all global scripts.
 	void execute_global_scripts(core::asset_manager& mAsset_manager);
 	// Create a new environment for individual objects.
-	sol::environment create_object_environment(const core::object& pObj);
+	sol::environment create_object_environment(core::object pObj);
 	// Update the delta. Do this before each layer.
 	void update_delta(float pSeconds);
 

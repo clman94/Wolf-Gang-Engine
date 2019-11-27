@@ -565,9 +565,8 @@ public:
 		resource->instances.clear();
 
 		auto layer = mScene.get_layer(0);
-		for (std::size_t i = 0; i < layer->get_object_count(); i++)
+		for (auto obj : *layer)
 		{
-			core::object obj = layer->get_object(i);
 			core::scene_resource::instance& inst = resource->instances.emplace_back();
 			inst.asset_id = obj.get_asset()->get_id();
 			inst.id = obj.get_id();
@@ -1400,23 +1399,6 @@ private:
 	{
 		mEngine.close_game();
 		mEngine.load_game(pPath);
-
-		auto layer = mEngine.get_scene().add_layer();
-		layer->set_name("Layer1");
-		layer->add_system<graphics::renderer>();
-		layer->add_system<scripting::script_system>();
-
-		auto renderer = layer->get_system<graphics::renderer>();
-		renderer->set_pixel_size(0.01f);
-
-		auto obj = layer->add_object();
-		obj.add_component<math::transform>();
-		auto sprite = obj.add_component<graphics::sprite_component>();
-		sprite->set_texture(mEngine.get_asset_manager().get_asset("mytex.png"));
-		obj.add_component<scripting::event_state_component>();
-
-		obj.add_component<scripting::event_components::on_create>();
-		obj.add_component<scripting::event_components::on_update>();
 
 		mEngine.get_script_engine().execute_global_scripts(mEngine.get_asset_manager());
 	}

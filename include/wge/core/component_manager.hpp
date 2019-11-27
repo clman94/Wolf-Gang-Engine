@@ -3,7 +3,7 @@
 #include <wge/core/component_storage.hpp>
 #include <wge/core/component_type.hpp>
 #include <wge/util/ptr.hpp>
-#include <wge/core/game_object.hpp>
+#include <wge/core/object_id.hpp>
 
 #include <map>
 

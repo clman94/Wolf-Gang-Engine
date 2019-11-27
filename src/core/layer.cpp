@@ -55,14 +55,16 @@ const std::string& layer::get_name() const noexcept
 
 object layer::add_object()
 {
-	object_id id = object_id_generator::get();
+	object_id id = get_global_generator().get();
+	if (mComponent_manager.get_storage<object_info>().has_component(id))
+		log::warning() << "Object with id " << id << " already exists." << log::endm;
 	mComponent_manager.add_component<object_info>(id);
 	return get_object(id);
 }
 
 object layer::add_object(const std::string& pName)
 {
-	object_id id = object_id_generator::get();
+	object_id id = get_global_generator().get();
 	auto& info = mComponent_manager.add_component<object_info>(id);
 	info.name = pName;
 	return get_object(id);
@@ -70,12 +72,19 @@ object layer::add_object(const std::string& pName)
 
 void layer::remove_object(const object_id& pObject_id)
 {
-	object_id_generator::reclaim(pObject_id);
+	get_global_generator().reclaim(pObject_id);
 	mComponent_manager.remove_object(pObject_id);
+}
+
+void layer::remove_object(const object_id& pObject_id, queue_destruction_flag)
+{
+	mDestruction_queue.push_object(pObject_id);
 }
 
 void layer::remove_all_objects()
 {
+	for (auto i : *this)
+		get_global_generator().reclaim(i.get_id());
 	mComponent_manager.clear();
 }
 
@@ -132,7 +141,7 @@ void layer::clear()
 	mSystems.clear();
 
 	for (auto i : *this)
-		object_id_generator::reclaim(i.get_id());
+		get_global_generator().reclaim(i.get_id());
 	mComponent_manager.clear();
 }
 

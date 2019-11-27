@@ -70,14 +70,14 @@ public:
 
 		iterator& operator--() noexcept
 		{
-			next();
+			previous();
 			return *this;
 		}
 
 		iterator operator--(int) noexcept
 		{
 			iterator temp = *this;
-			next();
+			previous();
 			return temp;
 		}
 
@@ -109,7 +109,7 @@ public:
 
 	bool has_value(key pKey) const noexcept
 	{
-		if (pKey < min || mLookup.empty())
+		if (pKey < mMinimum || mLookup.empty())
 			return false;
 		std::size_t offset = get_lookup_index(pKey);
 		if (offset >= mLookup.size())
@@ -119,15 +119,12 @@ public:
 
 	T* get(key pKey)
 	{
-		if (pKey < min || mLookup.empty())
+		if (!has_value(pKey))
 			return nullptr;
 
-		std::size_t offset = get_lookup_index(pKey);
-		if (offset >= mLookup.size())
-			return nullptr;
-
+		auto offset = get_lookup_index(pKey);
 		auto index = mLookup[offset];
-		return index ? &mValues[index.value()] : nullptr;
+		return &mValues[index.value()];
 	}
 
 	auto at(std::size_t pIndex)
@@ -138,21 +135,26 @@ public:
 	T& insert(key pKey)
 	{
 		// Expand the lookup to the left to accommodate the new key.
-		if (pKey < min)
+		if (pKey < mMinimum)
 		{
-			auto difference = min - pKey;
+			auto difference = mMinimum - pKey;
 			mLookup.resize(mLookup.size() + difference);
 			std::move_backward(mLookup.begin(),
 				mLookup.end() - difference, mLookup.end());
-			min = pKey;
+			mMinimum = pKey;
 		}
 		// Set the minimum to the first key.
 		else if (mLookup.empty())
-			min = pKey;
+			mMinimum = pKey;
 		std::size_t offset = get_lookup_index(pKey);
 		// Expand the lookup to the right if needed.
 		if (offset >= mLookup.size())
 			mLookup.resize(offset + 1);
+
+		// Already exists?
+		else if (mLookup[offset].has_value())
+			return mValues[mLookup[offset].value()];
+
 		// Insert the new information.
 		mLookup[offset] = std::make_optional(mValues.size());
 		mKeys.push_back(pKey);
@@ -172,15 +174,15 @@ public:
 		if (!has_value(pKey))
 			return;
 		std::size_t offset = get_lookup_index(pKey);
-		if (offset < mLookup.size() - 1)
+		std::size_t index = mLookup[offset].value();
+		if (index < size() - 1)
 		{
 			// Constant-time deletion by swapping the item with
 			// the back and then popping the back.
-			std::size_t index = mLookup[offset].value();
 			std::swap(mKeys[index], mKeys.back());
 			std::swap(mValues[index], mValues.back());
 			// Update the lookup for the item we swapped from the back.
-			mLookup[get_lookup_index(mKeys[index])] = index;
+			mLookup[get_lookup_index(mKeys[index])] = std::make_optional(index);
 		}
 		mKeys.pop_back();
 		mValues.pop_back();
@@ -196,7 +198,7 @@ public:
 		if (first != mLookup.end())
 		{
 			std::size_t amount = std::distance(mLookup.begin(), first);
-			min = first->value();
+			mMinimum = first->value();
 			std::move(first, mLookup.end(), mLookup.begin());
 			mLookup.resize(mLookup.size() - amount);
 		}
@@ -212,7 +214,7 @@ public:
 
 	void clear()
 	{
-		min = 0;
+		mMinimum = 0;
 		mLookup.clear();
 		mKeys.clear();
 		mValues.clear();
@@ -242,10 +244,10 @@ private:
 	// Get the index of the item in the lookup table from a key.
 	std::size_t get_lookup_index(key pKey) const noexcept
 	{
-		return pKey - min;
+		return pKey - mMinimum;
 	}
 
-	std::size_t min = 0;
+	std::size_t mMinimum = 0;
 	// Gives us O(1) lookup of values.
 	// Because object id's are able to be reused,
 	// they are usually reasonably contiguous. So,

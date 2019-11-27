@@ -51,7 +51,7 @@ void lua_engine::execute_global_scripts(core::asset_manager& pAsset_manager)
 	});
 }
 
-sol::environment lua_engine::create_object_environment(const core::object& pObj)
+sol::environment lua_engine::create_object_environment(core::object pObj)
 {
 	sol::environment env(state, sol::create, global_environment);
 
@@ -72,6 +72,11 @@ sol::environment lua_engine::create_object_environment(const core::object& pObj)
 	env["move"] = [get_position, set_position](const math::vec2& pDirection)
 	{
 		set_position(get_position() + pDirection);
+	};
+
+	env["destroy"] = [pObj]()
+	{
+		core::object{ pObj }.destroy(core::queue_destruction);
 	};
 
 	env["this_layer"] = std::ref(pObj.get_layer());
@@ -276,6 +281,7 @@ void script_system::update(float pDelta)
 			run_script(on_create.get_source(), state.environment);
 		}
 	}
+	get_layer().destroy_queued_components();
 
 	// Event: Update
 	for (auto& [id, on_update, state] :
@@ -283,6 +289,7 @@ void script_system::update(float pDelta)
 	{
 		run_script(on_update.get_source(), state.environment);
 	}
+	get_layer().destroy_queued_components();
 }
 
 std::string make_valid_identifier(std::string_view pStr, const std::string_view pDefault)

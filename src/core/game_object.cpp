@@ -20,13 +20,14 @@ object::object(layer& pLayer, const handle<object_info>& pInfo) noexcept :
 bool object::has_component(const component_type& pType) const
 {
 	assert_valid_reference();
-	return mInfo->get_component_info(pType) != nullptr;
+	auto& components = mInfo->components;
+	return std::find(components.begin(), components.end(), pType) != components.end();
 }
 
 std::size_t object::get_component_count() const
 {
 	assert_valid_reference();
-	return mInfo->mRegistered_components.size();
+	return mInfo->components.size();
 }
 
 void object::move_component(std::size_t pFrom, std::size_t pTo)
@@ -36,14 +37,14 @@ void object::move_component(std::size_t pFrom, std::size_t pTo)
 		return;
 	if (pFrom < pTo)
 	{
-		auto& components = mInfo->mRegistered_components;
+		auto& components = mInfo->components;
 		auto iter_begin = components.begin() + pFrom;
 		auto iter_end = components.begin() + pTo + 1;
 		std::rotate(iter_begin, iter_begin + 1, iter_end);
 	}
 	else
 	{
-		auto& components = mInfo->mRegistered_components;
+		auto& components = mInfo->components;
 		auto iter_begin = components.rbegin() + pFrom;
 		auto iter_end = components.rbegin() + pTo + 1;
 		std::rotate(iter_begin, iter_begin + 1, iter_end);
@@ -65,7 +66,14 @@ void object::set_name(const std::string & pName)
 void object::destroy()
 {
 	assert_valid_reference();;
-	get_layer().remove_object(mInfo.get_object_id());
+	get_layer().remove_object(get_id());
+	reset();
+}
+
+void object::destroy(queue_destruction_flag)
+{
+	assert_valid_reference();
+	get_layer().remove_object(get_id(), queue_destruction);
 	reset();
 }
 

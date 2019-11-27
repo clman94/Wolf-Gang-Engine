@@ -5,6 +5,7 @@
 #include <wge/core/component_manager.hpp>
 #include <wge/core/component_type.hpp>
 #include <wge/core/factory.hpp>
+#include <wge/core/destruction_queue.hpp>
 
 #include <string>
 #include <string_view>
@@ -93,6 +94,11 @@ public:
 
 	layer(const factory&) noexcept;
 
+	~layer()
+	{
+		clear();
+	}
+
 	layer(const layer&) = delete;
 	layer& operator=(const layer&) = delete;
 
@@ -131,6 +137,7 @@ public:
 	}
 	// Remove a game object
 	void remove_object(const object_id& pObject_id);
+	void remove_object(const object_id& pObject_id, queue_destruction_flag);
 	void remove_all_objects();
 	
 	template <typename T>
@@ -147,15 +154,21 @@ public:
 	T* add_component(const object_id& pObject_id);
 
 	template <typename T>
-	T* get_component(const object_id& pObject_id)
+	T* get_component(object_id pObject_id)
 	{
 		return get_storage<T>().get(pObject_id);
 	}
 
 	template <typename T>
-	bool remove_component(const object_id& pObject_id)
+	bool remove_component(object_id pObject_id)
 	{
-		get_storage<T>().remove(pObject_id);
+		get_storage<T>().destroy(pObject_id);
+	}
+
+	template <typename T>
+	bool remove_component(object_id pObject_id, queue_destruction_flag)
+	{
+		mDestruction_queue.push_component(pObject_id, component_type::from<T>());
 	}
 
 	// Get the container associated to a specific type of component.
@@ -193,8 +206,8 @@ public:
 	//    // You can also get the current game object by adding a `game_object` parameter at the start.
 	//    layer.for_each([&](object pObject, sprite_component& pTarget) {});
 	//
-	//template <typename T>
-	//void for_each(T&& pCallable);
+	template <typename T>
+	void for_each(T&& pCallable);
 
 	// Set whether or not this layer will recieve updates.
 	// Note: This does not affect the update methods in this class
@@ -214,19 +227,21 @@ public:
 
 	void clear();
 
-private:
-	/*template <typename Tcomponent, typename...Tdependencies>
-	void for_each_impl(const std::function<void(object, Tcomponent&, Tdependencies&...)>& pCallable);
-
-	template <typename Tcomponent, typename...Tdependencies>
-	void for_each_impl(const std::function<void(Tcomponent&, Tdependencies&...)>& pCallable);*/
+	void destroy_queued_components()
+	{
+		mDestruction_queue.apply(mComponent_manager);
+	}
 
 private:
+	template <typename T, typename...Tdeps>
+	void for_each_impl(const std::function<void(object_id, T, Tdeps...)>& pCallable);
+
 	const factory* mFactory;
 	float mTime_scale{ 1 };
 	bool mRecieve_update{ true };
 	std::string mName;
 	std::vector<std::unique_ptr<system>> mSystems;
+	destruction_queue mDestruction_queue;
 	component_manager mComponent_manager;
 };
 
@@ -380,49 +395,17 @@ inline auto layer::each()
 	return filter<T, Tdeps...>{ get_storage<T>(), get_storage<Tdeps>()... };
 }
 
-/*
-template<typename Tcomponent, typename...Tdependencies>
-inline void layer::for_each_impl(const std::function<void(object, Tcomponent&, Tdependencies&...)>& pCallable)
+template <typename T, typename...Tdeps>
+inline void layer::for_each_impl(const std::function<void(object_id, T, Tdeps...)>& pCallable)
 {
-	auto wrapper = [&](Tcomponent& pComp, Tdependencies&...pDep)
-	{
-		pCallable(get_object(pComp.get_object_id()), pComp, pDep...);
-	};
-	for_each(std::function(std::move(wrapper)));
-}
-
-template<typename Tcomponent, typename...Tdependencies>
-inline void layer::for_each_impl(const std::function<void(Tcomponent&, Tdependencies&...)>& pCallable)
-{
-	for (auto& i : mComponent_manager.get_storage<Tcomponent>())
-	{
-		// Skip unused or disabled components
-		if (i.is_unused() || !i.is_enabled())
-			continue;
-
-		if constexpr (sizeof...(Tdependencies) == 0)
-		{
-			// No dependencies
-			pCallable(i);
-		}
-		else
-		{
-			// Retrieve dependencies
-			object obj = get_object(i.get_object_id());
-			std::tuple<Tdependencies*...> dependency_pointers;
-			if (obj.unwrap_components(std::get<Tdependencies*>(dependency_pointers)...))
-			{
-				pCallable(i, *std::get<Tdependencies*>(dependency_pointers)...);
-			}
-		}
-	}
+	for (auto i : each<T, Tdeps...>())
+		std::apply(pCallable, i);
 }
 
 template<typename T>
 inline void layer::for_each(T&& pCallable)
 {
-	// Just for simplicity, this will be using std::function to deduce the arguments for us.
-	for_each_impl(std::function(std::forward<T>(pCallable)));
-}*/
+	for_each(std::function{ pCallable });
+}
 
 } // namespace wge::core
