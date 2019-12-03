@@ -28,6 +28,16 @@ public:
 		return mIndex < pR.mIndex;
 	}
 
+	constexpr bool operator==(const family& pR) const noexcept
+	{
+		return mIndex == pR.mIndex;
+	}
+
+	constexpr bool operator!=(const family& pR) const noexcept
+	{
+		return mIndex != pR.mIndex;
+	}
+
 	constexpr bool operator<=(const family& pR) const noexcept
 	{
 		return mIndex <= pR.mIndex;
@@ -43,21 +53,10 @@ public:
 		return mIndex >= pR.mIndex;
 	}
 
-	constexpr bool operator==(const family& pR) const noexcept
-	{
-		return mIndex == pR.mIndex;
-	}
-
-	constexpr bool operator!=(const family& pR) const noexcept
-	{
-		return mIndex != pR.mIndex;
-	}
-
 private:
 	std::size_t mIndex = 0;
 };
 
-// TODO: Fully implement.
 using bucket = std::size_t;
 constexpr inline bucket default_bucket = 0;
 
@@ -71,14 +70,9 @@ public:
 	{}
 
 	template <typename T>
-	constexpr static component_type from(bucket pBucket = default_bucket) noexcept
+	static constexpr component_type from(bucket pBucket = default_bucket) noexcept
 	{
 		return component_type{ family::from<T>(), pBucket };
-	}
-
-	constexpr bool operator<(const component_type& pR) const noexcept
-	{
-		return std::pair(mFamily, mBucket) < std::pair(pR.mFamily, pR.mBucket);
 	}
 
 	constexpr bool operator==(const component_type& pR) const noexcept
@@ -89,6 +83,26 @@ public:
 	constexpr bool operator!=(const component_type& pR) const noexcept
 	{
 		return !operator==(pR);
+	}
+
+	constexpr bool operator<(const component_type& pR) const noexcept
+	{
+		return mFamily < pR.mFamily || (mFamily == pR.mFamily && mBucket < pR.mBucket);
+	}
+
+	constexpr bool operator<=(const component_type& pR) const noexcept
+	{
+		return mFamily <= pR.mFamily || (mFamily == pR.mFamily && mBucket <= pR.mBucket);
+	}
+
+	constexpr bool operator>(const component_type& pR) const noexcept
+	{
+		return mFamily > pR.mFamily || (mFamily == pR.mFamily && mBucket > pR.mBucket);
+	}
+
+	constexpr bool operator>=(const component_type& pR) const noexcept
+	{
+		return mFamily >= pR.mFamily || (mFamily == pR.mFamily && mBucket >= pR.mBucket);
 	}
 
 private:

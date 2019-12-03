@@ -5,12 +5,23 @@ namespace wge::util
 
 // Converts a value, raw pointer, or reference into an object
 // accessable only through the -> operator.
+// References lvalues and copies rvalues and pointers.
 template <typename T>
 class ptr_adaptor
 {
 public:
 	constexpr ptr_adaptor(T&& pValue) :
 		value(pValue){}
+
+	constexpr T& operator*() noexcept
+	{
+		return value;
+	}
+
+	constexpr const T& operator*() const noexcept
+	{
+		return value;
+	}
 
 	constexpr T* operator->() noexcept
     {
@@ -33,6 +44,11 @@ public:
 	constexpr ptr_adaptor(T* pValue) noexcept :
 		value(pValue) {}
 
+	constexpr T& operator*() const noexcept
+	{
+		return *value;
+	}
+
 	constexpr T* operator->() const noexcept
     {
         return value;
@@ -48,6 +64,11 @@ class ptr_adaptor<T&>
 public:
 	constexpr ptr_adaptor(T& pValue) noexcept :
 		value(&pValue){}
+
+	constexpr T& operator*() const noexcept
+	{
+		return *value;
+	}
 
 	constexpr T* operator->() const noexcept
     {

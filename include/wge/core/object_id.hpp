@@ -19,7 +19,10 @@ public:
 		if (!available_ids.empty())
 		{
 			object_id temp = available_ids.top();
-			available_ids.pop();
+			do {
+				available_ids.pop();
+				// Clean out the duplicates. If needed.
+			} while (!available_ids.empty() && available_ids.top() == temp);
 			return temp;
 		}
 		return ++counter;
@@ -31,9 +34,13 @@ public:
 		if (pId <= counter)
 		{
 			available_ids.push(pId);
-			while (!available_ids.empty() && available_ids.top() == counter)
+			// Unwind the queue.
+			while (!available_ids.empty() && available_ids.top() >= counter)
 			{
-				--counter;
+				// Duplicates would cause the counter to decrement more than it should.
+				// This safeguards against that.
+				if (available_ids.top() == counter)
+					--counter;
 				available_ids.pop();
 			}
 		}

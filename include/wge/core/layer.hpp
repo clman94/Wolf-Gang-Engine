@@ -20,7 +20,7 @@ namespace wge::core
 // with its own set of systems acting upon the components
 // those objects.
 // In short, this is where all the ECS goodies happen.
-class layer
+class layer final
 {
 public:
 	class iterator
@@ -140,6 +140,10 @@ public:
 	void remove_object(const object_id& pObject_id, queue_destruction_flag);
 	void remove_all_objects();
 	
+	// Pointers to components can expire. If a reference to
+	// a component is required, use this function to create a
+	// handle that won't expire until the component it points to
+	// is destroyed.
 	template <typename T>
 	auto make_handle(object_id pId)
 	{
@@ -156,13 +160,13 @@ public:
 	template <typename T>
 	T* get_component(object_id pObject_id)
 	{
-		return get_storage<T>().get(pObject_id);
+		return mComponent_manager.get_component<T>(pObject_id);
 	}
 
 	template <typename T>
 	bool remove_component(object_id pObject_id)
 	{
-		get_storage<T>().destroy(pObject_id);
+		mComponent_manager.remove_component<T>(pObject_id);
 	}
 
 	template <typename T>
@@ -326,10 +330,10 @@ public:
 			return true;
 		}
 
-		mutable std::tuple<Tdeps *...> mDeps;
+		mutable std::tuple<Tdeps*...> mDeps;
 		storage_iterator mIter;
 		storage_iterator mEnd;
-		std::tuple<component_storage<Tdeps> *...> mDeps_storage;
+		std::tuple<component_storage<Tdeps>*...> mDeps_storage;
 	};
 
 	explicit filter(component_storage<T>& pContainer,
@@ -389,7 +393,7 @@ inline const component_storage<T>& layer::get_storage() const
 	return mComponent_manager.get_storage<T>();
 }
 
-template<typename T, typename ...Tdeps>
+template<typename T, typename...Tdeps>
 inline auto layer::each()
 {
 	return filter<T, Tdeps...>{ get_storage<T>(), get_storage<Tdeps>()... };

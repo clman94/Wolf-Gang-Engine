@@ -26,8 +26,8 @@ public:
 	void apply(component_manager& pComponent_manager)
 	{
 		// Remove all the components.
-		for (auto& i : mComponents_queue)
-			pComponent_manager.remove_component(i.second, i.first);
+		for (auto[id, type] : mComponents_queue)
+			pComponent_manager.remove_component(type, id);
 		mComponents_queue.clear();
 
 		// Remove all the objects.
@@ -39,6 +39,17 @@ public:
 		mObjects_queue.clear();
 	}
 
+	bool empty() const noexcept
+	{
+		return mObjects_queue.empty() || mComponents_queue.empty();
+	}
+
+	void clear()
+	{
+		mObjects_queue.clear();
+		mComponents_queue.clear();
+	}
+
 private:
 	std::vector<object_id> mObjects_queue;
 	std::vector<component_entry> mComponents_queue;
@@ -46,4 +57,4 @@ private:
 
 constexpr struct queue_destruction_flag {} queue_destruction;
 
-}
+} // namespace wge::core

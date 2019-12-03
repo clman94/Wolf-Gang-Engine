@@ -11,7 +11,7 @@ class strongly_typed_id
 {
 public:
 	constexpr strongly_typed_id() noexcept = default;
-	constexpr strongly_typed_id(const Tvalue& pVal) noexcept :
+	explicit constexpr strongly_typed_id(const Tvalue& pVal) noexcept :
 		mValue(pVal)
 	{}
 

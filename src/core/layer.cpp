@@ -1,8 +1,5 @@
 
-#include <wge/core/engine.hpp>
 #include <wge/core/layer.hpp>
-#include <wge/core/scene.hpp>
-#include <wge/util/uuid_rerouter.hpp>
 
 namespace wge::core
 {
@@ -140,9 +137,7 @@ void layer::clear()
 	mName.clear();
 	mSystems.clear();
 
-	for (auto i : *this)
-		get_global_generator().reclaim(i.get_id());
-	mComponent_manager.clear();
+	remove_all_objects();
 }
 
 } // namespace wge::core

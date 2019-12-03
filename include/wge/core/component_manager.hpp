@@ -15,9 +15,15 @@ class component_manager
 {
 public:
 	template <typename T>
-	T& add_component(const object_id& pObject)
+	T& add_component(const object_id& pObject, bucket pBucket = default_bucket)
 	{
-		return get_storage<T>().add(pObject);
+		return get_storage<T>(pBucket).add(pObject);
+	}
+
+	template <typename T>
+	void remove_component(const object_id& pObject, bucket pBucket = default_bucket)
+	{
+		remove_component(component_type::from<T>(pBucket), pObject);
 	}
 
 	void remove_component(const component_type& pType, const object_id& pObject)
@@ -30,7 +36,7 @@ public:
 	template <typename T>
 	T* get_component(const object_id& pObject, bucket pBucket = default_bucket)
 	{
-		return get_storage<T>().get(pObject);
+		return get_storage<T>(pBucket).get(pObject);
 	}
 
 	template <typename T>
@@ -44,7 +50,6 @@ public:
 	{
 		return get_container_impl<T>(pBucket);
 	}
-
 
 	component_storage_base* get_storage(const component_type& pType)
 	{

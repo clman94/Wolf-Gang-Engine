@@ -65,7 +65,7 @@ void object::set_name(const std::string & pName)
 
 void object::destroy()
 {
-	assert_valid_reference();;
+	assert_valid_reference();
 	get_layer().remove_object(get_id());
 }
 

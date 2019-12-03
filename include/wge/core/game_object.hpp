@@ -42,7 +42,7 @@ public:
 // in a layer. This class acts as a handle
 // to an object in a layer and contains only
 // pointers.
-class object
+class object final
 {
 public:
 	object() noexcept;

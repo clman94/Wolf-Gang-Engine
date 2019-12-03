@@ -1,19 +1,15 @@
 #pragma once
 
-#include <string>
-#include <array>
-
-#include <wge/math/aabb.hpp>
-#include <wge/core/serialize_type.hpp>
-#include <wge/core/component_type.hpp>
+#include <wge/core/object_id.hpp>
 #include <wge/core/component_storage.hpp>
-#include <wge/util/uuid.hpp>
-#include <wge/util/json_helpers.hpp>
-#include <wge/core/asset_manager.hpp>
+#include <wge/util/ptr_adaptor.hpp>
 
 namespace wge::core
 {
 
+// A lightweight handle to a component.
+// A handle to a component won't expire until
+// the component it points to is destroyed.
 template <typename T>
 class handle
 {
@@ -37,16 +33,20 @@ public:
 		return mStorage != nullptr && mStorage->has_component(mId);
 	}
 
-	T* operator->() const noexcept
+	T& get() const noexcept
 	{
 		assert(is_valid());
-		return mStorage->get(mId);
+		return *mStorage->get(mId);
+	}
+
+	auto operator->() const noexcept
+	{
+		return util::ptr_adaptor{ get() };
 	}
 
 	T& operator*() const noexcept
 	{
-		assert(is_valid());
-		return mStorage->get(mId);
+		return get();
 	}
 
 	void reset() noexcept
@@ -56,7 +56,7 @@ public:
 	}
 
 private:
-	object_id mId;
+	object_id mId = invalid_id;
 	component_storage<T>* mStorage = nullptr;
 };
 

@@ -3,6 +3,7 @@
 #include <Box2D/Dynamics/b2World.h>
 #include <wge/core/object_resource.hpp>
 #include <wge/math/transform.hpp>
+#include <wge/math/rect.hpp>
 
 namespace wge::scripting
 {

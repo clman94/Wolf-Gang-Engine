@@ -896,8 +896,8 @@ class eventful_sprite_editor :
 {
 private:
 	static constexpr std::array<const char*, 2> event_display_name = {
-		ICON_FA_PENCIL " Create",
-		ICON_FA_STEP_FORWARD " Update"
+		ICON_FA_PENCIL u8" Create",
+		ICON_FA_STEP_FORWARD u8" Update"
 	};
 
 public:
