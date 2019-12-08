@@ -36,9 +36,9 @@ int image::get_channel_count() const noexcept
 	return mChannel_count;
 }
 
-const unsigned char* image::get_raw() const noexcept
+util::span<const unsigned char> image::get_raw() const noexcept
 {
-	return mData.data();
+	return mData;
 }
 
 } // namespace wge::graphics

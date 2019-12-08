@@ -2,6 +2,7 @@
 
 #include <wge/math/vector.hpp>
 #include <wge/graphics/color.hpp>
+#include <wge/util/span.hpp>
 
 #include <string_view>
 #include <vector>
@@ -38,6 +39,9 @@ public:
 
 	color get_pixel(std::size_t x, std::size_t y) const
 	{
+		assert(x < mWidth);
+		assert(y < mHeight);
+		assert(mChannel_count == 4);
 		return color{
 			static_cast<float>(mData.at((x + y * mWidth) * mChannel_count)) / 255.f,
 			static_cast<float>(mData.at((x + y * mWidth + 1) * mChannel_count)) / 255.f,
@@ -46,12 +50,7 @@ public:
 		};
 	}
 
-	image sub_image(std::size_t x, std::size_t y, std::size_t w, std::size_t h)
-	{
-
-	}
-
-	const unsigned char* get_raw() const noexcept;
+	util::span<const unsigned char> get_raw() const noexcept;
 
 private:
 	int mWidth{ 0 }, mHeight{ 0 }, mChannel_count{ 0 };
