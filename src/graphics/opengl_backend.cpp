@@ -101,24 +101,24 @@ public:
 
 		glBindVertexArray(mVAO_id);
 
-		// Populate the vertex buffer
+		// Populate the vertex buffer.
 		glBindBuffer(GL_ARRAY_BUFFER, mVertex_buffer);
 		glBufferData(GL_ARRAY_BUFFER, pBatch.vertices.size() * sizeof(vertex_2d), &pBatch.vertices[0], GL_STATIC_DRAW);
 
-		// Populate the element buffer with index data
+		// Populate the element buffer with index data.
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mElement_buffer);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, pBatch.indexes.size() * sizeof(unsigned int), &pBatch.indexes[0], GL_STATIC_DRAW);
 
 		GLuint current_shader = pBatch.rendertexture ? mShader_texture : mShader_color;
 		glUseProgram(current_shader);
 
-		// Set the matrix uniforms
+		// Set the matrix uniforms.
 		GLuint proj_id = glGetUniformLocation(current_shader, "projection");
 		glUniformMatrix4fv(proj_id, 1, GL_FALSE, &pProjection.m[0][0]);
 
 		if (pBatch.rendertexture)
 		{
-			// Setup the texture
+			// Setup the texture.
 			glActiveTexture(GL_TEXTURE0);
 			auto impl = std::dynamic_pointer_cast<opengl_texture_impl>(pBatch.rendertexture->get_implementation());
 			glBindTexture(GL_TEXTURE_2D, impl->get_gl_texture());
@@ -126,25 +126,25 @@ public:
 			glUniform1i(tex_id, 0);
 		}
 
-		// Setup the 2d position attribute
+		// Setup the 2d position attribute.
 		glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, mVertex_buffer);
 		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_2d), (void*)0);
 
 		if (pBatch.rendertexture)
 		{
-			// Setup the UV attribute
+			// Setup the UV attribute.
 			glEnableVertexAttribArray(1);
 			glBindBuffer(GL_ARRAY_BUFFER, mVertex_buffer);
 			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_2d), (void*)sizeof(math::vec2));
 		}
 
-		// Setup the color attribute
+		// Setup the color attribute.
 		glEnableVertexAttribArray(2);
 		glBindBuffer(GL_ARRAY_BUFFER, mVertex_buffer);
 		glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(vertex_2d), (void*)(sizeof(math::vec2) * 2));
 
-		// Bind the element buffer
+		// Bind the element buffer.
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mElement_buffer);
 
 		glDrawElements(

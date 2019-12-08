@@ -36,7 +36,7 @@ json animation::serialize() const
 void texture::set_implementation(const texture_impl::ptr& pImpl) noexcept
 {
 	mImpl = pImpl;
-	if (mImage.is_valid() && mImpl)
+	if (!mImage.empty() && mImpl)
 	{
 		// Recreate the texture with the new implementation
 		mImpl->create_from_image(mImage);

@@ -7,6 +7,7 @@
 #include <wge/util/uuid.hpp>
 #include <wge/util/ipair.hpp>
 #include <wge/util/ptr_adaptor.hpp>
+#include <wge/util/span.hpp>
 
 namespace wge::core
 {
@@ -220,9 +221,14 @@ public:
 		mValues.clear();
 	}
 
+	bool empty() const noexcept
+	{
+		return mKeys.empty() // mKeys and mValues are interchangable.
+	}
+
 	std::size_t size() const noexcept
 	{
-		return mKeys.size(); // mKeys and mValues are interchangeable here.
+		return mKeys.size(); // mKeys and mValues are interchangeable.
 	}
 
 	auto begin() noexcept
@@ -238,6 +244,21 @@ public:
 	std::size_t lookup_size() const noexcept
 	{
 		return mLookup.size();
+	}
+
+	auto get_raw() noexcept
+	{
+		return util::span{ mValues };
+	}
+
+	auto get_raw() const noexcept
+	{
+		return util::span{ mValues };
+	}
+
+	auto get_const_raw() const noexcept
+	{
+		return util::span<const T>{ mValues };
 	}
 
 private:
@@ -311,9 +332,19 @@ public:
 		return mComponents.end();
 	}
 
-	auto& get_raw() noexcept
+	auto get_raw() noexcept
 	{
-		return mComponents;
+		return mComponents.get_raw();
+	}
+
+	auto get_raw() const noexcept
+	{
+		return mComponents.get_raw();
+	}
+
+	auto get_const_raw() const noexcept
+	{
+		return mComponents.get_const_raw();
 	}
 
 private:

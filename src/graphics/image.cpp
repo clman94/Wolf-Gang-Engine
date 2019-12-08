@@ -1,24 +1,18 @@
 #include <wge/graphics/image.hpp>
 
+#include <algorithm>
 #include <stb/stb_image.h>
 
 namespace wge::graphics
 {
 
-image::~image()
-{
-	if (mData)
-		stbi_image_free(mData);
-}
-
 bool image::load_file(const std::string& pPath)
 {
 	stbi_uc* data = stbi_load(&pPath[0], &mWidth, &mHeight, &mChannel_count, 4);
-	if (!data)
-		return false;
-	if (mData)
-		stbi_image_free(mData);
-	mData = data;
+	std::size_t length = mWidth * mHeight * mChannel_count;
+	mData.resize(length);
+	std::copy(data, data + length, mData.begin());
+	stbi_image_free(data);
 	return true;
 }
 
@@ -44,7 +38,7 @@ int image::get_channel_count() const noexcept
 
 const unsigned char* image::get_raw() const noexcept
 {
-	return mData;
+	return mData.data();
 }
 
 } // namespace wge::graphics

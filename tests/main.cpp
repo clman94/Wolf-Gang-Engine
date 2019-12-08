@@ -6,8 +6,38 @@
 #include <wge/core/component_manager.hpp>
 #include <wge/core/destruction_queue.hpp>
 #include <wge/util/ipair.hpp>
+#include <wge/core/layer.hpp>
+#include <wge/graphics/render_batch_2d.hpp>
+#include <wge/util/ipair.hpp>
+#include <wge/util/span.hpp>
 
 using namespace wge;
+
+TEST_CASE("Span")
+{
+	using util::span;
+	span<int> default_span;
+	REQUIRE(default_span.empty());
+	REQUIRE(default_span.size() == 0);
+
+	span<const int> const_span{ default_span };
+	REQUIRE(const_span.empty());
+	REQUIRE(const_span.size() == 0);
+
+	std::array arr = { 'a', 'b', 'c' };
+	auto arr_span = util::span(arr);
+	REQUIRE_FALSE(arr_span.empty());
+	REQUIRE(arr_span.size() == arr.size());
+
+	span<const char> const_span2{ arr_span };
+	REQUIRE_FALSE(const_span2.empty());
+	REQUIRE(const_span2.size() == arr.size());
+
+	const int arr2[] = { 1, 2, 3 };
+	auto arr_span2 = util::span(arr2);
+	REQUIRE_FALSE(arr_span2.empty());
+	REQUIRE(arr_span2.size() == arr.size());
+}
 
 TEST_CASE("Object id generator can generate and reuse ids")
 {
@@ -141,7 +171,7 @@ TEST_CASE("destruction_queue works")
 	REQUIRE(queue.empty());
 }
 
-TEST_CASE("ipair creates pears")
+TEST_CASE("ipair{} creates pears")
 {
 	std::array<int, 100> arr;
 	// v is a reference to the original array item.
@@ -156,3 +186,4 @@ TEST_CASE("ipair creates pears")
 	for (std::size_t i = 0; i < arr.size(); i++)
 		REQUIRE(arr[i] == i);
 }
+

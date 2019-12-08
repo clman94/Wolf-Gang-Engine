@@ -1,10 +1,57 @@
 #pragma once
 
-#include <iterator>
 #include "ptr_adaptor.hpp"
+
+#include <iterator>
+#include <tuple>
 
 namespace wge::util
 {
+
+template <typename Ttuple, std::size_t...I>
+constexpr auto forward_tuple_elements_impl(Ttuple&& pTuple, std::index_sequence<I...>)
+{
+	return std::forward_as_tuple(std::get<I>(std::forward<Ttuple>(pTuple))...);
+}
+
+// Forward all elements from one tuple into another.
+template <typename Ttuple>
+constexpr auto forward_tuple_elements(Ttuple&& pTuple)
+{
+	return forward_tuple_elements_impl(
+		std::forward<Ttuple>(pTuple),
+		std::make_index_sequence<std::tuple_size_v<std::remove_reference_t<Ttuple>>>{});
+}
+
+// Convert a tuple into a pair.
+template <typename Ttuple>
+constexpr auto as_pair(Ttuple&& pTuple)
+{
+	return std::pair<std::tuple_element_t<0, Ttuple>, std::tuple_element_t<1, Ttuple>>(
+		std::get<0>(std::forward<Ttuple>(pTuple)),
+		std::get<1>(std::forward<Ttuple>(pTuple)));
+}
+
+template <typename Ttuple>
+using first_element = std::tuple_element_t<0, Ttuple>;
+
+struct pair_mapping_policy
+{
+	template <typename T>
+	static constexpr auto map(std::size_t pIndex, T& pValue)
+	{
+		return as_pair(std::tuple_cat(std::make_tuple(pIndex), std::tie(pValue)));
+	}
+};
+
+struct flatten_mapping_policy
+{
+	template <typename T>
+	static constexpr auto map(std::size_t pIndex, T& pValue)
+	{
+		return std::tuple_cat(std::make_tuple(pIndex), forward_tuple_elements(pValue));
+	}
+};
 
 // This is a janky utility for creating index-value pairs for
 // containers.
@@ -13,8 +60,8 @@ namespace wge::util
 //   for (auto [index, value] : util::ipair{ arr })
 //     std::cout << index << " " << value << "\n";
 //
-template <typename T>
-class ipair
+template <typename T, typename Tmapping_policy>
+class basic_indexed
 {
 public:
 	template <typename Titer>
@@ -56,7 +103,7 @@ public:
 
 		constexpr auto get() const noexcept
 		{
-			return std::pair<std::size_t, typename std::iterator_traits<Titer>::reference>{ mIndex, *mIter };
+			return Tmapping_policy::map(mIndex, *mIter);
 		}
 
 		constexpr auto operator->() const noexcept
@@ -77,8 +124,8 @@ public:
 	template <typename Titer>
 	iterator(const Titer&)->iterator<Titer>;
 
-	constexpr ipair(T& pContainer) :
-		mContainer(&pContainer)
+	constexpr basic_indexed(T&& pContainer) :
+		mContainer(std::forward<T>(pContainer))
 	{}
 
 	constexpr auto begin() const
@@ -92,7 +139,31 @@ public:
 	}
 
 private:
-	T* mContainer;
+	util::ptr_adaptor<T> mContainer;
 };
+
+template <typename T>
+struct ipair :
+	basic_indexed<T, pair_mapping_policy>
+{
+	constexpr ipair(T&& pContainer) :
+		basic_indexed(std::forward<T>(pContainer))
+	{}
+};
+
+template <typename T>
+ipair(T&& pContainer)->ipair<T>;
+
+template <typename T>
+struct ituple :
+	basic_indexed<T, flatten_mapping_policy>
+{
+	constexpr ituple(T&& pContainer) :
+		basic_indexed(std::forward<T>(pContainer))
+	{}
+};
+
+template <typename T>
+ituple(T&& pContainer)->ituple<T>;
 
 } // namespace wge::util
