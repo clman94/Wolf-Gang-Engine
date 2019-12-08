@@ -1088,6 +1088,14 @@ public:
 			{"x", GLFW_KEY_X},
 			{"y", GLFW_KEY_Y},
 			{"z", GLFW_KEY_Z},
+			{"space", GLFW_KEY_SPACE},
+			{"tab", GLFW_KEY_TAB},
+			{"lshift", GLFW_KEY_LEFT_SHIFT},
+			{"rshift", GLFW_KEY_RIGHT_SHIFT},
+			{"lctrl", GLFW_KEY_LEFT_CONTROL},
+			{"rctrl", GLFW_KEY_RIGHT_CONTROL},
+			{"lalt", GLFW_KEY_LEFT_ALT},
+			{"ralt", GLFW_KEY_RIGHT_ALT}
 			});
 
 		input["pressed"] = [this](int pKey) -> bool
