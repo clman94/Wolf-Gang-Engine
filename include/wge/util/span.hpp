@@ -77,13 +77,15 @@ public:
 		mSize(N)
 	{}
 
-	template <typename Tcontainer, typename = std::enable_if_t<detail::is_container<Tcontainer>::value>>
+	template <typename Tcontainer,
+		typename = std::enable_if_t<detail::is_container<Tcontainer>::value>>
 	constexpr span(Tcontainer& pContainer) noexcept :
 		mPtr(std::data(pContainer)),
 		mSize(std::size(pContainer))
 	{}
 
-	template <typename Tcontainer, typename = std::enable_if_t<detail::is_container<Tcontainer>::value>>
+	template <typename Tcontainer,
+		typename = std::enable_if_t<detail::is_container<Tcontainer>::value>>
 	constexpr span(const Tcontainer& pContainer) noexcept :
 		mPtr(std::data(pContainer)),
 		mSize(std::size(pContainer))
@@ -117,22 +119,22 @@ public:
 		return mPtr + mSize;
 	}
 
-	constexpr iterator rbegin() const noexcept
+	constexpr reverse_iterator rbegin() const noexcept
 	{
 		return reverse_iterator{ mPtr };
 	}
 
-	constexpr iterator rend() const noexcept
+	constexpr reverse_iterator rend() const noexcept
 	{
 		return reverse_iterator{ mPtr + mSize };
 	}
 
-	constexpr const_iterator crbegin() const noexcept
+	constexpr const_reverse_iterator crbegin() const noexcept
 	{
 		return const_reverse_iterator{ mPtr };
 	}
 
-	constexpr const_iterator crend() const noexcept
+	constexpr const_reverse_iterator crend() const noexcept
 	{
 		return const_reverse_iterator{ mPtr + mSize };
 	}
@@ -176,7 +178,8 @@ public:
 		return mSize * sizeof(element_type);
 	}
 
-	constexpr span subspan(std::size_t pOffset, std::size_t pCount = std::numeric_limits<std::size_t>::max()) const noexcept
+	constexpr span subspan(std::size_t pOffset,
+		std::size_t pCount = std::numeric_limits<std::size_t>::max()) const noexcept
 	{
 		if (empty() || pOffset >= mSize)
 			return{};
