@@ -181,7 +181,8 @@ include_directories("${WGE_3RDPARTY_DIR}/sol/include")
 
 # fmt
 file(GLOB_RECURSE FMT_HEADERS "${WGE_3RDPARTY_DIR}/fmt/include/fmt/*.h")
-source_group("fmt" FILES ${FMT_HEADERS})
+file(GLOB_RECURSE FMT_SOURCES "${WGE_3RDPARTY_DIR}/fmt/src/*.cc")
+source_group("fmt" FILES ${FMT_SOURCES} ${FMT_HEADERS})
 include_directories("${WGE_3RDPARTY_DIR}/fmt/include")
 
 # Combine all the sources into one package :)
@@ -193,6 +194,7 @@ set(ALL_SOURCES
 	${LUA_SOURCES}
 	${LUA_HEADERS}
 	${SOL_HEADERS}
+	${FMT_SOURCES}
 	${FMT_HEADERS}
 	${ANGELSCRIPT_ADDONS}
 	${WGE_ALL_HEADERS}
