@@ -124,7 +124,7 @@ asset_editor* context::open_editor(const core::asset::ptr& pAsset, unsigned int 
 	}
 	else
 	{
-		log::error() << "No editor registered for asset type \"" << pAsset->get_type() << "\"" << log::endm;
+		log::error("No editor registered for asset type \"{}\"", pAsset->get_type());
 	}
 
 	return nullptr;

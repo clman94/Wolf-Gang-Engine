@@ -26,7 +26,7 @@ inline bool compile_shader(GLuint pGL_shader, const std::string& pSource)
 		// A compilation error occured. Print the message.
 		std::vector<char> message(log_length + 1);
 		glGetShaderInfoLog(pGL_shader, log_length, NULL, &message[0]);
-		log::error() << "Error compiling shader: " << &message[0] << log::endm;
+		log::error("Error compiling shader: {}", &message[0]);
 		return false;
 	}
 
@@ -62,7 +62,7 @@ inline GLuint load_shaders(const std::string& pVertex_source, const std::string&
 		// An error occured
 		std::vector<char> message(log_length + 1);
 		glGetProgramInfoLog(program_id, log_length, NULL, &message[0]);
-		log::error() << "Error linking shaders: " << &message[0] << log::endm;
+		log::error("Error linking shaders: {}", &message[0]);
 		return 0;
 	}
 

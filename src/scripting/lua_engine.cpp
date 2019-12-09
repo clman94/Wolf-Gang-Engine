@@ -29,7 +29,7 @@ void lua_engine::execute_global_scripts(core::asset_manager& pAsset_manager)
 	auto global_script_folder = pAsset_manager.get_asset("GlobalScripts");
 	if (!global_script_folder || global_script_folder->get_type() != "folder")
 	{
-		log::warning() << "\"GlobalScripts\" folder does not exist" << log::endm;
+		log::warning("\"GlobalScripts\" folder does not exist");
 		return;
 	}
 
@@ -46,7 +46,7 @@ void lua_engine::execute_global_scripts(core::asset_manager& pAsset_manager)
 			}
 			catch (sol::error& e)
 			{
-				log::error() << e.what() << log::endm;
+				log::error("{}", e.what());
 			}
 		}
 	});
@@ -112,8 +112,8 @@ void lua_engine::register_core_api()
 
 	state["delta"] = 1.f;
 	state["dprint"] = sol::overload(
-		[](const std::string& pVal) { log::debug() << pVal << log::endm; },
-		[](double pVal) { log::debug() << pVal << log::endm; }
+		[](const std::string& pVal) { log::debug("{}", pVal); },
+		[](double pVal) { log::debug("{}", pVal); }
 	);
 }
 
@@ -129,7 +129,7 @@ void lua_engine::register_layer_api(core::asset_manager& pAsset_manager)
 		{
 			auto res = asset->get_resource<core::object_resource>();
 			if (!res)
-				log::error() << "Asset is not an instantiable object" << log::endm;
+				log::error("Asset is not an instantiable object");
 			auto obj = pLayer.add_object();
 			res->generate_object(obj, pAsset_manager);
 			if (auto comp = obj.get_component<event_state_component>())
@@ -244,7 +244,7 @@ void script_system::update(float pDelta)
 		}
 		catch (const sol::error& e)
 		{
-			std::cout << "An expected error has occurred: " << e.what() << std::endl;
+			log::error("An expected error has occurred: {}", e.what());
 		}
 	};
 

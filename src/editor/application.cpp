@@ -69,8 +69,8 @@ public:
 		}
 		catch (const std::filesystem::filesystem_error& e)
 		{
-			log::error() << "Failed to copy texture from " << pSystem_path.string() << log::endm;
-			log::error() << "Failed with exception " << std::quoted(e.what()) << log::endm;
+			log::error("Failed to copy texture from {}", pSystem_path.string());
+			log::error("Failed with exception \"{}\"", e.what());
 			return{};
 		}
 
@@ -1024,7 +1024,7 @@ public:
 	{
 		if (!pAsset)
 		{
-			log::error() << "No asset to generate scene with." << log::endm;
+			log::error("No asset to generate scene with.");
 			return;
 		}
 		mEngine->get_scene().clear();
@@ -1036,7 +1036,7 @@ public:
 		}
 		else
 		{
-			log::error() << "Asset is not a scene." << log::endm;
+			log::error("Asset is not a scene.");
 		}
 	}
 
@@ -1319,7 +1319,7 @@ private:
 		// This will be our default font. It is quite a bit better than imguis builtin one.
 		if (fonts->AddFontFromFileTTF("./editor/Roboto-Regular.ttf", 18) == NULL)
 		{
-			log::error() << "Could not load RobotoMono-Regular font. Using default." << log::endm;
+			log::error("Could not load RobotoMono-Regular font. Using default.");
 			fonts->AddFontDefault();
 		}
 
@@ -1332,14 +1332,14 @@ private:
 		icons_config.GlyphMaxAdvanceX = 14;
 		if (fonts->AddFontFromFileTTF("./editor/forkawesome-webfont.ttf", 18, &icons_config, icons_ranges) == NULL)
 		{
-			log::error() << "Could not load forkawesome-webfont.ttf font." << log::endm;
+			log::error("Could not load forkawesome-webfont.ttf font.");
 			fonts->AddFontDefault();
 		}
 
 		// Used in the code editor.
 		if (fonts->AddFontFromFileTTF("./editor/RobotoMono-Regular.ttf", 18) == NULL)
 		{
-			log::error() << "Could not load RobotoMono-Regular font. Using default." << log::endm;
+			log::error("Could not load RobotoMono-Regular font. Using default.");
 			fonts->AddFontDefault();
 		}
 
@@ -1433,7 +1433,7 @@ private:
 
 		if (ImGui::Begin("Log", NULL, ImGuiWindowFlags_HorizontalScrollbar))
 		{
-			const auto& log = log::get_log();
+			auto log = log::get_log();
 
 			// Helps keep track of changes in the log
 			static size_t last_log_size = 0;
@@ -1444,15 +1444,13 @@ private:
 			bool lock_scroll_at_bottom = ImGui::GetScrollY() == ImGui::GetScrollMaxY() && last_log_size != log.size();
 
 			ImGui::Columns(2, 0, false);
-			ImGui::SetColumnWidth(0, 60);
+			ImGui::SetColumnWidth(0, 70);
 
 			// Limit the amount of items that can be shown in log.
 			// This makes it more convenient to scroll and there is less to draw.
-			const bool exceeds_limit = log.size() >= log_limit;
-			const size_t start = exceeds_limit ? log.size() - log_limit : 0;
-			for (size_t i = start; i < log.size(); i++)
+			for (auto& i : log.last(log_limit))
 			{
-				switch (log[i].severity_level)
+				switch (i.severity_level)
 				{
 				case log::level::info:
 					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_Text]);
@@ -1474,7 +1472,7 @@ private:
 				ImGui::NextColumn();
 
 				// The actual message. Has the same color as the message type.
-				ImGui::TextUnformatted(log[i].string.c_str());
+				ImGui::TextUnformatted(i.string.c_str());
 				ImGui::PopStyleColor();
 
 				ImGui::NextColumn();
@@ -1506,25 +1504,6 @@ private:
 
 	bool mUpdate{ false };
 };
-
-void GLAPIENTRY opengl_message_callback(GLenum source,
-	GLenum type,
-	GLuint id,
-	GLenum severity,
-	GLsizei length,
-	const GLchar* message,
-	const void* userParam)
-{
-	switch (severity)
-	{
-	case GL_DEBUG_SEVERITY_HIGH: log::out << log::level::error; break;
-	case GL_DEBUG_SEVERITY_MEDIUM: log::out << log::level::warning; break;
-	case GL_DEBUG_SEVERITY_LOW: log::out << log::level::warning; break;
-	case GL_DEBUG_SEVERITY_NOTIFICATION: log::out << log::level::info; break;
-	default: log::out << log::level::unknown;
-	}
-	log::out << "OpenGL: " << message << log::endm;
-}
 
 int main(int argc, char ** argv)
 {

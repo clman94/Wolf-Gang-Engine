@@ -339,7 +339,7 @@ void asset_manager::load_assets()
 			auto ptr = std::make_shared<asset>();
 			if (!ptr->load_file(i))
 			{
-				log::error() << "Failed to parse asset configuration for asset at \"" << i.string() << "\"" << log::endm;
+				log::error("Failed to parse asset configuration for asset at \"{}\"",i.string());
 				continue;
 			}
 
@@ -381,7 +381,7 @@ asset::ptr asset_manager::create_asset(const filesystem::path& pPath, const std:
 {
 	if (has_asset(pPath))
 	{
-		log::error() << "Could not create asset " << std::quoted(pPath.string()) << "; it already exists" << log::endm;
+		log::error("Could not create asset \"{}\"; it already exists", pPath.string());
 		return{};
 	}
 	auto config = std::make_shared<asset>();

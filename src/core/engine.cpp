@@ -55,7 +55,7 @@ void engine::load_game(const filesystem::path& pPath)
 
 	if (!mSettings.load(pPath))
 	{
-		log::error() << "Cannot find/parse game configuration" << log::endm;
+		log::error("Cannot find/parse game configuration from \"{}\"", pPath.string());
 		return;
 	}
 

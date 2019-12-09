@@ -29,15 +29,16 @@ inline void GLAPIENTRY opengl_message_callback(GLenum source,
 	const GLchar* message,
 	const void* userParam)
 {
+	log::level level;
 	switch (severity)
 	{
-	case GL_DEBUG_SEVERITY_HIGH: log::out << log::level::error; break;
-	case GL_DEBUG_SEVERITY_MEDIUM: log::out << log::level::warning; break;
-	case GL_DEBUG_SEVERITY_LOW: log::out << log::level::warning; break;
-	case GL_DEBUG_SEVERITY_NOTIFICATION: log::out << log::level::info; break;
-	default: log::out << log::level::unknown;
+	case GL_DEBUG_SEVERITY_HIGH: level = log::level::error; break;
+	case GL_DEBUG_SEVERITY_MEDIUM: level = log::level::warning; break;
+	case GL_DEBUG_SEVERITY_LOW: level = log::level::warning; break;
+	case GL_DEBUG_SEVERITY_NOTIFICATION: level = log::level::info; break;
+	default: level = log::level::unknown;
 	}
-	log::out << "OpenGL: " << message << log::endm;
+	log::print(level, "OpenGL: {}", message);
 }
 
 class opengl_backend_impl :
@@ -185,8 +186,7 @@ private:
 
 graphics_backend::ptr create_opengl_backend()
 {
-
-	log::info() << "Using OpenGL backend" << log::endm;
+	log::info("Using OpenGL backend.");
 	return std::make_shared<opengl_backend_impl>();
 }
 

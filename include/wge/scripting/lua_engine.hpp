@@ -49,8 +49,8 @@ public:
 		}
 		catch (const filesystem::io_error& e)
 		{
-			log::error() << e.what() << log::endm;
-			log::error() << "Couldn't load resource" << log::endm;
+			log::error("Couldn't load resource from path \"{}\"", path.string());
+			log::error("Exception: {}", e.what());
 		}
 	}
 
@@ -64,8 +64,8 @@ public:
 		}
 		catch (const filesystem::io_error& e)
 		{
-			log::error() << e.what() << log::endm;
-			log::error() << "Couldn't save resource" << log::endm;
+			log::error("Couldn't save resource to path \"{}\"", mFile_path.string());
+			log::error("Exception: {}", e.what());
 		}
 	}
 

@@ -1,12 +1,12 @@
 #pragma once
 
-#include <ostream>
+#include <fmt/format.h>
+#include <wge/util/span.hpp>
+
 #include <cassert>
-#include <vector>
 #include <any>
-#include <ctime>
 #include <string_view>
-#include <sstream>
+#include <ctime>
 
 namespace wge::log
 {
@@ -32,6 +32,15 @@ struct line_info
 	int column{ -1 };
 	std::string file;
 	bool system_filesystem{ true };
+
+	enum class file_option
+	{
+		not_changed,
+		relative
+	};
+
+	void shorten_path();
+	std::string to_string() const;
 };
 
 struct message
@@ -43,6 +52,7 @@ struct message
 
 	userdata_t userdata;
 
+	void stamp_time();
 	std::string to_string(bool pAnsi_color = false) const;
 };
 
@@ -60,54 +70,49 @@ struct userdata
 	userdata_t data;
 };
 
-class message_builder
-{
-public:
-	template <typename T>
-	message_builder& operator<<(T&& pIn)
-	{
-		using type = std::decay_t<T>;
-		if constexpr (std::is_same_v<type, userdata>)
-			mMessage.userdata = std::move(pUserdata.data);
-		else if constexpr (std::is_same_v<type, level>)
-			mMessage.severity_level = pIn;
-		else if constexpr (std::is_same_v<type, line_info>)
-			mMessage.line_info = pIn;
-		else
-			mStream << pIn;
-		return *this;
-	}
-
-	// Return the final message and prepare for a new message
-	message finalize();
-
-private:
-	std::ostringstream mStream;
-	log::message mMessage;
-};
-
-using log_container = std::vector<message>;
-const log_container& get_log();
+util::span<const message> get_log();
+void add_message(message&& pMessage);
+void add_message(const message& pMessage);
 
 // Returns true if the file was successfully opened
 bool open_file(const char* pFile);
 
 // Prints an assertion message as a warning. Returns the boolean result of the expression.
-bool soft_assert(bool pExpression, const char* pMessage, line_info);
+bool soft_assert(bool pExpression, std::string_view pMessage, line_info);
 
-// Get output stream for constructing a messsage. Remember to call flush() or endm when complete!
-extern message_builder& out;
-// Outputs the entire stream in a single message and then clears the stream
-// for a new message.
-void flush();
-// Similar to std::endl, instead this just calls flush()
-std::ostream& endm(std::ostream& os);
+template <typename Tformat, typename...Targs>
+void print(level pLevel, const Tformat& pFormat, Targs&&...pArgs)
+{
+	message msg;
+	msg.severity_level = pLevel;
+	msg.string = fmt::format(pFormat, std::forward<Targs>(pArgs)...);
+	msg.stamp_time();
+	add_message(std::move(msg));
+}
 
-// Sets the severity and returns the out stream
-message_builder& info();
-message_builder& debug();
-message_builder& warning();
-message_builder& error();
+template <typename Tformat, typename...Targs>
+void info(const Tformat& pFormat, Targs&&...pArgs)
+{
+	print(level::info, pFormat, std::forward<Targs>(pArgs)...);
+}
+
+template <typename Tformat, typename...Targs>
+void debug(const Tformat& pFormat, Targs&&...pArgs)
+{
+	print(level::debug, pFormat, std::forward<Targs>(pArgs)...);
+}
+
+template <typename Tformat, typename...Targs>
+void warning(const Tformat& pFormat, Targs&&...pArgs)
+{
+	print(level::warning, pFormat, std::forward<Targs>(pArgs)...);
+}
+
+template <typename Tformat, typename...Targs>
+void error(const Tformat& pFormat, Targs&&...pArgs)
+{
+	print(level::error, pFormat, std::forward<Targs>(pArgs)...);
+}
 
 } // namespace wge::log
 

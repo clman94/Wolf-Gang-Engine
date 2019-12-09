@@ -1,8 +1,11 @@
 #include <wge/logging/log.hpp>
 
+#include <fmt/chrono.h>
+#include <fmt/format.h>
+
 #include <iostream>
 #include <fstream>
-
+#include <array>
 #include <filesystem>
 
 using namespace wge;
@@ -28,144 +31,104 @@ static const char* get_ansi_color_for_level(log::level pSeverity_level)
 namespace wge::log
 {
 
-static message_builder gMessage_builder;
-static log_container gLog;
+static std::vector<message> gLog;
 static std::ofstream gLog_output_file;
 
-extern message_builder& out = gMessage_builder;
+void message::stamp_time()
+{
+	time_stamp = std::time(nullptr);
+}
 
 std::string message::to_string(bool pAnsi_color) const
 {
-	std::ostringstream stream;
-
 	std::tm timeinfo;
 #ifdef __linux__
 	localtime_r(&time, &timeinfo);
 #else
 	localtime_s(&timeinfo, &time_stamp);
 #endif
-	const char* time_format = "%m-%d-%y %T";
-	char time_str[18];
-	std::strftime(time_str, sizeof(time_str), time_format, &timeinfo);
-	stream << '[' << time_str << "] ";
 
-	if (pAnsi_color)
-		stream << get_ansi_color_for_level(severity_level);
+	constexpr std::array severity_level_name = { "Unknown", "Info", "Debug", "Warning", "Error" };
 
-	switch (severity_level)
-	{
-	case level::unknown: stream << "Unknown: "; break;
-	case level::info:    stream << "Info: "; break;
-	case level::debug:   stream << "Debug: "; break;
-	case level::warning: stream << "Warning: "; break;
-	case level::error:   stream << "Error: "; break;
-	}
+	fmt::memory_buffer buffer;
+	fmt::format_to(buffer, "[{:%m-%d-%y %T}] {}{}: ",
+		timeinfo, pAnsi_color ? get_ansi_color_for_level(severity_level) : "",
+		severity_level_name[static_cast<std::size_t>(severity_level)]);
 
-	if (!line_info.file.empty())
-		stream << line_info.file;
+	std::string line_info_str = line_info.to_string();
+	if (!line_info_str.empty())
+		fmt::format_to(buffer, "{}: ", line_info_str);
 
-	const bool has_line = line_info.line >= 0;
-	const bool has_column = line_info.column >= 0;
-	if (has_line || has_column)
-	{
-		stream << " (";
-		stream << (has_line ? line_info.line : '?');
-		if (has_column)
-			stream << ", " << line_info.column;
-		stream << ')';
-	}
-
-	if (!line_info.file.empty() || has_line || has_column)
-		stream << ": ";
-
-	stream << string;
-
-	if (pAnsi_color)
-		stream << get_ansi_color_reset();
-	return stream.str();
+	fmt::format_to(buffer, "{}{}", string, pAnsi_color ? get_ansi_color_reset() : "");
+	return fmt::to_string(std::move(buffer));
 }
 
-message message_builder::finalize()
-{
-	mStream.flush();
-	// Update the message string
-	mMessage.string = mStream.str();
-	// Clear the stream
-	mStream.str({});
-	mStream.clear();
-
-	// Record the time this message was created
-	mMessage.time_stamp = std::time(nullptr);
-
-	// If the file path is pointing to a system file,
-	// generate a relative path so it doesn't take too much space.
-	if (!mMessage.line_info.file.empty() &&
-		mMessage.line_info.system_filesystem &&
-		std::filesystem::exists(mMessage.line_info.file))
-	{
-		std::filesystem::path relate_path = std::filesystem::relative(mMessage.line_info.file);
-		std::string path_str = relate_path.string();
-		if (mMessage.line_info.file.length() > path_str.length())
-			mMessage.line_info.file = path_str;
-	}
-
-	return std::move(mMessage);
-}
-
-const std::vector<message>& get_log()
+util::span<const message> get_log()
 {
 	return gLog;
 }
 
-bool open_file(const char * pFile)
+void add_message(message&& pMessage)
+{
+	gLog.emplace_back(std::forward<message>(pMessage));
+	std::cout << gLog.back().to_string(true) << std::endl;
+}
+
+void add_message(const message& pMessage)
+{
+	gLog.push_back(pMessage);
+	std::cout << gLog.back().to_string(true) << std::endl;
+}
+
+bool open_file(const char* pFile)
 {
 	gLog_output_file.open(pFile);
 	if (gLog_output_file)
-		info() << "Log: Successfully opened log file \"" << pFile << "\"" << endm;
+		info("Log: Successfully opened log file \"{}\"", pFile);
 	else
-		error() << "Log: Failed to open log file \"" << pFile << "\"" << endm;
+		error("Log: Failed to open log file \"{}\"", pFile);
 	return gLog_output_file.good();
 }
 
-bool soft_assert(bool pExpression, const char * pMessage, line_info pLine_info)
+bool soft_assert(bool pExpression, std::string_view pMessage, line_info pLine_info)
 {
 	if (!pExpression)
-		warning() << pLine_info << "Assertion Failure: " << pMessage << endm;
+	{
+		pLine_info.shorten_path();
+		warning("{} Assertion Failure: {}", pLine_info.to_string(), pMessage);
+	}
 	return pExpression;
 }
 
-void flush()
+void line_info::shorten_path()
 {
-	const auto& msg = gLog.emplace_back(gMessage_builder.finalize());
-	if (gLog_output_file)
-		gLog_output_file << msg.to_string() << std::endl;
-	std::cout << msg.to_string(true) << std::endl;
+	if (!file.empty() &&
+		system_filesystem &&
+		std::filesystem::exists(file))
+	{
+		std::filesystem::path relate_path = std::filesystem::relative(file);
+		std::string path_str = relate_path.string();
+		if (file.length() > path_str.length())
+			file = path_str;
+	}
 }
 
-std::ostream& endm(std::ostream& pO)
+std::string line_info::to_string() const
 {
-	flush();
-	return pO;
-}
+	fmt::memory_buffer buffer;
 
-message_builder& info()
-{
-	return gMessage_builder << level::info;
-}
+	if (!file.empty())
+		fmt::format_to(buffer, "{}", file);
 
-message_builder& debug()
-{
-	return gMessage_builder << level::debug;
-}
-
-message_builder& warning()
-{
-	return gMessage_builder << level::warning;
-}
-
-message_builder& error()
-{
-	return gMessage_builder << level::error;
+	const bool has_line = line >= 0;
+	const bool has_column = column >= 0;
+	if (has_line && !has_column)
+		fmt::format_to(buffer, "({})", line);
+	else if (has_column)
+		fmt::format_to(buffer, "({}, {})",
+			has_line ? std::to_string(line).c_str() : "?",
+			column);
+	return fmt::to_string(buffer);
 }
 
 } // namespace wge::log

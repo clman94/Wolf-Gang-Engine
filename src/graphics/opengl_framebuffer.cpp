@@ -43,7 +43,7 @@ void opengl_framebuffer::create(int pWidth, int pHeight)
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 	{
-		log::error() << "Incomplete framebuffer\n" << log::endm;
+		log::error("Incomplete framebuffer.");
 		return;
 	}
 

@@ -74,7 +74,7 @@ window_backend::ptr create_glfw_backend(backend_type pFor_backend)
 {
 	if (pFor_backend != backend_type::opengl)
 	{
-		log::error() << "GLFW window backend only supports the OpenGL rendering backend, default null" << log::endm;
+		log::error("GLFW window backend only supports the OpenGL rendering backend, default null.");
 		return std::make_shared<null_window_backend>();
 	}
 	return std::make_shared<glfw_window_backend>();

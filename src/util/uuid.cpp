@@ -120,7 +120,7 @@ void uuid::from_json(const json& pJson)
 		mBytes = pJson;
 	else
 	{
-		log::error() << "Could not parse json uuid" << log::endm;
+		log::error("Could not parse json uuid.");
 	}
 }
 

@@ -180,7 +180,9 @@ public:
 	{
 		if (empty() || pOffset >= mSize)
 			return{};
-		return span{ mPtr + std::min(pOffset, mSize - 1), pCount };
+		pOffset = std::min(pOffset, mSize - 1);
+		pCount = std::min(pCount, mSize - pOffset);
+		return span{ mPtr + pOffset, pCount };
 	}
 
 	constexpr span first(std::size_t pCount) const noexcept
@@ -190,7 +192,7 @@ public:
 
 	constexpr span last(std::size_t pCount) const noexcept
 	{
-		return subspan(mSize - pCount);
+		return subspan(mSize - std::min(pCount, mSize));
 	}
 
 	constexpr bool empty() const noexcept

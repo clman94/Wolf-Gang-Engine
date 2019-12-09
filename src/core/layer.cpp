@@ -54,7 +54,7 @@ object layer::add_object()
 {
 	object_id id = get_global_generator().get();
 	if (mComponent_manager.get_storage<object_info>().has_component(id))
-		log::warning() << "Object with id " << id << " already exists." << log::endm;
+		log::warning("Object with id {} already exists.", id);
 	mComponent_manager.add_component<object_info>(id);
 	return get_object(id);
 }

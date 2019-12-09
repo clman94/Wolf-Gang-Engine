@@ -36,7 +36,7 @@ void object_resource::generate_object(core::object& pObj, const asset_manager& p
 			if (auto asset = pAsset_mgr.get_asset(asset_id))
 				comp->source_script = asset;
 			else
-				log::error() << "Could not load event script; Invalid id" << log::endm;
+				log::error("Could not load event script; Invalid id");
 		}
 	}
 }
