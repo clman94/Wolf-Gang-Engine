@@ -19,13 +19,13 @@ public:
 	math::vec2 get_size() const noexcept;
 
 	// Get width of this image in pixels.
-	int get_width() const noexcept;
+	std::size_t get_width() const noexcept;
 
 	// Get height of this image in pixels.
-	int get_height() const noexcept;
+	std::size_t get_height() const noexcept;
 
 	// Get the amount of channels in this image.
-	int get_channel_count() const noexcept;
+	std::size_t get_channel_count() const noexcept;
 
 	void resize(std::size_t w, std::size_t h)
 	{
@@ -53,7 +53,7 @@ public:
 	util::span<const unsigned char> get_raw() const noexcept;
 
 private:
-	int mWidth{ 0 }, mHeight{ 0 }, mChannel_count{ 0 };
+	std::size_t mWidth{ 0 }, mHeight{ 0 }, mChannel_count{ 0 };
 	std::vector<unsigned char> mData;
 
 };

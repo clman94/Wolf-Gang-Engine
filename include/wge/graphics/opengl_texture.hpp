@@ -25,7 +25,7 @@ public:
 
 		// Give the image to OpenGL
 		glBindTexture(GL_TEXTURE_2D, mGL_texture);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, pImage.get_width(), pImage.get_height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, pImage.get_raw());
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, pImage.get_width(), pImage.get_height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, pImage.get_raw().data());
 		glBindTexture(GL_TEXTURE_2D, 0);
 
 		update_filtering();
