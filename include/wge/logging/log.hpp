@@ -33,12 +33,6 @@ struct line_info
 	std::string file;
 	bool system_filesystem{ true };
 
-	enum class file_option
-	{
-		not_changed,
-		relative
-	};
-
 	void shorten_path();
 	std::string to_string() const;
 };
@@ -116,9 +110,6 @@ void error(const Tformat& pFormat, Targs&&...pArgs)
 
 } // namespace wge::log
 
-// Generates a line_info struct containing the current line and file.
-// Usage: log::out << WGE_LI << "My message";
-#define WGE_LI wge::log::line_info{ __LINE__, -1, __FILE__, true }
 // Strict assert macro.
 #define WGE_ASSERT(A) assert(A)
 
