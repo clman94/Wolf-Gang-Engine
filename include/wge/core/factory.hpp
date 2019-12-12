@@ -32,7 +32,6 @@ public:
 		};
 	}
 
-	component* create_component(const component_type& pType, component_manager& pManager) const;
 	system::uptr create_system(int pType, layer& pLayer) const;
 
 private:
