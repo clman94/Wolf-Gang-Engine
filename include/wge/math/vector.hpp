@@ -63,7 +63,7 @@ public:
 		y(pY)
 	{}
 	template <typename Tconv, typename = std::enable_if_t<!std::is_same_v<T, Tconv>>>
-	constexpr explicit basic_vec2(const basic_vec2<Tconv>& pVec) :
+	constexpr explicit basic_vec2(const basic_vec2<Tconv>& pVec) noexcept :
 		x(static_cast<T>(pVec.x)),
 		y(static_cast<T>(pVec.y))
 	{}
@@ -80,13 +80,13 @@ public:
 	}
 
 	template <typename = detail::only_floating_point<T>>
-	float magnitude() const noexcept
+	T magnitude() const noexcept
 	{
 		return math::sqrt(x * x + y * y);
 	}
 
 	template <typename = detail::only_floating_point<T>>
-	float distance(const basic_vec2& pTo) const noexcept
+	T distance(const basic_vec2& pTo) const noexcept
 	{
 		return (pTo - *this).magnitude();
 	}
@@ -94,9 +94,9 @@ public:
 	template <typename = detail::only_floating_point<T>>
 	basic_vec2& rotate(const radians& pRadians) noexcept
 	{
-		float s = math::sin(pRadians);
-		float c = math::cos(pRadians);
-		float tx = x, ty = y;
+		T s = math::sin(pRadians);
+		T c = math::cos(pRadians);
+		T tx = x, ty = y;
 		x = tx * c - ty * s;
 		y = tx * s + ty * c;
 		return *this;
@@ -133,7 +133,7 @@ public:
 	template <typename = detail::only_floating_point<T>>
 	basic_vec2& floor_magnitude() noexcept
 	{
-		float mag = magnitude();
+		T mag = magnitude();
 		*this *= math::floor(mag) / mag;
 		return *this;
 	}
@@ -149,7 +149,7 @@ public:
 	template <typename = detail::only_floating_point<T>>
 	basic_vec2& ceil_magnitude() noexcept
 	{
-		float mag = magnitude();
+		T mag = magnitude();
 		*this *= math::ceil(mag) / mag;
 		return *this;
 	}
@@ -165,7 +165,7 @@ public:
 	template <typename = detail::only_floating_point<T>>
 	basic_vec2& round_magnitude() noexcept
 	{
-		float mag = magnitude();
+		T mag = magnitude();
 		*this *= math::round(mag) / mag;
 		return *this;
 	}
