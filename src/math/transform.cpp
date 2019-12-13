@@ -16,7 +16,7 @@ math::mat33 transform::get_inverse_matrix() const noexcept
 {
 	return math::mat33(1)
 		.shear(-shear)
-		.scale(1 / scale)
+		.scale(1.f / scale)
 		.rotate(-rotation)
 		.translate(-position);
 }
@@ -106,7 +106,7 @@ math::mat33 inverse(const transform& pTransform) noexcept
 {
 	math::mat33 result(1);
 	result
-		.scale(1 / pTransform.scale)
+		.scale(1.f / pTransform.scale)
 		.rotate(-pTransform.rotation)
 		.translate(-pTransform.position);
 	return result;

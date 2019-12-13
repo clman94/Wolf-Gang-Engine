@@ -11,17 +11,6 @@
 
 using namespace wge;
 
-void wge::math::to_json(nlohmann::json& pJson, const math::vec2& pVec)
-{
-	pJson = { pVec.x, pVec.y };
-}
-
-void wge::math::from_json(const nlohmann::json& pJson, math::vec2& pVec)
-{
-	pVec.x = pJson[0];
-	pVec.y = pJson[1];
-}
-
 void wge::math::to_json(nlohmann::json& pJson, const radians& pRad)
 {
 	pJson = pRad.value();

@@ -2,184 +2,279 @@
 
 #include <wge/math/math.hpp>
 #include <wge/math/angle.hpp>
+#include <wge/util/span.hpp>
+#include <fmt/format.h>
+
+#include <type_traits>
 
 namespace wge::math
 {
 
 // Placeholders for swizzling
-constexpr struct _x_t {} _x;
-constexpr struct _y_t {} _y;
+static constexpr struct _x_t {} _x;
+static constexpr struct _y_t {} _y;
 
-class vec2
+namespace detail
 {
-public:
-	union {
-		struct {
-			float x, y;
-		};
-		float components[2];
-	};
 
-public:
-	constexpr vec2() noexcept :
-		x(0),
-		y(0)
-	{}
-	constexpr vec2(float pX, float pY) noexcept :
-		x(pX),
-		y(pY)
-	{}
-	constexpr vec2(const vec2&) noexcept = default;
-
-	float magnitude() const noexcept;
-
-	float distance(const vec2& pTo) const noexcept;
-
-	vec2& rotate(const radians& pRadians) noexcept;
-
-	vec2& normalize() noexcept;
-
-	vec2& abs() noexcept;
-
-	vec2& floor() noexcept;
-	vec2& floor_magnitude() noexcept;
-	vec2& ceil() noexcept;
-	vec2& ceil_magnitude() noexcept;
-	vec2& round() noexcept;
-	vec2& round_magnitude() noexcept;
-
-	vec2& swap_xy() noexcept;
-
-	bool is_zero() const noexcept;
-
-	// Vector operations
-	vec2 operator + (const vec2&) const noexcept;
-	vec2 operator - (const vec2&) const noexcept;
-	vec2 operator * (const vec2&) const noexcept;
-	vec2 operator / (const vec2&) const noexcept;
-
-	vec2 operator - () const noexcept;
-
-	// Scalar operations
-	vec2 operator * (float) const noexcept;
-	vec2 operator / (float) const noexcept;
-
-	// Vector assignments
-	vec2& operator = (const vec2&) noexcept;
-	vec2& operator += (const vec2&) noexcept;
-	vec2& operator -= (const vec2&) noexcept;
-	vec2& operator *= (const vec2&) noexcept;
-	vec2& operator /= (const vec2&) noexcept;
-
-	// Scalar assignments
-	vec2& operator *= (const float&) noexcept;
-	vec2& operator /= (const float&) noexcept;
-
-	bool operator == (const vec2&) const noexcept;
-	bool operator != (const vec2&) const noexcept;
-
-	// Returns format "([x], [y])"
-	std::string to_string() const;
-
-	template <typename Tx, typename Ty>
-	constexpr vec2 swizzle(Tx pX, Ty pY) const noexcept
+template <typename Tvec, typename Tvalue>
+struct vec2_swizzle_component
+{
+	static auto get(const Tvec& pVec, Tvalue& pValue)
 	{
-		return math::swizzle(*this, pX, pY);
+		return pValue;
 	}
 };
 
-inline constexpr vec2 operator * (float pVal, const math::vec2& pVec) noexcept
+template <typename Tvec>
+struct vec2_swizzle_component<Tvec, _x_t>
+{
+	static auto get(const Tvec& pVec, _x_t)
+	{
+		return pVec.components()[0];
+	}
+};
+
+template <typename Tvec>
+struct vec2_swizzle_component<Tvec, _y_t>
+{
+	static auto get(const Tvec& pVec, _y_t)
+	{
+		return pVec.components()[1];
+	}
+};
+
+} // namespace detail
+
+template <typename T>
+class basic_vec2
+{
+public:
+	using element_type = T;
+	T x, y;
+
+public:
+	constexpr basic_vec2() noexcept :
+		x(0),
+		y(0)
+	{}
+	constexpr basic_vec2(T pX, T pY) noexcept :
+		x(pX),
+		y(pY)
+	{}
+	template <typename Tconv, typename = std::enable_if_t<!std::is_same_v<T, Tconv>>>
+	constexpr explicit basic_vec2(const basic_vec2<Tconv>& pVec) :
+		x(static_cast<T>(pVec.x)),
+		y(static_cast<T>(pVec.y))
+	{}
+	constexpr basic_vec2(const basic_vec2&) noexcept = default;
+
+	constexpr auto components() noexcept
+	{
+		return util::span{ &x, 2 };
+	}
+
+	constexpr auto components() const noexcept
+	{
+		return util::span{ &x, 2 };
+	}
+
+	template <typename = detail::only_floating_point<T>>
+	float magnitude() const noexcept
+	{
+		return math::sqrt(x * x + y * y);
+	}
+
+	template <typename = detail::only_floating_point<T>>
+	float distance(const basic_vec2& pTo) const noexcept
+	{
+		return (pTo - *this).magnitude();
+	}
+
+	template <typename = detail::only_floating_point<T>>
+	basic_vec2& rotate(const radians& pRadians) noexcept
+	{
+		float s = math::sin(pRadians);
+		float c = math::cos(pRadians);
+		float tx = x, ty = y;
+		x = tx * c - ty * s;
+		y = tx * s + ty * c;
+		return *this;
+	}
+
+	template <typename = detail::only_floating_point<T>>
+	basic_vec2& normalize() noexcept
+	{
+		T mag = magnitude();
+		if (mag != 0)
+		{
+			x /= mag;
+			y /= mag;
+		}
+		return *this;
+	}
+
+	template <typename = detail::only_floating_point<T>>
+	basic_vec2& abs() noexcept
+	{
+		x = math::abs(x);
+		y = math::abs(y);
+		return *this;
+	}
+
+	template <typename = detail::only_floating_point<T>>
+	basic_vec2& floor() noexcept
+	{
+		x = math::floor(x);
+		y = math::floor(y);
+		return *this;
+	}
+
+	template <typename = detail::only_floating_point<T>>
+	basic_vec2& floor_magnitude() noexcept
+	{
+		float mag = magnitude();
+		*this *= math::floor(mag) / mag;
+		return *this;
+	}
+
+	template <typename = detail::only_floating_point<T>>
+	basic_vec2& ceil() noexcept
+	{
+		x = math::ceil(x);
+		y = math::ceil(y);
+		return *this;
+	}
+
+	template <typename = detail::only_floating_point<T>>
+	basic_vec2& ceil_magnitude() noexcept
+	{
+		float mag = magnitude();
+		*this *= math::ceil(mag) / mag;
+		return *this;
+	}
+
+	template <typename = detail::only_floating_point<T>>
+	basic_vec2& round() noexcept
+	{
+		x = math::round(x);
+		y = math::round(y);
+		return *this;
+	}
+
+	template <typename = detail::only_floating_point<T>>
+	basic_vec2& round_magnitude() noexcept
+	{
+		float mag = magnitude();
+		*this *= math::round(mag) / mag;
+		return *this;
+	}
+
+	constexpr basic_vec2& swap_xy() noexcept
+	{
+		std::swap(x, y);
+		return *this;
+	}
+	
+	constexpr bool is_zero() const noexcept
+	{
+		if constexpr (std::is_floating_point_v<T>)
+			return almost_equal(x, 0.f) && almost_equal(y, 0.f);
+		else
+			return x == 0 && y == 0;
+	}
+
+	// Vector operations
+	constexpr basic_vec2 operator + (const basic_vec2& pR) const noexcept { return{ x + pR.x, y + pR.y }; }
+	constexpr basic_vec2 operator - (const basic_vec2& pR) const noexcept { return{ x - pR.x, y - pR.y }; }
+	constexpr basic_vec2 operator * (const basic_vec2& pR) const noexcept { return{ x * pR.x, y * pR.y }; }
+	constexpr basic_vec2 operator / (const basic_vec2& pR) const noexcept { return{ x / pR.x, y / pR.y }; }
+
+	template <typename = detail::only_signed<T>>
+	constexpr basic_vec2 operator - () const noexcept { return{ -x, -y }; }
+
+	// Scalar operations
+	constexpr basic_vec2 operator * (T pR) const noexcept { return{ x * pR, y * pR }; }
+	constexpr basic_vec2 operator / (T pR) const noexcept { return{ x / pR, y / pR }; }
+
+	// Vector assignments
+	constexpr basic_vec2& operator = (const basic_vec2& ) noexcept = default;
+	constexpr basic_vec2& operator += (const basic_vec2& pR) noexcept { return *this = *this + pR; };
+	constexpr basic_vec2& operator -= (const basic_vec2& pR) noexcept { return *this = *this - pR; };
+	constexpr basic_vec2& operator *= (const basic_vec2& pR) noexcept { return *this = *this * pR; };
+	constexpr basic_vec2& operator /= (const basic_vec2& pR) noexcept { return *this = *this / pR; };
+
+	// Scalar assignments
+	constexpr basic_vec2& operator *= (T pR) noexcept { return *this = *this * pR; };
+	constexpr basic_vec2& operator /= (T pR) noexcept { return *this = *this / pR; };
+
+	constexpr bool operator == (const basic_vec2& pR) const noexcept { return x == pR.x && y == pR.y; }
+	constexpr bool operator != (const basic_vec2& pR) const noexcept { return !operator==(pR); }
+
+	constexpr bool operator < (const basic_vec2& pR) const noexcept { return x < pR.x || (x == pR.x && y < pR.y); }
+	constexpr bool operator <= (const basic_vec2& pR) const noexcept { return operator<(pR) || operator==(pR); }
+	constexpr bool operator > (const basic_vec2& pR) const noexcept { return !operator<(pR) && !operator==(pR); }
+	constexpr bool operator >= (const basic_vec2& pR) const noexcept { return !operator<(pR); }
+
+	// Returns with format "({x}, {y})"
+	std::string to_string() const
+	{
+		return fmt::format("({}, {})", x, y);
+	}
+
+	template <typename Tx, typename Ty>
+	constexpr basic_vec2 swizzle(Tx pX, Ty pY) const noexcept
+	{
+		return{
+			static_cast<T>(detail::vec2_swizzle_component<basic_vec2, Tx>::get(*this, pX)),
+			static_cast<T>(detail::vec2_swizzle_component<basic_vec2, Ty>::get(*this, pY))
+		};
+	}
+};
+
+template <typename Tx, typename Ty>
+basic_vec2(Tx, Ty)->basic_vec2<std::common_type_t<Tx, Ty>>;
+
+using fvec2 = basic_vec2<float>;
+using dvec2 = basic_vec2<double>;
+using ivec2 = basic_vec2<int>;
+using lvec2 = basic_vec2<long>;
+using vec2 = basic_vec2<float>; // Default vec2
+
+template <typename T>
+inline constexpr basic_vec2<T> operator * (T pVal, const math::basic_vec2<T>& pVec) noexcept
 {
 	return{ pVal * pVec.x , pVal * pVec.y };
 }
 
-inline constexpr vec2 operator / (float pVal, const math::vec2& pVec) noexcept
+template <typename T>
+inline constexpr basic_vec2<T> operator / (T pVal, const math::basic_vec2<T>& pVec) noexcept
 {
 	return{ pVal / pVec.x , pVal / pVec.y };
 }
 
-template <typename Tx, typename Ty>
-inline constexpr vec2 swizzle(const vec2& pVec, Tx pX, Ty pY) noexcept
+template<typename T>
+inline constexpr basic_vec2<T> swap_xy(const basic_vec2<T>& a) noexcept
 {
-	vec2 result;
-
-	if constexpr (std::is_same<Tx, _x_t>::value)
-		result.x = pVec.x;
-	else if constexpr (std::is_same<Tx, _y_t>::value)
-		result.x = pVec.y;
-	else
-		result.x = static_cast<float>(pX);
-
-	if constexpr (std::is_same<Ty, _x_t>::value)
-		result.y = pVec.x;
-	else if constexpr (std::is_same<Ty, _y_t>::value)
-		result.y = pVec.y;
-	else
-		result.y = static_cast<float>(pY);
-
-	return result;
+	return basic_vec2<T>(a).swap_xy();
 }
 
-template<>
-inline vec2 normal<vec2>(const vec2& a) noexcept
-{
-	return vec2(a).normalize();
-}
-
-template<>
-inline vec2 abs<vec2>(const vec2& a) noexcept
-{
-	return vec2(a).abs();
-}
-
-template<>
-inline vec2 floor<vec2>(const vec2& a) noexcept
-{
-	return vec2(a).floor();
-}
-
-template<>
-inline vec2 ceil<vec2>(const vec2& a) noexcept
-{
-	return vec2(a).ceil();
-}
-
-template<>
-inline vec2 round<vec2>(const vec2& a) noexcept
-{
-	return vec2(a).round();
-}
-
-inline vec2 swap_xy(const vec2& a) noexcept
-{
-	return vec2(a).swap_xy();
-}
-
-inline float dot(const vec2& pA, const vec2& pB) noexcept
+template<typename T>
+inline constexpr T dot(const basic_vec2<T>& pA, const basic_vec2<T>& pB) noexcept
 {
 	return pA.x * pB.x + pA.y * pB.y;
 }
 
-inline float magnitude(const vec2& pA) noexcept
+template<typename T>
+inline T magnitude(const basic_vec2<T>& pA) noexcept
 {
 	return pA.magnitude();
 }
 
-inline float distance(const vec2& pA, const vec2& pB) noexcept
+template<typename T>
+inline T distance(const basic_vec2<T>& pA, const basic_vec2<T>& pB) noexcept
 {
 	return pA.distance(pB);
-}
-
-template <>
-inline auto max<vec2>(const vec2& pL, const vec2& pR) noexcept
-{
-	return vec2{ max(pL.x, pR.x), max(pL.y, pR.y) };
-}
-
-template <>
-inline auto min<vec2>(const vec2& pL, const vec2& pR) noexcept
-{
-	return vec2{ min(pL.x, pR.x), min(pL.y, pR.y) };
 }
 
 } // namespace wge::math

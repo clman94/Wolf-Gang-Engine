@@ -413,8 +413,8 @@ public:
 					selected_animation->name = make_unique_animation_name(texture, temp);
 					mark_asset_modified();
 				}
-				ImGui::DragFloat2("Position", selected_animation->frame_rect.position.components); check_if_edited();
-				ImGui::DragFloat2("Size", selected_animation->frame_rect.size.components); check_if_edited();
+				ImGui::DragFloat2("Position", selected_animation->frame_rect.position.components().data()); check_if_edited();
+				ImGui::DragFloat2("Size", selected_animation->frame_rect.size.components().data()); check_if_edited();
 			}
 			if (ImGui::CollapsingHeader("Animation", ImGuiTreeNodeFlags_DefaultOpen))
 			{
@@ -730,7 +730,7 @@ public:
 		mScene.for_each_system<graphics::renderer>([&](core::layer&, graphics::renderer& pRenderer)
 		{
 			pRenderer.set_framebuffer(mViewport_framebuffer);
-			pRenderer.set_render_view_to_framebuffer(mViewport_offset, 1 / mViewport_scale);
+			pRenderer.set_render_view_to_framebuffer(mViewport_offset, 1.f / mViewport_scale);
 			pRenderer.render(engine.get_graphics());
 		});
 		ImGui::EndFixedScrollRegion();
@@ -895,7 +895,7 @@ class eventful_sprite_editor :
 	public asset_editor
 {
 private:
-	static constexpr std::array<const char*, 2> event_display_name = {
+	static constexpr std::array event_display_name = {
 		ICON_FA_PENCIL u8" Create",
 		ICON_FA_STEP_FORWARD u8" Update"
 	};

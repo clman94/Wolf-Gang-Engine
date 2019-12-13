@@ -164,7 +164,7 @@ void lua_engine::register_math_api()
 			math::vec2(float, float)>(),
 		"x", &math::vec2::x,
 		"y", &math::vec2::y,
-		"normalize", &math::vec2::normalize,
+		"normalize", &math::vec2::normalize<>,
 		sol::meta_function::addition, &math::vec2::operator+,
 		sol::meta_function::subtraction, static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator-),
 		sol::meta_function::multiplication, sol::overload(
@@ -180,10 +180,9 @@ void lua_engine::register_math_api()
 		sol::meta_function::unary_minus, static_cast<math::vec2(math::vec2::*)() const>(&math::vec2::operator-),
 		sol::meta_function::to_string, &math::vec2::to_string
 		);
-	t["dot"] = &math::dot;
-	t["normal"] = &math::normal<math::vec2>;
-	t["magnitude"] = &math::magnitude;
-	t["distance"] = &math::distance;
+	t["dot"] = &math::dot<float>;
+	t["magnitude"] = &math::magnitude<float>;
+	t["distance"] = &math::distance<float>;
 	t.new_usertype<math::transform>("transform",
 		"position", &math::transform::position,
 		"scale", &math::transform::scale);
@@ -198,7 +197,6 @@ void lua_engine::register_math_api()
 		"height", &math::rect::height,
 		"position", &math::rect::position,
 		"size", &math::rect::size);
-
 }
 
 class b2_quick_query_callback :

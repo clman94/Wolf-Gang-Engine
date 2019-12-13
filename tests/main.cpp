@@ -10,8 +10,32 @@
 #include <wge/graphics/render_batch_2d.hpp>
 #include <wge/util/ipair.hpp>
 #include <wge/util/span.hpp>
+#include <wge/math/vector.hpp>
 
 using namespace wge;
+
+TEST_CASE("Vector")
+{
+	using namespace math;
+	REQUIRE(fvec2{ 0, 0 }.is_zero());
+	REQUIRE(fvec2{ 0.5f, 0.2f }.floor().is_zero());
+	REQUIRE(fvec2{ 0.5f, 0.2f }.ceil() == fvec2{1, 1});
+	REQUIRE(fvec2{ -1, -1 }.abs() == fvec2{ 1, 1 });
+	REQUIRE(ivec2{ 1, 1 } + ivec2{ 1, 1 } == ivec2{ 2, 2 });
+	REQUIRE(ivec2{ 1, 1 } - ivec2{ 1, 1 } == ivec2{ 0, 0 });
+	REQUIRE(ivec2{ 2, 2 } * ivec2{ 2, 2 } == ivec2{ 4, 4 });
+	REQUIRE(ivec2{ 2, 2 } / ivec2{ 2, 2 } == ivec2{ 1, 1 });
+	REQUIRE((ivec2{ 1, 1 } += ivec2{ 1, 1 }) == ivec2{ 2, 2 });
+	REQUIRE((ivec2{ 1, 1 } -= ivec2{ 1, 1 }) == ivec2{ 0, 0 });
+	REQUIRE((ivec2{ 2, 2 } *= ivec2{ 2, 2 }) == ivec2{ 4, 4 });
+	REQUIRE((ivec2{ 2, 2 } /= ivec2{ 2, 2 }) == ivec2{ 1, 1 });
+	REQUIRE(ivec2{ fvec2{ 1.5f, 2.7f } } == ivec2{ 1, 2 });
+	REQUIRE(ivec2{ 1, 2 }.components()[0] == 1);
+	REQUIRE(ivec2{ 1, 2 }.components()[1] == 2);
+	REQUIRE(ivec2{ 1, 2 }.swizzle(_x, _x) == ivec2{ 1, 1 });
+	REQUIRE(ivec2{ 1, 2 }.swizzle(_y, _y) == ivec2{ 2, 2 });
+	REQUIRE(ivec2{ 1, 2 }.swizzle(_y, _x) == ivec2{ 2, 1 });
+}
 
 TEST_CASE("Span")
 {

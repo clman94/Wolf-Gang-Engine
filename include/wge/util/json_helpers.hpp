@@ -2,6 +2,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include <wge/math/vector.hpp>
+
 #include <wge/util/strongly_typed_id.hpp>
 
 #include <string_view>
@@ -57,10 +59,18 @@ inline bool optional_deserialize(const json& pJson, const std::string_view& pIte
 namespace wge::math
 {
 
-class vec2;
-void to_json(nlohmann::json&, const vec2&);
-void from_json(const nlohmann::json&, vec2&);
+template <typename T>
+void to_json(nlohmann::json& pJson, const math::basic_vec2<T>& pVec)
+{
+	pJson = { pVec.x, pVec.y };
+}
 
+template <typename T>
+void from_json(const nlohmann::json& pJson, math::basic_vec2<T>& pVec)
+{
+	pVec.x = pJson[0];
+	pVec.y = pJson[1];
+}
 class radians;
 void to_json(nlohmann::json&, const radians&);
 void from_json(const nlohmann::json&, radians&);

@@ -77,7 +77,7 @@ void engine::render_to(const graphics::framebuffer::ptr& pFrame_buffer, const ma
 		[&](layer&, graphics::renderer& pRenderer)
 	{
 		pRenderer.set_framebuffer(pFrame_buffer);
-		pRenderer.set_render_view_to_framebuffer(pOffset, 1 / pScale);
+		pRenderer.set_render_view_to_framebuffer(pOffset, 1.f / pScale);
 		pRenderer.render(mGraphics);
 	});
 }

@@ -9,6 +9,23 @@
 namespace wge::math
 {
 
+namespace detail
+{
+
+template <typename T>
+using only_floating_point = typename std::enable_if_t<std::is_floating_point_v<T>>;
+
+template <typename T>
+using only_integral = typename std::enable_if_t<std::is_integral_v<T>>;
+
+template <typename T>
+using only_arithmetic = typename std::enable_if_t<std::is_arithmetic_v<T>>;
+
+template <typename T>
+using only_signed = typename std::enable_if_t<std::is_floating_point_v<T> || std::is_unsigned_v<T>>;
+
+} // namespace detail
+
 static constexpr float pi = 3.14159265f;
 static constexpr float deg_max = 360.f;
 static constexpr float deg_half = 180.f;
@@ -28,40 +45,49 @@ inline T mod(const T& a, const T& b) noexcept
 	}
 }
 
-template<typename T>
+template<typename T, typename = detail::only_floating_point<T>>
 inline T abs(const T& a) noexcept
 {
 	return std::abs(a);
 }
 
-template<typename T>
+template<typename T, typename = detail::only_floating_point<T>>
 inline T sqrt(const T& a) noexcept
 {
 	return std::sqrt(a);
 }
 
-template<typename T>
+template<typename T, typename = detail::only_arithmetic<T>>
 inline T pow(const T& a, const T& b) noexcept
 {
 	return std::pow(a, b);
 }
 
-template<typename T>
+template<typename T, typename = detail::only_arithmetic<T>>
 inline T floor(const T& a) noexcept
 {
-	return std::floor(a);
+	if constexpr (std::is_floating_point_v<T>)
+		return std::floor(a);
+	else
+		return a;
 }
 
-template<typename T>
+template<typename T, typename = detail::only_arithmetic<T>>
 inline T ceil(const T& a) noexcept
 {
-	return std::ceil(a);
+	if constexpr (std::is_floating_point_v<T>)
+		return std::ceil(a);
+	else
+		return a;
 }
 
-template<typename T>
+template<typename T, typename = detail::only_arithmetic<T>>
 inline T round(const T& a) noexcept
 {
-	return std::round(a);
+	if constexpr (std::is_floating_point_v<T>)
+		return std::round(a);
+	else
+		return a;
 }
 
 template <typename T>
