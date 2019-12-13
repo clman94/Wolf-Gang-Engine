@@ -1162,6 +1162,70 @@ private:
 	core::engine* mEngine;
 };
 
+class log_window
+{
+public:
+	void on_gui()
+	{
+		const std::size_t log_limit = 256;
+
+		if (ImGui::Begin("Log", NULL, ImGuiWindowFlags_HorizontalScrollbar))
+		{
+			auto log = log::get_log();
+
+			// If the window is scrolled to the bottom, keep it at the bottom.
+			// To prevent it from locking the users mousewheel input, it will only lock the scroll
+			// when the log actually changes.
+			bool lock_scroll_at_bottom = ImGui::GetScrollY() == ImGui::GetScrollMaxY() && last_log_size != log.size();
+
+			ImGui::Columns(2, 0, false);
+			ImGui::SetColumnWidth(0, 70);
+
+			// Limit the amount of items that can be shown in log.
+			// This makes it more convenient to scroll and there is less to draw.
+			for (auto& i : log.last(log_limit))
+			{
+				switch (i.severity_level)
+				{
+				case log::level::info:
+					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_Text]);
+					ImGui::TextUnformatted("Info");
+					break;
+				case log::level::debug:
+					ImGui::PushStyleColor(ImGuiCol_Text, { 0.5f, 1, 1, 1 }); // Cyan-ish
+					ImGui::TextUnformatted("Debug");
+					break;
+				case log::level::warning:
+					ImGui::PushStyleColor(ImGuiCol_Text, { 1, 1, 0.5f, 1 }); // Yellow-ish
+					ImGui::TextUnformatted("Warning");
+					break;
+				case log::level::error:
+					ImGui::PushStyleColor(ImGuiCol_Text, { 1, 0.5f, 0.5f, 1 }); // Red
+					ImGui::TextUnformatted("Error");
+					break;
+				}
+				ImGui::NextColumn();
+
+				// The actual message. Has the same color as the message type.
+				ImGui::TextUnformatted(i.string.c_str());
+				ImGui::PopStyleColor();
+
+				ImGui::NextColumn();
+			}
+
+			ImGui::Columns(1);
+
+			if (lock_scroll_at_bottom)
+				ImGui::SetScrollHere();
+			last_log_size = log.size();
+		}
+		ImGui::End();
+	}
+
+private:
+	size_t last_log_size = 0;
+};
+
 class application
 {
 public:
@@ -1248,7 +1312,7 @@ private:
 				ImGui::EndMainMenuBar();
 			}
 
-			show_log();
+			mLog_window.on_gui();
 			show_settings();
 			//show_viewport();
 			//show_objects();
@@ -1426,66 +1490,6 @@ private:
 		}
 		ImGui::End();
 	}
-	
-	void show_log()
-	{
-		const std::size_t log_limit = 256;
-
-		if (ImGui::Begin("Log", NULL, ImGuiWindowFlags_HorizontalScrollbar))
-		{
-			auto log = log::get_log();
-
-			// Helps keep track of changes in the log
-			static size_t last_log_size = 0;
-
-			// If the window is scrolled to the bottom, keep it at the bottom.
-			// To prevent it from locking the users mousewheel input, it will only lock the scroll
-			// when the log actually changes.
-			bool lock_scroll_at_bottom = ImGui::GetScrollY() == ImGui::GetScrollMaxY() && last_log_size != log.size();
-
-			ImGui::Columns(2, 0, false);
-			ImGui::SetColumnWidth(0, 70);
-
-			// Limit the amount of items that can be shown in log.
-			// This makes it more convenient to scroll and there is less to draw.
-			for (auto& i : log.last(log_limit))
-			{
-				switch (i.severity_level)
-				{
-				case log::level::info:
-					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_Text]);
-					ImGui::TextUnformatted("Info");
-					break;
-				case log::level::debug:
-					ImGui::PushStyleColor(ImGuiCol_Text, { 0.5f, 1, 1, 1 }); // Cyan-ish
-					ImGui::TextUnformatted("Debug");
-					break;
-				case log::level::warning:
-					ImGui::PushStyleColor(ImGuiCol_Text, { 1, 1, 0.5f, 1 }); // Yellow-ish
-					ImGui::TextUnformatted("Warning");
-					break;
-				case log::level::error:
-					ImGui::PushStyleColor(ImGuiCol_Text, { 1, 0.5f, 0.5f, 1 }); // Red
-					ImGui::TextUnformatted("Error");
-					break;
-				}
-				ImGui::NextColumn();
-
-				// The actual message. Has the same color as the message type.
-				ImGui::TextUnformatted(i.string.c_str());
-				ImGui::PopStyleColor();
-
-				ImGui::NextColumn();
-			}
-
-			ImGui::Columns(1);
-
-			if (lock_scroll_at_bottom)
-				ImGui::SetScrollHere();
-			last_log_size = log.size();
-		}
-		ImGui::End();
-	}
 
 private:
 	// ImGui needs access to some glfw specific objects
@@ -1494,6 +1498,8 @@ private:
 	util::signal<void(const core::asset::ptr&)> mOn_game_run;
 
 	context mContext;
+
+	log_window mLog_window;
 
 	// Reference the game engine for convenience.
 	core::engine& mEngine{ mContext.get_engine() };

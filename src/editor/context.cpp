@@ -39,7 +39,7 @@ const std::string& asset_editor::get_window_str_id() const noexcept
 	return mWindow_str_id;
 }
 
-core::asset_manager & asset_editor::get_asset_manager() const noexcept
+core::asset_manager& asset_editor::get_asset_manager() const noexcept
 {
 	return mContext->get_engine().get_asset_manager();
 }
