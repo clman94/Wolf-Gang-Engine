@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <wge/util/span.hpp>
 
 struct stb_vorbis;
 
@@ -28,9 +29,8 @@ public:
 	int get_samples() const;
 
 	// The channel data in pSamples is interlaced if there is more than one channel.
-	//   [channel1_sample1, channel2_sample1, channel1_sample2, channel2_sample2, etc...]
 	// Returns the total amount of samples actually read.
-	int read(short* pSamples, int mSize);
+	int read(util::span<short> pDest);
 
 	// Seek to the beginning of the stream
 	void seek_beginning();

@@ -69,9 +69,9 @@ int ogg_vorbis_stream::get_samples() const
 	return mDuration_samples;
 }
 
-int ogg_vorbis_stream::read(short* pSamples, int mSize)
+int ogg_vorbis_stream::read(util::span<short> pDest)
 {
-	int amount = stb_vorbis_get_samples_short_interleaved(mVorbis_stream, mChannels, pSamples, mSize);
+	int amount = stb_vorbis_get_samples_short_interleaved(mVorbis_stream, mChannels, pDest.data(), pDest.size());
 	return amount * mChannels;
 }
 
