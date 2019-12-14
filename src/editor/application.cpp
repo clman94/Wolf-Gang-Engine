@@ -534,7 +534,7 @@ public:
 		ImGui::SameLine();
 
 		static float viewport_width = -100;
-		ImGui::BeginChild("Scene", ImVec2(viewport_width, 0), true);
+		ImGui::BeginChild("Scene", ImVec2(viewport_width, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
 
 		show_viewport();
 
@@ -608,15 +608,13 @@ public:
 			}
 			ImGui::EndMenuBar();
 		}*/
-
-		float width = ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x * 2 - ImGui::GetStyle().ScrollbarSize;
-		float height = ImGui::GetWindowHeight() - ImGui::GetCursorPos().y - ImGui::GetStyle().WindowPadding.y * 2 - ImGui::GetStyle().ScrollbarSize;
+		ImVec2 region_size = ImGui::GetContentRegionAvail();
+		float width = region_size.x;//ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x * 2 - ImGui::GetStyle().ScrollbarSize;
+		float height = region_size.y;//ImGui::GetWindowHeight() - ImGui::GetCursorPos().y - ImGui::GetStyle().WindowPadding.y * 2 - ImGui::GetStyle().ScrollbarSize;
 		float scroll_x_max = width * 2;
 		float scroll_y_max = height * 2;
 
-		if (mViewport_framebuffer->get_width() != width
-			|| mViewport_framebuffer->get_height() != height)
-			mViewport_framebuffer->resize(static_cast<int>(width), static_cast<int>(height));
+		ImGui::FillWithFramebuffer(mViewport_framebuffer);
 
 		ImGui::BeginFixedScrollRegion({ width, height }, { scroll_x_max, scroll_y_max });
 
@@ -1140,7 +1138,7 @@ public:
 
 			if (mIs_loaded)
 			{
-				ImGui::Image(mViewport_framebuffer, ImVec2(500, 500));
+				ImGui::Image(mViewport_framebuffer, ImGui::FillWithFramebuffer(mViewport_framebuffer));
 				mCan_take_input = ImGui::IsWindowFocused();
 				step();
 			}

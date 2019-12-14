@@ -208,7 +208,18 @@ bool HorizontalSplitter(const char* pStr_id, float* pDelta, float pWidth = 5);
 
 ImVec2 GetWindowContentRegionSize();
 
-
+// Doesn't render anything, it just calculates the available size in
+// the window and resize the framebuffer accordingly.
+// Returns the size.
+inline ImVec2 FillWithFramebuffer(const wge::graphics::framebuffer::ptr& pFramebuffer)
+{
+	assert(pFramebuffer != nullptr);
+	ImVec2 avail = ImGui::GetContentRegionAvail();
+	if (pFramebuffer->get_width() != avail.x
+		|| pFramebuffer->get_height() != avail.y)
+		pFramebuffer->resize(avail.x, avail.y);
+	return avail;
+}
 
 } // namespace ImGui
 
