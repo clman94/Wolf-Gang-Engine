@@ -10,6 +10,13 @@ class family
 {
 	static inline std::size_t counter = 1;
 
+	template <typename T>
+	static constexpr family from_impl() noexcept
+	{
+		static std::size_t index = counter++;
+		return{ index };
+	}
+
 public:
 	constexpr family() noexcept = default;
 	constexpr family(std::size_t pIndex) noexcept :
@@ -19,8 +26,7 @@ public:
 	template <typename T>
 	static constexpr family from() noexcept
 	{
-		static std::size_t index = counter++;
-		return{ index };
+		return from_impl<std::remove_cv_t<std::remove_reference_t<T>>>();
 	}
 
 	constexpr bool operator<(const family& pR) const noexcept

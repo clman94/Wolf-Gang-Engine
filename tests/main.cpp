@@ -14,6 +14,16 @@
 
 using namespace wge;
 
+TEST_CASE("A family represents a type")
+{
+	REQUIRE(core::family::from<int>() == core::family::from<int>());
+	REQUIRE(core::family::from<int>() == core::family::from<int&>());
+	REQUIRE(core::family::from<int>() == core::family::from<int&&>());
+	REQUIRE(core::family::from<int>() == core::family::from<const int>());
+	REQUIRE(core::family::from<int>() == core::family::from<const int&>());
+	REQUIRE(core::family::from<int>() == core::family::from<const int&&>());
+}
+
 TEST_CASE("Vector")
 {
 	using namespace math;
