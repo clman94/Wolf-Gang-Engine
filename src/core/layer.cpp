@@ -110,27 +110,6 @@ float layer::get_time_scale() const noexcept
 	return mTime_scale;
 }
 
-void layer::preupdate(float pDelta)
-{
-	pDelta *= mTime_scale;
-	for (auto& i : mSystems)
-		i->preupdate(pDelta);
-}
-
-void layer::update(float pDelta)
-{
-	pDelta *= mTime_scale;
-	for (auto& i : mSystems)
-		i->update(pDelta);
-}
-
-void layer::postupdate(float pDelta)
-{
-	pDelta *= mTime_scale;
-	for (auto& i : mSystems)
-		i->postupdate(pDelta);
-}
-
 void layer::clear()
 {
 	mTime_scale = 1;

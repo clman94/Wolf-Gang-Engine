@@ -15,13 +15,18 @@
 namespace wge::core
 {
 
+// This is used a component to hold information about objects.
+// Each object is given their own.
 struct object_info
 {
+	// An optional name for the object. Not required to be unique.
 	std::string name;
 	// This is the asset that was instanced by this object.
 	// This will be null if this object isn't an instance of
 	// an asset.
 	asset::ptr source_asset;
+	// For easy inspection of an object's components,
+	// this list holds the types of components this object has.
 	std::vector<component_type> components;
 };
 
@@ -106,7 +111,7 @@ public:
 	void set_asset(const core::asset::ptr&) noexcept;
 	asset::ptr get_asset() const;
 
-	// Get the id that uniquely identifies this object
+	// Get the id that uniquely identifies this object.
 	object_id get_id() const;
 
 	operator bool() const noexcept

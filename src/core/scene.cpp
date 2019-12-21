@@ -72,24 +72,6 @@ const factory& scene::get_factory() const noexcept
 	return *mFactory;
 }
 
-void scene::preupdate(float pDelta)
-{
-	for (auto& i : mLayers)
-		i->preupdate(pDelta);
-}
-
-void scene::update(float pDelta)
-{
-	for (auto& i : mLayers)
-		i->update(pDelta);
-}
-
-void scene::postupdate(float pDelta)
-{
-	for (auto& i : mLayers)
-		i->postupdate(pDelta);
-}
-
 void scene::clear()
 {
 	mLayers.clear();

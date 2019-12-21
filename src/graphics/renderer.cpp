@@ -13,7 +13,7 @@
 namespace wge::graphics
 {
 
-std::size_t batch_builder::add_quad(const vertex_2d * pBuffer)
+std::size_t batch_builder::add_quad(const vertex_2d* pBuffer)
 {
 	std::size_t start_index = mBatch.vertices.size();
 
@@ -83,6 +83,30 @@ void renderer::render(graphics& pGraphics)
 	for (const auto& i : mBatches)
 		pGraphics.get_graphics_backend()->render_batch(mFramebuffer, mProjection_matrix, i);
 	mBatches.clear();
+}
+
+void renderer::render_tilemap(graphics& pGraphics, core::resource_handle<texture> pTexture)
+{
+	std::size_t index = 0;
+	for (auto [id, indexes] : get_layer().each<quad_indicies>())
+	{
+		indexes.set_start_index(index++ * 4);
+	}
+	
+	render_batch_2d batch;
+	batch.rendertexture = pTexture;
+	for (auto& i : get_layer().get_storage<quad_vertices>().get_const_raw())
+	{
+		for (auto corner : i.corners)
+			batch.vertices.push_back(corner);
+	}
+	auto thing = get_layer().get_storage<quad_indicies>().get_const_raw();
+	for (auto& i : thing)
+	{
+		for (auto index : i.corners)
+			batch.indexes.push_back(index);
+	}
+	pGraphics.get_graphics_backend()->render_batch(mFramebuffer, mProjection_matrix, batch);
 }
 
 json renderer::on_serialize(core::serialize_type pType)

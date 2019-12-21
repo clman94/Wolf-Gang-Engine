@@ -75,6 +75,8 @@ public:
 
 	void render(graphics& pGraphics);
 
+	void render_tilemap(graphics& pGraphics, core::resource_handle<texture> pTexture);
+
 	// Set the current frame buffer to render to
 	void set_framebuffer(const framebuffer::ptr& pFramebuffer) noexcept
 	{
@@ -116,6 +118,14 @@ private:
 	float mPixel_size{ 1 };
 
 	std::vector<render_batch_2d> mBatches;
+};
+
+struct tilemap_renderer :
+	renderer
+{
+	tilemap_renderer(core::layer& pLayer) :
+		renderer(pLayer)
+	{}
 };
 
 } // namespace wge::graphics

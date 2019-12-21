@@ -92,6 +92,8 @@ public:
 
 	virtual void render_batch(const framebuffer::ptr& mFramebuffer, const math::mat44& pProjection, const render_batch_2d& pBatch) override
 	{
+		if (!mFramebuffer || pBatch.indexes.empty() || pBatch.vertices.empty())
+			return;
 		auto ogl_framebuffer = std::dynamic_pointer_cast<opengl_framebuffer>(mFramebuffer);
 		if (!ogl_framebuffer)
 			return;

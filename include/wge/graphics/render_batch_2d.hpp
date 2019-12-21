@@ -47,4 +47,40 @@ struct render_batch_2d
 	std::vector<vertex_2d> vertices;
 };
 
+struct quad_vertices
+{
+	vertex_2d corners[4];
+
+	void set_rect(const math::rect& pRect)
+	{
+		corners[0].position = pRect.get_corner(0);
+		corners[1].position = pRect.get_corner(1);
+		corners[2].position = pRect.get_corner(2);
+		corners[3].position = pRect.get_corner(3);
+	}
+
+	void set_uv(const math::rect& pRect)
+	{
+		corners[0].uv = pRect.get_corner(0);
+		corners[1].uv = pRect.get_corner(1);
+		corners[2].uv = pRect.get_corner(2);
+		corners[3].uv = pRect.get_corner(3);
+	}
+};
+
+struct quad_indicies
+{
+	unsigned int corners[6];
+	
+	void set_start_index(std::size_t pIndex) noexcept
+	{
+		corners[0] = pIndex;
+		corners[1] = pIndex + 1;
+		corners[2] = pIndex + 2;
+		corners[3] = pIndex + 2;
+		corners[4] = pIndex + 3;
+		corners[5] = pIndex;
+	}
+};
+
 } // namespace wge::graphics

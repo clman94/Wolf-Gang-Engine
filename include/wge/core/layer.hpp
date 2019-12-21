@@ -225,10 +225,6 @@ public:
 	// Get the scale for the delta parameters in the update methods.
 	float get_time_scale() const noexcept;
 
-	void preupdate(float pDelta);
-	void update(float pDelta);
-	void postupdate(float pDelta);
-
 	void clear();
 
 	void destroy_queued_components()
@@ -365,7 +361,7 @@ inline T* layer::get_system() const
 template<typename T, typename ...Targs>
 inline T* layer::add_unregistered_system(Targs&&...pArgs)
 {
-	auto ptr = new T(*this, pArgs...);
+	auto ptr = new T(*this, std::forward<Targs>(pArgs)...);
 	mSystems.emplace_back(ptr);
 	return ptr;
 }

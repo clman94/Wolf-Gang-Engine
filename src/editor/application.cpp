@@ -489,6 +489,10 @@ public:
 
 		// Generate the layer.
 		mScene_resource->generate_scene(mScene, pContext.get_engine().get_asset_manager());
+
+		mScene_resource->tilemap_texture = get_asset_manager().get_asset(filesystem::path("death"))->get_id();
+		mTilemap_layer = mScene.add_layer();
+		mTilemap_layer->add_unregistered_system<graphics::tilemap_renderer>();
 	}
 
 	virtual void on_gui() override
@@ -658,6 +662,8 @@ public:
 			if (is_grid_enabled)
 				visual_editor::draw_grid(grid_color, 1);
 
+			tilemap_editor(*mTilemap_layer, *mScene_resource);
+
 			for (auto& layer : mScene.get_layer_container())
 			{
 				graphics::renderer* renderer = layer->get_system<graphics::renderer>();
@@ -724,6 +730,14 @@ public:
 		// Clear the framebuffer with black.
 		mViewport_framebuffer->clear({ 0, 0, 0, 1 });
 
+		mScene.for_each_system<graphics::tilemap_renderer>([&](core::layer&, graphics::tilemap_renderer& pRenderer)
+		{
+			pRenderer.set_framebuffer(mViewport_framebuffer);
+			pRenderer.set_render_view_to_framebuffer(mViewport_offset, 1.f / mViewport_scale);
+			pRenderer.render_tilemap(engine.get_graphics(),
+				get_asset_manager().get_asset(mScene_resource->tilemap_texture));
+		});
+
 		// Render all layers.
 		mScene.for_each_system<graphics::renderer>([&](core::layer&, graphics::renderer& pRenderer)
 		{
@@ -771,7 +785,31 @@ public:
 		return false;//has_aabb;
 	}
 
+	void tilemap_editor(core::layer& pLayer, core::scene_resource& pScene)
+	{
+		if (auto asset = get_asset_manager().get_asset(pScene.tilemap_texture))
+		{
+			asset->get_resource<graphics::texture>();
+		}
+		else
+			return;
+		math::ivec2 tile_position{ visual_editor::get_mouse_position().floor() };
+		visual_editor::draw_rect(math::rect(math::vec2(tile_position), math::vec2(1, 1)),
+			graphics::color(1, 1, 0, 1));
+		if (ImGui::IsItemClicked())
+		{
+			core::object new_tile = pLayer.add_object();
+			auto tile = new_tile.add_component<core::tile>();
+			tile->position = tile_position;
+			auto quad_verts = new_tile.add_component<graphics::quad_vertices>();
+			quad_verts->set_rect(math::rect(math::vec2(tile_position), math::vec2(1, 1)));
+			quad_verts->set_uv(math::rect(math::vec2(0, 0), math::vec2(10, 10)));
+			new_tile.add_component<graphics::quad_indicies>();
+		}
+	}
+
 private:
+	core::layer* mTilemap_layer = nullptr;
 	core::layer* mSelected_layer = nullptr;
 	core::object_id mSelected_object_id = core::invalid_id;
 	core::scene mScene;

@@ -36,10 +36,6 @@ public:
 
 	const layers& get_layer_container() const noexcept;
 
-	void preupdate(float pDelta);
-	void update(float pDelta);
-	void postupdate(float pDelta);
-
 	void clear();
 
 	// For each system T, call pCallable.

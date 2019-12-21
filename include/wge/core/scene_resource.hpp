@@ -2,11 +2,19 @@
 #include <wge/core/game_object.hpp>
 #include <wge/core/asset_manager.hpp>
 #include <wge/math/transform.hpp>
+#include <wge/math/vector.hpp>
+#include <wge/graphics/render_batch_2d.hpp>
 
 namespace wge::core
 {
 
 class scene;
+
+struct tile
+{
+	math::ivec2 position, uv;
+};
+
 
 class scene_resource :
 	public resource
@@ -22,6 +30,9 @@ public:
 	};
 
 	std::vector<instance> instances;
+
+	std::vector<tile> tilemap;
+	util::uuid tilemap_texture;
 
 public:
 	virtual json serialize_data() const override;

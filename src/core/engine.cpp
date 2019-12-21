@@ -88,9 +88,23 @@ void engine::step()
 
 	mLua_engine.update_delta(delta);
 
-	mScene.preupdate(delta);
-	mScene.update(delta);
-	mScene.postupdate(delta);
+	mScene.for_each_system<scripting::script_system>(
+		[&](layer&, scripting::script_system& pSys)
+	{
+		pSys.preupdate(delta);
+	});
+
+	mScene.for_each_system<scripting::script_system>(
+		[&](layer&, scripting::script_system& pSys)
+	{
+		pSys.update(delta);
+	});
+
+	mScene.for_each_system<scripting::script_system>(
+		[&](layer&, scripting::script_system& pSys)
+	{
+		pSys.postupdate(delta);
+	});
 }
 
 bool engine::is_loaded() const
