@@ -108,7 +108,7 @@ public:
 		difference_type mIndex = 0;
 	};
 
-	bool has_value(key pKey) const noexcept
+	bool has(key pKey) const noexcept
 	{
 		if (pKey < mMinimum || mLookup.empty())
 			return false;
@@ -120,7 +120,7 @@ public:
 
 	T* get(key pKey)
 	{
-		if (!has_value(pKey))
+		if (!has(pKey))
 			return nullptr;
 
 		auto offset = get_lookup_index(pKey);
@@ -172,7 +172,7 @@ public:
 
 	void remove(key pKey)
 	{
-		if (!has_value(pKey))
+		if (!has(pKey))
 			return;
 		std::size_t offset = get_lookup_index(pKey);
 		std::size_t index = mLookup[offset].value();
@@ -223,7 +223,7 @@ public:
 
 	bool empty() const noexcept
 	{
-		return mKeys.empty() // mKeys and mValues are interchangable.
+		return mKeys.empty(); // mKeys and mValues are interchangable.
 	}
 
 	std::size_t size() const noexcept
@@ -288,67 +288,21 @@ public:
 
 template <typename T>
 class component_storage :
-	public component_storage_base
+	public component_storage_base,
+	public sparse_set<T>
 {
 public:
-	using iterator = typename sparse_set<T>::iterator;
-	T& add(object_id pObject_id)
-	{
-		return mComponents.insert(pObject_id);
-	}
-
-	T* get(object_id pObject_id)
-	{
-		return mComponents.get(pObject_id);
-	}
-
-	auto at(std::size_t pIndex)
-	{
-		return mComponents.at(pIndex);
-	}
-
-	bool has_component(object_id pObject_id) const
-	{
-		return mComponents.has_value(pObject_id);
-	}
-
+	using sparse_set<T>::operator[];
+	
 	virtual std::size_t size() const noexcept
 	{
-		return mComponents.size();
+		return sparse_set<T>::size();
 	}
 
-	virtual void remove(const object_id& pObject_id) override
+	virtual void remove(const object_id& pObject_id)
 	{
-		mComponents.remove(pObject_id);
+		sparse_set<T>::remove(pObject_id);
 	}
-
-	auto begin() noexcept
-	{
-		return mComponents.begin();
-	}
-
-	auto end() noexcept
-	{
-		return mComponents.end();
-	}
-
-	auto get_raw() noexcept
-	{
-		return mComponents.get_raw();
-	}
-
-	auto get_raw() const noexcept
-	{
-		return mComponents.get_raw();
-	}
-
-	auto get_const_raw() const noexcept
-	{
-		return mComponents.get_const_raw();
-	}
-
-private:
-	sparse_set<T> mComponents;
 };
 
 } // namespace wge::core

@@ -11,8 +11,74 @@
 #include <wge/util/ipair.hpp>
 #include <wge/util/span.hpp>
 #include <wge/math/vector.hpp>
+#include <wge/util/ptr.hpp>
 
 using namespace wge;
+
+TEST_CASE("Copyable ptr")
+{
+	using util::copyable_ptr;
+
+	struct tracker
+	{
+		tracker() = default;
+		tracker(const tracker& pOther):
+			copies(pOther.copies + 1)
+		{}
+		std::size_t copies = 0;
+	};
+
+	copyable_ptr ptr = util::make_copyable_ptr<tracker>();
+	REQUIRE(ptr.valid());
+	REQUIRE(ptr->copies == 0);
+
+	copyable_ptr copied_ptr = ptr;
+	REQUIRE(copied_ptr.valid());
+	REQUIRE(ptr->copies == 0);
+	REQUIRE(copied_ptr->copies == 1);
+
+	copyable_ptr moved_ptr = std::move(ptr);
+	REQUIRE_FALSE(ptr.valid());
+	REQUIRE(moved_ptr.valid());
+	REQUIRE(moved_ptr->copies == 0);
+
+	struct a { int x = 1;  };
+	struct b : a { b() : a{ 2 } {} };
+	struct d : a {};
+
+	copyable_ptr poly_ptr = util::make_copyable_ptr<b, a>();
+	REQUIRE(poly_ptr.valid());
+	REQUIRE(poly_ptr->x == 2);
+	copyable_ptr poly_ptr_copy = poly_ptr;
+	REQUIRE(poly_ptr_copy->x == 2);
+}
+
+TEST_CASE("Layer can be copied")
+{
+	using core::layer;
+	core::object_id id{ 1 };
+	layer first;
+	*first.add_component<int>(id) = 2;
+
+	layer second = first;
+	REQUIRE(*second.get_component<int>(id) == 2);
+	REQUIRE(first.get_component<int>(id) != second.get_component<int>(id));
+}
+
+TEST_CASE("component_manager can be copied")
+{
+	using mgr = core::component_manager;
+	core::object_id id{ 1 };
+	mgr first;
+	first.add_component<int>(id);
+	*first.get_component<int>(id) = 13;
+	REQUIRE_FALSE(first.get_storage<int>().empty());
+	
+	// Can copy it
+	mgr second = first;
+	REQUIRE(*second.get_component<int>(id) == 13);
+	REQUIRE(first.get_component<int>(id) != second.get_component<int>(id));
+}
 
 TEST_CASE("A family represents a type")
 {
@@ -178,24 +244,24 @@ TEST_CASE("destruction_queue works")
 	mgr.add_component<com2>(id);
 	mgr.add_component<com3>(id);
 
-	REQUIRE(mgr.get_storage<com1>().has_component(id));
-	REQUIRE(mgr.get_storage<com2>().has_component(id));
-	REQUIRE(mgr.get_storage<com3>().has_component(id));
+	REQUIRE(mgr.get_storage<com1>().has(id));
+	REQUIRE(mgr.get_storage<com2>().has(id));
+	REQUIRE(mgr.get_storage<com3>().has(id));
 
 	queue.push_component(id, core::component_type::from<com1>());
 	queue.push_component(id, core::component_type::from<com3>());
 
 	queue.apply(mgr);
 	// It should only remove the selected components.
-	REQUIRE_FALSE(mgr.get_storage<com1>().has_component(id));
-	REQUIRE_FALSE(mgr.get_storage<com3>().has_component(id));
-	REQUIRE(mgr.get_storage<com2>().has_component(id));
+	REQUIRE_FALSE(mgr.get_storage<com1>().has(id));
+	REQUIRE_FALSE(mgr.get_storage<com3>().has(id));
+	REQUIRE(mgr.get_storage<com2>().has(id));
 	REQUIRE(queue.empty());
 
 	queue.push_object(id);
 	queue.apply(mgr);
 	// The rest of the components should be removed from the object.
-	REQUIRE_FALSE(mgr.get_storage<com2>().has_component(id));
+	REQUIRE_FALSE(mgr.get_storage<com2>().has(id));
 	REQUIRE(queue.empty());
 
 	// Clearing the queue should leave it empty.

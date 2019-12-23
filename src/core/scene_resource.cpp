@@ -56,7 +56,6 @@ void scene_resource::generate_layer(core::layer& pLayer, const core::asset_manag
 	auto renderer = pLayer.add_system<graphics::renderer>();
 	renderer->set_pixel_size(0.01f);
 	pLayer.add_system<scripting::script_system>();
-	pLayer.add_system<physics::physics_world>();
 	for (auto& i : instances)
 		generate_instance(pLayer, pAsset_mgr, i);
 }

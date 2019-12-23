@@ -111,6 +111,11 @@ public:
 		return mFamily >= pR.mFamily || (mFamily == pR.mFamily && mBucket >= pR.mBucket);
 	}
 
+	constexpr bucket get_bucket() const noexcept
+	{
+		return mBucket;
+	}
+
 private:
 	family mFamily;
 	bucket mBucket = default_bucket;

@@ -2,7 +2,6 @@
 
 #include <wge/core/object_id.hpp>
 #include <wge/core/component_storage.hpp>
-#include <wge/util/ptr_adaptor.hpp>
 
 namespace wge::core
 {
@@ -30,7 +29,7 @@ public:
 
 	bool is_valid() const noexcept
 	{
-		return mStorage != nullptr && mStorage->has_component(mId);
+		return mStorage != nullptr && mStorage->has(mId);
 	}
 
 	T& get() const noexcept
@@ -39,9 +38,9 @@ public:
 		return *mStorage->get(mId);
 	}
 
-	auto operator->() const noexcept
+	T* operator->() const noexcept
 	{
-		return util::ptr_adaptor{ get() };
+		return &get();
 	}
 
 	T& operator*() const noexcept

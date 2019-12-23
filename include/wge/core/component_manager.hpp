@@ -4,6 +4,7 @@
 #include <wge/core/component_type.hpp>
 #include <wge/util/ptr.hpp>
 #include <wge/core/object_id.hpp>
+#include <wge/util/ptr.hpp>
 
 #include <map>
 
@@ -17,7 +18,7 @@ public:
 	template <typename T>
 	T& add_component(const object_id& pObject, bucket pBucket = default_bucket)
 	{
-		return get_storage<T>(pBucket).add(pObject);
+		return get_storage<T>(pBucket).insert(pObject);
 	}
 
 	template <typename T>
@@ -80,12 +81,13 @@ private:
 		auto iter = mContainers.find(type);
 		// Create a new container if it doesn't exist
 		if (iter == mContainers.end())
-			iter = mContainers.emplace_hint(iter, std::make_pair(type, std::make_unique<storage_type>()));
+			iter = mContainers.emplace_hint(iter,
+				std::make_pair(type, util::make_copyable_ptr<storage_type, component_storage_base>()));
 		return *static_cast<storage_type*>(iter->second.get());
 	}
 
 private:
-	mutable std::map<component_type, std::unique_ptr<component_storage_base>> mContainers;
+	mutable std::map<component_type, util::copyable_ptr<component_storage_base>> mContainers;
 };
 
 } // namespace wge::core

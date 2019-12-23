@@ -15,8 +15,6 @@
 namespace wge::core
 {
 
-// This is used a component to hold information about objects.
-// Each object is given their own.
 struct object_info
 {
 	// An optional name for the object. Not required to be unique.

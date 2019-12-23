@@ -3,6 +3,7 @@
 #include <wge/core/component_manager.hpp>
 #include <wge/core/component_type.hpp>
 #include <wge/core/system.hpp>
+#include <wge/util/ptr.hpp>
 
 #include <map>
 
@@ -24,18 +25,18 @@ public:
 		mSystem_factories[T::SYSTEM_ID] =
 			// This will capture rvalues as values and lvalues as references.
 			[pExtra_args = std::tuple<Targs...>(std::forward<Targs>(pExtra_args)...)](layer& pLayer)
-			->system::uptr
+			->util::copyable_ptr<system>
 		{
 			auto args = std::tuple_cat(std::tie(pLayer), pExtra_args);
-			auto make_unique_wrapper = [](auto&...pArgs) { return std::make_unique<T>(pArgs...); };
+			auto make_unique_wrapper = [](auto&...pArgs) { return util::make_copyable_ptr<T, system>(pArgs...); };
 			return std::apply(make_unique_wrapper, args);
 		};
 	}
 
-	system::uptr create_system(int pType, layer& pLayer) const;
+	util::copyable_ptr<system> create_system(int pType, layer& pLayer) const;
 
 private:
-	using system_factory = std::function<system::uptr(layer&)>;
+	using system_factory = std::function<util::copyable_ptr<system>(layer&)>;
 	std::map<int, system_factory> mSystem_factories;
 };
 

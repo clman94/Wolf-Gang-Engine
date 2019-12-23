@@ -12,7 +12,6 @@ engine::engine() :
 	mScene(mFactory)
 {
 	mFactory.register_system<graphics::renderer>();
-	mFactory.register_system<physics::physics_world>();
 	mFactory.register_system<scripting::script_system>(mLua_engine);
 
 	mLua_engine.register_core_api();

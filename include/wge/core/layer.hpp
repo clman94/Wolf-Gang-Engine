@@ -6,6 +6,7 @@
 #include <wge/core/component_type.hpp>
 #include <wge/core/factory.hpp>
 #include <wge/core/destruction_queue.hpp>
+#include <wge/util/ptr.hpp>
 
 #include <string>
 #include <string_view>
@@ -91,16 +92,8 @@ public:
 	{
 		return std::make_unique<layer>(pFactory);
 	}
-
+	layer() = default;
 	layer(const factory&) noexcept;
-
-	~layer()
-	{
-		clear();
-	}
-
-	layer(const layer&) = delete;
-	layer& operator=(const layer&) = delete;
 
 	// Get a system by its type
 	template <typename T>
@@ -236,11 +229,11 @@ private:
 	template <typename T, typename...Tdeps>
 	void for_each_impl(const std::function<void(object_id, T, Tdeps...)>& pCallable);
 
-	const factory* mFactory;
+	const factory* mFactory = nullptr;
 	float mTime_scale{ 1 };
 	bool mRecieve_update{ true };
 	std::string mName;
-	std::vector<std::unique_ptr<system>> mSystems;
+	std::vector<util::copyable_ptr<system>> mSystems;
 	destruction_queue mDestruction_queue;
 	component_manager mComponent_manager;
 };
@@ -361,14 +354,13 @@ inline T* layer::get_system() const
 template<typename T, typename ...Targs>
 inline T* layer::add_unregistered_system(Targs&&...pArgs)
 {
-	auto ptr = new T(*this, std::forward<Targs>(pArgs)...);
-	mSystems.emplace_back(ptr);
-	return ptr;
+	return static_cast<T*>(mSystems.emplace_back(util::make_copyable_ptr<T, system>(*this, std::forward<Targs>(pArgs)...)).get());
 }
 
 template<typename T>
 inline T* layer::add_system()
 {
+	assert(mFactory);
 	return static_cast<T*>(add_system(T::SYSTEM_ID));
 }
 

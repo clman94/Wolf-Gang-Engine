@@ -3,7 +3,7 @@
 namespace wge::core
 {
 
-system::uptr factory::create_system(int pType, layer& pLayer) const
+util::copyable_ptr<system> factory::create_system(int pType, layer& pLayer) const
 {
 	auto iter = mSystem_factories.find(pType);
 	if (iter == mSystem_factories.end())

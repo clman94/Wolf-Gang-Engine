@@ -33,7 +33,7 @@ system* layer::add_system(int pType)
 	assert(mFactory);
 
 	// Create a new one, otherwise.
-	if (system::uptr sys = mFactory->create_system(pType, *this))
+	if (auto sys = mFactory->create_system(pType, *this))
 	{
 		return mSystems.emplace_back(std::move(sys)).get();
 	}
@@ -53,7 +53,7 @@ const std::string& layer::get_name() const noexcept
 object layer::add_object()
 {
 	object_id id = get_global_generator().get();
-	if (mComponent_manager.get_storage<object_info>().has_component(id))
+	if (mComponent_manager.get_storage<object_info>().has(id))
 		log::warning("Object with id {} already exists.", id);
 	mComponent_manager.add_component<object_info>(id);
 	return get_object(id);
