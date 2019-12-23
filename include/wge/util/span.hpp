@@ -95,8 +95,8 @@ public:
 
 	template <typename = std::enable_if_t<std::is_const_v<T>>>
 	constexpr span(const span<std::remove_const_t<T>> & pTo_const) noexcept :
-		mPtr(pTo_const.data()),
-		mSize(pTo_const.size())
+		mPtr(std::data(pTo_const)),
+		mSize(std::size(pTo_const))
 	{}
 
 	constexpr iterator begin() const noexcept
