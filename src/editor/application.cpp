@@ -137,14 +137,6 @@ inline bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr, bool pD
 	return *pOpen;
 }
 
-inline void GLAPIENTRY opengl_message_callback(GLenum source,
-	GLenum type,
-	GLuint id,
-	GLenum severity,
-	GLsizei length,
-	const GLchar* message,
-	const void* userParam);
-
 class sprite_editor :
 	public asset_editor
 {
@@ -228,7 +220,7 @@ public:
 			box_edit.drag(visual_editor::edit_type::rect);
 			selected_animation->frame_rect = box_edit.get_rect();
 
-			// Limit the minimum size to +1 pixel so the user isn't using 0 or negitive numbers
+			// Limit the minimum size to 1 pixel so the user isn't using 0 or negitive numbers
 			selected_animation->frame_rect.size = math::max(selected_animation->frame_rect.size, math::vec2(1, 1));
 
 			// Notify a change in the asset
