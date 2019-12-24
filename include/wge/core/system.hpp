@@ -22,7 +22,7 @@ class any_set
 {
 public:
 	template <typename T, typename...Targs>
-	T* add(Targs&&...pArgs)
+	T* insert(Targs&&...pArgs)
 	{
 		if (auto existing = get<T>())
 		{
@@ -71,45 +71,13 @@ private:
 	std::vector<std::any> mAnys;
 };
 
-class layer;
-
 class system
 {
 public:
-	system(layer& pLayer) :
-		mLayer(pLayer)
-	{}
+	system() {}
 	virtual ~system() {}
 	virtual int get_system_id() const = 0;
 	virtual std::string get_system_name() const = 0;
-
-	json serialize(serialize_type pType = serialize_type::all)
-	{
-		json result;
-		result["type"] = get_system_id();
-		result["data"] = on_serialize(pType);
-		return result;
-	}
-	void deserialize(const json& pJson)
-	{
-		on_deserialize(pJson["data"]);
-	}
-
-	layer& get_layer() const noexcept
-	{
-		return mLayer;
-	}
-
-	virtual void preupdate(float pDelta) {}
-	virtual void update(float pDelta) {}
-	virtual void postupdate(float pDelta) {}
-
-protected:
-	virtual json on_serialize(serialize_type) { return{}; }
-	virtual void on_deserialize(const json&) {}
-
-private:
-	std::reference_wrapper<layer> mLayer;
 };
 
 } // namespace wge::core

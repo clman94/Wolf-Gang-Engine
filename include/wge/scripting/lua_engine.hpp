@@ -173,12 +173,11 @@ class script_system :
 {
 	WGE_SYSTEM("Script", 8423);
 public:
-	script_system(core::layer& pLayer, lua_engine& pLua_engine) :
-		core::system(pLayer),
+	script_system(lua_engine& pLua_engine) :
 		mLua_engine(&pLua_engine)
 	{}
 
-	void update(float pDelta) override;
+	void update(core::layer& pLayer, float pDelta);
 
 private:
 	lua_engine* mLua_engine;

@@ -73,11 +73,11 @@ void engine::close_game()
 void engine::render_to(const graphics::framebuffer::ptr& pFrame_buffer, const math::vec2& pOffset, const math::vec2& pScale)
 {
 	mScene.for_each_system<graphics::renderer>(
-		[&](layer&, graphics::renderer& pRenderer)
+		[&](layer& pLayer, graphics::renderer& pRenderer)
 	{
 		pRenderer.set_framebuffer(pFrame_buffer);
 		pRenderer.set_render_view_to_framebuffer(pOffset, 1.f / pScale);
-		pRenderer.render(mGraphics);
+		pRenderer.render(pLayer, mGraphics);
 	});
 }
 
@@ -88,21 +88,9 @@ void engine::step()
 	mLua_engine.update_delta(delta);
 
 	mScene.for_each_system<scripting::script_system>(
-		[&](layer&, scripting::script_system& pSys)
+		[&](layer& pLayer, scripting::script_system& pSys)
 	{
-		pSys.preupdate(delta);
-	});
-
-	mScene.for_each_system<scripting::script_system>(
-		[&](layer&, scripting::script_system& pSys)
-	{
-		pSys.update(delta);
-	});
-
-	mScene.for_each_system<scripting::script_system>(
-		[&](layer&, scripting::script_system& pSys)
-	{
-		pSys.postupdate(delta);
+		pSys.update(pLayer, delta);
 	});
 }
 

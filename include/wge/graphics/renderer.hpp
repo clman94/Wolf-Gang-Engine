@@ -52,10 +52,6 @@ class renderer :
 {
 	WGE_SYSTEM("Renderer", 43);
 public:
-	renderer(core::layer& pLayer) :
-		core::system(pLayer)
-	{
-	}
 
 	// Add a batch to be rendered
 	void push_batch(const render_batch_2d& pBatch)
@@ -73,9 +69,9 @@ public:
 	// Convert screen coordinates to world coordinates
 	[[nodiscard]] math::vec2 screen_to_world(const math::vec2& pVec) const noexcept;
 
-	void render(graphics& pGraphics);
+	void render(core::layer& pLayer, graphics& pGraphics);
 
-	void render_tilemap(graphics& pGraphics, core::resource_handle<texture> pTexture);
+	void render_tilemap(core::layer& pLayer, graphics& pGraphics, core::resource_handle<texture> pTexture);
 
 	// Set the current frame buffer to render to
 	void set_framebuffer(const framebuffer::ptr& pFramebuffer) noexcept
@@ -122,10 +118,6 @@ private:
 
 struct tilemap_renderer :
 	renderer
-{
-	tilemap_renderer(core::layer& pLayer) :
-		renderer(pLayer)
-	{}
-};
+{};
 
 } // namespace wge::graphics

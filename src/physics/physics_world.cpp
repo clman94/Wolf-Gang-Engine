@@ -10,11 +10,9 @@
 namespace wge::physics
 {
 
-physics_world::physics_world(core::layer& pLayer) :
-	core::system(pLayer),
+physics_world::physics_world() :
 	mWorld(std::make_unique<b2World>(b2Vec2(0, 1)))
-{
-}
+{}
 
 void physics_world::set_gravity(math::vec2 pVec)
 {
@@ -32,10 +30,10 @@ b2World* physics_world::get_world() const
 	return mWorld.get();
 }
 
-void physics_world::preupdate(float pDelta)
+void physics_world::preupdate(core::layer& pLayer, float pDelta)
 {
 	// Create all the bodies
-	for (auto [id, physics, transform] : get_layer().each<physics_component, math::transform>())
+	for (auto [id, physics, transform] : pLayer.each<physics_component, math::transform>())
 	{
 		if (!physics.mBody)
 		{
@@ -52,7 +50,7 @@ void physics_world::preupdate(float pDelta)
 
 	// Create all the fixtures
 	for (auto [id, collider, physics, transform] :
-		get_layer().each<box_collider_component, physics_component, math::transform>())
+		pLayer.each<box_collider_component, physics_component, math::transform>())
 	{
 		if (!collider.mFixture && physics.mBody)
 		{
@@ -68,13 +66,13 @@ void physics_world::preupdate(float pDelta)
 
 	// Calculate physics
 	mWorld->Step(pDelta, 1, 1);
-	update_object_transforms();
+	update_object_transforms(pLayer);
 }
 
-void physics_world::postupdate(float pDelta)
+void physics_world::postupdate(core::layer& pLayer, float pDelta)
 {
 	// Update the body to the transform of the transform component
-	for (auto [id, physics, transform] : get_layer().each<physics_component, math::transform>())
+	for (auto [id, physics, transform] : pLayer.each<physics_component, math::transform>())
 	{
 		if (physics.mBody)
 		{
@@ -85,16 +83,16 @@ void physics_world::postupdate(float pDelta)
 	}
 
 	// Update the shapes
-	for (auto [id, collider, transform] : get_layer().each<box_collider_component, math::transform>())
+	for (auto [id, collider, transform] : pLayer.each<box_collider_component, math::transform>())
 	{
 		// FIXME: Only update when the transform's scale actually changes.
 		collider.update_current_shape(transform.scale);
 	}
 }
 
-void physics_world::update_object_transforms()
+void physics_world::update_object_transforms(core::layer& pLayer)
 {
-	for (auto [id, physics, transform] : get_layer().each<physics_component, math::transform>())
+	for (auto [id, physics, transform] : pLayer.each<physics_component, math::transform>())
 	{
 		if (physics.mBody)
 		{

@@ -69,10 +69,10 @@ math::vec2 renderer::screen_to_world(const math::vec2& pVec) const noexcept
 	return (pVec / get_render_view_scale()) + mRender_view.max;
 }
 
-void renderer::render(graphics& pGraphics)
+void renderer::render(core::layer& pLayer, graphics& pGraphics)
 {
 	for (auto [id, sprite, transform] :
-		get_layer().each<sprite_component, math::transform>())
+		pLayer.each<sprite_component, math::transform>())
 	{
 		sprite.create_batch(transform, *this);
 	}
@@ -85,22 +85,25 @@ void renderer::render(graphics& pGraphics)
 	mBatches.clear();
 }
 
-void renderer::render_tilemap(graphics& pGraphics, core::resource_handle<texture> pTexture)
+void renderer::render_tilemap(core::layer& pLayer, graphics& pGraphics, core::resource_handle<texture> pTexture)
 {
+	// Update the indexes of all the vertices.
 	std::size_t index = 0;
-	for (auto [id, indexes] : get_layer().each<quad_indicies>())
+	for (auto [id, indexes] : pLayer.each<quad_indicies>())
 	{
 		indexes.set_start_index(index++ * 4);
 	}
 	
+	// Copy all the vertex and index data to a batch to be rendered.
+	// TODO: Have the renderer use the raw vertex/index data directly with copying it all.
 	render_batch_2d batch;
 	batch.rendertexture = pTexture;
-	for (auto& i : get_layer().get_storage<quad_vertices>().get_const_raw())
+	for (auto& i : pLayer.get_storage<quad_vertices>().get_const_raw())
 	{
 		for (auto corner : i.corners)
 			batch.vertices.push_back(corner);
 	}
-	auto thing = get_layer().get_storage<quad_indicies>().get_const_raw();
+	auto thing = pLayer.get_storage<quad_indicies>().get_const_raw();
 	for (auto& i : thing)
 	{
 		for (auto index : i.corners)

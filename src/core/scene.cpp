@@ -6,16 +6,19 @@
 namespace wge::core
 {
 
-layer* scene::get_layer(std::size_t pIndex) const
+layer* scene::get_layer(std::size_t pIndex)
 {
 	if (pIndex >= mLayers.size())
 		return{};
-	return mLayers[pIndex].get();
+	return &mLayers[pIndex];
 }
 
 layer* scene::add_layer()
 {
-	return mLayers.emplace_back(layer::create(*mFactory)).get();
+	if (mFactory) // Optional factory injection.
+		return &mLayers.emplace_back(*mFactory);
+	else
+		return &mLayers.emplace_back();
 }
 
 layer* scene::add_layer(const std::string& pName)
@@ -27,33 +30,16 @@ layer* scene::add_layer(const std::string& pName)
 
 layer* scene::add_layer(const std::string& pName, std::size_t pInsert)
 {
-	return mLayers.insert(mLayers.begin() + pInsert, layer::create(*mFactory))->get();
-}
-
-layer* scene::add_layer(layer::uptr pPtr)
-{
-	return mLayers.emplace_back(std::move(pPtr)).get();
-}
-
-layer::uptr scene::release_layer(const layer& pLayer)
-{
-	for (std::size_t i = 0; i < mLayers.size(); i++)
-	{
-		if (mLayers[i].get() == &pLayer)
-		{
-			auto temp = std::move(mLayers[i]);
-			mLayers.erase(mLayers.begin() + i);
-			return temp;
-		}
-	}
-	return{};
+	return &(*mLayers.insert(mLayers.begin() + pInsert,
+		// Optional factory injection.
+		mFactory ? layer{ *mFactory } : layer{}));
 }
 
 bool scene::remove_layer(const layer& pLayer)
 {
 	for (std::size_t i = 0; i < mLayers.size(); i++)
 	{
-		if (mLayers[i].get() == &pLayer)
+		if (&mLayers[i] == &pLayer)
 		{
 			mLayers.erase(mLayers.begin() + i);
 			return true;
@@ -62,7 +48,7 @@ bool scene::remove_layer(const layer& pLayer)
 	return false;
 }
 
-const scene::layers& scene::get_layer_container() const noexcept
+scene::layers& scene::get_layer_container() noexcept
 {
 	return mLayers;
 }

@@ -491,6 +491,7 @@ public:
 		mScene_resource->generate_scene(mScene, pContext.get_engine().get_asset_manager());
 
 		mScene_resource->tilemap_texture = get_asset_manager().get_asset(filesystem::path("death"))->get_id();
+		
 		mTilemap_layer = mScene.add_layer();
 		mTilemap_layer->add_unregistered_system<graphics::tilemap_renderer>();
 	}
@@ -509,12 +510,12 @@ public:
 		}
 		ImGui::TextUnformatted("Layers");
 		ImGui::BeginChild("Layers", ImVec2(0, 300), true);
-		for (const auto& i : mScene.get_layer_container())
+		for (auto& i : mScene.get_layer_container())
 		{
-			ImGui::PushID(i.get());
+			ImGui::PushID(&i);
 
-			if (ImGui::Selectable(i->get_name().c_str(), mSelected_layer == i.get()))
-				mSelected_layer = i.get();
+			if (ImGui::Selectable(i.get_name().c_str(), mSelected_layer == &i))
+				mSelected_layer = &i;
 			ImGui::PopID();
 		}
 		ImGui::EndChild();
@@ -666,7 +667,7 @@ public:
 
 			for (auto& layer : mScene.get_layer_container())
 			{
-				graphics::renderer* renderer = layer->get_system<graphics::renderer>();
+				graphics::renderer* renderer = layer.get_system<graphics::renderer>();
 				if (!renderer)
 					continue;
 				// Make sure we are working with the viewports framebuffer
@@ -675,7 +676,7 @@ public:
 				if (show_collision)
 				{
 					for (auto& [id, comp, transform] :
-						layer->each<physics::box_collider_component, math::transform>())
+						layer.each<physics::box_collider_component, math::transform>())
 					{
 						visual_editor::push_transform(transform);
 						math::transform box_transform;
@@ -687,12 +688,12 @@ public:
 					}
 				}
 
-				for (auto [id, transform] : layer->each<math::transform>())
+				for (auto [id, transform] : layer.each<math::transform>())
 				{
 					const bool is_object_selected = id == mSelected_object_id;
 
 					math::aabb aabb;
-					if (create_aabb_from_object(layer->get_object(id), aabb))
+					if (create_aabb_from_object(layer.get_object(id), aabb))
 					{
 						if (is_object_selected)
 						{
@@ -730,20 +731,20 @@ public:
 		// Clear the framebuffer with black.
 		mViewport_framebuffer->clear({ 0, 0, 0, 1 });
 
-		mScene.for_each_system<graphics::tilemap_renderer>([&](core::layer&, graphics::tilemap_renderer& pRenderer)
+		mScene.for_each_system<graphics::tilemap_renderer>([&](core::layer& pLayer, graphics::tilemap_renderer& pRenderer)
 		{
 			pRenderer.set_framebuffer(mViewport_framebuffer);
 			pRenderer.set_render_view_to_framebuffer(mViewport_offset, 1.f / mViewport_scale);
-			pRenderer.render_tilemap(engine.get_graphics(),
+			pRenderer.render_tilemap(pLayer, engine.get_graphics(),
 				get_asset_manager().get_asset(mScene_resource->tilemap_texture));
 		});
 
 		// Render all layers.
-		mScene.for_each_system<graphics::renderer>([&](core::layer&, graphics::renderer& pRenderer)
+		mScene.for_each_system<graphics::renderer>([&](core::layer& pLayer, graphics::renderer& pRenderer)
 		{
 			pRenderer.set_framebuffer(mViewport_framebuffer);
 			pRenderer.set_render_view_to_framebuffer(mViewport_offset, 1.f / mViewport_scale);
-			pRenderer.render(engine.get_graphics());
+			pRenderer.render(pLayer, engine.get_graphics());
 		});
 		ImGui::EndFixedScrollRegion();
 	}

@@ -27,9 +27,8 @@ public:
 			[pExtra_args = std::tuple<Targs...>(std::forward<Targs>(pExtra_args)...)](layer& pLayer)
 			->util::copyable_ptr<system>
 		{
-			auto args = std::tuple_cat(std::tie(pLayer), pExtra_args);
 			auto make_unique_wrapper = [](auto&...pArgs) { return util::make_copyable_ptr<T, system>(pArgs...); };
-			return std::apply(make_unique_wrapper, args);
+			return std::apply(make_unique_wrapper, pExtra_args);
 		};
 	}
 

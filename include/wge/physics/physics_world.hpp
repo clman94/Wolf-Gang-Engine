@@ -13,8 +13,14 @@ class b2World;
 class b2Body;
 struct b2BodyDef;
 
+namespace wge::core
+{
+class layer;
+}
+
 namespace wge::physics
 {
+
 
 /*
 
@@ -31,15 +37,15 @@ class physics_world :
 {
 	WGE_SYSTEM("Physics World", 3)
 public:
-	physics_world(core::layer&);
+	physics_world();
 
 	void set_gravity(math::vec2 pVec);
 	math::vec2 get_gravity() const;
 
 	b2World* get_world() const;
 
-	virtual void preupdate(float pDelta) override;
-	virtual void postupdate(float pDelta) override;
+	void preupdate(core::layer& pLayer, float pDelta);
+	void postupdate(core::layer& pLayer, float pDelta);
 private:
 	struct contact
 	{
@@ -69,9 +75,11 @@ private:
 		}
 	};
 
-	void update_object_transforms();
+	void update_object_transforms(core::layer& pLayer);
 
 private:
+	// Unfortunately, box2d likes to have everything pointing
+	// to eachother so we have to keep its world in heap.
 	std::unique_ptr<b2World> mWorld;
 	contact_listener mContact_listener;
 

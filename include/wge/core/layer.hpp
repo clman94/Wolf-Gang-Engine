@@ -354,7 +354,7 @@ inline T* layer::get_system() const
 template<typename T, typename ...Targs>
 inline T* layer::add_unregistered_system(Targs&&...pArgs)
 {
-	return static_cast<T*>(mSystems.emplace_back(util::make_copyable_ptr<T, system>(*this, std::forward<Targs>(pArgs)...)).get());
+	return static_cast<T*>(mSystems.emplace_back(util::make_copyable_ptr<T, system>(std::forward<Targs>(pArgs)...)).get());
 }
 
 template<typename T>

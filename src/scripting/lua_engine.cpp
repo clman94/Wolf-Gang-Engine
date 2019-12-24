@@ -232,7 +232,7 @@ void lua_engine::register_physics_api()
 	};
 }
 
-void script_system::update(float pDelta)
+void script_system::update(core::layer& pLayer, float pDelta)
 {
 	const auto run_script = [&](const std::string& pSource, const sol::environment& pEnv)
 	{
@@ -250,11 +250,11 @@ void script_system::update(float pDelta)
 
 	// Setup the environments if needed
 
-	for (auto& [id, state] : get_layer().each<event_state_component>())
+	for (auto& [id, state] : pLayer.each<event_state_component>())
 	{
 		if (!state.environment.valid())
 		{
-			state.environment = mLua_engine->create_object_environment(get_layer().get_object(id));
+			state.environment = mLua_engine->create_object_environment(pLayer.get_object(id));
 
 			// Added the properties as variables.
 			for (const auto& i : state.properties)
@@ -272,7 +272,7 @@ void script_system::update(float pDelta)
 
 	// Event: Create
 	for (auto& [id, on_create, state] :
-		get_layer().each<event_components::on_create, event_state_component>())
+		pLayer.each<event_components::on_create, event_state_component>())
 	{
 		if (on_create.first_time)
 		{
@@ -280,15 +280,15 @@ void script_system::update(float pDelta)
 			run_script(on_create.get_source(), state.environment);
 		}
 	}
-	get_layer().destroy_queued_components();
+	pLayer.destroy_queued_components();
 
 	// Event: Update
 	for (auto& [id, on_update, state] :
-		get_layer().each<event_components::on_update, event_state_component>())
+		pLayer.each<event_components::on_update, event_state_component>())
 	{
 		run_script(on_update.get_source(), state.environment);
 	}
-	get_layer().destroy_queued_components();
+	pLayer.destroy_queued_components();
 }
 
 std::string make_valid_identifier(std::string_view pStr, const std::string_view pDefault)
