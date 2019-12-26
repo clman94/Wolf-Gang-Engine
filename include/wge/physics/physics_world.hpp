@@ -32,10 +32,8 @@ Events sent:
 Events recieved:
 	void on_preupdate(float);
 */
-class physics_world :
-	public core::system
+class physics_world
 {
-	WGE_SYSTEM("Physics World", 3)
 public:
 	physics_world();
 

@@ -4,42 +4,6 @@
 namespace wge::core
 {
 
-layer::layer(const factory& pFactory) noexcept :
-	mFactory(&pFactory)
-{}
-
-system* layer::get_system(int pID) const
-{
-	for (auto& i : mSystems)
-		if (i->get_system_id() == pID)
-			return i.get();
-	return nullptr;
-}
-
-system* layer::get_system(const std::string& pName) const
-{
-	for (auto& i : mSystems)
-		if (i->get_system_name() == pName)
-			return i.get();
-	return nullptr;
-}
-
-system* layer::add_system(int pType)
-{
-	// This system already exists.
-	if (system* sys = get_system(pType))
-		return sys;
-
-	assert(mFactory);
-
-	// Create a new one, otherwise.
-	if (auto sys = mFactory->create_system(pType, *this))
-	{
-		return mSystems.emplace_back(std::move(sys)).get();
-	}
-	return nullptr;
-}
-
 void layer::set_name(const std::string& pName) noexcept
 {
 	mName = pName;
@@ -114,8 +78,6 @@ void layer::clear()
 {
 	mTime_scale = 1;
 	mName.clear();
-	mSystems.clear();
-
 	remove_all_objects();
 }
 

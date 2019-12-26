@@ -54,8 +54,6 @@ core::object scene_resource::generate_instance(core::layer& pLayer, const core::
 layer scene_resource::generate_layer(const core::asset_manager& pAsset_mgr) const
 {
 	layer new_layer;
-	auto renderer = new_layer.add_unregistered_system<graphics::renderer>();
-	renderer->set_pixel_size(0.01f);
 	for (auto& i : instances)
 		generate_instance(new_layer, pAsset_mgr, i);
 	return new_layer;

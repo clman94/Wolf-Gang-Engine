@@ -8,11 +8,8 @@
 namespace wge::core
 {
 
-engine::engine() :
-	mScene(mFactory)
+engine::engine()
 {
-	mFactory.register_system<graphics::renderer>();
-
 	mLua_engine.register_core_api();
 	mLua_engine.register_asset_api(mAsset_manager);
 	mLua_engine.register_layer_api(mAsset_manager);
@@ -66,18 +63,6 @@ void engine::load_game(const filesystem::path& pPath)
 void engine::close_game()
 {
 	mLoaded = false;
-
-}
-
-void engine::render_to(const graphics::framebuffer::ptr& pFrame_buffer, const math::vec2& pOffset, const math::vec2& pScale)
-{
-	mScene.for_each_system<graphics::renderer>(
-		[&](layer& pLayer, graphics::renderer& pRenderer)
-	{
-		pRenderer.set_framebuffer(pFrame_buffer);
-		pRenderer.set_render_view_to_framebuffer(pOffset, 1.f / pScale);
-		pRenderer.render(pLayer, mGraphics);
-	});
 }
 
 void engine::step()

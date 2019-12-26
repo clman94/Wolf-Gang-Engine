@@ -18,11 +18,6 @@ public:
 	using uptr = std::unique_ptr<scene>;
 	using layers = std::deque<layer>;
 
-	scene() = default;
-	scene(const factory& pFactory) :
-		mFactory(&pFactory)
-	{}
-
 	// Get a layer by index
 	[[nodiscard]] layer* get_layer(std::size_t pIndex);
 
@@ -46,24 +41,8 @@ public:
 
 	void clear();
 
-	// For each system T, call pCallable.
-	// Tcallable should be void(layer&, T&)
-	template <typename T, typename Tcallable>
-	void for_each_system(Tcallable&& pCallable);
-
-	const factory& get_factory() const noexcept;
-
 private:
 	layers mLayers;
-	const factory* mFactory = nullptr;
 };
-
-template<typename T, typename Tcallable>
-inline void scene::for_each_system(Tcallable&& pCallable)
-{
-	for (auto& i : mLayers)
-		if (auto sys = i.get_system<T>())
-			pCallable(i, *sys);
-}
 
 } // namespace wge::core

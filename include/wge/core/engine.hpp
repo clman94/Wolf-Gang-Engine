@@ -19,8 +19,6 @@ public:
 	void load_game(const filesystem::path& pPath);
 	void close_game();
 
-	void render_to(const graphics::framebuffer::ptr& pFrame_buffer, const math::vec2& pOffset, const math::vec2& pScale);
-	
 	void step();
 
 	bool is_loaded() const;
@@ -50,11 +48,6 @@ public:
 		return mLua_engine;
 	}
 
-	const factory& get_factory() const noexcept
-	{
-		return mFactory;
-	}
-
 private:
 	void load_assets();
 
@@ -62,7 +55,6 @@ private:
 	core::game_settings mSettings;
 	core::asset_manager mAsset_manager;
 	core::scene mScene;
-	core::factory mFactory;
 	graphics::graphics mGraphics;
 	scripting::lua_engine mLua_engine;
 

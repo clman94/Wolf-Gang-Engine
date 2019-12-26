@@ -470,12 +470,13 @@ public:
 
 	scene_editor(context& pContext, const core::asset::ptr& pAsset, const on_game_run_callback& pRun_callback) noexcept :
 		asset_editor(pContext, pAsset),
-		mScene(pContext.get_engine().get_factory()),
 		mOn_game_run_callback(pRun_callback)
 	{
 		// Create a framebuffer for the scene to be rendered to.
 		auto& graphics = pContext.get_engine().get_graphics();
 		mViewport_framebuffer = graphics.get_graphics_backend()->create_framebuffer();
+		mRenderer.set_framebuffer(mViewport_framebuffer);
+		mRenderer.set_pixel_size(0.01f);
 
 		mScene_resource = get_asset()->get_resource<core::scene_resource>();
 
@@ -483,9 +484,6 @@ public:
 		mScene = mScene_resource->generate_scene(pContext.get_engine().get_asset_manager());
 
 		mScene_resource->tilemap_texture = get_asset_manager().get_asset(filesystem::path("death"))->get_id();
-		
-		mTilemap_layer = mScene.add_layer();
-		mTilemap_layer->add_unregistered_system<graphics::tilemap_renderer>();
 	}
 
 	virtual void on_gui() override
@@ -506,7 +504,6 @@ public:
 			if (ImGui::Selectable("Sprites"))
 			{
 				core::layer layer;
-				layer.add_system<graphics::renderer>();
 				mScene.add_layer(std::move(layer));
 			}
 			if (ImGui::Selectable("Tilemap"))
@@ -668,16 +665,10 @@ public:
 			if (is_grid_enabled)
 				visual_editor::draw_grid(grid_color, 1);
 
-			tilemap_editor(*mTilemap_layer, *mScene_resource);
+			//tilemap_editor(*mTilemap_layer, *mScene_resource);
 
 			for (auto& layer : mScene.get_layer_container())
 			{
-				graphics::renderer* renderer = layer.get_system<graphics::renderer>();
-				if (!renderer)
-					continue;
-				// Make sure we are working with the viewports framebuffer
-				renderer->set_framebuffer(mViewport_framebuffer);
-
 				if (show_collision)
 				{
 					for (auto& [id, comp, transform] :
@@ -736,23 +727,15 @@ public:
 		// Clear the framebuffer with black.
 		mViewport_framebuffer->clear({ 0, 0, 0, 1 });
 
-		mScene.for_each_system<graphics::tilemap_renderer>(
-			[&](core::layer& pLayer, graphics::tilemap_renderer& pRenderer)
+		// Render all the layers.
+		mRenderer.set_render_view_to_framebuffer(mViewport_offset, 1.f / mViewport_scale);
+		for (auto& i : mScene.get_layer_container())
 		{
-			pRenderer.set_framebuffer(mViewport_framebuffer);
-			pRenderer.set_render_view_to_framebuffer(mViewport_offset, 1.f / mViewport_scale);
-			pRenderer.render_tilemap(pLayer, engine.get_graphics(),
+			mRenderer.render_tilemap(i, engine.get_graphics(),
 				get_asset_manager().get_asset(mScene_resource->tilemap_texture));
-		});
+			mRenderer.render(i, engine.get_graphics());
+		}
 
-		// Render all layers.
-		mScene.for_each_system<graphics::renderer>(
-			[&](core::layer& pLayer, graphics::renderer& pRenderer)
-		{
-			pRenderer.set_framebuffer(mViewport_framebuffer);
-			pRenderer.set_render_view_to_framebuffer(mViewport_offset, 1.f / mViewport_scale);
-			pRenderer.render(pLayer, engine.get_graphics());
-		});
 		ImGui::EndFixedScrollRegion();
 	}
 
@@ -824,6 +807,7 @@ private:
 
 	core::scene_resource* mScene_resource = nullptr;
 
+	graphics::renderer mRenderer;
 	graphics::framebuffer::ptr mViewport_framebuffer;
 	math::vec2 mViewport_offset;
 	math::vec2 mViewport_scale{ 100, 100 };
@@ -1064,29 +1048,21 @@ public:
 		mEngine(&pEngine)
 	{}
 
-	void open_scene(const core::asset::ptr& pAsset)
+	void open_scene(core::resource_handle<core::scene_resource> pScene)
 	{
-		if (!pAsset)
+		if (!pScene)
 		{
 			log::error("No asset to generate scene with.");
 			return;
 		}
-		mEngine->get_scene().clear();
-		if (auto resource = pAsset->get_resource<core::scene_resource>())
-		{
-			mEngine->get_scene() = resource->generate_scene(mEngine->get_asset_manager());
-			mIs_loaded = true;
-			mAsset = pAsset;
-		}
-		else
-		{
-			log::error("Asset is not a scene.");
-		}
+		mEngine->get_scene() = pScene->generate_scene(mEngine->get_asset_manager());
+		mIs_loaded = true;
+		mScene = pScene;
 	}
 
 	void restart()
 	{
-		open_scene(mAsset);
+		open_scene(mScene);
 	}
 
 	void init_viewport()
@@ -1094,6 +1070,8 @@ public:
 		auto& g = mEngine->get_graphics();
 		mViewport_framebuffer = g.get_graphics_backend()->create_framebuffer();
 		mViewport_framebuffer->resize(500, 500);
+		mRenderer.set_framebuffer(mViewport_framebuffer);
+		mRenderer.set_pixel_size(0.01f);
 	}
 
 	void register_input()
@@ -1162,7 +1140,15 @@ public:
 		// Clear the framebuffer with black.
 		mViewport_framebuffer->clear({ 0, 0, 0, 1 });
 
-		mEngine->render_to(mViewport_framebuffer, math::vec2(0, 0), math::vec2(1.f, 1.f) * 100.f);
+		// Render all the layers.
+		mRenderer.set_render_view_to_framebuffer(math::vec2(0, 0), math::vec2(1.f, 1.f) / 100.f);
+		for (auto& i : mEngine->get_scene().get_layer_container())
+		{
+			if (mScene->tilemap_texture.is_valid())
+				mRenderer.render_tilemap(i, mEngine->get_graphics(),
+					mEngine->get_asset_manager().get_asset(mScene->tilemap_texture));
+			mRenderer.render(i, mEngine->get_graphics());
+		}
 	}
 
 	void on_gui()
@@ -1201,8 +1187,9 @@ private:
 	bool mIs_loaded = false;
 	bool mCan_take_input = false;
 	graphics::framebuffer::ptr mViewport_framebuffer;
+	graphics::renderer mRenderer;
 
-	core::asset::ptr mAsset;
+	core::resource_handle<core::scene_resource> mScene;
 	core::engine* mEngine;
 };
 

@@ -85,33 +85,6 @@ public:
 		storage_iterator mIter;
 	};
 
-	using uptr = std::unique_ptr<layer>;
-
-	// Create a new layer object
-	[[nodiscard]] static uptr create(const factory& pFactory)
-	{
-		return std::make_unique<layer>(pFactory);
-	}
-	layer() = default;
-	layer(const factory&) noexcept;
-
-	// Get a system by its type
-	template <typename T>
-	T* get_system() const;
-	// Get a system by its type
-	system* get_system(int pID) const;
-	// Get a system by name
-	system* get_system(const std::string& pName) const;
-
-	// Create a system that was not registered in the factory.
-	template <typename T, typename...Targs>
-	T* add_unregistered_system(Targs&&...);
-	// Uses the current factory to construct the system.
-	template <typename T>
-	T* add_system();
-	// Create a new system that was registered in the factory.
-	system* add_system(int pType);
-
 	// Set the name of this layer
 	void set_name(const std::string& pName) noexcept;
 	// Get the name of this layer
@@ -229,11 +202,9 @@ private:
 	template <typename T, typename...Tdeps>
 	void for_each_impl(const std::function<void(object_id, T, Tdeps...)>& pCallable);
 
-	const factory* mFactory = nullptr;
 	float mTime_scale{ 1 };
 	bool mRecieve_update{ true };
 	std::string mName;
-	std::vector<util::copyable_ptr<system>> mSystems;
 	destruction_queue mDestruction_queue;
 	component_manager mComponent_manager;
 };
@@ -344,25 +315,6 @@ public:
 private:
 	iterator mBegin, mEnd;
 };
-
-template<typename T>
-inline T* layer::get_system() const
-{
-	return dynamic_cast<T*>(get_system(T::SYSTEM_ID));
-}
-
-template<typename T, typename ...Targs>
-inline T* layer::add_unregistered_system(Targs&&...pArgs)
-{
-	return static_cast<T*>(mSystems.emplace_back(util::make_copyable_ptr<T, system>(std::forward<Targs>(pArgs)...)).get());
-}
-
-template<typename T>
-inline T* layer::add_system()
-{
-	assert(mFactory);
-	return static_cast<T*>(add_system(T::SYSTEM_ID));
-}
 
 template<typename T>
 inline T* layer::add_component(const object_id& pObject_id)

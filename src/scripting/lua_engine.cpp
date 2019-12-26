@@ -215,7 +215,7 @@ public:
 void lua_engine::register_physics_api()
 {
 	sol::table t = state.create_named_table("physics");
-	t["test_aabb"] = [this](const core::layer& pLayer, const math::vec2& a, const math::vec2& b)
+	/*t["test_aabb"] = [this](const core::layer& pLayer, const math::vec2& a, const math::vec2& b)
 	{
 		if (auto world = pLayer.get_system<physics::physics_world>())
 		{
@@ -229,7 +229,7 @@ void lua_engine::register_physics_api()
 			return callback.has_collision;
 		}
 		return false;
-	};
+	};*/
 }
 
 void lua_engine::update_layer(core::layer& pLayer, float pDelta)

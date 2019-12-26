@@ -15,10 +15,7 @@ layer* scene::get_layer(std::size_t pIndex)
 
 layer* scene::add_layer()
 {
-	if (mFactory) // Optional factory injection.
-		return &mLayers.emplace_back(*mFactory);
-	else
-		return &mLayers.emplace_back();
+	return &mLayers.emplace_back();
 }
 
 layer* scene::add_layer(const std::string& pName)
@@ -30,9 +27,7 @@ layer* scene::add_layer(const std::string& pName)
 
 layer* scene::add_layer(const std::string& pName, std::size_t pInsert)
 {
-	return &(*mLayers.insert(mLayers.begin() + pInsert,
-		// Optional factory injection.
-		mFactory ? layer{ *mFactory } : layer{}));
+	return &(*mLayers.insert(mLayers.begin() + pInsert, layer{}));
 }
 
 bool scene::remove_layer(const layer& pLayer)
@@ -51,11 +46,6 @@ bool scene::remove_layer(const layer& pLayer)
 scene::layers& scene::get_layer_container() noexcept
 {
 	return mLayers;
-}
-
-const factory& scene::get_factory() const noexcept
-{
-	return *mFactory;
 }
 
 void scene::clear()

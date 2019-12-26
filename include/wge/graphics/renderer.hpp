@@ -47,10 +47,8 @@ private:
 
 class graphics;
 
-class renderer :
-	public core::system
+class renderer
 {
-	WGE_SYSTEM("Renderer", 43);
 public:
 
 	// Add a batch to be rendered
@@ -99,7 +97,6 @@ public:
 protected:
 	virtual json on_serialize(core::serialize_type pType);
 	virtual void on_deserialize(const json&);
-	
 
 private:
 	// Sort the batches so then the ones with greater depth are
@@ -115,9 +112,5 @@ private:
 
 	std::vector<render_batch_2d> mBatches;
 };
-
-struct tilemap_renderer :
-	renderer
-{};
 
 } // namespace wge::graphics
