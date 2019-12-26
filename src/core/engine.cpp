@@ -12,7 +12,6 @@ engine::engine() :
 	mScene(mFactory)
 {
 	mFactory.register_system<graphics::renderer>();
-	mFactory.register_system<scripting::script_system>(mLua_engine);
 
 	mLua_engine.register_core_api();
 	mLua_engine.register_asset_api(mAsset_manager);
@@ -85,13 +84,8 @@ void engine::step()
 {
 	float delta = 1.f / 60.f;
 
-	mLua_engine.update_delta(delta);
-
-	mScene.for_each_system<scripting::script_system>(
-		[&](layer& pLayer, scripting::script_system& pSys)
-	{
-		pSys.update(pLayer, delta);
-	});
+	for (auto& i : mScene.get_layer_container())
+		mLua_engine.update_layer(i, delta);
 }
 
 bool engine::is_loaded() const

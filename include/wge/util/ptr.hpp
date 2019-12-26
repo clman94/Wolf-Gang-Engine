@@ -35,9 +35,6 @@ public:
 	copyable_ptr() noexcept
 	{}
 	
-	//copyable_ptr& operator=(copyable_ptr&&) noexcept = default;
-	//copyable_ptr& operator=(const copyable_ptr&) noexcept = default;
-
 	T* get() const noexcept
 	{
 		return mPtr.get();

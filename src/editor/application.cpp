@@ -480,7 +480,7 @@ public:
 		mScene_resource = get_asset()->get_resource<core::scene_resource>();
 
 		// Generate the layer.
-		mScene_resource->generate_scene(mScene, pContext.get_engine().get_asset_manager());
+		mScene = mScene_resource->generate_scene(pContext.get_engine().get_asset_manager());
 
 		mScene_resource->tilemap_texture = get_asset_manager().get_asset(filesystem::path("death"))->get_id();
 		
@@ -491,7 +491,7 @@ public:
 	virtual void on_gui() override
 	{
 		ImGui::BeginChild("SidePanelSettings", ImVec2(200, 0));
-		if (ImGui::Button("Run") && mOn_game_run_callback)
+		if (ImGui::Button("Send to viewport") && mOn_game_run_callback)
 		{
 			// Make sure the actual asset data is up to date before
 			// we start the scene.
@@ -501,6 +501,19 @@ public:
 			mOn_game_run_callback(get_asset());
 		}
 		ImGui::TextUnformatted("Layers");
+		if (ImGui::BeginCombo("Add", "Layer"))
+		{
+			if (ImGui::Selectable("Sprites"))
+			{
+				core::layer layer;
+				layer.add_system<graphics::renderer>();
+				mScene.add_layer(std::move(layer));
+			}
+			if (ImGui::Selectable("Tilemap"))
+			{ }
+
+			ImGui::EndCombo();
+		}
 		ImGui::BeginChild("Layers", ImVec2(0, 300), true);
 		for (auto& i : mScene.get_layer_container())
 		{
@@ -723,7 +736,8 @@ public:
 		// Clear the framebuffer with black.
 		mViewport_framebuffer->clear({ 0, 0, 0, 1 });
 
-		mScene.for_each_system<graphics::tilemap_renderer>([&](core::layer& pLayer, graphics::tilemap_renderer& pRenderer)
+		mScene.for_each_system<graphics::tilemap_renderer>(
+			[&](core::layer& pLayer, graphics::tilemap_renderer& pRenderer)
 		{
 			pRenderer.set_framebuffer(mViewport_framebuffer);
 			pRenderer.set_render_view_to_framebuffer(mViewport_offset, 1.f / mViewport_scale);
@@ -732,7 +746,8 @@ public:
 		});
 
 		// Render all layers.
-		mScene.for_each_system<graphics::renderer>([&](core::layer& pLayer, graphics::renderer& pRenderer)
+		mScene.for_each_system<graphics::renderer>(
+			[&](core::layer& pLayer, graphics::renderer& pRenderer)
 		{
 			pRenderer.set_framebuffer(mViewport_framebuffer);
 			pRenderer.set_render_view_to_framebuffer(mViewport_offset, 1.f / mViewport_scale);
@@ -1059,7 +1074,7 @@ public:
 		mEngine->get_scene().clear();
 		if (auto resource = pAsset->get_resource<core::scene_resource>())
 		{
-			resource->generate_scene(mEngine->get_scene(), mEngine->get_asset_manager());
+			mEngine->get_scene() = resource->generate_scene(mEngine->get_asset_manager());
 			mIs_loaded = true;
 			mAsset = pAsset;
 		}

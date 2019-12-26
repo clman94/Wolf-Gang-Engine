@@ -51,19 +51,21 @@ core::object scene_resource::generate_instance(core::layer& pLayer, const core::
 	return obj;
 }
 
-void scene_resource::generate_layer(core::layer& pLayer, const core::asset_manager& pAsset_mgr) const
+layer scene_resource::generate_layer(const core::asset_manager& pAsset_mgr) const
 {
-	auto renderer = pLayer.add_system<graphics::renderer>();
+	layer new_layer;
+	auto renderer = new_layer.add_unregistered_system<graphics::renderer>();
 	renderer->set_pixel_size(0.01f);
-	pLayer.add_system<scripting::script_system>();
 	for (auto& i : instances)
-		generate_instance(pLayer, pAsset_mgr, i);
+		generate_instance(new_layer, pAsset_mgr, i);
+	return new_layer;
 }
 
-void scene_resource::generate_scene(core::scene& pScene, const core::asset_manager& pAsset_mgr) const
+scene scene_resource::generate_scene(const core::asset_manager& pAsset_mgr) const
 {
-	auto layer = pScene.add_layer("Game");
-	generate_layer(*layer, pAsset_mgr);
+	scene new_scene;
+	new_scene.add_layer(generate_layer(pAsset_mgr));
+	return new_scene;
 }
 
 } // namespace wge::core

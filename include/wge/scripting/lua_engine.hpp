@@ -125,6 +125,8 @@ public:
 	void register_layer_api(core::asset_manager& pAsset_manager);
 	void register_math_api();
 	void register_physics_api();
+
+	void update_layer(core::layer& pLayer, float pDelta);
 };
 
 class event_state_component
@@ -167,21 +169,6 @@ public:
 };
 
 } // namespace event_components
-
-class script_system :
-	public core::system
-{
-	WGE_SYSTEM("Script", 8423);
-public:
-	script_system(lua_engine& pLua_engine) :
-		mLua_engine(&pLua_engine)
-	{}
-
-	void update(core::layer& pLayer, float pDelta);
-
-private:
-	lua_engine* mLua_engine;
-};
 
 std::string make_valid_identifier(std::string_view pStr, std::string_view pDefault = "Blank");
 

@@ -4,17 +4,15 @@
 #include <wge/math/transform.hpp>
 #include <wge/math/vector.hpp>
 #include <wge/graphics/render_batch_2d.hpp>
+#include <wge/core/scene.hpp>
 
 namespace wge::core
 {
-
-class scene;
 
 struct tile
 {
 	math::ivec2 position, uv;
 };
-
 
 class scene_resource :
 	public resource
@@ -38,9 +36,9 @@ public:
 	virtual json serialize_data() const override;
 	virtual void deserialize_data(const json& pJson) override;
 
-	static core::object generate_instance(core::layer& pLayer, const core::asset_manager& pAsset_mgr, const instance& pData);
-	void generate_layer(core::layer& pLayer, const core::asset_manager& pAsset_mgr) const;
-	void generate_scene(core::scene& pScene, const core::asset_manager& pAsset_mgr) const;
+	static object generate_instance(layer& pLayer, const asset_manager& pAsset_mgr, const instance& pData);
+	layer generate_layer(const asset_manager& pAsset_mgr) const;
+	scene generate_scene(const asset_manager& pAsset_mgr) const;
 };
 
 } // namespace wge::core

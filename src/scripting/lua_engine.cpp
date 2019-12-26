@@ -232,21 +232,21 @@ void lua_engine::register_physics_api()
 	};
 }
 
-void script_system::update(core::layer& pLayer, float pDelta)
+void lua_engine::update_layer(core::layer& pLayer, float pDelta)
 {
 	const auto run_script = [&](const std::string& pSource, const sol::environment& pEnv)
 	{
 		try
 		{
-			mLua_engine->state.safe_script(pSource, pEnv);
+			state.safe_script(pSource, pEnv);
 		}
-		catch (const sol::error& e)
+		catch (const sol::error & e)
 		{
 			log::error("An expected error has occurred: {}", e.what());
 		}
 	};
 
-	mLua_engine->update_delta(pDelta);
+	update_delta(pDelta);
 
 	// Setup the environments if needed
 
@@ -254,7 +254,7 @@ void script_system::update(core::layer& pLayer, float pDelta)
 	{
 		if (!state.environment.valid())
 		{
-			state.environment = mLua_engine->create_object_environment(pLayer.get_object(id));
+			state.environment = create_object_environment(pLayer.get_object(id));
 
 			// Added the properties as variables.
 			for (const auto& i : state.properties)

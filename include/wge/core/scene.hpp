@@ -30,10 +30,11 @@ public:
 	layer* add_layer(const layer& pLayer)
 	{
 		mLayers.push_back(pLayer);
+		return &mLayers.back();
 	}
 	layer* add_layer(layer&& pLayer)
 	{
-		mLayers.emplace_back(std::move(pLayer));
+		return &mLayers.emplace_back(std::move(pLayer));
 	}
 	layer* add_layer(const std::string& pName);
 	layer* add_layer(const std::string& pName, std::size_t pInsert);
