@@ -665,7 +665,7 @@ public:
 			if (is_grid_enabled)
 				visual_editor::draw_grid(grid_color, 1);
 
-			//tilemap_editor(*mTilemap_layer, *mScene_resource);
+			//tilemap_editor(*mTilemap_layer);
 
 			for (auto& layer : mScene.get_layer_container())
 			{
@@ -776,9 +776,9 @@ public:
 		return false;//has_aabb;
 	}
 
-	void tilemap_editor(core::layer& pLayer, core::scene_resource& pScene)
+	void tilemap_editor(core::layer& pLayer)
 	{
-		if (auto asset = get_asset_manager().get_asset(pScene.tilemap_texture))
+		if (auto asset = get_asset_manager().get_asset(mScene_resource->tilemap_texture))
 		{
 			asset->get_resource<graphics::texture>();
 		}
