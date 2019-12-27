@@ -15,7 +15,6 @@ namespace wge::core
 class scene
 {
 public:
-	using uptr = std::unique_ptr<scene>;
 	using layers = std::deque<layer>;
 
 	// Get a layer by index
