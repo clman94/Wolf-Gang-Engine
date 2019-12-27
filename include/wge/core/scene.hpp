@@ -18,7 +18,7 @@ public:
 	using layers = std::deque<layer>;
 
 	// Get a layer by index
-	[[nodiscard]] layer* get_layer(std::size_t pIndex);
+	layer* get_layer(std::size_t pIndex);
 
 	layer* add_layer();
 	layer* add_layer(const layer& pLayer)

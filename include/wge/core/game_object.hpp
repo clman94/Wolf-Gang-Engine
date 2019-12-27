@@ -108,9 +108,6 @@ public:
 	void set_name(const std::string& pName);
 
 	// Remove this object from the layer.
-	// It is recommended that you discard any object objects because this
-	// function will remove the data they are pointing to, thus leaving
-	// them in an invalid state.
 	void destroy();
 	void destroy(queue_destruction_flag);
 
