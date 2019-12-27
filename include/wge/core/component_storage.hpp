@@ -133,7 +133,8 @@ public:
 		return std::pair<object_id, T&>(mKeys[pIndex], mValues[pIndex]);
 	}
 
-	T& insert(key pKey)
+	template <typename Tvalue = T>
+	T& insert(key pKey, Tvalue&& pValue = T{})
 	{
 		// Expand the lookup to the left to accommodate the new key.
 		if (pKey < mMinimum)
@@ -159,7 +160,7 @@ public:
 		// Insert the new information.
 		mLookup[offset] = std::make_optional(mValues.size());
 		mKeys.push_back(pKey);
-		return mValues.emplace_back();
+		return mValues.emplace_back(std::forward<Tvalue>(pValue));
 	}
 
 	T& operator[](key pKey)

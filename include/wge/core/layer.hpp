@@ -121,7 +121,16 @@ public:
 
 	// Add a new component to an object
 	template <typename T>
-	T* add_component(const object_id& pObject_id);
+	T* add_component(const object_id& pObject_id, bucket pBucket = default_bucket);
+
+	// Add a new component to an object
+	template <typename T, typename U = std::decay_t<T>,
+		// Buckets can't be used as components.
+		typename = std::enable_if_t<!std::is_same_v<U, bucket>>>
+	U* add_component(const object_id& pObject_id, T&& pComponent, bucket pBucket = default_bucket)
+	{
+		return &mComponent_manager.add_component(pObject_id, std::forward<T>(pComponent), pBucket);
+	}
 
 	template <typename T>
 	T* get_component(object_id pObject_id)
@@ -317,9 +326,9 @@ private:
 };
 
 template<typename T>
-inline T* layer::add_component(const object_id& pObject_id)
+inline T* layer::add_component(const object_id& pObject_id, bucket pBucket)
 {
-	return &mComponent_manager.add_component<T>(pObject_id);
+	return &mComponent_manager.add_component<T>(pObject_id, pBucket);
 }
 
 template<typename T>

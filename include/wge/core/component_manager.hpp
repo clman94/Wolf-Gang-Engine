@@ -21,6 +21,14 @@ public:
 		return get_storage<T>(pBucket).insert(pObject);
 	}
 
+	template <typename T, typename U = std::decay_t<T>,
+		// Buckets can't be used as components.
+		typename = std::enable_if_t<!std::is_same_v<U, bucket>>>
+	U& add_component(const object_id& pObject, T&& pComponent, bucket pBucket = default_bucket)
+	{
+		return get_storage<U>(pBucket).insert(pObject, std::forward<T>(pComponent));
+	}
+
 	template <typename T>
 	void remove_component(const object_id& pObject, bucket pBucket = default_bucket)
 	{

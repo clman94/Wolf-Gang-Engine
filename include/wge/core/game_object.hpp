@@ -15,6 +15,7 @@
 namespace wge::core
 {
 
+// This maintains basic information about an object.
 struct object_info
 {
 	// An optional name for the object. Not required to be unique.
@@ -59,10 +60,18 @@ public:
 
 	// Create a new component for this object
 	template <typename T>
-	T* add_component();
+	T* add_component(bucket pBucket = default_bucket);
+
+	template <typename T, typename U = std::decay_t<T>,
+		// Buckets can't be used as components.
+		typename = std::enable_if_t<!std::is_same_v<U, bucket>>>
+	U* add_component(T&& pComponent, bucket pBucket = default_bucket)
+	{
+		assert_valid_reference();
+		return get_layer().add_component(get_id(), std::forward<T>(pComponent), pBucket);
+	}
+
 	// Get the amount of components assigned to this object.
-	// Note: If a component is removed, this will not update until
-	// the end of the frame.
 	std::size_t get_component_count() const;
 	// Get first component by type
 	template <class T>
@@ -146,10 +155,10 @@ inline bool object::has_component() const
 }
 
 template<typename T>
-inline T* object::add_component()
+inline T* object::add_component(bucket pBucket)
 {
 	assert_valid_reference();
-	return get_layer().add_component<T>(get_id());
+	return get_layer().add_component<T>(get_id(), pBucket);
 }
 
 template<class T>

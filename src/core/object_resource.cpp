@@ -8,17 +8,18 @@ namespace wge::core
 
 void object_resource::generate_object(core::object& pObj, const asset_manager& pAsset_mgr)
 {
-	pObj.add_component<math::transform>();
+	pObj.add_component(math::transform{});
 
 	if (display_sprite.is_valid())
 	{
-		auto sprite = pObj.add_component<graphics::sprite_component>();
-		sprite->set_texture(pAsset_mgr.get_asset(display_sprite));
+		graphics::sprite_component sprite;
+		sprite.set_texture(pAsset_mgr.get_asset(display_sprite));
+		pObj.add_component(std::move(sprite));
 	}
 
 	if (!events.empty())
 	{
-		pObj.add_component<scripting::event_state_component>();
+		pObj.add_component(scripting::event_state_component{});
 
 		for (auto[type, asset_id] : util::ipair{ events })
 		{
