@@ -58,7 +58,7 @@ public:
 	template <class T>
 	bool has_component() const;
 
-	// Create a new component for this object
+	// Create a new component for this object.
 	template <typename T>
 	T* add_component(bucket pBucket = default_bucket);
 
@@ -82,17 +82,23 @@ public:
 	void move_component(std::size_t pFrom, std::size_t pTo);
 
 	template <typename T>
-	bool remove_component()
+	bool remove_component(bucket pBucket = default_bucket)
 	{
 		assert_valid_reference();
-		return mLayer->remove_component<T>(mInfo.get_object_id());
+		return mLayer->remove_component<T>(mInfo.get_object_id(), pBucket);
 	}
 
 	template <typename T>
 	bool remove_component(queue_destruction_flag)
 	{
+		return remove_component(default_bucket, queue_destruction);
+	}
+
+	template <typename T>
+	bool remove_component(bucket pBucket, queue_destruction_flag)
+	{
 		assert_valid_reference();
-		return mLayer->remove_component<T>(mInfo.get_object_id(), queue_destruction);
+		return mLayer->remove_component<T>(mInfo.get_object_id(), pBucket, queue_destruction);
 	}
 
 	// Get the name of this object.
