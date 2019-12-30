@@ -213,6 +213,11 @@ public:
 		mDestruction_queue.apply(mComponent_manager);
 	}
 
+	// These components are for the layer.
+	// With this, the layer is pretty much an object itself.
+	// Made public for convenience.
+	component_set layer_components;
+
 private:
 	template <typename T, typename...Tdeps>
 	void for_each_impl(const std::function<void(object_id, T, Tdeps...)>& pCallable);
@@ -220,7 +225,11 @@ private:
 	float mTime_scale{ 1 };
 	bool mRecieve_update{ true };
 	std::string mName;
+	// Because we can't remove components while iterating them
+	// we can queue those components to be removed after the iteration
+	// is complete.
 	destruction_queue mDestruction_queue;
+	// This manages the components for the objects.
 	component_manager mComponent_manager;
 };
 

@@ -2,66 +2,93 @@
 
 #include <wge/core/serialize_type.hpp>
 #include <wge/util/json_helpers.hpp>
+#include <wge/core/component_type.hpp>
 
 #include <string>
 #include <vector>
 #include <utility>
 #include <any>
+#include <map>
 
 namespace wge::core
 {
 
-class any_set
+class component_set
 {
 public:
-	template <typename T, typename...Targs>
-	T* insert(Targs&&...pArgs)
+	template <typename T, typename U = std::decay_t<T>>
+	U* insert(T&& pComponent, bucket pBucket = default_bucket)
 	{
-		if (auto existing = get<T>())
+		if (auto existing = get<U>(pBucket))
 		{
-			*existing = T{ std::forward<Targs>(pArgs)... };
-			return existing;
+			return &(*existing = std::forward<T>(pComponent));
 		}
 		else
-			return &mAnys.emplace_back(std::make_any(T{ pArgs... }));
+		{
+			auto iter = mComponents.insert({ component_type::from<U>(pBucket), std::forward<T>(pComponent) }).first;
+			return std::any_cast<U*>(&(*iter));
+		}
 	}
 
 	template <typename T>
-	T* get() noexcept
+	T* get(bucket pBucket = default_bucket) noexcept
 	{
-		for (auto& i : mAnys)
-			if (i.type() == typeid(T))
-				return std::any_cast<T>(&i);
-		return nullptr;
+		auto iter = mComponents.find(component_type::from<T>(pBucket));
+		if (iter != mComponents.end())
+			return std::any_cast<T*>(&(*iter));
+		else
+			return nullptr;
 	}
-
+	
 	template <typename T>
-	const T* get() const noexcept
+	const T* get(bucket pBucket = default_bucket) const noexcept
 	{
-		for (auto& i : mAnys)
-			if (i.type() == typeid(T))
-				return std::any_cast<T>(&i);
-		return nullptr;
+		auto iter = mComponents.find(component_type::from<T>(pBucket));
+		if (iter != mComponents.end())
+			return std::any_cast<T*>(&(*iter));
+		else
+			return nullptr;
 	}
 
 	template <typename T>
-	bool has() const noexcept
+	bool has(bucket pBucket = default_bucket) const noexcept
 	{
 		return get<T>() != nullptr;
 	}
 
+	bool remove(component_type pType)
+	{
+		return mComponents.erase(pType) != 0;
+	}
+
+	template <typename T>
+	bool remove(bucket pBucket = default_bucket)
+	{
+		return remove(component_type::from<T>(pBucket));
+	}
+
 	bool empty() const noexcept
 	{
-		return mAnys.empty();
+		return mComponents.empty();
 	}
 
 	std::size_t size() const noexcept
 	{
-		return mAnys.size();
+		return mComponents.size();
+	}
+
+	void clear()
+	{
+		mComponents.clear();
+	}
+
+	void merge(component_set& pSet)
+	{
+		mComponents.merge(pSet.mComponents);
 	}
 
 private:
-	std::vector<std::any> mAnys;
+	std::map<component_type, std::any> mComponents;
 };
 
 } // namespace wge::core

@@ -482,8 +482,6 @@ public:
 
 		// Generate the layer.
 		mScene = mScene_resource->generate_scene(pContext.get_engine().get_asset_manager());
-
-		mScene_resource->tilemap_texture = get_asset_manager().get_asset(filesystem::path("death"))->get_id();
 	}
 
 	virtual void on_gui() override
@@ -504,10 +502,17 @@ public:
 			if (ImGui::Selectable("Sprites"))
 			{
 				core::layer layer;
+				// Add layer specific components here.
 				mScene.add_layer(std::move(layer));
 			}
 			if (ImGui::Selectable("Tilemap"))
-			{ }
+			{
+				core::layer layer;
+				core::tilemap_info tilemap;
+				tilemap.texture = get_asset_manager().get_asset(filesystem::path("death"));
+				layer.layer_components.insert(std::move(tilemap));
+				mScene.add_layer(std::move(layer));
+			}
 
 			ImGui::EndCombo();
 		}
@@ -516,8 +521,8 @@ public:
 		{
 			ImGui::PushID(&i);
 
-			if (ImGui::Selectable(i.get_name().c_str(), mSelected_layer == &i))
-				mSelected_layer = &i;
+			if (ImGui::Selectable(i->get_name().c_str(), mSelected_layer == i.get()))
+				mSelected_layer = i.get();
 			ImGui::PopID();
 		}
 		ImGui::EndChild();
@@ -667,12 +672,12 @@ public:
 
 			//tilemap_editor(*mTilemap_layer);
 
-			for (auto& layer : mScene.get_layer_container())
+			if (mSelected_layer)
 			{
 				if (show_collision)
 				{
 					for (auto& [id, comp, transform] :
-						layer.each<physics::box_collider_component, math::transform>())
+						mSelected_layer->each<physics::box_collider_component, math::transform>())
 					{
 						visual_editor::push_transform(transform);
 						math::transform box_transform;
@@ -684,12 +689,12 @@ public:
 					}
 				}
 
-				for (auto [id, transform] : layer.each<math::transform>())
+				for (auto [id, transform] : mSelected_layer->each<math::transform>())
 				{
 					const bool is_object_selected = id == mSelected_object_id;
 
 					math::aabb aabb;
-					if (create_aabb_from_object(layer.get_object(id), aabb))
+					if (create_aabb_from_object(mSelected_layer->get_object(id), aabb))
 					{
 						if (is_object_selected)
 						{
@@ -731,9 +736,10 @@ public:
 		mRenderer.set_render_view_to_framebuffer(mViewport_offset, 1.f / mViewport_scale);
 		for (auto& i : mScene.get_layer_container())
 		{
-			mRenderer.render_tilemap(i, engine.get_graphics(),
-				get_asset_manager().get_asset(mScene_resource->tilemap_texture));
-			mRenderer.render(i, engine.get_graphics());
+			if (auto tilemap_info = i->layer_components.get<core::tilemap_info>())
+				mRenderer.render_tilemap(*i, engine.get_graphics(), tilemap_info->texture);
+			else
+				mRenderer.render(*i, engine.get_graphics());
 		}
 
 		ImGui::EndFixedScrollRegion();
@@ -790,12 +796,17 @@ public:
 		if (ImGui::IsItemClicked())
 		{
 			core::object new_tile = pLayer.add_object();
-			auto tile = new_tile.add_component<core::tile>();
-			tile->position = tile_position;
-			auto quad_verts = new_tile.add_component<graphics::quad_vertices>();
-			quad_verts->set_rect(math::rect(math::vec2(tile_position), math::vec2(1, 1)));
-			quad_verts->set_uv(math::rect(math::vec2(0, 0), math::vec2(10, 10)));
-			new_tile.add_component<graphics::quad_indicies>();
+
+			core::tile tile;
+			tile.position = tile_position;
+			new_tile.add_component(tile);
+
+			graphics::quad_vertices quad_verts;
+			quad_verts.set_rect(math::rect(math::vec2(tile_position), math::vec2(1, 1)));
+			quad_verts.set_uv(math::rect(math::vec2(0, 0), math::vec2(10, 10)));
+			new_tile.add_component(quad_verts);
+
+			new_tile.add_component(graphics::quad_indicies{});
 		}
 	}
 

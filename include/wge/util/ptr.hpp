@@ -14,7 +14,8 @@ inline constexpr auto to_address(T&& pPtr)
 }
 
 // A unique_ptr wrapper that allows the underlaying polymorphic object
-// to be copied.
+// to be copied. Think of it as a strongly typed std::any where only the base
+// or its sub-classes can be stored.
 template <typename T>
 class copyable_ptr
 {

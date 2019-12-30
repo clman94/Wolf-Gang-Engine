@@ -10,12 +10,12 @@ layer* scene::get_layer(std::size_t pIndex)
 {
 	if (pIndex >= mLayers.size())
 		return{};
-	return &mLayers[pIndex];
+	return mLayers[pIndex].get();
 }
 
 layer* scene::add_layer()
 {
-	return &mLayers.emplace_back();
+	return mLayers.emplace_back(util::make_copyable_ptr<layer>()).get();
 }
 
 layer* scene::add_layer(const std::string& pName)
@@ -25,16 +25,11 @@ layer* scene::add_layer(const std::string& pName)
 	return l;
 }
 
-layer* scene::add_layer(const std::string& pName, std::size_t pInsert)
-{
-	return &(*mLayers.insert(mLayers.begin() + pInsert, layer{}));
-}
-
 bool scene::remove_layer(const layer& pLayer)
 {
 	for (std::size_t i = 0; i < mLayers.size(); i++)
 	{
-		if (&mLayers[i] == &pLayer)
+		if (mLayers[i].get() == &pLayer)
 		{
 			mLayers.erase(mLayers.begin() + i);
 			return true;

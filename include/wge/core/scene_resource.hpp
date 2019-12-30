@@ -6,12 +6,20 @@
 #include <wge/graphics/render_batch_2d.hpp>
 #include <wge/core/scene.hpp>
 
+#include <vector>
+#include <variant>
+
 namespace wge::core
 {
 
 struct tile
 {
 	math::ivec2 position, uv;
+};
+
+struct tilemap_info
+{
+	core::resource_handle<graphics::texture> texture;
 };
 
 class scene_resource :
@@ -26,6 +34,22 @@ public:
 		object_id id;
 		util::uuid asset_id;
 	};
+
+	struct object_layer
+	{
+		std::string name;
+		std::vector<instance> instances;
+	};
+
+	struct tilemap_layer
+	{
+		std::string name;
+		std::vector<tile> tiles;
+		util::uuid tilemap_texture;
+	};
+
+	using layer_variant = std::variant<object_layer, tilemap_layer>;
+	std::vector<layer_variant> layers;
 
 	std::vector<instance> instances;
 
