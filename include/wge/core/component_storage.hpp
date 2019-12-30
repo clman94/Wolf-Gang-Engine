@@ -133,8 +133,13 @@ public:
 		return std::pair<object_id, T&>(mKeys[pIndex], mValues[pIndex]);
 	}
 
-	template <typename Tvalue = T>
-	T& insert(key pKey, Tvalue&& pValue = T{})
+	T& insert(key pKey)
+	{
+		return insert(pKey, T{});
+	}
+
+	template <typename Tvalue>
+	T& insert(key pKey, Tvalue&& pValue)
 	{
 		// Expand the lookup to the left to accommodate the new key.
 		if (pKey < mMinimum)
