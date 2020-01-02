@@ -1140,9 +1140,9 @@ public:
 		for (auto& i : mEngine->get_scene().get_layer_container())
 		{
 			if (mScene->tilemap_texture.is_valid())
-				mRenderer.render_tilemap(*i, mEngine->get_graphics(),
+				mRenderer.render_tilemap(i, mEngine->get_graphics(),
 					mEngine->get_asset_manager().get_asset(mScene->tilemap_texture));
-			mRenderer.render(*i, mEngine->get_graphics());
+			mRenderer.render(i, mEngine->get_graphics());
 		}
 	}
 
