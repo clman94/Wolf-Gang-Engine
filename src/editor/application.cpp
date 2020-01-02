@@ -521,8 +521,8 @@ public:
 		{
 			ImGui::PushID(&i);
 
-			if (ImGui::Selectable(i->get_name().c_str(), mSelected_layer == i.get()))
-				mSelected_layer = i.get();
+			if (ImGui::Selectable(i.get_name().c_str(), mSelected_layer == &i))
+				mSelected_layer = &i;
 			ImGui::PopID();
 		}
 		ImGui::EndChild();
@@ -534,8 +534,8 @@ public:
 			for (auto obj : *mSelected_layer)
 			{
 				ImGui::PushID(obj.get_id());
-				if (ImGui::Selectable(obj.get_name().c_str(), obj.get_id() == mSelected_object_id))
-					mSelected_object_id = obj.get_id();
+				if (ImGui::Selectable(obj.get_name().c_str(), obj == mSelected_object))
+					mSelected_object = obj;
 				ImGui::PopID();
 			}
 		}
@@ -555,16 +555,15 @@ public:
 		ImGui::VerticalSplitter("ViewportInspectorSplitter", &viewport_width);
 		ImGui::SameLine();
 		ImGui::BeginChild("InspectorSidePanel", ImVec2(-viewport_width, 0));
-		if (mSelected_layer && mSelected_object_id != core::invalid_id)
+		if (mSelected_layer && mSelected_object.is_valid())
 		{
 			ImGui::TextUnformatted("Selected Object Settings");
-			auto obj = mSelected_layer->get_object(mSelected_object_id);
-			std::string name = obj.get_name();
+			std::string name = mSelected_object.get_name();
 			if (ImGui::InputText("Name", &name))
-				obj.set_name(name);
+				mSelected_object.set_name(name);
 			if (ImGui::IsItemDeactivatedAfterEdit())
 			{
-				obj.set_name(scripting::make_valid_identifier(name));
+				mSelected_object.set_name(scripting::make_valid_identifier(name));
 				mark_asset_modified();
 			}
 		}
@@ -600,7 +599,6 @@ public:
 		static bool show_center_point = true;
 		static bool is_grid_enabled = true;
 		static graphics::color grid_color{ 1, 1, 1, 0.7f };
-		static bool show_collision = false;
 
 		/*if (ImGui::BeginMenuBar())
 		{
@@ -670,61 +668,12 @@ public:
 			if (is_grid_enabled)
 				visual_editor::draw_grid(grid_color, 1);
 
-			//tilemap_editor(*mTilemap_layer);
-
 			if (mSelected_layer)
 			{
-				if (show_collision)
-				{
-					for (auto& [id, comp, transform] :
-						mSelected_layer->each<physics::box_collider_component, math::transform>())
-					{
-						visual_editor::push_transform(transform);
-						math::transform box_transform;
-						box_transform.position = comp.get_offset();
-						box_transform.rotation = comp.get_rotation();
-						visual_editor::push_transform(box_transform);
-						visual_editor::draw_rect(math::rect({ 0, 0 }, comp.get_size()), { 0, 1, 0, 0.8f });
-						visual_editor::pop_transform(2);
-					}
-				}
-
-				for (auto [id, transform] : mSelected_layer->each<math::transform>())
-				{
-					const bool is_object_selected = id == mSelected_object_id;
-
-					math::aabb aabb;
-					if (create_aabb_from_object(mSelected_layer->get_object(id), aabb))
-					{
-						if (is_object_selected)
-						{
-							visual_editor::box_edit box_edit(aabb, transform);
-							box_edit.resize(visual_editor::edit_type::transform);
-							box_edit.drag(visual_editor::edit_type::transform);
-							transform = box_edit.get_transform();
-							if (box_edit.is_dragging())
-							{
-								mark_asset_modified();
-							}
-						}
-
-						visual_editor::push_transform(transform);
-						if (aabb.intersect(visual_editor::get_mouse_position()))
-						{
-							if (ImGui::IsItemClicked())
-								mSelected_object_id = id;
-							// TODO: Show info about this object instance
-							visual_editor::draw_rect(aabb, { 1, 1, 1, 1 });
-						}
-						visual_editor::pop_transform();
-					}
-
-					// Draw center point
-					if (is_object_selected && show_center_point)
-					{
-						visual_editor::draw_circle(transform.position, 5, { 1, 1, 1, 0.6f }, 3.f);
-					}
-				}
+				if (mSelected_layer->layer_components.has<core::tilemap_info>())
+					tilemap_editor();
+				else
+					object_layer_editor();
 			}
 		}
 		visual_editor::end();
@@ -736,10 +685,10 @@ public:
 		mRenderer.set_render_view_to_framebuffer(mViewport_offset, 1.f / mViewport_scale);
 		for (auto& i : mScene.get_layer_container())
 		{
-			if (auto tilemap_info = i->layer_components.get<core::tilemap_info>())
-				mRenderer.render_tilemap(*i, engine.get_graphics(), tilemap_info->texture);
+			if (auto tilemap_info = i.layer_components.get<core::tilemap_info>())
+				mRenderer.render_tilemap(i, engine.get_graphics(), tilemap_info->texture);
 			else
-				mRenderer.render(*i, engine.get_graphics());
+				mRenderer.render(i, engine.get_graphics());
 		}
 
 		ImGui::EndFixedScrollRegion();
@@ -764,38 +713,22 @@ public:
 
 	static bool create_aabb_from_object(core::object& pObj, math::aabb& pAABB)
 	{
-		/*bool has_aabb = false;
-		for (std::size_t comp_idx = 0; comp_idx < pObj.get_component_count(); comp_idx++)
+		if (auto sprite = pObj.get_component<graphics::sprite_component>())
 		{
-			auto comp = pObj.get_component_at(comp_idx);
-			if (comp->has_aabb())
-			{
-				if (!has_aabb)
-				{
-					pAABB = comp->get_local_aabb();
-					has_aabb = true;
-				}
-				else
-					pAABB.merge(comp->get_local_aabb());
-			}
-		}*/
+			pAABB = sprite->get_local_aabb();
+			return true;
+		}
 		return false;//has_aabb;
 	}
 
-	void tilemap_editor(core::layer& pLayer)
+	void tilemap_editor()
 	{
-		if (auto asset = get_asset_manager().get_asset(mScene_resource->tilemap_texture))
-		{
-			asset->get_resource<graphics::texture>();
-		}
-		else
-			return;
 		math::ivec2 tile_position{ visual_editor::get_mouse_position().floor() };
 		visual_editor::draw_rect(math::rect(math::vec2(tile_position), math::vec2(1, 1)),
 			graphics::color(1, 1, 0, 1));
 		if (ImGui::IsItemClicked())
 		{
-			core::object new_tile = pLayer.add_object();
+			core::object new_tile = mSelected_layer->add_object();
 
 			core::tile tile;
 			tile.position = tile_position;
@@ -810,10 +743,61 @@ public:
 		}
 	}
 
+	void object_layer_editor()
+	{
+		for (auto& [id, comp, transform] :
+			mSelected_layer->each<physics::box_collider_component, math::transform>())
+		{
+			visual_editor::push_transform(transform);
+			math::transform box_transform;
+			box_transform.position = comp.get_offset();
+			box_transform.rotation = comp.get_rotation();
+			visual_editor::push_transform(box_transform);
+			visual_editor::draw_rect(math::rect({ 0, 0 }, comp.get_size()), { 0, 1, 0, 0.8f });
+			visual_editor::pop_transform(2);
+		}
+
+		for (auto [id, transform] : mSelected_layer->each<math::transform>())
+		{
+			const bool is_object_selected = mSelected_object.is_valid() && mSelected_object.get_id() == id;
+
+			math::aabb aabb;
+			if (create_aabb_from_object(mSelected_layer->get_object(id), aabb))
+			{
+				if (is_object_selected)
+				{
+					visual_editor::box_edit box_edit(aabb, transform);
+					box_edit.resize(visual_editor::edit_type::transform);
+					box_edit.drag(visual_editor::edit_type::transform);
+					transform = box_edit.get_transform();
+					if (box_edit.is_dragging())
+					{
+						mark_asset_modified();
+					}
+				}
+
+				visual_editor::push_transform(transform);
+				if (aabb.intersect(visual_editor::get_mouse_position()))
+				{
+					if (ImGui::IsItemClicked())
+						mSelected_object = mSelected_layer->get_object(id);
+					// TODO: Show info about this object instance
+					visual_editor::draw_rect(aabb, { 1, 1, 1, 1 });
+				}
+				visual_editor::pop_transform();
+			}
+
+			// Draw center point
+			if (is_object_selected)
+			{
+				visual_editor::draw_circle(transform.position, 5, { 1, 1, 1, 0.6f }, 3.f);
+			}
+		}
+	}
+
 private:
-	core::layer* mTilemap_layer = nullptr;
 	core::layer* mSelected_layer = nullptr;
-	core::object_id mSelected_object_id = core::invalid_id;
+	core::object mSelected_object;
 	core::scene mScene;
 
 	core::scene_resource* mScene_resource = nullptr;
@@ -1156,9 +1140,9 @@ public:
 		for (auto& i : mEngine->get_scene().get_layer_container())
 		{
 			if (mScene->tilemap_texture.is_valid())
-				mRenderer.render_tilemap(i, mEngine->get_graphics(),
+				mRenderer.render_tilemap(*i, mEngine->get_graphics(),
 					mEngine->get_asset_manager().get_asset(mScene->tilemap_texture));
-			mRenderer.render(i, mEngine->get_graphics());
+			mRenderer.render(*i, mEngine->get_graphics());
 		}
 	}
 

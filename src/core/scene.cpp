@@ -3,6 +3,8 @@
 #include <wge/core/engine.hpp>
 #include <wge/filesystem/file_input_stream.hpp>
 
+#include <iterator>
+
 namespace wge::core
 {
 
@@ -10,12 +12,14 @@ layer* scene::get_layer(std::size_t pIndex)
 {
 	if (pIndex >= mLayers.size())
 		return{};
-	return mLayers[pIndex].get();
+	auto iter = mLayers.begin();
+	std::advance(iter, pIndex);
+	return &(*iter);
 }
 
 layer* scene::add_layer()
 {
-	return mLayers.emplace_back(util::make_copyable_ptr<layer>()).get();
+	return &mLayers.emplace_back();
 }
 
 layer* scene::add_layer(const std::string& pName)
@@ -27,11 +31,11 @@ layer* scene::add_layer(const std::string& pName)
 
 bool scene::remove_layer(const layer& pLayer)
 {
-	for (std::size_t i = 0; i < mLayers.size(); i++)
+	for (auto i = mLayers.begin(); i != mLayers.end(); i++)
 	{
-		if (mLayers[i].get() == &pLayer)
+		if (&*i == &pLayer)
 		{
-			mLayers.erase(mLayers.begin() + i);
+			mLayers.erase(i);
 			return true;
 		}
 	}

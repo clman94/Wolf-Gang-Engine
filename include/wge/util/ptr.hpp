@@ -20,21 +20,31 @@ template <typename T>
 class copyable_ptr
 {
 	friend class copyable_ptr;
+
 public:
 	template <typename Tcopier>
 	copyable_ptr(std::unique_ptr<T> pPtr, Tcopier&& pCopier) noexcept :
 		mPtr(std::move(pPtr)),
 		mCopier(std::move(pCopier))
 	{}
-	copyable_ptr(copyable_ptr&&) = default;
-	copyable_ptr(const copyable_ptr& pOther) :
-		mPtr(pOther.mCopier(pOther.mPtr)),
-		mCopier(pOther.mCopier)
-	{}
+	copyable_ptr(copyable_ptr&&) noexcept = default;
+	copyable_ptr(const copyable_ptr& pOther)
+		noexcept(std::is_nothrow_copy_constructible_v<T>)
+	{
+		if (pOther.valid())
+		{
+			mPtr = pOther.mCopier(pOther.mPtr);
+			mCopier = pOther.mCopier;
+		}
+	}
 	copyable_ptr(std::nullptr_t) noexcept
 	{}
 	copyable_ptr() noexcept
 	{}
+
+	copyable_ptr& operator=(copyable_ptr&&) noexcept = default;
+	copyable_ptr& operator=(const copyable_ptr&)
+		noexcept(std::is_nothrow_copy_assignable_v<T>) = default;
 	
 	T* get() const noexcept
 	{

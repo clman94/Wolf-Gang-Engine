@@ -37,6 +37,11 @@ public:
 	// Get the current texture
 	core::asset::ptr get_texture() const noexcept;
 
+	const math::aabb& get_local_aabb() const noexcept
+	{
+		return mLocal_aabb;
+	}
+
 private:
 	math::aabb mSceen_aabb, mLocal_aabb;
 	texture::handle mTexture;

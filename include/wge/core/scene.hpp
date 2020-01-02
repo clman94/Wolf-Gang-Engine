@@ -3,11 +3,7 @@
 #include <wge/core/layer.hpp>
 #include <wge/core/factory.hpp>
 
-#include <memory>
-#include <vector>
-#include <map>
-#include <utility>
-#include <tuple>
+#include <list>
 
 namespace wge::core
 {
@@ -15,7 +11,7 @@ namespace wge::core
 class scene
 {
 public:
-	using layers = std::vector<util::copyable_ptr<layer>>;
+	using layers = std::list<layer>;
 
 	// Get a layer by index
 	layer* get_layer(std::size_t pIndex);
@@ -23,12 +19,13 @@ public:
 	layer* add_layer();
 	layer* add_layer(const layer& pLayer)
 	{
-		mLayers.push_back(util::make_copyable_ptr<layer>(pLayer));
-		return mLayers.back().get();
+		mLayers.push_back(pLayer);
+		return &mLayers.back();
 	}
 	layer* add_layer(layer&& pLayer)
 	{
-		return mLayers.emplace_back(util::make_copyable_ptr<layer>(std::move(pLayer))).get();
+		mLayers.push_back(std::move(pLayer));
+		return &mLayers.back();
 	}
 	layer* add_layer(const std::string& pName);
 
