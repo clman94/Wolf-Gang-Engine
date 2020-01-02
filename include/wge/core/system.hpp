@@ -26,7 +26,7 @@ public:
 		else
 		{
 			auto iter = mComponents.insert({ component_type::from<U>(pBucket), std::forward<T>(pComponent) }).first;
-			return std::any_cast<U*>(&(*iter));
+			return std::any_cast<U>(&iter->second);
 		}
 	}
 
@@ -35,7 +35,7 @@ public:
 	{
 		auto iter = mComponents.find(component_type::from<T>(pBucket));
 		if (iter != mComponents.end())
-			return std::any_cast<T*>(&(*iter));
+			return std::any_cast<T>(&iter->second);
 		else
 			return nullptr;
 	}
@@ -45,7 +45,7 @@ public:
 	{
 		auto iter = mComponents.find(component_type::from<T>(pBucket));
 		if (iter != mComponents.end())
-			return std::any_cast<T*>(&(*iter));
+			return std::any_cast<T>(&iter->second);
 		else
 			return nullptr;
 	}
