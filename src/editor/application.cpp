@@ -573,18 +573,7 @@ public:
 	void update_asset_data()
 	{
 		auto resource = get_asset()->get_resource<core::scene_resource>();
-		resource->instances.clear();
-
-		auto layer = mScene.get_layer(0);
-		for (auto obj : *layer)
-		{
-			core::scene_resource::instance& inst = resource->instances.emplace_back();
-			inst.asset_id = obj.get_asset()->get_id();
-			inst.id = obj.get_id();
-			inst.name = obj.get_name();
-			if (auto transform = obj.get_component<math::transform>())
-				inst.transform = *transform;
-		}
+		resource->update_data(mScene);
 	}
 
 	virtual void on_save() override
@@ -646,7 +635,7 @@ public:
 		if (ImGui::IsItemHovered())
 			ImGui::DragScroll(2, 1);
 
-		mViewport_offset = (math::vec2(ImGui::GetScrollX(), ImGui::GetScrollY()) / mViewport_scale);
+		mViewport_offset = math::vec2(ImGui::GetScrollX(), ImGui::GetScrollY()) / mViewport_scale;
 
 		visual_editor::begin("_SceneEditor", { cursor.x, cursor.y }, mViewport_offset, mViewport_scale);
 		{
@@ -685,10 +674,10 @@ public:
 		mRenderer.set_render_view_to_framebuffer(mViewport_offset, 1.f / mViewport_scale);
 		for (auto& i : mScene.get_layer_container())
 		{
-			if (auto tilemap_info = i.layer_components.get<core::tilemap_info>())
+			core::tilemap_info* tilemap_info = i.layer_components.get<core::tilemap_info>();
+			if (tilemap_info && tilemap_info->texture.is_valid())
 				mRenderer.render_tilemap(i, engine.get_graphics(), tilemap_info->texture);
-			else
-				mRenderer.render(i, engine.get_graphics());
+			mRenderer.render(i, engine.get_graphics());
 		}
 
 		ImGui::EndFixedScrollRegion();
@@ -726,20 +715,12 @@ public:
 		math::ivec2 tile_position{ visual_editor::get_mouse_position().floor() };
 		visual_editor::draw_rect(math::rect(math::vec2(tile_position), math::vec2(1, 1)),
 			graphics::color(1, 1, 0, 1));
+
+		core::tilemap_manipulator tilemap(*mSelected_layer);
 		if (ImGui::IsItemClicked())
 		{
-			core::object new_tile = mSelected_layer->add_object();
-
-			core::tile tile;
-			tile.position = tile_position;
-			new_tile.add_component(tile);
-
-			graphics::quad_vertices quad_verts;
-			quad_verts.set_rect(math::rect(math::vec2(tile_position), math::vec2(1, 1)));
-			quad_verts.set_uv(math::rect(math::vec2(0, 0), math::vec2(10, 10)));
-			new_tile.add_component(quad_verts);
-
-			new_tile.add_component(graphics::quad_indicies{});
+			tilemap.set_tile(tile_position, math::ivec2{ 0, 0 });
+			mark_asset_modified();
 		}
 	}
 
@@ -1139,9 +1120,9 @@ public:
 		mRenderer.set_render_view_to_framebuffer(math::vec2(0, 0), math::vec2(1.f, 1.f) / 100.f);
 		for (auto& i : mEngine->get_scene().get_layer_container())
 		{
-			if (mScene->tilemap_texture.is_valid())
-				mRenderer.render_tilemap(i, mEngine->get_graphics(),
-					mEngine->get_asset_manager().get_asset(mScene->tilemap_texture));
+			core::tilemap_info* tilemap_info = i.layer_components.get<core::tilemap_info>();
+			if (tilemap_info && tilemap_info->texture.is_valid())
+				mRenderer.render_tilemap(i, mEngine->get_graphics(), tilemap_info->texture);
 			mRenderer.render(i, mEngine->get_graphics());
 		}
 	}

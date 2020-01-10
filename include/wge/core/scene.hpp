@@ -36,6 +36,11 @@ public:
 
 	void clear();
 
+	auto begin() { return mLayers.begin(); }
+	auto end() { return mLayers.end(); }
+	auto begin() const { return mLayers.begin(); }
+	auto end() const { return mLayers.end(); }
+
 private:
 	layers mLayers;
 };

@@ -22,6 +22,9 @@ class copyable_ptr
 	friend class copyable_ptr;
 
 public:
+	copyable_ptr() noexcept = default;
+	copyable_ptr(std::nullptr_t) noexcept
+	{}
 	template <typename Tcopier>
 	copyable_ptr(std::unique_ptr<T> pPtr, Tcopier&& pCopier) noexcept :
 		mPtr(std::move(pPtr)),
@@ -29,7 +32,6 @@ public:
 	{}
 	copyable_ptr(copyable_ptr&&) noexcept = default;
 	copyable_ptr(const copyable_ptr& pOther)
-		noexcept(std::is_nothrow_copy_constructible_v<T>)
 	{
 		if (pOther.valid())
 		{
@@ -37,14 +39,9 @@ public:
 			mCopier = pOther.mCopier;
 		}
 	}
-	copyable_ptr(std::nullptr_t) noexcept
-	{}
-	copyable_ptr() noexcept
-	{}
 
 	copyable_ptr& operator=(copyable_ptr&&) noexcept = default;
-	copyable_ptr& operator=(const copyable_ptr&)
-		noexcept(std::is_nothrow_copy_assignable_v<T>) = default;
+	copyable_ptr& operator=(const copyable_ptr&) = default;
 	
 	T* get() const noexcept
 	{
@@ -63,7 +60,7 @@ public:
 
 	bool valid() const noexcept
 	{
-		return mPtr != nullptr;
+		return mPtr != nullptr && mCopier;
 	}
 
 	operator bool() const noexcept

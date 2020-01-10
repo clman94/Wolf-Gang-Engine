@@ -151,6 +151,8 @@ private:
 	handle<object_info> mInfo;
 };
 
+inline const object invalid_object;
+
 template<class T>
 inline bool object::has_component() const
 {
