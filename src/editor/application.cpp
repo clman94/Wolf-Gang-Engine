@@ -747,19 +747,6 @@ public:
 	{
 		update_aabbs();
 
-		// Draw a boundary box around each object.
-		for (auto& [id, comp, transform] :
-			mSelected_layer->each<physics::box_collider_component, math::transform>())
-		{
-			visual_editor::push_transform(transform);
-			math::transform box_transform;
-			box_transform.position = comp.get_offset();
-			box_transform.rotation = comp.get_rotation();
-			visual_editor::push_transform(box_transform);
-			visual_editor::draw_rect(math::rect({ 0, 0 }, comp.get_size()), { 0, 1, 0, 0.8f });
-			visual_editor::pop_transform(2);
-		}
-
 		// True when the selected object is being edited.
 		// We don't want to select objects behind it on accident.
 		bool is_currently_editing = false;
