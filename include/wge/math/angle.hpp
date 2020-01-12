@@ -1,5 +1,7 @@
 #pragma once
 
+#include <wge/util/span.hpp>
+
 namespace wge::math
 {
 
@@ -11,6 +13,11 @@ public:
 	radians() noexcept;
 	radians(float pRadians) noexcept;
 	radians(const degrees& pDegrees) noexcept;
+
+	util::span<float> components() noexcept
+	{
+		return util::span<float>(&mRadians, 1);
+	}
 
 	degrees to_degrees() const noexcept;
 
@@ -54,6 +61,11 @@ public:
 	degrees() noexcept;
 	degrees(float pDegrees) noexcept;
 	degrees(const radians& pRadians) noexcept;
+
+	util::span<float> components() noexcept
+	{
+		return util::span<float>(&mDegrees, 1);
+	}
 
 	radians to_radians() const noexcept;
 

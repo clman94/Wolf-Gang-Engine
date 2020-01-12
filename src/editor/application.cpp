@@ -556,7 +556,10 @@ public:
 			ImGui::PushID(&i);
 
 			if (ImGui::Selectable(i.get_name().c_str(), mSelected_layer == &i))
+			{
+				mSelected_object = core::invalid_object;
 				mSelected_layer = &i;
+			}
 			ImGui::PopID();
 		}
 		ImGui::EndChild();
@@ -600,6 +603,15 @@ public:
 				mSelected_object.set_name(scripting::make_valid_identifier(name));
 				mark_asset_modified();
 			}
+			ImGui::TextUnformatted("Transform");
+			math::transform* transform = mSelected_object.get_component<math::transform>();
+			ImGui::BeginGroup();
+			ImGui::DragFloat2("Position", transform->position.components().data());
+			ImGui::DragFloat("Rotation", transform->rotation.components().data());
+			ImGui::DragFloat2("Scale", transform->scale.components().data());
+			ImGui::EndGroup();
+			if (ImGui::IsItemDeactivatedAfterEdit())
+				mark_asset_modified();
 		}
 		ImGui::EndChild();
 	}
