@@ -178,7 +178,7 @@ void asset_manager_window::asset_tile(const core::asset::ptr & pAsset, const mat
 	ImGui::SameLine();
 
 	// Allow asset to be dragged.
-	if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+	if (ImGui::IsItemHovered() && ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
 	{
 		ImGui::SetDragDropPayload((pAsset->get_type() + "Asset").c_str(), &pAsset->get_id(), sizeof(util::uuid));
 		ImGui::Text("Asset: %s", mAsset_manager.get_asset_path(pAsset).string().c_str());
