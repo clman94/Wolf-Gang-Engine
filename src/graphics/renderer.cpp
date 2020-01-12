@@ -100,7 +100,7 @@ void renderer::render_tilemap(core::layer& pLayer, graphics& pGraphics)
 	}
 	
 	// Copy all the vertex and index data to a batch to be rendered.
-	// TODO: Have the renderer use the raw vertex/index data directly with copying it all.
+	// TODO: Have the renderer use the raw vertex/index data directly without copying it all.
 	render_batch_2d batch;
 	batch.rendertexture = info->texture;
 	for (auto& i : pLayer.get_storage<quad_vertices>().get_const_raw())

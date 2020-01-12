@@ -492,13 +492,10 @@ public:
 
 	void update_aabbs()
 	{
-		if (mSelected_layer)
+		ensure_editor_info();
+		for (auto& [id, editor_object_info] : mSelected_layer->each<editor_object_info>())
 		{
-			ensure_editor_info();
-			for (auto& [id, editor_object_info] : mSelected_layer->each<editor_object_info>())
-			{
-				editor_object_info.local_aabb = get_aabb_from_object(mSelected_layer->get_object(id));
-			}
+			editor_object_info.local_aabb = get_aabb_from_object(mSelected_layer->get_object(id));
 		}
 	}
 
