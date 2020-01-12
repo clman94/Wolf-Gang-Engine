@@ -154,7 +154,6 @@ public:
 		// Unique name of instance.
 		std::string name;
 		math::transform transform;
-		object_id id;
 		util::uuid asset_id;
 	};
 
@@ -182,12 +181,12 @@ public:
 	[
 		{
 			type: "tilemap",
-			tiles: [ {position: [0, 0], uv: [0, 0]} ]
-			texture: ...
+			tiles: [ { position:..., uv:... } ],
+			texture:...
 		}
 		{
 			type: "instance",
-			instances: [ {name: "", transform: {...}, asset:... } ]
+			instances: [ { name:..., transform:..., asset:... } ]
 		}
 	]
 
@@ -216,7 +215,6 @@ public:
 		{
 			instance& inst = inst_layer.instances.emplace_back();
 			inst.asset_id = obj.get_asset()->get_id();
-			inst.id = obj.get_id();
 			inst.name = obj.get_name();
 			if (auto transform = obj.get_component<math::transform>())
 				inst.transform = *transform;

@@ -9,6 +9,7 @@
 #include <wge/math/transform.hpp>
 #include <wge/math/transformations.hpp>
 #include <wge/graphics/graphics.hpp>
+#include <wge/core/scene_resource.hpp>
 
 namespace wge::graphics
 {
@@ -69,7 +70,7 @@ math::vec2 renderer::screen_to_world(const math::vec2& pVec) const noexcept
 	return (pVec / get_render_view_scale()) + mRender_view.max;
 }
 
-void renderer::render(core::layer& pLayer, graphics& pGraphics)
+void renderer::render_sprites(core::layer& pLayer, graphics& pGraphics)
 {
 	for (auto [id, sprite, transform] :
 		pLayer.each<sprite_component, math::transform>())
@@ -85,8 +86,12 @@ void renderer::render(core::layer& pLayer, graphics& pGraphics)
 	mBatches.clear();
 }
 
-void renderer::render_tilemap(core::layer& pLayer, graphics& pGraphics, core::resource_handle<texture> pTexture)
+void renderer::render_tilemap(core::layer& pLayer, graphics& pGraphics)
 {
+	core::tilemap_info* info = pLayer.layer_components.get<core::tilemap_info>();
+	if (!info || !info->texture.is_valid())
+		return;
+
 	// Update the indexes of all the vertices.
 	std::size_t index = 0;
 	for (auto [id, indexes] : pLayer.each<quad_indicies>())
@@ -97,7 +102,7 @@ void renderer::render_tilemap(core::layer& pLayer, graphics& pGraphics, core::re
 	// Copy all the vertex and index data to a batch to be rendered.
 	// TODO: Have the renderer use the raw vertex/index data directly with copying it all.
 	render_batch_2d batch;
-	batch.rendertexture = pTexture;
+	batch.rendertexture = info->texture;
 	for (auto& i : pLayer.get_storage<quad_vertices>().get_const_raw())
 	{
 		for (auto corner : i.corners)
@@ -110,6 +115,18 @@ void renderer::render_tilemap(core::layer& pLayer, graphics& pGraphics, core::re
 			batch.indexes.push_back(index);
 	}
 	pGraphics.get_graphics_backend()->render_batch(mFramebuffer, mProjection_matrix, batch);
+}
+
+void renderer::render_layer(core::layer& pLayer, graphics& pGraphics)
+{
+	render_sprites(pLayer, pGraphics);
+	render_tilemap(pLayer, pGraphics);
+}
+
+void renderer::render_scene(core::scene& pScene, graphics& pGraphics)
+{
+	for (auto& i : pScene)
+		render_layer(i, pGraphics);
 }
 
 json renderer::on_serialize(core::serialize_type pType)

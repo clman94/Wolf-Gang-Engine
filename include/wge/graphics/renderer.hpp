@@ -67,9 +67,10 @@ public:
 	// Convert screen coordinates to world coordinates
 	[[nodiscard]] math::vec2 screen_to_world(const math::vec2& pVec) const noexcept;
 
-	void render(core::layer& pLayer, graphics& pGraphics);
-
-	void render_tilemap(core::layer& pLayer, graphics& pGraphics, core::resource_handle<texture> pTexture);
+	void render_sprites(core::layer& pLayer, graphics& pGraphics);
+	void render_tilemap(core::layer& pLayer, graphics& pGraphics);
+	void render_layer(core::layer& pLayer, graphics& pGraphics);
+	void render_scene(core::scene& pScene, graphics& pGraphics);
 
 	// Set the current frame buffer to render to
 	void set_framebuffer(const framebuffer::ptr& pFramebuffer) noexcept

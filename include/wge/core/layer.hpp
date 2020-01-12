@@ -21,6 +21,7 @@ namespace wge::core
 // with its own set of systems acting upon the components
 // those objects.
 // In short, this is where all the ECS goodies happen.
+// TODO: Better const correctness.
 class layer final
 {
 public:
@@ -302,7 +303,7 @@ public:
 		}
 
 	private:
-		bool find_dependencies() const noexcept
+		bool find_dependencies() noexcept
 		{
 			if constexpr (sizeof...(Tdeps) != 0)
 			{
@@ -314,7 +315,7 @@ public:
 			return true;
 		}
 
-		mutable std::tuple<Tdeps*...> mDeps;
+		std::tuple<Tdeps*...> mDeps;
 		storage_iterator mIter;
 		storage_iterator mEnd;
 		std::tuple<component_storage<Tdeps>*...> mDeps_storage;

@@ -465,6 +465,43 @@ class scene_editor :
 	public asset_editor
 {
 public:
+	struct editor_object_info
+	{
+		// Precalculated local aabb of an object.
+		math::aabb local_aabb;
+	};
+
+	void ensure_editor_info()
+	{
+		for (auto& obj : *mSelected_layer)
+		{
+			if (!obj.has_component<editor_object_info>())
+				obj.add_component(editor_object_info{});
+		}
+	}
+
+	static math::aabb get_aabb_from_object(core::object& pObj)
+	{
+		math::aabb aabb;
+		if (auto sprite = pObj.get_component<graphics::sprite_component>())
+		{
+			aabb = sprite->get_local_aabb();
+		}
+		return aabb;
+	}
+
+	void update_aabbs()
+	{
+		if (mSelected_layer)
+		{
+			ensure_editor_info();
+			for (auto& [id, editor_object_info] : mSelected_layer->each<editor_object_info>())
+			{
+				editor_object_info.local_aabb = get_aabb_from_object(mSelected_layer->get_object(id));
+			}
+		}
+	}
+
 	// TODO: Implement a better and more generic messaging method at some point.
 	using on_game_run_callback = std::function<void(const core::asset::ptr&)>;
 
@@ -672,13 +709,7 @@ public:
 
 		// Render all the layers.
 		mRenderer.set_render_view_to_framebuffer(mViewport_offset, 1.f / mViewport_scale);
-		for (auto& i : mScene.get_layer_container())
-		{
-			core::tilemap_info* tilemap_info = i.layer_components.get<core::tilemap_info>();
-			if (tilemap_info && tilemap_info->texture.is_valid())
-				mRenderer.render_tilemap(i, engine.get_graphics(), tilemap_info->texture);
-			mRenderer.render(i, engine.get_graphics());
-		}
+		mRenderer.render_scene(mScene, engine.get_graphics());
 
 		ImGui::EndFixedScrollRegion();
 	}
@@ -700,15 +731,6 @@ public:
 		return obj;
 	}
 
-	static bool create_aabb_from_object(core::object& pObj, math::aabb& pAABB)
-	{
-		if (auto sprite = pObj.get_component<graphics::sprite_component>())
-		{
-			pAABB = sprite->get_local_aabb();
-			return true;
-		}
-		return false;//has_aabb;
-	}
 
 	void tilemap_editor()
 	{
@@ -726,6 +748,9 @@ public:
 
 	void object_layer_editor()
 	{
+		update_aabbs();
+
+		// Draw a boundary box around each object.
 		for (auto& [id, comp, transform] :
 			mSelected_layer->each<physics::box_collider_component, math::transform>())
 		{
@@ -738,41 +763,65 @@ public:
 			visual_editor::pop_transform(2);
 		}
 
-		for (auto [id, transform] : mSelected_layer->each<math::transform>())
+		// True when the selected object is being edited.
+		// We don't want to select objects behind it on accident.
+		bool is_currently_editing = false;
+		if (mSelected_object.is_valid())
 		{
-			const bool is_object_selected = mSelected_object.is_valid() && mSelected_object.get_id() == id;
-
-			math::aabb aabb;
-			if (create_aabb_from_object(mSelected_layer->get_object(id), aabb))
+			// Edit object transform.
+			editor_object_info* info = mSelected_object.get_component<editor_object_info>();
+			math::transform* transform = mSelected_object.get_component<math::transform>();
+			visual_editor::box_edit box_edit(info->local_aabb, *transform);
+			box_edit.resize(visual_editor::edit_type::transform);
+			box_edit.drag(visual_editor::edit_type::transform);
+			*transform = box_edit.get_transform();
+			if (box_edit.is_dragging())
 			{
-				if (is_object_selected)
-				{
-					visual_editor::box_edit box_edit(aabb, transform);
-					box_edit.resize(visual_editor::edit_type::transform);
-					box_edit.drag(visual_editor::edit_type::transform);
-					transform = box_edit.get_transform();
-					if (box_edit.is_dragging())
-					{
-						mark_asset_modified();
-					}
-				}
+				is_currently_editing = true;
+				mark_asset_modified();
+			}
 
+			// Draw center point.
+			visual_editor::draw_circle(transform->position, 5, { 1, 1, 1, 0.6f }, 3.f);
+		}
+
+		// Draw boundaries of all the other objects.
+		for (auto& [id, transform, info] : mSelected_layer->each<math::transform, editor_object_info>())
+		{
+			if (mSelected_object && mSelected_object.get_id() == id)
+				continue;
+			visual_editor::push_transform(transform);
+			visual_editor::draw_rect(info.local_aabb, { 1, 1, 1, 1 });
+			visual_editor::pop_transform();
+		}
+
+		if (!is_currently_editing && ImGui::IsMouseReleased(0))
+		{
+			// Generate a list of potential objects to be selected.
+			std::vector<core::object> canidates;
+			for (auto& [id, transform, info] : mSelected_layer->each<math::transform, editor_object_info>())
+			{
 				visual_editor::push_transform(transform);
-				if (aabb.intersect(visual_editor::get_mouse_position()))
-				{
-					if (ImGui::IsItemClicked())
-						mSelected_object = mSelected_layer->get_object(id);
-					// TODO: Show info about this object instance
-					visual_editor::draw_rect(aabb, { 1, 1, 1, 1 });
-				}
+				if (info.local_aabb.intersect(visual_editor::get_mouse_position()))
+					canidates.push_back(mSelected_layer->get_object(id));
 				visual_editor::pop_transform();
 			}
-
-			// Draw center point
-			if (is_object_selected)
+			
+			// If one of the canidates are already currectly selected,
+			// we will use the object after the already selected one or loop back to the beginning.
+			auto selected = std::find_if(canidates.begin(), canidates.end(), [this](core::object& obj) {return obj == mSelected_object;  });
+			if (selected != canidates.end())
 			{
-				visual_editor::draw_circle(transform.position, 5, { 1, 1, 1, 0.6f }, 3.f);
+				++selected;
+				// Loop back to the beginning.
+				if (selected == canidates.end())
+					selected = canidates.begin();
+				mSelected_object = *selected;
 			}
+			else if (!canidates.empty())
+				mSelected_object = canidates.front();
+			else
+				mSelected_object = core::invalid_object;
 		}
 	}
 
@@ -1118,13 +1167,7 @@ public:
 
 		// Render all the layers.
 		mRenderer.set_render_view_to_framebuffer(math::vec2(0, 0), math::vec2(1.f, 1.f) / 100.f);
-		for (auto& i : mEngine->get_scene().get_layer_container())
-		{
-			core::tilemap_info* tilemap_info = i.layer_components.get<core::tilemap_info>();
-			if (tilemap_info && tilemap_info->texture.is_valid())
-				mRenderer.render_tilemap(i, mEngine->get_graphics(), tilemap_info->texture);
-			mRenderer.render(i, mEngine->get_graphics());
-		}
+		mRenderer.render_scene(mEngine->get_scene(), mEngine->get_graphics());
 	}
 
 	void on_gui()

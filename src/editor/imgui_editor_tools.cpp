@@ -208,14 +208,14 @@ bool drag_behavior(ImGuiID pID, bool pHovered)
 	assert(gCurrent_editor_state);
 	bool is_dragging_this = gCurrent_editor_state->active_dragger_id == pID;
 	bool is_dragging_at_all = gCurrent_editor_state->active_dragger_id != 0;
-	if (pHovered && ImGui::IsItemHovered() && ImGui::IsMouseClicked(0)
+	if (pHovered && ImGui::IsItemHovered() && ImGui::IsMouseDragging(0, 0.1f) // Note: Threshold really tiny so then draggable circles work right.
 		&& !is_dragging_at_all)
 	{
 		// Start drag
 		gCurrent_editor_state->active_dragger_id = pID;
 		is_dragging_this = true;
 	}
-	else if (!ImGui::IsMouseDown(0) && is_dragging_this)
+	else if (ImGui::IsMouseReleased(0) && is_dragging_this)
 	{
 		// End drag
 		gCurrent_editor_state->active_dragger_id = 0;

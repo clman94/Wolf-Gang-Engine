@@ -16,7 +16,6 @@ static json serialize_instance_layer(const scene_resource::instance_layer& pLaye
 		json j_inst;
 		j_inst["name"] = i.name;
 		j_inst["transform"] = i.transform;
-		j_inst["id"] = i.id;
 		j_inst["asset_id"] = i.asset_id;
 		instances.push_back(std::move(j_inst));
 	}
@@ -71,7 +70,6 @@ static scene_resource::instance_layer deserialize_instance_layer(const json& pJs
 		scene_resource::instance inst;
 		inst.name = i["name"];
 		inst.transform = i["transform"];
-		inst.id = i["id"];
 		inst.asset_id = i["asset_id"];
 		layer.instances.push_back(std::move(inst));
 	}
