@@ -791,11 +791,11 @@ public:
 			if (mSelected_object && mSelected_object.get_id() == id)
 				continue;
 			visual_editor::push_transform(transform);
-			visual_editor::draw_rect(info.local_aabb, { 1, 1, 1, 1 });
+			visual_editor::draw_rect(info.local_aabb, { 1, 1, 1, 0.7f });
 			visual_editor::pop_transform();
 		}
 
-		if (!is_currently_editing && ImGui::IsMouseReleased(0))
+		if (!is_currently_editing && ImGui::IsItemHovered() && ImGui::IsMouseReleased(0))
 		{
 			// Generate a list of potential objects to be selected.
 			std::vector<core::object> canidates;
@@ -818,8 +818,10 @@ public:
 					selected = canidates.begin();
 				mSelected_object = *selected;
 			}
+			// Select first object if nothing else is selected.
 			else if (!canidates.empty())
 				mSelected_object = canidates.front();
+			// Deselect objects if the user clicked in an empty space.
 			else
 				mSelected_object = core::invalid_object;
 		}
