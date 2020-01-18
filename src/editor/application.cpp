@@ -583,7 +583,7 @@ public:
 		ImGui::SameLine();
 
 		static float viewport_width = -100;
-		ImGui::BeginChild("Scene", ImVec2(viewport_width, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
+		ImGui::BeginChild("Scene", ImVec2(viewport_width, 0), true, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_MenuBar);
 
 		show_viewport();
 
@@ -635,7 +635,7 @@ public:
 		static bool is_grid_enabled = true;
 		static graphics::color grid_color{ 1, 1, 1, 0.7f };
 
-		/*if (ImGui::BeginMenuBar())
+		if (ImGui::BeginMenuBar())
 		{
 			if (ImGui::BeginMenu("View"))
 			{
@@ -645,17 +645,14 @@ public:
 				ImGui::MenuItem("Grid", NULL, false, false);
 				ImGui::Checkbox("Enable Grid", &is_grid_enabled);
 				ImGui::ColorEdit4("Grid Color", grid_color.components, ImGuiColorEditFlags_NoInputs);
-
-				ImGui::Separator();
-				ImGui::MenuItem("Physics", NULL, false, false);
-				ImGui::Checkbox("Collision", &show_collision);
 				ImGui::EndMenu();
 			}
 			ImGui::EndMenuBar();
-		}*/
+		}
+		
 		ImVec2 region_size = ImGui::GetContentRegionAvail();
-		float width = region_size.x;//ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x * 2 - ImGui::GetStyle().ScrollbarSize;
-		float height = region_size.y;//ImGui::GetWindowHeight() - ImGui::GetCursorPos().y - ImGui::GetStyle().WindowPadding.y * 2 - ImGui::GetStyle().ScrollbarSize;
+		float width = region_size.x;
+		float height = region_size.y;
 		float scroll_x_max = width * 2;
 		float scroll_y_max = height * 2;
 
@@ -740,7 +737,6 @@ public:
 		return obj;
 	}
 
-
 	void tilemap_editor()
 	{
 		math::ivec2 tile_position{ visual_editor::get_mouse_position().floor() };
@@ -805,7 +801,7 @@ public:
 			
 			// If one of the canidates are already currectly selected,
 			// we will use the object after the already selected one or loop back to the beginning.
-			auto selected = std::find_if(canidates.begin(), canidates.end(), [this](core::object& obj) {return obj == mSelected_object;  });
+			auto selected = std::find_if(canidates.begin(), canidates.end(), [this](core::object& obj) { return obj == mSelected_object; });
 			if (selected != canidates.end())
 			{
 				++selected;

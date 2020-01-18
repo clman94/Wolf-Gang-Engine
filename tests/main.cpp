@@ -12,21 +12,26 @@
 #include <wge/util/span.hpp>
 #include <wge/math/vector.hpp>
 #include <wge/util/ptr.hpp>
+#include <wge/core/scene_resource.hpp>
 
 using namespace wge;
+
+struct tracker
+{
+	tracker() noexcept = default;
+	tracker(const tracker& pOther) noexcept :
+		copies(pOther.copies + 1)
+	{}
+	tracker(tracker&& pOther) noexcept :
+		moves(pOther.moves + 1)
+	{}
+	std::size_t copies = 0;
+	std::size_t moves = 0;
+};
 
 TEST_CASE("Copyable ptr")
 {
 	using util::copyable_ptr;
-
-	struct tracker
-	{
-		tracker() = default;
-		tracker(const tracker& pOther):
-			copies(pOther.copies + 1)
-		{}
-		std::size_t copies = 0;
-	};
 
 	copyable_ptr ptr = util::make_copyable_ptr<tracker>();
 	REQUIRE(ptr.valid());

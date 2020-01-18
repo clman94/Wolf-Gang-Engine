@@ -13,7 +13,8 @@ template <typename T>
 class handle
 {
 public:
-	using storage = component_storage<T>;
+	using const_storage = const component_storage<std::remove_const_t<T>>;
+	using storage = std::conditional_t<std::is_const_v<T>, const_storage, std::remove_const_t<const_storage>>;
 
 	handle() = default;
 	handle(object_id pId, storage& pStorage) :
@@ -56,7 +57,7 @@ public:
 
 private:
 	object_id mId = invalid_id;
-	component_storage<T>* mStorage = nullptr;
+	storage* mStorage = nullptr;
 };
 
 } // namespace wge::core

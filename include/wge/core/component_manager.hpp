@@ -15,6 +15,13 @@ namespace wge::core
 class component_manager
 {
 public:
+	// Boilerplate for noexcept move because std::map can't get it right.
+	component_manager() = default;
+	component_manager(const component_manager&) = default;
+	component_manager(component_manager&&) noexcept = default;
+	component_manager& operator=(const component_manager&) = default;
+	component_manager& operator=(component_manager&&) noexcept = default;
+
 	template <typename T>
 	T& add_component(const object_id& pObject, bucket pBucket = default_bucket)
 	{
@@ -44,6 +51,12 @@ public:
 
 	template <typename T>
 	T* get_component(const object_id& pObject, bucket pBucket = default_bucket)
+	{
+		return get_storage<T>(pBucket).get(pObject);
+	}
+
+	template <typename T>
+	const T* get_component(const object_id& pObject, bucket pBucket = default_bucket) const
 	{
 		return get_storage<T>(pBucket).get(pObject);
 	}

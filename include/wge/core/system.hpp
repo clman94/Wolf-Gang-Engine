@@ -16,6 +16,13 @@ namespace wge::core
 class component_set
 {
 public:
+	// Boilerplate for noexcept move because std::map can't get it right.
+	component_set() = default;
+	component_set(const component_set&) = default;
+	component_set(component_set&&) noexcept = default;
+	component_set& operator=(const component_set&) = default;
+	component_set& operator=(component_set&&) noexcept = default;
+
 	template <typename T, typename U = std::decay_t<T>>
 	U* insert(T&& pComponent, bucket pBucket = default_bucket)
 	{

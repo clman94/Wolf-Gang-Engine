@@ -17,11 +17,8 @@
 namespace wge::core
 {
 
-// A layer is a self-contained collection of objects
-// with its own set of systems acting upon the components
-// those objects.
-// In short, this is where all the ECS goodies happen.
-// TODO: Better const correctness.
+// A layer is a container of objects and their components.
+//
 class layer final
 {
 public:
@@ -114,7 +111,7 @@ public:
 	template <typename T>
 	auto make_handle(object_id pId, bucket pBucket = default_bucket)
 	{
-		return handle{ pId, mComponent_manager.get_storage<T>(pBucket) };
+		return handle<T>{ pId, mComponent_manager.get_storage<T>(pBucket) };
 	}
 
 	// Get the amount of game objects in this layer.
@@ -135,6 +132,12 @@ public:
 
 	template <typename T>
 	T* get_component(object_id pObject_id, bucket pBucket = default_bucket)
+	{
+		return mComponent_manager.get_component<T>(pObject_id, pBucket);
+	}
+
+	template <typename T>
+	const T* get_component(object_id pObject_id, bucket pBucket = default_bucket) const
 	{
 		return mComponent_manager.get_component<T>(pObject_id, pBucket);
 	}
