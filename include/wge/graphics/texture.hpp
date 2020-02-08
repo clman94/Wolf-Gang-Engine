@@ -55,7 +55,7 @@ public:
 	texture_impl::ptr get_implementation() const noexcept;
 
 	// Load a texture from a file
-	virtual void load(const filesystem::path& pDirectory, const std::string& pName) override;
+	virtual void load() override;
 
 	// Get width of texture in pixels
 	int get_width() const noexcept;
@@ -81,8 +81,6 @@ public:
 	// Mainly for use by an editor.
 	atlas_container& get_raw_atlas() noexcept;
 	const atlas_container& get_raw_atlas() const noexcept;
-
-	virtual void update_source_path(const filesystem::path& pDirectory, const std::string& pName) override;
 
 private:
 	virtual json serialize_data() const override;

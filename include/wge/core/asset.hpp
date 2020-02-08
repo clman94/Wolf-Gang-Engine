@@ -9,6 +9,98 @@
 namespace wge::core
 {
 
+class asset_location
+{
+public:
+	using ptr = std::shared_ptr<asset_location>;
+
+	static ptr create(const filesystem::path& pDirectory, const std::string& pName)
+	{
+		return std::make_shared<asset_location>(pDirectory, pName);
+	}
+
+	asset_location(const filesystem::path& pDirectory, const std::string& pName) :
+		mDirectory(pDirectory),
+		mName(pName)
+	{}
+	asset_location(asset_location&&) = default;
+	asset_location(const asset_location&) = delete;
+
+	filesystem::path get_autonamed_file(const std::string& pExtension) const
+	{
+		assert(is_valid());
+		assert(!pExtension.empty());
+		return mDirectory / (mName + pExtension);
+	}
+
+	filesystem::path get_file(const std::string& pFilename) const
+	{
+		assert(is_valid());
+		assert(!pFilename.empty());
+		return mDirectory / pFilename;
+	}
+
+	bool remove_autonamed_file(const std::string& pExtension)
+	{
+		assert(is_valid());
+		assert(!pExtension.empty());
+		system_fs::remove(get_autonamed_file(pExtension));
+	}
+
+	bool remove_file(const std::string& pFilename)
+	{
+		assert(is_valid());
+		assert(!pFilename.empty());
+		system_fs::remove(get_file(pFilename));
+	}
+
+	// Moves the directory and renames the autonamed files.
+	void move_to(const filesystem::path& pDirectory, const std::string& pName)
+	{
+		assert(is_valid());
+		assert(!pDirectory.empty());
+		assert(!pName.empty());
+
+		// Move the directory.
+		system_fs::rename(mDirectory, pDirectory);
+		mDirectory = pDirectory;
+
+		// Get all autonamed files with the old name.
+		std::vector<filesystem::path> autonamed_files;
+		for (auto i : system_fs::directory_iterator(pDirectory))
+		{
+			if (i.path().stem() == mName)
+				autonamed_files.push_back(i.path());
+		}
+
+		// Rename those autonamed files with the new name.
+		mName = pName;
+		for (auto& i : autonamed_files)
+			system_fs::rename(i, get_autonamed_file(i.extension()));
+	}
+
+	const std::string& get_name() const noexcept
+	{
+		assert(is_valid());
+		return mName;
+	}
+
+	const filesystem::path& get_directory() const noexcept
+	{
+		assert(is_valid());
+		return mDirectory;
+	}
+
+	bool is_valid() const noexcept
+	{
+		return !mName.empty() && !mDirectory.empty();
+	}
+
+private:
+	std::string mName;
+	filesystem::path mDirectory;
+};
+
 class resource
 {
 public:
@@ -16,7 +108,35 @@ public:
 
 	virtual ~resource() {}
 
-	virtual void load(const filesystem::path& pDirectory, const std::string& pName) {}
+	void set_location(const asset_location::ptr& pLocation)
+	{
+		mLocation = pLocation;
+	}
+
+	bool has_location() const noexcept
+	{
+		return mLocation != nullptr;
+	}
+
+	asset_location& get_location() noexcept
+	{
+		assert(has_location());
+		return *mLocation;
+	}
+
+	const asset_location& get_location() const noexcept
+	{
+		assert(has_location());
+		return *mLocation;
+	}
+
+	void load(const asset_location::ptr& pLocation)
+	{
+		set_location(pLocation);
+		load();
+	}
+
+	virtual void load() {}
 	virtual void unload() {}
 
 	virtual bool is_loaded() const
@@ -26,14 +146,12 @@ public:
 
 	virtual void save() {}
 
-	// Make sure the resource is unloaded when you move it around
-	// so any streams are cleaned up. This function should be used
-	// to notify this resource about the change in path.
-	virtual void update_source_path(const filesystem::path& pDirectory, const std::string& mName) {}
-
 	// Serialize any settings from this resource.
 	virtual json serialize_data() const { return{}; }
 	virtual void deserialize_data(const json& pJson) {}
+
+private:
+	asset_location::ptr mLocation;
 };
 
 // Assets are file-like objects that contain data and resources for a project.
@@ -48,15 +166,22 @@ public:
 	// Load a file.
 	bool load_file(const filesystem::path& pSystem_path);
 
+	asset_location::ptr get_location() const noexcept
+	{
+		return mLocation;
+	}
+
 	// Save the assets configuration to its source file.
 	void save() const;
 
+	void save_to(const filesystem::path& pDirectory)
+	{
+		mLocation = asset_location::create(pDirectory, mName);
+		save();
+	}
+
 	const std::string& get_name() const noexcept;
 	void set_name(const std::string& pName);
-
-	// Get path to the configuration file on the hard-drive.
-	const filesystem::path& get_file_path() const noexcept;
-	void set_file_path(const filesystem::path& pPath);
 
 	const util::uuid& get_id() const noexcept;
 
@@ -92,12 +217,11 @@ private:
 	// Stores the resource.
 	resource::uptr mResource;
 
+	asset_location::ptr mLocation;
+
 	// This is that path that the asset manager uses to
 	// locate assets.
 	std::string mName;
-
-	// File path to the asset's source file on the systems disk.
-	filesystem::path mFile_path;
 
 	// A string identifying the type of an asset.
 	std::string mType;

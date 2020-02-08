@@ -62,8 +62,6 @@ public:
 
 	const asset_container& get_asset_list() const;
 
-	asset::ptr create_asset(const filesystem::path& pPath, const std::string& pType, const json& pMetadata = {});
-
 	// Create an asset representing a folder.
 	asset::ptr create_folder(const filesystem::path& pPath);
 
@@ -80,9 +78,6 @@ public:
 	std::vector<asset::ptr> get_children(const asset::ptr& pParent) const;
 	std::vector<asset::ptr> get_children_recursive(const asset::ptr& pParent) const;
 	asset::ptr find_child(const asset::ptr& pParent, const std::string_view& pName) const;
-
-	// This generates a folder for the asset's data to be placed.
-	filesystem::path create_asset_storage(const asset::ptr& pAsset);
 
 	// Generates the name of the directory used to store an asset.
 	// "dir.dir.name-000000000000"

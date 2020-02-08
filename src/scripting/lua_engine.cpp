@@ -92,7 +92,7 @@ void lua_engine::update_delta(float pSeconds)
 
 bool lua_engine::compile_script(script& pScript)
 {
-	sol::load_result result = state.load(pScript.source, pScript.get_source_path().string());
+	sol::load_result result = state.load(pScript.source, pScript.get_location().get_autonamed_file(".lua").string());
 	if (!result.valid())
 		return false;
 	pScript.function = result.get<sol::protected_function>();

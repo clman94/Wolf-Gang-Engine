@@ -58,12 +58,10 @@ public:
 		tex->set_type("texture");
 		
 		// Create a new subdirectory for the asset's storage.
-		auto directory = pAsset_mgr.get_root_directory() / pAsset_mgr.generate_asset_directory_name(tex);
-		system_fs::create_directory(directory);
-		tex->set_file_path(directory / (tex->get_name() + ".wga"));
+		pAsset_mgr.store_asset(tex);
 
 		// Copy the texture file.
-		auto dest = directory / (tex->get_name() + ".png");
+		auto dest = tex->get_location()->get_autonamed_file(".png");
 		try {
 			system_fs::copy_file(pSystem_path, dest);
 		}
@@ -76,12 +74,12 @@ public:
 
 		// Create the new resource
 		auto res = pAsset_mgr.create_resource("texture");
-		res->load(directory, tex->get_name());
+		res->set_location(tex->get_location());
+		res->load();
 		tex->set_resource(std::move(res));
 
-		// Save the configuration
+		// Update the configuration
 		tex->save();
-
 		pAsset_mgr.add_asset(tex);
 
 		return tex;
@@ -1045,11 +1043,11 @@ private:
 		asset->set_name(pName);
 		asset->set_parent(get_asset());
 		asset->set_type("script");
-		asset->set_resource(asset_manager.create_resource("script"));
 		asset_manager.store_asset(asset);
 
+		asset->set_resource(asset_manager.create_resource("script"));
 		auto script = asset->get_resource<scripting::script>();
-		script->save(asset->get_file_path().parent(), pName);
+		script->set_location(asset->get_location());
 		asset->save();
 
 		asset_manager.add_asset(asset);

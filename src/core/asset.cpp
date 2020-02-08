@@ -18,8 +18,6 @@ bool asset::load_file(const filesystem::path& pSystem_path)
 		return false;
 	std::string str(std::istreambuf_iterator<char>(stream), {});
 
-	mFile_path = pSystem_path;
-
 	// Load all the settings
 	json j = json::parse(str);
 	mName = j["name"];
@@ -29,6 +27,8 @@ bool asset::load_file(const filesystem::path& pSystem_path)
 	mMetadata = j["metadata"];
 	mResource_metadata_cache = j["resource-metadata"];
 	mParent = j["parent"];
+	mLocation = asset_location::create(pSystem_path.parent(), mName);
+
 	update_resource_metadata();
 	return true;
 }
@@ -41,16 +41,6 @@ const std::string& asset::get_name() const noexcept
 void asset::set_name(const std::string& pName)
 {
 	mName = pName;
-}
-
-const filesystem::path& asset::get_file_path() const noexcept
-{
-	return mFile_path;
-}
-
-void asset::set_file_path(const filesystem::path & pPath)
-{
-	mFile_path = pPath;
 }
 
 const util::uuid& asset::get_id() const noexcept
@@ -70,7 +60,7 @@ void asset::set_type(const std::string& pType)
 
 void asset::save() const
 {
-	assert(!mFile_path.empty());
+	assert(mLocation);
 
 	json j;
 	j["name"] = mName;
@@ -86,7 +76,7 @@ void asset::save() const
 	j["parent"] = mParent;
 
 	filesystem::file_stream out;
-	out.open(mFile_path, filesystem::stream_access::write);
+	out.open(mLocation->get_autonamed_file(".wga"), filesystem::stream_access::write);
 	out.write(j.dump(2));
 }
 

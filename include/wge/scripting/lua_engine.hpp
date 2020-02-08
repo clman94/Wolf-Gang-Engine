@@ -36,68 +36,38 @@ public:
 		return function.valid();
 	}
 
-	virtual void load(const filesystem::path& pDirectory, const std::string& pName) override
+	virtual void load() override
 	{
-		auto path = pDirectory / (pName + ".lua");
+		const auto filepath = get_location().get_autonamed_file(".lua");
 		try
 		{
-			std::ifstream stream(path.string().c_str());
+			std::ifstream stream(filepath.string().c_str());
 			std::stringstream sstr;
 			sstr << stream.rdbuf();
 			source = sstr.str();
-			mFile_path = path;
 		}
 		catch (const filesystem::io_error& e)
 		{
-			log::error("Couldn't load resource from path \"{}\"", path.string());
+			log::error("Couldn't load resource from path \"{}\"", filepath.string());
 			log::error("Exception: {}", e.what());
 		}
 	}
 
 	virtual void save() override
 	{
-		filesystem::file_stream stream;
+		const auto filepath = get_location().get_autonamed_file(".lua");
 		try
 		{
-			stream.open(mFile_path, filesystem::stream_access::write);
+			filesystem::file_stream stream;
+			stream.open(filepath, filesystem::stream_access::write);
 			stream.write(source);
 		}
 		catch (const filesystem::io_error& e)
 		{
-			log::error("Couldn't save resource to path \"{}\"", mFile_path.string());
+			log::error("Couldn't save resource to path \"{}\"", filepath.string());
 			log::error("Exception: {}", e.what());
 		}
 	}
-
-	void save(const filesystem::path& pPath)
-	{
-		mFile_path = pPath;
-		save();
-	}
-
-	void save(const filesystem::path& pDirectory, const std::string& pName)
-	{
-		save(pDirectory / (pName + ".lua"));
-	}
-
-	const filesystem::path& get_source_path() const noexcept
-	{
-		return mFile_path;
-	}
-
-	virtual void update_source_path(const filesystem::path& pDirectory, const std::string& pName) override
-	{
-		auto new_path = pDirectory / (pName + ".lua");
-		if (!mFile_path.empty())
-		{
-			auto old_path = pDirectory / mFile_path.filename();
-			system_fs::rename(old_path, new_path);
-		}
-		mFile_path = std::move(new_path);
-	}
-
-private:
-	filesystem::path mFile_path;
 };
 
 class lua_engine

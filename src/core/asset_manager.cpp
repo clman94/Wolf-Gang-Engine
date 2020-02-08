@@ -95,21 +95,10 @@ asset::ptr asset_manager::create_folder(const filesystem::path& pPath)
 		folder->set_parent(parent);
 	}
 
-	auto system_dir = mRoot_dir / generate_asset_directory_name(folder);
-	system_fs::create_directory(system_dir);
-	folder->set_file_path(system_dir / (folder->get_name() + ".wga"));
-	folder->save();
-
+	store_asset(folder);
 	add_asset(folder);
 
 	return folder;
-}
-
-filesystem::path asset_manager::create_asset_storage(const asset::ptr& pAsset)
-{
-	auto dir = mRoot_dir / pAsset->get_id().to_string();
-	system_fs::create_directory(dir);
-	return dir;
 }
 
 std::string asset_manager::generate_asset_directory_name(const asset::ptr& pAsset) const
@@ -128,22 +117,22 @@ filesystem::path asset_manager::create_asset_storage(const core::asset::ptr& pAs
 
 void asset_manager::store_asset(const core::asset::ptr& pAsset) const
 {
-	auto directory = mRoot_dir / generate_asset_directory_name(pAsset);
-	pAsset->set_file_path(directory / (pAsset->get_name() + ".wga"));
+	auto directory = create_asset_storage(pAsset);
+	pAsset->save_to(directory);
 }
 
 void asset_manager::update_directory_structure()
 {
 	for (const auto& i : mAsset_list)
 	{
-		std::string dir_name = generate_asset_directory_name(i);
+		std::string new_dir_name = generate_asset_directory_name(i);
 
 		// Get the path of the asset definition's parent directory.
-		auto current_dir_path = i->get_file_path().parent();
+		auto current_dir_path = i->get_location()->get_directory();
 		assert(!current_dir_path.empty());
 
 		// Make sure the name is consistant with the generated name.
-		if (current_dir_path.filename() != dir_name)
+		if (current_dir_path.filename() != new_dir_name)
 		{
 			// It is not! So we must rename it.
 
@@ -159,32 +148,16 @@ void asset_manager::update_directory_structure()
 				res->unload();
 			}
 
-			{
-				// Rename the asset's configuration file just-in-case.
-				auto new_config_path = current_dir_path / (i->get_name() + ".wga");
-				system_fs::rename(i->get_file_path(), new_config_path);
-			}
-
 			auto parent_dir_path = current_dir_path.parent();
 			assert(!parent_dir_path.empty());
+			auto new_dir_path = parent_dir_path / new_dir_name;
 
-			auto new_dir_path = parent_dir_path / dir_name;
+			// Move the directory and update the autonamed files.
+			i->get_location()->move_to(new_dir_path, i->get_name());
 
-			// Rename the directory with the correct name.
-			system_fs::rename(current_dir_path, new_dir_path);
-			
-			if (res)
-			{
-				// Tell the resource that its source path has changed.
-				res->update_source_path(new_dir_path, i->get_name());
-
-				// Reload the asset if it was loaded before.
-				if (!res->is_loaded() && was_resource_loaded)
-					res->load(new_dir_path, i->get_name());
-			}
-
-			// Tell the asset configuration that its source path has changed.
-			i->set_file_path(new_dir_path / (i->get_name() + ".wga"));
+			// Reload the asset if it was loaded before.
+			if (res && !res->is_loaded() && was_resource_loaded)
+				res->load();
 		}
 	}
 }
@@ -282,7 +255,7 @@ bool asset_manager::remove_asset(const asset::ptr& pAsset)
 		remove_asset(i);
 
 	// Get the path to the asset's parent directory.
-	auto dir_path = pAsset->get_file_path().parent();
+	auto dir_path = pAsset->get_location()->get_directory();
 	assert(!dir_path.empty());
 
 	// Remove the directory.
@@ -347,7 +320,7 @@ void asset_manager::load_assets()
 			auto factory_iter = mResource_factories.find(ptr->get_type());
 			if (auto res = create_resource(ptr->get_type()))
 			{
-				res->load(ptr->get_file_path().parent(), ptr->get_name());
+				res->load(ptr->get_location());
 				ptr->set_resource(std::move(res));
 			}
 
@@ -360,40 +333,5 @@ const asset_manager::asset_container& asset_manager::get_asset_list() const
 {
 	return mAsset_list;
 }
-
-static bool is_already_imported(const filesystem::path& pResource_path)
-{
-	filesystem::path path = pResource_path;
-	auto filename = path.pop_filepath();
-	path.push_back(filename + ".wge_asset");
-	return system_fs::exists(path);
-}
-
-static filesystem::path append_asset_extension(const filesystem::path& pPath)
-{
-	filesystem::path result(pPath);
-	std::string filename = result.pop_filepath();
-	result.push_back(filename + ".wge_asset");
-	return result;
-}
-
-asset::ptr asset_manager::create_asset(const filesystem::path& pPath, const std::string& pType, const json& pMetadata)
-{
-	if (has_asset(pPath))
-	{
-		log::error("Could not create asset \"{}\"; it already exists", pPath.string());
-		return{};
-	}
-	auto config = std::make_shared<asset>();
-	config->set_file_path(mRoot_dir / append_asset_extension(pPath));
-	config->set_name(pPath.filename());
-	config->set_type(pType);
-	config->set_metadata(pMetadata);
-	config->save();
-
-	add_asset(config);
-	return config;
-}
-
 
 } // namespace wge::core

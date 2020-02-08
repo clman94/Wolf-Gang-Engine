@@ -32,7 +32,6 @@ json animation::serialize() const
 	return result;
 }
 
-
 void texture::set_implementation(const texture_impl::ptr& pImpl) noexcept
 {
 	mImpl = pImpl;
@@ -49,11 +48,10 @@ texture_impl::ptr texture::get_implementation() const noexcept
 	return mImpl;
 }
 
-void texture::load(const filesystem::path& pDirectory, const std::string& pName)
+void texture::load()
 {
-	mPath = pDirectory / (pName + ".png");
+	mPath = get_location().get_autonamed_file(".png");
 	mImage.load_file(mPath.string());
-	
 	if (mImpl)
 		mImpl->create_from_image(mImage);
 }
@@ -108,16 +106,6 @@ texture::atlas_container& texture::get_raw_atlas() noexcept
 const texture::atlas_container& texture::get_raw_atlas() const noexcept
 {
 	return mAtlas;
-}
-
-void texture::update_source_path(const filesystem::path& pDirectory, const std::string& pName)
-{
-	auto old_path = pDirectory / mPath.filename();
-	auto new_path = pDirectory / (pName + ".png");
-
-	// Rename the texture file for name consistancy
-	system_fs::rename(old_path, new_path);
-	mPath = std::move(new_path);
 }
 
 json texture::serialize_data() const
