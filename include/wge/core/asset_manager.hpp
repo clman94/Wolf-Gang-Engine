@@ -44,7 +44,16 @@ public:
 	// Find and cast a resource asset.
 	// Returns empty if it was not found.
 	template <typename T = resource>
-	resource_handle<T> get_resource(const filesystem::path& pPath) const;
+	resource_handle<T> get_resource(const filesystem::path& pPath) const
+	{
+		return{ get_asset(pPath) };
+	}
+
+	template <typename T = resource>
+	resource_handle<T> get_resource(const util::uuid& pId) const
+	{
+		return{ get_asset(pId) };
+	}
 
 	void register_resource_factory(const std::string& pType, const resource_factory& pFactory);
 	template <typename T>
@@ -130,12 +139,6 @@ public:
 private:
 	std::map<std::string, std::unique_ptr<importer>> mImporters;
 };
-
-template<typename T>
-inline resource_handle<T> asset_manager::get_resource(const filesystem::path& pPath) const
-{
-	return{ get_asset(pPath) };
-}
 
 template<typename T>
 inline void asset_manager::register_default_resource_factory(const std::string& pType)

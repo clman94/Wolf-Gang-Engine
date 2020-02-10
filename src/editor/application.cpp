@@ -135,6 +135,89 @@ inline bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr, bool pD
 	return *pOpen;
 }
 
+
+void begin_image_editor(const char* pStr_id, const graphics::texture& pTexture, bool pShow_alpha = false)
+{
+	ImGui::PushID(pStr_id);
+
+	float* zoom = ImGui::GetStateStorage()->GetFloatRef(ImGui::GetID("_Zoom"), 0);
+
+	const ImVec2 last_cursor = ImGui::GetCursorPos();
+	ImGui::BeginGroup();
+
+	const float scale = std::powf(2, *zoom);
+	const ImVec2 image_size = pTexture.get_size() * scale;
+
+	// Top and left padding
+	ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
+	ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
+	ImGui::SameLine();
+
+	// Store the cursor so we can position things on top of the image
+	const ImVec2 image_position = ImGui::GetCursorScreenPos();
+
+	// A checker board will help us "see" the alpha channel of the image
+	ImGui::DrawAlphaCheckerBoard(image_position, image_size);
+
+	ImGui::Image(pTexture, image_size);
+
+	// Right and bottom padding
+	ImGui::SameLine();
+	ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
+	ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
+	ImGui::EndGroup();
+
+	// Draw grid
+	if (*zoom > 2)
+	{
+		ImGui::DrawGridLines(image_position,
+			ImVec2(image_position.x + image_size.x, image_position.y + image_size.y),
+			{ 0, 1, 1, 0.2f }, scale);
+	}
+
+	// Overlap with an invisible button to recieve input
+	ImGui::SetCursorPos(last_cursor);
+	ImGui::InvisibleButton("_Input", ImVec2(image_size.x + ImGui::GetWindowWidth(), image_size.y + ImGui::GetWindowHeight()));
+	if (ImGui::IsItemHovered())
+	{
+		// Zoom with ctrl and mousewheel
+		if (ImGui::GetIO().KeyCtrl && ImGui::GetIO().MouseWheel != 0)
+		{
+			*zoom += ImGui::GetIO().MouseWheel;
+			const float new_scale = std::powf(2, *zoom);
+			const float ratio_changed = new_scale / scale;
+			ImGui::SetScrollX(ImGui::GetScrollX() * ratio_changed);
+			ImGui::SetScrollY(ImGui::GetScrollY() * ratio_changed);
+		}
+
+		// Hold middle mouse button to scroll
+		ImGui::DragScroll(2);
+	}
+	visual_editor::begin("_SomeEditor", { image_position.x, image_position.y }, { 0, 0 }, { scale, scale });
+}
+
+void end_image_editor()
+{
+	visual_editor::end();
+	ImGui::PopID();
+}
+
+core::asset::ptr asset_drag_drop_target(const std::string& pType, const core::asset_manager& pAsset_manager)
+{
+	core::asset::ptr result;
+	if (ImGui::BeginDragDropTarget())
+	{
+		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload((pType + "Asset").c_str()))
+		{
+			// Retrieve the object asset from the payload.
+			const util::uuid& id = *(const util::uuid*)payload->Data;
+			result = pAsset_manager.get_asset(id);
+		}
+		ImGui::EndDragDropTarget();
+	}
+	return result;
+}
+
 class sprite_editor :
 	public asset_editor
 {
@@ -156,47 +239,7 @@ public:
 		ImGui::BeginChild("SpriteEditorViewport", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
 
 		auto texture = get_asset()->get_resource<graphics::texture>();
-
-		float* zoom = ImGui::GetStateStorage()->GetFloatRef(ImGui::GetID("_Zoom"), 0);
-
-		const ImVec2 last_cursor = ImGui::GetCursorPos();
-		ImGui::BeginGroup();
-
-		const float scale = std::powf(2, *zoom);
-		const ImVec2 image_size = texture->get_size() * scale;
-
-		// Top and left padding
-		ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
-		ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
-		ImGui::SameLine();
-
-		// Store the cursor so we can position things on top of the image
-		const ImVec2 image_position = ImGui::GetCursorScreenPos();
-
-		// A checker board will help us "see" the alpha channel of the image
-		ImGui::DrawAlphaCheckerBoard(image_position, image_size);
-
-		ImGui::Image(get_asset(), image_size);
-
-		// Right and bottom padding
-		ImGui::SameLine();
-		ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
-		ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
-		ImGui::EndGroup();
-
-		// Draw grid
-		if (*zoom > 2)
-		{
-			ImGui::DrawGridLines(image_position,
-				ImVec2(image_position.x + image_size.x, image_position.y + image_size.y),
-				{ 0, 1, 1, 0.2f }, scale);
-		}
-
-		// Overlap with an invisible button to recieve input
-		ImGui::SetCursorPos(last_cursor);
-		ImGui::InvisibleButton("_Input", ImVec2(image_size.x + ImGui::GetWindowWidth(), image_size.y + ImGui::GetWindowHeight()));
-
-		visual_editor::begin("_SomeEditor", { image_position.x, image_position.y }, { 0, 0 }, { scale, scale });
+		begin_image_editor("Editor", *texture);
 
 		// Draw the rectangles for the frames
 		for (const auto& i : texture->get_raw_atlas())
@@ -249,24 +292,7 @@ public:
 				mSelected_animation_id = selected_animation->id;
 			}
 		}
-
-		visual_editor::end();
-
-		if (ImGui::IsItemHovered())
-		{
-			// Zoom with ctrl and mousewheel
-			if (ImGui::GetIO().KeyCtrl && ImGui::GetIO().MouseWheel != 0)
-			{
-				*zoom += ImGui::GetIO().MouseWheel;
-				const float new_scale = std::powf(2, *zoom);
-				const float ratio_changed = new_scale / scale;
-				ImGui::SetScrollX(ImGui::GetScrollX() * ratio_changed);
-				ImGui::SetScrollY(ImGui::GetScrollY() * ratio_changed);
-			}
-
-			// Hold middle mouse button to scroll
-			ImGui::DragScroll(2);
-		}
+		end_image_editor();
 
 		ImGui::EndChild();
 	}
@@ -459,6 +485,35 @@ public:
 	}
 };
 
+class tileset_editor :
+	public asset_editor
+{
+public:
+	tileset_editor(context& pContext, const core::asset::ptr& pAsset) :
+		asset_editor(pContext, pAsset)
+	{}
+
+	virtual void on_gui() override
+	{
+		auto tileset = get_asset()->get_resource<graphics::tileset>();
+		if (!tileset->texture_id.is_valid())
+			ImGui::Text("Drop a tileset here");
+		else if (auto texture = get_asset_manager().get_resource<graphics::texture>(tileset->texture_id))
+		{
+			begin_image_editor("Tileset", *texture);
+			visual_editor::draw_grid({ 1, 1, 1, 1 }, tileset->tile_size.x);
+			end_image_editor();
+		}
+		else
+			ImGui::Text("Invalid Texture");
+		if (auto texture = asset_drag_drop_target("texture", get_asset_manager()))
+		{
+			tileset->texture_id = texture->get_id();
+			mark_asset_modified();
+		}
+	}
+};
+
 class scene_editor :
 	public asset_editor
 {
@@ -518,6 +573,8 @@ public:
 
 	virtual void on_gui() override
 	{
+		if (mSelected_layer && core::is_tilemap_layer(*mSelected_layer))
+			tileset_brush_selector();
 		ImGui::BeginChild("SidePanelSettings", ImVec2(200, 0));
 		if (ImGui::Button("Send to viewport") && mOn_game_run_callback)
 		{
@@ -540,9 +597,7 @@ public:
 			if (ImGui::Selectable("Tilemap"))
 			{
 				core::layer layer;
-				core::tilemap_info tilemap;
-				tilemap.texture = get_asset_manager().get_asset(filesystem::path("death"));
-				layer.layer_components.insert(std::move(tilemap));
+				core::tilemap_manipulator tilemap(layer);
 				mScene.add_layer(std::move(layer));
 			}
 
@@ -680,19 +735,14 @@ public:
 
 		visual_editor::begin("_SceneEditor", { cursor.x, cursor.y }, mViewport_offset, mViewport_scale);
 		{
-			if (ImGui::BeginDragDropTarget() && mSelected_layer)
+			core::asset::ptr dropdropasset = asset_drag_drop_target("gameobject", get_asset_manager());
+			if (dropdropasset && mSelected_layer)
 			{
-				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("gameobjectAsset"))
-				{
-					// Retrieve the object asset from the payload.
-					const util::uuid& id = *(const util::uuid*)payload->Data;
-					auto obj = new_instance(id);
+				auto obj = new_instance(dropdropasset);
 
-					// Set the transform to the position it was dropped at.
-					if (auto transform = obj.get_component<math::transform>())
-						transform->position = visual_editor::get_mouse_position();
-				}
-				ImGui::EndDragDropTarget();
+				// Set the transform to the position it was dropped at.
+				if (auto transform = obj.get_component<math::transform>())
+					transform->position = visual_editor::get_mouse_position();
 			}
 
 			if (is_grid_enabled)
@@ -719,24 +769,59 @@ public:
 	}
 
 	// Generate a new instance from an object asset.
-	core::object new_instance(util::uuid pAsset)
+	core::object new_instance(const core::asset::ptr& pAsset)
 	{
+		assert(pAsset);
 		core::engine& engine = get_context().get_engine();
-		auto asset = engine.get_asset_manager().get_asset(pAsset);
-		auto object_resource = asset->get_resource<core::object_resource>();
+		auto object_resource = pAsset->get_resource<core::object_resource>();
 
 		// Generate the object
 		core::object obj = mSelected_layer->add_object();
 		object_resource->generate_object(obj, get_asset_manager());
-		obj.set_asset(asset);
+		obj.set_asset(pAsset);
 
 		mark_asset_modified();
 
 		return obj;
 	}
 
+	void tileset_brush_selector()
+	{
+		ImGui::Begin("Tileset");
+		core::tilemap_manipulator tilemap(*mSelected_layer);
+		auto tileset = tilemap.get_tileset();
+		if (!tileset)
+			ImGui::Text("Drop a tileset here");
+		else
+			ImGui::Text(tileset.get_asset()->get_name().c_str());
+		if (tileset = asset_drag_drop_target("tileset", get_asset_manager()))
+		{
+			tilemap.set_tileset(tileset, get_asset_manager());
+		}
+		auto texture = tilemap.get_texture();
+		if (texture)
+		{
+			begin_image_editor("Tileset", *texture);
+			// Draw tile grid.
+			visual_editor::draw_grid({ 1, 1, 1, 1 }, tilemap.get_tilesize().x);
+
+			if (ImGui::IsItemClicked())
+			{
+				mTilemap_brush = math::ivec2(visual_editor::get_mouse_position() / math::vec2(tilemap.get_tilesize()));
+			}
+
+			// Draw brush selection.
+			visual_editor::draw_rect(math::rect(math::vec2(mTilemap_brush * tilemap.get_tilesize()),
+				math::vec2(tilemap.get_tilesize())), { 1, 1, 0, 1 });
+			end_image_editor();
+		}
+
+		ImGui::End();
+	}
+
 	void tilemap_editor()
 	{
+
 		math::ivec2 tile_position{ visual_editor::get_mouse_position().floor() };
 		visual_editor::draw_rect(math::rect(math::vec2(tile_position), math::vec2(1, 1)),
 			graphics::color(1, 1, 0, 1));
@@ -744,7 +829,7 @@ public:
 		core::tilemap_manipulator tilemap(*mSelected_layer);
 		if (ImGui::IsItemClicked())
 		{
-			tilemap.set_tile(tile_position, math::ivec2{ 0, 0 });
+			tilemap.set_tile(tile_position, mTilemap_brush);
 			mark_asset_modified();
 		}
 	}
@@ -818,6 +903,8 @@ public:
 	}
 
 private:
+	math::ivec2 mTilemap_brush;
+
 	core::layer* mSelected_layer = nullptr;
 	core::object mSelected_object;
 	core::scene mScene;
@@ -1278,6 +1365,9 @@ public:
 		mContext.register_editor<script_editor>("script");
 		mContext.register_editor<scene_editor>("scene", mOn_game_run);
 		mContext.register_editor<eventful_sprite_editor>("gameobject");
+		mContext.register_editor<tileset_editor>("tileset");
+		
+		mEngine.get_asset_manager().register_default_resource_factory<graphics::tileset>("tileset");
 		mEngine.get_asset_manager().register_default_resource_factory<core::object_resource>("gameobject");
 		mEngine.get_asset_manager().register_default_resource_factory<core::scene_resource>("scene");
 

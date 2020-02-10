@@ -5,6 +5,7 @@
 #include <wge/math/vector.hpp>
 #include <wge/graphics/render_batch_2d.hpp>
 #include <wge/core/scene.hpp>
+#include <wge/graphics/tileset.hpp>
 
 #include <vector>
 #include <variant>
@@ -20,6 +21,8 @@ struct tile
 struct tilemap_info
 {
 	math::fvec2 tile_size{ 10, 10 };
+	core::resource_handle<graphics::tileset> tileset;
+	// This is the cached texture handle so we don't have to keep looking it up.
 	core::resource_handle<graphics::texture> texture;
 };
 
@@ -69,9 +72,27 @@ public:
 		return false;
 	}
 
-	void set_texture(core::resource_handle<graphics::texture> pTexture)
+	void set_tileset(core::resource_handle<graphics::tileset> pTileset, const asset_manager& pAsset_manager)
 	{
-		mInfo->texture = pTexture;
+		mInfo->tileset = pTileset;
+		mInfo->texture = pAsset_manager.get_asset(pTileset->texture_id);
+	}
+
+	core::resource_handle<graphics::tileset> get_tileset() const
+	{
+		return mInfo->tileset;
+	}
+
+	core::resource_handle<graphics::texture> get_texture() const
+	{
+		return mInfo->texture;
+	}
+
+	math::ivec2 get_tilesize() const
+	{
+		assert(mInfo);
+		assert(mInfo->tileset);
+		return mInfo->tileset->tile_size;
 	}
 
 	bool clear_tile(math::ivec2 pPosition, queue_destruction_flag)
@@ -84,15 +105,15 @@ public:
 		return false;
 	}
 
-	object set_tile(math::ivec2 pPosition, math::ivec2 pUV)
+	object set_tile(const tile& pTile)
 	{
-		if (object existing = find_tile(pPosition))
+		if (object existing = find_tile(pTile.position))
 		{
 			// Update the uv of an existing tile.
 			auto tile_comp = existing.get_component<tile>();
-			tile_comp->uv = pUV;
+			tile_comp->uv = pTile.uv;
 			auto quad_comp = existing.get_component<graphics::quad_vertices>();
-			quad_comp->set_uv(get_uvrect(pUV));
+			quad_comp->set_uv(get_uvrect(pTile.uv));
 			return existing;
 		}
 		else
@@ -100,19 +121,21 @@ public:
 			// Create a new object for the tile.
 			object new_tile = mLayer->add_object();
 
-			tile tile;
-			tile.position = pPosition;
-			tile.uv = pUV;
-			new_tile.add_component(tile);
+			new_tile.add_component(pTile);
 
 			graphics::quad_vertices quad_verts;
-			quad_verts.set_rect(math::rect(math::vec2(pPosition), math::vec2(1, 1)));
-			quad_verts.set_uv(get_uvrect(tile.uv));
+			quad_verts.set_rect(math::rect(math::vec2(pTile.position), math::vec2(1, 1)));
+			quad_verts.set_uv(get_uvrect(pTile.uv));
 			new_tile.add_component(quad_verts);
 			new_tile.add_component(graphics::quad_indicies{});
 
 			return new_tile;
 		}
+	}
+
+	object set_tile(math::ivec2 pPosition, math::ivec2 pUV)
+	{
+		return set_tile(tile{ pPosition, pUV });
 	}
 
 	void update_tile_uvs()
@@ -168,7 +191,7 @@ public:
 		std::string name;
 		std::vector<tile> tiles;
 		math::vec2 tile_size;
-		util::uuid tilemap_texture;
+		util::uuid tileset_id;
 	};
 
 	using layer_variant = std::variant<instance_layer, tilemap_layer>;
@@ -226,7 +249,7 @@ public:
 	{
 		tilemap_layer tilemap_layer;
 		tilemap_info const* info = pLayer.layer_components.get<tilemap_info>();
-		tilemap_layer.tilemap_texture = info->texture.get_asset()->get_id();
+		tilemap_layer.tileset_id = info->tileset ? info->tileset.get_asset()->get_id() : util::uuid{};
 		for (auto& [id, tile] : pLayer.each<tile>())
 			tilemap_layer.tiles.push_back(tile);
 		return tilemap_layer;

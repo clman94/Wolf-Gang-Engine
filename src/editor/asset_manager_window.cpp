@@ -56,6 +56,17 @@ void asset_manager_window::on_gui()
 					mAsset_manager.add_asset(asset);
 				}
 
+				if (ImGui::MenuItem("Tileset"))
+				{
+					auto asset = std::make_shared<core::asset>();
+					asset->set_name("New_Tileset");
+					asset->set_parent(current_folder);
+					asset->set_type("tileset");
+					asset->set_resource(std::make_unique<graphics::tileset>());
+					mAsset_manager.store_asset(asset);
+					mAsset_manager.add_asset(asset);
+				}
+
 				ImGui::EndMenu();
 			}
 

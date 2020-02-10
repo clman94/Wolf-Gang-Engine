@@ -275,6 +275,11 @@ public:
 		return static_cast<bool>(mAsset);
 	}
 
+	void reset() noexcept
+	{
+		mAsset.reset();
+	}
+
 	operator bool() const noexcept
 	{
 		return is_valid();

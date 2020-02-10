@@ -37,7 +37,7 @@ static json serialize_tilemap_layer(const scene_resource::tilemap_layer& pLayer)
 
 	json result;
 	result["tiles"] = std::move(tiles);
-	result["texture"] = pLayer.tilemap_texture;
+	result["tileset"] = pLayer.tileset_id;
 	return result;
 }
 
@@ -86,7 +86,7 @@ static scene_resource::tilemap_layer deserialize_tilemap_layer(const json& pJson
 		this_tile.uv = i["uv"];
 		layer.tiles.push_back(this_tile);
 	}
-	layer.tilemap_texture = pJson["texture"];
+	layer.tileset_id = pJson["tileset"];
 	return layer;
 }
 
@@ -129,9 +129,10 @@ static layer generate_tilemap_layer(const scene_resource::tilemap_layer& pLayer,
 {
 	layer new_layer;
 	tilemap_manipulator tilemap(new_layer);
-	tilemap.set_texture(pAsset_mgr.get_asset(pLayer.tilemap_texture));
+	if (pLayer.tileset_id.is_valid())
+		tilemap.set_tileset(pAsset_mgr.get_asset(pLayer.tileset_id), pAsset_mgr);
 	for (auto& i : pLayer.tiles)
-		tilemap.set_tile(i.position, i.uv);
+		tilemap.set_tile(i);
 	return new_layer;
 }
 

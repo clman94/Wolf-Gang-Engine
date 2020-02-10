@@ -78,6 +78,10 @@ private:
 public:
 	using modified_assets = std::vector<core::asset::ptr>;
 
+	context() = default;
+	context(const context&) = delete;
+	context(context&&) = delete;
+
 	void add_modified_asset(const core::asset::ptr& pAsset);
 	bool is_asset_modified(const core::asset::ptr& pAsset) const;
 	bool are_there_modified_assets() const noexcept;
