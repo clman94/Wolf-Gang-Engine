@@ -1092,7 +1092,7 @@ private:
 	{
 		ImGui::Text("Events:");
 		ImGui::BeginChild("Events", ImVec2(0, 0), true);
-		for (auto[type, asset_id] : util::ipair{ pGenerator->events })
+		for (auto[type, asset_id] : util::enumerate{ pGenerator->events })
 		{
 			const char* event_name = event_display_name[type];
 			const bool editor_already_open = get_context().is_editor_open_for(asset_id);

@@ -90,7 +90,7 @@ void asset_manager_window::on_gui()
 		ImGui::BeginGroup();
 
 		ImGui::PushID("PathList");
-		for (auto[i, segment] : util::ipair{ current_path })
+		for (auto[i, segment] : util::enumerate{ current_path })
 		{
 			const bool last_item = i == current_path.size() - 1;
 			if (ImGui::Button(segment.c_str()))

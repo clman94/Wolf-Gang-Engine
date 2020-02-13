@@ -24,7 +24,7 @@ constexpr auto forward_tuple_elements(Ttuple&& pTuple)
 }
 
 // Convert a tuple into a pair.
-template <typename Ttuple>
+template <typename Ttuple, typename = std::enable_if_t<std::tuple_size<Ttuple>::value >= 2>>
 constexpr auto as_pair(Ttuple&& pTuple)
 {
 	return std::pair<std::tuple_element_t<0, Ttuple>, std::tuple_element_t<1, Ttuple>>(
@@ -57,11 +57,11 @@ struct flatten_mapping_policy
 // containers.
 // Example:
 //   std::array arr = { "Hello", " " , "world" };
-//   for (auto [index, value] : util::ipair{ arr })
+//   for (auto [index, value] : util::enumerate{ arr })
 //     std::cout << index << " " << value << "\n";
 //
 template <typename T, typename Tmapping_policy>
-class basic_indexed
+class basic_enumerate
 {
 public:
 	template <typename Titer>
@@ -124,7 +124,7 @@ public:
 	template <typename Titer>
 	iterator(const Titer&)->iterator<Titer>;
 
-	constexpr basic_indexed(T&& pContainer) :
+	constexpr basic_enumerate(T&& pContainer) :
 		mContainer(std::forward<T>(pContainer))
 	{}
 
@@ -143,27 +143,27 @@ private:
 };
 
 template <typename T>
-struct ipair :
-	basic_indexed<T, pair_mapping_policy>
+struct enumerate :
+	basic_enumerate<T, pair_mapping_policy>
 {
-	constexpr ipair(T&& pContainer) :
-		basic_indexed(std::forward<T>(pContainer))
+	constexpr enumerate(T&& pContainer) :
+		basic_enumerate(std::forward<T>(pContainer))
 	{}
 };
 
 template <typename T>
-ipair(T&& pContainer)->ipair<T>;
+enumerate(T&& pContainer)->enumerate<T>;
 
 template <typename T>
-struct ituple :
-	basic_indexed<T, flatten_mapping_policy>
+struct enumerate_tuple :
+	basic_enumerate<T, flatten_mapping_policy>
 {
-	constexpr ituple(T&& pContainer) :
-		basic_indexed(std::forward<T>(pContainer))
+	constexpr enumerate_tuple(T&& pContainer) :
+		basic_enumerate(std::forward<T>(pContainer))
 	{}
 };
 
 template <typename T>
-ituple(T&& pContainer)->ituple<T>;
+enumerate_tuple(T&& pContainer)->enumerate_tuple<T>;
 
 } // namespace wge::util

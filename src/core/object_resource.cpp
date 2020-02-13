@@ -21,7 +21,7 @@ void object_resource::generate_object(core::object& pObj, const asset_manager& p
 	{
 		pObj.add_component(scripting::event_state_component{});
 
-		for (auto[type, asset_id] : util::ipair{ events })
+		for (auto[type, asset_id] : util::enumerate{ events })
 		{
 			scripting::event_component* comp = nullptr;
 			switch (static_cast<event_type>(type))
@@ -46,7 +46,7 @@ json object_resource::serialize_data() const
 {
 	json j;
 	json& jevents = j["events"];
-	for (auto[type, asset_id] : util::ipair{ events })
+	for (auto[type, asset_id] : util::enumerate{ events })
 	{
 		json jevent;
 		const char* event_name = event_typenames[type];
@@ -65,7 +65,7 @@ void object_resource::deserialize_data(const json& pJson)
 	for (const auto& i : jevents)
 	{
 		// Find the index for this event name.
-		for (auto[index, name] : util::ipair{ event_typenames })
+		for (auto[index, name] : util::enumerate{ event_typenames })
 		{
 			if (name == i["type"])
 			{

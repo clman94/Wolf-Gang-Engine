@@ -13,6 +13,7 @@
 #include <wge/math/vector.hpp>
 #include <wge/util/ptr.hpp>
 #include <wge/core/scene_resource.hpp>
+#include <wge/util/boxed.hpp>
 
 using namespace wge;
 
@@ -25,6 +26,8 @@ struct tracker
 	tracker(tracker&& pOther) noexcept :
 		moves(pOther.moves + 1)
 	{}
+	tracker& operator=(const tracker&) noexcept = default;
+	tracker& operator=(tracker&&) noexcept = default;
 	std::size_t copies = 0;
 	std::size_t moves = 0;
 };
@@ -276,15 +279,15 @@ TEST_CASE("destruction_queue works")
 	REQUIRE(queue.empty());
 }
 
-TEST_CASE("ipair{} creates pears")
+TEST_CASE("enumerate{} creates pears")
 {
 	std::array<int, 100> arr;
 	// v is a reference to the original array item.
-	for (auto [i, v] : util::ipair{ arr })
+	for (auto [i, v] : util::enumerate{ arr })
 		v = i;
 
 	// Values should have been changed.
-	for (auto [i, v] : util::ipair{ arr })
+	for (auto [i, v] : util::enumerate{ arr })
 		REQUIRE(i == v);
 
 	// All values should be equal to their index.
