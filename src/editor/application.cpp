@@ -218,6 +218,83 @@ core::asset::ptr asset_drag_drop_target(const std::string& pType, const core::as
 	return result;
 }
 
+core::asset::ptr asset_selector(const char* pStr_id, const std::string& pType, const core::asset_manager& pAsset_manager, core::asset::ptr pCurrent_asset = nullptr)
+{
+	const ImVec2 preview_size = { 50, 50 };
+
+	core::asset::ptr asset = nullptr;
+	ImGui::BeginGroup();
+
+	if (pCurrent_asset)
+	{
+		if (pCurrent_asset->get_type() == "texture")
+		{
+			ImGui::ImageButton(pCurrent_asset, preview_size);
+		}
+		else
+		{
+			ImGui::Button("", preview_size);
+		}
+		ImGui::SameLine();
+		ImGui::BeginGroup();
+		ImGui::TextColored({ 0, 1, 1, 1 }, pCurrent_asset->get_name().c_str());
+		ImGui::TextColored({ 0.5f, 0.5f, 0.5f, 0 }, pAsset_manager.get_asset_path(pCurrent_asset).parent().string().c_str());
+		ImGui::EndGroup();
+	}
+	else
+	{
+		ImGui::Button("", preview_size);
+		ImGui::SameLine();
+		ImGui::Text("Select/Drop asset");
+	}
+
+	ImGui::EndGroup();
+	if (auto dropped_asset = asset_drag_drop_target(pType, pAsset_manager))
+		asset = dropped_asset;
+	if (ImGui::BeginPopupContextWindow("AssetSelectorWindow"))
+	{
+		ImGui::Text(ICON_FA_SEARCH);
+		ImGui::SameLine();
+		static std::string search_str;
+		ImGui::InputText("##Search", &search_str);
+		ImGui::BeginChild("AssetList", ImVec2(170, 400));
+		for (const auto& i : pAsset_manager.get_asset_list())
+		{
+			std::string_view name{ i->get_name() };
+			if (i->get_type() == pType &&
+				name.size() >= search_str.size() &&
+				name.substr(0, search_str.size()) == search_str)
+			{
+				ImGui::BeginGroup();
+				if (i->get_type() == "texture")
+				{
+					ImGui::ImageButton(i, preview_size);
+				}
+				else
+				{
+					ImGui::Button("", preview_size);
+				}
+				ImGui::SameLine();
+				ImGui::BeginGroup();
+				ImGui::TextColored({ 0, 1, 1, 1 }, search_str.c_str());
+				ImGui::SameLine();
+				ImGui::Text(std::string(name.substr(search_str.size())).c_str());
+				ImGui::TextColored({ 0.5f, 0.5f, 0.5f, 0 }, pAsset_manager.get_asset_path(i).parent().string().c_str());
+				ImGui::EndGroup();
+				ImGui::EndGroup();
+				if (ImGui::IsItemClicked())
+				{
+					asset = i;
+					ImGui::CloseCurrentPopup();
+				}
+			}
+		}
+		ImGui::EndChild();
+		ImGui::EndPopup();
+	}
+	return asset;
+}
+
 class sprite_editor :
 	public asset_editor
 {
@@ -496,9 +573,11 @@ public:
 	virtual void on_gui() override
 	{
 		auto tileset = get_asset()->get_resource<graphics::tileset>();
-		if (!tileset->texture_id.is_valid())
-			ImGui::Text("Drop a tileset here");
-		else if (auto texture = get_asset_manager().get_resource<graphics::texture>(tileset->texture_id))
+
+		if (auto texture_asset = asset_selector("TextureSelector", "texture", get_asset_manager(), get_asset_manager().get_asset(tileset->texture_id)))
+			tileset->texture_id = texture_asset->get_id();
+		ImGui::BeginChild("TilesetEditor", { 0, 0 }, true);
+		if (auto texture = get_asset_manager().get_resource<graphics::texture>(tileset->texture_id))
 		{
 			begin_image_editor("Tileset", *texture);
 			visual_editor::draw_grid({ 1, 1, 1, 1 }, tileset->tile_size.x);
@@ -506,11 +585,7 @@ public:
 		}
 		else
 			ImGui::Text("Invalid Texture");
-		if (auto texture = asset_drag_drop_target("texture", get_asset_manager()))
-		{
-			tileset->texture_id = texture->get_id();
-			mark_asset_modified();
-		}
+		ImGui::EndChild();
 	}
 };
 
@@ -616,7 +691,7 @@ public:
 			ImGui::PopID();
 		}
 		ImGui::EndChild();
-
+		
 		ImGui::TextUnformatted("Instances");
 		ImGui::BeginChild("Instances", ImVec2(0, 0), true);
 		if (mSelected_layer)
@@ -750,7 +825,7 @@ public:
 
 			if (mSelected_layer)
 			{
-				if (mSelected_layer->layer_components.has<core::tilemap_info>())
+				if (core::is_tilemap_layer(*mSelected_layer))
 					tilemap_editor();
 				else
 					object_layer_editor();
@@ -789,15 +864,10 @@ public:
 	{
 		ImGui::Begin("Tileset");
 		core::tilemap_manipulator tilemap(*mSelected_layer);
-		auto tileset = tilemap.get_tileset();
-		if (!tileset)
-			ImGui::Text("Drop a tileset here");
-		else
-			ImGui::Text(tileset.get_asset()->get_name().c_str());
-		if (tileset = asset_drag_drop_target("tileset", get_asset_manager()))
-		{
-			tilemap.set_tileset(tileset, get_asset_manager());
-		}
+		if (auto asset = asset_selector("Select_tileset", "tileset", get_asset_manager(), tilemap.get_tileset().get_asset()))
+			tilemap.set_tileset(asset, get_asset_manager());
+
+		ImGui::BeginChild("TilesetEditor");
 		auto texture = tilemap.get_texture();
 		if (texture)
 		{
@@ -815,13 +885,13 @@ public:
 				math::vec2(tilemap.get_tilesize())), { 1, 1, 0, 1 });
 			end_image_editor();
 		}
+		ImGui::EndChild();
 
 		ImGui::End();
 	}
 
 	void tilemap_editor()
 	{
-
 		math::ivec2 tile_position{ visual_editor::get_mouse_position().floor() };
 		visual_editor::draw_rect(math::rect(math::vec2(tile_position), math::vec2(1, 1)),
 			graphics::color(1, 1, 0, 1));
