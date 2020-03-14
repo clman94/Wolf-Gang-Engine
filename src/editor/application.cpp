@@ -91,6 +91,50 @@ public:
 namespace wge::editor
 {
 
+inline bool asset_item(const core::asset::ptr& pAsset, const core::asset_manager& pAsset_manager, ImVec2 pPreview_size = { 0, 0 })
+{
+	if (!pAsset)
+		return false;
+	ImGui::PushID(&*pAsset);
+	ImGui::BeginGroup();
+	if (pAsset->get_type() == "texture")
+	{
+		ImGui::ImageButton(pAsset, pPreview_size);
+	}
+	else
+	{
+		ImGui::Button("", pPreview_size);
+	}
+	ImGui::SameLine();
+	ImGui::BeginGroup();
+	ImGui::TextColored({ 0, 1, 1, 1 }, pAsset->get_name().c_str());
+	ImGui::TextColored({ 0.5f, 0.5f, 0.5f, 0 }, pAsset_manager.get_asset_path(pAsset).parent().string().c_str());
+	ImGui::EndGroup();
+	ImGui::EndGroup();
+	ImGui::PopID();
+
+	const bool clicked = ImGui::IsItemClicked();
+
+	math::vec2 item_min = ImGui::GetItemRectMin()
+		- ImGui::GetStyle().ItemSpacing;
+	math::vec2 item_max = ImGui::GetItemRectMax()
+		+ ImGui::GetStyle().ItemSpacing;
+
+	// Draw the background
+	auto dl = ImGui::GetWindowDrawList();
+	if (ImGui::IsItemHovered())
+	{
+		dl->AddRectFilled(item_min, item_max,
+			ImGui::GetColorU32(ImGuiCol_ButtonHovered), ImGui::GetStyle().FrameRounding);
+	}
+	else if (clicked)
+	{
+		dl->AddRectFilled(item_min, item_max,
+			ImGui::GetColorU32(ImGuiCol_ButtonActive), ImGui::GetStyle().FrameRounding);
+	}
+	return clicked;
+}
+
 // Creates an imgui dockspace in the main window
 inline void main_viewport_dock(ImGuiID pDock_id)
 {
@@ -227,19 +271,7 @@ core::asset::ptr asset_selector(const char* pStr_id, const std::string& pType, c
 
 	if (pCurrent_asset)
 	{
-		if (pCurrent_asset->get_type() == "texture")
-		{
-			ImGui::ImageButton(pCurrent_asset, preview_size);
-		}
-		else
-		{
-			ImGui::Button("", preview_size);
-		}
-		ImGui::SameLine();
-		ImGui::BeginGroup();
-		ImGui::TextColored({ 0, 1, 1, 1 }, pCurrent_asset->get_name().c_str());
-		ImGui::TextColored({ 0.5f, 0.5f, 0.5f, 0 }, pAsset_manager.get_asset_path(pCurrent_asset).parent().string().c_str());
-		ImGui::EndGroup();
+		asset_item(pCurrent_asset, pAsset_manager, preview_size);
 	}
 	else
 	{
@@ -265,24 +297,7 @@ core::asset::ptr asset_selector(const char* pStr_id, const std::string& pType, c
 				name.size() >= search_str.size() &&
 				name.substr(0, search_str.size()) == search_str)
 			{
-				ImGui::BeginGroup();
-				if (i->get_type() == "texture")
-				{
-					ImGui::ImageButton(i, preview_size);
-				}
-				else
-				{
-					ImGui::Button("", preview_size);
-				}
-				ImGui::SameLine();
-				ImGui::BeginGroup();
-				ImGui::TextColored({ 0, 1, 1, 1 }, search_str.c_str());
-				ImGui::SameLine();
-				ImGui::Text(std::string(name.substr(search_str.size())).c_str());
-				ImGui::TextColored({ 0.5f, 0.5f, 0.5f, 0 }, pAsset_manager.get_asset_path(i).parent().string().c_str());
-				ImGui::EndGroup();
-				ImGui::EndGroup();
-				if (ImGui::IsItemClicked())
+				if (asset_item(i, pAsset_manager, preview_size))
 				{
 					asset = i;
 					ImGui::CloseCurrentPopup();
@@ -679,16 +694,31 @@ public:
 			ImGui::EndCombo();
 		}
 		ImGui::BeginChild("Layers", ImVec2(0, 300), true);
-		for (auto& i : mScene.get_layer_container())
+		ImGui::BeginGroup();
+		for (auto i = mScene.get_layer_container().begin();
+			i != mScene.get_layer_container().end();
+			++i)
 		{
 			ImGui::PushID(&i);
 
-			if (ImGui::Selectable(i.get_name().c_str(), mSelected_layer == &i))
+			if (ImGui::Selectable(i->get_name().c_str(), mSelected_layer == &*i))
 			{
 				mSelected_object = core::invalid_object;
-				mSelected_layer = &i;
+				mSelected_layer = &*i;
 			}
+
 			ImGui::PopID();
+		}
+		ImGui::EndGroup();
+		if (mSelected_layer && ImGui::BeginPopupContextWindow())
+		{
+			if (ImGui::MenuItem("Delete"))
+			{
+				mScene.remove_layer(*mSelected_layer);
+				mSelected_layer = nullptr;
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::EndPopup();
 		}
 		ImGui::EndChild();
 		
