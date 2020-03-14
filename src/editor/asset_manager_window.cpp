@@ -215,6 +215,10 @@ void asset_manager_window::asset_tile(const core::asset::ptr & pAsset, const mat
 	if (ImGui::BeginPopup("AssetContextMenu",
 		ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings))
 	{
+		// Rename asset.
+		std::string name_str = pAsset->get_name();
+		if (ImGui::InputText("Name", &name_str))
+			pAsset->set_name(name_str);
 		// Delete asset. (Undoable atm)
 		if (ImGui::MenuItem("Delete"))
 		{
