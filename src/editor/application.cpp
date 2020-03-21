@@ -663,8 +663,6 @@ public:
 
 	virtual void on_gui() override
 	{
-		if (mSelected_layer && core::is_tilemap_layer(*mSelected_layer))
-			tileset_brush_selector();
 		ImGui::BeginChild("SidePanelSettings", ImVec2(200, 0));
 		if (ImGui::Button("Send to viewport") && mOn_game_run_callback)
 		{
@@ -694,6 +692,7 @@ public:
 			ImGui::EndCombo();
 		}
 		ImGui::BeginChild("Layers", ImVec2(0, 300), true);
+
 		ImGui::BeginGroup();
 		for (auto i = mScene.get_layer_container().begin();
 			i != mScene.get_layer_container().end();
@@ -712,29 +711,42 @@ public:
 		ImGui::EndGroup();
 		if (mSelected_layer && ImGui::BeginPopupContextWindow())
 		{
+			std::string layer_name = mSelected_layer->get_name();
+			if (ImGui::InputText("Name", &layer_name))
+			{
+				mSelected_layer->set_name(layer_name);
+				mark_asset_modified();
+			}
 			if (ImGui::MenuItem("Delete"))
 			{
 				mScene.remove_layer(*mSelected_layer);
 				mSelected_layer = nullptr;
+				mark_asset_modified();
 				ImGui::CloseCurrentPopup();
 			}
 			ImGui::EndPopup();
 		}
 		ImGui::EndChild();
-		
-		ImGui::TextUnformatted("Instances");
-		ImGui::BeginChild("Instances", ImVec2(0, 0), true);
 		if (mSelected_layer)
 		{
-			for (auto obj : *mSelected_layer)
+			if (core::is_tilemap_layer(*mSelected_layer))
 			{
-				ImGui::PushID(obj.get_id());
-				if (ImGui::Selectable(obj.get_name().c_str(), obj == mSelected_object))
-					mSelected_object = obj;
-				ImGui::PopID();
+				tileset_brush_selector();
+			}
+			else
+			{
+				ImGui::TextUnformatted("Instances");
+				ImGui::BeginChild("Instances", ImVec2(0, 0), true);
+				for (auto obj : *mSelected_layer)
+				{
+					ImGui::PushID(obj.get_id());
+					if (ImGui::Selectable(obj.get_name().c_str(), obj == mSelected_object))
+						mSelected_object = obj;
+					ImGui::PopID();
+				}
+				ImGui::EndChild(); // Instances
 			}
 		}
-		ImGui::EndChild(); // Instances
 
 		ImGui::EndChild(); // SidePanelSettings
 
@@ -892,7 +904,6 @@ public:
 
 	void tileset_brush_selector()
 	{
-		ImGui::Begin("Tileset");
 		core::tilemap_manipulator tilemap(*mSelected_layer);
 		if (auto asset = asset_selector("Select_tileset", "tileset", get_asset_manager(), tilemap.get_tileset().get_asset()))
 			tilemap.set_tileset(asset, get_asset_manager());
@@ -916,8 +927,6 @@ public:
 			end_image_editor();
 		}
 		ImGui::EndChild();
-
-		ImGui::End();
 	}
 
 	void tilemap_editor()
@@ -1155,8 +1164,9 @@ public:
 		}
 
 		auto generator = get_asset()->get_resource<core::object_resource>();
-
+		ImGui::Dummy({ 0, 10 });
 		display_sprite_input(generator);
+		ImGui::Dummy({ 0, 10 });
 		display_event_list(generator);
 
 		ImGui::EndChild();

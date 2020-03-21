@@ -36,6 +36,7 @@ static json serialize_tilemap_layer(const scene_resource::tilemap_layer& pLayer)
 	}
 
 	json result;
+	result["name"] = pLayer.name;
 	result["tiles"] = std::move(tiles);
 	result["tileset"] = pLayer.tileset_id;
 	return result;
@@ -73,6 +74,7 @@ static scene_resource::instance_layer deserialize_instance_layer(const json& pJs
 		inst.asset_id = i["asset_id"];
 		layer.instances.push_back(std::move(inst));
 	}
+	layer.name = pJson["name"];
 	return layer;
 }
 
@@ -86,6 +88,7 @@ static scene_resource::tilemap_layer deserialize_tilemap_layer(const json& pJson
 		this_tile.uv = i["uv"];
 		layer.tiles.push_back(this_tile);
 	}
+	layer.name = pJson["name"];
 	layer.tileset_id = pJson["tileset"];
 	return layer;
 }
@@ -120,6 +123,7 @@ static void generate_instance(core::layer& pLayer, const scene_resource::instanc
 static layer generate_instance_layer(const scene_resource::instance_layer& pLayer, const core::asset_manager& pAsset_mgr)
 {
 	layer new_layer;
+	new_layer.set_name(pLayer.name);
 	for (auto& i : pLayer.instances)
 		generate_instance(new_layer, i, pAsset_mgr);
 	return new_layer;
@@ -128,6 +132,7 @@ static layer generate_instance_layer(const scene_resource::instance_layer& pLaye
 static layer generate_tilemap_layer(const scene_resource::tilemap_layer& pLayer, const core::asset_manager& pAsset_mgr)
 {
 	layer new_layer;
+	new_layer.set_name(pLayer.name);
 	tilemap_manipulator tilemap(new_layer);
 	if (pLayer.tileset_id.is_valid())
 		tilemap.set_tileset(pAsset_mgr.get_asset(pLayer.tileset_id), pAsset_mgr);

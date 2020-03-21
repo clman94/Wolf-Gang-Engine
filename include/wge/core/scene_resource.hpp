@@ -234,6 +234,7 @@ public:
 	instance_layer read_instance_layer(layer& pLayer)
 	{
 		instance_layer inst_layer;
+		inst_layer.name = pLayer.get_name();
 		for (auto obj : pLayer)
 		{
 			instance& inst = inst_layer.instances.emplace_back();
@@ -248,6 +249,7 @@ public:
 	tilemap_layer read_tilemap(layer& pLayer)
 	{
 		tilemap_layer tilemap_layer;
+		tilemap_layer.name = pLayer.get_name();
 		tilemap_info const* info = pLayer.layer_components.get<tilemap_info>();
 		tilemap_layer.tileset_id = info->tileset ? info->tileset.get_asset()->get_id() : util::uuid{};
 		for (auto& [id, tile] : pLayer.each<tile>())
