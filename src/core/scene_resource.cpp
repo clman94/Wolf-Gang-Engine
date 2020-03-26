@@ -20,6 +20,7 @@ static json serialize_instance_layer(const scene_resource::instance_layer& pLaye
 		instances.push_back(std::move(j_inst));
 	}
 	json result;
+	result["name"] = pLayer.name;
 	result["instances"] = std::move(instances);
 	return result;
 }
