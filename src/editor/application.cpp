@@ -1346,6 +1346,12 @@ public:
 			{"ralt", GLFW_KEY_RIGHT_ALT}
 			});
 
+		state.new_enum<int>("mouse", {
+			{ "left", GLFW_MOUSE_BUTTON_LEFT },
+			{ "middle", GLFW_MOUSE_BUTTON_MIDDLE },
+			{ "right", GLFW_MOUSE_BUTTON_RIGHT },
+			});
+
 		input["pressed"] = [this](int pKey) -> bool
 		{
 			return mCan_take_input && ImGui::IsKeyPressed(pKey, false);
@@ -1354,10 +1360,23 @@ public:
 		{
 			return mCan_take_input && ImGui::IsKeyDown(pKey);
 		};
+
+		input["mouse_pressed"] = [this](int pButton) -> bool
+		{
+			return mCan_take_input && ImGui::IsMouseClicked(pButton, false);
+		};
+		input["mouse_down"] = [this](int pButton) -> bool
+		{
+			return mCan_take_input && ImGui::IsMouseDown(pButton);
+		};
+
+		input["mouse_delta"] = math::vec2(0, 0);
+		input["mouse_position"] = math::vec2(0, 0);
 	}
 
 	void step()
 	{
+
 		if (mIs_running)
 		{
 			mEngine->step();
@@ -1368,6 +1387,7 @@ public:
 
 		// Render all the layers.
 		mRenderer.set_render_view_to_framebuffer(math::vec2(0, 0), math::vec2(1.f, 1.f) / 100.f);
+
 		mRenderer.render_scene(mEngine->get_scene(), mEngine->get_graphics());
 	}
 
@@ -1390,8 +1410,16 @@ public:
 
 			if (mIs_loaded)
 			{
+				auto cursor = ImGui::GetCursorPos();
 				ImGui::Image(mViewport_framebuffer, ImGui::FillWithFramebuffer(mViewport_framebuffer));
 				mCan_take_input = ImGui::IsWindowFocused();
+
+				// Update mouse inputs.
+				auto& state = mEngine->get_script_engine().state;
+				auto input = state.create_named_table("input");
+				input["mouse_delta"] = math::vec2(ImGui::GetIO().MouseDelta);
+				input["mouse_position"] = mRenderer.screen_to_world(ImGui::GetMousePos() - cursor);
+
 				step();
 			}
 			else
