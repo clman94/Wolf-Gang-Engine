@@ -590,7 +590,19 @@ public:
 		auto tileset = get_asset()->get_resource<graphics::tileset>();
 
 		if (auto texture_asset = asset_selector("TextureSelector", "texture", get_asset_manager(), get_asset_manager().get_asset(tileset->texture_id)))
+		{
 			tileset->texture_id = texture_asset->get_id();
+			mark_asset_modified();
+		}
+		
+		int tile_size = tileset->tile_size.x;
+		if (ImGui::InputInt("Tile Size", &tile_size))
+		{
+			tile_size = math::max(tile_size, 1);
+			tileset->tile_size = { tile_size, tile_size };
+			mark_asset_modified();
+		}
+
 		ImGui::BeginChild("TilesetEditor", { 0, 0 }, true);
 		if (auto texture = get_asset_manager().get_resource<graphics::texture>(tileset->texture_id))
 		{

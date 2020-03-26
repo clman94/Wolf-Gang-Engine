@@ -20,7 +20,6 @@ struct tile
 
 struct tilemap_info
 {
-	math::fvec2 tile_size{ 10, 10 };
 	core::resource_handle<graphics::tileset> tileset;
 	// This is the cached texture handle so we don't have to keep looking it up.
 	core::resource_handle<graphics::texture> texture;
@@ -149,9 +148,9 @@ public:
 private:
 	math::rect get_uvrect(math::ivec2 pUV) const
 	{
-		if (mInfo->texture)
+		if (mInfo->texture && mInfo->tileset)
 		{
-			auto tile_uv_size = mInfo->tile_size / mInfo->texture->get_size();
+			auto tile_uv_size = math::vec2(mInfo->tileset->tile_size) / mInfo->texture->get_size();
 			return math::rect(math::vec2(pUV) * tile_uv_size, tile_uv_size);
 		}
 		else
