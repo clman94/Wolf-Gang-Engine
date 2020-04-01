@@ -23,7 +23,7 @@ public:
 	component_manager& operator=(component_manager&&) noexcept = default;
 
 	template <typename T>
-	T& add_component(const object_id& pObject, bucket pBucket = default_bucket)
+	auto& add_component(const object_id& pObject, bucket pBucket = default_bucket)
 	{
 		return get_storage<T>(pBucket).insert(pObject);
 	}
@@ -31,7 +31,7 @@ public:
 	template <typename T, typename U = std::decay_t<T>,
 		// Buckets can't be used as components.
 		typename = std::enable_if_t<!std::is_same_v<U, bucket>>>
-	U& add_component(const object_id& pObject, T&& pComponent, bucket pBucket = default_bucket)
+	auto& add_component(const object_id& pObject, T&& pComponent, bucket pBucket = default_bucket)
 	{
 		return get_storage<U>(pBucket).insert(pObject, std::forward<T>(pComponent));
 	}
@@ -50,25 +50,25 @@ public:
 	}
 
 	template <typename T>
-	T* get_component(const object_id& pObject, bucket pBucket = default_bucket)
+	auto* get_component(const object_id& pObject, bucket pBucket = default_bucket)
 	{
 		return get_storage<T>(pBucket).get(pObject);
 	}
 
 	template <typename T>
-	const T* get_component(const object_id& pObject, bucket pBucket = default_bucket) const
+	const auto* get_component(const object_id& pObject, bucket pBucket = default_bucket) const
 	{
 		return get_storage<T>(pBucket).get(pObject);
 	}
 
 	template <typename T>
-	component_storage<T>& get_storage(bucket pBucket = default_bucket)
+	auto& get_storage(bucket pBucket = default_bucket)
 	{
 		return get_container_impl<T>(pBucket);
 	}
 
 	template <typename T>
-	const component_storage<T>& get_storage(bucket pBucket = default_bucket) const
+	const auto& get_storage(bucket pBucket = default_bucket) const
 	{
 		return get_container_impl<T>(pBucket);
 	}
@@ -94,10 +94,10 @@ public:
 	}
 
 private:
-	template <typename T>
-	component_storage<T>& get_container_impl(bucket pBucket = default_bucket) const
+	template <typename T, typename U = bselect_adaptor<T>::type>
+	component_storage<U>& get_container_impl(bucket pBucket = default_bucket) const
 	{
-		using storage_type = component_storage<T>;
+		using storage_type = component_storage<U>;
 		component_type type = component_type::from<T>(pBucket);
 		auto iter = mContainers.find(type);
 		// Create a new container if it doesn't exist

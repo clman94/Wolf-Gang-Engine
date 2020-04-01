@@ -165,6 +165,7 @@ void lua_engine::register_math_api()
 		"x", &math::vec2::x,
 		"y", &math::vec2::y,
 		"normalize", &math::vec2::normalize<>,
+		"abs", &math::vec2::abs<>,
 		sol::meta_function::addition, &math::vec2::operator+,
 		sol::meta_function::subtraction, static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator-),
 		sol::meta_function::multiplication, sol::overload(
@@ -242,7 +243,7 @@ void lua_engine::update_layer(core::layer& pLayer, float pDelta)
 		}
 		catch (const sol::error & e)
 		{
-			log::error("An expected error has occurred: {}", e.what());
+			log::error("An unexpected error has occurred: {}", e.what());
 		}
 	};
 
@@ -255,6 +256,8 @@ void lua_engine::update_layer(core::layer& pLayer, float pDelta)
 		if (!state.environment.valid())
 		{
 			state.environment = create_object_environment(pLayer.get_object(id));
+
+			state.environment["created"] = false;
 
 			// Added the properties as variables.
 			for (const auto& i : state.properties)
@@ -272,11 +275,12 @@ void lua_engine::update_layer(core::layer& pLayer, float pDelta)
 
 	// Event: Create
 	for (auto& [id, on_create, state] :
-		pLayer.each<event_components::on_create, event_state_component>())
+		pLayer.each<event_selector::create, event_state_component>())
 	{
-		if (on_create.first_time)
+		auto created = state.environment["created"];
+		if (created == false)
 		{
-			on_create.first_time = false;
+			created = true;
 			run_script(on_create.get_source(), state.environment);
 		}
 	}
@@ -284,7 +288,7 @@ void lua_engine::update_layer(core::layer& pLayer, float pDelta)
 
 	// Event: Update
 	for (auto& [id, on_update, state] :
-		pLayer.each<event_components::on_update, event_state_component>())
+		pLayer.each<event_selector::update, event_state_component>())
 	{
 		run_script(on_update.get_source(), state.environment);
 	}

@@ -27,10 +27,10 @@ void object_resource::generate_object(core::object& pObj, const asset_manager& p
 			switch (static_cast<event_type>(type))
 			{
 			case event_type::create:
-				comp = pObj.add_component<scripting::event_components::on_create>();
+				comp = pObj.add_component<scripting::event_selector::create>();
 				break;
 			case event_type::update:
-				comp = pObj.add_component<scripting::event_components::on_update>();
+				comp = pObj.add_component<scripting::event_selector::update>();
 				break;
 			}
 			assert(comp);

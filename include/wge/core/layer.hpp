@@ -119,25 +119,25 @@ public:
 
 	// Add a new component to an object.
 	template <typename T>
-	T* add_component(const object_id& pObject_id, bucket pBucket = default_bucket);
+	auto* add_component(const object_id& pObject_id, bucket pBucket = default_bucket);
 
 	// Add a new component to an object.
 	template <typename T, typename U = std::decay_t<T>,
 		// Buckets can't be used as components.
 		typename = std::enable_if_t<!std::is_same_v<U, bucket>>>
-	U* add_component(const object_id& pObject_id, T&& pComponent, bucket pBucket = default_bucket)
+	auto* add_component(const object_id& pObject_id, T&& pComponent, bucket pBucket = default_bucket)
 	{
 		return &mComponent_manager.add_component(pObject_id, std::forward<T>(pComponent), pBucket);
 	}
 
 	template <typename T>
-	T* get_component(object_id pObject_id, bucket pBucket = default_bucket)
+	auto* get_component(object_id pObject_id, bucket pBucket = default_bucket)
 	{
 		return mComponent_manager.get_component<T>(pObject_id, pBucket);
 	}
 
 	template <typename T>
-	const T* get_component(object_id pObject_id, bucket pBucket = default_bucket) const
+	const auto* get_component(object_id pObject_id, bucket pBucket = default_bucket) const
 	{
 		return mComponent_manager.get_component<T>(pObject_id, pBucket);
 	}
@@ -151,7 +151,7 @@ public:
 	template <typename T>
 	bool remove_component(object_id pObject_id, queue_destruction_flag)
 	{
-		remove_component(pObject_id, default_bucket, queue_destruction);
+		remove_component<T>(pObject_id, default_bucket, queue_destruction);
 	}
 
 	template <typename T>
@@ -162,11 +162,17 @@ public:
 
 	// Get the container associated to a specific type of component.
 	template <typename T>
-	component_storage<T>& get_storage(bucket pBucket = default_bucket);
+	auto& get_storage(bucket pBucket = default_bucket)
+	{
+		return mComponent_manager.get_storage<T>(pBucket);
+	}
 
 	// Get the container associated to a specific type of component.
 	template <typename T>
-	const component_storage<T>& get_storage(bucket pBucket = default_bucket) const;
+	const auto& get_storage(bucket pBucket = default_bucket) const
+	{
+		return mComponent_manager.get_storage<T>(pBucket);
+	}
 
 	template <typename T, typename...Tdeps>
 	auto each();
@@ -324,6 +330,7 @@ public:
 		std::tuple<component_storage<Tdeps>*...> mDeps_storage;
 	};
 
+	template <typename T, typename...Tdeps> // hmmm
 	explicit filter(component_storage<T>& pContainer,
 		component_storage<Tdeps>&...pDeps) :
 		mBegin(pContainer.begin(), pContainer.end(), pDeps...),
@@ -344,27 +351,19 @@ private:
 	iterator mBegin, mEnd;
 };
 
-template<typename T>
-inline T* layer::add_component(const object_id& pObject_id, bucket pBucket)
-{
-	return &mComponent_manager.add_component<T>(pObject_id, pBucket);
-}
+template <typename T, typename...Tdeps>
+filter(component_storage<T>&, component_storage<Tdeps>&...) -> filter<T, Tdeps...>;
 
 template<typename T>
-inline component_storage<T>& layer::get_storage(bucket pBucket)
+inline auto* layer::add_component(const object_id& pObject_id, bucket pBucket)
 {
-	return mComponent_manager.get_storage<T>(pBucket);
-}
-template<typename T>
-inline const component_storage<T>& layer::get_storage(bucket pBucket) const
-{
-	return mComponent_manager.get_storage<T>(pBucket);
+	return &mComponent_manager.add_component<T>(pObject_id, pBucket);
 }
 
 template<typename T, typename...Tdeps>
 inline auto layer::each()
 {
-	return filter<T, Tdeps...>{ get_storage<T>(), get_storage<Tdeps>()... };
+	return filter{ get_storage<T>(), get_storage<Tdeps>()... };
 }
 
 template <typename T, typename...Tdeps>

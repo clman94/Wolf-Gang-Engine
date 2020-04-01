@@ -118,27 +118,20 @@ public:
 	script::handle source_script;
 	const std::string& get_source() const
 	{
-		WGE_ASSERT(source_script);
+		WGE_ASSERT(source_script.is_valid());
 		return source_script->source;
 	}
 };
 
-namespace event_components
+namespace event_selector
 {
 
-class on_update :
-	public event_component
-{
-};
+using create = core::bselect<event_component, 0>;
+using preupdate = core::bselect<event_component, 1>;
+using update = core::bselect<event_component, 2>;
+using postupdate = core::bselect<event_component, 3>;
 
-class on_create :
-	public event_component
-{
-public:
-	bool first_time{ true };
-};
-
-} // namespace event_components
+} // namespace event_selectors
 
 std::string make_valid_identifier(std::string_view pStr, std::string_view pDefault = "Blank");
 

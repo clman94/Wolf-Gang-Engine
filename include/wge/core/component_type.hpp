@@ -66,6 +66,30 @@ private:
 using bucket = std::size_t;
 constexpr inline bucket default_bucket = 0;
 
+// Select a bucket in compile-time
+template<typename T, bucket pBucket>
+struct bselect
+{
+	using type = T;
+	static constexpr bucket bucket = pBucket;
+};
+
+template <typename T>
+struct bselect_adaptor
+{
+	using type = T;
+	static constexpr bucket bucket = default_bucket;
+	static constexpr bool is_bselect = false;
+};
+
+template <typename T, bucket pBucket>
+struct bselect_adaptor<bselect<T, pBucket>>
+{
+	using type = T;
+	static constexpr bucket bucket = pBucket;
+	static constexpr bool is_bselect = true;
+};
+
 struct component_type
 {
 public:
@@ -78,7 +102,9 @@ public:
 	template <typename T>
 	static constexpr component_type from(bucket pBucket = default_bucket) noexcept
 	{
-		return component_type{ family::from<T>(), pBucket };
+		// bselect should take precedence.
+		using selector = bselect_adaptor<T>;
+		return component_type{ family::from<selector::type>(), selector::is_bselect ? selector::bucket : pBucket };
 	}
 
 	constexpr bool operator==(const component_type& pR) const noexcept
@@ -109,6 +135,11 @@ public:
 	constexpr bool operator>=(const component_type& pR) const noexcept
 	{
 		return mFamily >= pR.mFamily || (mFamily == pR.mFamily && mBucket >= pR.mBucket);
+	}
+
+	constexpr family get_family() const noexcept
+	{
+		return mFamily;
 	}
 
 	constexpr bucket get_bucket() const noexcept

@@ -60,12 +60,12 @@ public:
 
 	// Create a new component for this object.
 	template <typename T>
-	T* add_component(bucket pBucket = default_bucket);
+	auto* add_component(bucket pBucket = default_bucket);
 
 	template <typename T, typename U = std::decay_t<T>,
 		// Buckets can't be used as components.
 		typename = std::enable_if_t<!std::is_same_v<U, bucket>>>
-	U* add_component(T&& pComponent, bucket pBucket = default_bucket)
+	auto* add_component(T&& pComponent, bucket pBucket = default_bucket)
 	{
 		assert_valid_reference();
 		return get_layer().add_component(get_id(), std::forward<T>(pComponent), pBucket);
@@ -75,7 +75,7 @@ public:
 	std::size_t get_component_count() const;
 	// Get first component by type
 	template <class T>
-	T* get_component() const;
+	auto* get_component() const;
 	// Find the first of all of these components. Returns true when all of them are found.
 	template <typename Tfirst, typename...Trest>
 	bool unwrap_components(Tfirst*& pFirst, Trest*& ...pRest);
@@ -160,14 +160,14 @@ inline bool object::has_component() const
 }
 
 template<typename T>
-inline T* object::add_component(bucket pBucket)
+inline auto* object::add_component(bucket pBucket)
 {
 	assert_valid_reference();
 	return get_layer().add_component<T>(get_id(), pBucket);
 }
 
 template<class T>
-inline T* object::get_component() const
+inline auto* object::get_component() const
 {
 	return mLayer->get_storage<T>().get(get_id());
 }

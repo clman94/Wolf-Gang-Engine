@@ -18,6 +18,7 @@ struct sparse_set
 {
 public:
 	using key = std::size_t;
+	using type = T;
 
 	class iterator
 	{
