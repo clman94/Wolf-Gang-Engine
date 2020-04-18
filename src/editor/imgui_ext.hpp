@@ -169,7 +169,7 @@ inline void DrawAlphaCheckerBoard(ImVec2 pMin, ImVec2 pSize, float pSquare_size 
 	dl->PopClipRect();
 }
 
-inline struct
+inline struct _FixedScrollRegion
 {
 	ImVec2 contentSize, maxScroll;
 } gFixedScrollRegion;
@@ -240,4 +240,54 @@ inline ImVec2 operator+(const ImVec2& pA, const ImVec2& pB) noexcept
 inline ImVec2 operator-(const ImVec2& pA, const ImVec2& pB) noexcept
 {
 	return { pA.x - pB.x, pA.y - pB.y };
+}
+
+inline ImVec2 operator*(const ImVec2& pA, const ImVec2& pB) noexcept
+{
+	return { pA.x * pB.x, pA.y * pB.y };
+}
+
+inline ImVec2 operator/(const ImVec2& pA, const ImVec2& pB) noexcept
+{
+	return { pA.x / pB.x, pA.y / pB.y };
+}
+
+inline ImVec2 operator*(const ImVec2& pA, float pB) noexcept
+{
+	return { pA.x * pB, pA.y * pB };
+}
+
+inline ImVec2 operator/(const ImVec2& pA, float pB) noexcept
+{
+	return { pA.x / pB, pA.y / pB };
+}
+
+inline ImVec2& operator+=(ImVec2& pA, const ImVec2& pB) noexcept
+{
+	return pA = pA + pB;
+}
+
+inline ImVec2& operator-=(ImVec2& pA, const ImVec2& pB) noexcept
+{
+	return pA = pA - pB;
+}
+
+inline ImVec2& operator*=(ImVec2& pA, const ImVec2& pB) noexcept
+{
+	return pA = pA * pB;
+}
+
+inline ImVec2& operator/=(ImVec2& pA, const ImVec2& pB) noexcept
+{
+	return pA = pA / pB;
+}
+
+inline ImVec2& operator*=(ImVec2& pA, float pB) noexcept
+{
+	return pA = pA * pB;
+}
+
+inline ImVec2& operator/=(ImVec2& pA, float pB) noexcept
+{
+	return pA = pA / pB;
 }
