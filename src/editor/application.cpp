@@ -47,6 +47,7 @@
 namespace wge::core
 {
 
+
 class texture_importer :
 	public importer
 {
@@ -90,6 +91,52 @@ public:
 
 namespace wge::editor
 {
+
+class canvas_test
+{
+public:
+	void begin()
+	{
+		ImGui::BeginChild("canvastest");
+		mCursor = ImGui::GetCursorScreenPos();
+		mDrawList = ImGui::GetWindowDrawList();
+		mStart_vertex = mDrawList->VtxBuffer.Size;
+
+		// Zoom with ctrl and mousewheel
+		if (ImGui::GetIO().KeyCtrl && ImGui::GetIO().MouseWheel != 0)
+		{
+			mZoom += ImGui::GetIO().MouseWheel;
+			mScale = std::powf(2, mZoom);
+		}
+
+		auto& mousepos = ImGui::GetIO().MousePos;
+		mOriginalMousePos = mousepos;
+		mousepos -= mCursor;
+		mousepos /= mScale;
+		mousepos += mCursor;
+	}
+
+	void end()
+	{
+		for (int i = mStart_vertex; i < mDrawList->VtxBuffer.Size; i++)
+		{
+			auto& vert = mDrawList->VtxBuffer[i];
+			vert.pos -= mCursor;
+			vert.pos *= mScale;
+			vert.pos += mCursor;
+		}
+		ImGui::GetIO().MousePos = mOriginalMousePos;
+		ImGui::EndChild();
+	}
+
+private:
+	float mScale = 1;
+	float mZoom = 0;
+	int mStart_vertex = 0;
+	ImVec2 mCursor;
+	ImVec2 mOriginalMousePos;
+	ImDrawList* mDrawList = nullptr;
+};
 
 inline bool asset_item(const core::asset::ptr& pAsset, const core::asset_manager& pAsset_manager, ImVec2 pPreview_size = { 0, 0 })
 {
@@ -182,19 +229,18 @@ inline bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr, bool pD
 
 void begin_image_editor(const char* pStr_id, const graphics::texture& pTexture, bool pShow_alpha = false)
 {
-	ImGui::PushID(pStr_id);
+	ImGui::BeginChild(pStr_id, ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
 	float* zoom = ImGui::GetStateStorage()->GetFloatRef(ImGui::GetID("_Zoom"), 0);
+	float scale = std::powf(2, *zoom);
 
-	const ImVec2 last_cursor = ImGui::GetCursorPos();
-	ImGui::BeginGroup();
-
-	const float scale = std::powf(2, *zoom);
-	const ImVec2 image_size = pTexture.get_size() * scale;
+	ImVec2 image_size = pTexture.get_size() * scale;
+	
+	const ImVec2 top_cursor = ImGui::GetCursorScreenPos();
 
 	// Top and left padding
-	ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
-	ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
+	ImGui::Dummy(ImVec2(0, ImGui::GetWindowHeight() / 2));
+	ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, 0));
 	ImGui::SameLine();
 
 	// Store the cursor so we can position things on top of the image
@@ -207,9 +253,36 @@ void begin_image_editor(const char* pStr_id, const graphics::texture& pTexture, 
 
 	// Right and bottom padding
 	ImGui::SameLine();
-	ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, image_size.y));
-	ImGui::Dummy(ImVec2(image_size.x + ImGui::GetWindowWidth() / 2, ImGui::GetWindowHeight() / 2));
-	ImGui::EndGroup();
+	ImGui::Dummy(ImVec2(ImGui::GetWindowWidth() / 2, 0));
+	ImGui::Dummy(ImVec2(0, ImGui::GetWindowHeight() / 2));
+
+	ImGui::SetCursorScreenPos(top_cursor);
+
+	ImGui::InvisibleButton("_Input", ImGui::GetWindowSize() + image_size);
+	if (ImGui::IsItemHovered())
+	{
+		// Zoom with ctrl and mousewheel
+		if (ImGui::GetIO().KeyCtrl && ImGui::GetIO().MouseWheel != 0)
+		{
+			*zoom += ImGui::GetIO().MouseWheel;
+			const float new_scale = std::powf(2, *zoom);
+			const float ratio_changed = new_scale / scale;
+			const ImVec2 old_scroll{ ImGui::GetScrollX(), ImGui::GetScrollY() };
+			const ImVec2 new_scroll = old_scroll * ratio_changed;
+			// ImGui doesn't like content size changes after setting the scroll, this appears to fix it.
+			ImGui::Dummy((new_scroll - old_scroll) + ImVec2(ImGui::GetWindowWidth() + image_size.x, 0));
+			ImGui::SetScrollX(new_scroll.x);
+			ImGui::SetScrollY(new_scroll.y);
+		}
+		else if (!ImGui::GetIO().KeyCtrl)
+		{
+			ImGui::SetScrollX(ImGui::GetScrollX() + ImGui::GetIO().MouseWheelH);
+			ImGui::SetScrollY(ImGui::GetScrollY() + ImGui::GetIO().MouseWheel);
+		}
+
+		// Hold middle mouse button to scroll
+		ImGui::DragScroll(2);
+	}
 
 	// Draw grid
 	if (*zoom > 2)
@@ -219,31 +292,13 @@ void begin_image_editor(const char* pStr_id, const graphics::texture& pTexture, 
 			{ 0, 1, 1, 0.2f }, scale);
 	}
 
-	// Overlap with an invisible button to recieve input
-	ImGui::SetCursorPos(last_cursor);
-	ImGui::InvisibleButton("_Input", ImVec2(image_size.x + ImGui::GetWindowWidth(), image_size.y + ImGui::GetWindowHeight()));
-	if (ImGui::IsItemHovered())
-	{
-		// Zoom with ctrl and mousewheel
-		if (ImGui::GetIO().KeyCtrl && ImGui::GetIO().MouseWheel != 0)
-		{
-			*zoom += ImGui::GetIO().MouseWheel;
-			const float new_scale = std::powf(2, *zoom);
-			const float ratio_changed = new_scale / scale;
-			ImGui::SetScrollX(ImGui::GetScrollX() * ratio_changed);
-			ImGui::SetScrollY(ImGui::GetScrollY() * ratio_changed);
-		}
-
-		// Hold middle mouse button to scroll
-		ImGui::DragScroll(2);
-	}
 	visual_editor::begin("_SomeEditor", { image_position.x, image_position.y }, { 0, 0 }, { scale, scale });
 }
 
 void end_image_editor()
 {
 	visual_editor::end();
-	ImGui::PopID();
+	ImGui::EndChild();
 }
 
 core::asset::ptr asset_drag_drop_target(const std::string& pType, const core::asset_manager& pAsset_manager)
@@ -285,7 +340,7 @@ core::asset::ptr asset_selector(const char* pStr_id, const std::string& pType, c
 		asset = dropped_asset;
 	if (ImGui::BeginPopupContextWindow("AssetSelectorWindow"))
 	{
-		ImGui::Text(ICON_FA_SEARCH);
+		ImGui::Text((const char*)ICON_FA_SEARCH);
 		ImGui::SameLine();
 		static std::string search_str;
 		ImGui::InputText("##Search", &search_str);
@@ -328,8 +383,6 @@ public:
 		ImGui::VerticalSplitter("AtlasInfoSplitter", &mAtlas_info_width);
 
 		ImGui::SameLine();
-		ImGui::BeginChild("SpriteEditorViewport", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
-
 		auto texture = get_asset()->get_resource<graphics::texture>();
 		begin_image_editor("Editor", *texture);
 
@@ -386,7 +439,6 @@ public:
 		}
 		end_image_editor();
 
-		ImGui::EndChild();
 	}
 
 	static void preview_image(const char* pStr_id, const graphics::texture::handle& pTexture, const math::vec2& pSize, const math::rect& pFrame_rect)
@@ -918,9 +970,11 @@ public:
 	{
 		core::tilemap_manipulator tilemap(*mSelected_layer);
 		if (auto asset = asset_selector("Select_tileset", "tileset", get_asset_manager(), tilemap.get_tileset().get_asset()))
+		{
 			tilemap.set_tileset(asset, get_asset_manager());
+			tilemap.update_tile_uvs();
+		}
 
-		ImGui::BeginChild("TilesetEditor");
 		auto texture = tilemap.get_texture();
 		if (texture)
 		{
@@ -938,7 +992,6 @@ public:
 				math::vec2(tilemap.get_tilesize())), { 1, 1, 0, 1 });
 			end_image_editor();
 		}
-		ImGui::EndChild();
 	}
 
 	void tilemap_editor()
@@ -1143,15 +1196,16 @@ static bool texture_asset_input(core::asset::ptr& pAsset, context& pContext, con
 	}
 	return asset_dropped;
 }
+static const std::array event_display_name = {
+		(const char*)(ICON_FA_PENCIL u8" Create"),
+		(const char*)(ICON_FA_STEP_FORWARD u8" Update")
+	};
 
 class eventful_sprite_editor :
 	public asset_editor
 {
 private:
-	static constexpr std::array event_display_name = {
-		ICON_FA_PENCIL u8" Create",
-		ICON_FA_STEP_FORWARD u8" Update"
-	};
+
 
 public:
 	eventful_sprite_editor(context& pContext, const core::asset::ptr& pAsset) noexcept :
@@ -1160,7 +1214,7 @@ public:
 
 	virtual void on_gui() override
 	{
-		mSCript_editor_dock_id = ImGui::GetID("EditorDock");
+		mScript_editor_dock_id = ImGui::GetID("EditorDock");
 
 		ImGui::BeginChild("LeftPanel", ImVec2(300, 0));
 
@@ -1185,10 +1239,10 @@ public:
 
 		ImGui::SameLine();
 
-		ImGuiDockFamily dock_family(mSCript_editor_dock_id);
+		ImGuiDockFamily dock_family(mScript_editor_dock_id);
 		// Event script editors are given a dedicated dockspace where they spawn. This helps
 		// remove clutter windows popping up everywhere.
-		ImGui::DockSpace(mSCript_editor_dock_id, ImVec2(0, 0), ImGuiDockNodeFlags_None, &dock_family);
+		ImGui::DockSpace(mScript_editor_dock_id, ImVec2(0, 0), ImGuiDockNodeFlags_None, &dock_family);
 	}
 
 	virtual void on_close() override
@@ -1236,8 +1290,8 @@ private:
 					mark_asset_modified();
 					first_time = true;
 				}
-				auto editor = get_context().open_editor(asset, mSCript_editor_dock_id);
-				editor->set_dock_family_id(mSCript_editor_dock_id);
+				auto editor = get_context().open_editor(asset, mScript_editor_dock_id);
+				editor->set_dock_family_id(mScript_editor_dock_id);
 			}
 		}
 		ImGui::EndChild();
@@ -1264,7 +1318,7 @@ private:
 		return asset;
 	}
 
-	ImGuiID mSCript_editor_dock_id;
+	ImGuiID mScript_editor_dock_id = 0;
 };
 
 class game_viewport
@@ -1396,14 +1450,14 @@ public:
 		if (ImGui::Begin("Game##GameViewport"))
 		{
 			// Play/pause button.
-			if (ImGui::Button(mIs_running ? ICON_FA_PAUSE " Pause" : ICON_FA_PLAY "Play"))
+			if (ImGui::Button((const char*)(mIs_running ? ICON_FA_PAUSE u8" Pause" : ICON_FA_PLAY u8"Play")))
 			{
 				mIs_running = !mIs_running;
 			}
 
 			// Restart button.
 			ImGui::SameLine();
-			if (ImGui::Button(ICON_FA_UNDO " Restart"))
+			if (ImGui::Button((const char*)(ICON_FA_UNDO u8" Restart")))
 			{
 				restart();
 			}
@@ -1566,7 +1620,7 @@ private:
 				// Just an aesthetic
 				ImGui::TextColored({ 0.5, 0.5, 0.5, 1 }, "WGE");
 
-				if (ImGui::BeginMenu(ICON_FA_HOME " Project"))
+				if (ImGui::BeginMenu((const char*)(ICON_FA_HOME u8" Project")))
 				{
 					ImGui::MenuItem(" New");
 					ImGui::MenuItem(" Open");
@@ -1691,7 +1745,7 @@ private:
 
 
 		// Theme
-		ImVec4* colors = ImGui::GetStyle().Colors;
+		/*ImVec4* colors = ImGui::GetStyle().Colors;
 		colors[ImGuiCol_Text] = ImVec4(0.87f, 0.87f, 0.87f, 1.00f);
 		colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
 		colors[ImGuiCol_WindowBg] = ImVec4(0.06f, 0.06f, 0.06f, 0.90f);
@@ -1728,7 +1782,7 @@ private:
 		colors[ImGuiCol_Tab] = ImVec4(0.38f, 0.38f, 0.38f, 0.00f);
 		colors[ImGuiCol_TabHovered] = ImVec4(0.47f, 0.47f, 0.47f, 0.80f);
 		colors[ImGuiCol_TabActive] = ImVec4(0.40f, 0.40f, 0.40f, 1.00f);
-		colors[ImGuiCol_TabUnfocused] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+		colors[ImGuiCol_TabUnfocused] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);*
 		colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
 		colors[ImGuiCol_DockingPreview] = ImVec4(0.26f, 0.59f, 0.98f, 0.70f);
 		colors[ImGuiCol_DockingEmptyBg] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
@@ -1741,7 +1795,7 @@ private:
 		colors[ImGuiCol_NavHighlight] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
 		colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
 		colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
-		colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
+		colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);*/
 	}
 
 	void create_project(const filesystem::path& pPath)
@@ -1760,7 +1814,7 @@ private:
 private:
 	void show_settings()
 	{
-		if (ImGui::Begin(ICON_FA_COG " Settings"))
+		if (ImGui::Begin((const char*)(ICON_FA_COG u8" Settings")))
 		{
 			ImGui::BeginTabBar("SettingsTabBar");
 			if (ImGui::BeginTabItem("Style"))

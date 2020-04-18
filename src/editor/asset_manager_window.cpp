@@ -18,7 +18,7 @@ asset_manager_window::asset_manager_window(context& pContext, core::asset_manage
 
 void asset_manager_window::on_gui()
 {
-	if (ImGui::Begin(ICON_FA_FOLDER " Assets", 0, ImGuiWindowFlags_MenuBar))
+	if (ImGui::Begin((const char*)(ICON_FA_FOLDER u8" Assets"), 0, ImGuiWindowFlags_MenuBar))
 	{
 		static core::asset::ptr current_folder;
 		const filesystem::path current_path = mAsset_manager.get_asset_path(current_folder);
