@@ -193,7 +193,7 @@ void draw_grid(const graphics::color& pColor, float pSquare_size)
 {
 	assert(gCurrent_editor_state);
 	ImDrawList* dl = ImGui::GetWindowDrawList();
-	math::vec2 min = gCurrent_editor_state->calc_absolute(math::vec2(-1000, -1000));
+	math::vec2 min = gCurrent_editor_state->calc_absolute(math::vec2(-pSquare_size * 1000, -pSquare_size * 1000));
 	ImGui::DrawGridLines({ min.x, min.y }, dl->GetClipRectMax(), { pColor.r, pColor.g, pColor.b, pColor.a }, gCurrent_editor_state->scale.x * pSquare_size);
 }
 
