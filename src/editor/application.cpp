@@ -276,8 +276,8 @@ void begin_image_editor(const char* pStr_id, const graphics::texture& pTexture, 
 		}
 		else if (!ImGui::GetIO().KeyCtrl)
 		{
-			ImGui::SetScrollX(ImGui::GetScrollX() + ImGui::GetIO().MouseWheelH);
-			ImGui::SetScrollY(ImGui::GetScrollY() + ImGui::GetIO().MouseWheel);
+			ImGui::SetScrollX(ImGui::GetScrollX() - ImGui::GetIO().MouseWheelH * 10);
+			ImGui::SetScrollY(ImGui::GetScrollY() - ImGui::GetIO().MouseWheel * 10);
 		}
 
 		// Hold middle mouse button to scroll
