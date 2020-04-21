@@ -45,6 +45,16 @@ struct render_batch_2d
 
 	std::vector<unsigned int> indexes;
 	std::vector<vertex_2d> vertices;
+
+	bool use_indirect_source = false;
+	util::span<const unsigned int> indexes_indirect;
+	util::span<const vertex_2d> vertices_indirect;
+
+	bool empty() const noexcept
+	{
+		return (!use_indirect_source && indexes.empty() && vertices.empty()) ||
+			(use_indirect_source && indexes_indirect.empty() && vertices_indirect.empty());
+	}
 };
 
 struct quad_vertices

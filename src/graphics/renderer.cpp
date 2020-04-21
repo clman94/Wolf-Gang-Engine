@@ -80,7 +80,6 @@ void renderer::render_sprites(core::layer& pLayer, graphics& pGraphics)
 
 	sort_batches();
 
-	mProjection_matrix = math::ortho(mRender_view);
 	for (const auto& i : mBatches)
 		pGraphics.get_graphics_backend()->render_batch(mFramebuffer, mProjection_matrix, i);
 	mBatches.clear();
@@ -99,26 +98,23 @@ void renderer::render_tilemap(core::layer& pLayer, graphics& pGraphics)
 		indexes.set_start_index(index++ * 4);
 	}
 	
-	// Copy all the vertex and index data to a batch to be rendered.
-	// TODO: Have the renderer use the raw vertex/index data directly without copying it all.
 	render_batch_2d batch;
 	batch.rendertexture = info->texture;
-	for (auto& i : pLayer.get_storage<quad_vertices>().get_const_raw())
-	{
-		for (auto corner : i.corners)
-			batch.vertices.push_back(corner);
-	}
-	auto thing = pLayer.get_storage<quad_indicies>().get_const_raw();
-	for (auto& i : thing)
-	{
-		for (auto index : i.corners)
-			batch.indexes.push_back(index);
-	}
+
+	// This is a fairly dirty optimization that allows us to use the
+	// component memory storage directly without copying anything over to be rendered.
+	// The performance improvement was substantial enough to warrent this optimization early on.
+	batch.use_indirect_source = true;
+	auto idx_raw = pLayer.get_storage<quad_indicies>().get_const_raw();
+	auto verts_raw = pLayer.get_storage<quad_vertices>().get_const_raw();
+	batch.indexes_indirect = util::span{ &idx_raw[0].corners[0], idx_raw.size() * 6 };
+	batch.vertices_indirect = util::span{ &verts_raw[0].corners[0], verts_raw.size() * 4 };
 	pGraphics.get_graphics_backend()->render_batch(mFramebuffer, mProjection_matrix, batch);
 }
 
 void renderer::render_layer(core::layer& pLayer, graphics& pGraphics)
 {
+	mProjection_matrix = math::ortho(mRender_view);
 	render_sprites(pLayer, pGraphics);
 	render_tilemap(pLayer, pGraphics);
 }

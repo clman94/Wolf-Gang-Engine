@@ -92,11 +92,14 @@ public:
 
 	virtual void render_batch(const framebuffer::ptr& mFramebuffer, const math::mat44& pProjection, const render_batch_2d& pBatch) override
 	{
-		if (!mFramebuffer || pBatch.indexes.empty() || pBatch.vertices.empty())
+		if (!mFramebuffer || pBatch.empty())
 			return;
 		auto ogl_framebuffer = std::dynamic_pointer_cast<opengl_framebuffer>(mFramebuffer);
 		if (!ogl_framebuffer)
 			return;
+
+		const util::span<const unsigned int> indexes = pBatch.use_indirect_source ? pBatch.indexes_indirect : pBatch.indexes;
+		const util::span<const vertex_2d> vertices = pBatch.use_indirect_source ? pBatch.vertices_indirect : pBatch.vertices;
 
 		ogl_framebuffer->begin_framebuffer();
 
@@ -106,11 +109,11 @@ public:
 
 		// Populate the vertex buffer.
 		glBindBuffer(GL_ARRAY_BUFFER, mVertex_buffer);
-		glBufferData(GL_ARRAY_BUFFER, pBatch.vertices.size() * sizeof(vertex_2d), &pBatch.vertices[0], GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vertex_2d), &vertices[0], GL_STATIC_DRAW);
 
 		// Populate the element buffer with index data.
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mElement_buffer);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, pBatch.indexes.size() * sizeof(unsigned int), &pBatch.indexes[0], GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexes.size() * sizeof(unsigned int), &indexes[0], GL_STATIC_DRAW);
 
 		GLuint current_shader = pBatch.rendertexture ? mShader_texture : mShader_color;
 		glUseProgram(current_shader);
@@ -152,7 +155,7 @@ public:
 
 		glDrawElements(
 			primitive_type_to_opengl(pBatch.type),
-			pBatch.indexes.size(),
+			indexes.size(),
 			GL_UNSIGNED_INT,
 			(void*)0
 		);
