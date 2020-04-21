@@ -668,6 +668,57 @@ public:
 	}
 };
 
+class layer_previews
+{
+public:
+	void set_graphics(graphics::graphics& pGraphics)
+	{
+		mGraphics = &pGraphics;
+	}
+
+	void render_previews(core::scene& pScene, graphics::renderer& pRenderer, const math::ivec2& pSize)
+	{
+		assert(mGraphics);
+
+		mFramebuffers.resize(pScene.get_layer_container().size());
+		++mFrame_clock;
+		if (mFrame_clock > mRender_interval)
+		{
+			mFrame_clock = 0;
+			std::size_t framebuffer_idx = 0;
+			for (auto& i : pScene)
+			{
+				auto& framebuffer = mFramebuffers[framebuffer_idx];
+				if (framebuffer == nullptr)
+					framebuffer = mGraphics->get_graphics_backend()->create_framebuffer();
+				if (framebuffer->get_size() != math::vec2(pSize))
+					framebuffer->resize(pSize.x, pSize.y);
+
+				framebuffer->clear();
+
+				pRenderer.set_framebuffer(framebuffer);
+				// If we are using the same renderer from the viewport,
+				// this should use the same render view.
+				pRenderer.render_layer(i, *mGraphics);
+				++framebuffer_idx;
+			}
+		}
+	}
+
+	graphics::framebuffer::ptr get_preview_framebuffer(std::size_t pLayer_index) const
+	{
+		if (pLayer_index >= mFramebuffers.size())
+			return nullptr;
+		return mFramebuffers[pLayer_index];
+	}
+
+private:
+	std::size_t mRender_interval = 60;
+	std::size_t mFrame_clock = 0;
+	graphics::graphics* mGraphics = nullptr;
+	std::vector<graphics::framebuffer::ptr> mFramebuffers;
+};
+
 class scene_editor :
 	public asset_editor
 {
@@ -713,6 +764,8 @@ public:
 		asset_editor(pContext, pAsset),
 		mOn_game_run_callback(pRun_callback)
 	{
+		mLayer_previews.set_graphics(pContext.get_engine().get_graphics());
+
 		// Create a framebuffer for the scene to be rendered to.
 		auto& graphics = pContext.get_engine().get_graphics();
 		mViewport_framebuffer = graphics.get_graphics_backend()->create_framebuffer();
@@ -738,7 +791,7 @@ public:
 			mOn_game_run_callback(get_asset());
 		}
 		ImGui::TextUnformatted("Layers");
-		if (ImGui::BeginCombo("Add", "Layer"))
+		if (ImGui::BeginCombo("##Add", "Add Layer"))
 		{
 			if (ImGui::Selectable("Sprites"))
 			{
@@ -763,6 +816,13 @@ public:
 			++i)
 		{
 			ImGui::PushID(&i);
+
+			auto preview = mLayer_previews.get_preview_framebuffer(std::distance(mScene.get_layer_container().begin(), i));
+			if (preview)
+			{
+				ImGui::Image(preview, { 30, 30 });
+				ImGui::SameLine();
+			}
 
 			if (ImGui::Selectable(i->get_name().c_str(), mSelected_layer == &*i))
 			{
@@ -818,10 +878,11 @@ public:
 
 		static float viewport_width = -100;
 		ImGui::BeginChild("Scene", ImVec2(viewport_width, 0), true, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_MenuBar);
-
+		
 		show_viewport();
 
 		ImGui::EndChild(); // Scene
+
 		ImGui::SameLine();
 		ImGui::VerticalSplitter("ViewportInspectorSplitter", &viewport_width);
 		ImGui::SameLine();
@@ -939,10 +1000,14 @@ public:
 		}
 		visual_editor::end();
 
+
+		mLayer_previews.render_previews(mScene, mRenderer, { 20, 20 });
+
 		// Clear the framebuffer with black.
 		mViewport_framebuffer->clear({ 0, 0, 0, 1 });
 
 		// Render all the layers.
+		mRenderer.set_framebuffer(mViewport_framebuffer);
 		mRenderer.set_render_view_to_framebuffer(mViewport_offset, 1.f / mViewport_scale);
 		mRenderer.render_scene(mScene, engine.get_graphics());
 
@@ -1089,6 +1154,8 @@ private:
 	graphics::framebuffer::ptr mViewport_framebuffer;
 	math::vec2 mViewport_offset;
 	math::vec2 mViewport_scale{ 100, 100 };
+
+	layer_previews mLayer_previews;
 
 	on_game_run_callback mOn_game_run_callback;
 };
@@ -1717,11 +1784,12 @@ private:
 		auto fonts = ImGui::GetIO().Fonts;
 
 		// This will be our default font. It is quite a bit better than imguis builtin one.
-		if (fonts->AddFontFromFileTTF("./editor/Roboto-Regular.ttf", 18) == NULL)
+		/*if (fonts->AddFontFromFileTTF("./editor/Roboto-Regular.ttf", 18) == NULL)
 		{
 			log::error("Could not load RobotoMono-Regular font. Using default.");
 			fonts->AddFontDefault();
-		}
+		}*/
+		fonts->AddFontDefault();
 
 		// Setup the icon font so we can fancy things up.
 		static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
