@@ -914,12 +914,12 @@ public:
 		ImGui::SameLine();
 		ImGui::BeginGroup();
 
-		if (ImGui::ToolButton((const char*)ICON_FA_PENCIL, mTilemap_mode == tm_mode_draw))
-			mTilemap_mode = tm_mode_draw;
+		if (ImGui::ToolButton((const char*)ICON_FA_PENCIL, mTilemap_mode == tilemap_mode::draw))
+			mTilemap_mode = tilemap_mode::draw;
 		ImGui::DescriptiveToolTip("Paint Tool", "Drag To draw!");
 		ImGui::SameLine();
-		if (ImGui::ToolButton((const char*)ICON_FA_ERASER, mTilemap_mode == tm_mode_erase))
-			mTilemap_mode = tm_mode_erase;
+		if (ImGui::ToolButton((const char*)ICON_FA_ERASER, mTilemap_mode == tilemap_mode::erase))
+			mTilemap_mode = tilemap_mode::erase;
 		ImGui::DescriptiveToolTip("Erase Tool", "Drag To Erase!");
 		ImGui::SameLine();
 		ImGui::Button((const char*)ICON_FA_OBJECT_GROUP);
@@ -1099,7 +1099,7 @@ public:
 		}
 		visual_editor::end();
 
-
+		// Render the little layer previews.
 		mLayer_previews.render_previews(mScene, mRenderer, { 20, 20 });
 
 		// Clear the framebuffer with black.
@@ -1168,8 +1168,8 @@ public:
 		switch (mTilemap_mode)
 		{
 		default:
-		case tm_mode_draw: hover_overlay_color = { 1, 1, 0, 1 }; break;
-		case tm_mode_erase: 
+		case tilemap_mode::draw: hover_overlay_color = { 1, 1, 0, 1 }; break;
+		case tilemap_mode::erase:
 			if (tilemap.find_tile(tile_position))
 				hover_overlay_color = { 1, 0.4f, 0.4f, 1 };
 			else
@@ -1185,8 +1185,8 @@ public:
 			switch (mTilemap_mode)
 			{
 			default:
-			case tm_mode_draw: tilemap.set_tile(tile_position, mTilemap_brush); break;
-			case tm_mode_erase: tilemap.clear_tile(tile_position); break;
+			case tilemap_mode::draw: tilemap.set_tile(tile_position, mTilemap_brush); break;
+			case tilemap_mode::erase: tilemap.clear_tile(tile_position); break;
 			}
 			mark_asset_modified();
 		}
@@ -1261,12 +1261,12 @@ public:
 	}
 
 private:
-	enum tilemap_mode
+	enum class tilemap_mode
 	{
-		tm_mode_draw,
-		tm_mode_erase,
+		draw,
+		erase,
 	} ;
-	tilemap_mode mTilemap_mode = tm_mode_draw;
+	tilemap_mode mTilemap_mode = tilemap_mode::draw;
 	math::ivec2 mTilemap_brush;
 
 	core::layer* mSelected_layer = nullptr;
