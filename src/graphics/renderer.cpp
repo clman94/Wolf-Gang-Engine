@@ -107,9 +107,12 @@ void renderer::render_tilemap(core::layer& pLayer, graphics& pGraphics)
 	batch.use_indirect_source = true;
 	auto idx_raw = pLayer.get_storage<quad_indicies>().get_const_raw();
 	auto verts_raw = pLayer.get_storage<quad_vertices>().get_const_raw();
-	batch.indexes_indirect = util::span{ &idx_raw[0].corners[0], idx_raw.size() * 6 };
-	batch.vertices_indirect = util::span{ &verts_raw[0].corners[0], verts_raw.size() * 4 };
-	pGraphics.get_graphics_backend()->render_batch(mFramebuffer, mProjection_matrix, batch);
+	if (!idx_raw.empty() && !verts_raw.empty())
+	{
+		batch.indexes_indirect = util::span{ &idx_raw[0].corners[0], idx_raw.size() * 6 };
+		batch.vertices_indirect = util::span{ &verts_raw[0].corners[0], verts_raw.size() * 4 };
+		pGraphics.get_graphics_backend()->render_batch(mFramebuffer, mProjection_matrix, batch);
+	}
 }
 
 void renderer::render_layer(core::layer& pLayer, graphics& pGraphics)
