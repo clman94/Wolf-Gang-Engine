@@ -71,6 +71,16 @@ public:
 		return false;
 	}
 
+	bool clear_tile(math::ivec2 pPosition, queue_destruction_flag)
+	{
+		if (object tile = find_tile(pPosition))
+		{
+			tile.destroy(queue_destruction);
+			return true;
+		}
+		return false;
+	}
+
 	void set_tileset(core::resource_handle<graphics::tileset> pTileset, const asset_manager& pAsset_manager)
 	{
 		mInfo->tileset = pTileset;
@@ -94,15 +104,6 @@ public:
 		return mInfo->tileset->tile_size;
 	}
 
-	bool clear_tile(math::ivec2 pPosition, queue_destruction_flag)
-	{
-		if (object tile = find_tile(pPosition))
-		{
-			tile.destroy(queue_destruction);
-			return true;
-		}
-		return false;
-	}
 
 	object set_tile(const tile& pTile)
 	{

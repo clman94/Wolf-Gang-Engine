@@ -47,7 +47,6 @@
 namespace wge::core
 {
 
-
 class texture_importer :
 	public importer
 {
@@ -808,8 +807,14 @@ public:
 				i != mScene.get_layer_container().end();
 				++i)
 			{
-				ImGui::PushID(&i);
+				ImGui::PushID(&*i);
 
+				if (ImGui::Selectable("##LayerSelectable", mSelected_layer == &*i))
+				{
+					mSelected_object = core::invalid_object;
+					mSelected_layer = &*i;
+				}
+				ImGui::SameLine();
 				auto preview = mLayer_previews.get_preview_framebuffer(std::distance(mScene.get_layer_container().begin(), i));
 				if (preview)
 				{
@@ -817,11 +822,13 @@ public:
 					ImGui::SameLine();
 				}
 
-				if (ImGui::Selectable(i->get_name().c_str(), mSelected_layer == &*i))
-				{
-					mSelected_object = core::invalid_object;
-					mSelected_layer = &*i;
-				}
+				ImGui::BeginGroup();
+				ImGui::TextUnformatted(i->get_name().c_str());
+				if (core::is_tilemap_layer(*i))
+					ImGui::TextColored({ 0.6f, 0.6f, 0.6f, 1 }, "Tilemap");
+				else
+					ImGui::TextColored({ 0.6f, 0.6f, 0.6f, 1 }, "Objects");
+				ImGui::EndGroup();
 
 				ImGui::PopID();
 			}
@@ -907,10 +914,12 @@ public:
 		ImGui::SameLine();
 		ImGui::BeginGroup();
 
-		ImGui::Button((const char*)ICON_FA_PENCIL);
+		if (ImGui::ToolButton((const char*)ICON_FA_PENCIL, mTilemap_mode == tm_mode_draw))
+			mTilemap_mode = tm_mode_draw;
 		ImGui::DescriptiveToolTip("Paint Tool", "Drag To draw!");
 		ImGui::SameLine();
-		ImGui::Button((const char*)ICON_FA_ERASER);
+		if (ImGui::ToolButton((const char*)ICON_FA_ERASER, mTilemap_mode == tm_mode_erase))
+			mTilemap_mode = tm_mode_erase;
 		ImGui::DescriptiveToolTip("Erase Tool", "Drag To Erase!");
 		ImGui::SameLine();
 		ImGui::Button((const char*)ICON_FA_OBJECT_GROUP);
@@ -1151,14 +1160,34 @@ public:
 
 	void tilemap_editor()
 	{
-		math::ivec2 tile_position{ visual_editor::get_mouse_position().floor() };
-		visual_editor::draw_rect(math::rect(math::vec2(tile_position), math::vec2(1, 1)),
-			graphics::color(1, 1, 0, 1));
-
 		core::tilemap_manipulator tilemap(*mSelected_layer);
-		if (ImGui::IsItemClicked())
+		const math::ivec2 tile_position{ visual_editor::get_mouse_position().floor() };
+
+		// Select color of hover overlay from the edit mode.
+		graphics::color hover_overlay_color;
+		switch (mTilemap_mode)
 		{
-			tilemap.set_tile(tile_position, mTilemap_brush);
+		default:
+		case tm_mode_draw: hover_overlay_color = { 1, 1, 0, 1 }; break;
+		case tm_mode_erase: 
+			if (tilemap.find_tile(tile_position))
+				hover_overlay_color = { 1, 0.4f, 0.4f, 1 };
+			else
+				hover_overlay_color = { 1, 0.7f, 0.7f, 1 };
+			break;
+		}
+		// Draw the overlay
+		if (ImGui::IsItemHovered())
+			visual_editor::draw_rect(math::rect(math::vec2(tile_position), math::vec2(1, 1)), hover_overlay_color);
+
+		if (ImGui::IsItemActive())
+		{
+			switch (mTilemap_mode)
+			{
+			default:
+			case tm_mode_draw: tilemap.set_tile(tile_position, mTilemap_brush); break;
+			case tm_mode_erase: tilemap.clear_tile(tile_position); break;
+			}
 			mark_asset_modified();
 		}
 	}
@@ -1232,6 +1261,12 @@ public:
 	}
 
 private:
+	enum tilemap_mode
+	{
+		tm_mode_draw,
+		tm_mode_erase,
+	} ;
+	tilemap_mode mTilemap_mode = tm_mode_draw;
 	math::ivec2 mTilemap_brush;
 
 	core::layer* mSelected_layer = nullptr;

@@ -15,6 +15,16 @@
 namespace ImGui
 {
 
+inline bool ToolButton(const char* pStr, bool pSelected, const ImVec2& pSize = { 0, 0 })
+{
+	if (pSelected)
+		ImGui::PushStyleColor(ImGuiCol_Button, { 0.7f, 0.6f, 0, 1 });
+	bool clicked = ImGui::Button(pStr, pSize);
+	if (pSelected)
+		ImGui::PopStyleColor();
+	return clicked;
+}
+
 inline void QuickToolTip(const char* pMessage)
 {
 	if (ImGui::IsItemHovered())

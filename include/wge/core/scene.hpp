@@ -11,8 +11,10 @@ namespace wge::core
 class scene
 {
 public:
-	// While a vector of unique_ptr's would work
-	// just fine, List can more elegantly manage that memory.
+	// You may be thinking "wouldn't vector be fine here?"
+	// Unfortunately, that is not "always" the case.
+	// Layer is a pretty heavy object to move
+	// around and combine that with that fact that 
 	using layers = std::list<layer>;
 
 	// Get a layer by index
