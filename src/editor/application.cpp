@@ -675,6 +675,13 @@ public:
 	{
 		mGraphics = &pGraphics;
 	}
+	
+	// Set the interval in which to rerender previews.
+	// Default: 60 frames
+	void set_render_interval(std::size_t pFrames)
+	{
+		mRender_interval = pFrames;
+	}
 
 	void render_previews(core::scene& pScene, graphics::renderer& pRenderer, const math::ivec2& pSize)
 	{
@@ -780,7 +787,8 @@ public:
 
 	virtual void on_gui() override
 	{
-		ImGui::BeginChild("SidePanelSettings", ImVec2(200, 0));
+		static float side_panel_width = 200;
+		ImGui::BeginChild("SidePanelSettings", ImVec2(side_panel_width, 0));
 		if (ImGui::Button("Send to viewport") && mOn_game_run_callback)
 		{
 			// Make sure the actual asset data is up to date before
@@ -790,91 +798,123 @@ public:
 			// messaging mechanism later.
 			mOn_game_run_callback(get_asset());
 		}
-		ImGui::TextUnformatted("Layers");
-		if (ImGui::BeginCombo("##Add", "Add Layer"))
+		if (ImGui::CollapsingHeader("Layers", ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			if (ImGui::Selectable("Sprites"))
+			static float layers_height = 300;
+			ImGui::BeginChild("Layers", ImVec2(0, layers_height), true);
+
+			ImGui::BeginGroup();
+			for (auto i = mScene.get_layer_container().begin();
+				i != mScene.get_layer_container().end();
+				++i)
 			{
-				core::layer layer;
-				// Add layer specific components here.
-				mScene.add_layer(std::move(layer));
+				ImGui::PushID(&i);
+
+				auto preview = mLayer_previews.get_preview_framebuffer(std::distance(mScene.get_layer_container().begin(), i));
+				if (preview)
+				{
+					ImGui::Image(preview, { 30, 30 });
+					ImGui::SameLine();
+				}
+
+				if (ImGui::Selectable(i->get_name().c_str(), mSelected_layer == &*i))
+				{
+					mSelected_object = core::invalid_object;
+					mSelected_layer = &*i;
+				}
+
+				ImGui::PopID();
 			}
-			if (ImGui::Selectable("Tilemap"))
+			ImGui::EndGroup();
+			if (mSelected_layer && ImGui::BeginPopupContextWindow())
 			{
-				core::layer layer;
-				core::tilemap_manipulator tilemap(layer);
-				mScene.add_layer(std::move(layer));
+				std::string layer_name = mSelected_layer->get_name();
+				if (ImGui::InputText("Name", &layer_name))
+				{
+					mSelected_layer->set_name(layer_name);
+					mark_asset_modified();
+				}
+				if (ImGui::MenuItem("Delete"))
+				{
+					remove_selected_layer();
+					ImGui::CloseCurrentPopup();
+				}
+				ImGui::EndPopup();
+			}
+			ImGui::EndChild();
+			ImGui::HorizontalSplitter("LayersSplitter", &layers_height);
+			if (ImGui::Button((const char*)ICON_FA_PLUS))
+				ImGui::OpenPopup("AddLayerPopup");
+			if (ImGui::BeginPopup("AddLayerPopup"))
+			{
+				if (ImGui::Selectable("Sprites"))
+				{
+					core::layer layer;
+					// Add layer specific components here.
+					mScene.add_layer(std::move(layer));
+				}
+				if (ImGui::Selectable("Tilemap"))
+				{
+					core::layer layer;
+					core::tilemap_manipulator tilemap(layer);
+					mScene.add_layer(std::move(layer));
+				}
+				ImGui::EndPopup();
 			}
 
-			ImGui::EndCombo();
+			ImGui::SameLine();
+			
+			if (ImGui::Button((const char*)ICON_FA_TRASH))
+				remove_selected_layer();
+			ImGui::SameLine();
+			if (ImGui::Button((const char*)ICON_FA_ARROW_UP))
+				move_selected_layer_up();
+			ImGui::SameLine();
+			if (ImGui::Button((const char*)ICON_FA_ARROW_DOWN))
+				move_selected_layer_down();
 		}
-		ImGui::BeginChild("Layers", ImVec2(0, 300), true);
 
-		ImGui::BeginGroup();
-		for (auto i = mScene.get_layer_container().begin();
-			i != mScene.get_layer_container().end();
-			++i)
-		{
-			ImGui::PushID(&i);
-
-			auto preview = mLayer_previews.get_preview_framebuffer(std::distance(mScene.get_layer_container().begin(), i));
-			if (preview)
-			{
-				ImGui::Image(preview, { 30, 30 });
-				ImGui::SameLine();
-			}
-
-			if (ImGui::Selectable(i->get_name().c_str(), mSelected_layer == &*i))
-			{
-				mSelected_object = core::invalid_object;
-				mSelected_layer = &*i;
-			}
-
-			ImGui::PopID();
-		}
-		ImGui::EndGroup();
-		if (mSelected_layer && ImGui::BeginPopupContextWindow())
-		{
-			std::string layer_name = mSelected_layer->get_name();
-			if (ImGui::InputText("Name", &layer_name))
-			{
-				mSelected_layer->set_name(layer_name);
-				mark_asset_modified();
-			}
-			if (ImGui::MenuItem("Delete"))
-			{
-				mScene.remove_layer(*mSelected_layer);
-				mSelected_layer = nullptr;
-				mark_asset_modified();
-				ImGui::CloseCurrentPopup();
-			}
-			ImGui::EndPopup();
-		}
-		ImGui::EndChild();
 		if (mSelected_layer)
 		{
 			if (core::is_tilemap_layer(*mSelected_layer))
 			{
-				tileset_brush_selector();
+				if (ImGui::CollapsingHeader("Tilemap Brush Selector", ImGuiTreeNodeFlags_DefaultOpen))
+					tileset_brush_selector();
 			}
 			else
 			{
-				ImGui::TextUnformatted("Instances");
-				ImGui::BeginChild("Instances", ImVec2(0, 0), true);
-				for (auto obj : *mSelected_layer)
+				if (ImGui::CollapsingHeader("Instances", ImGuiTreeNodeFlags_DefaultOpen))
 				{
-					ImGui::PushID(obj.get_id());
-					if (ImGui::Selectable(obj.get_name().c_str(), obj == mSelected_object))
-						mSelected_object = obj;
-					ImGui::PopID();
+					ImGui::BeginChild("Instances", ImVec2(0, 0), true);
+					for (auto obj : *mSelected_layer)
+					{
+						ImGui::PushID(obj.get_id());
+						if (ImGui::Selectable(obj.get_name().c_str(), obj == mSelected_object))
+							mSelected_object = obj;
+						ImGui::PopID();
+					}
+					ImGui::EndChild(); // Instances
 				}
-				ImGui::EndChild(); // Instances
 			}
 		}
 
 		ImGui::EndChild(); // SidePanelSettings
 
 		ImGui::SameLine();
+		ImGui::VerticalSplitter("SidePanelSettingsSplitter", &side_panel_width);
+
+
+		ImGui::SameLine();
+		ImGui::BeginGroup();
+
+		ImGui::Button((const char*)ICON_FA_PENCIL);
+		ImGui::DescriptiveToolTip("Paint Tool", "Drag To draw!");
+		ImGui::SameLine();
+		ImGui::Button((const char*)ICON_FA_ERASER);
+		ImGui::DescriptiveToolTip("Erase Tool", "Drag To Erase!");
+		ImGui::SameLine();
+		ImGui::Button((const char*)ICON_FA_OBJECT_GROUP);
+		ImGui::DescriptiveToolTip("Select Tool", "Select a range!");
 
 		static float viewport_width = -100;
 		ImGui::BeginChild("Scene", ImVec2(viewport_width, 0), true, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_MenuBar);
@@ -908,13 +948,63 @@ public:
 			if (ImGui::IsItemDeactivatedAfterEdit())
 				mark_asset_modified();
 		}
-		ImGui::EndChild();
+		ImGui::EndChild(); // InspectorSidePanel
+
+		ImGui::EndGroup();
 	}
 
 	void update_asset_data()
 	{
 		auto resource = get_asset()->get_resource<core::scene_resource>();
 		resource->update_data(mScene);
+	}
+
+	void move_selected_layer_up()
+	{
+		if (mSelected_layer)
+		{
+			auto& layers = mScene.get_layer_container();
+			if (layers.size() <= 1)
+				return;
+			for (auto i = std::next(layers.begin()); i != layers.end(); i++)
+			{
+				if (mSelected_layer == &*i)
+				{
+					layers.splice(std::prev(i), layers, i);
+					mark_asset_modified();
+					return;
+				}
+			}
+		}
+	}
+
+	void move_selected_layer_down()
+	{
+		if (mSelected_layer)
+		{
+			auto& layers = mScene.get_layer_container();
+			if (layers.size() <= 1)
+				return;
+			for (auto i = layers.begin(); i != std::prev(layers.end()); i++)
+			{
+				if (mSelected_layer == &*i)
+				{
+					layers.splice(std::next(i, 2), layers, i);
+					mark_asset_modified();
+					return;
+				}
+			}
+		}
+	}
+
+	void remove_selected_layer()
+	{
+		if (mSelected_layer)
+		{
+			mScene.remove_layer(*mSelected_layer);
+			mSelected_layer = nullptr;
+			mark_asset_modified();
+		}
 	}
 
 	virtual void on_save() override
@@ -1798,14 +1888,14 @@ private:
 		icons_config.PixelSnapH = true;
 		icons_config.GlyphMinAdvanceX = 14;
 		icons_config.GlyphMaxAdvanceX = 14;
-		if (fonts->AddFontFromFileTTF("./editor/forkawesome-webfont.ttf", 18, &icons_config, icons_ranges) == NULL)
+		if (fonts->AddFontFromFileTTF("./editor/forkawesome-webfont.ttf", 13, &icons_config, icons_ranges) == NULL)
 		{
 			log::error("Could not load forkawesome-webfont.ttf font.");
 			fonts->AddFontDefault();
 		}
 
 		// Used in the code editor.
-		if (fonts->AddFontFromFileTTF("./editor/RobotoMono-Regular.ttf", 18) == NULL)
+		if (fonts->AddFontFromFileTTF("./editor/RobotoMono-Regular.ttf", 13) == NULL)
 		{
 			log::error("Could not load RobotoMono-Regular font. Using default.");
 			fonts->AddFontDefault();
