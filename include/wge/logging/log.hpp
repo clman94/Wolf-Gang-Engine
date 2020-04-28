@@ -75,7 +75,7 @@ bool open_file(const char* pFile);
 bool soft_assert(bool pExpression, std::string_view pMessage, line_info);
 
 template <typename Tformat, typename...Targs>
-void print(level pLevel, const Tformat& pFormat, Targs&&...pArgs)
+inline void print(level pLevel, const Tformat& pFormat, Targs&&...pArgs)
 {
 	message msg;
 	msg.severity_level = pLevel;
@@ -85,25 +85,25 @@ void print(level pLevel, const Tformat& pFormat, Targs&&...pArgs)
 }
 
 template <typename Tformat, typename...Targs>
-void info(const Tformat& pFormat, Targs&&...pArgs)
+inline void info(const Tformat& pFormat, Targs&&...pArgs)
 {
 	print(level::info, pFormat, std::forward<Targs>(pArgs)...);
 }
 
 template <typename Tformat, typename...Targs>
-void debug(const Tformat& pFormat, Targs&&...pArgs)
+inline void debug(const Tformat& pFormat, Targs&&...pArgs)
 {
 	print(level::debug, pFormat, std::forward<Targs>(pArgs)...);
 }
 
 template <typename Tformat, typename...Targs>
-void warning(const Tformat& pFormat, Targs&&...pArgs)
+inline void warning(const Tformat& pFormat, Targs&&...pArgs)
 {
 	print(level::warning, pFormat, std::forward<Targs>(pArgs)...);
 }
 
 template <typename Tformat, typename...Targs>
-void error(const Tformat& pFormat, Targs&&...pArgs)
+inline void error(const Tformat& pFormat, Targs&&...pArgs)
 {
 	print(level::error, pFormat, std::forward<Targs>(pArgs)...);
 }

@@ -243,6 +243,12 @@ private:
 	component_manager mComponent_manager;
 };
 
+// A range object that filters out all objects that
+// don't have the following components.
+//
+// This runs in O(n) where n is the amount of
+// elements in the provided component_storage<T>.
+// The amount of Tdeps does not affect this.
 template <typename T, typename...Tdeps>
 class filter
 {
@@ -260,6 +266,8 @@ public:
 			mEnd(pEnd),
 			mDeps_storage(&pDeps_storage...)
 		{
+			// "Prime" the iterator by finding the first
+			// element with the matching components.
 			while (mIter != mEnd && !find_dependencies())
 				++mIter;
 		}

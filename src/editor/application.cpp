@@ -770,8 +770,11 @@ public:
 		asset_editor(pContext, pAsset),
 		mOn_game_run_callback(pRun_callback)
 	{
+		log::info("Opening Scene Editor...");
 		mLayer_previews.set_graphics(pContext.get_engine().get_graphics());
 
+
+		log::info("Creating Scene Editor Framebuffer...");
 		// Create a framebuffer for the scene to be rendered to.
 		auto& graphics = pContext.get_engine().get_graphics();
 		mViewport_framebuffer = graphics.get_graphics_backend()->create_framebuffer();
@@ -781,21 +784,32 @@ public:
 		mScene_resource = get_asset()->get_resource<core::scene_resource>();
 
 		// Generate the layer.
+		log::info("Generating Scene...");
 		mScene = mScene_resource->generate_scene(pContext.get_engine().get_asset_manager());
+		log::info("Layers: {}", mScene.get_layer_container().size());
 	}
 
 	virtual void on_gui() override
 	{
 		static float side_panel_width = 200;
 		ImGui::BeginChild("SidePanelSettings", ImVec2(side_panel_width, 0));
-		if (ImGui::Button("Send to viewport") && mOn_game_run_callback)
+		if (ImGui::CollapsingHeader("Scene"))
 		{
-			// Make sure the actual asset data is up to date before
-			// we start the scene.
-			update_asset_data();
-			// Invoke the callback. I may consider using a better
-			// messaging mechanism later.
-			mOn_game_run_callback(get_asset());
+			if (ImGui::Button("Send to viewport") && mOn_game_run_callback)
+			{
+				log::info("Sending scene to Player Viewport...");
+				// Make sure the actual asset data is up to date before
+				// we start the scene.
+				update_asset_data();
+				// Invoke the callback. I may consider using a better
+				// messaging mechanism later.
+				mOn_game_run_callback(get_asset());
+			}
+
+			if (ImGui::Button("Open Scene Script"))
+			{
+
+			}
 		}
 		if (ImGui::CollapsingHeader("Layers", ImGuiTreeNodeFlags_DefaultOpen))
 		{
@@ -857,6 +871,7 @@ public:
 				if (ImGui::Selectable("Sprites"))
 				{
 					core::layer layer;
+					log::info("Adding Sprite Layer...");
 					// Add layer specific components here.
 					mScene.add_layer(std::move(layer));
 				}
@@ -864,6 +879,7 @@ public:
 				{
 					core::layer layer;
 					core::tilemap_manipulator tilemap(layer);
+					log::info("Adding Tilemap Layer...");
 					mScene.add_layer(std::move(layer));
 				}
 				ImGui::EndPopup();
@@ -1113,6 +1129,11 @@ public:
 		ImGui::EndFixedScrollRegion();
 	}
 
+	void open_scene_script()
+	{
+
+	}
+
 	// Generate a new instance from an object asset.
 	core::object new_instance(const core::asset::ptr& pAsset)
 	{
@@ -1265,7 +1286,7 @@ private:
 	{
 		draw,
 		erase,
-	} ;
+	};
 	tilemap_mode mTilemap_mode = tilemap_mode::draw;
 	math::ivec2 mTilemap_brush;
 
@@ -1527,18 +1548,23 @@ public:
 			log::error("No asset to generate scene with.");
 			return;
 		}
+		log::info("Opening Scene in Player Viewport...");
 		mEngine->get_scene() = pScene->generate_scene(mEngine->get_asset_manager());
 		mIs_loaded = true;
 		mScene = pScene;
+		log::info("Player Ready");
 	}
 
 	void restart()
 	{
+		log::info("Restarting Scene...");
 		open_scene(mScene);
 	}
 
 	void init_viewport()
 	{
+		log::info("Initializing Player Viewport Graphics....");
+
 		auto& g = mEngine->get_graphics();
 		mViewport_framebuffer = g.get_graphics_backend()->create_framebuffer();
 		mViewport_framebuffer->resize(500, 500);
@@ -1548,6 +1574,8 @@ public:
 
 	void register_input()
 	{
+		log::info("Registering Player Viewport Input...");
+
 		auto& state = mEngine->get_script_engine().state;
 		auto input = state.create_named_table("input");
 
