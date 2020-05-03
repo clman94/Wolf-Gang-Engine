@@ -4,7 +4,7 @@ namespace wge::util
 {
 
 // Converts a value, raw pointer, or reference into an object
-// accessable only through the -> operator.
+// accessable only through the -> or * operators.
 // References lvalues and copies rvalues and pointers.
 template <typename T>
 class ptr_adaptor
