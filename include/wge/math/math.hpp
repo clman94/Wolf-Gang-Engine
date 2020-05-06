@@ -134,4 +134,10 @@ inline T positive_modulus(const T& a, const T& b) noexcept
 	return mod(mod(a, b) + b, b);
 }
 
+template <typename T>
+inline T midpoint(const T& pA, const T& pB) noexcept
+{
+	return (pA + pB) / 2;
+}
+
 } // namespace wge::math

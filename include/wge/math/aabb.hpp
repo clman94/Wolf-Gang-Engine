@@ -43,6 +43,11 @@ public:
 		return *this;
 	}
 
+	math::vec2 get_size() const noexcept
+	{
+		return max - min;
+	}
+
 	bool intersect(const math::vec2& pVec) const noexcept
 	{
 		return min.x <= pVec.x && min.y <= pVec.y
