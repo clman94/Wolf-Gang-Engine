@@ -16,20 +16,8 @@ class slot_base
 public:
 	using ptr = std::shared_ptr<slot_base>;
 	using wptr = std::weak_ptr<slot_base>;
-	slot_base() :
-		mTracker([]() { return true; })
-	{}
 
-	virtual ~slot_base() {}
-
-	// Trackers may throw.
-	bool are_trackers_valid() const
-	{
-		return mTracker();
-	}
-
-protected:
-	std::function<bool()> mTracker;
+	virtual ~slot_base() = default;
 };
 
 template <typename Tsignature>
@@ -44,18 +32,6 @@ public:
 	slot(Tcallable&& pCallable) :
 		mFunction(std::forward<Tcallable>(pCallable))
 	{}
-
-	// Track a shared_ptr object
-	template <typename T>
-	slot& track(const std::shared_ptr<T>& pPtr)
-	{
-		std::weak_ptr<T> wptr = pPtr;
-		mTracker = [wptr = std::move(wptr)]() -> bool
-		{
-			return !wptr.expired();
-		};
-		return *this;
-	}
 
 	template <typename...Targs>
 	auto operator()(Targs&&...pArgs) const
@@ -72,7 +48,7 @@ class connection_body_base
 public:
 	using ptr = std::shared_ptr<connection_body_base>;
 	using wptr = std::weak_ptr<connection_body_base>;
-	virtual ~connection_body_base() {}
+	virtual ~connection_body_base() = default;
 
 	virtual bool connected() const noexcept = 0;
 	virtual void disconnect() noexcept = 0;
@@ -88,34 +64,33 @@ public:
 	using slot_type = slot<Tsignature>;
 
 	connection_body(const slot_type& pSlot) :
-		mSlot(new slot_type(pSlot))
+		mSlot(pSlot)
 	{}
 
 	virtual bool connected() const noexcept override
 	{
-		return mConnected && mSlot->are_trackers_valid();
+		return mConnected;
 	}
 
 	virtual void disconnect() noexcept override
 	{
 		mConnected = false;
-		mSlot.reset();
 	}
 
 	slot_type& get_slot() noexcept
 	{
-		return *mSlot;
+		return mSlot;
 	}
 
 private:
 	bool mConnected{ true };
-	typename slot_type::ptr mSlot;
+	slot_type mSlot;
 };
 
 class connection
 {
 public:
-	connection() noexcept {}
+	connection() noexcept = default;
 	connection(const connection_body_base::ptr& pPtr) noexcept :
 		mBody(pPtr)
 	{}
@@ -148,6 +123,27 @@ private:
 	connection_body_base::wptr mBody;
 };
 
+class scoped_connection :
+	public connection
+{
+public:
+	scoped_connection() noexcept = default;
+	scoped_connection(const connection& pConnection) noexcept :
+		connection(pConnection)
+	{}
+
+	scoped_connection(const scoped_connection&) noexcept = delete;
+	scoped_connection& operator=(const scoped_connection&) noexcept = delete;
+
+	scoped_connection(scoped_connection&&) noexcept = default;
+	scoped_connection& operator=(scoped_connection&&) noexcept = default;
+
+	~scoped_connection() noexcept
+	{
+		disconnect();
+	}
+};
+
 template <typename Tsignature>
 class signal
 {
@@ -178,12 +174,26 @@ public:
 
 	bool has_connections() const noexcept
 	{
-		return !mConnections.empty()
+		return !mConnections.empty();
 	}
 
 private:
 	// Mutable to allow dead connections to be deleted
 	mutable std::vector<typename body_type::ptr> mConnections;
 };
+
+class observer
+{
+public:
+	template <typename Tsig, typename Tcallable>
+	void subscribe(signal<Tsig>& pSignal, Tcallable&& pCallable)
+	{
+		mConnections.push_back(pSignal.connect(std::forward<Tcallable>(pCallable)));
+	}
+
+private:
+	std::vector<scoped_connection> mConnections;
+};
+
 
 } // namespace wge::util
