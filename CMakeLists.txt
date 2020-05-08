@@ -6,14 +6,8 @@ set(WGE_HEADER_DIR "${CMAKE_SOURCE_DIR}/include/wge")
 set(WGE_SOURCE_DIR "${CMAKE_SOURCE_DIR}/src")
 set(WGE_3RDPARTY_DIR "${CMAKE_SOURCE_DIR}/3rdparty")
 
-# Use latest standard in Visual Studio
-if (MSVC_VERSION GREATER_EQUAL "1900")
-	include(CheckCXXCompilerFlag)
-	CHECK_CXX_COMPILER_FLAG("/std:c++latest" _cpp_latest_flag_supported)
-	if (_cpp_latest_flag_supported)
-		add_compile_options("/std:c++latest")
-	endif()
-endif()
+# Use C++17
+set(CMAKE_CXX_STANDARD 17)
 
 # Use the angelscript namespace
 # Disabled for now because of some minor errors
