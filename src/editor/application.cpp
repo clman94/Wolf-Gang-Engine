@@ -908,7 +908,8 @@ public:
 			{
 				if (ImGui::CollapsingHeader("Instances", ImGuiTreeNodeFlags_DefaultOpen))
 				{
-					ImGui::BeginChild("Instances", ImVec2(0, 0), true);
+					static float height = 200;
+					ImGui::BeginChild("Instances", ImVec2(0, height), true);
 					for (auto obj : *mSelected_layer)
 					{
 						ImGui::PushID(obj.get_id());
@@ -917,6 +918,40 @@ public:
 						ImGui::PopID();
 					}
 					ImGui::EndChild(); // Instances
+					ImGui::HorizontalSplitter("InstancesSplitter", &height);
+				}
+				
+			}
+			if (ImGui::CollapsingHeader("Properties", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				if (ImGui::TreeNode("Layer"))
+				{
+					ImGui::TextUnformatted("No properties available");
+					ImGui::TreePop();
+				}
+
+				if (mSelected_object.is_valid() && ImGui::TreeNode("Object"))
+				{
+					ImGui::TextUnformatted("Selected Object Settings");
+					std::string name = mSelected_object.get_name();
+					if (ImGui::InputText("Name", &name))
+						mSelected_object.set_name(name);
+					if (ImGui::IsItemDeactivatedAfterEdit())
+					{
+						mSelected_object.set_name(scripting::make_valid_identifier(name));
+						mark_asset_modified();
+					}
+					ImGui::TextUnformatted("Transform");
+					math::transform* transform = mSelected_object.get_component<math::transform>();
+					ImGui::BeginGroup();
+					ImGui::DragFloat2("Position", transform->position.components().data());
+					ImGui::DragFloat("Rotation", transform->rotation.components().data());
+					ImGui::DragFloat2("Scale", transform->scale.components().data());
+					ImGui::EndGroup();
+					if (ImGui::IsItemDeactivatedAfterEdit())
+						mark_asset_modified();
+
+					ImGui::TreePop();
 				}
 			}
 		}
@@ -950,30 +985,6 @@ public:
 
 		ImGui::SameLine();
 		ImGui::VerticalSplitter("ViewportInspectorSplitter", &viewport_width);
-		ImGui::SameLine();
-		ImGui::BeginChild("InspectorSidePanel", ImVec2(-viewport_width, 0));
-		if (mSelected_layer && mSelected_object.is_valid())
-		{
-			ImGui::TextUnformatted("Selected Object Settings");
-			std::string name = mSelected_object.get_name();
-			if (ImGui::InputText("Name", &name))
-				mSelected_object.set_name(name);
-			if (ImGui::IsItemDeactivatedAfterEdit())
-			{
-				mSelected_object.set_name(scripting::make_valid_identifier(name));
-				mark_asset_modified();
-			}
-			ImGui::TextUnformatted("Transform");
-			math::transform* transform = mSelected_object.get_component<math::transform>();
-			ImGui::BeginGroup();
-			ImGui::DragFloat2("Position", transform->position.components().data());
-			ImGui::DragFloat("Rotation", transform->rotation.components().data());
-			ImGui::DragFloat2("Scale", transform->scale.components().data());
-			ImGui::EndGroup();
-			if (ImGui::IsItemDeactivatedAfterEdit())
-				mark_asset_modified();
-		}
-		ImGui::EndChild(); // InspectorSidePanel
 
 		ImGui::EndGroup();
 	}
