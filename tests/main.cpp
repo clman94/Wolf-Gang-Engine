@@ -13,7 +13,6 @@
 #include <wge/math/vector.hpp>
 #include <wge/util/ptr.hpp>
 #include <wge/core/scene_resource.hpp>
-#include <wge/util/boxed.hpp>
 
 using namespace wge;
 
