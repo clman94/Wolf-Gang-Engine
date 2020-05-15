@@ -56,6 +56,11 @@ sol::environment lua_engine::create_object_environment(core::object pObj)
 {
 	sol::environment env(state, sol::create, global_environment);
 
+	env["is_valid"] = [pObj]() -> bool
+	{
+		return pObj.is_valid();
+	};
+
 	env["this"] = env;
 
 	auto get_position = [pObj]() -> math::vec2
