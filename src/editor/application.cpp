@@ -870,16 +870,16 @@ public:
 			{
 				if (ImGui::Selectable("Sprites"))
 				{
-					core::layer layer;
 					log::info("Adding Sprite Layer...");
+					core::layer layer;
 					// Add layer specific components here.
 					mScene.add_layer(std::move(layer));
 				}
 				if (ImGui::Selectable("Tilemap"))
 				{
+					log::info("Adding Tilemap Layer...");
 					core::layer layer;
 					core::tilemap_manipulator tilemap(layer);
-					log::info("Adding Tilemap Layer...");
 					mScene.add_layer(std::move(layer));
 				}
 				ImGui::EndPopup();
@@ -913,47 +913,61 @@ public:
 					for (auto obj : *mSelected_layer)
 					{
 						ImGui::PushID(obj.get_id());
-						if (ImGui::Selectable(obj.get_name().c_str(), obj == mSelected_object))
+						std::string display_name = fmt::format("{} [{} id:{})]", obj.get_name(), obj.get_asset()->get_name(), obj.get_id());
+						if (ImGui::Selectable(display_name.c_str(), obj == mSelected_object))
 							mSelected_object = obj;
 						ImGui::PopID();
 					}
 					ImGui::EndChild(); // Instances
 					ImGui::HorizontalSplitter("InstancesSplitter", &height);
 				}
-				
 			}
-			if (ImGui::CollapsingHeader("Properties", ImGuiTreeNodeFlags_DefaultOpen))
+		}
+
+		if (ImGui::CollapsingHeader("Detailed Properties", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			ImGui::BeginChild("PropertiesPane", { 0, 0 }, true);
+			if (ImGui::TreeNode("Scene"))
 			{
-				if (ImGui::TreeNode("Layer"))
-				{
-					ImGui::TextUnformatted("No properties available");
-					ImGui::TreePop();
-				}
-
-				if (mSelected_object.is_valid() && ImGui::TreeNode("Object"))
-				{
-					ImGui::TextUnformatted("Selected Object Settings");
-					std::string name = mSelected_object.get_name();
-					if (ImGui::InputText("Name", &name))
-						mSelected_object.set_name(name);
-					if (ImGui::IsItemDeactivatedAfterEdit())
-					{
-						mSelected_object.set_name(scripting::make_valid_identifier(name));
-						mark_asset_modified();
-					}
-					ImGui::TextUnformatted("Transform");
-					math::transform* transform = mSelected_object.get_component<math::transform>();
-					ImGui::BeginGroup();
-					ImGui::DragFloat2("Position", transform->position.components().data());
-					ImGui::DragFloat("Rotation", transform->rotation.components().data());
-					ImGui::DragFloat2("Scale", transform->scale.components().data());
-					ImGui::EndGroup();
-					if (ImGui::IsItemDeactivatedAfterEdit())
-						mark_asset_modified();
-
-					ImGui::TreePop();
-				}
+				ImGui::TextUnformatted("No properties available");
+				ImGui::TreePop();
 			}
+
+			if (mSelected_layer && ImGui::TreeNode("Selected Layer"))
+			{
+				ImGui::TextUnformatted("No properties available");
+				ImGui::TreePop();
+			}
+
+			if (mSelected_layer && mSelected_object.is_valid() && ImGui::TreeNode("Selected Object"))
+			{
+				std::string name = mSelected_object.get_name();
+				if (ImGui::InputText("Name", &name))
+					mSelected_object.set_name(name);
+				if (ImGui::Button("Goto Asset"))
+				{
+					get_context().open_editor(mSelected_object.get_asset());
+				}
+				if (ImGui::IsItemDeactivatedAfterEdit())
+				{
+					mSelected_object.set_name(scripting::make_valid_identifier(name));
+					mark_asset_modified();
+				}
+				ImGui::TextUnformatted("Transform");
+				math::transform* transform = mSelected_object.get_component<math::transform>();
+				ImGui::BeginGroup();
+				ImGui::DragFloat2("Position", transform->position.components().data());
+				ImGui::DragFloat("Rotation", transform->rotation.components().data());
+				ImGui::DragFloat2("Scale", transform->scale.components().data());
+				ImGui::EndGroup();
+				if (ImGui::IsItemDeactivatedAfterEdit())
+					mark_asset_modified();
+
+				ImGui::Button("Creation Code");
+
+				ImGui::TreePop();
+			}
+			ImGui::EndChild();
 		}
 
 		ImGui::EndChild(); // SidePanelSettings
@@ -982,9 +996,6 @@ public:
 		show_viewport();
 
 		ImGui::EndChild(); // Scene
-
-		ImGui::SameLine();
-		ImGui::VerticalSplitter("ViewportInspectorSplitter", &viewport_width);
 
 		ImGui::EndGroup();
 	}
