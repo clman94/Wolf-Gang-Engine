@@ -5,6 +5,7 @@
 #include <wge/util/span.hpp>
 #include <fmt/format.h>
 
+#include <functional>
 #include <type_traits>
 
 namespace wge::math
@@ -241,6 +242,8 @@ using ivec2 = basic_vec2<int>;
 using lvec2 = basic_vec2<long>;
 using vec2 = basic_vec2<float>; // Default vec2
 
+
+
 template <typename T>
 inline constexpr basic_vec2<T> operator * (T pVal, const math::basic_vec2<T>& pVec) noexcept
 {
@@ -278,3 +281,20 @@ inline T distance(const basic_vec2<T>& pA, const basic_vec2<T>& pB) noexcept
 }
 
 } // namespace wge::math
+
+namespace std
+{
+
+template<typename T>
+struct hash<wge::math::basic_vec2<T>>
+{
+	using vec = wge::math::basic_vec2<T>;
+	std::size_t operator()(vec const& pVec) const noexcept
+	{
+		std::size_t x = std::hash<T>{}(pVec.x);
+		std::size_t y = std::hash<T>{}(pVec.y);
+		return x ^ (y << 1);
+	}
+};
+
+} // namespace std
