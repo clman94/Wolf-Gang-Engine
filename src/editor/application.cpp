@@ -842,7 +842,7 @@ public:
 					ImGui::TextColored({ 0.6f, 0.6f, 0.6f, 1 }, "Tilemap");
 				else
 				{
-					const auto _header_faded_color = ImGui::ScopedStyleColor(ImGuiCol_Text, { 0.6f, 0.6f, 0.6f, 1 });
+					const auto _faded_color = ImGui::ScopedStyleColor(ImGuiCol_Text, { 0.6f, 0.6f, 0.6f, 1 });
 					if (!core::is_tilemap_layer(*i) &&
 						ImGui::TreeNode("Objects"))
 					{
@@ -1450,16 +1450,14 @@ static bool texture_asset_input(core::asset::ptr& pAsset, context& pContext, con
 	return asset_dropped;
 }
 static const std::array event_display_name = {
-		(const char*)(ICON_FA_PENCIL u8" Create"),
-		(const char*)(ICON_FA_STEP_FORWARD u8" Update")
+		(const char*)(ICON_FA_PLUS u8" Create"),
+		(const char*)(ICON_FA_STEP_FORWARD u8" Update"),
+		(const char*)(ICON_FA_PENCIL u8" Draw")
 	};
 
 class eventful_sprite_editor :
 	public asset_editor
 {
-private:
-
-
 public:
 	eventful_sprite_editor(context& pContext, const core::asset::ptr& pAsset) noexcept :
 		asset_editor(pContext, pAsset)
@@ -1487,6 +1485,7 @@ public:
 		display_sprite_input(generator);
 		ImGui::Dummy({ 0, 10 });
 		display_event_list(generator);
+		ImGui::Dummy({ 0, 10 });
 
 		ImGui::EndChild();
 
@@ -1674,6 +1673,10 @@ public:
 		{
 			return mCan_take_input && ImGui::IsKeyDown(pKey);
 		};
+		input["released"] = [this](int pKey) -> bool
+		{
+			return mCan_take_input && ImGui::IsKeyReleased(pKey);
+		};
 
 		input["mouse_pressed"] = [this](int pButton) -> bool
 		{
@@ -1683,7 +1686,11 @@ public:
 		{
 			return mCan_take_input && ImGui::IsMouseDown(pButton);
 		};
-
+		input["mouse_released"] = [this](int pButton) -> bool
+		{
+			return mCan_take_input && ImGui::IsMouseReleased(pButton);
+		};
+		
 		input["mouse_delta"] = math::vec2(0, 0);
 		input["mouse_position"] = math::vec2(0, 0);
 	}

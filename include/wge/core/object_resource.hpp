@@ -14,11 +14,12 @@ public:
 	{
 		create,
 		update,
+		draw,
 		count,
 	};
 
 	// event_type as strings.
-	static constexpr std::array<const char*, 2> event_typenames = { "create", "update" };
+	static constexpr std::array<const char*, 3> event_typenames = { "create", "update", "draw" };
 
 	// Asset id for the default sprite.
 	util::uuid display_sprite;

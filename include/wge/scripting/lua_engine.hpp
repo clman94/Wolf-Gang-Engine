@@ -12,6 +12,7 @@
 #include <wge/filesystem/file_input_stream.hpp>
 #include <wge/math/math.hpp>
 #include <wge/math/vector.hpp>
+#include <wge/graphics/renderer.hpp>
 
 #include <sol/sol.hpp>
 
@@ -93,10 +94,15 @@ public:
 	void register_core_api();
 	void register_asset_api(core::asset_manager& pAsset_manager);
 	void register_layer_api(core::asset_manager& pAsset_manager);
+	void register_draw_api(graphics::renderer& pRenderer);
 	void register_math_api();
 	void register_physics_api();
 
 	void update_layer(core::layer& pLayer, float pDelta);
+	void draw_layer(core::layer& pLayer, float pDelta);
+
+private:
+	void run_script(const std::string& pSource, const sol::environment& pEnv);
 };
 
 class event_state_component
@@ -130,6 +136,7 @@ using create = core::bselect<event_component, 0>;
 using preupdate = core::bselect<event_component, 1>;
 using update = core::bselect<event_component, 2>;
 using postupdate = core::bselect<event_component, 3>;
+using draw = core::bselect<event_component, 4>;
 
 } // namespace event_selectors
 

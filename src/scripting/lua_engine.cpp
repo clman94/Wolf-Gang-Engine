@@ -147,6 +147,11 @@ void lua_engine::register_layer_api(core::asset_manager& pAsset_manager)
 	};
 }
 
+void lua_engine::register_draw_api(graphics::renderer& pRenderer)
+{
+	// TODO
+}
+
 void lua_engine::register_math_api()
 {
 	sol::table t = state.create_named_table("math");
@@ -240,18 +245,6 @@ void lua_engine::register_physics_api()
 
 void lua_engine::update_layer(core::layer& pLayer, float pDelta)
 {
-	const auto run_script = [&](const std::string& pSource, const sol::environment& pEnv)
-	{
-		try
-		{
-			state.safe_script(pSource, pEnv);
-		}
-		catch (const sol::error & e)
-		{
-			log::error("An unexpected error has occurred: {}", e.what());
-		}
-	};
-
 	update_delta(pDelta);
 
 	// Setup the environments if needed
@@ -298,6 +291,29 @@ void lua_engine::update_layer(core::layer& pLayer, float pDelta)
 		run_script(on_update.get_source(), state.environment);
 	}
 	pLayer.destroy_queued_components();
+}
+
+void lua_engine::draw_layer(core::layer& pLayer, float pDelta)
+{
+	// Event: Draw
+	for (auto& [id, on_create, state] :
+		pLayer.each<event_selector::create, event_state_component>())
+	{
+		run_script(on_create.get_source(), state.environment);
+	}
+	pLayer.destroy_queued_components();
+}
+
+void lua_engine::run_script(const std::string& pSource, const sol::environment& pEnv)
+{
+	try
+	{
+		state.safe_script(pSource, pEnv);
+	}
+	catch (const sol::error& e)
+	{
+		log::error("An unexpected error has occurred: {}", e.what());
+	}
 }
 
 std::string make_valid_identifier(std::string_view pStr, const std::string_view pDefault)

@@ -32,6 +32,9 @@ void object_resource::generate_object(core::object& pObj, const asset_manager& p
 			case event_type::update:
 				comp = pObj.add_component<scripting::event_selector::update>();
 				break;
+			case event_type::draw:
+				comp = pObj.add_component<scripting::event_selector::draw>();
+				break;
 			}
 			assert(comp);
 			if (auto asset = pAsset_mgr.get_asset(asset_id))
