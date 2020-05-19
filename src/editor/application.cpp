@@ -841,8 +841,27 @@ public:
 				if (core::is_tilemap_layer(*i))
 					ImGui::TextColored({ 0.6f, 0.6f, 0.6f, 1 }, "Tilemap");
 				else
-					ImGui::TextColored({ 0.6f, 0.6f, 0.6f, 1 }, "Objects");
+				{
+					const auto _header_faded_color = ImGui::ScopedStyleColor(ImGuiCol_Text, { 0.6f, 0.6f, 0.6f, 1 });
+					if (!core::is_tilemap_layer(*i) &&
+						ImGui::TreeNode("Objects"))
+					{
+						for (auto obj : *i)
+						{
+							if (!obj.get_name().empty())
+							{
+								if (ImGui::Selectable(obj.get_name().c_str(), obj == mSelected_object))
+								{
+									mSelected_layer = &*i;
+									mSelected_object = obj;
+								}
+							}
+						}
+						ImGui::TreePop();
+					}
+				}
 				ImGui::EndGroup();
+
 
 				ImGui::PopID();
 			}
@@ -990,8 +1009,7 @@ public:
 		ImGui::Button((const char*)ICON_FA_OBJECT_GROUP);
 		ImGui::DescriptiveToolTip("Select Tool", "Select a range!");
 
-		static float viewport_width = -100;
-		ImGui::BeginChild("Scene", ImVec2(viewport_width, 0), true, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_MenuBar);
+		ImGui::BeginChild("Scene", { 0, 0 }, true, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_MenuBar);
 		
 		show_viewport();
 

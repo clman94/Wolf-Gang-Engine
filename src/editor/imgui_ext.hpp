@@ -15,6 +15,19 @@
 namespace ImGui
 {
 
+struct ScopedStyleColor
+{
+	ScopedStyleColor(ImGuiCol idx, const ImVec4& col)
+	{
+		PushStyleColor(idx, col);
+	}
+
+	~ScopedStyleColor()
+	{
+		PopStyleColor();
+	}
+};
+
 inline bool ToolButton(const char* pStr, bool pSelected, const ImVec2& pSize = { 0, 0 })
 {
 	if (pSelected)
