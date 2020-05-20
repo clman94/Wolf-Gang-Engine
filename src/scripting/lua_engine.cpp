@@ -54,7 +54,7 @@ void lua_engine::execute_global_scripts(core::asset_manager& pAsset_manager)
 
 sol::environment lua_engine::create_object_environment(core::object pObj)
 {
-	sol::environment env(state, sol::create, global_environment);
+	sol::environment env(state, sol::create, state.globals());
 
 	env["is_valid"] = [pObj]() -> bool
 	{
