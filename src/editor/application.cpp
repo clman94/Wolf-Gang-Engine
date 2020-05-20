@@ -1169,11 +1169,6 @@ public:
 		ImGui::EndFixedScrollRegion();
 	}
 
-	void open_scene_script()
-	{
-
-	}
-
 	// Generate a new instance from an object asset.
 	core::object new_instance(const core::asset::ptr& pAsset)
 	{
