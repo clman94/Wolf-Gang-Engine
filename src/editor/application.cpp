@@ -697,7 +697,7 @@ public:
 				auto& framebuffer = mFramebuffers[framebuffer_idx];
 				if (framebuffer == nullptr)
 					framebuffer = mGraphics->get_graphics_backend()->create_framebuffer();
-				if (framebuffer->get_size() != math::vec2(pSize))
+				if (framebuffer->get_size() != pSize)
 					framebuffer->resize(pSize.x, pSize.y);
 
 				framebuffer->clear();

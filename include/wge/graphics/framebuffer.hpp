@@ -31,9 +31,9 @@ public:
 	virtual int get_height() const = 0;
 
 	// Get a vec2 size of this framebuffer.
-	math::vec2 get_size() const
+	math::ivec2 get_size() const
 	{
-		return{ static_cast<float>(get_width()), static_cast<float>(get_height()) };
+		return{ get_width(), get_height() };
 	}
 };
 
