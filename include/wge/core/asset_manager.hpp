@@ -98,6 +98,11 @@ public:
 	void update_directory_structure();
 	void save_all_configuration();
 
+	void remove_all_assets()
+	{
+		mAsset_list.clear();
+	}
+
 private:
 	// Turn an absolute path into a relative path to the root directory
 	filesystem::path make_relative_to_root(const filesystem::path& pPath) const;

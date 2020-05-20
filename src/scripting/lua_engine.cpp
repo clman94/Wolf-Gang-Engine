@@ -279,7 +279,7 @@ void lua_engine::update_layer(core::layer& pLayer, float pDelta)
 		if (created == false)
 		{
 			created = true;
-			run_script(on_create.get_source(), state.environment);
+			run_script(on_create, state.environment, "Create");
 		}
 	}
 	pLayer.destroy_queued_components();
@@ -288,7 +288,7 @@ void lua_engine::update_layer(core::layer& pLayer, float pDelta)
 	for (auto& [id, on_update, state] :
 		pLayer.each<event_selector::update, event_state_component>())
 	{
-		run_script(on_update.get_source(), state.environment);
+		run_script(on_update, state.environment, "Update");
 	}
 	pLayer.destroy_queued_components();
 }
@@ -299,16 +299,42 @@ void lua_engine::draw_layer(core::layer& pLayer, float pDelta)
 	for (auto& [id, on_create, state] :
 		pLayer.each<event_selector::create, event_state_component>())
 	{
-		run_script(on_create.get_source(), state.environment);
+		run_script(on_create, state.environment, "Update");
 	}
 	pLayer.destroy_queued_components();
 }
 
-void lua_engine::run_script(const std::string& pSource, const sol::environment& pEnv)
+void lua_engine::run_script(event_component& pSource, const sol::environment& pEnv, const std::string& pEvent_name)
 {
 	try
 	{
-		state.safe_script(pSource, pEnv);
+		if (!pSource.source_script.is_valid() ||
+			pSource.source_script->has_run_error)
+			return;
+		script& src_script = *pSource.source_script;
+		if (!src_script.function.valid())
+		{
+			sol::load_result lr = state.load(src_script.source, pEvent_name);
+			if (!lr.valid())
+			{
+				src_script.has_run_error = true;
+				sol::error err = lr;
+				log::error("Parse error: {}", err.what());
+				return;
+			}
+			src_script.function = lr;
+		}
+
+		// Execute for this objects environment.
+		sol::set_environment(pEnv, src_script.function);
+		sol::protected_function_result result = src_script.function();
+		if (!result.valid())
+		{
+			src_script.has_run_error = true;
+			sol::error err = result;
+			log::error("Runtime error: {}", err.what());
+			return;
+		}
 	}
 	catch (const sol::error& e)
 	{

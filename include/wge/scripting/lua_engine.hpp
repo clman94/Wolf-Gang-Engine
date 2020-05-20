@@ -31,6 +31,7 @@ public:
 
 	std::string source;
 	sol::protected_function function;
+	bool has_run_error = false;
 
 	bool is_compiled() const noexcept
 	{
@@ -71,6 +72,8 @@ public:
 	}
 };
 
+class event_component;
+
 class lua_engine
 {
 public:
@@ -102,7 +105,7 @@ public:
 	void draw_layer(core::layer& pLayer, float pDelta);
 
 private:
-	void run_script(const std::string& pSource, const sol::environment& pEnv);
+	void run_script(event_component& pSource, const sol::environment& pEnv, const std::string& pEvent_name);
 };
 
 class event_state_component

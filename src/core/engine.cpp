@@ -31,6 +31,9 @@ engine::~engine()
 {
 	// Clean up the scene first to prevent hanging references.
 	mScene.clear();
+	// Again, script assets contain references to lua objects that
+	// need to be cleaned up beforehand.
+	mAsset_manager.remove_all_assets();
 }
 
 void engine::create_game(const filesystem::path& pDirectory)
