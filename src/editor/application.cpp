@@ -1659,6 +1659,14 @@ public:
 			{ "middle", GLFW_MOUSE_BUTTON_MIDDLE },
 			{ "right", GLFW_MOUSE_BUTTON_RIGHT },
 			});
+		state["key_down"] = [this](int pKey) -> bool
+		{
+			return mCan_take_input && ImGui::IsKeyDown(pKey);
+		};
+		state["key_pressed"] = [this](int pKey) -> bool
+		{
+			return mCan_take_input && ImGui::IsKeyPressed(pKey, false);
+		};
 
 		input["pressed"] = [this](int pKey) -> bool
 		{
