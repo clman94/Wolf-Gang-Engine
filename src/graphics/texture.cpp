@@ -66,7 +66,7 @@ int texture::get_height() const noexcept
 	return mImage.get_height();
 }
 
-math::vec2 texture::get_size() const noexcept
+math::ivec2 texture::get_size() const noexcept
 {
 	return mImage.get_size();
 }
@@ -130,7 +130,7 @@ void texture::deserialize_data(const json& pJson)
 		animation& def_animation = mAtlas.emplace_back();
 		def_animation.name = "Default";
 		def_animation.id = util::generate_uuid();
-		def_animation.frame_rect = math::rect(math::vec2(0, 0), mImage.get_size());
+		def_animation.frame_rect = math::rect(math::vec2(0, 0), math::vec2(mImage.get_size()));
 	}
 }
 

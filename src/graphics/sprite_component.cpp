@@ -16,7 +16,7 @@ void sprite_component::create_batch(math::transform& pTransform, renderer& pRend
 	batch_builder batch;
 	batch.set_texture(res);
 
-	const math::vec2 texture_size = res->get_size();
+	const math::vec2 texture_size{ res->get_size() };
 
 	const animation* anim = res->get_animation(mAnimation_id);
 	if (!anim)

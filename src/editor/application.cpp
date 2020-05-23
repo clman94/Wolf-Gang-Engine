@@ -233,7 +233,7 @@ void begin_image_editor(const char* pStr_id, const graphics::texture& pTexture, 
 	float* zoom = ImGui::GetStateStorage()->GetFloatRef(ImGui::GetID("_Zoom"), 0);
 	float scale = std::powf(2, *zoom);
 
-	ImVec2 image_size = pTexture.get_size() * scale;
+	ImVec2 image_size = math::vec2(pTexture.get_size()) * scale;
 	
 	const ImVec2 top_cursor = ImGui::GetCursorScreenPos();
 
@@ -463,8 +463,8 @@ public:
 
 		// Convert to UV coord
 		math::aabb uv(pFrame_rect);
-		uv.min /= pTexture->get_size();
-		uv.max /= pTexture->get_size();
+		uv.min /= math::vec2(pTexture->get_size());
+		uv.max /= math::vec2(pTexture->get_size());
 
 		// Draw the image
 		const auto impl = std::dynamic_pointer_cast<graphics::opengl_texture_impl>(pTexture->get_implementation());
@@ -519,7 +519,7 @@ public:
 			if (ImGui::Button("Add"))
 			{
 				graphics::animation& animation = texture->get_raw_atlas().emplace_back();
-				animation.frame_rect = math::rect({ 0, 0 }, texture->get_size());
+				animation.frame_rect = math::rect({ 0, 0 }, math::vec2(texture->get_size()));
 				animation.name = make_unique_animation_name(texture, "NewEntry");
 				animation.id = util::generate_uuid();
 				mark_asset_modified();
@@ -679,6 +679,7 @@ public:
 	// Default: 60 frames
 	void set_render_interval(std::size_t pFrames)
 	{
+		assert(pFrames > 0);
 		mRender_interval = pFrames;
 	}
 
@@ -688,7 +689,7 @@ public:
 
 		mFramebuffers.resize(pScene.get_layer_container().size());
 		++mFrame_clock;
-		if (mFrame_clock > mRender_interval)
+		if (mFrame_clock >= mRender_interval)
 		{
 			mFrame_clock = 0;
 			std::size_t framebuffer_idx = 0;
@@ -1094,7 +1095,7 @@ public:
 				ImGui::Separator();
 				ImGui::MenuItem("Grid", NULL, false, false);
 				ImGui::Checkbox("Enable Grid", &is_grid_enabled);
-				ImGui::ColorEdit4("Grid Color", grid_color.components, ImGuiColorEditFlags_NoInputs);
+				ImGui::ColorEdit4("Grid Color", grid_color.components().data(), ImGuiColorEditFlags_NoInputs);
 				ImGui::EndMenu();
 			}
 			ImGui::EndMenuBar();

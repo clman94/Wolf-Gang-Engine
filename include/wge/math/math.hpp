@@ -22,7 +22,7 @@ template <typename T>
 using only_arithmetic = typename std::enable_if_t<std::is_arithmetic_v<T>>;
 
 template <typename T>
-using only_signed = typename std::enable_if_t<std::is_floating_point_v<T> || std::is_unsigned_v<T>>;
+using only_signed = typename std::enable_if_t<std::is_floating_point_v<T> || std::is_signed_v<T>>;
 
 } // namespace detail
 

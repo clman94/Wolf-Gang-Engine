@@ -150,7 +150,7 @@ private:
 	{
 		if (mInfo->texture && mInfo->tileset)
 		{
-			auto tile_uv_size = math::vec2(mInfo->tileset->tile_size) / mInfo->texture->get_size();
+			auto tile_uv_size = math::vec2(mInfo->tileset->tile_size) / math::vec2(mInfo->texture->get_size());
 			return math::rect(math::vec2(pUV) * tile_uv_size, tile_uv_size);
 		}
 		else

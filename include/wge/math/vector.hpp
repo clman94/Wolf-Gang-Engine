@@ -280,6 +280,12 @@ inline T distance(const basic_vec2<T>& pA, const basic_vec2<T>& pB) noexcept
 	return pA.distance(pB);
 }
 
+template<typename T>
+inline basic_vec2<T> clamp_components(const basic_vec2<T>& pA, const basic_vec2<T>& pMin, const basic_vec2<T>& pMax) noexcept
+{
+	return { math::clamp(pA.x, pMin.x, pMax.x), math::clamp(pA.y, pMin.y, pMax.y) };
+}
+
 } // namespace wge::math
 
 namespace std

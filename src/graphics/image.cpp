@@ -8,42 +8,60 @@ namespace wge::graphics
 
 bool image::load_file(const std::string& pPath)
 {
-	int width = 0, height = 0, channel_count = 0;
-	stbi_uc* data = stbi_load(&pPath[0], &width, &height, &channel_count, 4);
-	mWidth = static_cast<std::size_t>(width);
-	mHeight = static_cast<std::size_t>(height);
-	mChannel_count = static_cast<std::size_t>(channel_count);
+	int width = 0, height = 0;
+	stbi_uc* data = stbi_load(&pPath[0], &mSize.x, &mSize.y, nullptr, 4);
 
-	std::size_t length = mWidth * mHeight * mChannel_count;
+	std::size_t length = static_cast<std::size_t>(mSize.x * mSize.y) * channel_count;
 	mData.resize(length);
 	std::copy(data, data + length, mData.begin());
 	stbi_image_free(data);
 	return true;
 }
 
-math::vec2 image::get_size() const noexcept
+math::ivec2 image::get_size() const noexcept
 {
-	return{ static_cast<float>(mWidth), static_cast<float>(mHeight) };
+	return mSize;
 }
 
-std::size_t image::get_width() const noexcept
+int image::get_width() const noexcept
 {
-	return mWidth;
+	return mSize.x;
 }
 
-std::size_t image::get_height() const noexcept
+int image::get_height() const noexcept
 {
-	return mHeight;
+	return mSize.y;
 }
 
-std::size_t image::get_channel_count() const noexcept
+void image::splice(const image& pSrc,
+	const math::ivec2& pDest,
+	const math::ivec2& pSrc_min,
+	const math::ivec2& pSrc_max) noexcept
 {
-	return mChannel_count;
+	const math::ivec2 src_size = (pSrc_max - pSrc_min) + math::ivec2{ 1, 1 };
+	if (empty() || pSrc.empty() || // Nothing to paste.
+		pDest.x >= mSize.x || pDest.y >= mSize.y || // Source is being pasted outside this image.
+		pDest.x + src_size.x <= 0 || pDest.y + src_size.y <= 0)
+		return; // Just do nothing.
+
+	// The aabb in the destination in which the source will be pasted.
+	const math::ivec2 dest_min = math::clamp_components(pDest, math::ivec2{ 0, 0 }, get_size() - math::ivec2{ 1, 1 });
+	const math::ivec2 dest_max = math::clamp_components(pDest + (pSrc_max - pSrc_min), math::ivec2{ 0, 0 }, get_size() - math::ivec2{ 1, 1 });
+
+	// Copy the pixels.
+	for (int y = dest_min.y; y <= dest_max.y; y++)
+		for (int x = dest_min.x; x <= dest_max.x; x++)
+			set_pixel({ x, y }, pSrc.get_pixel((math::ivec2{ x, y } - pDest) + pSrc_min));
 }
 
-util::span<const unsigned char> image::get_raw() const noexcept
+image image::crop(math::ivec2 pMin, math::ivec2 pMax, const color8& pOverflow_color) const
 {
-	return mData;
+	assert(pMax.x > pMin.x);
+	assert(pMax.y > pMin.y);
+	const math::ivec2 new_size = pMax - pMin + math::ivec2{ 1, 1 };
+	image new_image(new_size, pOverflow_color);
+	new_image.splice(*this, -pMin);
+	return new_image;
 }
 
 } // namespace wge::graphics
