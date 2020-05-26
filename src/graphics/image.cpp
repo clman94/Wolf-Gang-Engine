@@ -2,16 +2,23 @@
 
 #include <algorithm>
 #include <stb/stb_image.h>
+#include <stb/stb_image_write.h>
 
 namespace wge::graphics
 {
+
+bool image::save_png(const std::string& pPath) const
+{
+	int r = stbi_write_png(pPath.c_str(), mSize.x, mSize.y, 4, mData.data(), mSize.x * static_cast<int>(channel_count));
+	return r == 1;
+}
 
 bool image::load_file(const std::string& pPath)
 {
 	int width = 0, height = 0;
 	stbi_uc* data = stbi_load(&pPath[0], &mSize.x, &mSize.y, nullptr, 4);
 
-	std::size_t length = static_cast<std::size_t>(mSize.x * mSize.y) * channel_count;
+	const std::size_t length = static_cast<std::size_t>(mSize.x) * static_cast<std::size_t>(mSize.y) * channel_count;
 	mData.resize(length);
 	std::copy(data, data + length, mData.begin());
 	stbi_image_free(data);

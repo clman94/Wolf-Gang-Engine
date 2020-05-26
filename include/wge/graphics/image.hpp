@@ -24,6 +24,7 @@ public:
 		fill(pColor);
 	}
 
+	bool save_png(const std::string& pPath) const;
 	bool load_file(const std::string& pPath);
 
 	// Get vec2 of the size of this image in pixels.
