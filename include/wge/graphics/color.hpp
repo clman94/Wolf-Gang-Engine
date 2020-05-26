@@ -19,7 +19,7 @@ public:
 	color() :
 		r(0), g(0), b(0), a(1)
 	{}
-	color(const color& pColor) = default;
+	color(const color&) = default;
 	color(type pR, type pG, type pB) :
 		r(pR), g(pG), b(pB), a(1)
 	{}
