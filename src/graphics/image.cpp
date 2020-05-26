@@ -54,7 +54,7 @@ void image::splice(const image& pSrc,
 			set_pixel({ x, y }, pSrc.get_pixel((math::ivec2{ x, y } - pDest) + pSrc_min));
 }
 
-image image::crop(math::ivec2 pMin, math::ivec2 pMax, const color8& pOverflow_color) const
+image image::crop(const math::ivec2& pMin, const math::ivec2& pMax, const color8& pOverflow_color) const
 {
 	assert(pMax.x > pMin.x);
 	assert(pMax.y > pMin.y);

@@ -20,7 +20,7 @@ public:
 	image(const math::ivec2& pSize, const color8& pColor) :
 		mSize(pSize)
 	{
-		mData.resize(static_cast<std::size_t>(mSize.x * mSize.y) * channel_count);
+		mData.resize(static_cast<std::size_t>(mSize.x) * static_cast<std::size_t>(mSize.y) * channel_count);
 		fill(pColor);
 	}
 
@@ -58,7 +58,7 @@ public:
 		}
 	}
 
-	image crop(math::ivec2 pMin, math::ivec2 pMax, const color8& pOverflow_color = { 0, 0, 0, 0 }) const;
+	image crop(const math::ivec2& pMin, const math::ivec2& pMax, const color8& pOverflow_color = { 0, 0, 0, 0 }) const;
 
 	bool empty() const noexcept
 	{
@@ -84,7 +84,7 @@ public:
 		assert(pPos.x < mSize.x);
 		assert(pPos.y >= 0);
 		assert(pPos.y < mSize.y);
-		return util::span{ &mData[static_cast<std::size_t>(pPos.x + pPos.y * mSize.x)], channel_count };
+		return util::span{ &mData[pixel_index(pPos)], channel_count };
 	}
 
 	auto get_raw_pixel(const math::ivec2& pPos) const noexcept
@@ -94,7 +94,7 @@ public:
 		assert(pPos.x < mSize.x);
 		assert(pPos.y >= 0);
 		assert(pPos.y < mSize.y);
-		return util::span{ &mData[static_cast<std::size_t>(pPos.x + pPos.y * mSize.x)], channel_count };
+		return util::span{ &mData[pixel_index(pPos)], channel_count };
 	}
 
 	void set_pixel(const math::ivec2& pPos, const color8& pColor)
@@ -114,6 +114,15 @@ public:
 	auto get_raw() const noexcept
 	{
 		return util::span{ mData };
+	}
+
+private:
+	std::size_t pixel_index(const math::ivec2& pPos) const noexcept
+	{
+		return (static_cast<std::size_t>(pPos.x) +
+			static_cast<std::size_t>(pPos.y) *
+			static_cast<std::size_t>(mSize.x)) *
+			channel_count;
 	}
 
 private:
