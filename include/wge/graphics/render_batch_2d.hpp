@@ -84,12 +84,13 @@ struct quad_indicies
 	
 	void set_start_index(std::size_t pIndex) noexcept
 	{
-		corners[0] = pIndex;
-		corners[1] = pIndex + 1;
-		corners[2] = pIndex + 2;
-		corners[3] = pIndex + 2;
-		corners[4] = pIndex + 3;
-		corners[5] = pIndex;
+		const unsigned int index = static_cast<unsigned int>(pIndex);
+		corners[0] = index;
+		corners[1] = index + 1;
+		corners[2] = index + 2;
+		corners[3] = index + 2;
+		corners[4] = index + 3;
+		corners[5] = index;
 	}
 };
 
