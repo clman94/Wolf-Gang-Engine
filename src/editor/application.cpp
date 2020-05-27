@@ -1077,6 +1077,7 @@ public:
 					core::layer layer;
 					// Add layer specific components here.
 					mScene.add_layer(std::move(layer));
+					mark_asset_modified();
 				}
 				if (ImGui::Selectable("Tilemap"))
 				{
@@ -1084,6 +1085,7 @@ public:
 					core::layer layer;
 					core::tilemap_manipulator tilemap(layer);
 					mScene.add_layer(std::move(layer));
+					mark_asset_modified();
 				}
 				ImGui::EndPopup();
 			}
