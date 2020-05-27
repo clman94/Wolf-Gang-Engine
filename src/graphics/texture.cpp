@@ -35,12 +35,7 @@ json animation::serialize() const
 void texture::set_implementation(const texture_impl::ptr& pImpl) noexcept
 {
 	mImpl = pImpl;
-	if (!mImage.empty() && mImpl)
-	{
-		// Recreate the texture with the new implementation
-		mImpl->create_from_image(mImage);
-		mImpl->set_smooth(mSmooth);
-	}
+	update_impl_image();
 }
 
 texture_impl::ptr texture::get_implementation() const noexcept
@@ -48,12 +43,23 @@ texture_impl::ptr texture::get_implementation() const noexcept
 	return mImpl;
 }
 
+void texture::set_image(image&& pImage)
+{
+	mImage = std::move(pImage);
+	update_impl_image();
+}
+
+void texture::set_image(const image& pImage)
+{
+	mImage = pImage;
+	update_impl_image();
+}
+
 void texture::load()
 {
 	mPath = get_location().get_autonamed_file(".png");
 	mImage.load_file(mPath.string());
-	if (mImpl)
-		mImpl->create_from_image(mImage);
+	update_impl_image();
 }
 
 int texture::get_width() const noexcept
@@ -131,6 +137,15 @@ void texture::deserialize_data(const json& pJson)
 		def_animation.name = "Default";
 		def_animation.id = util::generate_uuid();
 		def_animation.frame_rect = math::rect(math::vec2(0, 0), math::vec2(mImage.get_size()));
+	}
+}
+
+void texture::update_impl_image()
+{
+	if (!mImage.empty() && mImpl)
+	{
+		mImpl->create_from_image(mImage);
+		mImpl->set_smooth(mSmooth);
 	}
 }
 

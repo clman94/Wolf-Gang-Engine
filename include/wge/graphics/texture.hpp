@@ -3,14 +3,15 @@
 #include <memory>
 #include <string>
 #include <iostream>
+#include <optional>
 
 #include <wge/util/json_helpers.hpp>
 #include <wge/util/uuid.hpp>
 #include <wge/math/rect.hpp>
+#include <wge/math/aabb.hpp>
 #include <wge/core/asset.hpp>
 #include <wge/filesystem/filesystem_interface.hpp>
 #include <wge/graphics/image.hpp>
-
 namespace wge::graphics
 {
 
@@ -54,6 +55,10 @@ public:
 	void set_implementation(const texture_impl::ptr& pImpl) noexcept;
 	texture_impl::ptr get_implementation() const noexcept;
 
+	void set_image(image&& pImage);
+	void set_image(const image& pImage);
+	const image& get_image() const noexcept { return mImage; }
+
 	// Load a texture from a file
 	virtual void load() override;
 
@@ -86,6 +91,8 @@ private:
 	virtual json serialize_data() const override;
 	virtual void deserialize_data(const json& pJson) override;
 
+	void update_impl_image();
+
 private:
 	filesystem::path mPath;
 	texture_impl::ptr mImpl;
@@ -94,5 +101,6 @@ private:
 	atlas_container mAtlas;
 	// util::uuid mDefault_animation; // TODO: Use instead of a "Default" animation
 };
+
 
 } // namespace wge::graphics
