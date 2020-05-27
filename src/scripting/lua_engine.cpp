@@ -187,7 +187,6 @@ void lua_engine::register_math_api()
 			static_cast<math::vec2(math::vec2::*)(float) const>(&math::vec2::operator/)
 		),
 		sol::meta_function::equal_to, static_cast<bool(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator==),
-		sol::meta_function::to_string, &math::vec2::to_string,
 		sol::meta_function::unary_minus, static_cast<math::vec2(math::vec2::*)() const>(&math::vec2::operator-),
 		sol::meta_function::to_string, &math::vec2::to_string
 		);
