@@ -88,7 +88,7 @@ void renderer::render_sprites(core::layer& pLayer, graphics& pGraphics)
 void renderer::render_tilemap(core::layer& pLayer, graphics& pGraphics)
 {
 	core::tilemap_info* info = pLayer.layer_components.get<core::tilemap_info>();
-	if (!info || !info->texture.is_valid())
+	if (!info || !info->tileset.is_valid())
 		return;
 
 	// Update the indexes of all the vertices.
@@ -99,7 +99,7 @@ void renderer::render_tilemap(core::layer& pLayer, graphics& pGraphics)
 	}
 	
 	render_batch_2d batch;
-	batch.rendertexture = info->texture;
+	batch.rendertexture = &info->tileset->get_texture();
 
 	// This is a fairly dirty optimization that allows us to use the
 	// component memory storage directly without copying anything over to be rendered.

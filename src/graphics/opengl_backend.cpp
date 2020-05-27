@@ -122,7 +122,7 @@ public:
 		GLuint proj_id = glGetUniformLocation(current_shader, "projection");
 		glUniformMatrix4fv(proj_id, 1, GL_FALSE, &pProjection.m[0][0]);
 
-		if (pBatch.rendertexture)
+		if (pBatch.rendertexture && pBatch.rendertexture->get_implementation())
 		{
 			// Setup the texture.
 			glActiveTexture(GL_TEXTURE0);

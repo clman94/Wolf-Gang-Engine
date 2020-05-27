@@ -13,7 +13,7 @@ void object_resource::generate_object(core::object& pObj, const asset_manager& p
 	if (display_sprite.is_valid())
 	{
 		graphics::sprite_component sprite;
-		sprite.set_texture(pAsset_mgr.get_asset(display_sprite));
+		sprite.set_sprite(pAsset_mgr.get_asset(display_sprite));
 		pObj.add_component(std::move(sprite));
 	}
 

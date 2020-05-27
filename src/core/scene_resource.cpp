@@ -136,7 +136,7 @@ static layer generate_tilemap_layer(const scene_resource::tilemap_layer& pLayer,
 	new_layer.set_name(pLayer.name);
 	tilemap_manipulator tilemap(new_layer);
 	if (pLayer.tileset_id.is_valid() && pAsset_mgr.has_asset(pLayer.tileset_id))
-		tilemap.set_tileset(pAsset_mgr.get_asset(pLayer.tileset_id), pAsset_mgr);
+		tilemap.set_tileset(pAsset_mgr.get_asset(pLayer.tileset_id));
 	for (auto& i : pLayer.tiles)
 		tilemap.set_tile(i);
 	return new_layer;

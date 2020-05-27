@@ -17,7 +17,7 @@ public:
 
 public:
 	image() = default;
-	image(const math::ivec2& pSize, const color8& pColor) :
+	image(const math::ivec2& pSize, const color8& pColor = { 0, 0, 0, 0 }) :
 		mSize(pSize)
 	{
 		mData.resize(static_cast<std::size_t>(mSize.x) * static_cast<std::size_t>(mSize.y) * channel_count);

@@ -139,7 +139,7 @@ struct adl_serializer<std::optional<T>>
 	static void from_json(const json& pJson, std::optional<T>& pOpt)
 	{
 		if (pJson.is_null())
-			pOpt = {};
+			pOpt = std::nullopt;
 		else
 			pOpt = pJson.get<T>();
 	}

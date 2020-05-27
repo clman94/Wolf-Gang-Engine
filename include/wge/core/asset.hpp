@@ -26,11 +26,11 @@ public:
 	asset_location(asset_location&&) = default;
 	asset_location(const asset_location&) = delete;
 
-	filesystem::path get_autonamed_file(const std::string& pExtension) const
+	filesystem::path get_autonamed_file(const std::string& pSuffix) const
 	{
 		assert(is_valid());
-		assert(!pExtension.empty());
-		return mDirectory / (mName + pExtension);
+		assert(!pSuffix.empty());
+		return mDirectory / (mName + pSuffix);
 	}
 
 	filesystem::path get_file(const std::string& pFilename) const

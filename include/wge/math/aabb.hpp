@@ -10,12 +10,7 @@ namespace wge::math
 class aabb
 {
 public:
-	union {
-		struct {
-			math::vec2 min, max;
-		};
-		float components[4];
-	};
+	math::vec2 min, max;
 
 public:
 	aabb() noexcept {}

@@ -6,6 +6,7 @@
 #include <wge/core/asset.hpp>
 #include <wge/math/aabb.hpp>
 #include <wge/graphics/image.hpp>
+#include <wge/graphics/texture.hpp>
 
 namespace wge::graphics
 {
@@ -16,29 +17,41 @@ class sprite :
 public:
 	using handle = core::resource_handle<sprite>;
 
+	static constexpr int padding = 1;
+
 public:
 	struct frame_info
 	{
 		std::optional<math::vec2> anchor;
-		std::optional<float> duration = 0;
+		std::optional<float> duration;
+
+		static json serialize(const frame_info& pInfo)
+		{
+			json result;
+			result["duration"] = pInfo.duration;
+			result["anchor"] = pInfo.anchor;
+			return result;
+		}
+
+		static frame_info deserialize(const json& pJson)
+		{
+			frame_info info;
+			info.duration = pJson["duration"].get<std::optional<float>>();
+			info.anchor = pJson["anchor"].get<std::optional<math::vec2>>();
+			return info;
+		}
 	};
 
-	static void to_json(json& pJson, const frame_info& pFrame)
-	{
-		pJson["duration"] = pFrame.duration;
-		pJson["anchor"] = pFrame.anchor;
-	}
-
-	static void from_json(const json& pJson, frame_info& pFrame)
-	{
-		pFrame.duration = pJson["duration"];
-		pFrame.anchor = pJson["anchor"];
-	}
 
 	virtual void load()
 	{
 		mImage.load_file(get_location().get_autonamed_file(".png").string());
+		mTexture.set_image(mImage);
+	}
 
+	void set_texture_implementation(texture_impl::ptr pImpl)
+	{
+		mTexture.set_implementation(pImpl);
 	}
 
 	std::size_t get_frame_count() const noexcept
@@ -64,13 +77,19 @@ public:
 			return mAnchor;
 	}
 
-	math::aabb get_frame_uv(std::size_t pFrame) const noexcept
+	math::aabb get_frame_aabb(std::size_t pFrame) const noexcept
 	{
 		math::aabb result;
 		result.min = math::vec2{
-			static_cast<float>(mSize.x + 1) * static_cast<float>(pFrame), 0 }
-		+ math::vec2{ 1,  1 }; // +1 for Padding
+			static_cast<float>(mSize.x + padding) * static_cast<float>(pFrame), 0 }
+		+ math::vec2{ padding,  padding };
 		result.max = result.min + math::vec2{ mSize };
+		return result;
+	}
+
+	math::aabb get_frame_uv(std::size_t pFrame) const noexcept
+	{
+		math::aabb result = get_frame_aabb(pFrame);
 		result.min /= math::vec2{ mSize };
 		result.max /= math::vec2{ mSize };
 		return result;
@@ -88,15 +107,46 @@ public:
 		return mFrames[pFrame];
 	}
 
+	const texture& get_texture() const noexcept
+	{
+		return mTexture;
+	}
+
+	void resize_animation(std::size_t pLength)
+	{
+		mFrames.resize(pLength);
+	}
+
+	void set_frame_size(const math::ivec2& pSize) noexcept
+	{
+		mSize = pSize;
+	}
+
+	math::ivec2 get_frame_size() const noexcept
+	{
+		return mSize;
+	}
+
+	int get_frame_width() const noexcept
+	{
+		return mSize.x;
+	}
+
+	int get_frame_height() const noexcept
+	{
+		return mSize.y;
+	}
+
 private:
 	virtual json serialize_data() const override
 	{
 		json result;
 		result["frame_duration"] = mFrame_duration;
+		result["frame_size"] = mSize;
 		result["anchor"] = mAnchor;
 		json jframes;
 		for (auto& i : mFrames)
-			jframes.push_back(i);
+			jframes.push_back(frame_info::serialize(i));
 		result["frames"] = std::move(jframes);
 		return result;
 	}
@@ -104,12 +154,14 @@ private:
 	virtual void deserialize_data(const json& pJson) override
 	{
 		mFrame_duration = pJson["frame_duration"];
+		mSize = pJson["frame_size"];
 		mAnchor = pJson["anchor"];
 		for (auto& i : pJson["frames"])
-			mFrames.push_back(i.get<frame_info>());
+			mFrames.push_back(frame_info::deserialize(i));
 	}
 
 private:
+	texture mTexture;
 	image mImage;
 	std::vector<frame_info> mFrames;
 	float mFrame_duration = 0;

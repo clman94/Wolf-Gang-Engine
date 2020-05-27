@@ -27,9 +27,9 @@ public:
 	// TODO: Add ability to draw to several framebuffers for post-processing
 	//void set_framebuffer(const std::string& pName);
 
-	void set_texture(const texture::handle& pTexture) noexcept
+	void set_texture(const texture& pTexture) noexcept
 	{
-		mBatch.rendertexture = pTexture;
+		mBatch.rendertexture = &pTexture;
 	}
 
 	// Add 4 vertices as a quad. Returns the starting index in the vertices

@@ -21,6 +21,7 @@
 #include <wge/util/ipair.hpp>
 #include <wge/core/object_resource.hpp>
 #include <wge/core/scene_resource.hpp>
+#include <wge/graphics/sprite.hpp>
 
 #include "editor.hpp"
 #include "history.hpp"
@@ -90,6 +91,344 @@ public:
 
 namespace wge::editor
 {
+
+struct spritesheet_data
+{
+	graphics::image image;
+	math::ivec2 frame_size;
+	std::size_t frame_count = 0;
+};
+
+// Takes a directory with an array of sprites and converts them into
+// a spritesheet with proper padding.
+// The directory should look like this:
+//   mysprite/
+//   mysprite/mysprite1.png
+//   mysprite/mysprite2.png
+//   mysprite/mysprite3.png
+//   ...etc...
+// Assumptions:
+// - All images are the exact same size.
+// - All images are png.
+// - There is at least one frame.
+// - None of the images are empty (zero size).
+// - None of the images are corrupted.
+spritesheet_data create_spritesheet(const std::filesystem::path& pDirectory)
+{
+	const std::string sprite_name = pDirectory.filename().string();
+	std::vector<graphics::image> frames;
+
+	const auto make_frame_filepath = [&](int index)
+	{
+		return pDirectory / (sprite_name + std::to_string(index) + ".png");
+	};
+
+	// Load all the frames.
+	int frame_index = 1;
+	std::filesystem::path filepath = make_frame_filepath(frame_index);
+	while (std::filesystem::exists(filepath))
+	{
+		graphics::image frame;
+		frame.load_file(filepath.string());
+		frames.push_back(std::move(frame));
+
+		++frame_index;
+		filepath = make_frame_filepath(frame_index);
+	}
+
+	assert(!frames.empty());
+
+	// Calculate the size of the spritesheet.
+	// *This assumes all the frames are the same size.
+	const int padding = graphics::sprite::padding;
+	math::ivec2 spritesheet_size{
+		(frames.front().get_width() + padding) * static_cast<int>(frames.size()) + padding,
+		frames.front().get_height() + padding * 2
+	};
+
+	// Copy all the frames into the spritesheet.
+	graphics::image spritesheet(spritesheet_size);
+	math::ivec2 frame_position{ padding, padding };
+	for (auto& i : frames)
+	{
+		spritesheet.splice(i, frame_position);
+		frame_position += math::ivec2{ frames.front().get_width() + padding, 0 };
+	}
+
+	return { std::move(spritesheet), frames.front().get_size(), frames.size() };
+}
+
+class import_manager
+{
+private:
+	using time_point = std::filesystem::file_time_type;
+
+	struct import_link
+	{
+		util::uuid asset;
+		std::string import_name;
+		time_point import_time;
+
+		static json serialize(const import_link& pLink)
+		{
+			return {
+				{"asset_id", pLink.asset},
+				{"import_name", pLink.import_name}
+			};
+		}
+		static import_link deserialize(const json& pJson)
+		{
+			import_link link;
+			link.asset = pJson["asset_id"];
+			link.import_name = pJson["import_name"];
+			/*
+			std::tm tm{};
+			std::stringstream ss(pJson["import_time"].get<std::string>());
+			ss >> std::get_time(&tm, "%b %d %Y %H:%M:%S");
+			*/
+			return link;
+		}
+	};
+
+public:
+	void load_import_folder(const std::filesystem::path& pLocation)
+	{
+		mDirectory = pLocation;
+		const std::filesystem::path imports_path = mDirectory / "imports.json";
+		if (std::filesystem::exists(imports_path))
+		{
+			log::info("Parsing imports.json in \"{}\"", imports_path.string());
+			deserialize(json::parse(std::ifstream(imports_path.c_str())));
+		}
+		parse_import_directory();
+	}
+
+	void save_import_config() const
+	{
+		std::ofstream((mDirectory / "imports.json").c_str(), std::ios::binary) << serialize().dump(2);
+	}
+
+	void register_link(const core::asset::ptr& pAsset, std::string_view pName)
+	{
+		import_link link;
+		link.import_name = pName;
+		link.import_time = time_point::clock::now();
+		link.asset = pAsset->get_id();
+		mLinks.push_back(link);
+		save_import_config();
+	}
+
+	void import_tileset(const std::filesystem::path& pFilepath, core::asset_manager& pAsset_mgr)
+	{
+		graphics::image sprite;
+		sprite.load_file(pFilepath.string());
+
+		// Create the new asset.
+		auto tileset_asset = std::make_shared<core::asset>();
+		tileset_asset->set_name(pFilepath.stem().string());
+		tileset_asset->set_type("tileset");
+		pAsset_mgr.store_asset(tileset_asset);
+
+		// Save the image to the asset's location.
+		bool success = sprite.save_png(tileset_asset->get_location()->get_autonamed_file(".png").string());
+		assert(success);
+
+		// Configure the resource.
+		auto tileset_resource = pAsset_mgr.create_resource("tileset");
+		tileset_resource->set_location(tileset_asset->get_location());
+		tileset_resource->load();
+
+		// Save the configuration.
+		tileset_asset->set_resource(std::move(tileset_resource));
+		tileset_asset->save();
+		pAsset_mgr.add_asset(tileset_asset);
+		register_link(tileset_asset, pFilepath.stem().string());
+	}
+
+	void import_static_sprite(const std::filesystem::path& pFilepath, core::asset_manager& pAsset_mgr)
+	{
+		const int padding = graphics::sprite::padding;
+
+		graphics::image sprite;
+		sprite.load_file(pFilepath.string());
+		const math::ivec2 frame_size = sprite.get_size();
+		// Add padding to the sprite.
+		sprite = sprite.crop({ -padding, -padding }, sprite.get_size() + math::ivec2{ padding, padding });
+
+		// Create the new asset.
+		auto sprite_asset = std::make_shared<core::asset>();
+		sprite_asset->set_name(pFilepath.stem().string());
+		sprite_asset->set_type("sprite");
+		pAsset_mgr.store_asset(sprite_asset);
+
+		// Save the image to the asset's location.
+		bool success = sprite.save_png(sprite_asset->get_location()->get_autonamed_file(".png").string());
+		assert(success);
+
+		// Configure the resource.
+		auto sprite_resource = util::dynamic_unique_cast<graphics::sprite>(pAsset_mgr.create_resource("sprite"));
+		sprite_resource->set_location(sprite_asset->get_location());
+		sprite_resource->resize_animation(1);
+		sprite_resource->set_frame_size(frame_size);
+		sprite_resource->load();
+
+		// Save the configuration.
+		sprite_asset->set_resource(std::move(sprite_resource));
+		sprite_asset->save();
+		pAsset_mgr.add_asset(sprite_asset);
+		register_link(sprite_asset, pFilepath.stem().string());
+	}
+
+	void import_animated_sprite(const std::string& pName, core::asset_manager& pAsset_mgr)
+	{
+		// Create the new asset.
+		auto sprite_asset = std::make_shared<core::asset>();
+		sprite_asset->set_name(pName);
+		sprite_asset->set_type("sprite");
+		pAsset_mgr.store_asset(sprite_asset);
+
+		// Save the new spritesheet to the asset's location.
+		const spritesheet_data spritesheet = create_spritesheet(mDirectory / pName);
+		bool success = spritesheet.image.save_png(sprite_asset->get_location()->get_autonamed_file(".png").string());
+		assert(success);
+
+		// Configure the resource.
+		auto sprite_resource = util::dynamic_unique_cast<graphics::sprite>(pAsset_mgr.create_resource("sprite"));
+		sprite_resource->set_location(sprite_asset->get_location());
+		sprite_resource->resize_animation(spritesheet.frame_count);
+		sprite_resource->set_frame_size(spritesheet.frame_size);
+		sprite_resource->load();
+
+		// Save the configuration.
+		sprite_asset->set_resource(std::move(sprite_resource));
+		sprite_asset->save();
+		pAsset_mgr.add_asset(sprite_asset);
+		register_link(sprite_asset, pName);
+	}
+
+	static bool is_valid_animated_sprite(const std::filesystem::path& pDirectory)
+	{
+		// Check if it has at least 1 frame with the correct name.
+		return std::filesystem::exists(pDirectory / (pDirectory.filename().string() + "1.png"));
+	}
+
+	void parse_import_directory()
+	{
+		mNot_imported.clear();
+		mOutdated_names.clear();
+
+		for (auto i : std::filesystem::directory_iterator(mDirectory))
+		{
+			if (i.is_directory() && is_valid_animated_sprite(i.path()) ||
+				i.path().extension() == ".png")
+			{
+				const std::string name = i.path().stem().string();
+				if (!has_imported(name))
+					mNot_imported.push_back(i.path().filename().string());
+				else if (is_import_outdated(name, std::filesystem::last_write_time(i)))
+					mOutdated_names.push_back(name);
+			}
+		}
+	}
+
+	util::span<const std::string> get_not_imported_names() const noexcept
+	{
+		return mNot_imported;
+	}
+
+	util::span<const std::string> get_outdated_names() const noexcept
+	{
+		return mOutdated_names;
+	}
+
+	bool is_import_outdated(std::string_view pName, const time_point& mLast_import_time) const noexcept
+	{
+		for (auto& i : mLinks)
+			if (i.import_name == pName)
+				return i.import_time > mLast_import_time;
+		return false;
+	}
+
+	bool has_imported(std::string_view pName) const noexcept
+	{
+		for (auto& i : mLinks)
+			if (i.import_name == pName)
+				return true;
+		return false;
+	}
+
+private:
+	std::filesystem::path mDirectory;
+	std::vector<std::string> mNot_imported;
+	std::vector<std::string> mOutdated_names;
+	std::vector<import_link> mLinks;
+
+	json serialize() const
+	{
+		json result;
+		
+		json jimports;
+		for (auto& i : mLinks)
+			jimports.push_back(import_link::serialize(i));
+		result["imports"] = std::move(jimports);
+		return result;
+	}
+
+	void deserialize(const json& pJson)
+	{
+		for (auto& i : pJson["imports"])
+			mLinks.push_back(import_link::deserialize(i));
+	}
+};
+
+class import_window
+{
+public:
+	void on_gui(core::asset_manager& pAsset_mgr, import_manager& mManager)
+	{
+		ImGui::Begin("Imports");
+
+		if (ImGui::Button("Update List"))
+		{
+			log::info("Parsing import directory...");
+			mManager.parse_import_directory();
+			log::info("Found {} new imports", mManager.get_not_imported_names().size());
+			log::info("Found {} outdated imports", mManager.get_outdated_names().size());
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Import all")) {}
+		ImGui::SameLine();
+		if (ImGui::Button("Update all")) {}
+		ImGui::BeginChild("ImportsPane", { 0, 0 }, true);
+		ImGui::Columns(2);
+		for (auto& i : mManager.get_outdated_names())
+		{
+			ImGui::PushID(&i);
+			ImGui::TextUnformatted(i.c_str());
+			ImGui::NextColumn();
+			ImGui::Button("Update");
+			ImGui::NextColumn();
+			ImGui::PopID();
+		}
+
+		for (auto& i : mManager.get_not_imported_names())
+		{
+			ImGui::PushID(&i);
+			ImGui::TextUnformatted(i.c_str());
+			ImGui::NextColumn();
+			if (ImGui::Button("Import As..."))
+			{
+				mManager.import_animated_sprite(i, pAsset_mgr);
+			}
+			ImGui::NextColumn();
+			ImGui::PopID();
+		}
+
+		ImGui::Columns();
+		ImGui::EndChild();
+		ImGui::End();
+	}
+};
 
 class canvas_test
 {
@@ -225,15 +564,50 @@ inline bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr, bool pD
 	return *pOpen;
 }
 
+void preview_image(const char* pStr_id, const graphics::texture& pTexture, const math::vec2& pSize, const math::rect& pFrame_rect)
+{
+	if (pSize.x <= 0 || pSize.y <= 0)
+		return;
 
-void begin_image_editor(const char* pStr_id, const graphics::texture& pTexture, bool pShow_alpha = false)
+	// Scale the size of the image to preserve the aspect ratio but still fit in the
+	// specified area.
+	const float aspect_ratio = pFrame_rect.size.x / pFrame_rect.size.y;
+	math::vec2 scaled_size =
+	{
+		math::min(pSize.y * aspect_ratio, pSize.x),
+		math::min(pSize.x / aspect_ratio, pSize.y)
+	};
+
+	// Center the position
+	const math::vec2 center_offset = pSize / 2 - scaled_size / 2;
+	const math::vec2 pos = math::vec2(ImGui::GetCursorScreenPos()) + center_offset;
+
+	// Draw the checkered background
+	ImGui::DrawAlphaCheckerBoard(pos, scaled_size, 10);
+
+	// Convert to UV coord
+	math::aabb uv(pFrame_rect);
+	uv.min /= math::vec2(pTexture.get_size());
+	uv.max /= math::vec2(pTexture.get_size());
+
+	// Draw the image
+	const auto impl = std::dynamic_pointer_cast<graphics::opengl_texture_impl>(pTexture.get_implementation());
+	auto dl = ImGui::GetWindowDrawList();
+	dl->AddImage((void*)impl->get_gl_texture(), pos, pos + scaled_size, uv.min, uv.max);
+
+	// Add an invisible button so we can interact with this image
+	ImGui::InvisibleButton(pStr_id, pSize);
+}
+
+
+void begin_image_editor(const char* pStr_id, const graphics::texture& pTexture, const math::aabb& pUV = { 0, 0, 1, 1 }, bool pShow_alpha = false)
 {
 	ImGui::BeginChild(pStr_id, ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
 	float* zoom = ImGui::GetStateStorage()->GetFloatRef(ImGui::GetID("_Zoom"), 0);
 	float scale = std::powf(2, *zoom);
 
-	ImVec2 image_size = math::vec2(pTexture.get_size()) * scale;
+	ImVec2 image_size = math::vec2(pUV.max - pUV.min) * scale;
 	
 	const ImVec2 top_cursor = ImGui::GetCursorScreenPos();
 
@@ -248,7 +622,7 @@ void begin_image_editor(const char* pStr_id, const graphics::texture& pTexture, 
 	// A checker board will help us "see" the alpha channel of the image
 	ImGui::DrawAlphaCheckerBoard(image_position, image_size);
 
-	ImGui::Image(pTexture, image_size);
+	ImGui::Image(pTexture, image_size, pUV.min, pUV.max);
 
 	// Right and bottom padding
 	ImGui::SameLine();
@@ -374,6 +748,8 @@ public:
 
 	void on_gui()
 	{
+		auto sprite = get_asset()->get_resource<graphics::sprite>();
+
 		ImGui::BeginChild("AtlasInfo", ImVec2(mAtlas_info_width, 0));
 		atlas_info_pane();
 		ImGui::EndChild();
@@ -382,222 +758,40 @@ public:
 		ImGui::VerticalSplitter("AtlasInfoSplitter", &mAtlas_info_width);
 
 		ImGui::SameLine();
-		auto texture = get_asset()->get_resource<graphics::texture>();
-		begin_image_editor("Editor", *texture);
 
-		// Draw the rectangles for the frames
-		for (const auto& i : texture->get_raw_atlas())
-			visual_editor::draw_rect(i.frame_rect, { 0, 1, 1, 0.5f });
+		ImGui::BeginChild("Frames", { 0, 110 }, true, ImGuiWindowFlags_AlwaysHorizontalScrollbar);
 
-		const bool was_dragging = visual_editor::is_dragging();
-
-		// Get the pointer to the selected animation
-		graphics::animation* selected_animation = texture->get_animation(mSelected_animation_id);
-
-		// Modify selected
-		if (selected_animation)
+		for (std::size_t i = 0; i < sprite->get_frame_count(); i++)
 		{
-			visual_editor::begin_snap({ 1, 1 });
-
-			// Edit the selection
-			visual_editor::box_edit box_edit(selected_animation->frame_rect);
-			box_edit.resize(visual_editor::edit_type::rect);
-			box_edit.drag(visual_editor::edit_type::rect);
-			selected_animation->frame_rect = box_edit.get_rect();
-
-			// Limit the minimum size to 1 pixel so the user isn't using 0 or negitive numbers
-			selected_animation->frame_rect.size = math::max(selected_animation->frame_rect.size, math::vec2(1, 1));
-
-			// Notify a change in the asset
-			if (box_edit.is_dragging() && ImGui::IsMouseReleased(0))
-				mark_asset_modified();
-
-			visual_editor::end_snap();
+			ImGui::PushID(i);
+			ImGui::BeginChild("Frame", { 100, 0 }, true);
+			ImGui::Text(std::to_string(i + 1).c_str());
+			preview_image("Preview", sprite->get_texture(), ImGui::GetContentRegionAvail(), sprite->get_frame_aabb(i));
+			ImGui::EndChild();
+			if (ImGui::IsItemClicked())
+				mSelected_frame = i;
+			ImGui::PopID();
+			ImGui::SameLine();
 		}
 
-		// Select a new one
-		if (!was_dragging && ImGui::IsItemHovered() && ImGui::IsMouseReleased(0))
-		{
-			// Find all overlapping frames that the mouse is hovering
-			std::vector<graphics::animation*> mOverlapping;
-			for (auto& i : texture->get_raw_atlas())
-				if (i.frame_rect.intersects(visual_editor::get_mouse_position()))
-					mOverlapping.push_back(&i);
+		ImGui::EndChild();
 
-			if (!mOverlapping.empty())
-			{
-				// Check if the currently selected animation is being selected again
-				// and cycle through the overlapping animations each click.
-				auto iter = std::find(mOverlapping.begin(), mOverlapping.end(), selected_animation);
-				if (iter == mOverlapping.end() || iter + 1 == mOverlapping.end())
-					selected_animation = mOverlapping.front(); // Start/loop to front
-				else
-					selected_animation = *(iter + 1); // Next item
-				mSelected_animation_id = selected_animation->id;
-			}
-		}
+		begin_image_editor("Editor", sprite->get_texture(), sprite->get_frame_uv(mSelected_frame), true);
+
+		math::vec2 anchor = sprite->get_frame_anchor(mSelected_frame);
+
+		visual_editor::draw_line(anchor - math::vec2{ 5, 0 }, anchor + math::vec2{ 5, 0 }, { 1, 1, 1, 1 });
+		visual_editor::draw_line(anchor - math::vec2{ 0, 5 }, anchor + math::vec2{ 0, 5 }, { 1, 1, 1, 1 });
+
 		end_image_editor();
-
-	}
-
-	static void preview_image(const char* pStr_id, const graphics::texture::handle& pTexture, const math::vec2& pSize, const math::rect& pFrame_rect)
-	{
-		if (pSize.x <= 0 || pSize.y <= 0)
-			return;
-
-		// Scale the size of the image to preserve the aspect ratio but still fit in the
-		// specified area.
-		const float aspect_ratio = pFrame_rect.size.x / pFrame_rect.size.y;
-		math::vec2 scaled_size =
-		{
-			math::min(pSize.y * aspect_ratio, pSize.x),
-			math::min(pSize.x / aspect_ratio, pSize.y)
-		};
-
-		// Center the position
-		const math::vec2 center_offset = pSize / 2 - scaled_size / 2;
-		const math::vec2 pos = math::vec2(ImGui::GetCursorScreenPos()) + center_offset;
-
-		// Draw the checkered background
-		ImGui::DrawAlphaCheckerBoard(pos, scaled_size, 10);
-
-		// Convert to UV coord
-		math::aabb uv(pFrame_rect);
-		uv.min /= math::vec2(pTexture->get_size());
-		uv.max /= math::vec2(pTexture->get_size());
-
-		// Draw the image
-		const auto impl = std::dynamic_pointer_cast<graphics::opengl_texture_impl>(pTexture->get_implementation());
-		auto dl = ImGui::GetWindowDrawList();
-		dl->AddImage((void*)impl->get_gl_texture(), pos, pos + scaled_size, uv.min, uv.max);
-
-		// Add an invisible button so we can interact with this image
-		ImGui::InvisibleButton(pStr_id, pSize);
 	}
 
 	void atlas_info_pane()
 	{
-		const auto open_sprite_editor = []()
-		{
-			ImGui::Begin("Sprite Editor");
-			ImGui::SetWindowFocus();
-			ImGui::End();
-		};
 
-		graphics::texture::handle texture = get_asset();
-
-		if (ImGui::CollapsingHeader("Atlas", ImGuiTreeNodeFlags_DefaultOpen))
-		{
-			static float atlas_list_height = 200;
-			// Atlas list
-			ImGui::BeginChild("_AtlasList", { 0, atlas_list_height }, true);
-			ImGui::Columns(2, "_Previews", false);
-			ImGui::SetColumnWidth(0, 75 + ImGui::GetStyle().WindowPadding.x + ImGui::GetStyle().ItemSpacing.x);
-			for (auto& i : texture->get_raw_atlas())
-			{
-				if (ImGui::Selectable(("###" + i.name).c_str(), mSelected_animation_id == i.id, ImGuiSelectableFlags_SpanAllColumns, { 0, 75 }))
-					mSelected_animation_id = i.id;
-
-				// Double click will focus the sprite editor
-				if (ImGui::IsItemActive() && ImGui::IsMouseDoubleClicked(0))
-					open_sprite_editor();
-				ImGui::SameLine();
-
-				preview_image("SmallPreviewImage", texture, { 75, 75 }, i.frame_rect);
-
-				ImGui::NextColumn();
-
-				// Entry name
-				ImGui::Text(i.name.c_str());
-				ImGui::NextColumn();
-			}
-			ImGui::Columns();
-			ImGui::EndChild();
-
-			ImGui::HorizontalSplitter("AtlasListSplitter", &atlas_list_height);
-
-			if (ImGui::Button("Add"))
-			{
-				graphics::animation& animation = texture->get_raw_atlas().emplace_back();
-				animation.frame_rect = math::rect({ 0, 0 }, math::vec2(texture->get_size()));
-				animation.name = make_unique_animation_name(texture, "NewEntry");
-				animation.id = util::generate_uuid();
-				mark_asset_modified();
-			}
-
-			ImGui::SameLine();
-			if (ImGui::Button("Delete"))
-			{
-				auto iter = std::find_if(
-					texture->get_raw_atlas().begin(),
-					texture->get_raw_atlas().end(),
-					[&](auto& i) { return i.id == mSelected_animation_id; });
-				if (iter != texture->get_raw_atlas().end())
-				{
-					// Set the next animation after this one as selected
-					if (iter + 1 != texture->get_raw_atlas().end())
-						mSelected_animation_id = (iter + 1)->id;
-
-					// Remove it
-					texture->get_raw_atlas().erase(iter);
-				}
-				mark_asset_modified();
-			}
-		}
-
-		if (graphics::animation* selected_animation = texture->get_animation(mSelected_animation_id))
-		{
-			ImGui::PushID("_AnimationSettings");
-
-			if (ImGui::CollapsingHeader("Preview", ImGuiTreeNodeFlags_DefaultOpen))
-			{
-				static float preview_image_height = 200;
-				ImGui::BeginChild("PreviewImageChild", { 0, preview_image_height }, true, ImGuiWindowFlags_NoInputs);
-				preview_image("LargePreviewImage", texture, ImGui::GetWindowContentRegionSize(), selected_animation->frame_rect);
-				ImGui::EndChild();
-				ImGui::HorizontalSplitter("PreviewImageSplitter", &preview_image_height);
-				preview_image_height = math::max(preview_image_height, 30.f);
-
-				ImGui::Button("Play");
-				static int a = 1;
-				const std::string format = "%d/" + std::to_string(selected_animation->frames);
-				ImGui::SliderInt("Frame", &a, 1, selected_animation->frames, format.c_str());
-			}
-			if (ImGui::CollapsingHeader("Basic", ImGuiTreeNodeFlags_DefaultOpen))
-			{
-				ImGui::InputText("Name", &selected_animation->name);
-				if (ImGui::IsItemDeactivatedAfterEdit())
-				{
-					std::string temp = std::move(selected_animation->name);
-					selected_animation->name = make_unique_animation_name(texture, temp);
-					mark_asset_modified();
-				}
-				ImGui::DragFloat2("Position", selected_animation->frame_rect.position.components().data()); check_if_edited();
-				ImGui::DragFloat2("Size", selected_animation->frame_rect.size.components().data()); check_if_edited();
-			}
-			if (ImGui::CollapsingHeader("Animation", ImGuiTreeNodeFlags_DefaultOpen))
-			{
-				int frame_count = static_cast<int>(selected_animation->frames);
-				if (ImGui::InputInt("Frame Count", &frame_count))
-				{
-					// Limit the minimun to 1
-					selected_animation->frames = math::max<std::size_t>(static_cast<std::size_t>(frame_count), 1);
-					mark_asset_modified();
-				}
-				ImGui::InputFloat("Interval", &selected_animation->interval, 0.01f, 0.1f, "%.3f Seconds"); check_if_edited();
-			}
-			ImGui::PopID();
-		}
 	}
 
 private:
-	static std::string make_unique_animation_name(const graphics::texture::handle& pTexture, const std::string& pName)
-	{
-		return util::create_unique_name(pName,
-			pTexture->get_raw_atlas().begin(), pTexture->get_raw_atlas().end(),
-			[](auto& i) -> const std::string& { return i.name; });
-	}
-
 	void check_if_edited()
 	{
 		if (ImGui::IsItemDeactivatedAfterEdit())
@@ -605,7 +799,7 @@ private:
 	}
 
 private:
-	util::uuid mSelected_animation_id;
+	std::size_t mSelected_frame = 0;
 	float mAtlas_info_width = 200;
 };
 
@@ -640,12 +834,6 @@ public:
 	{
 		auto tileset = get_asset()->get_resource<graphics::tileset>();
 
-		if (auto texture_asset = asset_selector("TextureSelector", "texture", get_asset_manager(), get_asset_manager().get_asset(tileset->texture_id)))
-		{
-			tileset->texture_id = texture_asset->get_id();
-			mark_asset_modified();
-		}
-		
 		int tile_size = tileset->tile_size.x;
 		if (ImGui::InputInt("Tile Size", &tile_size))
 		{
@@ -655,14 +843,9 @@ public:
 		}
 
 		ImGui::BeginChild("TilesetEditor", { 0, 0 }, true);
-		if (auto texture = get_asset_manager().get_resource<graphics::texture>(tileset->texture_id))
-		{
-			begin_image_editor("Tileset", *texture);
-			visual_editor::draw_grid({ 1, 1, 1, 1 }, tileset->tile_size.x);
-			end_image_editor();
-		}
-		else
-			ImGui::Text("Invalid Texture");
+		begin_image_editor("Tileset", tileset->get_texture());
+		visual_editor::draw_grid({ 1, 1, 1, 1 }, tileset->tile_size.x);
+		end_image_editor();
 		ImGui::EndChild();
 	}
 };
@@ -1192,14 +1375,14 @@ public:
 		core::tilemap_manipulator tilemap(*mSelected_layer);
 		if (auto asset = asset_selector("Select_tileset", "tileset", get_asset_manager(), tilemap.get_tileset().get_asset()))
 		{
-			tilemap.set_tileset(asset, get_asset_manager());
+			tilemap.set_tileset(asset);
 			tilemap.update_tile_uvs();
 		}
 
-		auto texture = tilemap.get_texture();
-		if (texture)
+		auto tileset = tilemap.get_tileset();
+		if (tileset)
 		{
-			begin_image_editor("Tileset", *texture);
+			begin_image_editor("Tileset", tileset->get_texture());
 			// Draw tile grid.
 			visual_editor::draw_grid({ 1, 1, 1, 1 }, tilemap.get_tilesize().x);
 
@@ -1419,11 +1602,10 @@ static bool texture_asset_input(core::asset::ptr& pAsset, context& pContext, con
 			pContext.open_editor(pAsset);
 		ImGui::SameLine();
 		ImGui::BeginGroup();
-		auto res = pAsset->get_resource<graphics::texture>();
-		ImGui::Text("Size: %i, %i", res->get_width(), res->get_height());
-		ImGui::Text("Animations: %u", res->get_raw_atlas().size());
+		auto res = pAsset->get_resource<graphics::sprite>();
+		ImGui::Text("Size: %i, %i", res->get_frame_width(), res->get_frame_height());
 		ImGui::EndGroup();
-		ImGui::InputText("Texture", &inputtext, ImGuiInputTextFlags_ReadOnly);
+		ImGui::InputText("Sprite", &inputtext, ImGuiInputTextFlags_ReadOnly);
 	}
 	else
 	{
@@ -1435,7 +1617,7 @@ static bool texture_asset_input(core::asset::ptr& pAsset, context& pContext, con
 
 	if (ImGui::BeginDragDropTarget())
 	{
-		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("textureAsset"))
+		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("spriteAsset"))
 		{
 			const util::uuid& id = *(const util::uuid*)payload->Data;
 			pAsset = pAsset_manager.get_asset(id);
@@ -1835,16 +2017,12 @@ class application
 public:
 	application()
 	{
-		mContext.register_editor<sprite_editor>("texture");
+		mContext.register_editor<sprite_editor>("sprite");
 		//mContext.register_editor<object_editor>("gameobject", mInspectors);
 		mContext.register_editor<script_editor>("script");
 		mContext.register_editor<scene_editor>("scene", mOn_game_run);
 		mContext.register_editor<eventful_sprite_editor>("gameobject");
 		mContext.register_editor<tileset_editor>("tileset");
-		
-		mEngine.get_asset_manager().register_default_resource_factory<graphics::tileset>("tileset");
-		mEngine.get_asset_manager().register_default_resource_factory<core::object_resource>("gameobject");
-		mEngine.get_asset_manager().register_default_resource_factory<core::scene_resource>("scene");
 
 		mOn_game_run.connect([this](const core::asset::ptr& pAsset) {
 			mGame_viewport.open_scene(pAsset);
@@ -1928,6 +2106,7 @@ private:
 			mAsset_manager_window.on_gui();
 			mContext.show_editor_guis();
 			mGame_viewport.on_gui();
+			mImport_window.on_gui(mContext.get_engine().get_asset_manager(), mImport_manager);
 
 			end_frame();
 		}
@@ -2081,6 +2260,7 @@ private:
 		mEngine.load_game(pPath);
 
 		mEngine.get_script_engine().execute_global_scripts(mEngine.get_asset_manager());
+		mImport_manager.load_import_folder(pPath / "imports");
 	}
 
 private:
@@ -2111,7 +2291,8 @@ private:
 
 	// Reference the game engine for convenience.
 	core::engine& mEngine{ mContext.get_engine() };
-
+	import_manager mImport_manager;
+	import_window mImport_window;
 	asset_manager_window mAsset_manager_window{ mContext, mEngine.get_asset_manager() };
 	drop_import_handler mDrop_import_handler{ mEngine.get_asset_manager() };
 	game_viewport mGame_viewport{ mEngine };

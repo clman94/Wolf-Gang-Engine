@@ -19,9 +19,6 @@ struct tile
 struct tilemap_info
 {
 	core::resource_handle<graphics::tileset> tileset;
-	// This is the cached texture handle so we don't have to keep looking it up.
-	core::resource_handle<graphics::texture> texture;
-
 };
 
 struct tile_animation
@@ -80,20 +77,14 @@ public:
 		return false;
 	}
 
-	void set_tileset(core::resource_handle<graphics::tileset> pTileset, const asset_manager& pAsset_manager)
+	void set_tileset(core::resource_handle<graphics::tileset> pTileset)
 	{
 		mInfo->tileset = pTileset;
-		mInfo->texture = pAsset_manager.get_asset(pTileset->texture_id);
 	}
 
 	core::resource_handle<graphics::tileset> get_tileset() const
 	{
 		return mInfo->tileset;
-	}
-
-	core::resource_handle<graphics::texture> get_texture() const
-	{
-		return mInfo->texture;
 	}
 
 	math::ivec2 get_tilesize() const
@@ -139,7 +130,7 @@ public:
 
 	void update_tile_uvs()
 	{
-		if (!mInfo->texture)
+		if (!mInfo->tileset)
 			return;
 		for (auto& [id, tile, quad_verts] : mLayer->each<tile, graphics::quad_vertices>())
 			quad_verts.set_uv(get_uvrect(tile.uv));
@@ -148,9 +139,9 @@ public:
 private:
 	math::rect get_uvrect(math::ivec2 pUV) const
 	{
-		if (mInfo->texture && mInfo->tileset)
+		if (mInfo->tileset)
 		{
-			auto tile_uv_size = math::vec2(mInfo->tileset->tile_size) / math::vec2(mInfo->texture->get_size());
+			auto tile_uv_size = math::vec2(mInfo->tileset->tile_size) / math::vec2(mInfo->tileset->get_texture().get_size());
 			return math::rect(math::vec2(pUV) * tile_uv_size, tile_uv_size);
 		}
 		else

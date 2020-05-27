@@ -8,39 +8,35 @@ namespace wge::graphics
 
 void sprite_component::create_batch(math::transform& pTransform, renderer& pRenderer)
 {
-	// No texture
-	if (!mTexture)
+	// No sprite.
+	if (!mSprite)
 		return;
-	texture::handle res = mTexture;
+
+	const texture& sprite_texture = mSprite->get_texture();
 
 	batch_builder batch;
-	batch.set_texture(res);
+	batch.set_texture(sprite_texture);
 
-	const math::vec2 texture_size{ res->get_size() };
+	const math::vec2 frame_size{ mSprite->get_frame_size() };
 
-	const animation* anim = res->get_animation(mAnimation_id);
-	if (!anim)
-		return;
-
-	math::aabb uv {
-		anim->frame_rect.position / texture_size,
-		(anim->frame_rect.position + anim->frame_rect.size) / texture_size
-	};
+	math::aabb uv = mSprite->get_frame_aabb(0);
 
 	vertex_2d verts[4];
 	verts[0].position = math::vec2(0, 0);
 	verts[0].uv = uv.min;
-	verts[1].position = texture_size.swizzle(math::_x, 0);
+	verts[1].position = frame_size.swizzle(math::_x, 0);
 	verts[1].uv = math::vec2(uv.max.x, uv.min.y);
-	verts[2].position = texture_size;
+	verts[2].position = frame_size;
 	verts[2].uv = uv.max;
-	verts[3].position = texture_size.swizzle(0, math::_y);
+	verts[3].position = frame_size.swizzle(0, math::_y);
 	verts[3].uv = math::vec2(uv.min.x, uv.max.y);
+
+	math::vec2 anchor = mSprite->get_frame_anchor(0);
 
 	// Transform the vertices
 	for (int i = 0; i < 4; i++)
 	{
-		verts[i].position += -mAnchor * texture_size + mOffset;
+		verts[i].position += mOffset - anchor;
 		verts[i].position *= pRenderer.get_pixel_size();
 		
 		// Calc aabb of sprite before transform
@@ -74,48 +70,14 @@ math::vec2 sprite_component::get_offset() const noexcept
 	return mOffset;
 }
 
-void sprite_component::set_anchor(const math::vec2& pRatio) noexcept
+void sprite_component::set_sprite(const core::asset::ptr& pAsset) noexcept
 {
-	mAnchor = pRatio;
+	mSprite = pAsset;
 }
 
-math::vec2 sprite_component::get_anchor() const noexcept
+core::asset::ptr sprite_component::get_sprite() const noexcept
 {
-	return mAnchor;
-}
-
-bool sprite_component::set_animation(const std::string& pName) noexcept
-{
-	WGE_ASSERT(mTexture);
-	if (auto anim = mTexture->get_animation(pName))
-	{
-		mAnimation_id = anim->id;
-		return true;
-	}
-	return false;
-}
-
-bool sprite_component::set_animation(const util::uuid& pId) noexcept
-{
-	WGE_ASSERT(mTexture);
-	if (mTexture->get_animation(pId))
-	{
-		mAnimation_id = pId;
-		return true;
-	}
-	return false;
-}
-
-void sprite_component::set_texture(const core::asset::ptr& pAsset) noexcept
-{
-	mTexture = pAsset;
-	if (mTexture)
-		set_animation("Default");
-}
-
-core::asset::ptr sprite_component::get_texture() const noexcept
-{
-	return mTexture.get_asset();
+	return mSprite.get_asset();
 }
 
 } // namespace wge::graphics

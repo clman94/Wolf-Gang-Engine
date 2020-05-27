@@ -312,7 +312,7 @@ void asset_manager::load_assets()
 			auto ptr = std::make_shared<asset>();
 			if (!ptr->load_file(i))
 			{
-				log::error("Failed to parse asset configuration for asset at \"{}\"",i.string());
+				log::error("Failed to parse asset configuration for asset at \"{}\"", i.string());
 				continue;
 			}
 

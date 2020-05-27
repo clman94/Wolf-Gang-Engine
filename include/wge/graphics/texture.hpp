@@ -12,25 +12,9 @@
 #include <wge/core/asset.hpp>
 #include <wge/filesystem/filesystem_interface.hpp>
 #include <wge/graphics/image.hpp>
+
 namespace wge::graphics
 {
-
-struct animation
-{
-public:
-	std::string name;
-	std::size_t frames{ 1 };
-	float interval{ 0 };
-	math::rect frame_rect;
-	util::uuid id;
-
-	animation() = default;
-	animation(const json& pJson);
-
-	// Parse json
-	void deserialize(const json& pJson);
-	[[nodiscard]] json serialize() const;
-};
 
 // Interface for the texture implementation.
 class texture_impl
@@ -43,24 +27,15 @@ public:
 	virtual bool is_smooth() const = 0;
 };
 
-class texture :
-	public core::resource
+class texture
 {
 public:
-	using atlas_container = std::vector<animation>;
-	using handle = core::resource_handle<texture>;
-
-	virtual ~texture() {}
-
 	void set_implementation(const texture_impl::ptr& pImpl) noexcept;
 	texture_impl::ptr get_implementation() const noexcept;
 
 	void set_image(image&& pImage);
 	void set_image(const image& pImage);
 	const image& get_image() const noexcept { return mImage; }
-
-	// Load a texture from a file
-	virtual void load() override;
 
 	// Get width of texture in pixels
 	int get_width() const noexcept;
@@ -78,19 +53,7 @@ public:
 	void set_smooth(bool pEnabled) noexcept;
 	bool is_smooth() const noexcept;
 
-	// Retrieve an animation by name. Returns an empty pointer if it was not found.
-	animation* get_animation(const std::string& pName) noexcept;
-	animation* get_animation(const util::uuid& pId) noexcept;
-
-	// Get the raw container for the atlas.
-	// Mainly for use by an editor.
-	atlas_container& get_raw_atlas() noexcept;
-	const atlas_container& get_raw_atlas() const noexcept;
-
 private:
-	virtual json serialize_data() const override;
-	virtual void deserialize_data(const json& pJson) override;
-
 	void update_impl_image();
 
 private:
@@ -98,9 +61,6 @@ private:
 	texture_impl::ptr mImpl;
 	bool mSmooth{ false };
 	image mImage;
-	atlas_container mAtlas;
-	// util::uuid mDefault_animation; // TODO: Use instead of a "Default" animation
 };
-
 
 } // namespace wge::graphics
