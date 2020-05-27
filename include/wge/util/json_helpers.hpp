@@ -121,3 +121,30 @@ void to_json(nlohmann::json&, const path&);
 void from_json(const nlohmann::json&, path&);
 
 } // namespace wge::filesystem
+
+namespace nlohmann
+{
+
+template <typename T>
+struct adl_serializer<std::optional<T>>
+{
+	static void to_json(json& pJson, const std::optional<T>& pOpt)
+	{
+		if (pOpt.has_value())
+			pJson = pOpt.value();
+		else 
+			pJson = nullptr;
+	}
+
+	static void from_json(const json& pJson, std::optional<T>& pOpt)
+	{
+		if (pJson.is_null())
+			pOpt = {};
+		else
+			pOpt = pJson.get<T>();
+	}
+};
+
+} // namespace nlohmann
+
+

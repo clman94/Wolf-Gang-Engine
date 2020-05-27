@@ -45,6 +45,11 @@ void image::splice(const image& pSrc,
 	const math::ivec2& pSrc_min,
 	const math::ivec2& pSrc_max) noexcept
 {
+	// Overlapping might occur if the same object is used as the source.
+	// The correct alternative is to crop out the section you want
+	// to copy and splice it to this image.
+	assert(&pSrc != this);
+
 	const math::ivec2 src_size = (pSrc_max - pSrc_min) + math::ivec2{ 1, 1 };
 	if (empty() || pSrc.empty() || // Nothing to paste.
 		pDest.x >= mSize.x || pDest.y >= mSize.y || // Source is being pasted outside this image.
