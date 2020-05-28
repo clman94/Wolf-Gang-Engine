@@ -8,18 +8,19 @@ namespace wge::graphics
 
 void sprite_component::create_batch(math::transform& pTransform, renderer& pRenderer)
 {
-	// No sprite.
-	if (!mSprite)
+	if (!mController.get_sprite())
 		return;
 
-	const texture& sprite_texture = mSprite->get_texture();
+	const auto sprite = mController.get_sprite();
+
+	const texture& sprite_texture = sprite->get_texture();
 
 	batch_builder batch;
 	batch.set_texture(sprite_texture);
 
-	const math::vec2 frame_size{ mSprite->get_frame_size() };
+	const math::vec2 frame_size{ sprite->get_frame_size() };
 
-	math::aabb uv = mSprite->get_frame_uv(0);
+	math::aabb uv = sprite->get_frame_uv(0);
 
 	vertex_2d verts[4];
 	verts[0].position = math::vec2(0, 0);
@@ -31,7 +32,7 @@ void sprite_component::create_batch(math::transform& pTransform, renderer& pRend
 	verts[3].position = frame_size.swizzle(0, math::_y);
 	verts[3].uv = math::vec2(uv.min.x, uv.max.y);
 
-	math::vec2 anchor = mSprite->get_frame_anchor(0);
+	math::vec2 anchor = sprite->get_frame_anchor(0);
 
 	// Transform the vertices
 	for (int i = 0; i < 4; i++)
@@ -72,12 +73,12 @@ math::vec2 sprite_component::get_offset() const noexcept
 
 void sprite_component::set_sprite(const core::asset::ptr& pAsset) noexcept
 {
-	mSprite = pAsset;
+	mController.set_sprite(pAsset);
 }
 
 core::asset::ptr sprite_component::get_sprite() const noexcept
 {
-	return mSprite.get_asset();
+	return mController.get_sprite().get_asset();
 }
 
 } // namespace wge::graphics

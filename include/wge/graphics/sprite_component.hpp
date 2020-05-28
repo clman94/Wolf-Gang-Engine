@@ -35,9 +35,19 @@ public:
 		return mLocal_aabb;
 	}
 
+	sprite_controller& get_controller() noexcept
+	{
+		return mController;
+	}
+
+	const sprite_controller& get_controller() const noexcept
+	{
+		return mController;
+	}
+
 private:
+	sprite_controller mController;
 	math::aabb mSceen_aabb, mLocal_aabb;
-	sprite::handle mSprite;
 	math::vec2 mOffset, mAnchor{ math::anchor::topleft };
 	util::uuid mAnimation_id;
 };
