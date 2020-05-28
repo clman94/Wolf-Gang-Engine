@@ -90,8 +90,8 @@ public:
 	math::aabb get_frame_uv(std::size_t pFrame) const noexcept
 	{
 		math::aabb result = get_frame_aabb(pFrame);
-		result.min /= math::vec2{ mSize };
-		result.max /= math::vec2{ mSize };
+		result.min /= math::vec2{ mImage.get_size() };
+		result.max /= math::vec2{ mImage.get_size() };
 		return result;
 	}
 
