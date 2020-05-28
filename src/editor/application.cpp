@@ -158,10 +158,27 @@ spritesheet_data create_spritesheet(const std::filesystem::path& pDirectory)
 	return { std::move(spritesheet), frames.front().get_size(), frames.size() };
 }
 
+template <typename Ttime_point>
+inline std::time_t to_time_t(Ttime_point pTime_point)
+{
+	using namespace std::chrono;
+	auto now = Ttime_point::clock::now();
+	auto sctp = time_point_cast<system_clock::duration>((pTime_point - now) + now);
+	return system_clock::to_time_t(sctp);
+}
+
+// This exists because the C++17 file_time_clock does not
+// have any facilities to allow us to serialize it (to_time_t, from_time_t).
+template <typename Tto_tp, typename Tfrom_tp>
+inline Tto_tp cast_clock(Tfrom_tp pTime_point)
+{
+	return std::chrono::time_point_cast<Tto_tp::duration>((pTime_point - Tfrom_tp::clock::now()) + Tto_tp::clock::now());
+}
+
 class import_manager
 {
 private:
-	using time_point = std::filesystem::file_time_type;
+	using time_point = std::chrono::system_clock::time_point;
 
 	struct import_link
 	{
@@ -171,9 +188,14 @@ private:
 
 		static json serialize(const import_link& pLink)
 		{
+			std::time_t time = time_point::clock::to_time_t(pLink.import_time);
+			std::tm* tm = localtime(&time);
+			std::stringstream time_buffer;
+			time_buffer << std::put_time(tm, "%b %d %Y %H:%M:%S");
 			return {
-				{"asset_id", pLink.asset},
-				{"import_name", pLink.import_name}
+				{ "asset_id", pLink.asset },
+				{ "import_name", pLink.import_name },
+				{ "import_time", time_buffer.str() }
 			};
 		}
 		static import_link deserialize(const json& pJson)
@@ -181,11 +203,12 @@ private:
 			import_link link;
 			link.asset = pJson["asset_id"];
 			link.import_name = pJson["import_name"];
-			/*
+			
 			std::tm tm{};
 			std::stringstream ss(pJson["import_time"].get<std::string>());
 			ss >> std::get_time(&tm, "%b %d %Y %H:%M:%S");
-			*/
+			link.import_time = time_point::clock::from_time_t(mktime(&tm));
+			
 			return link;
 		}
 	};
@@ -245,19 +268,20 @@ public:
 		register_link(tileset_asset, pFilepath.stem().string());
 	}
 
-	void import_static_sprite(const std::filesystem::path& pFilepath, core::asset_manager& pAsset_mgr)
+	void import_static_sprite(const std::string& pName, core::asset_manager& pAsset_mgr)
 	{
+		const std::string asset_name = std::filesystem::path(pName).stem().string();
 		const int padding = graphics::sprite::padding;
 
 		graphics::image sprite;
-		sprite.load_file(pFilepath.string());
+		sprite.load_file((mDirectory / pName).string());
 		const math::ivec2 frame_size = sprite.get_size();
 		// Add padding to the sprite.
 		sprite = sprite.crop({ -padding, -padding }, sprite.get_size() + math::ivec2{ padding, padding });
 
 		// Create the new asset.
 		auto sprite_asset = std::make_shared<core::asset>();
-		sprite_asset->set_name(pFilepath.stem().string());
+		sprite_asset->set_name(asset_name);
 		sprite_asset->set_type("sprite");
 		pAsset_mgr.store_asset(sprite_asset);
 
@@ -276,7 +300,7 @@ public:
 		sprite_asset->set_resource(std::move(sprite_resource));
 		sprite_asset->save();
 		pAsset_mgr.add_asset(sprite_asset);
-		register_link(sprite_asset, pFilepath.stem().string());
+		register_link(sprite_asset, pName);
 	}
 
 	void import_animated_sprite(const std::string& pName, core::asset_manager& pAsset_mgr)
@@ -305,6 +329,15 @@ public:
 		pAsset_mgr.add_asset(sprite_asset);
 		register_link(sprite_asset, pName);
 	}
+	
+	void import_sprite(const std::string& pName, core::asset_manager& pAsset_mgr)
+	{
+		if (std::filesystem::is_directory(mDirectory / pName))
+			import_animated_sprite(pName, pAsset_mgr);
+		else
+			import_static_sprite(pName, pAsset_mgr);
+	}
+
 
 	static bool is_valid_animated_sprite(const std::filesystem::path& pDirectory)
 	{
@@ -322,10 +355,11 @@ public:
 			if (i.is_directory() && is_valid_animated_sprite(i.path()) ||
 				i.path().extension() == ".png")
 			{
-				const std::string name = i.path().stem().string();
+				const std::string name = i.path().filename().string();
 				if (!has_imported(name))
-					mNot_imported.push_back(i.path().filename().string());
-				else if (is_import_outdated(name, std::filesystem::last_write_time(i)))
+					mNot_imported.push_back(name);
+
+				else if (is_import_outdated(name, i))
 					mOutdated_names.push_back(name);
 			}
 		}
@@ -341,11 +375,31 @@ public:
 		return mOutdated_names;
 	}
 
-	bool is_import_outdated(std::string_view pName, const time_point& mLast_import_time) const noexcept
+	bool is_import_outdated(std::string_view pName, const std::filesystem::directory_entry& pEntry) const noexcept
 	{
 		for (auto& i : mLinks)
+		{
 			if (i.import_name == pName)
-				return i.import_time > mLast_import_time;
+			{
+				if (pEntry.is_directory())
+				{
+					// Check all sub files in the directory.
+					for (auto subfile : std::filesystem::directory_iterator(pEntry))
+					{
+						auto write_time = cast_clock<time_point>(subfile.last_write_time());
+						if (i.import_time < write_time)
+							return true;
+					}
+					return false;
+				}
+				else
+				{
+					auto write_time = cast_clock<time_point>(pEntry.last_write_time());
+					// Check only the file.
+					return i.import_time < write_time;
+				}
+			}
+		}
 		return false;
 	}
 
@@ -386,6 +440,8 @@ class import_window
 public:
 	void on_gui(core::asset_manager& pAsset_mgr, import_manager& mManager)
 	{
+		bool imports_need_refresh = false;
+
 		ImGui::Begin("Imports");
 
 		if (ImGui::Button("Update List"))
@@ -418,7 +474,8 @@ public:
 			ImGui::NextColumn();
 			if (ImGui::Button("Import As..."))
 			{
-				mManager.import_animated_sprite(i, pAsset_mgr);
+				mManager.import_sprite(i, pAsset_mgr);
+				imports_need_refresh = true;
 			}
 			ImGui::NextColumn();
 			ImGui::PopID();
@@ -427,6 +484,11 @@ public:
 		ImGui::Columns();
 		ImGui::EndChild();
 		ImGui::End();
+
+		if (imports_need_refresh)
+		{
+			mManager.parse_import_directory();
+		}
 	}
 };
 
@@ -793,10 +855,8 @@ public:
 		}
 		ImGui::EndChild();
 
-		ImGui::BeginChild("AtlasInfo", ImVec2(mAtlas_info_width, 0));
+		ImGui::BeginChild("AnimationSettings", ImVec2(mAtlas_info_width, 0));
 		{
-			bool thing = false;
-			ImGui::Checkbox("##thing", &thing); ImGui::SameLine();
 			math::vec2 anchor = sprite->get_default_anchor();
 			if (ImGui::DragFloat2("Anchor", anchor.components().data()))
 			{
