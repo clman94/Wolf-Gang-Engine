@@ -19,7 +19,7 @@ void sprite_component::create_batch(math::transform& pTransform, renderer& pRend
 
 	const math::vec2 frame_size{ mSprite->get_frame_size() };
 
-	math::aabb uv = mSprite->get_frame_aabb(0);
+	math::aabb uv = mSprite->get_frame_uv(0);
 
 	vertex_2d verts[4];
 	verts[0].position = math::vec2(0, 0);
