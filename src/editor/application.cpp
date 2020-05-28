@@ -604,10 +604,10 @@ void begin_image_editor(const char* pStr_id, const graphics::texture& pTexture, 
 {
 	ImGui::BeginChild(pStr_id, ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
-	float* zoom = ImGui::GetStateStorage()->GetFloatRef(ImGui::GetID("_Zoom"), 0);
+	float* zoom = ImGui::GetStateStorage()->GetFloatRef(ImGui::GetID("_Zoom"), 3);
 	float scale = std::powf(2, *zoom);
 
-	ImVec2 image_size = math::vec2(pUV.max - pUV.min) * scale;
+	ImVec2 image_size = (math::vec2(pUV.max - pUV.min) * math::vec2(pTexture.get_size())) * scale;
 	
 	const ImVec2 top_cursor = ImGui::GetCursorScreenPos();
 
@@ -758,7 +758,7 @@ public:
 		ImGui::VerticalSplitter("AtlasInfoSplitter", &mAtlas_info_width);
 
 		ImGui::SameLine();
-
+		ImGui::BeginGroup();
 		ImGui::BeginChild("Frames", { 0, 110 }, true, ImGuiWindowFlags_AlwaysHorizontalScrollbar);
 
 		for (std::size_t i = 0; i < sprite->get_frame_count(); i++)
@@ -784,6 +784,7 @@ public:
 		visual_editor::draw_line(anchor - math::vec2{ 0, 5 }, anchor + math::vec2{ 0, 5 }, { 1, 1, 1, 1 });
 
 		end_image_editor();
+		ImGui::EndGroup();
 	}
 
 	void atlas_info_pane()
