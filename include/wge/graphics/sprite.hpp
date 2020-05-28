@@ -16,7 +16,6 @@ class sprite :
 {
 public:
 	using handle = core::resource_handle<sprite>;
-
 	static constexpr int padding = 1;
 
 public:
@@ -137,6 +136,26 @@ public:
 		return mSize.y;
 	}
 
+	math::vec2 get_default_anchor() const noexcept
+	{
+		return mAnchor;
+	}
+
+	void set_default_anchor(const math::vec2& pAnchor) noexcept
+	{
+		mAnchor = pAnchor;
+	}
+
+	float get_default_duration() const noexcept
+	{
+		return mFrame_duration;
+	}
+
+	void set_default_duration(float pSeconds) noexcept
+	{
+		mFrame_duration = pSeconds;
+	}
+
 private:
 	virtual json serialize_data() const override
 	{
@@ -167,6 +186,100 @@ private:
 	float mFrame_duration = 0;
 	math::ivec2 mSize;
 	math::vec2 mAnchor;
+};
+
+class sprite_controller
+{
+public:
+	sprite_controller() = default;
+	sprite_controller(sprite::handle pHandle) :
+		mSprite(pHandle)
+	{}
+
+	void set_sprite(sprite::handle pHandle) noexcept
+	{
+		mSprite = pHandle;
+		restart();
+	}
+
+	sprite::handle get_sprite() const noexcept
+	{
+		return mSprite;
+	}
+
+	void toggle() noexcept
+	{
+		mPlaying = !mPlaying;
+	}
+
+	void play() noexcept
+	{
+		mPlaying = true;
+	}
+
+	void pause() noexcept
+	{
+		mPlaying = false;
+	}
+
+	void stop() noexcept
+	{
+		mPlaying = false;
+		restart();
+	}
+
+	void restart() noexcept
+	{
+		mTimer = 0;
+		mFrame_index = 0;
+	}
+
+	bool is_playing() const noexcept
+	{
+		return mPlaying;
+	}
+
+	bool is_paused() const noexcept
+	{
+		return !mPlaying;
+	}
+
+	std::size_t get_frame() const noexcept
+	{
+		return mFrame_index;
+	}
+
+	void set_frame(std::size_t pFrame)
+	{
+		if (pFrame >= mSprite->get_frame_count())
+			mFrame_index = mSprite->get_frame_count() - 1;
+		else
+			mFrame_index = pFrame;
+	}
+
+	void update(float pDelta)
+	{
+		if (!mSprite)
+			return;
+		if (mPlaying)
+		{
+			if (mTimer >= mSprite->get_frame_duration(mFrame_index))
+			{
+				mTimer = 0;
+				++mFrame_index;
+				if (mFrame_index >= mSprite->get_frame_count())
+					mFrame_index = 0;
+			}
+
+			mTimer += pDelta;
+		}
+	}
+
+private:
+	sprite::handle mSprite;
+	float mTimer = 0;
+	std::size_t mFrame_index = 0;
+	bool mPlaying = false;
 };
 
 } // namespace wge::graphics
