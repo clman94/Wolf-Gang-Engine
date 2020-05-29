@@ -41,7 +41,6 @@ public:
 		}
 	};
 
-
 	virtual void load()
 	{
 		mImage.load_file(get_location().get_autonamed_file(".png").string());
@@ -191,8 +190,8 @@ private:
 class sprite_controller
 {
 public:
-	sprite_controller() = default;
-	sprite_controller(sprite::handle pHandle) :
+	sprite_controller() noexcept = default;
+	sprite_controller(sprite::handle pHandle) noexcept :
 		mSprite(pHandle)
 	{}
 
@@ -242,6 +241,11 @@ public:
 	bool is_paused() const noexcept
 	{
 		return !mPlaying;
+	}
+
+	void set_playing(bool pPlaying) noexcept
+	{
+		mPlaying = pPlaying;
 	}
 
 	std::size_t get_frame() const noexcept
