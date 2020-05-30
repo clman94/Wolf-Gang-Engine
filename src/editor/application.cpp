@@ -158,15 +158,6 @@ spritesheet_data create_spritesheet(const std::filesystem::path& pDirectory)
 	return { std::move(spritesheet), frames.front().get_size(), frames.size() };
 }
 
-template <typename Ttime_point>
-inline std::time_t to_time_t(Ttime_point pTime_point)
-{
-	using namespace std::chrono;
-	auto now = Ttime_point::clock::now();
-	auto sctp = time_point_cast<system_clock::duration>((pTime_point - now) + now);
-	return system_clock::to_time_t(sctp);
-}
-
 // This exists because the C++17 file_time_clock does not
 // have any facilities to allow us to serialize it (to_time_t, from_time_t).
 template <typename Tto_tp, typename Tfrom_tp>
