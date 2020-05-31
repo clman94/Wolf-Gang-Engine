@@ -155,6 +155,16 @@ public:
 		mFrame_duration = pSeconds;
 	}
 
+	void set_loop(bool pLoop) noexcept
+	{
+		mLoop = pLoop;
+	}
+
+	bool get_loop() const noexcept
+	{
+		return mLoop;
+	}
+
 private:
 	virtual json serialize_data() const override
 	{
@@ -162,6 +172,7 @@ private:
 		result["frame_duration"] = mFrame_duration;
 		result["frame_size"] = mSize;
 		result["anchor"] = mAnchor;
+		result["loop"] = mLoop;
 		json jframes;
 		for (auto& i : mFrames)
 			jframes.push_back(frame_info::serialize(i));
@@ -174,6 +185,7 @@ private:
 		mFrame_duration = pJson["frame_duration"];
 		mSize = pJson["frame_size"];
 		mAnchor = pJson["anchor"];
+		mLoop = pJson["loop"];
 		for (auto& i : pJson["frames"])
 			mFrames.push_back(frame_info::deserialize(i));
 	}
@@ -185,6 +197,7 @@ private:
 	float mFrame_duration = 0;
 	math::ivec2 mSize;
 	math::vec2 mAnchor;
+	bool mLoop = false;
 };
 
 class sprite_controller
@@ -261,6 +274,21 @@ public:
 			mFrame_index = pFrame;
 	}
 
+	bool is_first_frame() const noexcept
+	{
+		if (!mSprite)
+			return false;
+		return mFrame_index == 0;
+	}
+
+	bool is_last_frame() const noexcept
+	{
+		if (!mSprite)
+			return false;
+		return mSprite->get_frame_count() > 0 &&
+			mFrame_index == mSprite->get_frame_count() - 1;
+	}
+
 	void update(float pDelta)
 	{
 		if (!mSprite)
@@ -268,14 +296,27 @@ public:
 		if (mPlaying)
 		{
 			if (mTimer >= mSprite->get_frame_duration(mFrame_index))
-			{
-				mTimer = 0;
-				++mFrame_index;
-				if (mFrame_index >= mSprite->get_frame_count())
-					mFrame_index = 0;
-			}
-
+				advance_frame();
 			mTimer += pDelta;
+		}
+	}
+
+private:
+	void advance_frame()
+	{
+		assert(mPlaying);
+		assert(mSprite);
+		mTimer = 0;
+		++mFrame_index;
+		if (mFrame_index >= mSprite->get_frame_count())
+		{
+			if (mSprite->get_loop())
+				mFrame_index = 0;
+			else
+			{
+				--mFrame_index;
+				mPlaying = false;
+			}
 		}
 	}
 

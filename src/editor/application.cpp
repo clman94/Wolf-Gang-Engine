@@ -860,6 +860,12 @@ public:
 				sprite->set_default_duration(duration);
 				mark_asset_modified();
 			}
+			bool loop = sprite->get_loop();
+			if (ImGui::Checkbox("Loop", &loop))
+			{
+				sprite->set_loop(loop);
+				mark_asset_modified();
+			}
 		}
 		ImGui::EndChild();
 
