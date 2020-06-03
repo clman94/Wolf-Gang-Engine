@@ -26,11 +26,11 @@ using only_signed = typename std::enable_if_t<std::is_floating_point_v<T> || std
 
 } // namespace detail
 
-static constexpr float pi = 3.14159265f;
-static constexpr float deg_max = 360.f;
-static constexpr float deg_half = 180.f;
-static constexpr float rad_max = pi * 2;
-static constexpr float rad_half = pi;
+constexpr float pi = 3.14159265f;
+constexpr float deg_max = 360.f;
+constexpr float deg_half = 180.f;
+constexpr float rad_max = pi * 2;
+constexpr float rad_half = pi;
 
 template<typename T>
 inline T mod(const T& a, const T& b) noexcept
