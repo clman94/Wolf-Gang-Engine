@@ -114,37 +114,6 @@ private:
 	filesystem::filesystem_interface* mFilesystem{ nullptr };
 };
 
-class importer
-{
-public:
-	// Import an asset/resource from the user's system.
-	virtual asset::ptr import(asset_manager&, const filesystem::path& pSystem_path) = 0;
-};
-
-class import_chooser
-{
-public:
-
-	void bind_importor_to_extension(const std::string& pExt, std::unique_ptr<importer> pImporter)
-	{
-		mImporters[pExt] = std::move(pImporter);
-	}
-
-	asset::ptr import(asset_manager& pAsset_mgr, const filesystem::path& pSystem_path) const
-	{
-		auto iter = mImporters.find(pSystem_path.extension());
-		if (iter != mImporters.end())
-		{
-			assert(iter->second);
-			return iter->second->import(pAsset_mgr, pSystem_path);
-		}
-		return{};
-	}
-
-private:
-	std::map<std::string, std::unique_ptr<importer>> mImporters;
-};
-
 template<typename T>
 inline void asset_manager::register_default_resource_factory(const std::string& pType)
 {
