@@ -312,19 +312,30 @@ void asset_manager::load_assets()
 			auto ptr = std::make_shared<asset>();
 			if (!ptr->load_file(i))
 			{
-				log::error("Failed to parse asset configuration for asset at \"{}\"", i.string());
+				log::warning("Skipping asset \"{}\"", i.string());
 				continue;
 			}
 
-			// Create the resource if it can.
-			auto factory_iter = mResource_factories.find(ptr->get_type());
-			if (auto res = create_resource(ptr->get_type()))
+			try
 			{
-				res->load(ptr->get_location());
-				ptr->set_resource(std::move(res));
+				// Create the resource if it can.
+				auto factory_iter = mResource_factories.find(ptr->get_type());
+				if (auto res = create_resource(ptr->get_type()))
+				{
+					res->load(ptr->get_location());
+					ptr->set_resource(std::move(res));
+				}
+				add_asset(ptr);
 			}
-
-			add_asset(ptr);
+			catch (const std::exception& e)
+			{
+				log::info("For asset: {} [{}]", ptr->get_name(), ptr->get_id().to_string());
+				log::error("Failed to load resource: {}", e.what());
+			}
+			catch (...)
+			{
+				log::error("Unknown error while loading resource for {}", i.string());
+			}
 		}
 	}
 }

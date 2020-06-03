@@ -18,18 +18,33 @@ bool asset::load_file(const filesystem::path& pSystem_path)
 		return false;
 	std::string str(std::istreambuf_iterator<char>(stream), {});
 
-	// Load all the settings
-	json j = json::parse(str);
-	mName = j["name"];
-	mType = j["type"];
-	mId = j["id"];
-	mDescription = j["description"];
-	mMetadata = j["metadata"];
-	mResource_metadata_cache = j["resource-metadata"];
-	mParent = j["parent"];
-	mLocation = asset_location::create(pSystem_path.parent(), mName);
+	try
+	{
+		// Load all the settings
+		json j = json::parse(str);
+		mName = j["name"];
+		mType = j["type"];
+		mId = j["id"];
+		mDescription = j["description"];
+		mMetadata = j["metadata"];
+		mResource_metadata_cache = j["resource-metadata"];
+		mParent = j["parent"];
+		mLocation = asset_location::create(pSystem_path.parent(), mName);
 
-	update_resource_metadata();
+		update_resource_metadata();
+	}
+	catch (const json::exception& e)
+	{
+		log::error("In {}", pSystem_path.string());
+		log::error("Error parsing asset configuration");
+		log::error("{}", e.what());
+		return false;
+	}
+	catch (...)
+	{
+		log::error("In {}", pSystem_path.string());
+		log::error("Unknown error while parsing asset configuration");
+	}
 	return true;
 }
 
