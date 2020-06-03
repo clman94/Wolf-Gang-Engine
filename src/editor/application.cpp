@@ -439,52 +439,6 @@ public:
 	}
 };
 
-class canvas_test
-{
-public:
-	void begin()
-	{
-		ImGui::BeginChild("canvastest");
-		mCursor = ImGui::GetCursorScreenPos();
-		mDrawList = ImGui::GetWindowDrawList();
-		mStart_vertex = mDrawList->VtxBuffer.Size;
-
-		// Zoom with ctrl and mousewheel
-		if (ImGui::GetIO().KeyCtrl && ImGui::GetIO().MouseWheel != 0)
-		{
-			mZoom += ImGui::GetIO().MouseWheel;
-			mScale = std::powf(2, mZoom);
-		}
-
-		auto& mousepos = ImGui::GetIO().MousePos;
-		mOriginalMousePos = mousepos;
-		mousepos -= mCursor;
-		mousepos /= mScale;
-		mousepos += mCursor;
-	}
-
-	void end()
-	{
-		for (int i = mStart_vertex; i < mDrawList->VtxBuffer.Size; i++)
-		{
-			auto& vert = mDrawList->VtxBuffer[i];
-			vert.pos -= mCursor;
-			vert.pos *= mScale;
-			vert.pos += mCursor;
-		}
-		ImGui::GetIO().MousePos = mOriginalMousePos;
-		ImGui::EndChild();
-	}
-
-private:
-	float mScale = 1;
-	float mZoom = 0;
-	int mStart_vertex = 0;
-	ImVec2 mCursor;
-	ImVec2 mOriginalMousePos;
-	ImDrawList* mDrawList = nullptr;
-};
-
 inline bool asset_item(const core::asset::ptr& pAsset, const core::asset_manager& pAsset_manager, ImVec2 pPreview_size = { 0, 0 })
 {
 	if (!pAsset)
