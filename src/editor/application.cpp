@@ -556,7 +556,7 @@ void preview_image(const char* pStr_id, const graphics::texture& pTexture, const
 	// Draw the image
 	const auto impl = std::dynamic_pointer_cast<graphics::opengl_texture_impl>(pTexture.get_implementation());
 	auto dl = ImGui::GetWindowDrawList();
-	dl->AddImage((void*)impl->get_gl_texture(), pos, pos + scaled_size, uv.min, uv.max);
+	dl->AddImage(reinterpret_cast<void*>(static_cast<std::uintptr_t>(impl->get_gl_texture())), pos, pos + scaled_size, uv.min, uv.max);
 
 	// Add an invisible button so we can interact with this image
 	ImGui::InvisibleButton(pStr_id, pSize);
@@ -723,9 +723,9 @@ public:
 			ImGui::SameLine();
 			if (ImGui::Button((const char*)(ICON_FA_BACKWARD), { 50, 50 }))
 				mController.restart();
-			int frame_index = mController.get_frame() + 1;
+			int frame_index = static_cast<int>(mController.get_frame() + 1);
 			ImGui::PushItemWidth(50 + 50 + ImGui::GetStyle().FramePadding.x * 2);
-			if (ImGui::SliderInt("##FrameIndex", &frame_index, 1, sprite->get_frame_count()))
+			if (ImGui::SliderInt("##FrameIndex", &frame_index, 1, static_cast<int>(sprite->get_frame_count())))
 			{
 				assert(frame_index >= 1);
 				mController.set_frame(static_cast<std::size_t>(frame_index - 1));
@@ -740,7 +740,7 @@ public:
 
 		for (std::size_t i = 0; i < sprite->get_frame_count(); i++)
 		{
-			ImGui::PushID(i);
+			ImGui::PushID(static_cast<int>(i));
 			if (mController.get_frame() == i)
 				ImGui::PushStyleColor(ImGuiCol_ChildBg, { 0.2f, 0.7f, 0.2f, 0.7f });
 			ImGui::BeginChild("Frame", { 100, 0 }, true);
@@ -846,7 +846,7 @@ public:
 
 		ImGui::BeginChild("TilesetEditor", { 0, 0 }, true);
 		begin_image_editor("Tileset", tileset->get_texture());
-		visual_editor::draw_grid({ 1, 1, 1, 1 }, tileset->tile_size.x);
+		visual_editor::draw_grid({ 1, 1, 1, 1 }, static_cast<float>(tileset->tile_size.x));
 		end_image_editor();
 		ImGui::EndChild();
 	}
@@ -1119,7 +1119,7 @@ public:
 					ImGui::BeginChild("Instances", ImVec2(0, height), true);
 					for (auto obj : *mSelected_layer)
 					{
-						ImGui::PushID(obj.get_id());
+						ImGui::PushID(static_cast<int>(obj.get_id()));
 						std::string display_name = fmt::format("{} [{} id:{})]", obj.get_name(), obj.get_asset()->get_name(), obj.get_id());
 						if (ImGui::Selectable(display_name.c_str(), obj == mSelected_object))
 							mSelected_object = obj;
@@ -1388,7 +1388,7 @@ public:
 		{
 			begin_image_editor("Tileset", tileset->get_texture());
 			// Draw tile grid.
-			visual_editor::draw_grid({ 1, 1, 1, 1 }, tilemap.get_tilesize().x);
+			visual_editor::draw_grid({ 1, 1, 1, 1 }, static_cast<float>(tilemap.get_tilesize().x));
 
 			if (ImGui::IsItemClicked())
 			{

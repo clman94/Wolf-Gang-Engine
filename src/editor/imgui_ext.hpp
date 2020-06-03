@@ -6,6 +6,7 @@
 #include <imgui/imgui_impl_opengl3.h>
 #include <imgui/imgui_stl.h>
 
+#include <wge/math/vector.hpp>
 #include <wge/math/math.hpp>
 #include <wge/graphics/opengl_framebuffer.hpp>
 #include <wge/graphics/opengl_texture.hpp>
@@ -63,12 +64,17 @@ inline void DescriptiveToolTip(const char* pMessage, const char* pDescription)
 	}
 }
 
+inline void* cast_gluint_to_void(GLuint pInt) noexcept
+{
+	// Avoids casting warnings (at least in msvc)
+	return reinterpret_cast<void*>(static_cast<std::uintptr_t>(pInt));
+}
 
 // Draws a framebuffer
 inline void Image(const wge::graphics::framebuffer::ptr& mFramebuffer, const ImVec2& pSize = ImVec2(0, 0))
 {
 	auto ogl_texture = std::dynamic_pointer_cast<wge::graphics::opengl_framebuffer>(mFramebuffer);
-	ImGui::Image((void*)ogl_texture->get_gl_texture(), pSize,
+	ImGui::Image(cast_gluint_to_void(ogl_texture->get_gl_texture()), pSize,
 		ImVec2(0, 1), ImVec2(1, 0)); // Y-axis needs to be flipped
 }
 
@@ -77,7 +83,7 @@ inline void Image(const wge::graphics::texture& mTexture, const ImVec2& pSize = 
 {
 	auto impl = std::dynamic_pointer_cast<wge::graphics::opengl_texture_impl>(mTexture.get_implementation());
 	if (impl)
-		ImGui::Image((void*)impl->get_gl_texture(), pSize, pUV0, pUV1);
+		ImGui::Image(cast_gluint_to_void(impl->get_gl_texture()), pSize, pUV0, pUV1);
 }
 
 // Draws a texture
@@ -93,7 +99,7 @@ inline void Image(wge::core::asset::ptr mTexture, const ImVec2& pSize = ImVec2(0
 inline bool ImageButton(const wge::graphics::framebuffer::ptr& mFramebuffer, const ImVec2& pSize = ImVec2(0, 0), const ImVec2& pUV0 = ImVec2(0, 0), const ImVec2& pUV1 = ImVec2(1, 1))
 {
 	auto ogl_texture = std::dynamic_pointer_cast<wge::graphics::opengl_framebuffer>(mFramebuffer);
-	return ImGui::ImageButton((void*)ogl_texture->get_gl_texture(), pSize,
+	return ImGui::ImageButton(cast_gluint_to_void(ogl_texture->get_gl_texture()), pSize,
 		ImVec2(0, 1), ImVec2(1, 0)); // Y-axis needs to be flipped
 }
 
@@ -104,7 +110,7 @@ inline bool ImageButton(wge::core::asset::ptr mTexture, const ImVec2& pSize = Im
 	if (!res)
 		return false;
 	auto impl = std::dynamic_pointer_cast<wge::graphics::opengl_texture_impl>(res->get_implementation());
-	return ImGui::ImageButton((void*)impl->get_gl_texture(), pSize, pUV0, pUV1);
+	return ImGui::ImageButton(cast_gluint_to_void(impl->get_gl_texture()), pSize, pUV0, pUV1);
 }
 
 inline bool CollapsingArrow(const char* pStr_id, bool* pOpen = nullptr, bool pDefault_open = false)
@@ -244,11 +250,13 @@ ImVec2 GetWindowContentRegionSize();
 inline ImVec2 FillWithFramebuffer(const wge::graphics::framebuffer::ptr& pFramebuffer)
 {
 	assert(pFramebuffer != nullptr);
-	ImVec2 avail = ImGui::GetContentRegionAvail();
-	if (pFramebuffer->get_width() != avail.x
-		|| pFramebuffer->get_height() != avail.y)
-		pFramebuffer->resize(avail.x, avail.y);
-	return avail;
+	ImVec2 avail_f = ImGui::GetContentRegionAvail();
+	// Cast to an int to avoid warnings (implicitly floors the values).
+	wge::math::ivec2 avail_i{ wge::math::vec2{ avail_f } };
+	if (pFramebuffer->get_width() != avail_i.x
+		|| pFramebuffer->get_height() != avail_i.y)
+		pFramebuffer->resize(avail_i.x, avail_i.y);
+	return avail_f;
 }
 
 } // namespace ImGui
