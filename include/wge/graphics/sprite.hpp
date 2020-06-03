@@ -44,7 +44,10 @@ public:
 
 	virtual void load()
 	{
-		mImage.load_file(get_location().get_autonamed_file(".png").string());
+		auto image_filepath = get_location().get_autonamed_file(".png").string();
+		if (!mImage.load_file(image_filepath))
+			throw std::runtime_error(
+				fmt::format("Could not load image from \"{}\". Possible file corruption or invalid path.", image_filepath));
 		mTexture.set_image(mImage);
 	}
 
