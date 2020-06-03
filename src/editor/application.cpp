@@ -45,50 +45,6 @@
 #include <unordered_map>
 #include <array>
 
-namespace wge::core
-{
-
-class texture_importer :
-	public importer
-{
-public:
-	virtual asset::ptr import(asset_manager& pAsset_mgr, const filesystem::path& pSystem_path) override
-	{
-		auto tex = std::make_shared<asset>();
-		tex->set_name(pSystem_path.stem());
-		tex->set_type("texture");
-		
-		// Create a new subdirectory for the asset's storage.
-		pAsset_mgr.store_asset(tex);
-
-		// Copy the texture file.
-		auto dest = tex->get_location()->get_autonamed_file(".png");
-		try {
-			system_fs::copy_file(pSystem_path, dest);
-		}
-		catch (const std::filesystem::filesystem_error& e)
-		{
-			log::error("Failed to copy texture from {}", pSystem_path.string());
-			log::error("Failed with exception \"{}\"", e.what());
-			return{};
-		}
-
-		// Create the new resource
-		auto res = pAsset_mgr.create_resource("texture");
-		res->set_location(tex->get_location());
-		res->load();
-		tex->set_resource(std::move(res));
-
-		// Update the configuration
-		tex->save();
-		pAsset_mgr.add_asset(tex);
-
-		return tex;
-	}
-};
-
-} // namespace wge::core
-
 namespace wge::editor
 {
 
@@ -1619,71 +1575,6 @@ private:
 	on_game_run_callback mOn_game_run_callback;
 };
 
-class drop_import_handler
-{
-public:
-	drop_import_handler(core::asset_manager& pAsset_manager) :
-		mAsset_manager(&pAsset_manager)
-	{}
-
-	~drop_import_handler()
-	{
-		mCallback_connection.disconnect();
-	}
-
-	void register_callback_to(decltype(graphics::window_backend::on_file_drop)& pCallback)
-	{
-		mCallback_connection = pCallback.connect([&](int pCount, const char** pPaths)
-		{
-			for (int i = 0; i < pCount; i++)
-			{
-				filesystem::path path = pPaths[i];
-				if (path.extension() == ".png")
-					mPaths.push_back(std::move(path));
-			}
-		});
-	}
-
-	void on_gui()
-	{
-		if (!mPaths.empty())
-			ImGui::OpenPopup("Import Assets");
-
-		if (ImGui::BeginPopupModal("Import Assets", 0, ImGuiWindowFlags_AlwaysAutoResize))
-		{
-			ImGui::BeginChild("AssetsToImport", ImVec2(400, 300), true);
-
-			for (auto& i : mPaths)
-				ImGui::Selectable(i.string().c_str());
-
-			ImGui::EndChild();
-			if (ImGui::Button("Import"))
-			{
-				core::texture_importer importer;
-				for (auto& i : mPaths)
-				{
-					importer.import(*mAsset_manager, i);
-				}
-				mPaths.clear();
-				ImGui::CloseCurrentPopup();
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Cancel"))
-			{
-				mPaths.clear();
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::EndPopup();
-		}
-	}
-
-private:
-	core::asset_manager* mAsset_manager;
-	std::vector<filesystem::path> mPaths;
-	util::connection mCallback_connection;
-};
-
 static bool texture_asset_input(core::asset::ptr& pAsset, context& pContext, const core::asset_manager& pAsset_manager)
 {
 	std::string inputtext = pAsset ? pAsset_manager.get_asset_path(pAsset).string().c_str() : "None";
@@ -2145,8 +2036,6 @@ private:
 
 		// Store the glfw backend for initializing imgui's glfw backend
 		mGLFW_backend = std::dynamic_pointer_cast<graphics::glfw_window_backend>(g.get_window_backend());
-
-		mDrop_import_handler.register_callback_to(mGLFW_backend->on_file_drop);
 	}
 
 	void mainloop()
@@ -2193,10 +2082,6 @@ private:
 
 			mLog_window.on_gui();
 			show_settings();
-			//show_viewport();
-			//show_objects();
-			//show_inspector();
-			mDrop_import_handler.on_gui();
 			mAsset_manager_window.on_gui();
 			mContext.show_editor_guis();
 			mGame_viewport.on_gui();
@@ -2388,7 +2273,6 @@ private:
 	import_manager mImport_manager;
 	import_window mImport_window;
 	asset_manager_window mAsset_manager_window{ mContext, mEngine.get_asset_manager() };
-	drop_import_handler mDrop_import_handler{ mEngine.get_asset_manager() };
 	game_viewport mGame_viewport{ mEngine };
 
 	bool mUpdate{ false };
