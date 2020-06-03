@@ -17,6 +17,12 @@ class renderer;
 class sprite_component
 {
 public:
+
+	sprite_component() = default;
+	sprite_component(sprite::handle pSprite) :
+		mController(pSprite)
+	{}
+
 	// Creates a batch
 	void create_batch(math::transform& pTransform, renderer& pRenderer);
 
@@ -48,8 +54,7 @@ public:
 private:
 	sprite_controller mController;
 	math::aabb mSceen_aabb, mLocal_aabb;
-	math::vec2 mOffset, mAnchor{ math::anchor::topleft };
-	util::uuid mAnimation_id;
+	math::vec2 mOffset;
 };
 
 } // namespace wge::graphics
