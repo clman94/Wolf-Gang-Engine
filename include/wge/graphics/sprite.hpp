@@ -16,6 +16,7 @@ class sprite :
 {
 public:
 	using handle = core::resource_handle<sprite>;
+
 	static constexpr int padding = 1;
 
 public:
@@ -289,7 +290,7 @@ public:
 			mFrame_index == mSprite->get_frame_count() - 1;
 	}
 
-	void update(float pDelta)
+	void update(float pDelta) noexcept
 	{
 		if (!mSprite)
 			return;
@@ -302,7 +303,7 @@ public:
 	}
 
 private:
-	void advance_frame()
+	void advance_frame() noexcept
 	{
 		assert(mPlaying);
 		assert(mSprite);
