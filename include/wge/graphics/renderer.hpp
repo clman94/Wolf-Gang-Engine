@@ -34,7 +34,7 @@ public:
 
 	// Add 4 vertices as a quad. Returns the starting index in the vertices
 	// member of the batch.
-	std::size_t add_quad(const vertex_2d* pBuffer);
+	std::size_t add_quad(util::span<vertex_2d> pBuffer);
 
 	render_batch_2d finalize() noexcept
 	{

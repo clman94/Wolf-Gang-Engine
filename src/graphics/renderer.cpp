@@ -14,24 +14,25 @@
 namespace wge::graphics
 {
 
-std::size_t batch_builder::add_quad(const vertex_2d* pBuffer)
+std::size_t batch_builder::add_quad(util::span<vertex_2d> pBuffer)
 {
+	assert(pBuffer.size() == 4);
 	std::size_t start_index = mBatch.vertices.size();
 
 	// Make sure there is enough space
 	mBatch.indexes.reserve(mBatch.indexes.size() + 6);
 
-	// Triangle 1
+	// Triangle 1 indexes
 	mBatch.indexes.push_back(start_index);
 	mBatch.indexes.push_back(start_index + 1);
 	mBatch.indexes.push_back(start_index + 2);
 
-	// Triangle 2
+	// Triangle 2 indexes
 	mBatch.indexes.push_back(start_index + 2);
 	mBatch.indexes.push_back(start_index + 3);
 	mBatch.indexes.push_back(start_index);
 
-	// Add them
+	// Add the vertices.
 	mBatch.vertices.reserve(mBatch.vertices.size() + 4);
 	for (std::size_t i = 0; i < 4; i++)
 		mBatch.vertices.push_back(pBuffer[i]);
