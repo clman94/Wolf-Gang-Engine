@@ -121,6 +121,15 @@ void asset_manager::store_asset(const core::asset::ptr& pAsset) const
 	pAsset->save_to(directory);
 }
 
+void asset_manager::remove_asset_storage(const core::asset::ptr& pAsset) const
+{
+	auto dir_path = pAsset->get_location()->get_directory();
+	assert(!dir_path.empty());
+
+	// Remove the directory.
+	system_fs::remove_all(dir_path);
+}
+
 void asset_manager::update_directory_structure()
 {
 	for (const auto& i : mAsset_list)
@@ -254,19 +263,14 @@ bool asset_manager::remove_asset(const asset::ptr& pAsset)
 	for (const auto& i : all_children)
 		remove_asset(i);
 
-	// Get the path to the asset's parent directory.
-	auto dir_path = pAsset->get_location()->get_directory();
-	assert(!dir_path.empty());
-
-	// Remove the directory.
-	bool success = system_fs::remove_all(dir_path);
+	remove_asset_storage(pAsset);
 
 	// Remove it from the asset manager.
 	auto iter = std::remove(mAsset_list.begin(), mAsset_list.end(), pAsset);
 	assert(iter != mAsset_list.end());
 	mAsset_list.erase(iter);
-
-	return success;
+	
+	return true;
 }
 
 filesystem::path asset_manager::get_asset_path(const core::asset::ptr& pAsset) const

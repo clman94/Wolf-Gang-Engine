@@ -94,6 +94,7 @@ public:
 
 	filesystem::path create_asset_storage(const core::asset::ptr& pAsset) const;
 	void store_asset(const core::asset::ptr& pAsset) const;
+	void remove_asset_storage(const core::asset::ptr& pAsset) const;
 
 	void update_directory_structure();
 	void save_all_configuration();
