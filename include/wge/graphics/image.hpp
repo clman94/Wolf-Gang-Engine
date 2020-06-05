@@ -17,6 +17,11 @@ public:
 
 public:
 	image() = default;
+	image(const std::string& pFilepath)
+	{
+		if (!load_file(pFilepath))
+			throw std::runtime_error(fmt::format("Could not load file from \"{}\"", pFilepath));
+	}
 	image(const math::ivec2& pSize, const color8& pColor = { 0, 0, 0, 0 }) :
 		mSize(pSize)
 	{

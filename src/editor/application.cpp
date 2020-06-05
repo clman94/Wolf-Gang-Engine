@@ -57,6 +57,8 @@ struct spritesheet_data
 
 // Takes a directory with an array of sprites and converts them into
 // a spritesheet with proper padding.
+// If path points to a single file, it fill create a single frame animation.
+//
 // The directory should look like this:
 //   mysprite/
 //   mysprite/mysprite1.png
@@ -67,37 +69,47 @@ struct spritesheet_data
 // - All images are the exact same size.
 // - All images are png.
 // - There is at least one frame.
-// - None of the images are empty (zero size).
-// - None of the images are corrupted.
-spritesheet_data create_spritesheet(const std::filesystem::path& pDirectory)
+// Will throw if an image is unable to be read.
+spritesheet_data create_spritesheet(const std::filesystem::path& pPath)
 {
-	const std::string sprite_name = pDirectory.filename().string();
+	const std::string sprite_name = pPath.filename().string();
 	std::vector<graphics::image> frames;
 
-	const auto make_frame_filepath = [&](int index)
+	// If the path points to a directory, this assumes
+	// that there are multiple sprite inside.
+	if (std::filesystem::is_directory(pPath))
 	{
-		return pDirectory / (sprite_name + std::to_string(index) + ".png");
-	};
+		// Load a multiframe sprite.
 
-	// Load all the frames.
-	int frame_index = 1;
-	std::filesystem::path filepath = make_frame_filepath(frame_index);
-	while (std::filesystem::exists(filepath))
+		const auto make_frame_filepath = [&](int index)
+		{
+			return pPath / (sprite_name + std::to_string(index) + ".png");
+		};
+
+		// Load all the frames.
+		int frame_index = 1;
+		std::filesystem::path filepath = make_frame_filepath(frame_index);
+		while (std::filesystem::exists(filepath))
+		{
+			frames.push_back(graphics::image{ filepath.string() });
+			++frame_index;
+			filepath = make_frame_filepath(frame_index);
+		}
+	}
+	else
 	{
-		graphics::image frame;
-		frame.load_file(filepath.string());
-		frames.push_back(std::move(frame));
-
-		++frame_index;
-		filepath = make_frame_filepath(frame_index);
+		// Load a single frame sprite.
+		frames.push_back(graphics::image{ pPath.string() });
 	}
 
+	// Sanity check.
+	// Client must check if the directory contains at least on frame.
 	assert(!frames.empty());
 
 	// Calculate the size of the spritesheet.
 	// *This assumes all the frames are the same size.
 	const int padding = graphics::sprite::padding;
-	math::ivec2 spritesheet_size{
+	const math::ivec2 spritesheet_size{
 		(frames.front().get_width() + padding) * static_cast<int>(frames.size()) + padding,
 		frames.front().get_height() + padding * 2
 	};
@@ -190,8 +202,7 @@ public:
 
 	void import_tileset(const std::filesystem::path& pFilepath, core::asset_manager& pAsset_mgr)
 	{
-		graphics::image sprite;
-		sprite.load_file(pFilepath.string());
+		graphics::image sprite((mDirectory / pFilepath).string());
 
 		// Create the new asset.
 		auto tileset_asset = std::make_shared<core::asset>();
@@ -215,51 +226,18 @@ public:
 		register_link(tileset_asset, pFilepath.stem().string());
 	}
 
-	void import_static_sprite(const std::string& pName, core::asset_manager& pAsset_mgr)
+	void import_sprite(const std::string& pPath, core::asset_manager& pAsset_mgr)
 	{
-		const std::string asset_name = std::filesystem::path(pName).stem().string();
-		const int padding = graphics::sprite::padding;
-
-		graphics::image sprite;
-		sprite.load_file((mDirectory / pName).string());
-		const math::ivec2 frame_size = sprite.get_size();
-		// Add padding to the sprite.
-		sprite = sprite.crop({ -padding, -padding }, sprite.get_size() + math::ivec2{ padding, padding });
+		const std::string name = std::filesystem::path(pPath).stem().string();
 
 		// Create the new asset.
 		auto sprite_asset = std::make_shared<core::asset>();
-		sprite_asset->set_name(asset_name);
-		sprite_asset->set_type("sprite");
-		pAsset_mgr.store_asset(sprite_asset);
-
-		// Save the image to the asset's location.
-		bool success = sprite.save_png(sprite_asset->get_location()->get_autonamed_file(".png").string());
-		assert(success);
-
-		// Configure the resource.
-		auto sprite_resource = util::dynamic_unique_cast<graphics::sprite>(pAsset_mgr.create_resource("sprite"));
-		sprite_resource->set_location(sprite_asset->get_location());
-		sprite_resource->resize_animation(1);
-		sprite_resource->set_frame_size(frame_size);
-		sprite_resource->load();
-
-		// Save the configuration.
-		sprite_asset->set_resource(std::move(sprite_resource));
-		sprite_asset->save();
-		pAsset_mgr.add_asset(sprite_asset);
-		register_link(sprite_asset, pName);
-	}
-
-	void import_animated_sprite(const std::string& pName, core::asset_manager& pAsset_mgr)
-	{
-		// Create the new asset.
-		auto sprite_asset = std::make_shared<core::asset>();
-		sprite_asset->set_name(pName);
+		sprite_asset->set_name(name);
 		sprite_asset->set_type("sprite");
 		pAsset_mgr.store_asset(sprite_asset);
 
 		// Save the new spritesheet to the asset's location.
-		const spritesheet_data spritesheet = create_spritesheet(mDirectory / pName);
+		const spritesheet_data spritesheet = create_spritesheet(mDirectory / pPath);
 		bool success = spritesheet.image.save_png(sprite_asset->get_location()->get_autonamed_file(".png").string());
 		assert(success);
 
@@ -274,17 +252,8 @@ public:
 		sprite_asset->set_resource(std::move(sprite_resource));
 		sprite_asset->save();
 		pAsset_mgr.add_asset(sprite_asset);
-		register_link(sprite_asset, pName);
+		register_link(sprite_asset, pPath);
 	}
-	
-	void import_sprite(const std::string& pName, core::asset_manager& pAsset_mgr)
-	{
-		if (std::filesystem::is_directory(mDirectory / pName))
-			import_animated_sprite(pName, pAsset_mgr);
-		else
-			import_static_sprite(pName, pAsset_mgr);
-	}
-
 
 	static bool is_valid_animated_sprite(const std::filesystem::path& pDirectory)
 	{
