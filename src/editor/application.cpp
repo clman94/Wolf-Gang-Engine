@@ -103,7 +103,7 @@ spritesheet_data create_spritesheet(const std::filesystem::path& pPath)
 	}
 
 	// Sanity check.
-	// Client must check if the directory contains at least on frame.
+	// Client must check if the directory contains at least one frame.
 	assert(!frames.empty());
 
 	// Calculate the size of the spritesheet.
@@ -192,6 +192,18 @@ public:
 
 	void register_link(const core::asset::ptr& pAsset, std::string_view pName)
 	{
+		// Find an existing link and update the import date.
+		for (auto& i : mLinks)
+		{
+			if (i.asset == pAsset->get_id())
+			{
+				i.import_time = time_point::clock::now();
+				save_import_config();
+				return;
+			}
+		}
+
+		// Create a new link if none where found.
 		import_link link;
 		link.import_name = pName;
 		link.import_time = time_point::clock::now();
@@ -253,6 +265,26 @@ public:
 		sprite_asset->save();
 		pAsset_mgr.add_asset(sprite_asset);
 		register_link(sprite_asset, pPath);
+	}
+
+	void reimport_sprite(const std::string& pPath, const core::asset_manager& pAsset_mgr)
+	{
+		import_link* link = get_link(pPath);
+		assert(link != nullptr);
+
+		core::asset::ptr asset = pAsset_mgr.get_asset(link->asset);
+
+		// Save the new spritesheet to the asset's location.
+		const spritesheet_data spritesheet = create_spritesheet(mDirectory / pPath);
+		bool success = spritesheet.image.save_png(asset->get_location()->get_autonamed_file(".png").string());
+		assert(success);
+
+		auto sprite_resource = asset->get_resource<graphics::sprite>();
+		sprite_resource->resize_animation(spritesheet.frame_count);
+		sprite_resource->set_frame_size(spritesheet.frame_size);
+		sprite_resource->load();
+
+		register_link(asset, pPath);
 	}
 
 	static bool is_valid_animated_sprite(const std::filesystem::path& pDirectory)
@@ -319,6 +351,14 @@ public:
 		return false;
 	}
 
+	import_link* get_link(std::string_view pName) noexcept
+	{
+		for (auto& i : mLinks)
+			if (i.import_name == pName)
+				return &i;
+		return nullptr;
+	}
+
 	bool has_imported(std::string_view pName) const noexcept
 	{
 		for (auto& i : mLinks)
@@ -367,10 +407,6 @@ public:
 			log::info("Found {} new imports", mManager.get_not_imported_names().size());
 			log::info("Found {} outdated imports", mManager.get_outdated_names().size());
 		}
-		ImGui::SameLine();
-		if (ImGui::Button("Import all")) {}
-		ImGui::SameLine();
-		if (ImGui::Button("Update all")) {}
 		ImGui::BeginChild("ImportsPane", { 0, 0 }, true);
 		ImGui::Columns(2);
 		for (auto& i : mManager.get_outdated_names())
@@ -378,7 +414,10 @@ public:
 			ImGui::PushID(&i);
 			ImGui::TextUnformatted(i.c_str());
 			ImGui::NextColumn();
-			ImGui::Button("Update");
+			if (ImGui::Button("Update"))
+			{
+
+			}
 			ImGui::NextColumn();
 			ImGui::PopID();
 		}
