@@ -41,8 +41,8 @@ void physics_world::preupdate(core::layer& pLayer, float pDelta)
 			body_def.position.x = transform.position.x;
 			body_def.position.y = transform.position.y;
 			body_def.angle = transform.rotation;
-			body_def.type = physics.get_b2Body_type();
-			//body_def.userData = obj.get_instance_id().get_value();
+			body_def.type = b2_dynamicBody;
+			body_def.userData = reinterpret_cast<void*>(static_cast<std::uintptr_t>(id));
 			physics.mBody = mWorld->CreateBody(&body_def);
 			physics.mBody->ResetMassData();
 		}
@@ -59,6 +59,7 @@ void physics_world::preupdate(core::layer& pLayer, float pDelta)
 			collider.update_shape(transform.scale, &shape);
 			fixture_def.shape = &shape;
 			fixture_def.density = 1;
+			fixture_def.userData = reinterpret_cast<void*>(static_cast<std::uintptr_t>(id));
 			collider.mFixture = physics.create_fixture(fixture_def);
 			physics.mBody->ResetMassData();
 		}
