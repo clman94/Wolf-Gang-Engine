@@ -1741,91 +1741,79 @@ public:
 		log::info("Registering Player Viewport Input...");
 
 		auto& state = mEngine->get_script_engine().state;
-		auto input = state.create_named_table("input");
+		state["key_left"] = GLFW_KEY_LEFT;
+		state["key_right"] = GLFW_KEY_RIGHT;
+		state["key_up"] = GLFW_KEY_UP;
+		state["key_down"] = GLFW_KEY_DOWN;
+		state["key_a"] = GLFW_KEY_A;
+		state["key_b"] = GLFW_KEY_B;
+		state["key_c"] = GLFW_KEY_C;
+		state["key_d"] = GLFW_KEY_D;
+		state["key_e"] = GLFW_KEY_E;
+		state["key_f"] = GLFW_KEY_F;
+		state["key_g"] = GLFW_KEY_G;
+		state["key_h"] = GLFW_KEY_H;
+		state["key_i"] = GLFW_KEY_I;
+		state["key_j"] = GLFW_KEY_J;
+		state["key_k"] = GLFW_KEY_K;
+		state["key_l"] = GLFW_KEY_L;
+		state["key_m"] = GLFW_KEY_M;
+		state["key_n"] = GLFW_KEY_N;
+		state["key_o"] = GLFW_KEY_O;
+		state["key_p"] = GLFW_KEY_P;
+		state["key_q"] = GLFW_KEY_Q;
+		state["key_r"] = GLFW_KEY_R;
+		state["key_s"] = GLFW_KEY_S;
+		state["key_t"] = GLFW_KEY_T;
+		state["key_u"] = GLFW_KEY_U;
+		state["key_v"] = GLFW_KEY_V;
+		state["key_w"] = GLFW_KEY_W;
+		state["key_x"] = GLFW_KEY_X;
+		state["key_y"] = GLFW_KEY_Y;
+		state["key_z"] = GLFW_KEY_Z;
+		state["key_space"] = GLFW_KEY_SPACE;
+		state["key_tab"] = GLFW_KEY_TAB;
+		state["key_lshift"] = GLFW_KEY_LEFT_SHIFT;
+		state["key_rshift"] = GLFW_KEY_RIGHT_SHIFT;
+		state["key_lctrl"] = GLFW_KEY_LEFT_CONTROL;
+		state["key_rctrl"] = GLFW_KEY_RIGHT_CONTROL;
+		state["key_lalt"] = GLFW_KEY_LEFT_ALT;
+		state["key_ralt"] = GLFW_KEY_RIGHT_ALT;
 
-		state.new_enum<int>("key", {
-			{"left", GLFW_KEY_LEFT},
-			{"right", GLFW_KEY_RIGHT},
-			{"up", GLFW_KEY_UP},
-			{"down", GLFW_KEY_DOWN},
-			{"a", GLFW_KEY_A},
-			{"b", GLFW_KEY_B},
-			{"c", GLFW_KEY_C},
-			{"d", GLFW_KEY_D},
-			{"e", GLFW_KEY_E},
-			{"f", GLFW_KEY_F},
-			{"g", GLFW_KEY_G},
-			{"h", GLFW_KEY_H},
-			{"i", GLFW_KEY_I},
-			{"j", GLFW_KEY_J},
-			{"k", GLFW_KEY_K},
-			{"l", GLFW_KEY_L},
-			{"m", GLFW_KEY_M},
-			{"n", GLFW_KEY_N},
-			{"o", GLFW_KEY_O},
-			{"p", GLFW_KEY_P},
-			{"q", GLFW_KEY_Q},
-			{"r", GLFW_KEY_R},
-			{"s", GLFW_KEY_S},
-			{"t", GLFW_KEY_T},
-			{"u", GLFW_KEY_U},
-			{"v", GLFW_KEY_V},
-			{"w", GLFW_KEY_W},
-			{"x", GLFW_KEY_X},
-			{"y", GLFW_KEY_Y},
-			{"z", GLFW_KEY_Z},
-			{"space", GLFW_KEY_SPACE},
-			{"tab", GLFW_KEY_TAB},
-			{"lshift", GLFW_KEY_LEFT_SHIFT},
-			{"rshift", GLFW_KEY_RIGHT_SHIFT},
-			{"lctrl", GLFW_KEY_LEFT_CONTROL},
-			{"rctrl", GLFW_KEY_RIGHT_CONTROL},
-			{"lalt", GLFW_KEY_LEFT_ALT},
-			{"ralt", GLFW_KEY_RIGHT_ALT}
-			});
+		state["mouse_button_left"] = GLFW_MOUSE_BUTTON_LEFT;
+		state["mouse_button_middle"] = GLFW_MOUSE_BUTTON_MIDDLE;
+		state["mouse_button_right"] = GLFW_MOUSE_BUTTON_RIGHT;
 
-		state.new_enum<int>("mouse", {
-			{ "left", GLFW_MOUSE_BUTTON_LEFT },
-			{ "middle", GLFW_MOUSE_BUTTON_MIDDLE },
-			{ "right", GLFW_MOUSE_BUTTON_RIGHT },
-			});
-		state["key_down"] = [this](int pKey) -> bool
+		state["is_key_down"] = [this](int pKey) -> bool
 		{
 			return mCan_take_input && ImGui::IsKeyDown(pKey);
 		};
-		state["key_pressed"] = [this](int pKey) -> bool
+		state["is_key_pressed"] = [this](int pKey) -> bool
+		{
+			return mCan_take_input && ImGui::IsKeyPressed(pKey, false);
+		};
+		state["is_key_released"] = [this](int pKey) -> bool
 		{
 			return mCan_take_input && ImGui::IsKeyPressed(pKey, false);
 		};
 
-		input["pressed"] = [this](int pKey) -> bool
-		{
-			return mCan_take_input && ImGui::IsKeyPressed(pKey, false);
-		};
-		input["down"] = [this](int pKey) -> bool
-		{
-			return mCan_take_input && ImGui::IsKeyDown(pKey);
-		};
-		input["released"] = [this](int pKey) -> bool
-		{
-			return mCan_take_input && ImGui::IsKeyReleased(pKey);
-		};
-
-		input["mouse_pressed"] = [this](int pButton) -> bool
+		state["is_mouse_pressed"] = [this](int pButton) -> bool
 		{
 			return mCan_take_input && ImGui::IsMouseClicked(pButton, false);
 		};
-		input["mouse_down"] = [this](int pButton) -> bool
+		state["is_mouse_down"] = [this](int pButton) -> bool
 		{
 			return mCan_take_input && ImGui::IsMouseDown(pButton);
 		};
-		input["mouse_released"] = [this](int pButton) -> bool
+		state["is_mouse_released"] = [this](int pButton) -> bool
 		{
 			return mCan_take_input && ImGui::IsMouseReleased(pButton);
 		};
 		
-		input["mouse_delta"] = math::vec2(0, 0);
-		input["mouse_position"] = math::vec2(0, 0);
+		state["mouse_world_delta"] = math::vec2(0, 0);
+		state["mouse_world_position"] = math::vec2(0, 0);
+		state["mouse_screen_delta"] = math::vec2(0, 0);
+		state["mouse_screen_position"] = math::vec2(0, 0);
 	}
 
 	void step()
@@ -1871,8 +1859,10 @@ public:
 				// Update mouse inputs.
 				auto& state = mEngine->get_script_engine().state;
 				auto input = state.create_named_table("input");
-				input["mouse_delta"] = math::vec2(ImGui::GetIO().MouseDelta);
-				input["mouse_position"] = mRenderer.screen_to_world(ImGui::GetMousePos() - cursor);
+				input["mouse_world_delta"] = math::vec2(ImGui::GetIO().MouseDelta) * mRenderer.get_render_view_scale();
+				input["mouse_world_position"] = mRenderer.screen_to_world(ImGui::GetMousePos() - cursor);
+				input["mouse_screen_delta"] = math::vec2(ImGui::GetIO().MouseDelta);
+				input["mouse_screen_position"] = ImGui::GetMousePos() - cursor;
 
 				step();
 			}
