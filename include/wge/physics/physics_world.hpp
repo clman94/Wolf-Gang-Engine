@@ -7,11 +7,7 @@
 #include <wge/math/vector.hpp>
 #include <wge/core/system.hpp>
 
-#include <Box2D/Dynamics/b2WorldCallbacks.h>
-
-class b2World;
-class b2Body;
-struct b2BodyDef;
+#include <Box2D/Box2D.h>
 
 namespace wge::core
 {
@@ -22,16 +18,15 @@ namespace wge::physics
 {
 
 
-/*
+struct hit_info
+{
+	bool hit = false;
+	core::object_id object_id;
+	math::vec2 point;
+	math::vec2 normal;
+	float fraction = 0;
+};
 
-Events sent:
-	void on_physics_update_bodies(physics_world_component*);
-	  - Used by physics_component's to update their bodies to
-		the current world.
-
-Events recieved:
-	void on_preupdate(float);
-*/
 class physics_world
 {
 public:
@@ -39,6 +34,49 @@ public:
 
 	void set_gravity(math::vec2 pVec);
 	math::vec2 get_gravity() const;
+
+	hit_info first_hit_raycast(const math::vec2& pA, const math::vec2& pB) const
+	{
+		struct callback : b2RayCastCallback
+		{
+			hit_info hit;
+			virtual float32 ReportFixture(b2Fixture* fixture, const b2Vec2& point,
+				const b2Vec2& normal, float32 fraction) override
+			{
+				hit.hit = true;
+				hit.object_id = static_cast<core::object_id>(reinterpret_cast<std::uintptr_t>(fixture->GetUserData()));
+				hit.point = { point.x, point.y };
+				hit.normal = { normal.x, normal.y };
+				hit.fraction = fraction;
+				return 0;
+			}
+		} mycallback;
+		mWorld->RayCast(&mycallback, { pA.x, pA.y }, { pB.x, pB.y });
+		return mycallback.hit;
+	}
+	
+	template <typename Tcallable>
+	void raycast(Tcallable&& pCallable, const math::vec2& pA, const math::vec2& pB) const
+	{
+		struct callback : b2RayCastCallback
+		{
+			Tcallable callable;
+			hit_info hit;
+			virtual float32 ReportFixture(b2Fixture* fixture, const b2Vec2& point,
+				const b2Vec2& normal, float32 fraction)
+			{
+				hit.hit = true;
+				hit.object_id = static_cast<core::object_id>(reinterpret_cast<std::uintptr_t>(fixture->GetUserData()));
+				hit.point = { point.x, point.y };
+				hit.normal = { normal.x, normal.y };
+				hit.fraction = fraction;
+				callable(hit);
+			}
+		} mycallback{ pCallable };
+
+		mWorld->RayCast(&mycallback, { pA.x, pA.y }, { pB.x, pB.y });
+		return mycallback.hit;
+	}
 
 	b2World* get_world() const;
 
