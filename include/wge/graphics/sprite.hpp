@@ -301,8 +301,18 @@ public:
 		{
 			if (mTimer >= mSprite->get_frame_duration(mFrame_index))
 				advance_frame();
-			mTimer += pDelta;
+			mTimer += pDelta * mSpeed;
 		}
+	}
+
+	void set_speed(float pSpeed) noexcept
+	{
+		mSpeed = pSpeed;
+	}
+
+	float get_speed() const noexcept
+	{
+		return mSpeed;
 	}
 
 private:
@@ -326,6 +336,7 @@ private:
 
 private:
 	sprite::handle mSprite;
+	float mSpeed = 1.f;
 	float mTimer = 0;
 	std::size_t mFrame_index = 0;
 	bool mPlaying = false;
