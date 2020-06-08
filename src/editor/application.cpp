@@ -273,12 +273,14 @@ public:
 		assert(link != nullptr);
 
 		core::asset::ptr asset = pAsset_mgr.get_asset(link->asset);
+		assert(asset != nullptr);
 
 		// Save the new spritesheet to the asset's location.
 		const spritesheet_data spritesheet = create_spritesheet(mDirectory / pPath);
 		bool success = spritesheet.image.save_png(asset->get_location()->get_autonamed_file(".png").string());
 		assert(success);
 
+		// Update the sprite info.
 		auto sprite_resource = asset->get_resource<graphics::sprite>();
 		sprite_resource->resize_animation(spritesheet.frame_count);
 		sprite_resource->set_frame_size(spritesheet.frame_size);
@@ -414,9 +416,9 @@ public:
 			ImGui::PushID(&i);
 			ImGui::TextUnformatted(i.c_str());
 			ImGui::NextColumn();
-			if (ImGui::Button("Update"))
+			if (ImGui::Button("Update Sprite"))
 			{
-
+				mManager.reimport_sprite(i, pAsset_mgr);
 			}
 			ImGui::NextColumn();
 			ImGui::PopID();
@@ -427,7 +429,7 @@ public:
 			ImGui::PushID(&i);
 			ImGui::TextUnformatted(i.c_str());
 			ImGui::NextColumn();
-			if (ImGui::Button("Import As..."))
+			if (ImGui::Button("Import Sprite"))
 			{
 				mManager.import_sprite(i, pAsset_mgr);
 				imports_need_refresh = true;
