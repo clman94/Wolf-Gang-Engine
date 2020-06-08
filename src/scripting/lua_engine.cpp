@@ -107,6 +107,7 @@ bool lua_engine::compile_script(script& pScript)
 void lua_engine::register_core_api()
 {
 	state.open_libraries(sol::lib::base, sol::lib::coroutine, sol::lib::string, sol::lib::table);
+	state["global"] = state.globals();
 	state["table"]["haskey"] = [](sol::table pTable, sol::object pKey) -> bool
 	{
 		for (auto& i : pTable)
