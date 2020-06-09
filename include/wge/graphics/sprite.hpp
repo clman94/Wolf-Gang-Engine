@@ -214,6 +214,7 @@ public:
 
 	void set_sprite(sprite::handle pHandle) noexcept
 	{
+		mIs_new_frame = true;
 		mSprite = pHandle;
 		restart();
 	}
@@ -248,6 +249,7 @@ public:
 	{
 		mTimer = 0;
 		mFrame_index = 0;
+		mIs_new_frame = true;
 	}
 
 	bool is_playing() const noexcept
@@ -276,6 +278,7 @@ public:
 			mFrame_index = mSprite->get_frame_count() - 1;
 		else
 			mFrame_index = pFrame;
+		mIs_new_frame = true;
 	}
 
 	bool is_first_frame() const noexcept
@@ -293,14 +296,23 @@ public:
 			mFrame_index == mSprite->get_frame_count() - 1;
 	}
 
+	bool is_new_frame() const noexcept
+	{
+		return mIs_new_frame;
+	}
+
 	void update(float pDelta) noexcept
 	{
 		if (!mSprite)
 			return;
+		mIs_new_frame = false;
 		if (mPlaying)
 		{
 			if (mTimer >= mSprite->get_frame_duration(mFrame_index))
+			{
+				mIs_new_frame = true;
 				advance_frame();
+			}
 			mTimer += pDelta * mSpeed;
 		}
 	}
@@ -340,6 +352,7 @@ private:
 	float mTimer = 0;
 	std::size_t mFrame_index = 0;
 	bool mPlaying = false;
+	bool mIs_new_frame = true;
 };
 
 } // namespace wge::graphics
