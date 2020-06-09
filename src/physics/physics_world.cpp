@@ -42,7 +42,7 @@ void physics_world::preupdate(core::layer& pLayer, float pDelta)
 			body_def.position.x = transform.position.x;
 			body_def.position.y = transform.position.y;
 			body_def.angle = transform.rotation;
-			body_def.type = b2_dynamicBody;
+			body_def.type = b2_staticBody;
 			body_def.userData = reinterpret_cast<void*>(static_cast<std::uintptr_t>(id));
 			physics.mBody = mWorld->CreateBody(&body_def);
 			physics.mBody->ResetMassData();
@@ -58,18 +58,19 @@ void physics_world::preupdate(core::layer& pLayer, float pDelta)
 		{
 			// Create the shape around the sprite.
 			const auto sprite = sprite_comp.get_sprite()->get_resource<graphics::sprite>();
-			const auto frame_size = math::vec2(sprite->get_frame_size());
-			const auto frame_anchor = math::vec2(sprite->get_frame_anchor(sprite_comp.get_controller().get_frame())) * transform_comp.scale;
-			const auto sprite_size = frame_size * transform_comp.scale;
+			const math::vec2 frame_size = math::vec2(sprite->get_frame_size());
+			const math::vec2 frame_anchor = (math::vec2(sprite->get_frame_anchor(sprite_comp.get_controller().get_frame())) * transform_comp.scale) / 100;
+			const math::vec2 sprite_hsize = ((frame_size * transform_comp.scale) / 2) / 100;
+			const math::vec2 center = frame_anchor + sprite_hsize;
 			b2PolygonShape shape;
-			shape.SetAsBox(sprite_size.x, sprite_size.y, { frame_anchor.x, frame_anchor.y }, 0);
+			shape.SetAsBox(sprite_hsize.x, sprite_hsize.y, { center.x, center.y }, 0);
 
 			// Setup the fixture settings.
 			b2FixtureDef fixture_def;
 			fixture_def.shape = &shape;
 			fixture_def.density = 1;
 			fixture_def.userData = reinterpret_cast<void*>(static_cast<std::uintptr_t>(id));
-
+			
 			// Remove the existing fixture
 			if (sprite_col_comp.mFixture)
 				physics_comp.mBody->DestroyFixture(sprite_col_comp.mFixture);

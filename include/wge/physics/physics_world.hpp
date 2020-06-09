@@ -41,6 +41,8 @@ public:
 	void set_gravity(math::vec2 pVec);
 	math::vec2 get_gravity() const;
 
+	void imgui_debug();
+
 	raycast_hit_info first_hit_raycast(const math::vec2& pA, const math::vec2& pB) const
 	{
 		struct callback : b2RayCastCallback

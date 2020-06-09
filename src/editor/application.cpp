@@ -45,6 +45,74 @@
 #include <unordered_map>
 #include <array>
 
+namespace wge::physics
+{
+
+struct imgui_debug_draw : b2Draw
+{
+	virtual void DrawPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color) override
+	{
+		using namespace wge::editor;
+		for (int32 i = 0; i < vertexCount; i++)
+		{
+			const b2Vec2& a = vertices[i];
+			const b2Vec2& b = vertices[(i + 1) % vertexCount];
+			visual_editor::draw_line({ a.x, a.y }, { b.x, b.y }, { color.r, color.g, color.b, color.a });
+		}
+	}
+
+	virtual void DrawSolidPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color) override
+	{
+		using namespace wge::editor;
+		for (int32 i = 0; i < vertexCount; i++)
+		{
+			const b2Vec2& a = vertices[i];
+			const b2Vec2& b = vertices[(i + 1) % vertexCount];
+			visual_editor::draw_line({ a.x, a.y }, { b.x, b.y }, { color.r, color.g, color.b, color.a });
+		}
+	}
+
+	virtual void DrawCircle(const b2Vec2& center, float32 radius, const b2Color& color) override
+	{
+		using namespace wge::editor;
+		visual_editor::draw_circle({ center.x, center.y }, radius, { color.r, color.g, color.b, color.a }, true);
+	}
+
+	virtual void DrawSolidCircle(const b2Vec2& center, float32 radius, const b2Vec2& axis, const b2Color& color) override
+	{
+		using namespace wge::editor;
+		visual_editor::draw_circle({ center.x, center.y }, radius, { color.r, color.g, color.b, color.a }, true);
+	}
+	virtual void DrawSegment(const b2Vec2& a, const b2Vec2& b, const b2Color& color) override
+	{
+		using namespace wge::editor;
+		visual_editor::draw_line({ a.x, a.y }, { b.x, b.y }, { color.r, color.g, color.b, color.a });
+	}
+	virtual void DrawTransform(const b2Transform& xf) override
+	{
+		using namespace wge::editor;
+		visual_editor::draw_circle({ xf.p.x, xf.p.y }, 5, { 1, 1, 1, 1 });
+		visual_editor::draw_line({ xf.p.x, xf.p.y }, math::vec2{ 0, 0.1 }.rotate(xf.q.GetAngle()) + math::vec2{ xf.p.x, xf.p.y }, { 1, 1, 1, 1 });
+	}
+
+	virtual void DrawPoint(const b2Vec2& p, float32 size, const b2Color& color) override
+	{
+		using namespace wge::editor;
+		visual_editor::draw_circle({ p.x, p.y }, size, { color.r, color.g, color.b, color.a });
+	}
+};
+
+void physics_world::imgui_debug()
+{
+	imgui_debug_draw myimgui_debug_draw;
+	myimgui_debug_draw.SetFlags(b2Draw::e_shapeBit);
+	mWorld->SetDebugDraw(&myimgui_debug_draw);
+	mWorld->DrawDebugData();
+	mWorld->SetDebugDraw(nullptr);
+}
+
+} // namespace wge::physics
+
 namespace wge::editor
 {
 
@@ -1857,8 +1925,14 @@ public:
 
 			if (mIs_loaded)
 			{
-				auto cursor = ImGui::GetCursorPos();
+				ImGui::BeginChild("viewport");
+				auto cursor = ImGui::GetCursorScreenPos();
 				ImGui::Image(mViewport_framebuffer, ImGui::FillWithFramebuffer(mViewport_framebuffer));
+
+				visual_editor::begin("_SceneEditor", cursor, math::vec2(0, 0), math::vec2(1.f, 1.f) * 100.f);
+				mEngine->get_physics().imgui_debug();
+				visual_editor::end();
+
 				mCan_take_input = ImGui::IsWindowFocused();
 
 				// Update mouse inputs.
@@ -1868,6 +1942,8 @@ public:
 				input["mouse_world_position"] = mRenderer.screen_to_world(ImGui::GetMousePos() - cursor);
 				input["mouse_screen_delta"] = math::vec2(ImGui::GetIO().MouseDelta);
 				input["mouse_screen_position"] = ImGui::GetMousePos() - cursor;
+
+				ImGui::EndChild();
 
 				step();
 			}

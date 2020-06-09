@@ -49,6 +49,11 @@ public:
 		return mLua_engine;
 	}
 
+	physics::physics_world& get_physics() noexcept
+	{
+		return mPhysics;
+	}
+
 private:
 	void load_assets();
 
