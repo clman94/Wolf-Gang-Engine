@@ -229,12 +229,11 @@ void lua_engine::register_physics_api(physics::physics_world& pPhysics, core::sc
 {
 	state["physics_raycast"] = [&pPhysics, &pScene](sol::table pResult, const math::vec2& pA, const math::vec2& pB) -> bool
 	{
-		const physics::raycast_hit_info hit = pPhysics.first_hit_raycast(pA, pB);
+		const physics::raycast_hit_info hit = pPhysics.raycast_closest(pA, pB);
 		if (hit.hit && pResult.valid())
 		{
 			pResult["normal"] = hit.normal;
 			pResult["point"] = hit.point;
-			pResult["fraction"] = hit.fraction;
 			if (auto state_comp = pScene.get_component<scripting::event_state_component>(hit.object_id))
 				pResult["object"] = state_comp->environment;
 		}
@@ -250,7 +249,6 @@ void lua_engine::register_physics_api(physics::physics_world& pPhysics, core::sc
 				hit_once = true;
 				result_info["normal"] = hit.normal;
 				result_info["point"] = hit.point;
-				result_info["fraction"] = hit.fraction;
 				if (auto state_comp = pScene.get_component<scripting::event_state_component>(hit.object_id))
 					result_info["object"] = state_comp->environment;
 				sol::protected_function_result cont = pCallable.call(result_info);

@@ -25,7 +25,6 @@ struct raycast_hit_info
 	core::object_id object_id;
 	math::vec2 point;
 	math::vec2 normal;
-	float fraction = 0;
 
 	operator bool() const noexcept
 	{
@@ -43,7 +42,7 @@ public:
 
 	void imgui_debug();
 
-	raycast_hit_info first_hit_raycast(const math::vec2& pA, const math::vec2& pB) const
+	raycast_hit_info raycast_closest(const math::vec2& pA, const math::vec2& pB) const
 	{
 		struct callback : b2RayCastCallback
 		{
@@ -55,8 +54,7 @@ public:
 				hit.object_id = static_cast<core::object_id>(reinterpret_cast<std::uintptr_t>(fixture->GetUserData()));
 				hit.point = { point.x, point.y };
 				hit.normal = { normal.x, normal.y };
-				hit.fraction = fraction;
-				return 0;
+				return fraction;
 			}
 		} mycallback;
 		mWorld->RayCast(&mycallback, { pA.x, pA.y }, { pB.x, pB.y });
@@ -77,7 +75,6 @@ public:
 				hit.object_id = static_cast<core::object_id>(reinterpret_cast<std::uintptr_t>(fixture->GetUserData()));
 				hit.point = { point.x, point.y };
 				hit.normal = { normal.x, normal.y };
-				hit.fraction = fraction;
 				if (callable(hit))
 					return 1;
 				return 0;
