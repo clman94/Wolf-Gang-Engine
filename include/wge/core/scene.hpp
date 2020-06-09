@@ -45,6 +45,7 @@ public:
 		for (auto& i : mLayers)
 			if (auto obj = i.get_object(pId))
 				return obj;
+		return invalid_object;
 	}
 
 	void remove_object(const object_id& pId)
