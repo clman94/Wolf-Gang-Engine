@@ -30,24 +30,27 @@ void object_resource::generate_object(core::object& pObj, const asset_manager& p
 
 		for (auto[type, asset_id] : util::enumerate{ events })
 		{
-			scripting::event_component* comp = nullptr;
-			switch (static_cast<event_type>(type))
+			if (asset_id.is_valid())
 			{
-			case event_type::create:
-				comp = pObj.add_component<scripting::event_selector::create>();
-				break;
-			case event_type::update:
-				comp = pObj.add_component<scripting::event_selector::update>();
-				break;
-			case event_type::draw:
-				comp = pObj.add_component<scripting::event_selector::draw>();
-				break;
+				scripting::event_component* comp = nullptr;
+				switch (static_cast<event_type>(type))
+				{
+				case event_type::create:
+					comp = pObj.add_component<scripting::event_selector::create>();
+					break;
+				case event_type::update:
+					comp = pObj.add_component<scripting::event_selector::update>();
+					break;
+				case event_type::draw:
+					comp = pObj.add_component<scripting::event_selector::draw>();
+					break;
+				}
+				assert(comp);
+				if (auto asset = pAsset_mgr.get_asset(asset_id))
+					comp->source_script = asset;
+				else
+					log::error("Could not load event script; Invalid id");
 			}
-			assert(comp);
-			if (auto asset = pAsset_mgr.get_asset(asset_id))
-				comp->source_script = asset;
-			else
-				log::error("Could not load event script; Invalid id");
 		}
 	}
 }
