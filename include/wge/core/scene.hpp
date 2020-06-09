@@ -1,5 +1,6 @@
 #pragma once
 
+#include <wge/core/game_object.hpp>
 #include <wge/core/layer.hpp>
 #include <wge/core/factory.hpp>
 
@@ -38,6 +39,25 @@ public:
 	bool remove_layer(const layer& pPtr);
 
 	layers& get_layer_container() noexcept;
+
+	object get_object(const object_id& pId)
+	{
+		for (auto& i : mLayers)
+			if (auto obj = i.get_object(pId))
+				return obj;
+	}
+
+	void remove_object(const object_id& pId)
+	{
+		if (auto obj = get_object(pId))
+			obj.destroy();
+	}
+
+	void remove_object(const object_id& pId, queue_destruction_flag)
+	{
+		if (auto obj = get_object(pId))
+			obj.destroy(queue_destruction);
+	}
 
 	void clear();
 
