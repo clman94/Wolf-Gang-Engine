@@ -116,6 +116,17 @@ public:
 		return mycallback.hit;
 	}
 
+	void clear_all()
+	{
+		b2Body* i = mWorld->GetBodyList();
+		while (i)
+		{
+			b2Body* temp = i;
+			i = i->GetNext();
+			mWorld->DestroyBody(temp);
+		}
+	}
+
 	b2World* get_world() const;
 
 	void preupdate(core::layer& pLayer, float pDelta);

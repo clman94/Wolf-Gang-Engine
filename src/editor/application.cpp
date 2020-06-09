@@ -1790,6 +1790,7 @@ public:
 			return;
 		}
 		log::info("Opening Scene in Player Viewport...");
+		mEngine->get_physics().clear_all();
 		mEngine->get_scene() = pScene->generate_scene(mEngine->get_asset_manager());
 		mIs_loaded = true;
 		mScene = pScene;
