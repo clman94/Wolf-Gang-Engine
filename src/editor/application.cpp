@@ -1607,12 +1607,15 @@ public:
 			get_asset()->set_name(scripting::make_valid_identifier(get_asset()->get_name()));
 		}
 
-		auto generator = get_asset()->get_resource<core::object_resource>();
+		auto res = get_asset()->get_resource<core::object_resource>();
 		ImGui::Dummy({ 0, 10 });
-		display_sprite_input(generator);
+		display_sprite_input(res);
 		ImGui::Dummy({ 0, 10 });
-		display_event_list(generator);
+		display_event_list(res);
 		ImGui::Dummy({ 0, 10 });
+
+		if (ImGui::Checkbox("Collision", &res->is_collision_enabled))
+			mark_asset_modified();
 
 		ImGui::EndChild();
 

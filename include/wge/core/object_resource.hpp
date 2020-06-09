@@ -27,6 +27,8 @@ public:
 	// Lists the ids for the scripts assets for each event type.
 	std::array<util::uuid, static_cast<unsigned>(event_type::count)> events;
 
+	bool is_collision_enabled = false;
+
 public:
 	virtual void save() override {}
 

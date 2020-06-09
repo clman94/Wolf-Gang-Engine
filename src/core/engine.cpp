@@ -18,7 +18,7 @@ engine::engine()
 	mLua_engine.register_asset_api(mAsset_manager);
 	mLua_engine.register_layer_api(mAsset_manager);
 	mLua_engine.register_math_api();
-	mLua_engine.register_physics_api();
+	mLua_engine.register_physics_api(mPhysics);
 
 	mAsset_manager.register_resource_factory("sprite",
 		[&]()

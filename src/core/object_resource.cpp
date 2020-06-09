@@ -2,6 +2,7 @@
 #include <wge/scripting/lua_engine.hpp>
 #include <wge/util/ipair.hpp>
 #include <wge/graphics/sprite_component.hpp>
+#include <wge/physics/physics_component.hpp>
 
 namespace wge::core
 {
@@ -15,6 +16,12 @@ void object_resource::generate_object(core::object& pObj, const asset_manager& p
 		graphics::sprite_component sprite;
 		sprite.set_sprite(pAsset_mgr.get_asset(display_sprite));
 		pObj.add_component(std::move(sprite));
+	}
+
+	if (is_collision_enabled)
+	{
+		pObj.add_component(physics::physics_component{});
+		pObj.add_component(physics::sprite_fixture{});
 	}
 
 	if (!events.empty())
@@ -58,7 +65,7 @@ json object_resource::serialize_data() const
 		jevents.push_back(jevent);
 	}
 	j["sprite"] = display_sprite;
-
+	j["is_collision_enabled"] = is_collision_enabled;
 	return j;
 }
 
@@ -78,7 +85,7 @@ void object_resource::deserialize_data(const json& pJson)
 			}
 		}
 	}
-
 	display_sprite = pJson["sprite"];
+	is_collision_enabled = pJson["is_collision_enabled"];
 }
 } // namespace wge::core

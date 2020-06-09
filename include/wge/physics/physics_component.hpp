@@ -16,6 +16,13 @@ namespace wge::physics
 
 class physics_world;
 
+class sprite_fixture
+{
+private:
+	b2Fixture* mFixture;
+	friend class physics_world;
+};
+
 class physics_component
 {
 public:
@@ -37,11 +44,8 @@ public:
 
 	void set_fixed_rotation(bool pSet);
 
-	b2Fixture* create_fixture(const b2FixtureDef& pDef);
-
 private:
 	b2Body* mBody;
-
 	friend class physics_world;
 };
 

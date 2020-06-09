@@ -223,24 +223,40 @@ public:
 	bool has_collision = false;
 };
 
-void lua_engine::register_physics_api()
+void lua_engine::register_physics_api(physics::physics_world& pPhysics)
 {
-	sol::table t = state.create_named_table("physics");
-	/*t["test_aabb"] = [this](const core::layer& pLayer, const math::vec2& a, const math::vec2& b)
+	state["physics_raycast"] = [&pPhysics](sol::table pResult, const math::vec2& pA, const math::vec2& pB) -> bool
 	{
-		if (auto world = pLayer.get_system<physics::physics_world>())
+		const physics::raycast_hit_info hit = pPhysics.first_hit_raycast(pA, pB);
+		if (hit.hit && pResult.valid())
 		{
-			b2AABB aabb;
-			aabb.lowerBound.x = a.x;
-			aabb.lowerBound.y = a.y;
-			aabb.upperBound.x = b.x;
-			aabb.upperBound.y = b.y;
-			b2_quick_query_callback callback;
-			world->get_world()->QueryAABB(&callback, aabb);
-			return callback.has_collision;
+			pResult["normal"] = hit.normal;
+			pResult["point"] = hit.point;
+			pResult["fraction"] = hit.fraction;
 		}
-		return false;
-	};*/
+		return hit.hit;
+	};
+
+	state["physics_raycast_each"] = [this, &pPhysics](sol::safe_function pCallable, const math::vec2& pA, const math::vec2& pB) -> bool
+	{
+		bool hit_once = false;
+		sol::table result_info = state.create_table();
+		pPhysics.raycast(
+			[this, &pCallable, &hit_once, &result_info](const physics::raycast_hit_info& hit) {
+				hit_once = true;
+				result_info["normal"] = hit.normal;
+				result_info["point"] = hit.point;
+				result_info["fraction"] = hit.fraction;
+				sol::protected_function_result cont = pCallable.call(result_info);
+				return cont.valid() && cont.get<bool>();
+			}, pA, pB);
+		return hit_once;
+	};
+
+	state["physics_test_aabb"] = [this, &pPhysics](const math::vec2& pA, const math::vec2& pB) -> bool
+	{
+		return pPhysics.test_aabb({ pA, pB });
+	};
 }
 
 void lua_engine::update_layer(core::layer& pLayer, float pDelta)

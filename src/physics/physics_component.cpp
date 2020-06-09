@@ -53,10 +53,5 @@ void physics_component::set_fixed_rotation(bool pSet)
 {
 }
 
-b2Fixture* physics_component::create_fixture(const b2FixtureDef & pDef)
-{
-	assert(mBody);
-	return mBody->CreateFixture(&pDef);
-}
 
 } // namespace wge::physics

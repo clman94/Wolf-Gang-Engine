@@ -6,6 +6,7 @@
 #include <wge/core/game_object.hpp>
 #include <wge/math/vector.hpp>
 #include <wge/core/system.hpp>
+#include <wge/math/aabb.hpp>
 
 #include <Box2D/Box2D.h>
 
@@ -18,13 +19,18 @@ namespace wge::physics
 {
 
 
-struct hit_info
+struct raycast_hit_info
 {
 	bool hit = false;
 	core::object_id object_id;
 	math::vec2 point;
 	math::vec2 normal;
 	float fraction = 0;
+
+	operator bool() const noexcept
+	{
+		return hit;
+	}
 };
 
 class physics_world
@@ -35,11 +41,11 @@ public:
 	void set_gravity(math::vec2 pVec);
 	math::vec2 get_gravity() const;
 
-	hit_info first_hit_raycast(const math::vec2& pA, const math::vec2& pB) const
+	raycast_hit_info first_hit_raycast(const math::vec2& pA, const math::vec2& pB) const
 	{
 		struct callback : b2RayCastCallback
 		{
-			hit_info hit;
+			raycast_hit_info hit;
 			virtual float32 ReportFixture(b2Fixture* fixture, const b2Vec2& point,
 				const b2Vec2& normal, float32 fraction) override
 			{
@@ -61,20 +67,50 @@ public:
 		struct callback : b2RayCastCallback
 		{
 			Tcallable callable;
-			hit_info hit;
 			virtual float32 ReportFixture(b2Fixture* fixture, const b2Vec2& point,
-				const b2Vec2& normal, float32 fraction)
+				const b2Vec2& normal, float32 fraction) override
 			{
+				raycast_hit_info hit;
 				hit.hit = true;
 				hit.object_id = static_cast<core::object_id>(reinterpret_cast<std::uintptr_t>(fixture->GetUserData()));
 				hit.point = { point.x, point.y };
 				hit.normal = { normal.x, normal.y };
 				hit.fraction = fraction;
-				callable(hit);
+				if (callable(hit))
+					return 1;
+				return 0;
 			}
-		} mycallback{ pCallable };
+
+			callback(Tcallable&& pCallable) :
+				callable(std::forward<Tcallable>(pCallable))
+			{}
+		};
+		callback mycallback{ std::forward<Tcallable>(pCallable) };
 
 		mWorld->RayCast(&mycallback, { pA.x, pA.y }, { pB.x, pB.y });
+	}
+
+	bool test_aabb(const math::aabb& pAabb) const
+	{
+		// Callback that stops on the first hit.
+		struct callback : b2QueryCallback
+		{
+			bool hit = false;
+			virtual bool ReportFixture(b2Fixture* fixture) override
+			{
+				hit = true;
+				return false;
+			}
+		} mycallback;
+
+		// Create a box2d compatible structure.
+		b2AABB aabb;
+		aabb.lowerBound.x = pAabb.min.x;
+		aabb.lowerBound.y = pAabb.min.y;
+		aabb.upperBound.x = pAabb.max.x;
+		aabb.upperBound.y = pAabb.max.y;
+		mWorld->QueryAABB(&mycallback, aabb);
+
 		return mycallback.hit;
 	}
 

@@ -20,6 +20,13 @@
 #include <vector>
 #include <memory>
 
+namespace wge::physics
+{
+
+class physics_world;
+
+}
+
 namespace wge::scripting
 {
 
@@ -99,7 +106,7 @@ public:
 	void register_layer_api(core::asset_manager& pAsset_manager);
 	void register_draw_api(graphics::renderer& pRenderer);
 	void register_math_api();
-	void register_physics_api();
+	void register_physics_api(physics::physics_world& pPhysics);
 
 	void update_layer(core::layer& pLayer, float pDelta);
 	void draw_layer(core::layer& pLayer, float pDelta);

@@ -5,6 +5,7 @@
 #include <wge/graphics/graphics.hpp>
 #include <wge/scripting/lua_engine.hpp>
 #include <wge/core/factory.hpp>
+#include <wge/physics/physics_world.hpp>
 
 namespace wge::core
 {
@@ -57,6 +58,7 @@ private:
 	core::scene mScene;
 	graphics::graphics mGraphics;
 	scripting::lua_engine mLua_engine;
+	physics::physics_world mPhysics;
 
 	bool mLoaded{ false };
 };
