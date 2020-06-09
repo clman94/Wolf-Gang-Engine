@@ -897,7 +897,11 @@ public:
 
 		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
 		if (ImGui::CodeEditor("CodeEditor", source->source))
+		{
+			source->has_run_error = false;
+			source->function = {};
 			mark_asset_modified();
+		}
 		ImGui::PopFont();
 	}
 };
