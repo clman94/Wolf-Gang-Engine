@@ -6,7 +6,7 @@
 #include <wge/core/asset.hpp>
 #include <wge/core/asset_manager.hpp>
 #include <wge/core/game_object.hpp>
-#include <wge/core/layer.hpp>
+#include <wge/core/scene.hpp>
 #include <wge/core/component.hpp>
 #include <wge/core/system.hpp>
 #include <wge/filesystem/file_input_stream.hpp>
@@ -106,7 +106,7 @@ public:
 	void register_layer_api(core::asset_manager& pAsset_manager);
 	void register_draw_api(graphics::renderer& pRenderer);
 	void register_math_api();
-	void register_physics_api(physics::physics_world& pPhysics);
+	void register_physics_api(physics::physics_world& pPhysics, core::scene& pScene);
 
 	void update_layer(core::layer& pLayer, float pDelta);
 	void draw_layer(core::layer& pLayer, float pDelta);

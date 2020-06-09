@@ -4,6 +4,7 @@
 #include <wge/core/object_resource.hpp>
 #include <wge/math/transform.hpp>
 #include <wge/math/rect.hpp>
+#include <wge/scripting/lua_engine.hpp>
 
 namespace wge::scripting
 {
@@ -223,9 +224,9 @@ public:
 	bool has_collision = false;
 };
 
-void lua_engine::register_physics_api(physics::physics_world& pPhysics)
+void lua_engine::register_physics_api(physics::physics_world& pPhysics, core::scene& pScene)
 {
-	state["physics_raycast"] = [&pPhysics](sol::table pResult, const math::vec2& pA, const math::vec2& pB) -> bool
+	state["physics_raycast"] = [&pPhysics, &pScene](sol::table pResult, const math::vec2& pA, const math::vec2& pB) -> bool
 	{
 		const physics::raycast_hit_info hit = pPhysics.first_hit_raycast(pA, pB);
 		if (hit.hit && pResult.valid())
@@ -233,20 +234,24 @@ void lua_engine::register_physics_api(physics::physics_world& pPhysics)
 			pResult["normal"] = hit.normal;
 			pResult["point"] = hit.point;
 			pResult["fraction"] = hit.fraction;
+			if (auto state_comp = pScene.get_component<scripting::event_state_component>(hit.object_id))
+				pResult["object"] = state_comp->environment;
 		}
 		return hit.hit;
 	};
 
-	state["physics_raycast_each"] = [this, &pPhysics](sol::safe_function pCallable, const math::vec2& pA, const math::vec2& pB) -> bool
+	state["physics_raycast_each"] = [this, &pPhysics, &pScene](sol::safe_function pCallable, const math::vec2& pA, const math::vec2& pB) -> bool
 	{
 		bool hit_once = false;
 		sol::table result_info = state.create_table();
 		pPhysics.raycast(
-			[this, &pCallable, &hit_once, &result_info](const physics::raycast_hit_info& hit) {
+			[this, &pCallable, &pScene, &hit_once, &result_info](const physics::raycast_hit_info& hit) {
 				hit_once = true;
 				result_info["normal"] = hit.normal;
 				result_info["point"] = hit.point;
 				result_info["fraction"] = hit.fraction;
+				if (auto state_comp = pScene.get_component<scripting::event_state_component>(hit.object_id))
+					result_info["object"] = state_comp->environment;
 				sol::protected_function_result cont = pCallable.call(result_info);
 				return cont.valid() && cont.get<bool>();
 			}, pA, pB);
