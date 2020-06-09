@@ -61,7 +61,7 @@ void physics_world::preupdate(core::layer& pLayer, float pDelta)
 			const math::vec2 frame_size = math::vec2(sprite->get_frame_size());
 			const math::vec2 frame_anchor = (math::vec2(sprite->get_frame_anchor(sprite_comp.get_controller().get_frame())) * transform_comp.scale) / 100;
 			const math::vec2 sprite_hsize = ((frame_size * transform_comp.scale) / 2) / 100;
-			const math::vec2 center = frame_anchor + sprite_hsize;
+			const math::vec2 center = sprite_hsize - frame_anchor;
 			b2PolygonShape shape;
 			shape.SetAsBox(sprite_hsize.x, sprite_hsize.y, { center.x, center.y }, 0);
 
