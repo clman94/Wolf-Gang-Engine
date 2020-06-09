@@ -1683,11 +1683,11 @@ public:
 		ImGui::Dummy({ 0, 10 });
 		display_sprite_input(res);
 		ImGui::Dummy({ 0, 10 });
-		display_event_list(res);
-		ImGui::Dummy({ 0, 10 });
-
 		if (ImGui::Checkbox("Collision", &res->is_collision_enabled))
 			mark_asset_modified();
+		ImGui::Dummy({ 0, 10 });
+		display_event_list(res);
+
 
 		ImGui::EndChild();
 
