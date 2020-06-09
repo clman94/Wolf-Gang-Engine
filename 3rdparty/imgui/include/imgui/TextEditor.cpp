@@ -821,6 +821,7 @@ void TextEditor::HandleMouseInputs()
 					else
 						mSelectionMode = SelectionMode::Word;
 					SetSelection(mInteractiveStart, mInteractiveEnd, mSelectionMode);
+					SetCursorPosition(mState.mSelectionEnd);
 				}
 
 				mLastClick = (float)ImGui::GetTime();
