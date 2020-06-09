@@ -59,6 +59,46 @@ public:
 			obj.destroy(queue_destruction);
 	}
 
+	template <typename T>
+	auto* get_component(object_id pObject_id, bucket pBucket = default_bucket)
+	{
+		if (auto obj = get_object(pId))
+			return obj.get_component<T>(pBucket);
+		return nullptr;
+	}
+
+	template <typename T>
+	const auto* get_component(object_id pObject_id, bucket pBucket = default_bucket) const
+	{
+		if (auto obj = get_object(pId))
+			return obj.get_component<T>(pBucket);
+		return nullptr;
+	}
+
+	template <typename T>
+	bool remove_component(object_id pObject_id, bucket pBucket = default_bucket)
+	{
+		if (auto obj = get_object(pId))
+			return obj.remove_component<T>(pBucket);
+		return false;
+	}
+
+	template <typename T>
+	bool remove_component(object_id pObject_id, queue_destruction_flag)
+	{
+		if (auto obj = get_object(pId))
+			return obj.remove_component<T>(queue_destruction);
+		return false;
+	}
+
+	template <typename T>
+	bool remove_component(object_id pObject_id, bucket pBucket, queue_destruction_flag)
+	{
+		if (auto obj = get_object(pId))
+			return obj.remove_component<T>(pBucket, queue_destruction);
+		return false;
+	}
+
 	void clear();
 
 	auto begin() { return mLayers.begin(); }

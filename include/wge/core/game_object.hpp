@@ -75,7 +75,7 @@ public:
 	std::size_t get_component_count() const;
 	// Get first component by type
 	template <class T>
-	auto* get_component() const;
+	auto* get_component(bucket pBucket = default_bucket) const;
 	// Find the first of all of these components. Returns true when all of them are found.
 	template <typename Tfirst, typename...Trest>
 	bool unwrap_components(Tfirst*& pFirst, Trest*& ...pRest);
@@ -167,9 +167,9 @@ inline auto* object::add_component(bucket pBucket)
 }
 
 template<class T>
-inline auto* object::get_component() const
+inline auto* object::get_component(bucket pBucket) const
 {
-	return mLayer->get_storage<T>().get(get_id());
+	return mLayer->get_component<T>(pBucket);
 }
 
 template<typename Tfirst, typename ...Trest>
