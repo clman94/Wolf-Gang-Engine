@@ -40,30 +40,30 @@ public:
 
 	layers& get_layer_container() noexcept;
 
-	object get_object(const object_id& pId)
+	object get_object(const object_id& pObject_id)
 	{
 		for (auto& i : mLayers)
-			if (auto obj = i.get_object(pId))
+			if (auto obj = i.get_object(pObject_id))
 				return obj;
 		return invalid_object;
 	}
 
-	void remove_object(const object_id& pId)
+	void remove_object(const object_id& pObject_id)
 	{
-		if (auto obj = get_object(pId))
+		if (auto obj = get_object(pObject_id))
 			obj.destroy();
 	}
 
-	void remove_object(const object_id& pId, queue_destruction_flag)
+	void remove_object(const object_id& pObject_id, queue_destruction_flag)
 	{
-		if (auto obj = get_object(pId))
+		if (auto obj = get_object(pObject_id))
 			obj.destroy(queue_destruction);
 	}
 
 	template <typename T>
 	T* get_component(object_id pObject_id, bucket pBucket = default_bucket)
 	{
-		if (auto obj = get_object(pId))
+		if (auto obj = get_object(pObject_id))
 			return obj.get_component<T>(pBucket);
 		return nullptr;
 	}
@@ -71,7 +71,7 @@ public:
 	template <typename T>
 	const T* get_component(object_id pObject_id, bucket pBucket = default_bucket) const
 	{
-		if (auto obj = get_object(pId))
+		if (auto obj = get_object(pObject_id))
 			return obj.get_component<T>(pBucket);
 		return nullptr;
 	}
@@ -79,7 +79,7 @@ public:
 	template <typename T>
 	bool remove_component(object_id pObject_id, bucket pBucket = default_bucket)
 	{
-		if (auto obj = get_object(pId))
+		if (auto obj = get_object(pObject_id))
 			return obj.remove_component<T>(pBucket);
 		return false;
 	}
@@ -87,7 +87,7 @@ public:
 	template <typename T>
 	bool remove_component(object_id pObject_id, queue_destruction_flag)
 	{
-		if (auto obj = get_object(pId))
+		if (auto obj = get_object(pObject_id))
 			return obj.remove_component<T>(queue_destruction);
 		return false;
 	}
@@ -95,7 +95,7 @@ public:
 	template <typename T>
 	bool remove_component(object_id pObject_id, bucket pBucket, queue_destruction_flag)
 	{
-		if (auto obj = get_object(pId))
+		if (auto obj = get_object(pObject_id))
 			return obj.remove_component<T>(pBucket, queue_destruction);
 		return false;
 	}
