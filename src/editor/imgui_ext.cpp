@@ -93,7 +93,7 @@ bool HorizontalSplitter(const char* pStr_id, float* pDelta, float pWidth)
 ImVec2 GetWindowContentRegionSize()
 {
 	ImGuiWindow* window = GetCurrentWindowRead();
-	return window->ContentsRegionRect.GetSize();
+	return window->ContentRegionRect.GetSize();
 }
 
 } // namespace ImGui

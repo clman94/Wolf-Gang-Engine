@@ -29,7 +29,7 @@ void asset_editor::set_dock(unsigned int pId)
 {
 	assert(mAsset);
 	if (!ImGui::DockBuilderGetNode(pId))
-		ImGui::DockBuilderAddNode(pId, ImVec2(0, 0));
+		ImGui::DockBuilderAddNode(pId);
 	ImGui::DockBuilderDockWindow(mWindow_str_id.c_str(), pId);
 	ImGui::DockBuilderFinish(pId);
 }
@@ -192,8 +192,7 @@ void context::show_editor_guis()
 
 		if (editor->get_dock_family_id() != 0)
 		{
-			ImGuiDockFamily family(editor->get_dock_family_id());
-			ImGui::SetNextWindowDockFamily(&family);
+			ImGui::SetNextWindowDockID(editor->get_dock_family_id());
 		}
 		if (ImGui::Begin(title.c_str(), &is_window_open, flags))
 		{

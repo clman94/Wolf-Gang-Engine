@@ -32,7 +32,9 @@
 #include "icon_codepoints.hpp"
 #include "asset_manager_window.hpp"
 
+#include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
+#include <imgui/TextEditor.h>
 
 // GL
 #include <GL/glew.h>
@@ -582,7 +584,7 @@ inline void main_viewport_dock(ImGuiID pDock_id)
 	
 	ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;//ImGuiDockNodeFlags_PassthruDockspace;
 	ImGui::DockSpace(pDock_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-
+	
 	ImGui::End();
 }
 
@@ -889,21 +891,31 @@ class script_editor :
 public:
 	script_editor(context& pContext, const core::asset::ptr& pAsset) :
 		asset_editor(pContext, pAsset)
-	{}
+	{
+		auto source = get_asset()->get_resource<scripting::script>();
+		mText_editor.SetText(source->source);
+		mText_editor.SetPalette(TextEditor::GetDarkPalette());
+		mText_editor.SetLanguageDefinition(TextEditor::LanguageDefinition::Lua());
+		mText_editor.SetShowWhitespaces(false);
+	}
 
 	virtual void on_gui() override
 	{
-		auto source = get_asset()->get_resource<scripting::script>();
-
 		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-		if (ImGui::CodeEditor("CodeEditor", source->source))
+		mText_editor.Render("Text");
+		if (ImGui::IsItemDeactivatedAfterEdit())
 		{
+			auto source = get_asset()->get_resource<scripting::script>();
+			source->source = mText_editor.GetText();
 			source->has_run_error = false;
 			source->function = {};
 			mark_asset_modified();
 		}
 		ImGui::PopFont();
 	}
+
+private:
+	TextEditor mText_editor;
 };
 
 class tileset_editor :
@@ -1040,7 +1052,6 @@ public:
 	{
 		log::info("Opening Scene Editor...");
 		mLayer_previews.set_graphics(pContext.get_engine().get_graphics());
-
 
 		log::info("Creating Scene Editor Framebuffer...");
 		// Create a framebuffer for the scene to be rendered to.
@@ -1693,10 +1704,9 @@ public:
 
 		ImGui::SameLine();
 
-		ImGuiDockFamily dock_family(mScript_editor_dock_id);
 		// Event script editors are given a dedicated dockspace where they spawn. This helps
 		// remove clutter windows popping up everywhere.
-		ImGui::DockSpace(mScript_editor_dock_id, ImVec2(0, 0), ImGuiDockNodeFlags_None, &dock_family);
+		ImGui::DockSpace(mScript_editor_dock_id, ImVec2(0, 0), ImGuiDockNodeFlags_None);
 	}
 
 	virtual void on_close() override
@@ -2285,13 +2295,13 @@ private:
 	{
 		if (ImGui::Begin((const char*)(ICON_FA_COG u8" Settings")))
 		{
-			ImGui::BeginTabBar("SettingsTabBar");
+			/*ImGui::BeginTabBar("SettingsTabBar");
 			if (ImGui::BeginTabItem("Style"))
 			{
 				ImGui::ShowStyleEditor();
 				ImGui::EndTabItem();
 			}
-			ImGui::EndTabBar();
+			ImGui::EndTabBar();*/
 		}
 		ImGui::End();
 	}

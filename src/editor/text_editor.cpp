@@ -634,9 +634,9 @@ void text_editor::handle_keyboard()
 		cursor_right();
 	else
 	{
-		for (auto i : io.InputCharacters)
+		/*for (auto i : io.InputCharacters)
 			if (i != 0 && i < 128)
-				insert_character(static_cast<char>(i));
+				insert_character(static_cast<char>(i));*/
 	}
 }
 

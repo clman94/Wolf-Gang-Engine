@@ -113,6 +113,7 @@ set(IMGUI_HEADERS
 	"${IMGUI_INCLUDE_DIR}/imgui/imgui_stl.h"
 	"${IMGUI_INCLUDE_DIR}/imgui/imgui_impl_glfw.h"
 	"${IMGUI_INCLUDE_DIR}/imgui/imgui_impl_opengl3.h"
+	"${IMGUI_INCLUDE_DIR}/imgui/TextEditor.h"
 	)
 set(IMGUI_SOURCES
 	"${IMGUI_INCLUDE_DIR}/imgui/imgui.cpp"
@@ -122,6 +123,7 @@ set(IMGUI_SOURCES
 	"${IMGUI_INCLUDE_DIR}/imgui/imgui_style_editor.cpp"
 	"${IMGUI_INCLUDE_DIR}/imgui/imgui_impl_glfw.cpp"
 	"${IMGUI_INCLUDE_DIR}/imgui/imgui_impl_opengl3.cpp"
+	"${IMGUI_INCLUDE_DIR}/imgui/TextEditor.cpp"
 	)
 source_group("ImGui Headers" FILES ${IMGUI_HEADERS})
 source_group("ImGui Sources" FILES ${IMGUI_SOURCES})
