@@ -169,7 +169,7 @@ inline auto* object::add_component(bucket pBucket)
 template<class T>
 inline auto* object::get_component(bucket pBucket) const
 {
-	return mLayer->get_component<T>(pBucket);
+	return mLayer->get_component<T>(get_id(), pBucket);
 }
 
 template<typename Tfirst, typename ...Trest>
