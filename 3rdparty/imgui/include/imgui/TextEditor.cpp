@@ -786,10 +786,12 @@ void TextEditor::HandleMouseInputs()
 	{
 		if (!shift && !alt)
 		{
+			auto newCursorPosition = ScreenPosToCoordinates(ImGui::GetMousePos());
+			bool isSamePosition = mState.mCursorPosition == newCursorPosition;
 			auto click = ImGui::IsMouseClicked(0);
-			auto doubleClick = ImGui::IsMouseDoubleClicked(0);
+			auto doubleClick = ImGui::IsMouseDoubleClicked(0) && isSamePosition;
 			auto t = ImGui::GetTime();
-			auto tripleClick = click && !doubleClick && (mLastClick != -1.0f && (t - mLastClick) < io.MouseDoubleClickTime);
+			auto tripleClick = click && isSamePosition && !doubleClick && (mLastClick != -1.0f && (t - mLastClick) < io.MouseDoubleClickTime);
 
 			/*
 			Left mouse button triple click
@@ -799,7 +801,7 @@ void TextEditor::HandleMouseInputs()
 			{
 				if (!ctrl)
 				{
-					mState.mCursorPosition = mInteractiveStart = mInteractiveEnd = ScreenPosToCoordinates(ImGui::GetMousePos());
+					mState.mCursorPosition = mInteractiveStart = mInteractiveEnd = newCursorPosition;
 					mSelectionMode = SelectionMode::Line;
 					SetSelection(mInteractiveStart, mInteractiveEnd, mSelectionMode);
 				}
@@ -815,7 +817,7 @@ void TextEditor::HandleMouseInputs()
 			{
 				if (!ctrl)
 				{
-					mState.mCursorPosition = mInteractiveStart = mInteractiveEnd = ScreenPosToCoordinates(ImGui::GetMousePos());
+					mState.mCursorPosition = mInteractiveStart = mInteractiveEnd = newCursorPosition;
 					if (mSelectionMode == SelectionMode::Line)
 						mSelectionMode = SelectionMode::Normal;
 					else
@@ -832,7 +834,7 @@ void TextEditor::HandleMouseInputs()
 			*/
 			else if (click)
 			{
-				mState.mCursorPosition = mInteractiveStart = mInteractiveEnd = ScreenPosToCoordinates(ImGui::GetMousePos());
+				mState.mCursorPosition = mInteractiveStart = mInteractiveEnd = newCursorPosition;
 				if (ctrl)
 					mSelectionMode = SelectionMode::Word;
 				else
