@@ -61,7 +61,7 @@ public:
 	}
 
 	template <typename T>
-	auto* get_component(object_id pObject_id, bucket pBucket = default_bucket)
+	T* get_component(object_id pObject_id, bucket pBucket = default_bucket)
 	{
 		if (auto obj = get_object(pId))
 			return obj.get_component<T>(pBucket);
@@ -69,7 +69,7 @@ public:
 	}
 
 	template <typename T>
-	const auto* get_component(object_id pObject_id, bucket pBucket = default_bucket) const
+	const T* get_component(object_id pObject_id, bucket pBucket = default_bucket) const
 	{
 		if (auto obj = get_object(pId))
 			return obj.get_component<T>(pBucket);
