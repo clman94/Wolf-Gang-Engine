@@ -1937,6 +1937,11 @@ public:
 			{
 				restart();
 			}
+			ImGui::SameLine();
+			if (auto new_asset = asset_selector("Scene", "scene", mEngine->get_asset_manager(), mScene.get_asset()))
+			{
+				open_scene(new_asset);
+			}
 
 			if (mIs_loaded)
 			{
