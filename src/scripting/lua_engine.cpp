@@ -178,6 +178,7 @@ void lua_engine::register_math_api()
 		"y", &math::vec2::y,
 		"normalize", &math::vec2::normalize<>,
 		"abs", &math::vec2::abs<>,
+		"rotate", [](math::vec2& pVec, float pDeg) -> math::vec2& { pVec.rotate(math::degrees(pDeg)); return pVec; },
 		sol::meta_function::addition, &math::vec2::operator+,
 		sol::meta_function::subtraction, static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator-),
 		sol::meta_function::multiplication, sol::overload(
