@@ -903,7 +903,7 @@ public:
 	{
 		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
 		mText_editor.Render("Text");
-		if (ImGui::IsItemDeactivatedAfterEdit())
+		if (mText_editor.IsTextChanged())
 		{
 			auto source = get_asset()->get_resource<scripting::script>();
 			source->source = mText_editor.GetText();
