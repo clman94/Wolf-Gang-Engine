@@ -12,29 +12,12 @@ include ../config/version
 SHELL = bash
 PYTHON ?= python
 
-### Use git repository for GL extension specifications
-
-GIT_CLONE  ?= git clone --branch glew https://github.com/nigels-com/glfixes.git
-
-###
-### Conventional desktop OpenGL settings
-###
-
-REGISTRY     = registry/gl/specs
 EXT          = extensions/gl
-FILTER       = filter_gl_ext.sh
 CORE         = core/gl
-REGISTRY_URL = http://www.opengl.org/registry/
 
-###
-### Experimental OpenGL ES settings
-###
-
-# REGISTRY     = registry/gles
-# EXT          = extensions/gles
-# FILTER       = filter_gles_ext.sh
-# CORE         = core/gles
-# REGISTRY_URL = http://www.khronos.org/registry/gles/
+REPO_OPENGL  ?= https://github.com/KhronosGroup/OpenGL-Registry.git
+REPO_EGL     ?= https://github.com/KhronosGroup/EGL-Registry.git
+REPO_GLFIXES ?= https://github.com/nigels-com/glfixes
 
 BIN = bin
 SRC = src
@@ -103,30 +86,55 @@ B.TARGETS = \
 
 all custom: $(I.TARGETS) $(S.TARGETS) $(D.TARGETS) $(B.TARGETS)
 
-registry: $(REGISTRY)/.dummy
 ext: $(EXT)/.dummy
 
-$(REGISTRY)/.dummy:
+OpenGL-Registry/.dummy:
 	@echo "--------------------------------------------------------------------"
-	@echo "Downloading registry"
+	@echo "Downloading OpenGL-Registry"
 	@echo "--------------------------------------------------------------------"
-	$(GIT_CLONE) registry
+	git clone $(REPO_OPENGL) OpenGL-Registry
+	git clone --branch glew $(REPO_GLFIXES) glfixes
 	touch $@
 
-$(EXT)/.dummy: $(REGISTRY)/.dummy
+EGL-Registry/.dummy:
 	@echo "--------------------------------------------------------------------"
-	@echo "Creating descriptors"
+	@echo "Downloading EGL-Registry"
+	@echo "--------------------------------------------------------------------"
+	git clone $(REPO_EGL) EGL-Registry
+	touch $@
+
+$(EXT)/.dummy: OpenGL-Registry/.dummy EGL-Registry/.dummy
+	@echo "--------------------------------------------------------------------"
+	@echo "OpenGL descriptors"
 	@echo "--------------------------------------------------------------------"
 	rm -rf $(EXT)
-	$(BIN)/update_ext.sh $(EXT) $(REGISTRY) $(BLACKLIST)
-	$(PYTHON) $(BIN)/parse_xml.py registry/xml/egl.xml --core core/gl --extensions extensions/gl
-	$(BIN)/$(FILTER)     $(EXT)
+	cp -r glfixes/gl/specs/ANGLE OpenGL-Registry/extensions
+	cp -r glfixes/gl/specs/REGAL OpenGL-Registry/extensions
+	$(BIN)/update_ext.sh $(EXT) OpenGL-Registry/extensions $(BLACKLIST)
+	@echo "--------------------------------------------------------------------"
+	@echo "WGL descriptors"
+	@echo "--------------------------------------------------------------------"
+	rm -f $(EXT)/WGL_*
+	$(PYTHON) $(BIN)/parse_xml.py OpenGL-Registry/xml/wgl.xml --api wgl --extensions extensions/gl
+	@echo "--------------------------------------------------------------------"
+	@echo "GLX descriptors"
+	@echo "--------------------------------------------------------------------"
+	rm -f $(EXT)/GLX_*
+	$(PYTHON) $(BIN)/parse_xml.py OpenGL-Registry/xml/glx.xml --api glx --extensions extensions/gl
+	@echo "--------------------------------------------------------------------"
+	@echo "EGL descriptors"
+	@echo "--------------------------------------------------------------------"
+	$(PYTHON) $(BIN)/parse_xml.py EGL-Registry/api/egl.xml --api egl --extensions extensions/gl
+	@echo "--------------------------------------------------------------------"
+	@echo "filter descriptors"
+	@echo "--------------------------------------------------------------------"
+	$(BIN)/filter_gl_ext.sh $(EXT)
 ifeq ($(patsubst Darwin%,Darwin,$(SYSTEM)), Darwin)
 	find $(CORE) -maxdepth 1 -type f | grep -v VERSION | grep -v "~" | \
 	xargs -J % cp % $(EXT)
 else
 	find $(CORE) -maxdepth 1 -type f | grep -v VERSION | grep -v "~" | \
-	xargs cp --target-directory=$(EXT)
+	xargs -I % -n 1 cp % $(EXT)
 endif
 	touch $@
 
@@ -209,7 +217,7 @@ $(S.DEST)/glew.c: $(EXT)/.dummy
 	$(BIN)/make_def_var.pl GL $(GL_EXT_SPEC) >> $@
 	echo -e "\nstatic const char * _glewExtensionLookup[] = {" >> $@;
 	$(BIN)/make_index.pl $(GL_CORE_SPEC) $(GL_EXT_SPEC) >> $@
-	echo -e "  NULL\n};\n" >> $@;
+	echo -e "  NULL\n};\n\n" >> $@;
 	$(BIN)/make_enable_index.pl $(GL_CORE_SPEC) $(GL_EXT_SPEC) >> $@
 	$(BIN)/make_initd.pl GL $(GL_CORE_SPEC) >> $@
 	$(BIN)/make_initd.pl GL $(GL_EXT_SPEC) >> $@
@@ -302,7 +310,7 @@ $(S.DEST)/glewinfo.c: $(EXT)/.dummy
 	$(BIN)/make_info_list.pl $(EGL_CORE_SPEC) >> $@
 	$(BIN)/make_info_list.pl $(EGL_EXT_SPEC) >> $@
 	cat $(SRC)/glewinfo_tail.c >> $@
-	perl -e 's/"glColorSubTable"/"glBlendEquation", glBlendEquation == NULL);\n  glewInfoFunc("glColorSubTable"/g' -pi $@
+	perl -e 's/"glColorSubTable"/"glBlendEquation", glBlendEquation == NULL);\n  glewInfoFunc(fi, "glColorSubTable"/g' -pi $@
 	rm -f $@.bak
 
 # Update documentation

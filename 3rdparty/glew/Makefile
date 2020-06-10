@@ -89,6 +89,7 @@ all debug: glew.lib glew.bin
 
 LIB.LDFLAGS        := $(LDFLAGS.EXTRA) $(LDFLAGS.GL)
 LIB.LIBS           := $(GL_LDFLAGS)
+LIB.SHARED.DIR     ?= lib
 
 LIB.SRCS           := src/glew.c
 LIB.SRCS.NAMES     := $(notdir $(LIB.SRCS))
@@ -100,7 +101,7 @@ LIB.SOBJS          := $(LIB.SOBJS:.c=.o)
 
 glew.lib: glew.lib.shared glew.lib.static
 
-glew.lib.shared: lib lib/$(LIB.SHARED) glew.pc
+glew.lib.shared: lib $(LIB.SHARED.DIR) $(LIB.SHARED.DIR)/$(LIB.SHARED) glew.pc
 glew.lib.static: lib lib/$(LIB.STATIC) glew.pc
 
 .PHONY: glew.lib glew.lib.shared glew.lib.static
@@ -118,11 +119,11 @@ ifneq ($(STRIP),)
 	$(STRIP) -x $@
 endif
 
-lib/$(LIB.SHARED): $(LIB.SOBJS)
+$(LIB.SHARED.DIR)/$(LIB.SHARED): $(LIB.SOBJS)
 	$(LD) $(LDFLAGS.SO) -o $@ $^ $(LIB.LDFLAGS) $(LIB.LIBS)
 ifneq ($(LN),)
-	$(LN) $(LIB.SHARED) lib/$(LIB.SONAME)
-	$(LN) $(LIB.SHARED) lib/$(LIB.DEVLNK)
+	$(LN) $(LIB.SHARED) $(LIB.SHARED.DIR)/$(LIB.SONAME)
+	$(LN) $(LIB.SHARED) $(LIB.SHARED.DIR)/$(LIB.DEVLNK)
 endif
 ifneq ($(STRIP),)
 	$(STRIP) -x $@
@@ -149,6 +150,7 @@ glew.pc: glew.pc.in
 		-e "s|@version@|$(GLEW_VERSION)|g" \
 		-e "s|@cflags@||g" \
 		-e "s|@libname@|$(NAME)|g" \
+		-e "s|@libgl@|$(LDFLAGS.GL)|g" \
 		-e "s|@requireslib@|$(LIBGLU)|g" \
 		< $< > $@
 
@@ -177,13 +179,13 @@ endif
 bin:
 	mkdir bin
 
-bin/$(GLEWINFO.BIN): $(GLEWINFO.BIN.OBJ) lib/$(LIB.SHARED)
+bin/$(GLEWINFO.BIN): $(GLEWINFO.BIN.OBJ) $(LIB.SHARED.DIR)/$(LIB.SHARED)
 	$(CC) $(CFLAGS) -o $@ $(GLEWINFO.BIN.OBJ) $(BIN.LIBS)
 ifneq ($(STRIP),)
 	$(STRIP) -x $@
 endif
 
-bin/$(VISUALINFO.BIN): $(VISUALINFO.BIN.OBJ) lib/$(LIB.SHARED)
+bin/$(VISUALINFO.BIN): $(VISUALINFO.BIN.OBJ) $(LIB.SHARED.DIR)/$(LIB.SHARED)
 	$(CC) $(CFLAGS) -o $@ $(VISUALINFO.BIN.OBJ) $(BIN.LIBS)
 ifneq ($(STRIP),)
 	$(STRIP) -x $@
@@ -208,9 +210,9 @@ install.lib: glew.lib
 # runtime
 ifeq ($(filter-out mingw% cygwin,$(SYSTEM)),)
 	$(INSTALL) -d -m 0755 "$(DESTDIR)$(BINDIR)"
-	$(INSTALL) -m 0755 lib/$(LIB.SHARED) "$(DESTDIR)$(BINDIR)/"
+	$(INSTALL) -m 0755 $(LIB.SHARED.DIR)/$(LIB.SHARED) "$(DESTDIR)$(BINDIR)/"
 else
-	$(INSTALL) -m 0644 lib/$(LIB.SHARED) "$(DESTDIR)$(LIBDIR)/"
+	$(INSTALL) -m 0644 $(LIB.SHARED.DIR)/$(LIB.SHARED) "$(DESTDIR)$(LIBDIR)/"
 endif
 ifneq ($(LN),)
 	$(LN) $(LIB.SHARED) "$(DESTDIR)$(LIBDIR)/$(LIB.SONAME)"
@@ -292,6 +294,9 @@ dist-src:
 	mkdir -p $(DIST_DIR)/lib
 	cp -a auto $(DIST_DIR)
 	$(RM) -Rf $(DIST_DIR)/auto/registry
+	$(RM) -Rf $(DIST_DIR)/auto/glfixes
+	$(RM) -Rf $(DIST_DIR)/auto/OpenGL-Registry
+	$(RM) -Rf $(DIST_DIR)/auto/EGL-Registry
 	cp -a build $(DIST_DIR)
 	cp -a config $(DIST_DIR)
 	cp -a src $(DIST_DIR)

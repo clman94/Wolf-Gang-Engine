@@ -212,7 +212,7 @@ add_library(WolfGangEngine ${ALL_SOURCES})
 #                   COMMAND ${CMAKE_COMMAND} -E copy_directory
 #                       ${CMAKE_SOURCE_DIR}/resources $<TARGET_FILE_DIR:WolfGangEngine>)
 
-# GLEW
+# GLFW
 set(GLFW_BUILD_TESTS OFF)
 set(GLFW_BUILD_EXAMPLES OFF)
 set(GLFW_BUILD_DOCS OFF)
