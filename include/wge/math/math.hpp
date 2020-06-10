@@ -103,7 +103,7 @@ inline constexpr auto min(const T& pL, const T& pR) noexcept
 }
 
 template <typename T>
-inline constexpr const T& clamp(const T& pVal, const T& pMin, const T& pMax) noexcept
+inline constexpr T clamp(const T& pVal, const T& pMin, const T& pMax) noexcept
 {
 	return min(max(pVal, pMin), pMax);
 }
