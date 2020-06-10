@@ -86,6 +86,23 @@ sol::environment lua_engine::create_object_environment(core::object pObj)
 		core::object{ pObj }.destroy(core::queue_destruction);
 	};
 
+	env["animation_play"] = [pObj]()
+	{
+		if (auto comp = pObj.get_component<graphics::sprite_component>())
+			comp->get_controller().play();
+	};
+
+	env["animation_stop"] = [pObj]()
+	{
+		if (auto comp = pObj.get_component<graphics::sprite_component>())
+			comp->get_controller().stop();
+	};
+
+	env["set_sprite"] = [pObj](const std::string& pName)
+	{
+
+	};
+
 	env["this_layer"] = std::ref(pObj.get_layer());
 
 	return env;
