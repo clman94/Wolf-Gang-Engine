@@ -76,6 +76,7 @@ void renderer::render_sprites(core::layer& pLayer, graphics& pGraphics)
 	for (auto [id, sprite, transform] :
 		pLayer.each<sprite_component, math::transform>())
 	{
+		sprite.get_controller().update(1.f / 60.f);
 		sprite.create_batch(transform, *this);
 	}
 

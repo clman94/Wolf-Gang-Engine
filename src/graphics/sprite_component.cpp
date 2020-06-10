@@ -11,6 +11,8 @@ void sprite_component::create_batch(math::transform& pTransform, renderer& pRend
 	if (!mController.get_sprite())
 		return;
 
+	const std::size_t current_frame = get_controller().get_frame();
+
 	const auto sprite = mController.get_sprite();
 
 	const texture& sprite_texture = sprite->get_texture();
@@ -20,7 +22,7 @@ void sprite_component::create_batch(math::transform& pTransform, renderer& pRend
 
 	const math::vec2 frame_size{ sprite->get_frame_size() };
 
-	math::aabb uv = sprite->get_frame_uv(0);
+	math::aabb uv = sprite->get_frame_uv(current_frame);
 
 	vertex_2d verts[4];
 	verts[0].position = math::vec2(0, 0);
@@ -32,7 +34,7 @@ void sprite_component::create_batch(math::transform& pTransform, renderer& pRend
 	verts[3].position = frame_size.swizzle(0, math::_y);
 	verts[3].uv = math::vec2(uv.min.x, uv.max.y);
 
-	math::vec2 anchor = sprite->get_frame_anchor(0);
+	math::vec2 anchor = sprite->get_frame_anchor(current_frame);
 
 	// Transform the vertices
 	for (int i = 0; i < 4; i++)
