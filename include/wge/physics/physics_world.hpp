@@ -129,41 +129,12 @@ public:
 	void preupdate(core::layer& pLayer, float pDelta);
 	void postupdate(core::layer& pLayer, float pDelta);
 private:
-	struct contact
-	{
-		enum {
-			state_begin,
-			state_continued,
-			state_end
-		};
-		int state;
-	};
-
-	struct contact_listener :
-		b2ContactListener
-	{
-		virtual void BeginContact(b2Contact* pContact)
-		{
-			/*b2Fixture* f1 = pContact->GetFixtureA();
-			b2Fixture* f2 = pContact->GetFixtureB();
-			b2Body* b1 = f1->GetBody();
-			b2Body* b2 = f2->GetBody();
-			if (physics_component* component =
-				static_cast<physics_component*>(b1->GetUserData()))
-				component->get_object()->send("on_collision_begin");
-			if (physics_component* component =
-				static_cast<physics_component*>(b2->GetUserData()))
-				component->get_object()->send("on_collision_begin");*/
-		}
-	};
-
 	void update_object_transforms(core::layer& pLayer);
 
 private:
 	// Unfortunately, box2d likes to have everything pointing
 	// to eachother so we have to keep its world in heap.
 	std::unique_ptr<b2World> mWorld;
-	contact_listener mContact_listener;
 
 	friend class physics_component;
 };
