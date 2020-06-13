@@ -6,6 +6,8 @@
 #include <wge/math/rect.hpp>
 #include <wge/scripting/lua_engine.hpp>
 
+#include <regex>
+
 namespace wge::scripting
 {
 
@@ -291,20 +293,7 @@ void lua_engine::update_layer(core::layer& pLayer, float pDelta)
 		if (!state.environment.valid())
 		{
 			state.environment = create_object_environment(pLayer.get_object(id));
-
 			state.environment["created"] = false;
-
-			// Added the properties as variables.
-			for (const auto& i : state.properties)
-			{
-				if (!i.name.empty())
-				{
-					std::visit([&](auto& val)
-					{
-						state.environment[i.name] = val;
-					}, i.value);
-				}
-			}
 		}
 	}
 
@@ -341,12 +330,35 @@ void lua_engine::draw_layer(core::layer& pLayer, float pDelta)
 	pLayer.destroy_queued_components();
 }
 
+static error_info parse_lua_error(std::string_view pStr)
+{
+	error_info result;
+	const std::regex message_rule("(.*):(\\d+):\\s*([\\s\\S]*)");
+	const std::regex source_rule("\\[string\\s\"(.*)\"\\]");
+	std::match_results<std::string_view::const_iterator> pieces, source_pieces;
+	if (std::regex_match(pStr.begin(), pStr.end(), pieces, message_rule))
+	{
+		// Extract the string from "[string "{}"]"
+		if (std::regex_match(pieces[1].first, pieces[1].second, source_pieces, source_rule))
+			result.source = source_pieces[1].str();
+		else
+			result.source = pieces[1].str();
+		// Convert the line number.
+		result.line = std::atoi(pieces[2].str().c_str());
+		// Get the message.
+		result.message = pieces[3].str();
+	}
+	else
+		result.message = pStr;
+	return result;
+}
+
 void lua_engine::run_script(event_component& pSource, const sol::environment& pEnv, const std::string& pEvent_name)
 {
 	try
 	{
 		if (!pSource.source_script.is_valid() ||
-			pSource.source_script->has_run_error)
+			pSource.source_script->has_errors())
 			return;
 		script& src_script = *pSource.source_script;
 		if (!src_script.function.valid())
@@ -354,8 +366,8 @@ void lua_engine::run_script(event_component& pSource, const sol::environment& pE
 			sol::load_result lr = state.load(src_script.source, pEvent_name);
 			if (!lr.valid())
 			{
-				src_script.has_run_error = true;
 				sol::error err = lr;
+				src_script.error = parse_lua_error(err.what());
 				log::error("Parse error: {}", err.what());
 				return;
 			}
@@ -367,8 +379,8 @@ void lua_engine::run_script(event_component& pSource, const sol::environment& pE
 		sol::protected_function_result result = src_script.function();
 		if (!result.valid())
 		{
-			src_script.has_run_error = true;
 			sol::error err = result;
+			src_script.error = parse_lua_error(err.what());
 			log::error("Runtime error: {}", err.what());
 			return;
 		}

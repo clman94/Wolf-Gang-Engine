@@ -30,6 +30,25 @@ class physics_world;
 namespace wge::scripting
 {
 
+struct error_info
+{
+	std::string source;
+	std::string message;
+	int line = 0;
+
+	bool operator==(const error_info& pOther) const noexcept
+	{
+		return source == pOther.source &&
+			message == pOther.message && line == pOther.line;
+	}
+
+	bool operator!=(const error_info& pOther) const noexcept
+	{
+		return !operator==(pOther);
+	}
+};
+
+
 class script :
 	public core::resource
 {
@@ -38,11 +57,16 @@ public:
 
 	std::string source;
 	sol::protected_function function;
-	bool has_run_error = false;
+	std::optional<error_info> error;
+
+	bool has_errors() const noexcept
+	{
+		return error.has_value();
+	}
 
 	bool is_compiled() const noexcept
 	{
-		return function.valid();
+		return function.valid() && !has_errors();
 	}
 
 	virtual void load() override

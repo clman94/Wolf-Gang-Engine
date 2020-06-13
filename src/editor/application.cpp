@@ -901,13 +901,14 @@ public:
 
 	virtual void on_gui() override
 	{
+		update_error_markers();
+		auto source = get_asset()->get_resource<scripting::script>();
 		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
 		mText_editor.Render("Text");
 		if (mText_editor.IsTextChanged())
 		{
-			auto source = get_asset()->get_resource<scripting::script>();
 			source->source = mText_editor.GetText();
-			source->has_run_error = false;
+			source->error = std::nullopt;
 			source->function = {};
 			mark_asset_modified();
 		}
@@ -915,6 +916,25 @@ public:
 	}
 
 private:
+	void update_error_markers()
+	{
+		auto source = get_asset()->get_resource<scripting::script>();
+		if (source->has_errors() && mLast_error_info != source->error.value())
+		{
+			mError_markers.clear();
+			mError_markers[source->error->line] = source->error->message;
+			mText_editor.SetErrorMarkers(mError_markers);
+		}
+		else if (!source->has_errors() && !mError_markers.empty())
+		{
+			mError_markers.clear();
+			mText_editor.SetErrorMarkers(mError_markers);
+		}
+	}
+
+private:
+	scripting::error_info mLast_error_info;
+	TextEditor::ErrorMarkers mError_markers;
 	TextEditor mText_editor;
 };
 
