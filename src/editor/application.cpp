@@ -369,6 +369,11 @@ public:
 	{
 		mNot_imported.clear();
 		mOutdated_names.clear();
+		if (!std::filesystem::exists(mDirectory))
+		{
+			log::error("No import folder at \"{}\". Skiping import parsing.", mDirectory.string());
+			return;
+		}
 
 		for (auto i : std::filesystem::directory_iterator(mDirectory))
 		{
