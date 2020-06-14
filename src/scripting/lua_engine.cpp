@@ -225,8 +225,7 @@ void lua_engine::register_math_api()
 		),
 		sol::meta_function::equal_to, static_cast<bool(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator==),
 		sol::meta_function::unary_minus, static_cast<math::vec2(math::vec2::*)() const>(&math::vec2::operator-),
-		sol::meta_function::to_string, &math::vec2::to_string,
-		sol::meta_function::type, []() { return "vec2"; }
+		sol::meta_function::to_string, &math::vec2::to_string
 		);
 	t["dot"] = &math::dot<float>;
 	t["magnitude"] = &math::magnitude<float>;
@@ -341,7 +340,7 @@ void lua_engine::draw_layer(core::layer& pLayer, float pDelta)
 	for (auto& [id, on_create, state] :
 		pLayer.each<event_selector::create, event_state_component>())
 	{
-		run_script(on_create, state.environment, "Update");
+		run_script(on_create, state.environment, "Draw");
 	}
 	pLayer.destroy_queued_components();
 }
@@ -390,15 +389,18 @@ void lua_engine::run_script(event_component& pSource, const sol::environment& pE
 			src_script.function = lr;
 		}
 
-		// Execute for this objects environment.
-		sol::set_environment(pEnv, src_script.function);
-		sol::protected_function_result result = src_script.function();
-		if (!result.valid())
+		if (src_script.function.valid())
 		{
-			sol::error err = result;
-			src_script.error = parse_lua_error(err.what());
-			log::error("Runtime error: {}", err.what());
-			return;
+			// Execute for this objects environment.
+			sol::set_environment(pEnv, src_script.function);
+			sol::protected_function_result result = src_script.function();
+			if (!result.valid())
+			{
+				sol::error err = result;
+				src_script.error = parse_lua_error(err.what());
+				log::error("Runtime error: {}", err.what());
+				return;
+			}
 		}
 	}
 	catch (const sol::error& e)
