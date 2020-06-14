@@ -44,6 +44,10 @@ public:
 
 	raycast_hit_info raycast_closest(const math::vec2& pA, const math::vec2& pB) const
 	{
+		// Box2d doesn't know how to handle rays with zero length
+		// so let's just return early.
+		if (pA == pB)
+			return raycast_hit_info{};
 		struct callback : b2RayCastCallback
 		{
 			raycast_hit_info hit;
