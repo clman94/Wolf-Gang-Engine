@@ -57,6 +57,16 @@ public:
 	void set_parent_editor_id(const util::uuid& pAsset_id) noexcept { mParent_editor_asset_id = pAsset_id; }
 	const util::uuid& get_parent_editor_id() const noexcept { return mParent_editor_asset_id; }
 
+	void mark_first_time() noexcept
+	{
+		mFirst_time = false;
+	}
+
+	bool is_first_time() const noexcept
+	{
+		return mFirst_time;
+	}
+
 protected:
 	core::asset_manager& get_asset_manager() const noexcept;
 
@@ -65,6 +75,7 @@ private:
 	context* mContext;
 	core::asset::ptr mAsset;
 	bool mIs_visible = true;
+	bool mFirst_time = true;
 	unsigned int mDock_family_id{ 0 };
 
 	util::uuid mParent_editor_asset_id;

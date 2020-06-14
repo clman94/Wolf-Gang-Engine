@@ -109,18 +109,7 @@ asset_editor* context::open_editor(const core::asset::ptr& pAsset, unsigned int 
 	if (iter != mEditor_factories.end())
 	{
 		mAsset_editors.push_back(iter->second(pAsset));
-		asset_editor* editor = mAsset_editors.back().get();
-		if (pDock_id == 0)
-		{
-			editor->set_dock(mDefault_dock_id);
-		}
-		else
-		{
-			editor->set_dock(pDock_id);
-			editor->set_dock_family_id(pDock_id);
-		}
-		
-		return editor;
+		return mAsset_editors.back().get();
 	}
 	else
 	{
@@ -188,11 +177,15 @@ void context::show_editor_guis()
 		// without affecting the window.
 		const std::string title = asset->get_name() + "###" + asset->get_id().to_string();
 
-		ImGuiWindowFlags flags = is_asset_modified(asset) ? ImGuiWindowFlags_UnsavedDocument : 0;
-
-		if (editor->get_dock_family_id() != 0)
+		ImGuiWindowFlags flags = (is_asset_modified(asset) ? ImGuiWindowFlags_UnsavedDocument : 0);
+		if (editor->is_first_time())
 		{
-			ImGui::SetNextWindowDockID(editor->get_dock_family_id());
+			if (editor->get_dock_family_id() != 0)
+			{
+				ImGui::SetNextWindowDockID(editor->get_dock_family_id());
+			}
+			ImGui::SetNextWindowSize({ 400, 400 });
+			editor->mark_first_time();
 		}
 		if (ImGui::Begin(title.c_str(), &is_window_open, flags))
 		{
