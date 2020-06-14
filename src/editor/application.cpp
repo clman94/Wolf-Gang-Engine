@@ -921,6 +921,7 @@ private:
 		auto source = get_asset()->get_resource<scripting::script>();
 		if (source->has_errors() && mLast_error_info != source->error.value())
 		{
+			mLast_error_info = source->error.value();
 			mError_markers.clear();
 			mError_markers[source->error->line] = source->error->message;
 			mText_editor.SetErrorMarkers(mError_markers);
