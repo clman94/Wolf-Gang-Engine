@@ -1239,7 +1239,7 @@ public:
 					for (auto obj : *mSelected_layer)
 					{
 						ImGui::PushID(static_cast<int>(obj.get_id()));
-						std::string display_name = fmt::format("{} [{} id:{})]", obj.get_name(), obj.get_asset()->get_name(), obj.get_id());
+						std::string display_name = fmt::format("{} [{} id:{}]", obj.get_name(), obj.get_asset()->get_name(), obj.get_id());
 						if (ImGui::Selectable(display_name.c_str(), obj == mSelected_object))
 							mSelected_object = obj;
 						ImGui::PopID();
