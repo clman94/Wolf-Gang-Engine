@@ -37,7 +37,7 @@ math::vec2 transform::apply_to(const math::vec2& pVec, const transform_mask& pMa
 	if (!(pMask & transform_mask::scale))
 		result *= scale;
 	if (!(pMask & transform_mask::rotation))
-		result.rotate(rotation);
+		result = result.rotate(rotation);
 	if (!(pMask & transform_mask::position))
 		result += position;
 	return result;
@@ -59,7 +59,7 @@ math::vec2 transform::apply_inverse_to(const math::vec2& pVec, const transform_m
 	if (!(pMask & transform_mask::position))
 		result -= position;
 	if (!(pMask & transform_mask::rotation))
-		result.rotate(-rotation);
+		result = result.rotate(-rotation);
 	if (!(pMask & transform_mask::scale))
 		result /= scale;
 	if (!(pMask & transform_mask::shear))
