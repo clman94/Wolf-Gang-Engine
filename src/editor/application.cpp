@@ -2165,6 +2165,7 @@ private:
 			mContext.show_editor_guis();
 			mGame_viewport.on_gui();
 			mImport_window.on_gui(mContext.get_engine().get_asset_manager(), mImport_manager);
+			show_debugger();
 
 			end_frame();
 		}
@@ -2333,6 +2334,60 @@ private:
 				ImGui::EndTabItem();
 			}
 			ImGui::EndTabBar();*/
+		}
+		ImGui::End();
+	}
+
+
+	void show_debugger()
+	{
+		static std::set<std::string_view> builin_function_filter = {
+			"set_position", "get_position", "created", "this", "this_layer",
+			"destroy", "animation_play", "animation_stop", "set_sprite", "move",
+			"is_valid" };
+		auto& script_engine = mEngine.get_script_engine();
+		if (ImGui::Begin("Debugger"))
+		{
+			for (auto& layer : mEngine.get_scene())
+			{
+				if (ImGui::TreeNode(fmt::format("layer: {}", layer.get_name()).c_str()))
+				{
+					for (auto [id, env, info]: layer.each<scripting::event_state_component, core::object_info>())
+					{
+						if (env.environment.valid() &&
+							ImGui::TreeNode(fmt::format("Name: {} Id: {}", info.name, id).c_str()))
+						{
+							ImGui::Columns(2);
+							for (auto& var : env.environment)
+							{
+								std::string var_name = var.first.as<std::string>();
+								if (builin_function_filter.find(var_name) != builin_function_filter.end())
+									continue;
+								std::string type_name = sol::type_name(script_engine.state, var.second.get_type());
+								if (type_name == "function")
+									continue;
+								//std::string value = var.second.as<std::string>();
+								var.second.push();
+								std::size_t len = 0;
+								const char* value_ptr = luaL_tolstring(script_engine.state, -1, &len);
+								std::string value(value_ptr, len);
+								lua_pop(script_engine.state, 1);
+								var.second.pop();
+
+								ImGui::PushID(&info);
+								ImGui::Selectable(fmt::format("{} [{}]", var_name, type_name).c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
+								ImGui::PopID();
+								ImGui::NextColumn();
+								ImGui::TextUnformatted(value.c_str());
+								ImGui::NextColumn();
+							}
+							ImGui::TreePop();
+							ImGui::Columns(1);
+						}
+					}
+					ImGui::TreePop();
+				}
+			}
 		}
 		ImGui::End();
 	}
