@@ -93,82 +93,65 @@ public:
 	}
 
 	template <typename = detail::only_floating_point<T>>
-	basic_vec2& rotate(const radians& pRadians) noexcept
+	basic_vec2 rotate(const radians& pRadians) const noexcept
 	{
 		T s = math::sin(pRadians);
 		T c = math::cos(pRadians);
-		T tx = x, ty = y;
-		x = tx * c - ty * s;
-		y = tx * s + ty * c;
-		return *this;
+		return { x * c - y * s, x * s + y * c };
 	}
 
 	template <typename = detail::only_floating_point<T>>
-	basic_vec2& normalize() noexcept
+	basic_vec2 normalize() const noexcept
 	{
 		T mag = magnitude();
-		if (mag != 0)
-		{
-			x /= mag;
-			y /= mag;
-		}
-		return *this;
+		if (mag == 0)
+			return {};
+		return { x / mag, y / mag };
 	}
 
 	template <typename = detail::only_floating_point<T>>
-	basic_vec2& abs() noexcept
+	basic_vec2 abs() const noexcept
 	{
-		x = math::abs(x);
-		y = math::abs(y);
-		return *this;
+		return { math::abs(x), math::abs(y) };
 	}
 
 	template <typename = detail::only_floating_point<T>>
-	basic_vec2& floor() noexcept
+	basic_vec2 floor() const noexcept
 	{
-		x = math::floor(x);
-		y = math::floor(y);
-		return *this;
+		return { math::floor(x), math::floor(y) };
 	}
 
 	template <typename = detail::only_floating_point<T>>
-	basic_vec2& floor_magnitude() noexcept
+	basic_vec2 floor_magnitude() const noexcept
 	{
 		T mag = magnitude();
-		*this *= math::floor(mag) / mag;
-		return *this;
+		return basic_vec2{ *this } * (math::floor(mag) / mag);
 	}
 
 	template <typename = detail::only_floating_point<T>>
-	basic_vec2& ceil() noexcept
+	basic_vec2 ceil() const noexcept
 	{
-		x = math::ceil(x);
-		y = math::ceil(y);
-		return *this;
+		return { math::ceil(x), math::ceil(y) };
 	}
 
 	template <typename = detail::only_floating_point<T>>
-	basic_vec2& ceil_magnitude() noexcept
+	basic_vec2 ceil_magnitude() const noexcept
 	{
 		T mag = magnitude();
-		*this *= math::ceil(mag) / mag;
-		return *this;
+		return basic_vec2{ *this } * (math::ceil(mag) / mag);
 	}
 
 	template <typename = detail::only_floating_point<T>>
-	basic_vec2& round() noexcept
+	basic_vec2 round() const noexcept
 	{
-		x = math::round(x);
-		y = math::round(y);
-		return *this;
+		return basic_vec2{ math::round(x), math::round(y) };
 	}
 
 	template <typename = detail::only_floating_point<T>>
-	basic_vec2& round_magnitude() noexcept
+	basic_vec2 round_magnitude() const noexcept
 	{
 		T mag = magnitude();
-		*this *= math::round(mag) / mag;
-		return *this;
+		return basic_vec2{ *this } * (math::round(mag) / mag);
 	}
 
 	radians angle() const noexcept
@@ -178,29 +161,24 @@ public:
 		return std::atan2(ty, tx);
 	}
 
-	constexpr basic_vec2& swap_xy() noexcept
+	constexpr basic_vec2 swap_xy() const noexcept
 	{
-		std::swap(x, y);
-		return *this;
+		return { y, x };
 	}
 
-	constexpr basic_vec2& mirror_x() noexcept
+	constexpr basic_vec2 mirror_x() const noexcept
 	{
-		x = -x;
-		return *this;
+		return { -x, y };
 	}
 
-	constexpr basic_vec2& mirror_y() noexcept
+	constexpr basic_vec2 mirror_y() const noexcept
 	{
-		y = -y;
-		return *this;
+		return { x, -y };
 	}
 
-	constexpr basic_vec2& mirror_xy() noexcept
+	constexpr basic_vec2 mirror_xy() const noexcept
 	{
-		x = -x;
-		y = -y;
-		return *this;
+		return { -x, -y };
 	}
 	
 	constexpr bool is_zero() const noexcept
