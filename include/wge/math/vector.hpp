@@ -176,6 +176,25 @@ public:
 		std::swap(x, y);
 		return *this;
 	}
+
+	constexpr basic_vec2& mirror_x() noexcept
+	{
+		x = -x;
+		return *this;
+	}
+
+	constexpr basic_vec2& mirror_y() noexcept
+	{
+		y = -y;
+		return *this;
+	}
+
+	constexpr basic_vec2& mirror_xy() noexcept
+	{
+		x = -x;
+		y = -y;
+		return *this;
+	}
 	
 	constexpr bool is_zero() const noexcept
 	{
