@@ -171,6 +171,13 @@ public:
 		return *this;
 	}
 
+	radians angle() const noexcept
+	{
+		float tx = static_cast<float>(x);
+		float ty = static_cast<float>(y);
+		return std::atan2(ty, tx);
+	}
+
 	constexpr basic_vec2& swap_xy() noexcept
 	{
 		std::swap(x, y);
