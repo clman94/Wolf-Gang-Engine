@@ -737,10 +737,10 @@ void TextEditor::HandleKeyboardInputs()
 			MoveHome(shift);
 		else if (!ctrl && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_End)))
 			MoveEnd(shift);
-		else if (!IsReadOnly() && !ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete)))
-			Delete();
-		else if (!IsReadOnly() && !ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace)))
-			Backspace();
+		else if (!IsReadOnly() && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete)))
+			Delete(ctrl);
+		else if (!IsReadOnly() && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace)))
+			Backspace(ctrl);
 		else if (!ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Insert)))
 			mOverwrite ^= true;
 		else if (ctrl && !shift && !alt && ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Insert)))
@@ -1758,7 +1758,7 @@ void TextEditor::MoveEnd(bool aSelect)
 	}
 }
 
-void TextEditor::Delete()
+void TextEditor::Delete(bool aWordMode)
 {
 	assert(!mReadOnly);
 
@@ -1770,6 +1770,16 @@ void TextEditor::Delete()
 
 	if (HasSelection())
 	{
+		u.mRemoved = GetSelectedText();
+		u.mRemovedStart = mState.mSelectionStart;
+		u.mRemovedEnd = mState.mSelectionEnd;
+
+		DeleteSelection();
+	}
+	else if (aWordMode)
+	{
+		MoveRight(1, true, true);
+
 		u.mRemoved = GetSelectedText();
 		u.mRemovedStart = mState.mSelectionStart;
 		u.mRemovedEnd = mState.mSelectionEnd;
@@ -1816,7 +1826,7 @@ void TextEditor::Delete()
 	AddUndo(u);
 }
 
-void TextEditor::Backspace()
+void TextEditor::Backspace(bool aWordMode)
 {
 	assert(!mReadOnly);
 
@@ -1828,6 +1838,16 @@ void TextEditor::Backspace()
 
 	if (HasSelection())
 	{
+		u.mRemoved = GetSelectedText();
+		u.mRemovedStart = mState.mSelectionStart;
+		u.mRemovedEnd = mState.mSelectionEnd;
+
+		DeleteSelection();
+	}
+	else if (aWordMode)
+	{
+		MoveLeft(1, true, true);
+
 		u.mRemoved = GetSelectedText();
 		u.mRemovedStart = mState.mSelectionStart;
 		u.mRemovedEnd = mState.mSelectionEnd;
