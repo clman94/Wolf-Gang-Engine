@@ -197,13 +197,22 @@ void lua_engine::register_math_api()
 		"y", &math::vec2::y,
 		"normalize", &math::vec2::normalize<>,
 		"abs", &math::vec2::abs<>,
+		"clone", [](const math::vec2& pVec) -> math::vec2 { return pVec; },
+		"dot", &math::vec2::dot,
+		"distance", &math::vec2::distance<>,
 		"rotate", [](math::vec2& pVec, float pDeg) -> math::vec2 { return pVec.rotate(math::degrees(pDeg)); },
+		"rotate_around", [](math::vec2& pVec, float pDeg, const math::vec2& pOther) -> math::vec2 { return pVec.rotate_around(math::degrees(pDeg), pOther); },
 		"angle", [](const math::vec2& pVec) -> float { return math::degrees(pVec.angle()).value(); },
+		"angle_to", [](const math::vec2& pVec, const math::vec2& pOther) -> float { return math::degrees(pVec.angle_to(pOther)).value(); },
 		"mirror_x", &math::vec2::mirror_x,
 		"mirror_y", &math::vec2::mirror_y,
 		"mirror_xy", &math::vec2::mirror_xy,
+		"set", &math::vec2::set,
 		"swap_xy", &math::vec2::swap_xy,
 		"is_zero", &math::vec2::is_zero,
+		"magnitude", &math::vec2::magnitude<>,
+		"project", &math::vec2::project,
+		"reflect", &math::vec2::reflect,
 		sol::meta_function::addition, &math::vec2::operator+,
 		sol::meta_function::subtraction, static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator-),
 		sol::meta_function::multiplication, sol::overload(
@@ -216,7 +225,8 @@ void lua_engine::register_math_api()
 		),
 		sol::meta_function::equal_to, static_cast<bool(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator==),
 		sol::meta_function::unary_minus, static_cast<math::vec2(math::vec2::*)() const>(&math::vec2::operator-),
-		sol::meta_function::to_string, &math::vec2::to_string
+		sol::meta_function::to_string, &math::vec2::to_string,
+		sol::meta_function::type, []() { return "vec2"; }
 		);
 	t["dot"] = &math::dot<float>;
 	t["magnitude"] = &math::magnitude<float>;

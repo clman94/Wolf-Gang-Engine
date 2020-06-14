@@ -92,12 +92,32 @@ public:
 		return (pTo - *this).magnitude();
 	}
 
+	T dot(const basic_vec2& pOther) const noexcept
+	{
+		return x * pOther.x + y * pOther.y;
+	}
+
+	basic_vec2 project(const basic_vec2& pOther) const noexcept
+	{
+		return pOther * (dot(pOther) / math::pow<T>(pOther.magnitude(), 2));
+	}
+
+	basic_vec2 reflect(const basic_vec2& pNormal) const noexcept
+	{
+		return *this - (project(pNormal) * 2);
+	}
+
 	template <typename = detail::only_floating_point<T>>
 	basic_vec2 rotate(const radians& pRadians) const noexcept
 	{
 		T s = math::sin(pRadians);
 		T c = math::cos(pRadians);
 		return { x * c - y * s, x * s + y * c };
+	}
+
+	basic_vec2 rotate_around(const radians& pRadians, const basic_vec2& pOrigin) const noexcept
+	{
+		return (*this - pOrigin).rotate(pRadians) + pOrigin;
 	}
 
 	template <typename = detail::only_floating_point<T>>
@@ -161,6 +181,11 @@ public:
 		return std::atan2(ty, tx);
 	}
 
+	radians angle_to(const basic_vec2& pOther) const noexcept
+	{
+		return (pOther - *this).angle();
+	}
+
 	constexpr basic_vec2 swap_xy() const noexcept
 	{
 		return { y, x };
@@ -187,6 +212,11 @@ public:
 			return almost_equal(x, 0.f) && almost_equal(y, 0.f);
 		else
 			return x == 0 && y == 0;
+	}
+
+	constexpr basic_vec2& set(const basic_vec2& pTo) noexcept
+	{
+		return *this = pTo;
 	}
 
 	// Vector operations
