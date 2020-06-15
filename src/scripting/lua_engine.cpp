@@ -161,6 +161,7 @@ void lua_engine::register_math_api()
 	t["mod"] = &math::mod<float>;
 	t["pmod"] = &math::positive_modulus<float>;
 	t["pow"] = &math::pow<float>;
+	t["is_nan"] = &math::is_nan<float>;
 	t.new_usertype<math::vec2>("vec2",
 		sol::call_constructor, sol::constructors<math::vec2(),
 		math::vec2(const math::vec2&),
@@ -181,6 +182,7 @@ void lua_engine::register_math_api()
 		"mirror_xy", &math::vec2::mirror_xy,
 		"set", &math::vec2::set,
 		"swap_xy", &math::vec2::swap_xy,
+		"is_nan", &math::vec2::is_nan,
 		"is_zero", &math::vec2::is_zero,
 		"magnitude", &math::vec2::magnitude<>,
 		"project", &math::vec2::project,

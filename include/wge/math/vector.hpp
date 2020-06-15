@@ -205,6 +205,11 @@ public:
 	{
 		return { -x, -y };
 	}
+
+	bool is_nan() const noexcept
+	{
+		return std::isnan(x) || std::isnan(y);
+	}
 	
 	constexpr bool is_zero() const noexcept
 	{

@@ -125,6 +125,15 @@ inline T normal(const T& a) noexcept
 	return a;
 }
 
+template <typename T>
+inline bool is_nan(const T& a) noexcept
+{
+	if constexpr (std::is_floating_point_v<T>)
+		return std::isnan(a);
+	else
+		return false;
+}
+
 // Returns an always positive value if b > 0.
 // This is unlike the '%' operator (and std::fmodf) that only returns a remainder
 // that can be negative if a is negative.
