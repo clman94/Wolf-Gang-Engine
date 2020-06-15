@@ -95,10 +95,6 @@ public:
 		return mPixel_size;
 	}
 
-protected:
-	virtual json on_serialize(core::serialize_type pType);
-	virtual void on_deserialize(const json&);
-
 private:
 	// Sort the batches so then the ones with greater depth are
 	// farther in the background and less depth is closer to the
