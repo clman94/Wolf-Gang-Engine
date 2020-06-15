@@ -6,6 +6,7 @@
 #include <wge/scripting/lua_engine.hpp>
 #include <wge/core/factory.hpp>
 #include <wge/physics/physics_world.hpp>
+#include <wge/graphics/camera.hpp>
 
 namespace wge::core
 {
@@ -54,6 +55,11 @@ public:
 		return mPhysics;
 	}
 
+	graphics::camera& get_default_camera() noexcept
+	{
+		return mDefault_camera;
+	}
+
 private:
 	void load_assets();
 
@@ -62,6 +68,7 @@ private:
 	core::asset_manager mAsset_manager;
 	core::scene mScene;
 	graphics::graphics mGraphics;
+	graphics::camera mDefault_camera;
 	scripting::lua_engine mLua_engine;
 	physics::physics_world mPhysics;
 

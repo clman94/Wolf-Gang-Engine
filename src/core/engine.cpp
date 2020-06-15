@@ -17,6 +17,7 @@ engine::engine()
 	mLua_engine.register_core_api();
 	mLua_engine.register_asset_api(mAsset_manager);
 	mLua_engine.register_layer_api(mAsset_manager);
+	mLua_engine.register_graphics_api(mDefault_camera);
 	mLua_engine.register_math_api();
 	mLua_engine.register_physics_api(mPhysics, mScene);
 
@@ -38,6 +39,8 @@ engine::engine()
 	mAsset_manager.register_default_resource_factory<core::scene_resource>("scene");
 	mAsset_manager.register_default_resource_factory<core::object_resource>("gameobject");
 	mAsset_manager.register_default_resource_factory<scripting::script>("script");
+
+	mDefault_camera.set_size({ 10, 7 });
 }
 
 engine::~engine()

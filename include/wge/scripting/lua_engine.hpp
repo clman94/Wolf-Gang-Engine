@@ -13,6 +13,7 @@
 #include <wge/math/math.hpp>
 #include <wge/math/vector.hpp>
 #include <wge/graphics/renderer.hpp>
+#include <wge/graphics/camera.hpp>
 
 #include <sol/sol.hpp>
 
@@ -123,7 +124,7 @@ public:
 	void register_core_api();
 	void register_asset_api(core::asset_manager& pAsset_manager);
 	void register_layer_api(core::asset_manager& pAsset_manager);
-	void register_draw_api(graphics::renderer& pRenderer);
+	void register_graphics_api(graphics::camera& pDefault_camera);
 	void register_math_api();
 	void register_physics_api(physics::physics_world& pPhysics, core::scene& pScene);
 

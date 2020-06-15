@@ -135,9 +135,14 @@ void lua_engine::register_layer_api(core::asset_manager& pAsset_manager)
 	};
 }
 
-void lua_engine::register_draw_api(graphics::renderer& pRenderer)
+void lua_engine::register_graphics_api(graphics::camera& pDefault_camera)
 {
-	// TODO
+	sol::table t = state.create_named_table("graphics");
+	t.new_usertype<graphics::camera>("camera", 
+		"focus", sol::property(&graphics::camera::get_focus, &graphics::camera::set_focus),
+		"size", sol::property(&graphics::camera::get_size, &graphics::camera::set_size)
+		);
+	t["main_camera"] = std::ref(pDefault_camera);
 }
 
 void lua_engine::register_math_api()

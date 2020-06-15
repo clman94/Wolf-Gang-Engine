@@ -2039,7 +2039,7 @@ public:
 		mViewport_framebuffer->clear({ 0, 0, 0, 1 });
 
 		// Render all the layers.
-		mRenderer.set_view(math::aabb({ 0, 0 }, { 30, 30 }));
+		mRenderer.set_view(mEngine->get_default_camera().get_view());
 
 		mRenderer.render_scene(mEngine->get_scene(), mEngine->get_graphics());
 	}
