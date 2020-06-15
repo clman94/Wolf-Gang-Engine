@@ -108,11 +108,6 @@ class event_component;
 class lua_engine
 {
 public:
-	lua_engine();
-	~lua_engine();
-
-	// Clear all global variables and then execute all global scripts.
-	void execute_global_scripts(core::asset_manager& mAsset_manager);
 	// Create a new environment for individual objects.
 	sol::environment create_object_environment(core::object pObj);
 	// Update the delta. Do this before each layer.
@@ -120,8 +115,8 @@ public:
 
 	bool compile_script(script& pScript);
 
-	// This environment stores all global data from global scripts
-	sol::environment global_environment;
+	// Prepare state for new scene.
+	void cleanup();
 
 	sol::state state;
 

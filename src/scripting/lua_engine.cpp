@@ -11,53 +11,13 @@
 namespace wge::scripting
 {
 
-lua_engine::lua_engine()
-{
-}
-
-lua_engine::~lua_engine()
-{
-	// Clear the environment first to prevent hanging references
-	global_environment = sol::environment{};
-}
-
-void lua_engine::execute_global_scripts(core::asset_manager& pAsset_manager)
-{
-	// Reset the global environment so we can start fresh.
-	global_environment = sol::environment(state, sol::create, state.globals());
-
-	// Get the folder for global scripts. We have a dedicated folder
-	// so scripts from objects aren't being executed as well which would break things.
-	// TODO: Let the dev choose the name of the folder.
-	auto global_script_folder = pAsset_manager.get_asset("GlobalScripts");
-	if (!global_script_folder || global_script_folder->get_type() != "folder")
-	{
-		log::warning("\"GlobalScripts\" folder does not exist");
-		return;
-	}
-
-	// Run all global scripts
-	pAsset_manager.for_each_child_recursive(global_script_folder,
-		[&](const core::asset::ptr& pAsset)
-	{
-		if (pAsset->get_type() == "script")
-		{
-			auto res = pAsset->get_resource<script>();
-			try
-			{
-				state.safe_script(res->source, global_environment, pAsset_manager.get_asset_path(pAsset).string(), sol::load_mode::text);
-			}
-			catch (sol::error& e)
-			{
-				log::error("{}", e.what());
-			}
-		}
-	});
-}
-
 sol::environment lua_engine::create_object_environment(core::object pObj)
 {
 	sol::environment env(state, sol::create, state.globals());
+
+	// Register the object to be accessible through the obj table.
+	if (!pObj.get_name().empty())
+		state["obj"][pObj.get_name()] = env;
 
 	env["is_valid"] = [pObj]() -> bool
 	{
@@ -124,10 +84,17 @@ bool lua_engine::compile_script(script& pScript)
 	return true;
 }
 
+void lua_engine::cleanup()
+{
+	state["obj"] = state.create_table();
+	state["global"] = sol::environment(state, sol::create, state.globals());
+}
+
 void lua_engine::register_core_api()
 {
 	state.open_libraries(sol::lib::base, sol::lib::coroutine, sol::lib::string, sol::lib::table);
-	state["global"] = state.globals();
+	state["obj"] = state.create_table();
+	state["global"] = sol::environment(state, sol::create, state.globals());
 	state["table"]["haskey"] = [](sol::table pTable, sol::object pKey) -> bool
 	{
 		for (auto& i : pTable)
