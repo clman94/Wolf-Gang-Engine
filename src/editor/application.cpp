@@ -1031,16 +1031,185 @@ private:
 	std::vector<graphics::framebuffer::ptr> mFramebuffers;
 };
 
-class scene_editor :
-	public asset_editor
+struct editor_object_info
+{
+	// Precalculated local aabb of an object.
+	math::aabb local_aabb;
+};
+
+class scene_editor_mode
 {
 public:
-	struct editor_object_info
-	{
-		// Precalculated local aabb of an object.
-		math::aabb local_aabb;
-	};
+	virtual ~scene_editor_mode() {}
+	virtual void on_overlay() {}
+	virtual void on_detailed_properties() {}
+	virtual void on_side_bar() {}
+	virtual void on_tool_bar() {}
+	virtual void on_bottom_bar() {}
+	// Return true to select the current layer.
+	virtual bool on_layer_display() { return false; }
+};
 
+class scene_editor_instance_mode :
+	public scene_editor_mode
+{
+public:
+	scene_editor_instance_mode(asset_editor& pMain_editor, core::layer& pLayer) :
+		mMain_editor(&pMain_editor), mSelected_layer(&pLayer)
+	{}
+
+	virtual bool on_layer_display() override
+	{
+		bool select_this_layer = false;
+		const auto _faded_color = ImGui::ScopedStyleColor(ImGuiCol_Text, { 0.6f, 0.6f, 0.6f, 1 });
+		if (ImGui::TreeNode("Objects"))
+		{
+			for (auto obj : *mSelected_layer)
+			{
+				if (!obj.get_name().empty())
+				{
+					if (ImGui::Selectable(obj.get_name().c_str(), obj == mSelected_object))
+					{
+						mSelected_object = obj;
+						select_this_layer = true;
+					}
+				}
+			}
+			ImGui::TreePop();
+		}
+		return select_this_layer;
+	}
+
+	virtual void on_side_bar() override
+	{
+		if (ImGui::CollapsingHeader("Instances", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			static float height = 200;
+			ImGui::BeginChild("Instances", ImVec2(0, height), true);
+			for (auto obj : *mSelected_layer)
+			{
+				ImGui::PushID(static_cast<int>(obj.get_id()));
+				std::string display_name = fmt::format("{} [{} id:{}]", obj.get_name(), obj.get_asset()->get_name(), obj.get_id());
+				if (ImGui::Selectable(display_name.c_str(), obj == mSelected_object))
+					mSelected_object = obj;
+				ImGui::PopID();
+			}
+			ImGui::EndChild(); // Instances
+			ImGui::HorizontalSplitter("InstancesSplitter", &height);
+		}
+	}
+
+	virtual void on_detailed_properties() override
+	{
+		if (mSelected_layer && mSelected_object.is_valid() && ImGui::TreeNode("Selected Object"))
+		{
+			std::string name = mSelected_object.get_name();
+			if (ImGui::InputText("Name", &name))
+				mSelected_object.set_name(name);
+			if (ImGui::Button("Goto Asset"))
+			{
+				mMain_editor->get_context().open_editor(mSelected_object.get_asset());
+			}
+			if (ImGui::IsItemDeactivatedAfterEdit())
+			{
+				mSelected_object.set_name(scripting::make_valid_identifier(name));
+				mMain_editor->mark_asset_modified();
+			}
+			ImGui::TextUnformatted("Transform");
+			math::transform* transform = mSelected_object.get_component<math::transform>();
+			ImGui::BeginGroup();
+			ImGui::DragFloat2("Position", transform->position.components().data());
+			ImGui::DragFloat("Rotation", transform->rotation.components().data());
+			ImGui::DragFloat2("Scale", transform->scale.components().data());
+			ImGui::EndGroup();
+			if (ImGui::IsItemDeactivatedAfterEdit())
+				mMain_editor->mark_asset_modified();
+
+			ImGui::Button("Creation Code");
+
+			ImGui::TreePop();
+		}
+	}
+
+	virtual void on_overlay() override
+	{
+		update_aabbs();
+
+		// True when the selected object is being edited.
+		// We don't want to select objects behind it on accident.
+		bool is_currently_editing = false;
+		if (mSelected_object.is_valid())
+		{
+			// Edit object transform.
+			editor_object_info* info = mSelected_object.get_component<editor_object_info>();
+			math::transform* transform = mSelected_object.get_component<math::transform>();
+			visual_editor::box_edit box_edit(info->local_aabb, *transform);
+			box_edit.resize(visual_editor::edit_type::transform);
+			box_edit.drag(visual_editor::edit_type::transform);
+			*transform = box_edit.get_transform();
+			if (box_edit.is_dragging())
+			{
+				is_currently_editing = true;
+				mMain_editor->mark_asset_modified();
+			}
+
+			// Draw center point.
+			visual_editor::draw_circle(transform->position, 5, { 1, 1, 1, 0.6f }, 3.f);
+		}
+
+		// Draw boundaries of all the other objects.
+		for (auto& [id, transform, info] : mSelected_layer->each<math::transform, editor_object_info>())
+		{
+			if (mSelected_object && mSelected_object.get_id() == id)
+				continue;
+			visual_editor::push_transform(transform);
+			visual_editor::draw_rect(info.local_aabb, { 1, 1, 1, 0.7f });
+			visual_editor::pop_transform();
+		}
+
+		if (!is_currently_editing && ImGui::IsItemHovered() && ImGui::IsMouseReleased(0))
+		{
+			// Generate a list of potential objects to be selected.
+			std::vector<core::object> canidates;
+			for (auto& [id, transform, info] : mSelected_layer->each<math::transform, editor_object_info>())
+			{
+				visual_editor::push_transform(transform);
+				if (info.local_aabb.intersect(visual_editor::get_mouse_position()))
+					canidates.push_back(mSelected_layer->get_object(id));
+				visual_editor::pop_transform();
+			}
+
+			// If one of the canidates are already currectly selected,
+			// we will use the object after the already selected one or loop back to the beginning.
+			auto selected = std::find_if(canidates.begin(), canidates.end(), [this](core::object& obj) { return obj == mSelected_object; });
+			if (selected != canidates.end())
+			{
+				++selected;
+				// Loop back to the beginning.
+				if (selected == canidates.end())
+					selected = canidates.begin();
+				mSelected_object = *selected;
+			}
+			// Select first object if nothing else is selected.
+			else if (!canidates.empty())
+				mSelected_object = canidates.front();
+			// Deselect objects if the user clicked in an empty space.
+			else
+				mSelected_object = core::invalid_object;
+		}
+		if (ImGui::BeginPopupContextWindow("Asset Info Popup"))
+		{
+
+			ImGui::EndPopup();
+		}
+	}
+
+	void select_object(core::object pObj)
+	{
+		mSelected_object = pObj;
+	}
+
+private:
 	void ensure_editor_info()
 	{
 		for (auto& obj : *mSelected_layer)
@@ -1068,6 +1237,118 @@ public:
 			editor_object_info.local_aabb = get_aabb_from_object(mSelected_layer->get_object(id));
 		}
 	}
+	core::layer* mSelected_layer = nullptr;
+	core::object mSelected_object;
+	asset_editor* mMain_editor = nullptr;
+};
+
+class scene_editor_tilemap_mode :
+	public scene_editor_mode
+{
+public:
+	scene_editor_tilemap_mode(asset_editor& pMain_editor, core::layer& pLayer) :
+		mMain_editor(&pMain_editor), mSelected_layer(&pLayer)
+	{}
+
+	virtual bool on_layer_display() override
+	{
+		ImGui::TextColored({ 0.6f, 0.6f, 0.6f, 1 }, "Tilemap");
+		return false;
+	}
+
+	virtual void on_tool_bar() override
+	{
+		if (ImGui::ToolButton((const char*)ICON_FA_PENCIL, mTilemap_mode == tilemap_mode::draw))
+			mTilemap_mode = tilemap_mode::draw;
+		ImGui::DescriptiveToolTip("Paint Tool", "Drag To draw!");
+		ImGui::SameLine();
+		if (ImGui::ToolButton((const char*)ICON_FA_ERASER, mTilemap_mode == tilemap_mode::erase))
+			mTilemap_mode = tilemap_mode::erase;
+		ImGui::DescriptiveToolTip("Erase Tool", "Drag To Erase!");
+		ImGui::SameLine();
+		ImGui::Button((const char*)ICON_FA_OBJECT_GROUP);
+		ImGui::DescriptiveToolTip("Select Tool", "Select a range!");
+	}
+
+	virtual void on_side_bar() override
+	{
+		core::tilemap_manipulator tilemap(*mSelected_layer);
+		if (auto asset = asset_selector("Select_tileset", "tileset", mMain_editor->get_asset_manager(), tilemap.get_tileset().get_asset()))
+		{
+			tilemap.set_tileset(asset);
+			tilemap.update_tile_uvs();
+		}
+
+		auto tileset = tilemap.get_tileset();
+		if (tileset)
+		{
+			begin_image_editor("Tileset", tileset->get_texture());
+			// Draw tile grid.
+			visual_editor::draw_grid({ 1, 1, 1, 1 }, static_cast<float>(tilemap.get_tilesize().x));
+
+			if (ImGui::IsItemClicked())
+			{
+				mTilemap_brush = math::ivec2(visual_editor::get_mouse_position() / math::vec2(tilemap.get_tilesize()));
+			}
+
+			// Draw brush selection.
+			visual_editor::draw_rect(math::rect(math::vec2(mTilemap_brush * tilemap.get_tilesize()),
+				math::vec2(tilemap.get_tilesize())), { 1, 1, 0, 1 });
+			end_image_editor();
+		}
+	}
+
+	virtual void on_overlay() override
+	{
+		core::tilemap_manipulator tilemap(*mSelected_layer);
+		const math::ivec2 tile_position{ visual_editor::get_mouse_position().floor() };
+
+		// Select color of hover overlay from the edit mode.
+		graphics::color hover_overlay_color;
+		switch (mTilemap_mode)
+		{
+		default:
+		case tilemap_mode::draw: hover_overlay_color = { 1, 1, 0, 1 }; break;
+		case tilemap_mode::erase:
+			if (tilemap.find_tile(tile_position))
+				hover_overlay_color = { 1, 0.4f, 0.4f, 1 };
+			else
+				hover_overlay_color = { 1, 0.7f, 0.7f, 1 };
+			break;
+		}
+		// Draw the overlay
+		if (ImGui::IsItemHovered())
+			visual_editor::draw_rect(math::rect(math::vec2(tile_position), math::vec2(1, 1)), hover_overlay_color);
+
+		if (ImGui::IsItemActive())
+		{
+			switch (mTilemap_mode)
+			{
+			default:
+			case tilemap_mode::draw: tilemap.set_tile(tile_position, mTilemap_brush); break;
+			case tilemap_mode::erase: tilemap.clear_tile(tile_position); break;
+			}
+			mMain_editor->mark_asset_modified();
+		}
+	}
+
+private:
+	enum class tilemap_mode
+	{
+		draw,
+		erase,
+	};
+	tilemap_mode mTilemap_mode = tilemap_mode::draw;
+	math::ivec2 mTilemap_brush;
+
+	core::layer* mSelected_layer = nullptr;
+	asset_editor* mMain_editor = nullptr;
+};
+
+class scene_editor :
+	public asset_editor
+{
+public:
 
 	// TODO: Implement a better and more generic messaging method at some point.
 	using on_game_run_callback = std::function<void(const core::asset::ptr&)>;
@@ -1130,8 +1411,7 @@ public:
 
 				if (ImGui::Selectable("##LayerSelectable", mSelected_layer == &*i))
 				{
-					mSelected_object = core::invalid_object;
-					mSelected_layer = &*i;
+					select_layer(*i);
 				}
 				ImGui::SameLine();
 				auto preview = mLayer_previews.get_preview_framebuffer(std::distance(mScene.get_layer_container().begin(), i));
@@ -1143,27 +1423,9 @@ public:
 
 				ImGui::BeginGroup();
 				ImGui::TextUnformatted(i->get_name().c_str());
-				if (core::is_tilemap_layer(*i))
-					ImGui::TextColored({ 0.6f, 0.6f, 0.6f, 1 }, "Tilemap");
-				else
+				if (get_layer_editor(*i)->on_layer_display())
 				{
-					const auto _faded_color = ImGui::ScopedStyleColor(ImGuiCol_Text, { 0.6f, 0.6f, 0.6f, 1 });
-					if (!core::is_tilemap_layer(*i) &&
-						ImGui::TreeNode("Objects"))
-					{
-						for (auto obj : *i)
-						{
-							if (!obj.get_name().empty())
-							{
-								if (ImGui::Selectable(obj.get_name().c_str(), obj == mSelected_object))
-								{
-									mSelected_layer = &*i;
-									mSelected_object = obj;
-								}
-							}
-						}
-						ImGui::TreePop();
-					}
+					select_layer(*i);
 				}
 				ImGui::EndGroup();
 
@@ -1223,32 +1485,8 @@ public:
 				move_selected_layer_down();
 		}
 
-		if (mSelected_layer)
-		{
-			if (core::is_tilemap_layer(*mSelected_layer))
-			{
-				if (ImGui::CollapsingHeader("Tilemap Brush Selector", ImGuiTreeNodeFlags_DefaultOpen))
-					tileset_brush_selector();
-			}
-			else
-			{
-				if (ImGui::CollapsingHeader("Instances", ImGuiTreeNodeFlags_DefaultOpen))
-				{
-					static float height = 200;
-					ImGui::BeginChild("Instances", ImVec2(0, height), true);
-					for (auto obj : *mSelected_layer)
-					{
-						ImGui::PushID(static_cast<int>(obj.get_id()));
-						std::string display_name = fmt::format("{} [{} id:{}]", obj.get_name(), obj.get_asset()->get_name(), obj.get_id());
-						if (ImGui::Selectable(display_name.c_str(), obj == mSelected_object))
-							mSelected_object = obj;
-						ImGui::PopID();
-					}
-					ImGui::EndChild(); // Instances
-					ImGui::HorizontalSplitter("InstancesSplitter", &height);
-				}
-			}
-		}
+		if (mCurrent_editor)
+			mCurrent_editor->on_side_bar();
 
 		if (ImGui::CollapsingHeader("Detailed Properties", ImGuiTreeNodeFlags_DefaultOpen))
 		{
@@ -1265,34 +1503,9 @@ public:
 				ImGui::TreePop();
 			}
 
-			if (mSelected_layer && mSelected_object.is_valid() && ImGui::TreeNode("Selected Object"))
-			{
-				std::string name = mSelected_object.get_name();
-				if (ImGui::InputText("Name", &name))
-					mSelected_object.set_name(name);
-				if (ImGui::Button("Goto Asset"))
-				{
-					get_context().open_editor(mSelected_object.get_asset());
-				}
-				if (ImGui::IsItemDeactivatedAfterEdit())
-				{
-					mSelected_object.set_name(scripting::make_valid_identifier(name));
-					mark_asset_modified();
-				}
-				ImGui::TextUnformatted("Transform");
-				math::transform* transform = mSelected_object.get_component<math::transform>();
-				ImGui::BeginGroup();
-				ImGui::DragFloat2("Position", transform->position.components().data());
-				ImGui::DragFloat("Rotation", transform->rotation.components().data());
-				ImGui::DragFloat2("Scale", transform->scale.components().data());
-				ImGui::EndGroup();
-				if (ImGui::IsItemDeactivatedAfterEdit())
-					mark_asset_modified();
-
-				ImGui::Button("Creation Code");
-
-				ImGui::TreePop();
-			}
+			if (mCurrent_editor)
+				mCurrent_editor->on_detailed_properties();
+			
 			ImGui::EndChild();
 		}
 
@@ -1305,16 +1518,8 @@ public:
 		ImGui::SameLine();
 		ImGui::BeginGroup();
 
-		if (ImGui::ToolButton((const char*)ICON_FA_PENCIL, mTilemap_mode == tilemap_mode::draw))
-			mTilemap_mode = tilemap_mode::draw;
-		ImGui::DescriptiveToolTip("Paint Tool", "Drag To draw!");
-		ImGui::SameLine();
-		if (ImGui::ToolButton((const char*)ICON_FA_ERASER, mTilemap_mode == tilemap_mode::erase))
-			mTilemap_mode = tilemap_mode::erase;
-		ImGui::DescriptiveToolTip("Erase Tool", "Drag To Erase!");
-		ImGui::SameLine();
-		ImGui::Button((const char*)ICON_FA_OBJECT_GROUP);
-		ImGui::DescriptiveToolTip("Select Tool", "Select a range!");
+		if (mCurrent_editor)
+			mCurrent_editor->on_tool_bar();
 
 		ImGui::BeginChild("Scene", { 0, 0 }, true, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_MenuBar);
 		
@@ -1375,6 +1580,7 @@ public:
 		{
 			mScene.remove_layer(*mSelected_layer);
 			mSelected_layer = nullptr;
+			mCurrent_editor = nullptr;
 			mark_asset_modified();
 		}
 	}
@@ -1452,13 +1658,8 @@ public:
 			if (is_grid_enabled)
 				visual_editor::draw_grid(grid_color, 1);
 
-			if (mSelected_layer)
-			{
-				if (core::is_tilemap_layer(*mSelected_layer))
-					tilemap_editor();
-				else
-					object_layer_editor();
-			}
+			if (mCurrent_editor)
+				mCurrent_editor->on_overlay();
 		}
 		visual_editor::end();
 
@@ -1493,147 +1694,29 @@ public:
 		return obj;
 	}
 
-	void tileset_brush_selector()
+	scene_editor_mode* get_layer_editor(core::layer& pLayer)
 	{
-		core::tilemap_manipulator tilemap(*mSelected_layer);
-		if (auto asset = asset_selector("Select_tileset", "tileset", get_asset_manager(), tilemap.get_tileset().get_asset()))
+		auto& editor = mLayer_editors[&pLayer];
+		if (!editor)
 		{
-			tilemap.set_tileset(asset);
-			tilemap.update_tile_uvs();
+			if (core::is_tilemap_layer(pLayer))
+				editor = std::make_unique<scene_editor_tilemap_mode>(*this, pLayer);
+			else
+				editor = std::make_unique<scene_editor_instance_mode>(*this, pLayer);
 		}
-
-		auto tileset = tilemap.get_tileset();
-		if (tileset)
-		{
-			begin_image_editor("Tileset", tileset->get_texture());
-			// Draw tile grid.
-			visual_editor::draw_grid({ 1, 1, 1, 1 }, static_cast<float>(tilemap.get_tilesize().x));
-
-			if (ImGui::IsItemClicked())
-			{
-				mTilemap_brush = math::ivec2(visual_editor::get_mouse_position() / math::vec2(tilemap.get_tilesize()));
-			}
-
-			// Draw brush selection.
-			visual_editor::draw_rect(math::rect(math::vec2(mTilemap_brush * tilemap.get_tilesize()),
-				math::vec2(tilemap.get_tilesize())), { 1, 1, 0, 1 });
-			end_image_editor();
-		}
+		return editor.get();
 	}
 
-	void tilemap_editor()
+	void select_layer(core::layer& pLayer)
 	{
-		core::tilemap_manipulator tilemap(*mSelected_layer);
-		const math::ivec2 tile_position{ visual_editor::get_mouse_position().floor() };
-
-		// Select color of hover overlay from the edit mode.
-		graphics::color hover_overlay_color;
-		switch (mTilemap_mode)
-		{
-		default:
-		case tilemap_mode::draw: hover_overlay_color = { 1, 1, 0, 1 }; break;
-		case tilemap_mode::erase:
-			if (tilemap.find_tile(tile_position))
-				hover_overlay_color = { 1, 0.4f, 0.4f, 1 };
-			else
-				hover_overlay_color = { 1, 0.7f, 0.7f, 1 };
-			break;
-		}
-		// Draw the overlay
-		if (ImGui::IsItemHovered())
-			visual_editor::draw_rect(math::rect(math::vec2(tile_position), math::vec2(1, 1)), hover_overlay_color);
-
-		if (ImGui::IsItemActive())
-		{
-			switch (mTilemap_mode)
-			{
-			default:
-			case tilemap_mode::draw: tilemap.set_tile(tile_position, mTilemap_brush); break;
-			case tilemap_mode::erase: tilemap.clear_tile(tile_position); break;
-			}
-			mark_asset_modified();
-		}
-	}
-
-	void object_layer_editor()
-	{
-		update_aabbs();
-
-		// True when the selected object is being edited.
-		// We don't want to select objects behind it on accident.
-		bool is_currently_editing = false;
-		if (mSelected_object.is_valid())
-		{
-			// Edit object transform.
-			editor_object_info* info = mSelected_object.get_component<editor_object_info>();
-			math::transform* transform = mSelected_object.get_component<math::transform>();
-			visual_editor::box_edit box_edit(info->local_aabb, *transform);
-			box_edit.resize(visual_editor::edit_type::transform);
-			box_edit.drag(visual_editor::edit_type::transform);
-			*transform = box_edit.get_transform();
-			if (box_edit.is_dragging())
-			{
-				is_currently_editing = true;
-				mark_asset_modified();
-			}
-
-			// Draw center point.
-			visual_editor::draw_circle(transform->position, 5, { 1, 1, 1, 0.6f }, 3.f);
-		}
-
-		// Draw boundaries of all the other objects.
-		for (auto& [id, transform, info] : mSelected_layer->each<math::transform, editor_object_info>())
-		{
-			if (mSelected_object && mSelected_object.get_id() == id)
-				continue;
-			visual_editor::push_transform(transform);
-			visual_editor::draw_rect(info.local_aabb, { 1, 1, 1, 0.7f });
-			visual_editor::pop_transform();
-		}
-
-		if (!is_currently_editing && ImGui::IsItemHovered() && ImGui::IsMouseReleased(0))
-		{
-			// Generate a list of potential objects to be selected.
-			std::vector<core::object> canidates;
-			for (auto& [id, transform, info] : mSelected_layer->each<math::transform, editor_object_info>())
-			{
-				visual_editor::push_transform(transform);
-				if (info.local_aabb.intersect(visual_editor::get_mouse_position()))
-					canidates.push_back(mSelected_layer->get_object(id));
-				visual_editor::pop_transform();
-			}
-			
-			// If one of the canidates are already currectly selected,
-			// we will use the object after the already selected one or loop back to the beginning.
-			auto selected = std::find_if(canidates.begin(), canidates.end(), [this](core::object& obj) { return obj == mSelected_object; });
-			if (selected != canidates.end())
-			{
-				++selected;
-				// Loop back to the beginning.
-				if (selected == canidates.end())
-					selected = canidates.begin();
-				mSelected_object = *selected;
-			}
-			// Select first object if nothing else is selected.
-			else if (!canidates.empty())
-				mSelected_object = canidates.front();
-			// Deselect objects if the user clicked in an empty space.
-			else
-				mSelected_object = core::invalid_object;
-		}
+		mCurrent_editor = get_layer_editor(pLayer);
 	}
 
 private:
-	enum class tilemap_mode
-	{
-		draw,
-		erase,
-	};
-	tilemap_mode mTilemap_mode = tilemap_mode::draw;
-	math::ivec2 mTilemap_brush;
 
+	scene_editor_mode* mCurrent_editor = nullptr;
+	std::map<core::layer*, std::unique_ptr<scene_editor_mode>> mLayer_editors;
 	core::layer* mSelected_layer = nullptr;
-	core::object mSelected_object;
 	core::scene mScene;
 
 	core::scene_resource* mScene_resource = nullptr;
@@ -2318,7 +2401,6 @@ private:
 		mEngine.close_game();
 		mEngine.load_game(pPath);
 
-		mEngine.get_script_engine().execute_global_scripts(mEngine.get_asset_manager());
 		mImport_manager.load_import_folder(pPath / "imports");
 	}
 

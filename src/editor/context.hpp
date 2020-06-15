@@ -67,7 +67,6 @@ public:
 		return mFirst_time;
 	}
 
-protected:
 	core::asset_manager& get_asset_manager() const noexcept;
 
 private:
