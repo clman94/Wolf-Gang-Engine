@@ -57,8 +57,9 @@ public:
 		mBatches.push_back(pBatch);
 	}
 
-	void set_render_view(const math::aabb& mAABB) noexcept;
-	void set_render_view_to_framebuffer(const math::vec2& pOffset = { 0, 0 }, const math::vec2& pScale = { 1, 1 }) noexcept;
+	void set_view(const math::aabb& pView) noexcept;
+	void set_raw_view(const math::aabb& mAABB) noexcept;
+	void set_view_to_framebuffer(const math::vec2& pOffset = { 0, 0 }, const math::vec2& pScale = { 1, 1 }) noexcept;
 	math::aabb get_render_view() const noexcept;
 	math::vec2 get_render_view_scale() const noexcept;
 

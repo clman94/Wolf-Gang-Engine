@@ -40,15 +40,35 @@ std::size_t batch_builder::add_quad(util::span<vertex_2d> pBuffer)
 	return start_index;
 }
 
-void renderer::set_render_view(const math::aabb& mAABB) noexcept
+void renderer::set_view(const math::aabb& pView) noexcept
+{
+	const math::vec2 fb_size(mFramebuffer->get_size());
+	const float fb_aspect_ratio = fb_size.x / fb_size.y;
+
+	const math::vec2 view_size = pView.max - pView.min;
+	// Calculate a new size from the framebuffers aspect ratio.
+	const math::vec2 scaled_size =
+	{
+		math::min(view_size.y * fb_aspect_ratio, view_size.x),
+		math::min(view_size.x / fb_aspect_ratio, view_size.y)
+	};
+	math::aabb view;
+	// Center the view.
+	view.min = pView.min + ((view_size - scaled_size) / 2);
+	// Apply the new size.
+	view.max = view.min + scaled_size;
+	mRender_view = view;
+}
+
+void renderer::set_raw_view(const math::aabb& mAABB) noexcept
 {
 	mRender_view = mAABB;
 }
 
-void renderer::set_render_view_to_framebuffer(const math::vec2& pOffset, const math::vec2& pScale) noexcept
+void renderer::set_view_to_framebuffer(const math::vec2& pOffset, const math::vec2& pScale) noexcept
 {
 	WGE_ASSERT(mFramebuffer);
-	set_render_view({ pOffset, pOffset + math::vec2(mFramebuffer->get_size()) * pScale });
+	mRender_view = { pOffset, pOffset + math::vec2(mFramebuffer->get_size()) * pScale };
 }
 
 math::aabb renderer::get_render_view() const noexcept

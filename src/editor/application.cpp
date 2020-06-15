@@ -1684,7 +1684,7 @@ public:
 
 		// Render all the layers.
 		mRenderer.set_framebuffer(mViewport_framebuffer);
-		mRenderer.set_render_view_to_framebuffer(mViewport_offset, 1.f / mViewport_scale);
+		mRenderer.set_view_to_framebuffer(mViewport_offset, 1.f / mViewport_scale);
 		mRenderer.render_scene(mScene, engine.get_graphics());
 
 		ImGui::EndFixedScrollRegion();
@@ -2039,7 +2039,7 @@ public:
 		mViewport_framebuffer->clear({ 0, 0, 0, 1 });
 
 		// Render all the layers.
-		mRenderer.set_render_view_to_framebuffer(math::vec2(0, 0), math::vec2(1.f, 1.f) / 100.f);
+		mRenderer.set_view(math::aabb({ 0, 0 }, { 30, 30 }));
 
 		mRenderer.render_scene(mEngine->get_scene(), mEngine->get_graphics());
 	}
@@ -2072,7 +2072,7 @@ public:
 				auto cursor = ImGui::GetCursorScreenPos();
 				ImGui::Image(mViewport_framebuffer, ImGui::FillWithFramebuffer(mViewport_framebuffer));
 
-				visual_editor::begin("_SceneEditor", cursor, math::vec2(0, 0), math::vec2(1.f, 1.f) * 100.f);
+				visual_editor::begin("_SceneEditor", cursor, mRenderer.get_render_view().min, 1.f / mRenderer.get_render_view_scale());
 				mEngine->get_physics().imgui_debug();
 				visual_editor::end();
 
