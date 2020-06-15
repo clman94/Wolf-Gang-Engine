@@ -1094,6 +1094,7 @@ public:
 					mSelected_object = obj;
 				ImGui::PopID();
 			}
+			do_object_context_menu();
 			ImGui::EndChild(); // Instances
 			ImGui::HorizontalSplitter("InstancesSplitter", &height);
 		}
@@ -1168,8 +1169,9 @@ public:
 			visual_editor::draw_rect(info.local_aabb, { 1, 1, 1, 0.7f });
 			visual_editor::pop_transform();
 		}
-
-		if (!is_currently_editing && ImGui::IsItemHovered() && ImGui::IsMouseReleased(0))
+		
+		if (!do_object_context_menu() &&
+			!is_currently_editing && ImGui::IsItemHovered() && ImGui::IsMouseReleased(0))
 		{
 			// Generate a list of potential objects to be selected.
 			std::vector<core::object> canidates;
@@ -1199,19 +1201,28 @@ public:
 			else
 				mSelected_object = core::invalid_object;
 		}
-		if (ImGui::BeginPopupContextWindow("Asset Info Popup"))
-		{
-
-			ImGui::EndPopup();
-		}
-	}
-
-	void select_object(core::object pObj)
-	{
-		mSelected_object = pObj;
 	}
 
 private:
+	bool do_object_context_menu()
+	{
+		if (ImGui::BeginPopupContextWindow("ObjectContextMenu"))
+		{
+			if (ImGui::MenuItem("Open Editor", 0, false, mSelected_object.is_valid() && mSelected_object.get_asset() != nullptr))
+			{
+				mMain_editor->get_context().open_editor(mSelected_object.get_asset());
+			}
+			if (ImGui::MenuItem("Delete", 0, false, mSelected_object.is_valid()))
+			{
+				mSelected_object.destroy();
+				mSelected_object = core::invalid_object;
+			}
+			ImGui::EndPopup();
+			return true;
+		}
+		return false;
+	}
+
 	void ensure_editor_info()
 	{
 		for (auto& obj : *mSelected_layer)
@@ -1239,6 +1250,7 @@ private:
 			editor_object_info.local_aabb = get_aabb_from_object(mSelected_layer->get_object(id));
 		}
 	}
+
 	core::layer* mSelected_layer = nullptr;
 	core::object mSelected_object;
 	asset_editor* mMain_editor = nullptr;
@@ -1430,7 +1442,6 @@ public:
 					select_layer(*i);
 				}
 				ImGui::EndGroup();
-
 
 				ImGui::PopID();
 			}
@@ -1712,6 +1723,7 @@ public:
 	void select_layer(core::layer& pLayer)
 	{
 		mCurrent_editor = get_layer_editor(pLayer);
+		mSelected_layer = &pLayer;
 	}
 
 private:
