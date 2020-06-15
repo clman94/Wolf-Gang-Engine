@@ -1119,7 +1119,9 @@ public:
 			math::transform* transform = mSelected_object.get_component<math::transform>();
 			ImGui::BeginGroup();
 			ImGui::DragFloat2("Position", transform->position.components().data());
-			ImGui::DragFloat("Rotation", transform->rotation.components().data());
+			math::degrees degrees = transform->rotation;
+			if (ImGui::DragFloat("Rotation", degrees.components().data()))
+				transform->rotation = degrees;
 			ImGui::DragFloat2("Scale", transform->scale.components().data());
 			ImGui::EndGroup();
 			if (ImGui::IsItemDeactivatedAfterEdit())
