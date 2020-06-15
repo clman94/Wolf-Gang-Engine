@@ -1,6 +1,7 @@
 #pragma once
 
 #include <wge/graphics/graphics_backend.hpp>
+#include <wge/util/json_helpers.hpp>
 #include <memory>
 
 struct GLFWwindow;
@@ -19,6 +20,8 @@ public:
 	virtual int get_display_width() override;
 	virtual int get_display_height() override;
 	virtual void refresh() override;
+	virtual void serialize_settings(json&) override;
+	virtual void deserialize_settings(const json&) override;
 
 	GLFWwindow* get_window() const;
 

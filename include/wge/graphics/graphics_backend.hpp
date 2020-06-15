@@ -36,6 +36,8 @@ public:
 	virtual int get_display_width() = 0;
 	virtual int get_display_height() = 0;
 	virtual void refresh() = 0;
+	virtual void serialize_settings(json&) {}
+	virtual void deserialize_settings(const json&) {}
 
 	util::signal<void()> on_close;
 	util::signal<void(int, const char**)> on_file_drop;

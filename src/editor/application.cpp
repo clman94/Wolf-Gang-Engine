@@ -2204,11 +2204,49 @@ public:
 	}
 
 private:
+	void load_editor_configuration()
+	{
+		log::info("Loading editor configuration.");
+		std::ifstream file("./editor/config.json");
+		if (!file)
+		{
+			log::info("Editor configuration does not exist. A new one will be created.");
+			return;
+		}
+		
+		try {
+			json config = json::parse(file);
+			mEngine.get_graphics().get_window_backend()->deserialize_settings(config);
+		}
+		catch (json::exception& e)
+		{
+			log::error("Json error: {}", e.what());
+			log::error("Failed to parse editor configuration. A new one will be created.");
+		}
+	}
+
+	void save_editor_configuration()
+	{
+		json config;
+		mEngine.get_graphics().get_window_backend()->serialize_settings(config);
+
+		std::ofstream configoutput("./editor/config.json");
+		if (!configoutput)
+		{
+			log::error("Failed to open \"./editor/config.json\" for saving editor configuration.");
+			return;
+		}
+		configoutput << config.dump(2);
+		log::info("Editor configuration saved.");
+	}
+
 	void init_graphics()
 	{
 		auto& g = mEngine.get_graphics();
 		// Only glfw and opengl is supported for editing
 		g.initialize(graphics::window_backend_type::glfw, graphics::backend_type::opengl);
+
+		load_editor_configuration();
 
 		// Store the glfw backend for initializing imgui's glfw backend
 		mGLFW_backend = std::dynamic_pointer_cast<graphics::glfw_window_backend>(g.get_window_backend());
@@ -2271,6 +2309,9 @@ private:
 
 	void shutdown()
 	{
+		// Save configuration
+		save_editor_configuration();
+
 		// Cleanup ImGui
 		ImGui_ImplOpenGL3_Shutdown();
 		ImGui_ImplGlfw_Shutdown();

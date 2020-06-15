@@ -65,6 +65,24 @@ void glfw_window_backend::refresh()
 	glfwSwapBuffers(mWindow);
 }
 
+void glfw_window_backend::serialize_settings(json& pJson)
+{
+	int width = 0, height = 0;
+	glfwGetWindowSize(mWindow, &width, &height);
+	pJson["window_width"] = width;
+	pJson["window_height"] = height;
+
+	bool maximized = glfwGetWindowAttrib(mWindow, GLFW_MAXIMIZED) == GLFW_TRUE;
+	pJson["window_maximized"] = maximized;
+}
+
+void glfw_window_backend::deserialize_settings(const json& pJson)
+{
+	glfwSetWindowSize(mWindow, pJson["window_width"], pJson["window_height"]);
+	if (pJson["window_maximized"].get<bool>())
+		glfwMaximizeWindow(mWindow);
+}
+
 GLFWwindow* glfw_window_backend::get_window() const
 {
 	return mWindow;
