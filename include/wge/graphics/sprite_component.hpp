@@ -53,7 +53,7 @@ public:
 
 private:
 	sprite_controller mController;
-	math::aabb mSceen_aabb, mLocal_aabb;
+	math::aabb mLocal_aabb;
 	math::vec2 mOffset;
 };
 

@@ -50,12 +50,6 @@ void sprite_component::create_batch(math::transform& pTransform, renderer& pRend
 
 		// Transform the points
 		verts[i].position = pTransform * verts[i].position;
-
-		// Calc aabb after transform
-		if (i == 0)
-			mSceen_aabb = math::aabb{ verts[i].position, verts[i].position };
-		else
-			mSceen_aabb.merge(verts[i].position);
 	}
 
 	batch.add_quad(verts);
