@@ -270,6 +270,12 @@ public:
 		return mAsset;
 	}
 
+	const util::uuid& get_id() const noexcept
+	{
+		assert(mAsset);
+		return mAsset->get_id();
+	}
+
 	bool is_valid() const noexcept
 	{
 		return static_cast<bool>(mAsset);

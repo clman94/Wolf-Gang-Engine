@@ -932,7 +932,7 @@ public:
 	{
 		update_error_markers();
 		auto source = get_asset()->get_resource<scripting::script>();
-		if (ImGui::BeginCombo("Functions", fmt::format("{} Function(s)", source->function_list.size()).c_str()))
+		if (ImGui::BeginCombo("##Functions", fmt::format("{} Function(s)", source->function_list.size()).c_str()))
 		{
 			for (auto&& [line, name] : source->function_list)
 			{
@@ -953,7 +953,6 @@ public:
 		{
 			source->parse_function_list();
 			source->source = mText_editor.GetText();
-			source->error = std::nullopt;
 			source->function = {};
 			mark_asset_modified();
 		}
@@ -963,15 +962,17 @@ public:
 private:
 	void update_error_markers()
 	{
+		auto& script_engine = get_context().get_engine().get_script_engine();
 		auto source = get_asset()->get_resource<scripting::script>();
-		if (source->has_errors() && mLast_error_info != source->error.value())
+		auto error_info = script_engine.get_script_error(get_asset()->get_id());
+		if (error_info && *error_info != mLast_error_info)
 		{
-			mLast_error_info = source->error.value();
+			mLast_error_info = *error_info;
 			mError_markers.clear();
-			mError_markers[source->error->line] = source->error->message;
+			mError_markers[error_info->line] = error_info->message;
 			mText_editor.SetErrorMarkers(mError_markers);
 		}
-		else if (!source->has_errors() && !mError_markers.empty())
+		else if (!error_info && !mError_markers.empty())
 		{
 			mError_markers.clear();
 			mText_editor.SetErrorMarkers(mError_markers);
@@ -2097,12 +2098,15 @@ public:
 			log::error("No asset to generate scene with.");
 			return;
 		}
+		log::info("Resetting script vm...");
+		mEngine->get_script_engine().cleanup();
+
 		log::info("Opening Scene in Player Viewport...");
 		mEngine->get_physics().clear_all();
 		mEngine->get_scene() = pScene->generate_scene(mEngine->get_asset_manager());
 		mIs_loaded = true;
 		mScene = pScene;
-		log::info("Player Ready");
+		log::info("Ready");
 	}
 
 	void restart()
@@ -2246,6 +2250,30 @@ public:
 				ImGui::BeginChild("viewport", {0, 0}, true, ImGuiWindowFlags_MenuBar);
 				if (ImGui::BeginMenuBar())
 				{
+					if (ImGui::BeginMenu("Engine"))
+					{
+						if (ImGui::MenuItem("Clear script errors"))
+						{
+							auto script_list = mEngine->get_script_engine().get_errornous_scripts();
+							for (auto& id : script_list)
+							{
+								if (auto script = mEngine->get_asset_manager().get_resource<scripting::script>(id))
+								{
+									script->function = {};
+								}
+							}
+							mEngine->get_script_engine().clear_errors();
+						}
+						if (ImGui::MenuItem("Reset errornous objects"))
+						{
+							auto object_list = mEngine->get_script_engine().get_errornous_objects();
+							for (auto& id : object_list)
+							{
+								mEngine->get_script_engine().reset_object(mEngine->get_scene().get_object(id));
+							}
+						}
+						ImGui::EndMenu();
+					}
 					if (ImGui::BeginMenu("View"))
 					{
 						bool collision_debug = mEngine->get_physics().get_collision_debug_enabled();

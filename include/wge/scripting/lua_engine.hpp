@@ -21,6 +21,8 @@
 #include <vector>
 #include <memory>
 #include <regex>
+#include <map>
+#include <set>
 
 namespace wge::physics
 {
@@ -59,17 +61,11 @@ public:
 
 	std::string source;
 	sol::protected_function function;
-	std::optional<error_info> error;
 	std::vector<std::pair<int, std::string>> function_list;
-
-	bool has_errors() const noexcept
-	{
-		return error.has_value();
-	}
 
 	bool is_compiled() const noexcept
 	{
-		return function.valid() && !has_errors();
+		return function.valid();
 	}
 
 	void parse_function_list()
@@ -129,11 +125,11 @@ class lua_engine
 {
 public:
 	// Create a new environment for individual objects.
-	sol::environment create_object_environment(core::object pObj);
+	sol::environment create_object_environment(core::object pObj, sol::environment pExisting = {});
 	// Update the delta. Do this before each layer.
 	void update_delta(float pSeconds);
 
-	bool compile_script(script& pScript);
+	bool compile_script(script::handle& pScript, const std::string& pName, core::object_id pAssoc_object = 0);
 
 	// Prepare state for new scene.
 	void cleanup();
@@ -150,8 +146,68 @@ public:
 	void update_layer(core::layer& pLayer, float pDelta);
 	void draw_layer(core::layer& pLayer, float pDelta);
 
+	const error_info* get_script_error(const util::uuid& pId) const
+	{
+		auto iter = mRuntime_errors.find(pId);
+		if (iter != mRuntime_errors.end())
+			return &iter->second;
+		else
+			return nullptr;
+	}
+
+	bool prepare_recompile(script::handle& pScript)
+	{
+		pScript->function = {};
+		clear_script_error(pScript.get_id());
+	}
+
+	bool has_errors() const noexcept
+	{
+		return !mRuntime_errors.empty();
+	}
+
+	bool has_object_errors(const core::object_id& pId) const noexcept
+	{
+		return mObject_errors.count(pId) != 0;
+	}
+
+	std::vector<core::object_id> get_errornous_objects() const
+	{
+		return { mObject_errors.begin(), mObject_errors.end() };
+	}
+
+	std::vector<util::uuid> get_errornous_scripts() const
+	{
+		std::vector<util::uuid> result;
+		result.reserve(mRuntime_errors.size());
+		for (auto&& [id, _] : mRuntime_errors)
+		{
+			result.push_back(id);
+		}
+		return result;
+	}
+
+	void reset_object(const core::object& pObj) noexcept;
+
+	void clear_script_error(const util::uuid& pId)
+	{
+		mRuntime_errors.erase(pId);
+	}
+
+	void clear_errors()
+	{
+		mObject_errors.clear();
+		mRuntime_errors.clear();
+	}
+
 private:
-	void run_script(event_component& pSource, const sol::environment& pEnv, const std::string& pEvent_name);
+	// Set of objects that failed to run.
+	std::set<core::object_id> mObject_errors;
+	// Set of scripts and their errors.
+	std::map<util::uuid, error_info> mRuntime_errors;
+
+private:
+	void run_script(script::handle& pSource, const sol::environment& pEnv, const std::string& pEvent_name, const core::object_id& pId);
 };
 
 class event_state_component

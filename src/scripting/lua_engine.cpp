@@ -11,9 +11,32 @@
 namespace wge::scripting
 {
 
-sol::environment lua_engine::create_object_environment(core::object pObj)
+static error_info parse_lua_error(std::string_view pStr)
 {
-	sol::environment env(state, sol::create, state.globals());
+	error_info result;
+	const std::regex message_rule("(.*):(\\d+):\\s*([\\s\\S]*)");
+	const std::regex source_rule("\\[string\\s\"(.*)\"\\]");
+	std::match_results<std::string_view::const_iterator> pieces, source_pieces;
+	if (std::regex_match(pStr.begin(), pStr.end(), pieces, message_rule))
+	{
+		// Extract the string from "[string "{}"]"
+		if (std::regex_match(pieces[1].first, pieces[1].second, source_pieces, source_rule))
+			result.source = source_pieces[1].str();
+		else
+			result.source = pieces[1].str();
+		// Convert the line number.
+		result.line = std::atoi(pieces[2].str().c_str());
+		// Get the message.
+		result.message = pieces[3].str();
+	}
+	else
+		result.message = pStr;
+	return result;
+}
+
+sol::environment lua_engine::create_object_environment(core::object pObj, sol::environment pExisting)
+{
+	sol::environment env = pExisting.valid() ? pExisting : sol::environment{ state, sol::create, state.globals() };
 
 	// Register the object to be accessible through the obj table.
 	if (!pObj.get_name().empty())
@@ -75,17 +98,33 @@ void lua_engine::update_delta(float pSeconds)
 	state["delta"] = pSeconds;
 }
 
-bool lua_engine::compile_script(script& pScript)
+bool lua_engine::compile_script(script::handle& pScript, const std::string& pName, core::object_id pAssoc_object)
 {
-	sol::load_result result = state.load(pScript.source, pScript.get_location().get_autonamed_file(".lua").string());
-	if (!result.valid())
-		return false;
-	pScript.function = result.get<sol::protected_function>();
+	assert(pScript);
+	auto& source = *pScript;
+	if (!source.function.valid())
+	{
+		sol::load_result lr = state.load(source.source, pName);
+		if (lr.valid())
+		{
+			source.function = lr;
+		}
+		else
+		{
+			sol::error err = lr;
+			mRuntime_errors[pScript.get_id()] = parse_lua_error(err.what());
+			if (pAssoc_object > 0)
+				mObject_errors.insert(pAssoc_object);
+			log::error("Parse error: {}", err.what());
+			return false;
+		}
+	}
 	return true;
 }
 
 void lua_engine::cleanup()
 {
+	clear_errors();
 	state["obj"] = state.create_table();
 	state["global"] = sol::environment(state, sol::create, state.globals());
 }
@@ -294,7 +333,7 @@ void lua_engine::update_layer(core::layer& pLayer, float pDelta)
 		if (created == false)
 		{
 			created = true;
-			run_script(on_create, state.environment, "Create");
+			run_script(on_create.source_script, state.environment, "Create", id);
 		}
 	}
 	pLayer.destroy_queued_components();
@@ -303,7 +342,7 @@ void lua_engine::update_layer(core::layer& pLayer, float pDelta)
 	for (auto& [id, on_update, state] :
 		pLayer.each<event_selector::update, event_state_component>())
 	{
-		run_script(on_update, state.environment, "Update");
+		run_script(on_update.source_script, state.environment, "Update", id);
 	}
 	pLayer.destroy_queued_components();
 }
@@ -314,64 +353,50 @@ void lua_engine::draw_layer(core::layer& pLayer, float pDelta)
 	for (auto& [id, on_create, state] :
 		pLayer.each<event_selector::create, event_state_component>())
 	{
-		run_script(on_create, state.environment, "Draw");
+		run_script(on_create.source_script, state.environment, "Draw", id);
 	}
 	pLayer.destroy_queued_components();
 }
 
-static error_info parse_lua_error(std::string_view pStr)
+void lua_engine::reset_object(const core::object& pObj) noexcept
 {
-	error_info result;
-	const std::regex message_rule("(.*):(\\d+):\\s*([\\s\\S]*)");
-	const std::regex source_rule("\\[string\\s\"(.*)\"\\]");
-	std::match_results<std::string_view::const_iterator> pieces, source_pieces;
-	if (std::regex_match(pStr.begin(), pStr.end(), pieces, message_rule))
+	mObject_errors.erase(pObj.get_id());
+	if (auto state_comp = pObj.get_component<event_state_component>())
 	{
-		// Extract the string from "[string "{}"]"
-		if (std::regex_match(pieces[1].first, pieces[1].second, source_pieces, source_rule))
-			result.source = source_pieces[1].str();
-		else
-			result.source = pieces[1].str();
-		// Convert the line number.
-		result.line = std::atoi(pieces[2].str().c_str());
-		// Get the message.
-		result.message = pieces[3].str();
+		if (!state_comp->environment.valid())
+			return;
+		state_comp->environment.clear();
+		// Create a new environment (in-place)
+		create_object_environment(pObj, state_comp->environment);
 	}
-	else
-		result.message = pStr;
-	return result;
 }
 
-void lua_engine::run_script(event_component& pSource, const sol::environment& pEnv, const std::string& pEvent_name)
+void lua_engine::run_script(script::handle& pSource, const sol::environment& pEnv, const std::string& pEvent_name, const core::object_id& pId)
 {
+	if (!pSource.is_valid())
+		return;
+	// Do not execute scripts from errornous objects.
+	if (has_object_errors(pId))
+		return;
+	// Ignore errornous scripts.
+	if (get_script_error(pSource.get_id()) != nullptr)
+		return;
 	try
 	{
-		if (!pSource.source_script.is_valid() ||
-			pSource.source_script->has_errors())
-			return;
-		script& src_script = *pSource.source_script;
-		if (!src_script.function.valid())
-		{
-			sol::load_result lr = state.load(src_script.source, pEvent_name);
-			if (!lr.valid())
-			{
-				sol::error err = lr;
-				src_script.error = parse_lua_error(err.what());
-				log::error("Parse error: {}", err.what());
-				return;
-			}
-			src_script.function = lr;
-		}
+		// Compile script (if it can)
+		compile_script(pSource, pEvent_name, pId);
 
-		if (src_script.function.valid())
+		auto& source = *pSource;
+		if (source.function.valid())
 		{
 			// Execute for this objects environment.
-			sol::set_environment(pEnv, src_script.function);
-			sol::protected_function_result result = src_script.function();
+			sol::set_environment(pEnv, source.function);
+			sol::protected_function_result result = source.function();
 			if (!result.valid())
 			{
 				sol::error err = result;
-				src_script.error = parse_lua_error(err.what());
+				mRuntime_errors[pSource.get_id()] = parse_lua_error(err.what());
+				mObject_errors.insert(pId);
 				log::error("Runtime error: {}", err.what());
 				return;
 			}
