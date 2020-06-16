@@ -1575,11 +1575,15 @@ public:
 		if (mCurrent_editor)
 			mCurrent_editor->on_tool_bar();
 
-		ImGui::BeginChild("Scene", { 0, 0 }, true, /*ImGuiWindowFlags_NoScrollbar |*/ ImGuiWindowFlags_MenuBar);
+		ImGui::BeginChild("Scene", { 0, -ImGui::GetTextLineHeightWithSpacing() }, true, /*ImGuiWindowFlags_NoScrollbar |*/ ImGuiWindowFlags_MenuBar);
 		
+		const ImVec2 screen_mouse_pos = ImGui::GetMousePos() - ImGui::GetCursorScreenPos();
 		show_viewport();
 
+
 		ImGui::EndChild(); // Scene
+
+		ImGui::TextUnformatted(fmt::format("Coordinate: {}", mRenderer.screen_to_world(screen_mouse_pos).to_string()).c_str());
 
 		ImGui::EndGroup();
 	}
