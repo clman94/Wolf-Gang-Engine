@@ -41,6 +41,24 @@ public:
 	math::vec2 get_gravity() const;
 
 	void imgui_debug();
+	void imgui_raycast_debug(float delta);
+	void set_raycast_debug_enabled(bool pEnabled)
+	{
+		mRaycast_debug_enabled = pEnabled;
+	}
+	bool get_raycast_debug_enabled() const noexcept
+	{
+		return mRaycast_debug_enabled;
+	}
+	void set_collision_debug_enabled(bool pEnabled)
+	{
+		mCollision_debug_enable = pEnabled;
+	}
+
+	bool get_collision_debug_enabled() const noexcept
+	{
+		return mCollision_debug_enable;
+	}
 
 	raycast_hit_info raycast_closest(const math::vec2& pA, const math::vec2& pB) const
 	{
@@ -62,6 +80,17 @@ public:
 			}
 		} mycallback;
 		mWorld->RayCast(&mycallback, { pA.x, pA.y }, { pB.x, pB.y });
+
+		// Debug raycast.
+		if (mRaycast_debug_enabled && mRaycast_debugs.size() < 500){
+			raycast_debug db;
+			db.from = pA;
+			db.to = pB;
+			db.hit = mycallback.hit.hit;
+			db.point = mycallback.hit.point;
+			mRaycast_debugs.push_back(db);
+		}
+
 		return mycallback.hit;
 	}
 	
@@ -134,6 +163,17 @@ public:
 	void postupdate(core::layer& pLayer, float pDelta);
 private:
 	void update_object_transforms(core::layer& pLayer);
+
+	struct raycast_debug
+	{
+		math::vec2 from, to;
+		math::vec2 point;
+		bool hit = false;
+		float timer = 1;
+	};
+	bool mCollision_debug_enable = false;
+	bool mRaycast_debug_enabled = false;
+	mutable std::vector<raycast_debug> mRaycast_debugs;
 
 private:
 	// Unfortunately, box2d likes to have everything pointing

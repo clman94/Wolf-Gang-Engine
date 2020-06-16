@@ -106,11 +106,38 @@ struct imgui_debug_draw : b2Draw
 
 void physics_world::imgui_debug()
 {
+	if (!mCollision_debug_enable)
+		return;
+
 	imgui_debug_draw myimgui_debug_draw;
 	myimgui_debug_draw.SetFlags(b2Draw::e_shapeBit);
 	mWorld->SetDebugDraw(&myimgui_debug_draw);
 	mWorld->DrawDebugData();
 	mWorld->SetDebugDraw(nullptr);
+}
+
+void physics_world::imgui_raycast_debug(float delta)
+{
+	if (!mRaycast_debug_enabled)
+		return;
+
+	using namespace wge::editor;
+	const graphics::color nohit_color{ 1, 0, 0, 0.4f };
+	const graphics::color hit_color{ 1, 1, 0, 0.4f };
+
+	for (auto& i : mRaycast_debugs)
+	{
+		graphics::color color = (i.hit ? hit_color : nohit_color);
+		color.a = i.timer;
+		visual_editor::draw_line(i.from, i.to, color);
+		if (i.hit)
+			visual_editor::draw_circle(i.point, 3, hit_color, true);
+		i.timer -= delta;
+	}
+
+	// Remove old casts
+	auto iter = std::remove_if(mRaycast_debugs.begin(), mRaycast_debugs.end(), [](auto& i) { return i.timer <= 0; });
+	mRaycast_debugs.erase(iter, mRaycast_debugs.end());
 }
 
 } // namespace wge::physics
@@ -2218,16 +2245,34 @@ public:
 				open_scene(new_asset);
 			}
 
-			mCan_take_input = ImGui::IsWindowFocused();
 
+			mCan_take_input = ImGui::IsWindowFocused();
 			if (mIs_loaded)
 			{
-				ImGui::BeginChild("viewport");
+				ImGui::BeginChild("viewport", {0, 0}, true, ImGuiWindowFlags_MenuBar);
+				if (ImGui::BeginMenuBar())
+				{
+					if (ImGui::BeginMenu("View"))
+					{
+						bool collision_debug = mEngine->get_physics().get_collision_debug_enabled();
+						if (ImGui::Checkbox("Show Collision", &collision_debug))
+							mEngine->get_physics().set_collision_debug_enabled(collision_debug);
+						bool raycast_debug = mEngine->get_physics().get_raycast_debug_enabled();
+						if (ImGui::Checkbox("Show Raycasts", &raycast_debug))
+							mEngine->get_physics().set_raycast_debug_enabled(raycast_debug);
+						ImGui::EndMenu();
+					}
+					ImGui::EndMenuBar();
+				}
+				mCan_take_input |= ImGui::IsWindowFocused();
 				auto cursor = ImGui::GetCursorScreenPos();
 				ImGui::Image(mViewport_framebuffer, ImGui::FillWithFramebuffer(mViewport_framebuffer));
 
 				visual_editor::begin("_SceneEditor", cursor, mRenderer.get_render_view().min, 1.f / mRenderer.get_render_view_scale());
+				
 				mEngine->get_physics().imgui_debug();
+				mEngine->get_physics().imgui_raycast_debug(1.f / 60.f);
+
 				visual_editor::end();
 
 				// Update mouse inputs.
@@ -2251,6 +2296,8 @@ public:
 	}
 
 private:
+	bool mDebug_collision = false;
+	bool mDebug_raycasts = false;
 	bool mIs_running = false;
 	bool mIs_loaded = false;
 	bool mCan_take_input = false;
