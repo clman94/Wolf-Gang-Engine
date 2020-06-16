@@ -1208,8 +1208,9 @@ public:
 
 	virtual math::aabb get_aabb() override
 	{
+		update_aabbs();
 		math::aabb aabb;
-		for (auto& [id, editor_object_info, transform] : mSelected_layer->each<editor_object_info, math::transform>())
+		for (auto&& [id, editor_object_info, transform] : mSelected_layer->each<editor_object_info, math::transform>())
 		{
 			const math::aabb& local_aabb = editor_object_info.local_aabb;
 			aabb.merge(transform.position);
@@ -1583,7 +1584,7 @@ public:
 
 		ImGui::EndChild(); // Scene
 
-		ImGui::TextUnformatted(fmt::format("Coordinate: {}", mRenderer.screen_to_world(screen_mouse_pos).to_string()).c_str());
+		ImGui::TextUnformatted(fmt::format("Coord: {}", mRenderer.screen_to_world(screen_mouse_pos).to_string()).c_str());
 
 		ImGui::EndGroup();
 	}
@@ -1654,7 +1655,7 @@ public:
 
 		static bool show_center_point = true;
 		static bool is_grid_enabled = true;
-		static graphics::color grid_color{ 1, 1, 1, 0.7f };
+		static graphics::color grid_color{ 1, 1, 1, 0.2f };
 
 		if (ImGui::BeginMenuBar())
 		{
@@ -1716,6 +1717,8 @@ public:
 		//mViewport_camera.set_focus(math::clamp_components(mViewport_camera.get_focus(), mScene_aabb.min, mScene_aabb.max));
 		mRenderer.set_view(mViewport_camera.get_view());
 
+		draw_ruler(cursor);
+
 		viewport_scrollbars();
 
 		visual_editor::begin("_SceneEditor", { cursor.x, cursor.y }, mRenderer.get_render_view().min, 1.f / mRenderer.get_render_view_scale());
@@ -1731,7 +1734,7 @@ public:
 			}
 
 			if (is_grid_enabled)
-				visual_editor::draw_grid(grid_color, 1);
+				visual_editor::draw_grid(grid_color, get_grid_step());
 
 			if (mCurrent_editor)
 				mCurrent_editor->on_overlay();
@@ -1793,10 +1796,43 @@ public:
 	}
 
 private:
+	float get_grid_step() const
+	{
+		// TODO: Doesn't work entirely as intended but its close enough.
+		//   It SHOULD actually use the size of viewport to determine the step but
+		//   I'm too stupid to figure it out.
+		return std::pow(4, math::floor((mViewport_camera.get_zoom() + 1) * 2) / 2);
+	}
+
+	void draw_ruler(ImVec2 cursor)
+	{
+		ImDrawList* dl = ImGui::GetWindowDrawList();
+
+		const ImU32 color = ImGui::ColorConvertFloat4ToU32(ImGui::GetStyle().Colors[ImGuiCol_Text]);
+
+		const float step = get_grid_step();
+		const math::vec2 start{ (mRenderer.get_render_view().min / step).floor() * step };
+		const math::vec2 end{ (mRenderer.get_render_view().max / step).floor() * step };
+		for (float x = start.x; x <= end.x; x += step)
+		{
+			ImVec2 textpos = cursor + ImVec2(mRenderer.world_to_screen(math::vec2(x, 0)).x, 0);
+			dl->AddText(textpos, color, fmt::to_string(x).c_str());
+		}
+
+		for (float y = start.y; y <= end.y; y += step)
+		{
+			ImVec2 textpos = cursor + ImVec2(0, mRenderer.world_to_screen(math::vec2(0, y)).y);
+			dl->AddText(textpos, color, fmt::to_string(y).c_str());
+		}
+	}
+
 	void viewport_scrollbars()
 	{
 		const math::vec2 scene_size = mScene_aabb.max - mScene_aabb.min;
 		const math::vec2 view_size = mRenderer.get_render_view().max - mRenderer.get_render_view().min;
+		if (scene_size.is_zero() || view_size.is_zero())
+			return;
+		const math::vec2 scrollbar_length = mViewport_camera.get_size() * (view_size / scene_size);
 		math::vec2 scroll = mViewport_camera.get_focus() - mScene_aabb.min;
 
 		ImGuiContext& g = *GImGui;
@@ -1812,7 +1848,7 @@ private:
 
 			// Calculate scrollbar bounding box
 			ImRect bb = ImGui::GetWindowScrollbarRect(window, ImGuiAxis_X);
-			ImGui::ScrollbarEx(bb, id, ImGuiAxis_X, &scroll.x, 10, scene_size.x, 0);
+			ImGui::ScrollbarEx(bb, id, ImGuiAxis_X, &scroll.x, scrollbar_length.x, scene_size.x + scrollbar_length.x, 0);
 		}
 		{
 			const ImGuiID id = ImGui::GetWindowScrollbarID(window, ImGuiAxis_Y);
@@ -1820,7 +1856,7 @@ private:
 
 			// Calculate scrollbar bounding box
 			ImRect bb = ImGui::GetWindowScrollbarRect(window, ImGuiAxis_Y);
-			ImGui::ScrollbarEx(bb, id, ImGuiAxis_Y, &scroll.y, 10, scene_size.y, 0);
+			ImGui::ScrollbarEx(bb, id, ImGuiAxis_Y, &scroll.y, scrollbar_length.y, scene_size.y + scrollbar_length.y, 0);
 
 			mViewport_camera.set_focus(scroll + mScene_aabb.min);
 		}
