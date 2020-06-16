@@ -1668,10 +1668,8 @@ public:
 		}
 		
 		ImVec2 region_size = ImGui::GetContentRegionAvail();
-		float width = region_size.x;
-		float height = region_size.y;
-		float scroll_x_max = width * 2;
-		float scroll_y_max = height * 2;
+		float width = region_size.x - ImGui::GetStyle().ScrollbarSize;
+		float height = region_size.y - ImGui::GetStyle().ScrollbarSize;
 
 		ImGui::FillWithFramebuffer(mViewport_framebuffer);
 
