@@ -104,40 +104,36 @@ struct imgui_debug_draw : b2Draw
 	}
 };
 
-void physics_world::imgui_debug()
+void physics_world::imgui_debug(float delta)
 {
-	if (!mCollision_debug_enable)
-		return;
-
-	imgui_debug_draw myimgui_debug_draw;
-	myimgui_debug_draw.SetFlags(b2Draw::e_shapeBit);
-	mWorld->SetDebugDraw(&myimgui_debug_draw);
-	mWorld->DrawDebugData();
-	mWorld->SetDebugDraw(nullptr);
-}
-
-void physics_world::imgui_raycast_debug(float delta)
-{
-	if (!mRaycast_debug_enabled)
-		return;
-
 	using namespace wge::editor;
-	const graphics::color nohit_color{ 1, 0, 0, 0.4f };
-	const graphics::color hit_color{ 1, 1, 0, 0.4f };
-
-	for (auto& i : mRaycast_debugs)
+	if (mCollision_debug_enable)
 	{
-		graphics::color color = (i.hit ? hit_color : nohit_color);
-		color.a = i.timer;
-		visual_editor::draw_line(i.from, i.to, color);
-		if (i.hit)
-			visual_editor::draw_circle(i.point, 3, hit_color, true);
-		i.timer -= delta;
+		imgui_debug_draw myimgui_debug_draw;
+		myimgui_debug_draw.SetFlags(b2Draw::e_shapeBit);
+		mWorld->SetDebugDraw(&myimgui_debug_draw);
+		mWorld->DrawDebugData();
+		mWorld->SetDebugDraw(nullptr);
 	}
+	if (mRaycast_debug_enabled)
+	{
+		const graphics::color nohit_color{ 1, 0, 0, 0.4f };
+		const graphics::color hit_color{ 1, 1, 0, 0.4f };
 
-	// Remove old casts
-	auto iter = std::remove_if(mRaycast_debugs.begin(), mRaycast_debugs.end(), [](auto& i) { return i.timer <= 0; });
-	mRaycast_debugs.erase(iter, mRaycast_debugs.end());
+		for (auto& i : mRaycast_debugs)
+		{
+			graphics::color color = (i.hit ? hit_color : nohit_color);
+			color.a = i.timer;
+			visual_editor::draw_line(i.from, i.to, color);
+			if (i.hit)
+				visual_editor::draw_circle(i.point, 3, hit_color, true);
+			i.timer -= delta;
+		}
+
+		// Remove old casts
+		auto iter = std::remove_if(mRaycast_debugs.begin(), mRaycast_debugs.end(), [](auto& i) { return i.timer <= 0; });
+		mRaycast_debugs.erase(iter, mRaycast_debugs.end());
+	}
 }
 
 } // namespace wge::physics
@@ -2219,7 +2215,6 @@ public:
 
 		// Render all the layers.
 		mRenderer.set_view(mEngine->get_default_camera().get_view());
-
 		mRenderer.render_scene(mEngine->get_scene(), mEngine->get_graphics());
 	}
 
@@ -2245,7 +2240,6 @@ public:
 				open_scene(new_asset);
 			}
 
-
 			mCan_take_input = ImGui::IsWindowFocused();
 			if (mIs_loaded)
 			{
@@ -2270,8 +2264,7 @@ public:
 
 				visual_editor::begin("_SceneEditor", cursor, mRenderer.get_render_view().min, 1.f / mRenderer.get_render_view_scale());
 				
-				mEngine->get_physics().imgui_debug();
-				mEngine->get_physics().imgui_raycast_debug(1.f / 60.f);
+				mEngine->get_physics().imgui_debug(1.f / 60.f);
 
 				visual_editor::end();
 
@@ -2296,8 +2289,6 @@ public:
 	}
 
 private:
-	bool mDebug_collision = false;
-	bool mDebug_raycasts = false;
 	bool mIs_running = false;
 	bool mIs_loaded = false;
 	bool mCan_take_input = false;

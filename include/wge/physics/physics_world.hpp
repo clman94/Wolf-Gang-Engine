@@ -40,8 +40,7 @@ public:
 	void set_gravity(math::vec2 pVec);
 	math::vec2 get_gravity() const;
 
-	void imgui_debug();
-	void imgui_raycast_debug(float delta);
+	void imgui_debug(float delta);
 	void set_raycast_debug_enabled(bool pEnabled)
 	{
 		mRaycast_debug_enabled = pEnabled;
