@@ -2201,6 +2201,8 @@ public:
 				open_scene(new_asset);
 			}
 
+			mCan_take_input = ImGui::IsWindowFocused();
+
 			if (mIs_loaded)
 			{
 				ImGui::BeginChild("viewport");
@@ -2210,8 +2212,6 @@ public:
 				visual_editor::begin("_SceneEditor", cursor, mRenderer.get_render_view().min, 1.f / mRenderer.get_render_view_scale());
 				mEngine->get_physics().imgui_debug();
 				visual_editor::end();
-
-				mCan_take_input = ImGui::IsWindowFocused();
 
 				// Update mouse inputs.
 				auto& state = mEngine->get_script_engine().state;
