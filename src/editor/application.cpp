@@ -1701,7 +1701,7 @@ public:
 
 			if (ImGui::GetIO().KeyCtrl && ImGui::GetIO().MouseWheel != 0)
 			{
-				mViewport_camera.zoom(-ImGui::GetIO().MouseWheel);
+				mViewport_camera.zoom(-ImGui::GetIO().MouseWheel * 0.25f);
 			}
 			else
 			{
