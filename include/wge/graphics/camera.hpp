@@ -10,9 +10,9 @@ namespace wge::graphics
 class camera
 {
 public:
-	void set_zoom(float pZoom) { /* TODO */ }
+	void set_zoom(float pZoom) { mZoom = pZoom; }
 	float get_zoom() const { return mZoom; }
-	void zoom(float pAmount) { /* TODO */ }
+	void zoom(float pAmount) { mZoom += pAmount;  }
 
 	// Set the size of the camera.
 	void set_size(const math::vec2& pSize)

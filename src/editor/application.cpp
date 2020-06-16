@@ -996,6 +996,7 @@ public:
 		++mFrame_clock;
 		if (mFrame_clock >= mRender_interval)
 		{
+			graphics::framebuffer::ptr last_fb = pRenderer.get_framebuffer();
 			mFrame_clock = 0;
 			std::size_t framebuffer_idx = 0;
 			for (auto& i : pScene)
@@ -1014,6 +1015,7 @@ public:
 				pRenderer.render_layer(i, *mGraphics);
 				++framebuffer_idx;
 			}
+			pRenderer.set_framebuffer(last_fb);
 		}
 	}
 
@@ -1048,6 +1050,7 @@ public:
 	virtual void on_bottom_bar() {}
 	// Return true to select the current layer.
 	virtual bool on_layer_display() { return false; }
+	virtual math::aabb get_aabb() = 0;
 };
 
 class scene_editor_instance_mode :
@@ -1203,6 +1206,21 @@ public:
 		}
 	}
 
+	virtual math::aabb get_aabb() override
+	{
+		math::aabb aabb;
+		for (auto& [id, editor_object_info, transform] : mSelected_layer->each<editor_object_info, math::transform>())
+		{
+			const math::aabb& local_aabb = editor_object_info.local_aabb;
+			aabb.merge(transform.position);
+			aabb.merge(transform.apply_to(local_aabb.min));
+			aabb.merge(transform.apply_to(local_aabb.min + math::vec2{ local_aabb.max.x, 0 }));
+			aabb.merge(transform.apply_to(local_aabb.min + local_aabb.max));
+			aabb.merge(transform.apply_to(local_aabb.min + math::vec2{ 0, local_aabb.max.y }));
+		}
+		return aabb;
+	}
+
 private:
 	bool do_object_context_menu()
 	{
@@ -1251,6 +1269,7 @@ private:
 		}
 	}
 
+	math::aabb mAabb;
 	core::layer* mSelected_layer = nullptr;
 	core::object mSelected_object;
 	asset_editor* mMain_editor = nullptr;
@@ -1262,7 +1281,9 @@ class scene_editor_tilemap_mode :
 public:
 	scene_editor_tilemap_mode(asset_editor& pMain_editor, core::layer& pLayer) :
 		mMain_editor(&pMain_editor), mSelected_layer(&pLayer)
-	{}
+	{
+		update_aabb();
+	}
 
 	virtual bool on_layer_display() override
 	{
@@ -1342,7 +1363,24 @@ public:
 			case tilemap_mode::draw: tilemap.set_tile(tile_position, mTilemap_brush); break;
 			case tilemap_mode::erase: tilemap.clear_tile(tile_position); break;
 			}
+			update_aabb();
 			mMain_editor->mark_asset_modified();
+		}
+	}
+
+	virtual math::aabb get_aabb() override
+	{
+		return mAabb;
+	}
+
+private:
+	void update_aabb()
+	{
+		mAabb.min = mAabb.max = { 0, 0 };
+		for (auto& [id, tile] : mSelected_layer->each<core::tile>())
+		{
+			mAabb.merge(math::aabb{ math::vec2{ tile.position },
+				math::vec2{ tile.position } + math::vec2{ 1, 1 } });
 		}
 	}
 
@@ -1354,6 +1392,7 @@ private:
 	};
 	tilemap_mode mTilemap_mode = tilemap_mode::draw;
 	math::ivec2 mTilemap_brush;
+	math::aabb mAabb;
 
 	core::layer* mSelected_layer = nullptr;
 	asset_editor* mMain_editor = nullptr;
@@ -1387,6 +1426,8 @@ public:
 		log::info("Generating Scene...");
 		mScene = mScene_resource->generate_scene(pContext.get_engine().get_asset_manager());
 		log::info("Layers: {}", mScene.get_layer_container().size());
+
+		mViewport_camera.set_size({ 30, 30 });
 	}
 
 	virtual void on_gui() override
@@ -1534,7 +1575,7 @@ public:
 		if (mCurrent_editor)
 			mCurrent_editor->on_tool_bar();
 
-		ImGui::BeginChild("Scene", { 0, 0 }, true, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_MenuBar);
+		ImGui::BeginChild("Scene", { 0, 0 }, true, /*ImGuiWindowFlags_NoScrollbar |*/ ImGuiWindowFlags_MenuBar);
 		
 		show_viewport();
 
@@ -1634,8 +1675,6 @@ public:
 
 		ImGui::FillWithFramebuffer(mViewport_framebuffer);
 
-		ImGui::BeginFixedScrollRegion({ width, height }, { scroll_x_max, scroll_y_max });
-
 		ImVec2 cursor = ImGui::GetCursorScreenPos();
 
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0, 0, 0, 0));
@@ -1652,11 +1691,32 @@ public:
 
 		// Middle mouse to drag
 		if (ImGui::IsItemHovered())
-			ImGui::DragScroll(2, 1);
+		{
+			if (ImGui::IsMouseDragging(2, 0.1f))
+			{
+				mViewport_camera.move_focus(mRenderer.get_render_view_scale() * -math::vec2(ImGui::GetIO().MouseDelta));
+			}
 
-		mViewport_offset = math::vec2(ImGui::GetScrollX(), ImGui::GetScrollY()) / mViewport_scale;
+			if (ImGui::GetIO().KeyCtrl && ImGui::GetIO().MouseWheel != 0)
+			{
+				mViewport_camera.zoom(-ImGui::GetIO().MouseWheel);
+			}
+			else
+			{
+				math::vec2 scroll_amount = -math::vec2{ ImGui::GetIO().MouseWheelH, ImGui::GetIO().MouseWheel } * std::pow(2, mViewport_camera.get_zoom());
+				mViewport_camera.move_focus(scroll_amount);
+			}
+		}
 
-		visual_editor::begin("_SceneEditor", { cursor.x, cursor.y }, mViewport_offset, mViewport_scale);
+		// Update scene aabb info.
+		update_scene_aabb();
+		mRenderer.set_framebuffer(mViewport_framebuffer);
+		//mViewport_camera.set_focus(math::clamp_components(mViewport_camera.get_focus(), mScene_aabb.min, mScene_aabb.max));
+		mRenderer.set_view(mViewport_camera.get_view());
+
+		viewport_scrollbars();
+
+		visual_editor::begin("_SceneEditor", { cursor.x, cursor.y }, mRenderer.get_render_view().min, 1.f / mRenderer.get_render_view_scale());
 		{
 			core::asset::ptr dropdropasset = asset_drag_drop_target("gameobject", get_asset_manager());
 			if (dropdropasset && mSelected_layer)
@@ -1683,11 +1743,7 @@ public:
 		mViewport_framebuffer->clear({ 0, 0, 0, 1 });
 
 		// Render all the layers.
-		mRenderer.set_framebuffer(mViewport_framebuffer);
-		mRenderer.set_view_to_framebuffer(mViewport_offset, 1.f / mViewport_scale);
 		mRenderer.render_scene(mScene, engine.get_graphics());
-
-		ImGui::EndFixedScrollRegion();
 	}
 
 	// Generate a new instance from an object asset.
@@ -1726,8 +1782,49 @@ public:
 		mSelected_layer = &pLayer;
 	}
 
-private:
+	void update_scene_aabb()
+	{
+		mScene_aabb.min = mScene_aabb.max = { 0, 0 };
+		for (auto& i : mScene)
+			if (auto editor = get_layer_editor(i))
+				mScene_aabb.merge(editor->get_aabb());
+	}
 
+private:
+	void viewport_scrollbars()
+	{
+		const math::vec2 scene_size = mScene_aabb.max - mScene_aabb.min;
+		const math::vec2 view_size = mRenderer.get_render_view().max - mRenderer.get_render_view().min;
+		math::vec2 scroll = mViewport_camera.get_focus() - mScene_aabb.min;
+
+		ImGuiContext& g = *GImGui;
+		ImGuiWindow* window = g.CurrentWindow;
+		const ImGuiStyle& style = g.Style;
+
+		// Scrollbar sizes need to be set manually for things to work properly.
+		window->ScrollbarSizes = { style.ScrollbarSize, style.ScrollbarSize };
+
+		{
+			const ImGuiID id = ImGui::GetWindowScrollbarID(window, ImGuiAxis_X);
+			ImGui::KeepAliveID(id);
+
+			// Calculate scrollbar bounding box
+			ImRect bb = ImGui::GetWindowScrollbarRect(window, ImGuiAxis_X);
+			ImGui::ScrollbarEx(bb, id, ImGuiAxis_X, &scroll.x, 10, scene_size.x, 0);
+		}
+		{
+			const ImGuiID id = ImGui::GetWindowScrollbarID(window, ImGuiAxis_Y);
+			ImGui::KeepAliveID(id);
+
+			// Calculate scrollbar bounding box
+			ImRect bb = ImGui::GetWindowScrollbarRect(window, ImGuiAxis_Y);
+			ImGui::ScrollbarEx(bb, id, ImGuiAxis_Y, &scroll.y, 10, scene_size.y, 0);
+
+			mViewport_camera.set_focus(scroll + mScene_aabb.min);
+		}
+	}
+
+private:
 	scene_editor_mode* mCurrent_editor = nullptr;
 	std::map<core::layer*, std::unique_ptr<scene_editor_mode>> mLayer_editors;
 	core::layer* mSelected_layer = nullptr;
@@ -1737,8 +1834,8 @@ private:
 
 	graphics::renderer mRenderer;
 	graphics::framebuffer::ptr mViewport_framebuffer;
-	math::vec2 mViewport_offset;
-	math::vec2 mViewport_scale{ 100, 100 };
+	graphics::camera mViewport_camera;
+	math::aabb mScene_aabb;
 
 	layer_previews mLayer_previews;
 
