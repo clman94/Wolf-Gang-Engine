@@ -20,6 +20,7 @@
 #include <variant>
 #include <vector>
 #include <memory>
+#include <regex>
 
 namespace wge::physics
 {
@@ -59,6 +60,7 @@ public:
 	std::string source;
 	sol::protected_function function;
 	std::optional<error_info> error;
+	std::vector<std::pair<int, std::string>> function_list;
 
 	bool has_errors() const noexcept
 	{
@@ -68,6 +70,23 @@ public:
 	bool is_compiled() const noexcept
 	{
 		return function.valid() && !has_errors();
+	}
+
+	void parse_function_list()
+	{
+		function_list.clear();
+
+		std::regex func_reg("function\\s+(.+)\\s*\\(");
+		auto begin_iter = std::sregex_iterator(source.begin(), source.end(), func_reg);
+		auto end_iter = std::sregex_iterator();
+		int line = 1;
+		for (auto i = begin_iter; i != end_iter; ++i)
+		{
+			for (auto c = i->prefix().first; c != i->prefix().second; c++)
+				if (*c == '\n')
+					++line;
+			function_list.push_back({ line, (*i)[1] });
+		}
 	}
 
 	virtual void load() override

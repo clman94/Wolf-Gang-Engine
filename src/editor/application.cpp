@@ -902,16 +902,33 @@ public:
 		mText_editor.SetPalette(TextEditor::GetDarkPalette());
 		mText_editor.SetLanguageDefinition(TextEditor::LanguageDefinition::Lua());
 		mText_editor.SetShowWhitespaces(false);
+		source->parse_function_list();
 	}
 
 	virtual void on_gui() override
 	{
 		update_error_markers();
 		auto source = get_asset()->get_resource<scripting::script>();
+		if (ImGui::BeginCombo("Functions", fmt::format("{} Function(s)", source->function_list.size()).c_str()))
+		{
+			for (auto&& [line, name] : source->function_list)
+			{
+				if (ImGui::MenuItem(fmt::format("{} [Line: {}]", name, line).c_str()))
+				{
+					TextEditor::Coordinates coord;
+					coord.mColumn = 0;
+					coord.mLine = line - 1;
+					mText_editor.SetCursorPosition(coord);
+				}
+			}
+			ImGui::EndCombo();
+		}
+
 		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
 		mText_editor.Render("Text");
 		if (mText_editor.IsTextChanged())
 		{
+			source->parse_function_list();
 			source->source = mText_editor.GetText();
 			source->error = std::nullopt;
 			source->function = {};
