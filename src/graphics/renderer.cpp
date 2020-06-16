@@ -83,12 +83,12 @@ math::vec2 renderer::get_render_view_scale() const noexcept
 
 math::vec2 renderer::world_to_screen(const math::vec2& pVec) const noexcept
 {
-	return (pVec - mRender_view.min) * get_render_view_scale();
+	return (pVec - mRender_view.min) / get_render_view_scale();
 }
 
 math::vec2 renderer::screen_to_world(const math::vec2& pVec) const noexcept
 {
-	return (pVec / get_render_view_scale()) + mRender_view.max;
+	return (pVec * get_render_view_scale()) + mRender_view.min;
 }
 
 void renderer::render_sprites(core::layer& pLayer, graphics& pGraphics)
