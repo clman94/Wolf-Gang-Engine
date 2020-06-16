@@ -1150,14 +1150,14 @@ public:
 			std::string name = mSelected_object.get_name();
 			if (ImGui::InputText("Name", &name))
 				mSelected_object.set_name(name);
-			if (ImGui::Button("Goto Asset"))
-			{
-				mMain_editor->get_context().open_editor(mSelected_object.get_asset());
-			}
 			if (ImGui::IsItemDeactivatedAfterEdit())
 			{
 				mSelected_object.set_name(scripting::make_valid_identifier(name));
 				mMain_editor->mark_asset_modified();
+			}
+			if (ImGui::Button("Goto Asset"))
+			{
+				mMain_editor->get_context().open_editor(mSelected_object.get_asset());
 			}
 			ImGui::TextUnformatted("Transform");
 			math::transform* transform = mSelected_object.get_component<math::transform>();

@@ -18,7 +18,6 @@ class layer;
 namespace wge::physics
 {
 
-
 struct raycast_hit_info
 {
 	bool hit = false;

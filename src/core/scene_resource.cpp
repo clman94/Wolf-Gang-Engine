@@ -87,6 +87,8 @@ void instance::generate(core::object pObject, const core::asset_manager& pAsset_
 {
 	auto asset = pAsset_mgr.get_asset(asset_id);
 
+	pObject.set_name(name);
+
 	// Generate the object
 	pObject.set_asset(asset);
 
