@@ -1112,6 +1112,7 @@ void TextEditor::Render()
 
 
 	ImGui::Dummy(ImVec2((longest + 2), mLines.size() * mCharAdvance.y));
+	ImGui::Dummy(ImVec2(0, ImGui::GetWindowHeight() - mCharAdvance.y - ImGui::GetStyle().WindowPadding.y * 2));
 
 	if (mScrollToCursor)
 	{
