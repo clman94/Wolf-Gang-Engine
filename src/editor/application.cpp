@@ -2707,7 +2707,6 @@ private:
 		ImGui::End();
 	}
 
-
 	void show_debugger()
 	{
 		static std::set<std::string_view> builin_function_filter = {
@@ -2761,20 +2760,27 @@ private:
 
 		ImGui::End();
 
-		if (ImGui::Begin("Debug Errors List"))
+		if (ImGui::Begin("Debug Error List"))
 		{
-			if (ImGui::TreeNode("Compiletime"))
+			if (ImGui::TreeNodeEx("Compile Errors", ImGuiTreeNodeFlags_DefaultOpen))
 			{
+				if (script_engine.get_compile_errors().empty())
+					ImGui::TextUnformatted("No compile errors");
+				ImGui::PushStyleColor(ImGuiCol_Text, { 0.9f, 0.5f, 0.5f, 1 });
 				for (auto&& [id, error_info] : script_engine.get_compile_errors())
 				{
 					auto asset = mContext.get_engine().get_asset_manager().get_asset(id);
 					auto path = mContext.get_engine().get_asset_manager().get_asset_path(asset);
 					ImGui::Selectable(fmt::format("{} : {} : {}", path.string(), error_info.line, error_info.message).c_str());
 				}
+				ImGui::PopStyleColor();
 				ImGui::TreePop();
 			}
-			if (ImGui::TreeNode("Runtime Errors"))
+			if (ImGui::TreeNodeEx("Runtime Errors", ImGuiTreeNodeFlags_DefaultOpen))
 			{
+				if (script_engine.get_runtime_errors().empty())
+					ImGui::TextUnformatted("No runtime errors");
+				ImGui::PushStyleColor(ImGuiCol_Text, { 0.8f, 0.8f, 0.5f, 1 });
 				for (auto&& [id, error_info] : script_engine.get_runtime_errors())
 				{
 					auto asset = mContext.get_engine().get_asset_manager().get_asset(error_info.asset_id);
@@ -2784,6 +2790,31 @@ private:
 						obj.get_name(), obj.get_asset()->get_name(), obj.get_id(),
 						path.string(), error_info.line, error_info.message).c_str());
 				}
+				ImGui::PopStyleColor();
+				ImGui::TreePop();
+			}
+			if (ImGui::TreeNodeEx("Frozen objects", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				if (script_engine.get_erroneous_objects().empty())
+					ImGui::TextUnformatted("No frozen objects");
+				ImGui::PushStyleColor(ImGuiCol_Text, { 0.5f, 0.5f, 0.8f, 1 });
+				for (auto id : script_engine.get_erroneous_objects())
+				{
+					auto obj = mEngine.get_scene().get_object(id);
+					if (ImGui::Selectable(fmt::format("{} [{} id:{}]",
+						obj.get_name(), obj.get_asset()->get_name(), obj.get_id()).c_str()))
+					{
+						script_engine.reset_object(obj);
+						break;
+					}
+					if (ImGui::IsItemHovered())
+					{
+						ImGui::BeginTooltip();
+						ImGui::Text("Reinitialize the object");
+						ImGui::EndTooltip();
+					}
+				}
+				ImGui::PopStyleColor();
 				ImGui::TreePop();
 			}
 		}

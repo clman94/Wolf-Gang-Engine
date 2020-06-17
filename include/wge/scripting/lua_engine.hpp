@@ -200,8 +200,8 @@ public:
 	}
 
 private:
-	// Set of objects that failed to run due to either compile or runtime errors.
-	// This will block further running/compiling of scripts in an object.
+	// Set of objects that failed to run due to either a compile or runtime error.
+	// This will block running/compiling of scripts in an object.
 	std::set<core::object_id> mObject_errors;
 	// Compile-time errors.
 	std::map<util::uuid, error_info> mCompile_errors;

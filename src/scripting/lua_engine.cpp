@@ -359,7 +359,7 @@ void lua_engine::draw_layer(core::layer& pLayer, float pDelta)
 
 void lua_engine::reset_object(const core::object& pObj) noexcept
 {
-	mObject_errors.erase(pObj);
+	mObject_errors.erase(pObj.get_id());
 	mRuntime_errors.erase(pObj.get_id());
 	if (auto state_comp = pObj.get_component<event_state_component>())
 	{
@@ -384,7 +384,8 @@ void lua_engine::run_script(script::handle& pSource, const sol::environment& pEn
 	try
 	{
 		// Compile script (if it can)
-		compile_script(pSource, pEvent_name);
+		if (!compile_script(pSource, pEvent_name))
+			mObject_errors.insert(pId);
 
 		auto& source = *pSource;
 		if (source.function.valid())
