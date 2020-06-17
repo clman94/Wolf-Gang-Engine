@@ -102,6 +102,12 @@ inline constexpr auto min(const T& pL, const T& pR) noexcept
 	return pL < pR ? pL : pR;
 }
 
+template <typename T, typename Talpha>
+inline constexpr T lerp(const T& pA, const T& pB, Talpha pAlpha) noexcept
+{
+	return (pB - pA) * pAlpha + pA;
+}
+
 template <typename T>
 inline constexpr T clamp(const T& pVal, const T& pMin, const T& pMax) noexcept
 {

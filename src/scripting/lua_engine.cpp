@@ -243,6 +243,7 @@ void lua_engine::register_math_api()
 	t["dot"] = &math::dot<float>;
 	t["magnitude"] = &math::magnitude<float>;
 	t["distance"] = &math::distance<float>;
+	t["lerp"] = sol::overload(&math::lerp<float, float>, &math::lerp<math::vec2, float>);
 	t.new_usertype<math::transform>("transform",
 		"position", &math::transform::position,
 		"scale", &math::transform::scale);
