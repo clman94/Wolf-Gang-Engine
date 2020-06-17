@@ -10,6 +10,8 @@ class object_resource :
 	public resource
 {
 public:
+	using handle = core::resource_handle<object_resource>;
+
 	enum class event_type
 	{
 		create,

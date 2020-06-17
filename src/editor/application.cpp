@@ -953,7 +953,7 @@ public:
 		{
 			source->parse_function_list();
 			source->source = mText_editor.GetText();
-			source->function = {};
+			get_context().get_engine().get_script_engine().prepare_recompile(get_asset());
 			mark_asset_modified();
 		}
 		ImGui::PopFont();
@@ -962,21 +962,31 @@ public:
 private:
 	void update_error_markers()
 	{
+		mError_markers.clear();
+
 		auto& script_engine = get_context().get_engine().get_script_engine();
 		auto source = get_asset()->get_resource<scripting::script>();
 		auto error_info = script_engine.get_script_error(get_asset()->get_id());
-		if (error_info && *error_info != mLast_error_info)
+		if (error_info)
 		{
 			mLast_error_info = *error_info;
-			mError_markers.clear();
 			mError_markers[error_info->line] = error_info->message;
-			mText_editor.SetErrorMarkers(mError_markers);
 		}
-		else if (!error_info && !mError_markers.empty())
+
+		for (auto& [obj_id, rt_info] : script_engine.get_runtime_errors())
 		{
-			mError_markers.clear();
-			mText_editor.SetErrorMarkers(mError_markers);
+			if (rt_info.asset_id == get_asset()->get_id())
+			{
+				auto obj = get_context().get_engine().get_scene().get_object(obj_id);
+				auto& line = mError_markers[rt_info.line];
+				bool was_empty = line.empty();
+				line += fmt::format("{} [{} id:{}] {}", obj.get_name(), obj.get_asset()->get_name(), obj.get_id(), rt_info.message);
+				if (!was_empty)
+					line += "\n";
+			}
 		}
+
+		mText_editor.SetErrorMarkers(mError_markers);
 	}
 
 private:
@@ -2006,6 +2016,12 @@ public:
 		// Event script editors are given a dedicated dockspace where they spawn. This helps
 		// remove clutter windows popping up everywhere.
 		ImGui::DockSpace(mScript_editor_dock_id, ImVec2(0, 0), ImGuiDockNodeFlags_None);
+
+		for (auto&& [_, editor] : mScript_editors)
+		{
+			if (editor)
+				editor->set_visible(get_context().draw_editor(*editor));
+		}
 	}
 
 	virtual void on_close() override
@@ -2034,27 +2050,30 @@ private:
 		for (auto[type, asset_id] : util::enumerate{ pGenerator->events })
 		{
 			const char* event_name = event_display_name[type];
-			const bool editor_already_open = get_context().is_editor_open_for(asset_id);
-			if (ImGui::Selectable(
-				event_name,
-				editor_already_open, ImGuiSelectableFlags_AllowDoubleClick)
-				&& !editor_already_open && ImGui::IsMouseDoubleClicked(0))
+			const bool script_exists = asset_id.is_valid();
+			ImGuiSelectableFlags flags = ImGuiSelectableFlags_AllowDoubleClick;
+			if (ImGui::Selectable(event_name, script_exists, flags, { 0, 0 }))
 			{
-				bool first_time = false;
 				core::asset::ptr asset;
-				if (asset_id.is_valid())
+				if (script_exists)
 				{
+					// Use existing asset.
 					asset = get_asset_manager().get_asset(asset_id);
 				}
 				else
 				{
+					// Create a new one.
 					asset = create_event_script(pGenerator->event_typenames[type]);
 					asset_id = asset->get_id();
 					mark_asset_modified();
-					first_time = true;
 				}
-				auto editor = get_context().open_editor(asset, mScript_editor_dock_id);
+				assert(asset);
+				auto& editor = mScript_editors[asset->get_id()];
+				if (!editor)
+					editor = std::make_unique<script_editor>(get_context(), asset);
 				editor->set_dock_family_id(mScript_editor_dock_id);
+				editor->focus_window();
+				editor->set_visible(true);
 			}
 		}
 		ImGui::EndChild();
@@ -2080,6 +2099,8 @@ private:
 
 		return asset;
 	}
+
+	std::map<util::uuid, std::unique_ptr<script_editor>> mScript_editors;
 
 	ImGuiID mScript_editor_dock_id = 0;
 };
@@ -2252,26 +2273,8 @@ public:
 				{
 					if (ImGui::BeginMenu("Engine"))
 					{
-						if (ImGui::MenuItem("Clear script errors"))
-						{
-							auto script_list = mEngine->get_script_engine().get_errornous_scripts();
-							for (auto& id : script_list)
-							{
-								if (auto script = mEngine->get_asset_manager().get_resource<scripting::script>(id))
-								{
-									script->function = {};
-								}
-							}
-							mEngine->get_script_engine().clear_errors();
-						}
-						if (ImGui::MenuItem("Reset errornous objects"))
-						{
-							auto object_list = mEngine->get_script_engine().get_errornous_objects();
-							for (auto& id : object_list)
-							{
-								mEngine->get_script_engine().reset_object(mEngine->get_scene().get_object(id));
-							}
-						}
+						if (ImGui::MenuItem("Reset erroneous objects"))
+							reset_erroneous_objects();
 						ImGui::EndMenu();
 					}
 					if (ImGui::BeginMenu("View"))
@@ -2314,6 +2317,17 @@ public:
 			}
 		}
 		ImGui::End();
+	}
+
+	void reset_erroneous_objects()
+	{
+		auto object_list = mEngine->get_script_engine().get_erroneous_objects();
+		for (auto& id : object_list)
+		{
+			core::object obj = mEngine->get_scene().get_object(id);
+			log::info("Reinitializing script for \"{}\" [{} id:{}]", obj.get_name(), obj.get_asset()->get_name(), obj.get_id());
+			mEngine->get_script_engine().reset_object(obj);
+		}
 	}
 
 private:
@@ -2701,7 +2715,7 @@ private:
 			"destroy", "animation_play", "animation_stop", "set_sprite", "move",
 			"is_valid" };
 		auto& script_engine = mEngine.get_script_engine();
-		if (ImGui::Begin("Debugger"))
+		if (ImGui::Begin("Debug Object Inspector"))
 		{
 			for (auto& layer : mEngine.get_scene())
 			{
@@ -2744,7 +2758,37 @@ private:
 				}
 			}
 		}
+
 		ImGui::End();
+
+		if (ImGui::Begin("Debug Errors List"))
+		{
+			if (ImGui::TreeNode("Compiletime"))
+			{
+				for (auto&& [id, error_info] : script_engine.get_compile_errors())
+				{
+					auto asset = mContext.get_engine().get_asset_manager().get_asset(id);
+					auto path = mContext.get_engine().get_asset_manager().get_asset_path(asset);
+					ImGui::Selectable(fmt::format("{} : {} : {}", path.string(), error_info.line, error_info.message).c_str());
+				}
+				ImGui::TreePop();
+			}
+			if (ImGui::TreeNode("Runtime Errors"))
+			{
+				for (auto&& [id, error_info] : script_engine.get_runtime_errors())
+				{
+					auto asset = mContext.get_engine().get_asset_manager().get_asset(error_info.asset_id);
+					auto path = mContext.get_engine().get_asset_manager().get_asset_path(asset);
+					auto obj = mEngine.get_scene().get_object(id);
+					ImGui::Selectable(fmt::format("{} [{} id:{}] : {} : {} : {}",
+						obj.get_name(), obj.get_asset()->get_name(), obj.get_id(),
+						path.string(), error_info.line, error_info.message).c_str());
+				}
+				ImGui::TreePop();
+			}
+		}
+		ImGui::End();
+
 	}
 
 private:

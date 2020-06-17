@@ -156,60 +156,64 @@ void context::close_all_editors()
 	mAsset_editors.clear();
 }
 
+bool context::draw_editor(asset_editor& pEditor)
+{
+	if (!pEditor.is_visible())
+		return false;
+
+	auto& asset = pEditor.get_asset();
+
+	// True until the 'X' button on the top right of the
+	// window is clicked.
+	bool is_window_open = true;
+
+	// Construct a title with the id as the stringified asset id so the name can change freely
+	// without affecting the window.
+	const std::string title = asset->get_name() + "###" + asset->get_id().to_string();
+
+	ImGuiWindowFlags flags = (is_asset_modified(asset) ? ImGuiWindowFlags_UnsavedDocument : 0);
+	if (pEditor.is_first_time())
+	{
+		if (pEditor.get_dock_family_id() != 0)
+		{
+			ImGui::SetNextWindowDockID(pEditor.get_dock_family_id());
+		}
+		ImGui::SetNextWindowSize({ 400, 400 });
+		pEditor.mark_first_time();
+	}
+	if (ImGui::Begin(title.c_str(), &is_window_open, flags))
+	{
+		if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
+		{
+			ImGuiIO& io = ImGui::GetIO();
+			bool ctrl = io.KeyCtrl;
+			bool alt = io.KeyAlt;
+			if (ctrl && !alt && ImGui::IsKeyPressed(GLFW_KEY_S))
+			{
+				save_asset(pEditor.get_asset());
+			}
+		}
+		pEditor.on_gui();
+	}
+	ImGui::End();
+
+	if (!is_window_open)
+	{
+		if (is_asset_modified(pEditor.get_asset()))
+			pEditor.set_visible(false);
+	}
+	return is_window_open;
+}
+
 void context::show_editor_guis()
 {
 	for (auto iter = mAsset_editors.begin(); iter != mAsset_editors.end(); ++iter)
 	{
 		if (!*iter)
 			continue;
-
-		asset_editor* editor = iter->get();
-		if (!editor->is_visible())
-			continue;
-
-		auto& asset = editor->get_asset();
-
-		// True until the 'X' button on the top right of the
-		// window is clicked.
-		bool is_window_open = true;
-		
-		// Construct a title with the id as the stringified asset id so the name can change freely
-		// without affecting the window.
-		const std::string title = asset->get_name() + "###" + asset->get_id().to_string();
-
-		ImGuiWindowFlags flags = (is_asset_modified(asset) ? ImGuiWindowFlags_UnsavedDocument : 0);
-		if (editor->is_first_time())
-		{
-			if (editor->get_dock_family_id() != 0)
-			{
-				ImGui::SetNextWindowDockID(editor->get_dock_family_id());
-			}
-			ImGui::SetNextWindowSize({ 400, 400 });
-			editor->mark_first_time();
-		}
-		if (ImGui::Begin(title.c_str(), &is_window_open, flags))
-		{
-			if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
-			{
-				ImGuiIO& io = ImGui::GetIO();
-				bool ctrl = io.KeyCtrl;
-				bool alt = io.KeyAlt;
-				if (ctrl && !alt && ImGui::IsKeyPressed(GLFW_KEY_S))
-				{
-					save_asset(editor->get_asset());
-				}
-			}
-			editor->on_gui();
-		}
-		ImGui::End();
-
-		if (!is_window_open)
-		{
-			if (is_asset_modified(editor->get_asset()))
-				editor->set_visible(false);
-			else
-				iter->reset();
-		}
+		bool is_open = draw_editor(*iter->get());
+		if (!is_open && iter->get()->is_visible())
+			iter->reset();
 	}
 	erase_deleted_editors();
 }

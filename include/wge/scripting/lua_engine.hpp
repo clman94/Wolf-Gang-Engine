@@ -52,6 +52,10 @@ struct error_info
 	}
 };
 
+struct runtime_error_info : error_info
+{
+	util::uuid asset_id;
+};
 
 class script :
 	public core::resource
@@ -129,7 +133,7 @@ public:
 	// Update the delta. Do this before each layer.
 	void update_delta(float pSeconds);
 
-	bool compile_script(script::handle& pScript, const std::string& pName, core::object_id pAssoc_object = 0);
+	bool compile_script(const script::handle& pScript, const std::string& pName);
 
 	// Prepare state for new scene.
 	void cleanup();
@@ -148,63 +152,63 @@ public:
 
 	const error_info* get_script_error(const util::uuid& pId) const
 	{
-		auto iter = mRuntime_errors.find(pId);
-		if (iter != mRuntime_errors.end())
+		auto iter = mCompile_errors.find(pId);
+		if (iter != mCompile_errors.end())
 			return &iter->second;
 		else
 			return nullptr;
 	}
 
-	bool prepare_recompile(script::handle& pScript)
+	bool has_compile_error(const util::uuid& pId) const
+	{
+		return mCompile_errors.find(pId) != mCompile_errors.end();
+	}
+
+	void prepare_recompile(const script::handle& pScript)
 	{
 		pScript->function = {};
-		clear_script_error(pScript.get_id());
+		mCompile_errors.erase(pScript.get_id());
 	}
 
-	bool has_errors() const noexcept
-	{
-		return !mRuntime_errors.empty();
-	}
-
-	bool has_object_errors(const core::object_id& pId) const noexcept
+	bool has_object_error(const core::object_id& pId) const noexcept
 	{
 		return mObject_errors.count(pId) != 0;
 	}
 
-	std::vector<core::object_id> get_errornous_objects() const
+	auto& get_erroneous_objects() const noexcept
 	{
-		return { mObject_errors.begin(), mObject_errors.end() };
+		return mObject_errors;
 	}
 
-	std::vector<util::uuid> get_errornous_scripts() const
+	auto& get_runtime_errors() const noexcept
 	{
-		std::vector<util::uuid> result;
-		result.reserve(mRuntime_errors.size());
-		for (auto&& [id, _] : mRuntime_errors)
-		{
-			result.push_back(id);
-		}
-		return result;
+		return mRuntime_errors;
+	}
+
+	auto& get_compile_errors() const noexcept
+	{
+		return mCompile_errors;
 	}
 
 	void reset_object(const core::object& pObj) noexcept;
 
-	void clear_script_error(const util::uuid& pId)
-	{
-		mRuntime_errors.erase(pId);
-	}
-
 	void clear_errors()
 	{
 		mObject_errors.clear();
+		mCompile_errors.clear();
 		mRuntime_errors.clear();
 	}
 
 private:
-	// Set of objects that failed to run.
+	// Set of objects that failed to run due to either compile or runtime errors.
+	// This will block further running/compiling of scripts in an object.
 	std::set<core::object_id> mObject_errors;
-	// Set of scripts and their errors.
-	std::map<util::uuid, error_info> mRuntime_errors;
+	// Compile-time errors.
+	std::map<util::uuid, error_info> mCompile_errors;
+	// Errors that happened while running a script.
+	// Run-time errors have an association with an object and may fail multiple times
+	// depending on the amount of objects in the scene that run the script.
+	std::map<core::object_id, runtime_error_info> mRuntime_errors;
 
 private:
 	void run_script(script::handle& pSource, const sol::environment& pEnv, const std::string& pEvent_name, const core::object_id& pId);

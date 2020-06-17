@@ -42,6 +42,8 @@ sol::environment lua_engine::create_object_environment(core::object pObj, sol::e
 	if (!pObj.get_name().empty())
 		state["obj"][pObj.get_name()] = env;
 
+	env["created"] = false;
+
 	env["is_valid"] = [pObj]() -> bool
 	{
 		return pObj.is_valid();
@@ -98,7 +100,7 @@ void lua_engine::update_delta(float pSeconds)
 	state["delta"] = pSeconds;
 }
 
-bool lua_engine::compile_script(script::handle& pScript, const std::string& pName, core::object_id pAssoc_object)
+bool lua_engine::compile_script(const script::handle& pScript, const std::string& pName)
 {
 	assert(pScript);
 	auto& source = *pScript;
@@ -112,9 +114,7 @@ bool lua_engine::compile_script(script::handle& pScript, const std::string& pNam
 		else
 		{
 			sol::error err = lr;
-			mRuntime_errors[pScript.get_id()] = parse_lua_error(err.what());
-			if (pAssoc_object > 0)
-				mObject_errors.insert(pAssoc_object);
+			mCompile_errors[pScript.get_id()] = parse_lua_error(err.what());
 			log::error("Parse error: {}", err.what());
 			return false;
 		}
@@ -321,7 +321,6 @@ void lua_engine::update_layer(core::layer& pLayer, float pDelta)
 		if (!state.environment.valid())
 		{
 			state.environment = create_object_environment(pLayer.get_object(id));
-			state.environment["created"] = false;
 		}
 	}
 
@@ -360,7 +359,8 @@ void lua_engine::draw_layer(core::layer& pLayer, float pDelta)
 
 void lua_engine::reset_object(const core::object& pObj) noexcept
 {
-	mObject_errors.erase(pObj.get_id());
+	mObject_errors.erase(pObj);
+	mRuntime_errors.erase(pObj.get_id());
 	if (auto state_comp = pObj.get_component<event_state_component>())
 	{
 		if (!state_comp->environment.valid())
@@ -376,15 +376,15 @@ void lua_engine::run_script(script::handle& pSource, const sol::environment& pEn
 	if (!pSource.is_valid())
 		return;
 	// Do not execute scripts from errornous objects.
-	if (has_object_errors(pId))
+	if (has_object_error(pId))
 		return;
 	// Ignore errornous scripts.
-	if (get_script_error(pSource.get_id()) != nullptr)
+	if (has_compile_error(pSource.get_id()))
 		return;
 	try
 	{
 		// Compile script (if it can)
-		compile_script(pSource, pEvent_name, pId);
+		compile_script(pSource, pEvent_name);
 
 		auto& source = *pSource;
 		if (source.function.valid())
@@ -395,7 +395,9 @@ void lua_engine::run_script(script::handle& pSource, const sol::environment& pEn
 			if (!result.valid())
 			{
 				sol::error err = result;
-				mRuntime_errors[pSource.get_id()] = parse_lua_error(err.what());
+				auto& runtime_error = mRuntime_errors[pId];
+				runtime_error.asset_id = pSource.get_id();
+				static_cast<error_info&>(runtime_error) = parse_lua_error(err.what());
 				mObject_errors.insert(pId);
 				log::error("Runtime error: {}", err.what());
 				return;

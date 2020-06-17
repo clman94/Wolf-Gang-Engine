@@ -110,6 +110,7 @@ public:
 	void close_editor(const core::asset::ptr& pAsset);
 	void close_editor(const util::uuid& pIds);
 	void close_all_editors();
+	bool draw_editor(asset_editor& pEditor);
 	void show_editor_guis();
 	bool is_editor_open_for(const core::asset::ptr& pAsset) const;
 	bool is_editor_open_for(const util::uuid& pAsset_id) const;
