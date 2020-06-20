@@ -1,5 +1,5 @@
 #include <wge/core/object_resource.hpp>
-#include <wge/scripting/lua_engine.hpp>
+#include <wge/scripting/script_engine.hpp>
 #include <wge/util/ipair.hpp>
 #include <wge/graphics/sprite_component.hpp>
 #include <wge/physics/physics_component.hpp>

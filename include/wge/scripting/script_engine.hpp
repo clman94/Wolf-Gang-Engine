@@ -37,7 +37,7 @@ class physics_world;
 namespace wge::scripting
 {
 
-class lua_engine
+class script_engine
 {
 public:
 	// Create a new environment for individual objects.

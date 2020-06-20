@@ -3,7 +3,7 @@
 #include <wge/core/scene.hpp>
 #include <wge/core/game_settings.hpp>
 #include <wge/graphics/graphics.hpp>
-#include <wge/scripting/lua_engine.hpp>
+#include <wge/scripting/script_engine.hpp>
 #include <wge/physics/physics_world.hpp>
 #include <wge/graphics/camera.hpp>
 
@@ -44,7 +44,7 @@ public:
 		return mGraphics;
 	}
 
-	scripting::lua_engine& get_script_engine() noexcept
+	scripting::script_engine& get_script_engine() noexcept
 	{
 		return mLua_engine;
 	}
@@ -68,7 +68,7 @@ private:
 	core::scene mScene;
 	graphics::graphics mGraphics;
 	graphics::camera mDefault_camera;
-	scripting::lua_engine mLua_engine;
+	scripting::script_engine mLua_engine;
 	physics::physics_world mPhysics;
 
 	bool mLoaded{ false };

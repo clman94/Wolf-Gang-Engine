@@ -2,7 +2,7 @@
 #include <wge/core/object_resource.hpp>
 #include <wge/core/layer.hpp>
 #include <wge/graphics/renderer.hpp>
-#include <wge/scripting/lua_engine.hpp>
+#include <wge/scripting/script_engine.hpp>
 #include <wge/physics/physics_world.hpp>
 
 namespace wge::core

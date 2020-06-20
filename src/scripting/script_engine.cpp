@@ -1,10 +1,9 @@
-#include <wge/scripting/lua_engine.hpp>
+#include <wge/scripting/script_engine.hpp>
 #include <wge/physics/physics_world.hpp>
 #include <Box2D/Dynamics/b2World.h>
 #include <wge/core/object_resource.hpp>
 #include <wge/math/transform.hpp>
 #include <wge/math/rect.hpp>
-#include <wge/scripting/lua_engine.hpp>
 
 #include <regex>
 
@@ -34,7 +33,7 @@ static error_info parse_lua_error(std::string_view pStr)
 	return result;
 }
 
-sol::environment lua_engine::create_object_environment(core::object pObj, sol::environment pExisting)
+sol::environment script_engine::create_object_environment(core::object pObj, sol::environment pExisting)
 {
 	sol::environment env = pExisting.valid() ? pExisting : sol::environment{ state, sol::create, state.globals() };
 
@@ -95,12 +94,12 @@ sol::environment lua_engine::create_object_environment(core::object pObj, sol::e
 	return env;
 }
 
-void lua_engine::update_delta(float pSeconds)
+void script_engine::update_delta(float pSeconds)
 {
 	state["delta"] = pSeconds;
 }
 
-bool lua_engine::compile_script(const script::handle& pScript, const std::string& pName)
+bool script_engine::compile_script(const script::handle& pScript, const std::string& pName)
 {
 	assert(pScript);
 	auto& source = *pScript;
@@ -122,14 +121,14 @@ bool lua_engine::compile_script(const script::handle& pScript, const std::string
 	return true;
 }
 
-void lua_engine::cleanup()
+void script_engine::cleanup()
 {
 	clear_errors();
 	state["obj"] = state.create_table();
 	state["global"] = sol::environment(state, sol::create, state.globals());
 }
 
-void lua_engine::register_core_api()
+void script_engine::register_core_api()
 {
 	state.open_libraries(sol::lib::base, sol::lib::coroutine, sol::lib::string, sol::lib::table);
 	state["obj"] = state.create_table();
@@ -149,11 +148,11 @@ void lua_engine::register_core_api()
 	);
 }
 
-void lua_engine::register_asset_api(core::asset_manager& pAsset_manager)
+void script_engine::register_asset_api(core::asset_manager& pAsset_manager)
 {
 }
 
-void lua_engine::register_layer_api(core::asset_manager& pAsset_manager)
+void script_engine::register_layer_api(core::asset_manager& pAsset_manager)
 {
 	state["create_instance"] = [this, &pAsset_manager](core::layer& pLayer, std::string_view pStr) -> sol::table
 	{
@@ -174,7 +173,7 @@ void lua_engine::register_layer_api(core::asset_manager& pAsset_manager)
 	};
 }
 
-void lua_engine::register_graphics_api(graphics::camera& pDefault_camera)
+void script_engine::register_graphics_api(graphics::camera& pDefault_camera)
 {
 	sol::table t = state.create_named_table("graphics");
 	t.new_usertype<graphics::camera>("camera", 
@@ -184,7 +183,7 @@ void lua_engine::register_graphics_api(graphics::camera& pDefault_camera)
 	t["main_camera"] = std::ref(pDefault_camera);
 }
 
-void lua_engine::register_math_api()
+void script_engine::register_math_api()
 {
 	sol::table t = state.create_named_table("math");
 	t["pi"] = math::pi;
@@ -273,7 +272,7 @@ public:
 	bool has_collision = false;
 };
 
-void lua_engine::register_physics_api(physics::physics_world& pPhysics, core::scene& pScene)
+void script_engine::register_physics_api(physics::physics_world& pPhysics, core::scene& pScene)
 {
 	state["physics_raycast"] = [&pPhysics, &pScene](sol::table pResult, const math::vec2& pA, const math::vec2& pB) -> bool
 	{
@@ -311,7 +310,7 @@ void lua_engine::register_physics_api(physics::physics_world& pPhysics, core::sc
 	};
 }
 
-void lua_engine::update_layer(core::layer& pLayer, float pDelta)
+void script_engine::update_layer(core::layer& pLayer, float pDelta)
 {
 	update_delta(pDelta);
 
@@ -347,7 +346,7 @@ void lua_engine::update_layer(core::layer& pLayer, float pDelta)
 	pLayer.destroy_queued_components();
 }
 
-void lua_engine::draw_layer(core::layer& pLayer, float pDelta)
+void script_engine::draw_layer(core::layer& pLayer, float pDelta)
 {
 	// Event: Draw
 	for (auto& [id, on_create, state] :
@@ -358,7 +357,7 @@ void lua_engine::draw_layer(core::layer& pLayer, float pDelta)
 	pLayer.destroy_queued_components();
 }
 
-void lua_engine::reset_object(const core::object& pObj) noexcept
+void script_engine::reset_object(const core::object& pObj) noexcept
 {
 	mObject_errors.erase(pObj.get_id());
 	mRuntime_errors.erase(pObj.get_id());
@@ -372,7 +371,7 @@ void lua_engine::reset_object(const core::object& pObj) noexcept
 	}
 }
 
-void lua_engine::run_script(script::handle& pSource, const sol::environment& pEnv, const std::string& pEvent_name, const core::object_id& pId)
+void script_engine::run_script(script::handle& pSource, const sol::environment& pEnv, const std::string& pEvent_name, const core::object_id& pId)
 {
 	if (!pSource.is_valid())
 		return;
