@@ -2,7 +2,6 @@
 
 #include <wge/core/game_object.hpp>
 #include <wge/core/layer.hpp>
-#include <wge/core/factory.hpp>
 
 #include <list>
 

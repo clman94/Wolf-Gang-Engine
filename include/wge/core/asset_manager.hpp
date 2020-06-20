@@ -2,7 +2,6 @@
 
 #include <wge/core/asset.hpp>
 #include <wge/core/serialize_type.hpp>
-#include <wge/core/system.hpp>
 #include <wge/filesystem/filesystem_interface.hpp>
 #include <wge/util/ptr.hpp>
 

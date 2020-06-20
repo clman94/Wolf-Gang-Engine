@@ -1,14 +1,12 @@
 #pragma once
 
-#include <queue>
-
-#include <wge/core/component.hpp>
 #include <wge/core/game_object.hpp>
 #include <wge/math/vector.hpp>
-#include <wge/core/system.hpp>
 #include <wge/math/aabb.hpp>
 
 #include <Box2D/Box2D.h>
+
+#include <queue>
 
 namespace wge::core
 {

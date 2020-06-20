@@ -2,7 +2,6 @@
 
 #include <wge/logging/log.hpp>
 #include <wge/core/asset.hpp>
-#include <wge/core/component.hpp>
 #include <wge/math/anchor.hpp>
 #include <wge/math/aabb.hpp>
 #include <wge/math/vector.hpp>

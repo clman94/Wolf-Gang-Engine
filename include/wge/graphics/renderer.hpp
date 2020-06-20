@@ -10,7 +10,6 @@
 #include <wge/graphics/color.hpp>
 #include <wge/graphics/texture.hpp>
 #include <wge/graphics/render_batch_2d.hpp>
-#include <wge/core/system.hpp>
 #include <wge/core/scene.hpp>
 #include <wge/graphics/sprite_component.hpp>
 #include <wge/graphics/framebuffer.hpp>

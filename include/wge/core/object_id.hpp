@@ -51,6 +51,45 @@ private:
 	object_id counter = 0;
 };
 
+class object_id_owner
+{
+public:
+	object_id_owner() = default;
+	object_id_owner(object_id pId, object_id_generator& pGenerator)
+		: mId(pId), pGenerator(&pGenerator)
+	{}
+
+	object_id_owner(const object_id_owner&) = delete;
+	object_id_owner& operator=(const object_id_owner&) = delete;
+
+	object_id_owner(object_id_owner&&) noexcept = default;
+	object_id_owner& operator=(object_id_owner&&) noexcept = default;
+
+	~object_id_owner()
+	{
+		release();
+	}
+
+	object_id get_id() const noexcept
+	{
+		return mId;
+	}
+
+	void release()
+	{
+		if (pGenerator)
+		{
+			pGenerator->reclaim(mId);
+			mId = invalid_id;
+			pGenerator = nullptr;
+		}
+	}
+
+private:
+	object_id mId = invalid_id;
+	object_id_generator* pGenerator = nullptr;
+};
+
 object_id_generator& get_global_generator();
 
 } // namespace wge::core

@@ -4,7 +4,6 @@
 #include <wge/core/game_settings.hpp>
 #include <wge/graphics/graphics.hpp>
 #include <wge/scripting/lua_engine.hpp>
-#include <wge/core/factory.hpp>
 #include <wge/physics/physics_world.hpp>
 #include <wge/graphics/camera.hpp>
 

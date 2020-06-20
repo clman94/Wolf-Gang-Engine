@@ -1,6 +1,5 @@
 
 #include <wge/core/game_object.hpp>
-#include <wge/core/component.hpp>
 #include <wge/core/scene.hpp>
 #include <wge/core/layer.hpp>
 

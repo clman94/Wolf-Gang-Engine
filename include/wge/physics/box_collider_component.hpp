@@ -1,6 +1,5 @@
 #pragma once
 
-#include <wge/core/component.hpp>
 #include <wge/core/game_object.hpp>
 #include <wge/math/vector.hpp>
 

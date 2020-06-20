@@ -8,7 +8,7 @@
 #include <wge/core/component_type.hpp>
 #include <wge/util/json_helpers.hpp>
 #include <wge/core/asset.hpp>
-#include <wge/core/component.hpp>
+#include <wge/core/handle.hpp>
 #include <wge/core/object_id.hpp>
 #include <wge/core/destruction_queue.hpp>
 
