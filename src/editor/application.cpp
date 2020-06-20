@@ -2056,7 +2056,7 @@ public:
 		//mContext.register_editor<object_editor>("gameobject", mInspectors);
 		mContext.register_editor<script_editor>("script");
 		mContext.register_editor<scene_editor>("scene", mOn_game_run);
-		mContext.register_editor<eventful_sprite_editor>("gameobject");
+		mContext.register_editor<object_editor>("gameobject");
 		mContext.register_editor<tileset_editor>("tileset");
 
 		mOn_game_run.connect([this](const core::asset::ptr& pAsset) {

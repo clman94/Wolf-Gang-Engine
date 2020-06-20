@@ -11,11 +11,11 @@ namespace wge::editor
 
 class script_editor;
 
-class eventful_sprite_editor :
+class object_editor :
 	public asset_editor
 {
 public:
-	eventful_sprite_editor(context& pContext, const core::asset::ptr& pAsset) noexcept;
+	object_editor(context& pContext, const core::asset::ptr& pAsset) noexcept;
 	virtual void on_gui() override;
 	virtual void on_close() override;
 

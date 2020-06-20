@@ -14,11 +14,11 @@ static const std::array event_display_name = {
 namespace wge::editor
 {
 
-eventful_sprite_editor::eventful_sprite_editor(context& pContext, const core::asset::ptr& pAsset) noexcept :
+object_editor::object_editor(context& pContext, const core::asset::ptr& pAsset) noexcept :
 	asset_editor(pContext, pAsset)
 {}
 
-void eventful_sprite_editor::on_gui()
+void object_editor::on_gui()
 {
 	mScript_editor_dock_id = ImGui::GetID("EditorDock");
 
@@ -60,7 +60,7 @@ void eventful_sprite_editor::on_gui()
 	}
 }
 
-void eventful_sprite_editor::on_close()
+void object_editor::on_close()
 {
 	auto generator = get_asset()->get_resource<core::object_resource>();
 	for (auto& i : generator->events)
@@ -68,7 +68,7 @@ void eventful_sprite_editor::on_close()
 			get_context().close_editor(i);
 }
 
-inline void eventful_sprite_editor::display_sprite_input(core::object_resource* pGenerator)
+inline void object_editor::display_sprite_input(core::object_resource* pGenerator)
 {
 	core::asset::ptr sprite = get_asset_manager().get_asset(pGenerator->display_sprite);
 	if (sprite = asset_selector("SpriteSelector", "sprite", get_asset_manager(), sprite))
@@ -78,7 +78,7 @@ inline void eventful_sprite_editor::display_sprite_input(core::object_resource* 
 	}
 }
 
-inline void eventful_sprite_editor::display_event_list(core::object_resource* pGenerator)
+inline void object_editor::display_event_list(core::object_resource* pGenerator)
 {
 	ImGui::Text("Events:");
 	ImGui::BeginChild("Events", ImVec2(0, 0), true);
@@ -114,7 +114,7 @@ inline void eventful_sprite_editor::display_event_list(core::object_resource* pG
 	ImGui::EndChild();
 }
 
-inline core::asset::ptr eventful_sprite_editor::create_event_script(const char* pName)
+inline core::asset::ptr object_editor::create_event_script(const char* pName)
 {
 	core::asset_manager& asset_manager = get_context().get_engine().get_asset_manager();
 
