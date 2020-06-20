@@ -31,62 +31,6 @@ struct tracker
 	std::size_t moves = 0;
 };
 
-TEST_CASE("Copyable ptr")
-{
-	using util::copyable_ptr;
-
-	copyable_ptr ptr = util::make_copyable_ptr<tracker>();
-	REQUIRE(ptr.valid());
-	REQUIRE(ptr->copies == 0);
-
-	copyable_ptr copied_ptr = ptr;
-	REQUIRE(copied_ptr.valid());
-	REQUIRE(ptr->copies == 0);
-	REQUIRE(copied_ptr->copies == 1);
-
-	copyable_ptr moved_ptr = std::move(ptr);
-	REQUIRE_FALSE(ptr.valid());
-	REQUIRE(moved_ptr.valid());
-	REQUIRE(moved_ptr->copies == 0);
-
-	struct a { int x = 1;  };
-	struct b : a { b() : a{ 2 } {} };
-	struct d : a {};
-
-	copyable_ptr poly_ptr = util::make_copyable_ptr<b, a>();
-	REQUIRE(poly_ptr.valid());
-	REQUIRE(poly_ptr->x == 2);
-	copyable_ptr poly_ptr_copy = poly_ptr;
-	REQUIRE(poly_ptr_copy->x == 2);
-}
-
-TEST_CASE("Layer can be copied")
-{
-	using core::layer;
-	core::object_id id{ 1 };
-	layer first;
-	*first.add_component<int>(id) = 2;
-
-	layer second = first;
-	REQUIRE(*second.get_component<int>(id) == 2);
-	REQUIRE(first.get_component<int>(id) != second.get_component<int>(id));
-}
-
-TEST_CASE("component_manager can be copied")
-{
-	using mgr = core::component_manager;
-	core::object_id id{ 1 };
-	mgr first;
-	first.add_component<int>(id);
-	*first.get_component<int>(id) = 13;
-	REQUIRE_FALSE(first.get_storage<int>().empty());
-	
-	// Can copy it
-	mgr second = first;
-	REQUIRE(*second.get_component<int>(id) == 13);
-	REQUIRE(first.get_component<int>(id) != second.get_component<int>(id));
-}
-
 TEST_CASE("A family represents a type")
 {
 	REQUIRE(core::family::from<int>() == core::family::from<int>());

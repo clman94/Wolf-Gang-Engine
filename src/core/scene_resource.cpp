@@ -41,18 +41,15 @@ void scene_resource::deserialize_data(const json& pJson)
 	}
 }
 
-scene scene_resource::generate_scene(const core::asset_manager& pAsset_mgr) const
+void scene_resource::generate_scene(scene& pScene, const core::asset_manager& pAsset_mgr) const
 {
-	scene new_scene;
-
 	for (auto& i : layers)
 	{
 		// Generate each new layer.
 		std::visit([&](const auto& v) {
-			new_scene.add_layer(v.generate(pAsset_mgr));
+			v.generate(pScene.add_layer(), pAsset_mgr);
 		}, i);
 	}
-	return new_scene;
 }
 
 void scene_resource::update_data(scene& pScene)
@@ -128,15 +125,13 @@ void instance_layer::from(core::layer& pLayer)
 	}
 }
  
-layer instance_layer::generate(const core::asset_manager& pAsset_mgr) const
+void instance_layer::generate(layer& pLayer, const core::asset_manager& pAsset_mgr) const
 {
-	layer new_layer;
-	new_layer.set_name(name);
+	pLayer.set_name(name);
 	for (auto& i : instances)
 	{
-		i.generate(new_layer.add_object(), pAsset_mgr);
+		i.generate(pLayer.add_object(), pAsset_mgr);
 	}
-	return new_layer;
 }
 
 json instance_layer::serialize(const instance_layer& pData)
@@ -180,14 +175,13 @@ void tilemap_layer::from(core::layer& pLayer)
 	}
 }
 
-core::layer tilemap_layer::generate(const core::asset_manager& pAsset_mgr) const
+void tilemap_layer::generate(layer& pLayer, const core::asset_manager& pAsset_mgr) const
 {
-	layer new_layer;
-	new_layer.set_name(name);
+	pLayer.set_name(name);
 
 	// This will automatically generate the needed data structures
 	// that is required for a tilemap.
-	tilemap_manipulator tilemap(new_layer);
+	tilemap_manipulator tilemap(pLayer);
 
 	// Setup the tileset.
 	if (tileset_id.is_valid() && pAsset_mgr.has_asset(tileset_id))
@@ -201,7 +195,6 @@ core::layer tilemap_layer::generate(const core::asset_manager& pAsset_mgr) const
 	{
 		tilemap.set_tile(i);
 	}
-	return new_layer;
 }
 
 json tilemap_layer::serialize(const tilemap_layer& pData)

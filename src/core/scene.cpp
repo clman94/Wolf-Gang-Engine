@@ -17,15 +17,15 @@ layer* scene::get_layer(std::size_t pIndex)
 	return &(*iter);
 }
 
-layer* scene::add_layer()
+layer& scene::add_layer()
 {
-	return &mLayers.emplace_back();
+	return mLayers.emplace_back();
 }
 
-layer* scene::add_layer(const std::string& pName)
+layer& scene::add_layer(const std::string& pName)
 {
-	auto l = add_layer();
-	l->set_name(pName);
+	auto& l = add_layer();
+	l.set_name(pName);
 	return l;
 }
 

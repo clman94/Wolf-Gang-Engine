@@ -17,9 +17,9 @@ class component_manager
 public:
 	// Boilerplate for noexcept move because std::map can't get it right.
 	component_manager() = default;
-	component_manager(const component_manager&) = default;
+	component_manager(const component_manager&) = delete;
 	component_manager(component_manager&&) noexcept = default;
-	component_manager& operator=(const component_manager&) = default;
+	component_manager& operator=(const component_manager&) = delete;
 	component_manager& operator=(component_manager&&) noexcept = default;
 
 	template <typename T>
@@ -103,12 +103,12 @@ private:
 		// Create a new container if it doesn't exist
 		if (iter == mContainers.end())
 			iter = mContainers.emplace_hint(iter,
-				std::make_pair(type, util::make_copyable_ptr<storage_type, component_storage_base>()));
+				std::make_pair(type, util::static_unique_cast<component_storage_base>(std::make_unique<storage_type>())));
 		return *static_cast<storage_type*>(iter->second.get());
 	}
 
 private:
-	mutable std::map<component_type, util::copyable_ptr<component_storage_base>> mContainers;
+	mutable std::map<component_type, std::unique_ptr<component_storage_base>> mContainers;
 };
 
 } // namespace wge::core

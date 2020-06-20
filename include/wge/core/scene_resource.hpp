@@ -36,7 +36,7 @@ struct instance_layer
 	static constexpr const char* strtype = "instance";
 
 	void from(core::layer&);
-	core::layer generate(const core::asset_manager& pAsset_mgr) const;
+	void generate(core::layer& pLayer, const core::asset_manager& pAsset_mgr) const;
 
 	static json serialize(const instance_layer&);
 	static instance_layer deserialize(const json&);
@@ -52,7 +52,7 @@ struct tilemap_layer
 	static constexpr const char* strtype = "tilemap";
 
 	void from(core::layer&);
-	core::layer generate(const core::asset_manager& pAsset_mgr) const;
+	void generate(core::layer& pLayer, const core::asset_manager& pAsset_mgr) const;
 
 	static json serialize(const tilemap_layer&);
 	static tilemap_layer deserialize(const json&);
@@ -85,7 +85,7 @@ public:
 	virtual json serialize_data() const override;
 	virtual void deserialize_data(const json& pJson) override;
 
-	scene generate_scene(const asset_manager& pAsset_mgr) const;
+	void generate_scene(scene& pScene, const asset_manager& pAsset_mgr) const;
 
 	void update_data(scene& pScene);
 };

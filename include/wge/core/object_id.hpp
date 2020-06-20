@@ -4,6 +4,7 @@
 #include <wge/logging/log.hpp>
 #include <queue>
 #include <cstddef>
+#include <utility>
 
 namespace wge::core
 {
@@ -54,16 +55,24 @@ private:
 class object_id_owner
 {
 public:
-	object_id_owner() = default;
-	object_id_owner(object_id pId, object_id_generator& pGenerator)
+	object_id_owner() noexcept = default;
+	object_id_owner(object_id pId, object_id_generator& pGenerator) noexcept
 		: mId(pId), pGenerator(&pGenerator)
 	{}
 
 	object_id_owner(const object_id_owner&) = delete;
 	object_id_owner& operator=(const object_id_owner&) = delete;
 
-	object_id_owner(object_id_owner&&) noexcept = default;
-	object_id_owner& operator=(object_id_owner&&) noexcept = default;
+	object_id_owner(object_id_owner&& pOther) noexcept :
+		mId(std::exchange(pOther.mId, invalid_id)),
+		pGenerator(std::exchange(pOther.pGenerator, nullptr))
+	{}
+	object_id_owner& operator=(object_id_owner&& pOther) noexcept
+	{
+		mId = std::exchange(pOther.mId, invalid_id);
+		pGenerator = std::exchange(pOther.pGenerator, nullptr);
+		return *this;
+	}
 
 	~object_id_owner()
 	{

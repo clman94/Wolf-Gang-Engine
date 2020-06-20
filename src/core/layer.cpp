@@ -17,23 +17,21 @@ const std::string& layer::get_name() const noexcept
 object layer::add_object()
 {
 	object_id id = get_global_generator().get();
-	if (mComponent_manager.get_storage<object_info>().has(id))
-		log::warning("Object with id {} already exists.", id);
-	mComponent_manager.add_component<object_info>(id);
+	assert(!mComponent_manager.get_storage<object_info>().has(id));
+	mComponent_manager.add_component(id, object_info{});
+	mComponent_manager.add_component(id, object_id_owner{ id, get_global_generator() });
 	return get_object(id);
 }
 
 object layer::add_object(const std::string& pName)
 {
-	object_id id = get_global_generator().get();
-	auto& info = mComponent_manager.add_component<object_info>(id);
-	info.name = pName;
-	return get_object(id);
+	object obj = add_object();
+	obj.set_name(pName);
+	return obj;
 }
 
 void layer::remove_object(const object_id& pObject_id)
 {
-	get_global_generator().reclaim(pObject_id);
 	mComponent_manager.remove_object(pObject_id);
 }
 
@@ -44,8 +42,6 @@ void layer::remove_object(const object_id& pObject_id, queue_destruction_flag)
 
 void layer::remove_all_objects()
 {
-	for (auto i : *this)
-		get_global_generator().reclaim(i.get_id());
 	mComponent_manager.clear();
 }
 

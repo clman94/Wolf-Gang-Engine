@@ -1476,7 +1476,7 @@ public:
 
 		// Generate the layer.
 		log::info("Generating Scene...");
-		mScene = mScene_resource->generate_scene(pContext.get_engine().get_asset_manager());
+		mScene_resource->generate_scene(mScene, pContext.get_engine().get_asset_manager());
 		log::info("Layers: {}", mScene.get_layer_container().size());
 
 		mViewport_camera.set_size({ 30, 30 });
@@ -1563,17 +1563,15 @@ public:
 				if (ImGui::Selectable("Sprites"))
 				{
 					log::info("Adding Sprite Layer...");
-					core::layer layer;
 					// Add layer specific components here.
-					mScene.add_layer(std::move(layer));
+					mScene.add_layer();
 					mark_asset_modified();
 				}
 				if (ImGui::Selectable("Tilemap"))
 				{
 					log::info("Adding Tilemap Layer...");
-					core::layer layer;
+					core::layer& layer = mScene.add_layer();
 					core::tilemap_manipulator tilemap(layer);
-					mScene.add_layer(std::move(layer));
 					mark_asset_modified();
 				}
 				ImGui::EndPopup();
@@ -2124,7 +2122,8 @@ public:
 
 		log::info("Opening Scene in Player Viewport...");
 		mEngine->get_physics().clear_all();
-		mEngine->get_scene() = pScene->generate_scene(mEngine->get_asset_manager());
+		mEngine->get_scene().clear();
+		pScene->generate_scene(mEngine->get_scene(), mEngine->get_asset_manager());
 		mIs_loaded = true;
 		mScene = pScene;
 		log::info("Ready");
