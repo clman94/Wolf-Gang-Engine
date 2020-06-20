@@ -45,6 +45,8 @@ using update = core::bselect<event_component, 2>;
 using postupdate = core::bselect<event_component, 3>;
 using draw = core::bselect<event_component, 4>;
 
+constexpr core::bucket bucket_count = 5;
+
 } // namespace event_selectors
 
 } // namespace wge::scripting

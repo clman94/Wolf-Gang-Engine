@@ -24,6 +24,8 @@
 #include <wge/graphics/sprite.hpp>
 
 #include "editor.hpp"
+#include "script_editor.hpp"
+#include "object_editor.hpp"
 #include "history.hpp"
 #include "context.hpp"
 #include "imgui_editor_tools.hpp"
@@ -31,6 +33,7 @@
 #include "text_editor.hpp"
 #include "icon_codepoints.hpp"
 #include "asset_manager_window.hpp"
+#include "widgets.hpp"
 
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
@@ -547,49 +550,6 @@ public:
 	}
 };
 
-inline bool asset_item(const core::asset::ptr& pAsset, const core::asset_manager& pAsset_manager, ImVec2 pPreview_size = { 0, 0 })
-{
-	if (!pAsset)
-		return false;
-	ImGui::PushID(&*pAsset);
-	ImGui::BeginGroup();
-	if (pAsset->get_type() == "texture")
-	{
-		ImGui::ImageButton(pAsset, pPreview_size);
-	}
-	else
-	{
-		ImGui::Button("", pPreview_size);
-	}
-	ImGui::SameLine();
-	ImGui::BeginGroup();
-	ImGui::TextColored({ 0, 1, 1, 1 }, pAsset->get_name().c_str());
-	ImGui::TextColored({ 0.5f, 0.5f, 0.5f, 0 }, pAsset_manager.get_asset_path(pAsset).parent().string().c_str());
-	ImGui::EndGroup();
-	ImGui::EndGroup();
-	ImGui::PopID();
-
-	const bool clicked = ImGui::IsItemClicked();
-
-	math::vec2 item_min = ImGui::GetItemRectMin()
-		- ImGui::GetStyle().ItemSpacing;
-	math::vec2 item_max = ImGui::GetItemRectMax()
-		+ ImGui::GetStyle().ItemSpacing;
-
-	// Draw the background
-	auto dl = ImGui::GetWindowDrawList();
-	if (ImGui::IsItemHovered())
-	{
-		dl->AddRectFilled(item_min, item_max,
-			ImGui::GetColorU32(ImGuiCol_ButtonHovered), ImGui::GetStyle().FrameRounding);
-	}
-	else if (clicked)
-	{
-		dl->AddRectFilled(item_min, item_max,
-			ImGui::GetColorU32(ImGuiCol_ButtonActive), ImGui::GetStyle().FrameRounding);
-	}
-	return clicked;
-}
 
 // Creates an imgui dockspace in the main window
 inline void main_viewport_dock(ImGuiID pDock_id)
@@ -633,41 +593,6 @@ inline bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr, bool pD
 
 	ImGui::PopID();
 	return *pOpen;
-}
-
-void preview_image(const char* pStr_id, const graphics::texture& pTexture, const math::vec2& pSize, const math::rect& pFrame_rect)
-{
-	if (pSize.x <= 0 || pSize.y <= 0)
-		return;
-
-	// Scale the size of the image to preserve the aspect ratio but still fit in the
-	// specified area.
-	const float aspect_ratio = pFrame_rect.size.x / pFrame_rect.size.y;
-	math::vec2 scaled_size =
-	{
-		math::min(pSize.y * aspect_ratio, pSize.x),
-		math::min(pSize.x / aspect_ratio, pSize.y)
-	};
-
-	// Center the position
-	const math::vec2 center_offset = pSize / 2 - scaled_size / 2;
-	const math::vec2 pos = math::vec2(ImGui::GetCursorScreenPos()) + center_offset;
-
-	// Draw the checkered background
-	ImGui::DrawAlphaCheckerBoard(pos, scaled_size, 10);
-
-	// Convert to UV coord
-	math::aabb uv(pFrame_rect);
-	uv.min /= math::vec2(pTexture.get_size());
-	uv.max /= math::vec2(pTexture.get_size());
-
-	// Draw the image
-	const auto impl = std::dynamic_pointer_cast<graphics::opengl_texture_impl>(pTexture.get_implementation());
-	auto dl = ImGui::GetWindowDrawList();
-	dl->AddImage(reinterpret_cast<void*>(static_cast<std::uintptr_t>(impl->get_gl_texture())), pos, pos + scaled_size, uv.min, uv.max);
-
-	// Add an invisible button so we can interact with this image
-	ImGui::InvisibleButton(pStr_id, pSize);
 }
 
 
@@ -743,70 +668,6 @@ void end_image_editor()
 {
 	visual_editor::end();
 	ImGui::EndChild();
-}
-
-core::asset::ptr asset_drag_drop_target(const std::string& pType, const core::asset_manager& pAsset_manager)
-{
-	core::asset::ptr result;
-	if (ImGui::BeginDragDropTarget())
-	{
-		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload((pType + "Asset").c_str()))
-		{
-			// Retrieve the object asset from the payload.
-			const util::uuid& id = *(const util::uuid*)payload->Data;
-			result = pAsset_manager.get_asset(id);
-		}
-		ImGui::EndDragDropTarget();
-	}
-	return result;
-}
-
-core::asset::ptr asset_selector(const char* pStr_id, const std::string& pType, const core::asset_manager& pAsset_manager, core::asset::ptr pCurrent_asset = nullptr)
-{
-	const ImVec2 preview_size = { 50, 50 };
-
-	core::asset::ptr asset = nullptr;
-	ImGui::BeginGroup();
-
-	if (pCurrent_asset)
-	{
-		asset_item(pCurrent_asset, pAsset_manager, preview_size);
-	}
-	else
-	{
-		ImGui::Button("", preview_size);
-		ImGui::SameLine();
-		ImGui::Text("Select/Drop asset");
-	}
-
-	ImGui::EndGroup();
-	if (auto dropped_asset = asset_drag_drop_target(pType, pAsset_manager))
-		asset = dropped_asset;
-	if (ImGui::BeginPopupContextWindow("AssetSelectorWindow"))
-	{
-		ImGui::Text((const char*)ICON_FA_SEARCH);
-		ImGui::SameLine();
-		static std::string search_str;
-		ImGui::InputText("##Search", &search_str);
-		ImGui::BeginChild("AssetList", ImVec2(170, 400));
-		for (const auto& i : pAsset_manager.get_asset_list())
-		{
-			std::string_view name{ i->get_name() };
-			if (i->get_type() == pType &&
-				name.size() >= search_str.size() &&
-				name.substr(0, search_str.size()) == search_str)
-			{
-				if (asset_item(i, pAsset_manager, preview_size))
-				{
-					asset = i;
-					ImGui::CloseCurrentPopup();
-				}
-			}
-		}
-		ImGui::EndChild();
-		ImGui::EndPopup();
-	}
-	return asset;
 }
 
 class sprite_editor :
@@ -913,87 +774,6 @@ private:
 	float mAtlas_info_width = 200;
 };
 
-class script_editor :
-	public asset_editor
-{
-public:
-	script_editor(context& pContext, const core::asset::ptr& pAsset) :
-		asset_editor(pContext, pAsset)
-	{
-		auto source = get_asset()->get_resource<scripting::script>();
-		mText_editor.SetText(source->source);
-		mText_editor.SetPalette(TextEditor::GetDarkPalette());
-		mText_editor.SetLanguageDefinition(TextEditor::LanguageDefinition::Lua());
-		mText_editor.SetShowWhitespaces(false);
-		source->parse_function_list();
-	}
-
-	virtual void on_gui() override
-	{
-		update_error_markers();
-		auto source = get_asset()->get_resource<scripting::script>();
-		if (ImGui::BeginCombo("##Functions", fmt::format("{} Function(s)", source->function_list.size()).c_str()))
-		{
-			for (auto&& [line, name] : source->function_list)
-			{
-				if (ImGui::MenuItem(fmt::format("{} [Line: {}]", name, line).c_str()))
-				{
-					TextEditor::Coordinates coord;
-					coord.mColumn = 0;
-					coord.mLine = line - 1;
-					mText_editor.SetCursorPosition(coord);
-				}
-			}
-			ImGui::EndCombo();
-		}
-
-		ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-		mText_editor.Render("Text");
-		if (mText_editor.IsTextChanged())
-		{
-			source->parse_function_list();
-			source->source = mText_editor.GetText();
-			get_context().get_engine().get_script_engine().prepare_recompile(get_asset());
-			mark_asset_modified();
-		}
-		ImGui::PopFont();
-	}
-
-private:
-	void update_error_markers()
-	{
-		mError_markers.clear();
-
-		auto& script_engine = get_context().get_engine().get_script_engine();
-		auto source = get_asset()->get_resource<scripting::script>();
-		auto error_info = script_engine.get_script_error(get_asset()->get_id());
-		if (error_info)
-		{
-			mLast_error_info = *error_info;
-			mError_markers[error_info->line] = error_info->message;
-		}
-
-		for (auto& [obj_id, rt_info] : script_engine.get_runtime_errors())
-		{
-			if (rt_info.asset_id == get_asset()->get_id())
-			{
-				auto obj = get_context().get_engine().get_scene().get_object(obj_id);
-				auto& line = mError_markers[rt_info.line];
-				bool was_empty = line.empty();
-				line += fmt::format("{} [{} id:{}] {}", obj.get_name(), obj.get_asset()->get_name(), obj.get_id(), rt_info.message);
-				if (!was_empty)
-					line += "\n";
-			}
-		}
-
-		mText_editor.SetErrorMarkers(mError_markers);
-	}
-
-private:
-	scripting::error_info mLast_error_info;
-	TextEditor::ErrorMarkers mError_markers;
-	TextEditor mText_editor;
-};
 
 class tileset_editor :
 	public asset_editor
@@ -1966,143 +1746,6 @@ static bool texture_asset_input(core::asset::ptr& pAsset, context& pContext, con
 	}
 	return asset_dropped;
 }
-static const std::array event_display_name = {
-		(const char*)(ICON_FA_PLUS u8" Create"),
-		(const char*)(ICON_FA_STEP_FORWARD u8" Update"),
-		(const char*)(ICON_FA_PENCIL u8" Draw")
-	};
-
-class eventful_sprite_editor :
-	public asset_editor
-{
-public:
-	eventful_sprite_editor(context& pContext, const core::asset::ptr& pAsset) noexcept :
-		asset_editor(pContext, pAsset)
-	{}
-
-	virtual void on_gui() override
-	{
-		mScript_editor_dock_id = ImGui::GetID("EditorDock");
-
-		ImGui::BeginChild("LeftPanel", ImVec2(300, 0));
-
-		std::string mut_name = get_asset()->get_name();
-		if (ImGui::InputText("Name", &mut_name))
-		{
-			get_asset()->set_name(mut_name);
-			mark_asset_modified();
-		}
-		if (ImGui::IsItemDeactivatedAfterEdit())
-		{
-			get_asset()->set_name(scripting::make_valid_identifier(get_asset()->get_name()));
-		}
-
-		auto res = get_asset()->get_resource<core::object_resource>();
-		ImGui::Dummy({ 0, 10 });
-		display_sprite_input(res);
-		ImGui::Dummy({ 0, 10 });
-		if (ImGui::Checkbox("Collision", &res->is_collision_enabled))
-			mark_asset_modified();
-		ImGui::Dummy({ 0, 10 });
-		display_event_list(res);
-
-
-		ImGui::EndChild();
-
-		ImGui::SameLine();
-
-		// Event script editors are given a dedicated dockspace where they spawn. This helps
-		// remove clutter windows popping up everywhere.
-		ImGui::DockSpace(mScript_editor_dock_id, ImVec2(0, 0), ImGuiDockNodeFlags_None);
-
-		for (auto&& [_, editor] : mScript_editors)
-		{
-			if (editor)
-				editor->set_visible(get_context().draw_editor(*editor));
-		}
-	}
-
-	virtual void on_close() override
-	{
-		auto generator = get_asset()->get_resource<core::object_resource>();
-		for (auto& i : generator->events)
-			if (i.is_valid())
-				get_context().close_editor(i);
-	}
-
-private:
-	void display_sprite_input(core::object_resource* pGenerator)
-	{
-		core::asset::ptr sprite = get_asset_manager().get_asset(pGenerator->display_sprite);
-		if (texture_asset_input(sprite, get_context(), get_asset_manager()))
-		{
-			pGenerator->display_sprite = sprite->get_id();
-			mark_asset_modified();
-		}
-	}
-
-	void display_event_list(core::object_resource* pGenerator)
-	{
-		ImGui::Text("Events:");
-		ImGui::BeginChild("Events", ImVec2(0, 0), true);
-		for (auto[type, asset_id] : util::enumerate{ pGenerator->events })
-		{
-			const char* event_name = event_display_name[type];
-			const bool script_exists = asset_id.is_valid();
-			ImGuiSelectableFlags flags = ImGuiSelectableFlags_AllowDoubleClick;
-			if (ImGui::Selectable(event_name, script_exists, flags, { 0, 0 }))
-			{
-				core::asset::ptr asset;
-				if (script_exists)
-				{
-					// Use existing asset.
-					asset = get_asset_manager().get_asset(asset_id);
-				}
-				else
-				{
-					// Create a new one.
-					asset = create_event_script(pGenerator->event_typenames[type]);
-					asset_id = asset->get_id();
-					mark_asset_modified();
-				}
-				assert(asset);
-				auto& editor = mScript_editors[asset->get_id()];
-				if (!editor)
-					editor = std::make_unique<script_editor>(get_context(), asset);
-				editor->set_dock_family_id(mScript_editor_dock_id);
-				editor->focus_window();
-				editor->set_visible(true);
-			}
-		}
-		ImGui::EndChild();
-	}
-
-private:
-	core::asset::ptr create_event_script(const char* pName)
-	{
-		core::asset_manager& asset_manager = get_context().get_engine().get_asset_manager();
-
-		auto asset = std::make_shared<core::asset>();
-		asset->set_name(pName);
-		asset->set_parent(get_asset());
-		asset->set_type("script");
-		asset_manager.store_asset(asset);
-
-		asset->set_resource(asset_manager.create_resource("script"));
-		auto script = asset->get_resource<scripting::script>();
-		script->set_location(asset->get_location());
-		asset->save();
-
-		asset_manager.add_asset(asset);
-
-		return asset;
-	}
-
-	std::map<util::uuid, std::unique_ptr<script_editor>> mScript_editors;
-
-	ImGuiID mScript_editor_dock_id = 0;
-};
-
 class game_viewport
 {
 public:
