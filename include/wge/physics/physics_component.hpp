@@ -2,7 +2,7 @@
 
 #include <queue>
 
-#include <wge/core/game_object.hpp>
+#include <wge/core/object.hpp>
 #include <wge/math/vector.hpp>
 
 class b2Body;

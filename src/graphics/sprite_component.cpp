@@ -1,7 +1,7 @@
 #include <wge/graphics/sprite_component.hpp>
 #include <wge/graphics/renderer.hpp>
 #include <wge/core/asset_manager.hpp>
-#include <wge/core/game_object.hpp>
+#include <wge/core/object.hpp>
 
 namespace wge::graphics
 {

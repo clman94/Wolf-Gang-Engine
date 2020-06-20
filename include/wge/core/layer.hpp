@@ -1,6 +1,6 @@
 #pragma once
 
-#include <wge/core/game_object.hpp>
+#include <wge/core/object.hpp>
 #include <wge/core/component_set.hpp>
 #include <wge/core/component_manager.hpp>
 #include <wge/core/component_type.hpp>

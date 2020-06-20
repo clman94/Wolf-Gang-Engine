@@ -5,7 +5,7 @@
 #include <wge/filesystem/exception.hpp>
 #include <wge/core/asset.hpp>
 #include <wge/core/asset_manager.hpp>
-#include <wge/core/game_object.hpp>
+#include <wge/core/object.hpp>
 #include <wge/core/scene.hpp>
 #include <wge/core/handle.hpp>
 #include <wge/filesystem/file_input_stream.hpp>

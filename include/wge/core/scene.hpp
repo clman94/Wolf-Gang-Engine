@@ -1,6 +1,6 @@
 #pragma once
 
-#include <wge/core/game_object.hpp>
+#include <wge/core/object.hpp>
 #include <wge/core/layer.hpp>
 
 #include <list>
