@@ -59,9 +59,6 @@ TEST_CASE("Vector")
 	REQUIRE(ivec2{ fvec2{ 1.5f, 2.7f } } == ivec2{ 1, 2 });
 	REQUIRE(ivec2{ 1, 2 }.components()[0] == 1);
 	REQUIRE(ivec2{ 1, 2 }.components()[1] == 2);
-	REQUIRE(ivec2{ 1, 2 }.swizzle(_x, _x) == ivec2{ 1, 1 });
-	REQUIRE(ivec2{ 1, 2 }.swizzle(_y, _y) == ivec2{ 2, 2 });
-	REQUIRE(ivec2{ 1, 2 }.swizzle(_y, _x) == ivec2{ 2, 1 });
 }
 
 TEST_CASE("Span")

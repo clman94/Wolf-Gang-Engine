@@ -11,42 +11,6 @@
 namespace wge::math
 {
 
-// Placeholders for swizzling
-static constexpr struct _x_t {} _x;
-static constexpr struct _y_t {} _y;
-
-namespace detail
-{
-
-template <typename Tvec, typename Tvalue>
-struct vec2_swizzle_component
-{
-	static auto get(const Tvec& pVec, Tvalue& pValue)
-	{
-		return pValue;
-	}
-};
-
-template <typename Tvec>
-struct vec2_swizzle_component<Tvec, _x_t>
-{
-	static auto get(const Tvec& pVec, _x_t)
-	{
-		return pVec.components()[0];
-	}
-};
-
-template <typename Tvec>
-struct vec2_swizzle_component<Tvec, _y_t>
-{
-	static auto get(const Tvec& pVec, _y_t)
-	{
-		return pVec.components()[1];
-	}
-};
-
-} // namespace detail
-
 template <typename T>
 class basic_vec2
 {
@@ -261,15 +225,6 @@ public:
 	{
 		return fmt::format("({}, {})", x, y);
 	}
-
-	template <typename Tx, typename Ty>
-	constexpr basic_vec2 swizzle(Tx pX, Ty pY) const noexcept
-	{
-		return{
-			static_cast<T>(detail::vec2_swizzle_component<basic_vec2, Tx>::get(*this, pX)),
-			static_cast<T>(detail::vec2_swizzle_component<basic_vec2, Ty>::get(*this, pY))
-		};
-	}
 };
 
 template <typename Tx, typename Ty>
@@ -280,8 +235,6 @@ using dvec2 = basic_vec2<double>;
 using ivec2 = basic_vec2<int>;
 using lvec2 = basic_vec2<long>;
 using vec2 = basic_vec2<float>; // Default vec2
-
-
 
 template <typename T>
 inline constexpr basic_vec2<T> operator * (T pVal, const math::basic_vec2<T>& pVec) noexcept

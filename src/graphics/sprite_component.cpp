@@ -27,11 +27,11 @@ void sprite_component::create_batch(math::transform& pTransform, renderer& pRend
 	vertex_2d verts[4];
 	verts[0].position = math::vec2(0, 0);
 	verts[0].uv = uv.min;
-	verts[1].position = frame_size.swizzle(math::_x, 0);
+	verts[1].position = { frame_size.x, 0 };
 	verts[1].uv = math::vec2(uv.max.x, uv.min.y);
 	verts[2].position = frame_size;
 	verts[2].uv = uv.max;
-	verts[3].position = frame_size.swizzle(0, math::_y);
+	verts[3].position = { 0, frame_size.y};
 	verts[3].uv = math::vec2(uv.min.x, uv.max.y);
 
 	math::vec2 anchor = sprite->get_frame_anchor(current_frame);
