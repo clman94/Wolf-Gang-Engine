@@ -4,9 +4,6 @@
 #include <wge/math/vector.hpp>
 #include <memory>
 
-// Redefined here to move the gl header to a different file
-typedef unsigned int GLuint;
-
 namespace wge::graphics
 {
 
