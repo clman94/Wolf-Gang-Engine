@@ -79,7 +79,6 @@ public:
 	// Find the first of all of these components. Returns true when all of them are found.
 	template <typename Tfirst, typename...Trest>
 	bool unwrap_components(Tfirst*& pFirst, Trest*& ...pRest);
-	void move_component(std::size_t pFrom, std::size_t pTo);
 
 	template <typename T>
 	bool remove_component(bucket pBucket = default_bucket)

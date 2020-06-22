@@ -29,27 +29,6 @@ std::size_t object::get_component_count() const
 	return mInfo->components.size();
 }
 
-void object::move_component(std::size_t pFrom, std::size_t pTo)
-{
-	assert_valid_reference();
-	if (pFrom == pTo)
-		return;
-	if (pFrom < pTo)
-	{
-		auto& components = mInfo->components;
-		auto iter_begin = components.begin() + pFrom;
-		auto iter_end = components.begin() + pTo + 1;
-		std::rotate(iter_begin, iter_begin + 1, iter_end);
-	}
-	else
-	{
-		auto& components = mInfo->components;
-		auto iter_begin = components.rbegin() + pFrom;
-		auto iter_end = components.rbegin() + pTo + 1;
-		std::rotate(iter_begin, iter_begin + 1, iter_end);
-	}
-}
-
 const std::string& object::get_name() const
 {
 	assert_valid_reference();
