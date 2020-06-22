@@ -134,6 +134,10 @@ void asset_manager::update_directory_structure()
 {
 	for (const auto& i : mAsset_list)
 	{
+		auto primary_location = std::dynamic_pointer_cast<primary_asset_location>(i->get_location());
+		if (!primary_location)
+			continue;
+
 		std::string new_dir_name = generate_asset_directory_name(i);
 
 		// Get the path of the asset definition's parent directory.
@@ -162,7 +166,7 @@ void asset_manager::update_directory_structure()
 			auto new_dir_path = parent_dir_path / new_dir_name;
 
 			// Move the directory and update the autonamed files.
-			i->get_location()->move_to(new_dir_path, i->get_name());
+			primary_location->move_to(new_dir_path, i->get_name());
 
 			// Reload the asset if it was loaded before.
 			if (res && !res->is_loaded() && was_resource_loaded)

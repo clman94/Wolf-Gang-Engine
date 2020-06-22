@@ -29,7 +29,7 @@ bool asset::load_file(const filesystem::path& pSystem_path)
 		mMetadata = j["metadata"];
 		mResource_metadata_cache = j["resource-metadata"];
 		mParent = j["parent"];
-		mLocation = asset_location::create(pSystem_path.parent(), mName);
+		mLocation = primary_asset_location::create(pSystem_path.parent(), mName);
 
 		update_resource_metadata();
 	}

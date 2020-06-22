@@ -35,6 +35,7 @@ public:
 
 public:
 	virtual void save() override {}
+	void create_script_assets(core::asset_manager&);
 
 	void generate_object(core::object& pObj, const asset_manager& pAsset_mgr);
 

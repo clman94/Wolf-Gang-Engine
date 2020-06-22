@@ -12,30 +12,23 @@ class asset_location
 public:
 	using ptr = std::shared_ptr<asset_location>;
 
-	static ptr create(const filesystem::path& pDirectory, const std::string& pName)
-	{
-		return std::make_shared<asset_location>(pDirectory, pName);
-	}
+	virtual ~asset_location() = default;
 
-	asset_location(const filesystem::path& pDirectory, const std::string& pName) :
-		mDirectory(pDirectory),
-		mName(pName)
-	{}
-	asset_location(asset_location&&) = default;
-	asset_location(const asset_location&) = delete;
+	virtual const std::string& get_name() const noexcept = 0;
+	virtual const filesystem::path& get_directory() const noexcept = 0;
 
 	filesystem::path get_autonamed_file(const std::string& pSuffix) const
 	{
 		assert(is_valid());
 		assert(!pSuffix.empty());
-		return mDirectory / (mName + pSuffix);
+		return get_directory() / (get_name() + pSuffix);
 	}
 
 	filesystem::path get_file(const std::string& pFilename) const
 	{
 		assert(is_valid());
 		assert(!pFilename.empty());
-		return mDirectory / pFilename;
+		return get_directory() / pFilename;
 	}
 
 	bool remove_autonamed_file(const std::string& pExtension)
@@ -52,12 +45,42 @@ public:
 		system_fs::remove(get_file(pFilename));
 	}
 
+	bool is_valid() const noexcept
+	{
+		return !get_name().empty() && !get_directory().empty();
+	}
+};
+
+class primary_asset_location final :
+	public asset_location
+{
+public:
+	using ptr = std::shared_ptr<primary_asset_location>;
+
+	primary_asset_location(const filesystem::path& pDirectory, const std::string& pName) :
+		mDirectory(pDirectory),
+		mName(pName)
+	{}
+
+	static ptr create(const filesystem::path& pDirectory, const std::string& pName)
+	{
+		return std::make_shared<primary_asset_location>(pDirectory, pName);
+	}
+
+	virtual const std::string& get_name() const noexcept override
+	{
+		return mName;
+	}
+
+	virtual const filesystem::path& get_directory() const noexcept override
+	{
+		return mDirectory;
+	}
+
 	// Moves the directory and renames the autonamed files.
 	void move_to(const filesystem::path& pDirectory, const std::string& pName)
 	{
 		assert(is_valid());
-		assert(!pDirectory.empty());
-		assert(!pName.empty());
 
 		// Move the directory.
 		system_fs::rename(mDirectory, pDirectory);
@@ -77,26 +100,43 @@ public:
 			system_fs::rename(i, get_autonamed_file(i.extension()));
 	}
 
-	const std::string& get_name() const noexcept
-	{
-		assert(is_valid());
-		return mName;
-	}
-
-	const filesystem::path& get_directory() const noexcept
-	{
-		assert(is_valid());
-		return mDirectory;
-	}
-
-	bool is_valid() const noexcept
-	{
-		return !mName.empty() && !mDirectory.empty();
-	}
-
 private:
 	std::string mName;
 	filesystem::path mDirectory;
+};
+
+class secondary_asset_location final :
+	public asset_location
+{
+public:
+	using ptr = std::shared_ptr<secondary_asset_location>;
+
+	secondary_asset_location(const primary_asset_location::ptr& pPrimary, const std::string& pName) :
+		mPrimary(pPrimary), mName(pName)
+	{
+		assert(pPrimary);
+		assert(!mName.empty());
+		assert(pName != pPrimary->get_name());
+	}
+
+	static ptr create(const primary_asset_location::ptr& pPrimary, const std::string& pName)
+	{
+		return std::make_shared<secondary_asset_location>(pPrimary, pName);
+	}
+
+	virtual const std::string& get_name() const noexcept override
+	{
+		return mName;
+	}
+
+	virtual const filesystem::path& get_directory() const noexcept override
+	{
+		return mPrimary->get_directory();
+	}
+
+private:
+	primary_asset_location::ptr mPrimary;
+	std::string mName;
 };
 
 } // namespace wge::core

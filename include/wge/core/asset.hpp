@@ -33,12 +33,13 @@ public:
 
 	void save_to(const filesystem::path& pDirectory)
 	{
-		mLocation = asset_location::create(pDirectory, mName);
+		mLocation = primary_asset_location::create(pDirectory, mName);
 		save();
 	}
 
 	const std::string& get_name() const noexcept;
 	void set_name(const std::string& pName);
+	void rename(const std::string& pNew_name);
 
 	const util::uuid& get_id() const noexcept;
 
@@ -65,10 +66,18 @@ public:
 	void set_parent_id(const util::uuid& pId) noexcept;
 	void set_parent(const asset::ptr& pAsset) noexcept;
 
+	void set_subasset(bool pEnable) noexcept
+	{
+		mIs_subasset = pEnable;
+	}
+
 private:
 	void update_resource_metadata() const;
 
 private:
+	// Sub assets do not save or load their own config.
+	bool mIs_subasset = false;
+
 	util::uuid mParent;
 
 	// Stores the resource.

@@ -7,6 +7,11 @@
 namespace wge::core
 {
 
+void object_resource::create_script_assets(core::asset_manager& pAsset_mgr)
+{
+	get_location();
+}
+
 void object_resource::generate_object(core::object& pObj, const asset_manager& pAsset_mgr)
 {
 	pObj.add_component(math::transform{});
