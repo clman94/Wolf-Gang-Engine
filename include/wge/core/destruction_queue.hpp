@@ -28,15 +28,10 @@ public:
 		// Remove all the components.
 		for (auto[id, type] : mComponents_queue)
 			pComponent_manager.remove_component(type, id);
-		mComponents_queue.clear();
-
 		// Remove all the objects.
 		for (auto i : mObjects_queue)
-		{
-			get_global_generator().reclaim(i);
 			pComponent_manager.remove_object(i);
-		}
-		mObjects_queue.clear();
+		clear();
 	}
 
 	bool empty() const noexcept
@@ -44,7 +39,7 @@ public:
 		return mObjects_queue.empty() || mComponents_queue.empty();
 	}
 
-	void clear()
+	void clear() noexcept
 	{
 		mObjects_queue.clear();
 		mComponents_queue.clear();
