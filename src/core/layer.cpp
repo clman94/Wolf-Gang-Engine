@@ -35,7 +35,7 @@ void layer::remove_object(const object_id& pObject_id)
 	mComponent_manager.remove_object(pObject_id);
 }
 
-void layer::remove_object(const object_id& pObject_id, queue_destruction_flag)
+void layer::remove_object(queue_destruction_flag, const object_id& pObject_id)
 {
 	mDestruction_queue.push_object(pObject_id);
 }

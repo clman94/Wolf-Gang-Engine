@@ -76,7 +76,7 @@ public:
 	// Get first component by type
 	template <class T>
 	auto* get_component(bucket pBucket = default_bucket) const;
-	// Find the first of all of these components. Returns true when all of them are found.
+	// Retrieve a pointer to all of the listed components. Returns true when all of them are found.
 	template <typename Tfirst, typename...Trest>
 	bool unwrap_components(Tfirst*& pFirst, Trest*& ...pRest);
 
@@ -88,16 +88,10 @@ public:
 	}
 
 	template <typename T>
-	bool remove_component(queue_destruction_flag)
-	{
-		return remove_component(default_bucket, queue_destruction);
-	}
-
-	template <typename T>
-	bool remove_component(bucket pBucket, queue_destruction_flag)
+	bool remove_component(queue_destruction_flag, bucket pBucket = default_bucket)
 	{
 		assert_valid_reference();
-		return mLayer->remove_component<T>(mInfo.get_object_id(), pBucket, queue_destruction);
+		return mLayer->remove_component<T>(queue_destruction, mInfo.get_object_id(), pBucket);
 	}
 
 	// Get the name of this object.

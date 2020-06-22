@@ -50,7 +50,7 @@ void object::destroy()
 void object::destroy(queue_destruction_flag)
 {
 	assert_valid_reference();
-	get_layer().remove_object(get_id(), queue_destruction);
+	get_layer().remove_object(queue_destruction, get_id());
 }
 
 layer& object::get_layer() const

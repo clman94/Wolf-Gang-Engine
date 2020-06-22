@@ -100,7 +100,7 @@ public:
 	}
 	// Remove a game object
 	void remove_object(const object_id& pObject_id);
-	void remove_object(const object_id& pObject_id, queue_destruction_flag);
+	void remove_object(queue_destruction_flag, const object_id& pObject_id);
 	void remove_all_objects();
 	
 	// Pointers to components can expire. If a reference to
@@ -148,13 +148,7 @@ public:
 	}
 
 	template <typename T>
-	bool remove_component(object_id pObject_id, queue_destruction_flag)
-	{
-		remove_component<T>(pObject_id, default_bucket, queue_destruction);
-	}
-
-	template <typename T>
-	bool remove_component(object_id pObject_id, bucket pBucket, queue_destruction_flag)
+	bool remove_component(queue_destruction_flag, object_id pObject_id, bucket pBucket = default_bucket)
 	{
 		mDestruction_queue.push_component(pObject_id, component_type::from<T>(pBucket));
 	}
