@@ -15,13 +15,6 @@ namespace wge::scripting
 class event_state_component
 {
 public:
-	using property_value = std::variant<int, float, math::vec2, std::string>;
-	struct property
-	{
-		std::string name;
-		property_value value{ 0 };
-	};
-	std::vector<property> properties;
 	sol::environment environment;
 };
 

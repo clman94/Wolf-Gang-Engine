@@ -596,10 +596,6 @@ inline bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr, bool pD
 	return *pOpen;
 }
 
-
-
-
-
 class tileset_editor :
 	public asset_editor
 {
