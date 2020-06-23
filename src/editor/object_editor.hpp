@@ -24,7 +24,7 @@ private:
 	void display_event_list(core::object_resource* pGenerator);
 
 private:
-	core::asset::ptr create_event_script(const char* pName);
+	void create_event_script(std::size_t pIndex);
 
 	std::map<util::uuid, std::unique_ptr<script_editor>> mScript_editors;
 

@@ -75,24 +75,29 @@ void asset::set_type(const std::string& pType)
 
 void asset::save() const
 {
-	assert(mLocation);
-
-	json j;
-	j["name"] = mName;
-	j["type"] = mType;
-	j["id"] = mId;
-	j["description"] = mDescription;
-	j["metadata"] = mMetadata;
-	if (mResource)
+	if (!mLocation && mResource)
 	{
-		j["resource-metadata"] = mResource->serialize_data();
 		mResource->save();
 	}
-	j["parent"] = mParent;
+	else
+	{
+		json j;
+		j["name"] = mName;
+		j["type"] = mType;
+		j["id"] = mId;
+		j["description"] = mDescription;
+		j["metadata"] = mMetadata;
+		if (mResource)
+		{
+			j["resource-metadata"] = mResource->serialize_data();
+			mResource->save();
+		}
+		j["parent"] = mParent;
 
-	filesystem::file_stream out;
-	out.open(mLocation->get_autonamed_file(".wga"), filesystem::stream_access::write);
-	out.write(j.dump(2));
+		filesystem::file_stream out;
+		out.open(mLocation->get_autonamed_file(".wga"), filesystem::stream_access::write);
+		out.write(j.dump(2));
+	}
 }
 
 const std::string& asset::get_description() const noexcept

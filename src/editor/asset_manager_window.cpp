@@ -37,7 +37,7 @@ void asset_manager_window::on_gui()
 					auto asset = std::make_shared<core::asset>();
 					asset->set_name("New_Object");
 					asset->set_parent(current_folder);
-					asset->set_type("gameobject");
+					asset->set_type("object");
 					asset->set_resource(std::make_unique<core::object_resource>());
 					mAsset_manager.store_asset(asset);
 					asset->save();

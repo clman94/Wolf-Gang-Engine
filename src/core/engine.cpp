@@ -22,22 +22,26 @@ engine::engine()
 	mLua_engine.register_physics_api(mPhysics, mScene);
 
 	mAsset_manager.register_resource_factory("sprite",
-		[&]()
+		[&](const asset::ptr& pAsset)
 	{
 		auto res = std::make_unique<graphics::sprite>();
 		res->set_texture_implementation(mGraphics.get_graphics_backend()->create_texture_impl());
-		return res;
+		pAsset->set_resource(std::move(res));
 	});
 
 	mAsset_manager.register_resource_factory("tileset",
-		[&]()
+		[&](const asset::ptr& pAsset)
 	{
 		auto res = std::make_unique<graphics::tileset>();
 		res->set_texture_implementation(mGraphics.get_graphics_backend()->create_texture_impl());
-		return res;
+		pAsset->set_resource(std::move(res));
 	});
 	mAsset_manager.register_default_resource_factory<core::scene_resource>("scene");
-	mAsset_manager.register_default_resource_factory<core::object_resource>("gameobject");
+	mAsset_manager.register_resource_factory("object", [this](const asset::ptr& pAsset)
+	{
+		pAsset->set_resource(std::make_unique<object_resource>());
+		create_object_script_assets(pAsset, mAsset_manager);
+	});
 	mAsset_manager.register_default_resource_factory<scripting::script>("script");
 
 	mDefault_camera.set_size({ 10, 7 });

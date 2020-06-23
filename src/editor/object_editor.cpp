@@ -3,6 +3,8 @@
 #include "script_editor.hpp"
 #include "widgets.hpp"
 
+#include <wge/filesystem/file_input_stream.hpp>
+
 #include <array>
 
 static const std::array event_display_name = {
@@ -64,8 +66,8 @@ void object_editor::on_close()
 {
 	auto generator = get_asset()->get_resource<core::object_resource>();
 	for (auto& i : generator->events)
-		if (i.is_valid())
-			get_context().close_editor(i);
+		if (i.id.is_valid())
+			get_context().close_editor(i.id);
 }
 
 inline void object_editor::display_sprite_input(core::object_resource* pGenerator)
@@ -78,60 +80,67 @@ inline void object_editor::display_sprite_input(core::object_resource* pGenerato
 	}
 }
 
-inline void object_editor::display_event_list(core::object_resource* pGenerator)
+void object_editor::display_event_list(core::object_resource* pGenerator)
 {
 	ImGui::Text("Events:");
 	ImGui::BeginChild("Events", ImVec2(0, 0), true);
-	for (auto [type, asset_id] : util::enumerate{ pGenerator->events })
+	for (auto&& [type, info] : util::enumerate{ pGenerator->events })
 	{
 		const char* event_name = event_display_name[type];
-		const bool script_exists = asset_id.is_valid();
+		const bool script_exists = info.id.is_valid();
 		ImGuiSelectableFlags flags = ImGuiSelectableFlags_AllowDoubleClick;
 		if (ImGui::Selectable(event_name, script_exists, flags, { 0, 0 }))
 		{
-			core::asset::ptr asset;
-			if (script_exists)
+			if (!script_exists)
 			{
-				// Use existing asset.
-				asset = get_asset_manager().get_asset(asset_id);
+				// Create a new one.
+				create_event_script(type);
+				mark_asset_modified();
+			}
+			if (info.id.is_valid() && info.handle.is_valid())
+			{
+				auto& editor = mScript_editors[info.id];
+				if (!editor)
+					editor = std::make_unique<script_editor>(get_context(), info.handle.get_asset());
+				editor->set_dock_family_id(mScript_editor_dock_id);
+				editor->focus_window();
+				editor->set_visible(true);
 			}
 			else
 			{
-				// Create a new one.
-				asset = create_event_script(pGenerator->event_typenames[type]);
-				asset_id = asset->get_id();
-				mark_asset_modified();
+				log::error("Couldn't open editor for event.");
 			}
-			assert(asset);
-			auto& editor = mScript_editors[asset->get_id()];
-			if (!editor)
-				editor = std::make_unique<script_editor>(get_context(), asset);
-			editor->set_dock_family_id(mScript_editor_dock_id);
-			editor->focus_window();
-			editor->set_visible(true);
 		}
 	}
 	ImGui::EndChild();
 }
 
-inline core::asset::ptr object_editor::create_event_script(const char* pName)
+void object_editor::create_event_script(std::size_t pIndex)
 {
 	core::asset_manager& asset_manager = get_context().get_engine().get_asset_manager();
 
-	auto asset = std::make_shared<core::asset>();
-	asset->set_name(pName);
-	asset->set_parent(get_asset());
-	asset->set_type("script");
-	asset_manager.store_asset(asset);
+	auto name = core::object_resource::event_typenames[pIndex];
 
-	asset->set_resource(asset_manager.create_resource("script"));
-	auto script = asset->get_resource<scripting::script>();
-	script->set_location(asset->get_location());
-	asset->save();
+	try {
+		// Generate a file.
+		filesystem::file_stream out;
+		out.open(get_asset()->get_location()->get_file(std::string(name) + ".lua"), filesystem::stream_access::write);
+		out.write(fmt::format("-- Event: {}\n\n", name));
+		out.close();
+	}
+	catch (const filesystem::io_error& e)
+	{
+		log::error("Couldn't generate file for event.");
+		log::error("io_error: {}", e.what());
+		return;
+	}
 
-	asset_manager.add_asset(asset);
+	// Generate a uuid for this event.
+	auto resource = get_asset()->get_resource<core::object_resource>();
+	resource->events[pIndex].id = util::generate_uuid();
 
-	return asset;
+	// Make sure all the assets are created.
+	core::create_object_script_assets(get_asset(), get_asset_manager());
 }
 
 } // namespace wge::editor

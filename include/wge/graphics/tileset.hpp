@@ -16,7 +16,7 @@ public:
 	virtual void load() override
 	{
 		image tsimage;
-		tsimage.load_file(get_location().get_autonamed_file(".png").string());
+		tsimage.load_file(get_location()->get_autonamed_file(".png").string());
 		mTexture.set_image(std::move(tsimage));
 	}
 

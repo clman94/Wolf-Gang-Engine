@@ -290,12 +290,13 @@ void asset_manager::register_resource_factory(const std::string& pType, const re
 	mResource_factories[pType] = pFactory;
 }
 
-resource::uptr asset_manager::create_resource(const std::string& pType) const
+resource* asset_manager::create_resource_for(const asset::ptr& pAsset) const
 {
-	auto iter = mResource_factories.find(pType);
+	assert(pAsset);
+	auto iter = mResource_factories.find(pAsset->get_type());
 	if (iter != mResource_factories.end())
-		return iter->second();
-	return{};
+		iter->second(pAsset);
+	return pAsset->get_resource();
 }
 
 void asset_manager::set_root_directory(const filesystem::path& pPath)
@@ -328,10 +329,9 @@ void asset_manager::load_assets()
 			{
 				// Create the resource if it can.
 				auto factory_iter = mResource_factories.find(ptr->get_type());
-				if (auto res = create_resource(ptr->get_type()))
+				if (auto res = create_resource_for(ptr))
 				{
 					res->load(ptr->get_location());
-					ptr->set_resource(std::move(res));
 				}
 				add_asset(ptr);
 			}

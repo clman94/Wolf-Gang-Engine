@@ -15,7 +15,7 @@ namespace wge::core
 class asset_manager
 {
 public:
-	using resource_factory = std::function<resource::uptr()>;
+	using resource_factory = std::function<void(const asset::ptr&)>;
 	using asset_container = std::vector<asset::ptr>;
 
 	// TODO: Implement the filesystem_interface as the only means of
@@ -58,7 +58,7 @@ public:
 	template <typename T>
 	void register_default_resource_factory(const std::string& pType);
 
-	resource::uptr create_resource(const std::string& pType) const;
+	resource* create_resource_for(const asset::ptr& pAsset) const;
 
 	// Set the root directory to find all assets.
 	// Note: This affects the relative path of all assets.
@@ -117,7 +117,10 @@ private:
 template<typename T>
 inline void asset_manager::register_default_resource_factory(const std::string& pType)
 {
-	register_resource_factory(pType, []() { return std::make_unique<T>(); });
+	register_resource_factory(pType, [](const asset::ptr& pAsset)
+	{
+		pAsset->set_resource(std::make_unique<T>());
+	});
 }
 
 template<typename Tcallable>

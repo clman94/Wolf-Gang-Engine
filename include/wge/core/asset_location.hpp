@@ -1,6 +1,7 @@
 #pragma once
 
 #include <wge/filesystem/path.hpp>
+#include <wge/util/signal.hpp>
 
 #include <memory>
 

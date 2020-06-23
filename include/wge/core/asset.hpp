@@ -42,6 +42,10 @@ public:
 	void rename(const std::string& pNew_name);
 
 	const util::uuid& get_id() const noexcept;
+	void set_id(const util::uuid& pId) noexcept
+	{
+		mId = pId;
+	}
 
 	const std::string& get_type() const noexcept;
 	void set_type(const std::string& pType);
@@ -66,17 +70,31 @@ public:
 	void set_parent_id(const util::uuid& pId) noexcept;
 	void set_parent(const asset::ptr& pAsset) noexcept;
 
-	void set_subasset(bool pEnable) noexcept
+	bool is_primary_asset() const noexcept
 	{
-		mIs_subasset = pEnable;
+		return std::dynamic_pointer_cast<primary_asset_location>(mLocation) != nullptr;
 	}
 
+	bool is_secondary_asset() const noexcept
+	{
+		return std::dynamic_pointer_cast<secondary_asset_location>(mLocation) != nullptr;
+	}
+
+	void set_save_configuration(bool pEnable_save) noexcept
+	{
+		mCan_save_configuration = pEnable_save;
+	}
+
+	bool is_save_configuration_enabled() const noexcept
+	{
+		return mCan_save_configuration;
+	}
+	
 private:
 	void update_resource_metadata() const;
 
 private:
-	// Sub assets do not save or load their own config.
-	bool mIs_subasset = false;
+	bool mCan_save_configuration = true;
 
 	util::uuid mParent;
 

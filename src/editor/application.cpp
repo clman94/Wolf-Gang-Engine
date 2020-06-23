@@ -324,12 +324,11 @@ public:
 		assert(success);
 
 		// Configure the resource.
-		auto tileset_resource = pAsset_mgr.create_resource("tileset");
+		auto tileset_resource = pAsset_mgr.create_resource_for(tileset_asset);
 		tileset_resource->set_location(tileset_asset->get_location());
 		tileset_resource->load();
 
 		// Save the configuration.
-		tileset_asset->set_resource(std::move(tileset_resource));
 		tileset_asset->save();
 		pAsset_mgr.add_asset(tileset_asset);
 		register_link(tileset_asset, pFilepath.stem().string());
@@ -351,14 +350,13 @@ public:
 		assert(success);
 
 		// Configure the resource.
-		auto sprite_resource = util::dynamic_unique_cast<graphics::sprite>(pAsset_mgr.create_resource("sprite"));
+		auto sprite_resource = dynamic_cast<graphics::sprite*>(pAsset_mgr.create_resource_for(sprite_asset));
 		sprite_resource->set_location(sprite_asset->get_location());
 		sprite_resource->resize_animation(spritesheet.frame_count);
 		sprite_resource->set_frame_size(spritesheet.frame_size);
 		sprite_resource->load();
 
 		// Save the configuration.
-		sprite_asset->set_resource(std::move(sprite_resource));
 		sprite_asset->save();
 		pAsset_mgr.add_asset(sprite_asset);
 		register_link(sprite_asset, pPath);
@@ -1877,7 +1875,7 @@ public:
 		//mContext.register_editor<object_editor>("gameobject", mInspectors);
 		mContext.register_editor<script_editor>("script");
 		mContext.register_editor<scene_editor>("scene", mOn_game_run);
-		mContext.register_editor<object_editor>("gameobject");
+		mContext.register_editor<object_editor>("object");
 		mContext.register_editor<tileset_editor>("tileset");
 
 		mOn_game_run.connect([this](const core::asset::ptr& pAsset) {

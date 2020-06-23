@@ -23,16 +23,9 @@ public:
 		return mLocation != nullptr;
 	}
 
-	asset_location& get_location() noexcept
+	asset_location::ptr get_location() const noexcept
 	{
-		assert(has_location());
-		return *mLocation;
-	}
-
-	const asset_location& get_location() const noexcept
-	{
-		assert(has_location());
-		return *mLocation;
+		return mLocation;
 	}
 
 	void load(const asset_location::ptr& pLocation)

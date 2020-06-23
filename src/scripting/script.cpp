@@ -29,7 +29,7 @@ void script::parse_function_list()
 
 void script::load()
 {
-	const auto filepath = get_location().get_autonamed_file(".lua");
+	const auto filepath = get_location()->get_autonamed_file(".lua");
 	try
 	{
 		std::ifstream stream(filepath.string().c_str());
@@ -46,7 +46,7 @@ void script::load()
 
 void script::save()
 {
-	const auto filepath = get_location().get_autonamed_file(".lua");
+	const auto filepath = get_location()->get_autonamed_file(".lua");
 	try
 	{
 		filesystem::file_stream stream;
