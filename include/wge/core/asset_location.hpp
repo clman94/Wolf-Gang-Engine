@@ -2,6 +2,7 @@
 
 #include <wge/filesystem/path.hpp>
 #include <wge/util/signal.hpp>
+#include <wge/logging/log.hpp>
 
 #include <memory>
 
@@ -82,6 +83,9 @@ public:
 	void move_to(const filesystem::path& pDirectory, const std::string& pName)
 	{
 		assert(is_valid());
+		assert(!system_fs::exists(pDirectory));
+
+		log::info("Moving directory from {} to {}...", mDirectory.string(), pDirectory.string());
 
 		// Move the directory.
 		system_fs::rename(mDirectory, pDirectory);
@@ -98,7 +102,12 @@ public:
 		// Rename those autonamed files with the new name.
 		mName = pName;
 		for (auto& i : autonamed_files)
-			system_fs::rename(i, get_autonamed_file(i.extension()));
+		{
+
+			const auto new_path = get_autonamed_file(i.extension());
+			log::info("Renaming autonamed file from {} to {}...", i.string(), new_path.string());
+			system_fs::rename(i, new_path);
+		}
 	}
 
 private:

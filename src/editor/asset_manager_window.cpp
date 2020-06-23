@@ -210,15 +210,26 @@ void asset_manager_window::asset_tile(const core::asset::ptr & pAsset, const mat
 	{
 		// We still want the asset to be selected when we right click it.
 		mSelected_asset = pAsset;
-		ImGui::OpenPopup("AssetContextMenu");
 	}
-	if (ImGui::BeginPopup("AssetContextMenu",
-		ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings))
+	if (ImGui::BeginPopupContextWindow("AssetContextMenu"))
 	{
+		static std::string new_name;
+		if (ImGui::IsWindowAppearing())
+		{
+			new_name = pAsset->get_name();
+		}
 		// Rename asset.
-		std::string name_str = pAsset->get_name();
-		if (ImGui::InputText("Name", &name_str))
-			pAsset->set_name(name_str);
+		ImGui::InputText("Name", &new_name);
+		if (ImGui::IsItemDeactivatedAfterEdit())
+		{
+			if (!mAsset_manager.rename_asset(pAsset, new_name))
+			{
+				new_name = pAsset->get_name();
+				mContext.save_asset(pAsset);
+				log::error("Failed to rename asset from {} to {}", pAsset->get_name(), new_name);
+			}
+		}
+
 		// Delete asset. (Undoable atm)
 		if (ImGui::MenuItem("Delete"))
 		{

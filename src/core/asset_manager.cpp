@@ -105,7 +105,7 @@ std::string asset_manager::generate_asset_directory_name(const asset::ptr& pAsse
 {
 	assert(pAsset);
 	auto path = get_asset_path(pAsset);
-	return path.string('.') + "[" + pAsset->get_id().to_shortened_string() + "]";
+	return path.string('.');
 }
 
 filesystem::path asset_manager::create_asset_storage(const core::asset::ptr& pAsset) const
@@ -121,6 +121,16 @@ void asset_manager::store_asset(const core::asset::ptr& pAsset) const
 	pAsset->save_to(directory);
 }
 
+bool asset_manager::rename_asset(const core::asset::ptr& pAsset, const std::string& pTo)
+{
+	if (has_asset(pTo) || !pAsset->is_primary_asset() || pAsset->get_name() == pTo)
+		return false;
+	pAsset->set_name(pTo);
+	update_directory_structure();
+	pAsset->save();
+	return true;
+}
+
 void asset_manager::remove_asset_storage(const core::asset::ptr& pAsset) const
 {
 	auto dir_path = pAsset->get_location()->get_directory();
@@ -134,6 +144,7 @@ void asset_manager::update_directory_structure()
 {
 	for (const auto& i : mAsset_list)
 	{
+		// Only primary assets can be moved.
 		auto primary_location = std::dynamic_pointer_cast<primary_asset_location>(i->get_location());
 		if (!primary_location)
 			continue;

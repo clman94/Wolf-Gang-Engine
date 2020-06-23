@@ -39,7 +39,6 @@ public:
 
 	const std::string& get_name() const noexcept;
 	void set_name(const std::string& pName);
-	void rename(const std::string& pNew_name);
 
 	const util::uuid& get_id() const noexcept;
 	void set_id(const util::uuid& pId) noexcept

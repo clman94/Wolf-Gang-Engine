@@ -63,19 +63,20 @@ bool context::are_there_modified_assets() const noexcept
 void context::save_asset(const core::asset::ptr& pAsset)
 {
 	auto iter = std::find(mUnsaved_assets.begin(), mUnsaved_assets.end(), pAsset);
-	if (iter == mUnsaved_assets.end())
-		return;
-	if (auto editor = get_editor(*iter))
+	if (iter != mUnsaved_assets.end())
 	{
-		editor->on_save();
-		if (!editor->is_visible())
+		if (auto editor = get_editor(*iter))
 		{
-			editor->on_close();
-			iter->reset();
+			editor->on_save();
+			if (!editor->is_visible())
+			{
+				editor->on_close();
+				iter->reset();
+			}
 		}
+		mUnsaved_assets.erase(iter);
 	}
-	(*iter)->save();
-	mUnsaved_assets.erase(iter);
+	pAsset->save();
 }
 
 void context::save_all_assets()

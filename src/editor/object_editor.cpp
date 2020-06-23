@@ -26,17 +26,6 @@ void object_editor::on_gui()
 
 	ImGui::BeginChild("LeftPanel", ImVec2(300, 0));
 
-	std::string mut_name = get_asset()->get_name();
-	if (ImGui::InputText("Name", &mut_name))
-	{
-		get_asset()->set_name(mut_name);
-		mark_asset_modified();
-	}
-	if (ImGui::IsItemDeactivatedAfterEdit())
-	{
-		get_asset()->set_name(scripting::make_valid_identifier(get_asset()->get_name()));
-	}
-
 	auto res = get_asset()->get_resource<core::object_resource>();
 	ImGui::Dummy({ 0, 10 });
 	display_sprite_input(res);
