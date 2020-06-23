@@ -1371,7 +1371,7 @@ public:
 
 		visual_editor::begin("_SceneEditor", { cursor.x, cursor.y }, mRenderer.get_render_view().min, 1.f / mRenderer.get_render_view_scale());
 		{
-			core::asset::ptr dropdropasset = asset_drag_drop_target("gameobject", get_asset_manager());
+			core::asset::ptr dropdropasset = asset_drag_drop_target("object", get_asset_manager());
 			if (dropdropasset && mSelected_layer)
 			{
 				auto obj = new_instance(dropdropasset);
