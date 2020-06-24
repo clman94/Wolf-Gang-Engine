@@ -48,6 +48,7 @@ bool asset_item(const core::asset::ptr& pAsset, const core::asset_manager& pAsse
 	return clicked;
 }
 
+
 void preview_image(const char* pStr_id, const graphics::texture& pTexture, const math::vec2& pSize, const math::rect& pFrame_rect)
 {
 	if (pSize.x <= 0 || pSize.y <= 0)
@@ -81,6 +82,14 @@ void preview_image(const char* pStr_id, const graphics::texture& pTexture, const
 
 	// Add an invisible button so we can interact with this image
 	ImGui::InvisibleButton(pStr_id, pSize);
+}
+
+void preview_image(const char* pStr_id, const graphics::texture& pTexture, const math::vec2& pSize)
+{
+	preview_image(pStr_id, pTexture, pSize, math::rect{
+		math::vec2{0, 0},
+		math::vec2{ pTexture.get_size() }
+		});
 }
 
 core::asset::ptr asset_drag_drop_target(const std::string& pType, const core::asset_manager& pAsset_manager)

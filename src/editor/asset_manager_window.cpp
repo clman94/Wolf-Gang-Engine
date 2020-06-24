@@ -3,10 +3,13 @@
 
 #include <wge/core/scene_resource.hpp>
 #include <wge/core/object_resource.hpp>
+#include <wge/graphics/sprite.hpp>
+#include <wge/graphics/tileset.hpp>
 #include <wge/util/ipair.hpp>
 
 #include <imgui/imgui.h>
 #include "imgui_ext.hpp"
+#include "widgets.hpp"
 
 namespace wge::editor
 {
@@ -171,10 +174,37 @@ void asset_manager_window::asset_tile(const core::asset::ptr & pAsset, const mat
 
 	ImGui::BeginGroup();
 
+	const graphics::texture* preview_texture = nullptr;
+
 	// Draw preview
-	if (pAsset->get_type() == "texture")
-		ImGui::ImageButton(pAsset,
-			pSize - math::vec2(ImGui::GetStyle().FramePadding) * 2);
+	if (pAsset->get_type() == "sprite")
+	{
+		auto sprite = pAsset->get_resource<graphics::sprite>();
+		assert(sprite);
+		preview_texture = &sprite->get_texture();
+	}
+	else if (pAsset->get_type() == "tileset")
+	{
+		auto tileset = pAsset->get_resource<graphics::tileset>();
+		assert(tileset);
+		preview_texture = &tileset->get_texture();
+	}
+	else if (pAsset->get_type() == "object")
+	{
+		auto object_res = pAsset->get_resource<core::object_resource>();
+		assert(object_res);
+		if (object_res->display_sprite.is_valid())
+		{
+			auto sprite = mAsset_manager.get_resource<graphics::sprite>(object_res->display_sprite);
+			assert(sprite);
+			preview_texture = &sprite->get_texture();
+		}
+	}
+
+	if (preview_texture)
+	{
+		preview_image("Preview", *preview_texture, pSize - math::vec2(ImGui::GetStyle().FramePadding) * 2);
+	}
 	else
 		ImGui::Button("No preview", pSize);
 
