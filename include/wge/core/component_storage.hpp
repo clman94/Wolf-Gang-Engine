@@ -176,7 +176,7 @@ public:
 		if (auto* v = get(pKey))
 			return *v;
 		else
-			return insert(pKey, 0);
+			return insert(pKey);
 	}
 
 	void remove(key pKey)
