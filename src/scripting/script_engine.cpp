@@ -207,6 +207,7 @@ void script_engine::register_math_api()
 		"x", &math::vec2::x,
 		"y", &math::vec2::y,
 		"normalize", &math::vec2::normalize<>,
+		"normal_to", &math::vec2::normal_to<>,
 		"abs", &math::vec2::abs<>,
 		"clone", [](const math::vec2& pVec) -> math::vec2 { return pVec; },
 		"dot", &math::vec2::dot,
@@ -225,8 +226,14 @@ void script_engine::register_math_api()
 		"magnitude", &math::vec2::magnitude<>,
 		"project", &math::vec2::project,
 		"reflect", &math::vec2::reflect,
-		sol::meta_function::addition, &math::vec2::operator+,
-		sol::meta_function::subtraction, static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator-),
+		sol::meta_function::addition, sol::overload(
+			static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator+),
+			static_cast<math::vec2(math::vec2::*)(float) const>(&math::vec2::operator+)
+		),
+		sol::meta_function::subtraction, sol::overload(
+			static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator-),
+			static_cast<math::vec2(math::vec2::*)(float) const>(&math::vec2::operator-)
+		),
 		sol::meta_function::multiplication, sol::overload(
 			static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator*),
 			static_cast<math::vec2(math::vec2::*)(float) const>(&math::vec2::operator*)

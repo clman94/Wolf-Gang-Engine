@@ -61,9 +61,9 @@ public:
 		return x * pOther.x + y * pOther.y;
 	}
 
-	basic_vec2 project(const basic_vec2& pOther) const noexcept
+	basic_vec2 project(const basic_vec2& pNormal) const noexcept
 	{
-		return pOther * (dot(pOther) / math::pow<T>(pOther.magnitude(), 2));
+		return pNormal * (dot(pNormal) / math::pow<T>(pNormal.magnitude(), 2));
 	}
 
 	basic_vec2 reflect(const basic_vec2& pNormal) const noexcept
@@ -94,6 +94,12 @@ public:
 	}
 
 	template <typename = detail::only_floating_point<T>>
+	basic_vec2 normal_to(const basic_vec2& pTo) const noexcept
+	{
+		return (pTo - *this).normalize();
+	}
+
+	template <typename = detail::only_floating_point<T>>
 	basic_vec2 abs() const noexcept
 	{
 		return { math::abs(x), math::abs(y) };
@@ -109,7 +115,9 @@ public:
 	basic_vec2 floor_magnitude() const noexcept
 	{
 		T mag = magnitude();
-		return basic_vec2{ *this } * (math::floor(mag) / mag);
+		if (mag == 0)
+			return{};
+		return *this * (math::floor(mag) / mag);
 	}
 
 	template <typename = detail::only_floating_point<T>>
@@ -122,20 +130,24 @@ public:
 	basic_vec2 ceil_magnitude() const noexcept
 	{
 		T mag = magnitude();
-		return basic_vec2{ *this } * (math::ceil(mag) / mag);
+		if (mag == 0)
+			return{};
+		return *this * (math::ceil(mag) / mag);
 	}
 
 	template <typename = detail::only_floating_point<T>>
 	basic_vec2 round() const noexcept
 	{
-		return basic_vec2{ math::round(x), math::round(y) };
+		return { math::round(x), math::round(y) };
 	}
 
 	template <typename = detail::only_floating_point<T>>
 	basic_vec2 round_magnitude() const noexcept
 	{
 		T mag = magnitude();
-		return basic_vec2{ *this } * (math::round(mag) / mag);
+		if (mag == 0)
+			return{};
+		return *this * (math::round(mag) / mag);
 	}
 
 	radians angle() const noexcept
@@ -170,6 +182,14 @@ public:
 		return { -x, -y };
 	}
 
+	void nan_to_zero() noexcept
+	{
+		if (std::isnan(x))
+			x = 0;
+		if (std::isnan(y))
+			y = 0;
+	}
+
 	bool is_nan() const noexcept
 	{
 		return std::isnan(x) || std::isnan(y);
@@ -198,6 +218,8 @@ public:
 	constexpr basic_vec2 operator - () const noexcept { return{ -x, -y }; }
 
 	// Scalar operations
+	constexpr basic_vec2 operator + (T pR) const noexcept { return{ x + pR, y + pR }; }
+	constexpr basic_vec2 operator - (T pR) const noexcept { return{ x - pR, y - pR }; }
 	constexpr basic_vec2 operator * (T pR) const noexcept { return{ x * pR, y * pR }; }
 	constexpr basic_vec2 operator / (T pR) const noexcept { return{ x / pR, y / pR }; }
 
@@ -209,6 +231,8 @@ public:
 	constexpr basic_vec2& operator /= (const basic_vec2& pR) noexcept { return *this = *this / pR; };
 
 	// Scalar assignments
+	constexpr basic_vec2& operator += (T pR) noexcept { return *this = *this + pR; };
+	constexpr basic_vec2& operator -= (T pR) noexcept { return *this = *this - pR; };
 	constexpr basic_vec2& operator *= (T pR) noexcept { return *this = *this * pR; };
 	constexpr basic_vec2& operator /= (T pR) noexcept { return *this = *this / pR; };
 
@@ -235,6 +259,18 @@ using dvec2 = basic_vec2<double>;
 using ivec2 = basic_vec2<int>;
 using lvec2 = basic_vec2<long>;
 using vec2 = basic_vec2<float>; // Default vec2
+
+template <typename T>
+inline constexpr basic_vec2<T> operator + (T pVal, const math::basic_vec2<T>& pVec) noexcept
+{
+	return{ pVal + pVec.x , pVal + pVec.y };
+}
+
+template <typename T>
+inline constexpr basic_vec2<T> operator - (T pVal, const math::basic_vec2<T>& pVec) noexcept
+{
+	return{ pVal - pVec.x , pVal - pVec.y };
+}
 
 template <typename T>
 inline constexpr basic_vec2<T> operator * (T pVal, const math::basic_vec2<T>& pVec) noexcept
