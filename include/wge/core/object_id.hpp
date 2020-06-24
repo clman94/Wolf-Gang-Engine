@@ -57,7 +57,7 @@ class object_id_owner
 public:
 	object_id_owner() noexcept = default;
 	object_id_owner(object_id pId, object_id_generator& pGenerator) noexcept
-		: mId(pId), pGenerator(&pGenerator)
+		: mId(pId), mGenerator(&pGenerator)
 	{}
 
 	object_id_owner(const object_id_owner&) = delete;
@@ -65,12 +65,12 @@ public:
 
 	object_id_owner(object_id_owner&& pOther) noexcept :
 		mId(std::exchange(pOther.mId, invalid_id)),
-		pGenerator(std::exchange(pOther.pGenerator, nullptr))
+		mGenerator(std::exchange(pOther.mGenerator, nullptr))
 	{}
 	object_id_owner& operator=(object_id_owner&& pOther) noexcept
 	{
 		mId = std::exchange(pOther.mId, invalid_id);
-		pGenerator = std::exchange(pOther.pGenerator, nullptr);
+		mGenerator = std::exchange(pOther.mGenerator, nullptr);
 		return *this;
 	}
 
@@ -86,17 +86,17 @@ public:
 
 	void release()
 	{
-		if (pGenerator)
+		if (mGenerator)
 		{
-			pGenerator->reclaim(mId);
+			mGenerator->reclaim(mId);
 			mId = invalid_id;
-			pGenerator = nullptr;
+			mGenerator = nullptr;
 		}
 	}
 
 private:
 	object_id mId = invalid_id;
-	object_id_generator* pGenerator = nullptr;
+	object_id_generator* mGenerator = nullptr;
 };
 
 object_id_generator& get_global_generator();

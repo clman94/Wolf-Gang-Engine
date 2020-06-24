@@ -147,8 +147,10 @@ public:
 		{
 			auto difference = mMinimum - pKey;
 			mLookup.resize(mLookup.size() + difference);
-			std::move_backward(mLookup.begin(),
-				mLookup.end() - difference, mLookup.end());
+			std::move_backward(mLookup.begin(), mLookup.end() - difference, mLookup.end());
+			// std::optional doesn't nullify itself when it's moved-from so we must
+			// clear them ourselves.
+			std::fill(mLookup.begin(), mLookup.begin() + difference, std::nullopt);
 			mMinimum = pKey;
 		}
 		// Set the minimum to the first key.
