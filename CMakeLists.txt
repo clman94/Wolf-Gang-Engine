@@ -19,6 +19,13 @@ add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLEW)
 # Enable safeties for sol
 add_definitions(-DSOL_ALL_SAFETIES_ON)
 
+if (MSVC)
+	# Use multiple processes
+	add_definitions(/MP)
+	# Allow big objects
+	add_definitions(/bigobj)
+endif (MSVC)
+
 include_directories("${CMAKE_SOURCE_DIR}/include")
 
 # GLOBing for now
