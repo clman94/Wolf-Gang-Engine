@@ -19,36 +19,27 @@ using nlohmann::json;
 namespace wge::util
 {
 
-template <typename T>
-inline std::optional<T> optional_deserialize(const json& pJson)
+template <typename T, typename Tkey, typename Tdefault>
+inline T json_get_or(const json& pJson, const Tkey& pKey, Tdefault&& pDefault)
 {
-	if (pJson.find(pItem) != pJson.end())
-		return static_cast<T>(pJson);
-	return{};
+	static_assert(!std::is_reference_v<T>, "T cannot be a reference");
+	auto iter = pJson.find(pKey);
+	if (iter != pJson.end())
+		return iter->get<T>();
+	else
+		return pDefault;
 }
 
-// Deserialize json value only if it exists.
-// Returns true if the item has been deserialized.
-template <typename T>
-inline bool optional_deserialize(const json& pJson, const std::string_view& pItem, T& pDestination)
+template <typename T, typename Tjson, typename Tkey, typename Tdefault>
+inline T json_get_or_safe(const json& pJson, const Tkey& pKey, Tdefault&& pDefault)
 {
-	if (pJson.find(pItem) != pJson.end())
-	{
-		pDestination = pJson[pItem];
-		return true;
+	try {
+		return json_get_or<T>(pJson, pKey, std:forward<Tdefault>(pDefault));
 	}
-	return false;
-}
-
-template <typename T, typename Tdefault>
-inline bool optional_deserialize(const json& pJson, const std::string_view& pItem, T& pDestination, Tdefault&& pDefault)
-{
-	if (!optional_deserialize(pJson, pItem, pDestination))
+	catch (const json::exception& e)
 	{
-		pDestination = pDefault;
-		return false;
+		return pDefault;
 	}
-	return true;
 }
 
 } // namespace wge::util
@@ -93,12 +84,12 @@ namespace wge::util
 {
 
 template <typename T, typename Tvalue>
-void to_json(nlohmann::json& pJson, const strongly_typed_id<T, Tvalue>& pId)
+inline void to_json(nlohmann::json& pJson, const strongly_typed_id<T, Tvalue>& pId)
 {
 	pJson = pId.get_value();
 }
 template <typename T, typename Tvalue>
-void from_json(const nlohmann::json& pJson, strongly_typed_id<T, Tvalue>& pId)
+inline void from_json(const nlohmann::json& pJson, strongly_typed_id<T, Tvalue>& pId)
 {
 	pId.set_value(pJson);
 }
