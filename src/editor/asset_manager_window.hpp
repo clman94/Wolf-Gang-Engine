@@ -20,10 +20,14 @@ private:
 	void remove_queued_assets();
 
 	void set_selection(const core::asset::ptr& pAsset);
+	bool has_selection() const noexcept;
 	bool is_singlular_selection() const;
 	bool is_multi_selection() const;
 	bool is_selected(const core::asset::ptr& pAsset) const;
+	void select_all();
 	void select(const core::asset::ptr& pAsset);
+	void select_range(const core::asset::ptr& pFirst, const core::asset::ptr pLast);
+	void add_selection(const core::asset::ptr& pAsset);
 	void deselect();
 	void deselect(const core::asset::ptr& pAsset);
 	void delete_selected();

@@ -27,7 +27,7 @@ void asset_manager_window::on_gui()
 
 		if (ImGui::BeginMenuBar())
 		{
-			if (ImGui::BeginMenu("New..."))
+			if (ImGui::BeginMenu("New"))
 			{
 				if (ImGui::MenuItem("Folder"))
 				{
@@ -61,9 +61,22 @@ void asset_manager_window::on_gui()
 				ImGui::EndMenu();
 			}
 
-			if (ImGui::MenuItem("Update Asset Directory"))
+			if (ImGui::BeginMenu("Select"))
 			{
-				mAsset_manager.update_directory_structure();
+				if (ImGui::MenuItem("Select All"))
+					select_all();
+				if (ImGui::MenuItem("Deselect", nullptr, false, has_selection()))
+					deselect();
+				ImGui::EndMenu();
+			}
+
+			if (ImGui::BeginMenu("Tools"))
+			{
+				if (ImGui::MenuItem("Update Asset Directory"))
+				{
+					mAsset_manager.update_directory_structure();
+				}
+				ImGui::EndMenu();
 			}
 			ImGui::EndMenuBar();
 		}
@@ -275,9 +288,7 @@ void asset_manager_window::asset_tile(const core::asset::ptr& pAsset, const math
 	// Select the asset when clicked.
 	// Doing some trickery here so we dont deselect everything when we want to drag multiple items.
 	{
-		bool clicked = ImGui::IsItemClicked() || ImGui::IsItemClicked(1);
-		bool released = ImGui::IsItemHovered() && ImGui::IsMouseReleased(0);
-		if ((is_multi_selection() && released) || (mSelected_asset.size() <= 1 && clicked))
+		if (ImGui::IsItemHovered() && (ImGui::IsMouseReleased(0) || ImGui::IsMouseReleased(1) && !is_selected(pAsset)))
 			select(pAsset);
 	}
 
@@ -329,14 +340,13 @@ void asset_manager_window::asset_tile(const core::asset::ptr& pAsset, const math
 	if (ImGui::IsItemHovered())
 	{
 		dl->AddRect(item_min, item_max,
-			ImGui::GetColorU32(ImGuiCol_ButtonHovered), ImGui::GetStyle().FrameRounding, ImDrawCornerFlags_All, 2);
+			ImGui::GetColorU32(ImGui::IsItemActive() ? ImGuiCol_ButtonActive : ImGuiCol_Button), ImGui::GetStyle().FrameRounding, ImDrawCornerFlags_All, 1);
 	}
 
 	if (is_selected(pAsset))
 	{
-
 		dl->AddRect(item_min, item_max,
-			ImGui::GetColorU32(ImGui::IsItemActive() ? ImGuiCol_ButtonHovered : ImGuiCol_ButtonActive), ImGui::GetStyle().FrameRounding, ImDrawCornerFlags_All, 4);
+			ImGui::GetColorU32(ImGui::IsItemActive() ? ImGuiCol_ButtonActive : ImGuiCol_Button), ImGui::GetStyle().FrameRounding, ImDrawCornerFlags_All, 4);
 	}
 
 	ImGui::PopID();
@@ -428,10 +438,15 @@ void asset_manager_window::remove_queued_assets()
 
 void asset_manager_window::set_selection(const core::asset::ptr& pAsset)
 {
-	mSelected_asset.clear();
+	deselect();
 	if (pAsset)
-		mSelected_asset.push_back(pAsset);
+		add_selection(pAsset);
 	mMulti_last_select = pAsset;
+}
+
+bool asset_manager_window::has_selection() const noexcept
+{
+	return !mSelected_asset.empty();
 }
 
 bool asset_manager_window::is_singlular_selection() const
@@ -449,6 +464,14 @@ bool asset_manager_window::is_selected(const core::asset::ptr& pAsset) const
 	return std::find(mSelected_asset.begin(), mSelected_asset.end(), pAsset) != mSelected_asset.end();
 }
 
+void asset_manager_window::select_all()
+{
+	mAsset_manager.for_each_child(mCurrent_folder, [&](auto& i)
+	{
+		add_selection(i);
+	});
+}
+
 void asset_manager_window::select(const core::asset::ptr& pAsset)
 {
 	if (ImGui::GetIO().KeyCtrl)
@@ -457,47 +480,54 @@ void asset_manager_window::select(const core::asset::ptr& pAsset)
 			deselect(pAsset);
 		else
 		{
-			mSelected_asset.push_back(pAsset);
+			add_selection(pAsset);
 			mMulti_last_select = pAsset;
 		}
 	}
 	else if (ImGui::GetIO().KeyShift && !mSelected_asset.empty())
 	{
-		// Select based on how its displayed.
-		bool selecting = false;
-		mAsset_manager.for_each_child(mCurrent_folder, [&](auto& i)
-		{
-			// Only folders
-			if (i->get_type() == "folder")
-			{
-				if (i == mMulti_last_select || i == pAsset)
-				{
-					selecting = !selecting;
-					mSelected_asset.push_back(i);
-				}
-				else if (selecting)
-					mSelected_asset.push_back(i);
-			}
-		});
-		mAsset_manager.for_each_child(mCurrent_folder, [&](auto& i)
-		{
-			// Skip folders
-			if (i->get_type() != "folder")
-			{
-				if (i == mMulti_last_select || i == pAsset)
-				{
-					selecting = !selecting;
-					mSelected_asset.push_back(i);
-				}
-				else if (selecting)
-					mSelected_asset.push_back(i);
-			}
-		});
+		select_range(mMulti_last_select, pAsset);
 	}
 	else
 		set_selection(pAsset);
+}
 
+void asset_manager_window::select_range(const core::asset::ptr& pFirst, const core::asset::ptr pLast)
+{
+	// Select based on how its displayed.
+	bool selecting = false;
+	auto selecting_operation = [&](const core::asset::ptr& i)
+	{
+		if (i == pFirst || i == pLast)
+		{
+			selecting = !selecting;
+			add_selection(i);
+		}
+		else if (selecting)
+			add_selection(i);
+	};
+	mAsset_manager.for_each_child(mCurrent_folder, [&](auto& i)
+	{
+		// Only folders
+		if (i->get_type() == "folder")
+		{
+			selecting_operation(i);
+		}
+	});
+	mAsset_manager.for_each_child(mCurrent_folder, [&](auto& i)
+	{
+		// Skip folders
+		if (i->get_type() != "folder")
+		{
+			selecting_operation(i);
+		}
+	});
+}
 
+void asset_manager_window::add_selection(const core::asset::ptr& pAsset)
+{
+	if (!is_selected(pAsset))
+		mSelected_asset.push_back(pAsset);
 }
 
 void asset_manager_window::deselect()
@@ -518,7 +548,7 @@ void asset_manager_window::deselect(const core::asset::ptr& pAsset)
 void asset_manager_window::delete_selected()
 {
 	mRemove_queue.insert(mRemove_queue.end(), mSelected_asset.begin(), mSelected_asset.end());
-	mSelected_asset.clear();
+	deselect();
 }
 
 } // namespace wge::editor
