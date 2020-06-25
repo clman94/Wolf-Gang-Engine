@@ -58,17 +58,6 @@ void asset_manager_window::on_gui()
 					mAsset_manager.add_asset(asset);
 				}
 
-				if (ImGui::MenuItem("Tileset"))
-				{
-					auto asset = std::make_shared<core::asset>();
-					asset->set_name("New_Tileset");
-					asset->set_parent(mCurrent_folder);
-					asset->set_type("tileset");
-					asset->set_resource(std::make_unique<graphics::tileset>());
-					mAsset_manager.store_asset(asset);
-					mAsset_manager.add_asset(asset);
-				}
-
 				ImGui::EndMenu();
 			}
 
@@ -407,6 +396,7 @@ void asset_manager_window::folder_dragdrop_target(const core::asset::ptr& pAsset
 		{
 			for (auto i : mSelected_asset)
 				mAsset_manager.move_asset(i, pAsset);
+			deselect();
 		}
 		else if (const ImGuiPayload* payload = ImGui::GetDragDropPayload())
 		{
@@ -419,6 +409,7 @@ void asset_manager_window::folder_dragdrop_target(const core::asset::ptr& pAsset
 				core::asset::ptr from = mAsset_manager.get_asset(id);
 				assert(from);
 				mAsset_manager.move_asset(from, pAsset);
+				deselect();
 			}
 		}
 		ImGui::EndDragDropTarget();
@@ -462,8 +453,13 @@ void asset_manager_window::select(const core::asset::ptr& pAsset)
 {
 	if (ImGui::GetIO().KeyCtrl)
 	{
-		mSelected_asset.push_back(pAsset);
-		mMulti_last_select = pAsset;
+		if (is_selected(pAsset))
+			deselect(pAsset);
+		else
+		{
+			mSelected_asset.push_back(pAsset);
+			mMulti_last_select = pAsset;
+		}
 	}
 	else if (ImGui::GetIO().KeyShift && !mSelected_asset.empty())
 	{
@@ -502,6 +498,21 @@ void asset_manager_window::select(const core::asset::ptr& pAsset)
 		set_selection(pAsset);
 
 
+}
+
+void asset_manager_window::deselect()
+{
+	mSelected_asset.clear();
+	mMulti_last_select.reset();
+}
+
+void asset_manager_window::deselect(const core::asset::ptr& pAsset)
+{
+	auto iter = std::find(mSelected_asset.begin(), mSelected_asset.end(), pAsset);
+	if (iter != mSelected_asset.end())
+	{
+		mSelected_asset.erase(iter);
+	}
 }
 
 void asset_manager_window::delete_selected()

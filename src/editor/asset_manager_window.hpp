@@ -24,6 +24,8 @@ private:
 	bool is_multi_selection() const;
 	bool is_selected(const core::asset::ptr& pAsset) const;
 	void select(const core::asset::ptr& pAsset);
+	void deselect();
+	void deselect(const core::asset::ptr& pAsset);
 	void delete_selected();
 
 private:
