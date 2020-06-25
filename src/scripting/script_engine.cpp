@@ -59,6 +59,24 @@ sol::environment script_engine::create_object_environment(core::object pObj, sol
 		pObj.get_component<math::transform>()->position = pPos;
 	};
 
+	env["get_scale"] = [pObj]() -> math::vec2
+	{
+		return pObj.get_component<math::transform>()->scale;
+	};;
+	env["set_scale"] = [pObj](const math::vec2& pScale)
+	{
+		pObj.get_component<math::transform>()->scale = pScale;
+	};
+
+	env["get_rotation"] = [pObj]() -> float
+	{
+		return math::degrees{ pObj.get_component<math::transform>()->rotation }.value();
+	};;
+	env["set_rotation"] = [pObj](float pDeg)
+	{
+		pObj.get_component<math::transform>()->rotation = math::degrees{ pDeg };
+	};
+
 	//env["position"] = sol::property(get_position, set_position);
 	env["get_position"] = get_position;
 	env["set_position"] = set_position;
@@ -187,6 +205,8 @@ void script_engine::register_math_api()
 {
 	sol::table t = state.create_named_table("math");
 	t["pi"] = math::pi;
+	t["exp"] = math::exp<float>;
+	t["exp2"] = math::exp2<float>;
 	t["sin"] = [](float pRad) { return math::sin(pRad); };
 	t["cos"] = [](float pRad) { return math::cos(pRad); };
 	t["abs"] = &math::abs<float>;
@@ -194,11 +214,14 @@ void script_engine::register_math_api()
 	t["round"] = &math::round<float>;
 	t["max"] = &math::max<float>;
 	t["min"] = &math::min<float>;
-	t["clamp"] = &math::clamp<float>;
+	t["clamp"] = sol::overload(&math::clamp<float>, &math::clamp_components<float>);
 	t["sqrt"] = &math::sqrt<float>;
 	t["mod"] = &math::mod<float>;
 	t["pmod"] = &math::positive_modulus<float>;
 	t["pow"] = &math::pow<float>;
+	t["log"] = &math::log<float>;
+	t["log2"] = &math::log2<float>;
+	t["log10"] = &math::log10<float>;
 	t["is_nan"] = &math::is_nan<float>;
 	t.new_usertype<math::vec2>("vec2",
 		sol::call_constructor, sol::constructors<math::vec2(),

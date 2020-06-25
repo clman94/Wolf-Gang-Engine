@@ -32,7 +32,7 @@ constexpr float deg_half = 180.f;
 constexpr float rad_max = pi * 2;
 constexpr float rad_half = pi;
 
-template<typename T>
+template <typename T>
 inline T mod(const T& a, const T& b) noexcept
 {
 	if constexpr (std::is_floating_point<T>::value)
@@ -45,25 +45,55 @@ inline T mod(const T& a, const T& b) noexcept
 	}
 }
 
-template<typename T, typename = detail::only_floating_point<T>>
+template <typename T, typename = detail::only_floating_point<T>>
+inline T exp(const T& a) noexcept
+{
+	return std::exp(a);
+}
+
+template <typename T, typename = detail::only_floating_point<T>>
+inline T exp2(const T& a) noexcept
+{
+	return std::exp2(a);
+}
+
+template <typename T, typename = detail::only_floating_point<T>>
+inline T log(const T& a) noexcept
+{
+	return std::log(a);
+}
+
+template <typename T, typename = detail::only_floating_point<T>>
+inline T log2(const T& a) noexcept
+{
+	return std::log2(a);
+}
+
+template <typename T, typename = detail::only_floating_point<T>>
+inline T log10(const T& a) noexcept
+{
+	return std::log10(a);
+}
+
+template <typename T, typename = detail::only_floating_point<T>>
 inline T abs(const T& a) noexcept
 {
 	return std::abs(a);
 }
 
-template<typename T, typename = detail::only_floating_point<T>>
+template <typename T, typename = detail::only_floating_point<T>>
 inline T sqrt(const T& a) noexcept
 {
 	return std::sqrt(a);
 }
 
-template<typename T, typename = detail::only_arithmetic<T>>
+template <typename T, typename = detail::only_arithmetic<T>>
 inline T pow(const T& a, const T& b) noexcept
 {
 	return std::pow(a, b);
 }
 
-template<typename T, typename = detail::only_arithmetic<T>>
+template <typename T, typename = detail::only_arithmetic<T>>
 inline T floor(const T& a) noexcept
 {
 	if constexpr (std::is_floating_point_v<T>)
@@ -72,7 +102,7 @@ inline T floor(const T& a) noexcept
 		return a;
 }
 
-template<typename T, typename = detail::only_arithmetic<T>>
+template <typename T, typename = detail::only_arithmetic<T>>
 inline T ceil(const T& a) noexcept
 {
 	if constexpr (std::is_floating_point_v<T>)
@@ -124,7 +154,7 @@ inline constexpr T almost_equal(const T& pL, const T& pR) noexcept
 
 // Template for normalizing a value.
 // Specialization is required.
-template<typename T>
+template <typename T>
 inline T normal(const T& a) noexcept
 {
 	static_assert(false, "Invalid normalize() instantiation");
@@ -143,7 +173,7 @@ inline bool is_nan(const T& a) noexcept
 // Returns an always positive value if b > 0.
 // This is unlike the '%' operator (and std::fmodf) that only returns a remainder
 // that can be negative if a is negative.
-template<typename T>
+template <typename T>
 inline T positive_modulus(const T& a, const T& b) noexcept
 {
 	return mod(mod(a, b) + b, b);
