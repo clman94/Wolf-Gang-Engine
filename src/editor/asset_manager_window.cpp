@@ -23,8 +23,7 @@ void asset_manager_window::on_gui()
 {
 	if (ImGui::Begin((const char*)(ICON_FA_FOLDER u8" Assets"), 0, ImGuiWindowFlags_MenuBar))
 	{
-		static core::asset::ptr current_folder;
-		const filesystem::path current_path = mAsset_manager.get_asset_path(current_folder);
+		const filesystem::path current_path = mAsset_manager.get_asset_path(mCurrent_folder);
 
 		if (ImGui::BeginMenuBar())
 		{
@@ -39,7 +38,7 @@ void asset_manager_window::on_gui()
 				{
 					auto asset = std::make_shared<core::asset>();
 					asset->set_name("New_Object");
-					asset->set_parent(current_folder);
+					asset->set_parent(mCurrent_folder);
 					asset->set_type("object");
 					asset->set_resource(std::make_unique<core::object_resource>());
 					mAsset_manager.store_asset(asset);
@@ -51,7 +50,7 @@ void asset_manager_window::on_gui()
 				{
 					auto asset = std::make_shared<core::asset>();
 					asset->set_name("New_Scene");
-					asset->set_parent(current_folder);
+					asset->set_parent(mCurrent_folder);
 					asset->set_type("scene");
 					asset->set_resource(std::make_unique<core::scene_resource>());
 					mAsset_manager.store_asset(asset);
@@ -63,7 +62,7 @@ void asset_manager_window::on_gui()
 				{
 					auto asset = std::make_shared<core::asset>();
 					asset->set_name("New_Tileset");
-					asset->set_parent(current_folder);
+					asset->set_parent(mCurrent_folder);
 					asset->set_type("tileset");
 					asset->set_resource(std::make_unique<graphics::tileset>());
 					mAsset_manager.store_asset(asset);
@@ -83,7 +82,7 @@ void asset_manager_window::on_gui()
 		static float directory_tree_width = 200;
 
 		ImGui::BeginChild("DirectoryTree", { directory_tree_width, 0 }, true);
-		show_asset_directory_tree(current_folder);
+		show_asset_directory_tree(mCurrent_folder);
 		ImGui::EndChild();
 
 		ImGui::SameLine();
@@ -101,7 +100,7 @@ void asset_manager_window::on_gui()
 				// TODO: Clicking the last item will open a popup to select a different directory..?
 				auto new_path = current_path;
 				new_path.erase(new_path.begin() + i, new_path.end());
-				current_folder = mAsset_manager.get_asset(new_path);
+				auto folder_asset = mAsset_manager.get_asset(new_path);
 				break;
 			}
 			ImGui::SameLine();
@@ -113,7 +112,21 @@ void asset_manager_window::on_gui()
 		const math::vec2 file_preview_size = { 100, 100 };
 
 		ImGui::BeginChild("FileList", { 0, 0 }, true);
-		mAsset_manager.for_each_child(current_folder, [&](auto& i)
+		
+		mAsset_manager.for_each_child(mCurrent_folder, [&](auto& i)
+		{
+			// Only folders
+			if (i->get_type() == "folder")
+			{
+				asset_tile(i, file_preview_size);
+
+				// If there isn't any room left in this line, create a new one.
+				if (ImGui::GetContentRegionAvailWidth() < file_preview_size.x)
+					ImGui::NewLine();
+			}
+		});
+		ImGui::NewLine();
+		mAsset_manager.for_each_child(mCurrent_folder, [&](auto& i)
 		{
 			// Skip folders
 			if (i->get_type() != "folder")
@@ -137,12 +150,14 @@ void asset_manager_window::show_asset_directory_tree(core::asset::ptr& pCurrent_
 	const bool is_root = !pAsset;
 	bool open = false;
 
-	const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+	const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
 	const char* name = is_root ? "Assets" : pAsset->get_name().c_str();
 	if (pAsset && !mAsset_manager.has_subfolders(pAsset))
 		ImGui::TreeNodeEx(name, flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen);
 	else
 		open = ImGui::TreeNodeEx(name, flags);
+
+	folder_dragdrop_target(pAsset);
 
 	// Set the directory
 	if (ImGui::IsItemClicked())
@@ -201,19 +216,39 @@ void asset_manager_window::asset_tile(const core::asset::ptr & pAsset, const mat
 		}
 	}
 
-	if (preview_texture)
+	ImGui::BeginGroup();
+
+	if (pAsset->get_type() == "folder")
 	{
-		preview_image("Preview", *preview_texture, pSize - math::vec2(ImGui::GetStyle().FramePadding) * 2);
+		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + pSize.x);
+		ImGui::Text(fmt::format("{} {}", (const char*)ICON_FA_FOLDER, pAsset->get_name()).c_str());
+		ImGui::PopTextWrapPos();
 	}
 	else
-		ImGui::Button("No preview", pSize);
+	{
+		if (preview_texture)
+		{
+			preview_image("Preview", *preview_texture, pSize - math::vec2(ImGui::GetStyle().FramePadding) * 2);
+		}
+		else
+		{
+			ImGui::Dummy(pSize);
+		}
 
-	ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), pAsset->get_type().c_str());
+		ImGui::TextColored(ImVec4(0.5, 0.5, 0.5, 1), pAsset->get_type().c_str());
 
-	// Draw text.
-	ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + pSize.x);
-	ImGui::Text(pAsset->get_name().c_str());
-	ImGui::PopTextWrapPos();
+		// Draw text.
+		ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + pSize.x);
+		ImGui::Text(pAsset->get_name().c_str());
+		ImGui::PopTextWrapPos();
+	}
+
+	ImGui::EndGroup();
+
+	auto last_cursor_position = ImGui::GetCursorScreenPos();
+	ImGui::SetCursorScreenPos(ImGui::GetItemRectMin());
+	ImGui::InvisibleButton("InteractiveButton", ImGui::GetItemRectSize());
+	ImGui::SetCursorScreenPos(last_cursor_position);
 
 	ImGui::EndGroup();
 	ImGui::SameLine();
@@ -225,6 +260,10 @@ void asset_manager_window::asset_tile(const core::asset::ptr & pAsset, const mat
 		ImGui::Text("Asset: %s", mAsset_manager.get_asset_path(pAsset).string().c_str());
 		ImGui::EndDragDropSource();
 	}
+	if (pAsset->get_type() == "folder")
+	{
+		folder_dragdrop_target(pAsset);
+	}
 
 	// Select the asset when clicked.
 	if (ImGui::IsItemClicked())
@@ -232,7 +271,16 @@ void asset_manager_window::asset_tile(const core::asset::ptr & pAsset, const mat
 
 	// Open it if its double clicked.
 	if (ImGui::IsItemClicked() && ImGui::IsMouseDoubleClicked(0))
-		mContext.open_editor(mSelected_asset);
+	{
+		if (pAsset->get_type() == "folder")
+		{
+			mCurrent_folder = pAsset;
+		}
+		else
+		{
+			mContext.open_editor(mSelected_asset);
+		}
+	}
 
 
 	// Context menu when right clicked
@@ -273,19 +321,22 @@ void asset_manager_window::asset_tile(const core::asset::ptr & pAsset, const mat
 
 	auto dl = ImGui::GetWindowDrawList();
 
-	const char* icon = (const char*)ICON_FA_EXCLAMATION_TRIANGLE;
-	if (pAsset->get_type() == "object")
-		icon = (const char*)ICON_FA_CODE;
-	else if (pAsset->get_type() == "sprite")
-		icon = (const char*)ICON_FA_FILE_IMAGE_O;
-	else if (pAsset->get_type() == "tileset")
-		icon = (const char*)ICON_FA_FILE_IMAGE_O;
-	else if (pAsset->get_type() == "scene")
-		icon = (const char*)ICON_FA_GAMEPAD;
-	dl->AddRectFilled(ImGui::GetItemRectMin(),
-		ImGui::GetItemRectMin() + ImGui::CalcTextSize(icon) + ImGui::GetStyle().ItemInnerSpacing * 2,
-		ImGui::GetColorU32(ImVec4(0, 0, 0, 0.5f)), 5);
-	dl->AddText(ImGui::GetItemRectMin() + ImGui::GetStyle().ItemInnerSpacing, ImGui::GetColorU32(ImGuiCol_Text), icon);
+	if (pAsset->get_type() != "folder")
+	{
+		const char* icon = (const char*)ICON_FA_EXCLAMATION_TRIANGLE;
+		if (pAsset->get_type() == "object")
+			icon = (const char*)ICON_FA_CODE;
+		else if (pAsset->get_type() == "sprite")
+			icon = (const char*)ICON_FA_FILE_IMAGE_O;
+		else if (pAsset->get_type() == "tileset")
+			icon = (const char*)ICON_FA_FILE_IMAGE_O;
+		else if (pAsset->get_type() == "scene")
+			icon = (const char*)ICON_FA_GAMEPAD;
+		dl->AddRectFilled(ImGui::GetItemRectMin(),
+			ImGui::GetItemRectMin() + ImGui::CalcTextSize(icon) + ImGui::GetStyle().ItemInnerSpacing * 2,
+			ImGui::GetColorU32(ImVec4(0, 0, 0, 0.5f)), 5);
+		dl->AddText(ImGui::GetItemRectMin() + ImGui::GetStyle().ItemInnerSpacing, ImGui::GetColorU32(ImGuiCol_Text), icon);
+	}
 
 	// Calculate item aabb that includes the item spacing.
 	// We will use these to render the box around the preview and
@@ -309,6 +360,27 @@ void asset_manager_window::asset_tile(const core::asset::ptr & pAsset, const mat
 	}
 
 	ImGui::PopID();
+}
+
+void asset_manager_window::folder_dragdrop_target(const core::asset::ptr& pAsset)
+{
+	if (ImGui::BeginDragDropTarget())
+	{
+		if (const ImGuiPayload* payload = ImGui::GetDragDropPayload())
+		{
+			std::string_view datatype(payload->DataType);
+			bool is_asset = datatype.find_first_of("Asset") != static_cast<size_t>(-1);
+			if (is_asset && ImGui::AcceptDragDropPayload(payload->DataType))
+			{
+				// Retrieve the object asset from the payload.
+				const util::uuid& id = *(const util::uuid*)payload->Data;
+				core::asset::ptr from = mAsset_manager.get_asset(id);
+				assert(from);
+				mAsset_manager.move_asset(from, pAsset);
+			}
+		}
+		ImGui::EndDragDropTarget();
+	}
 }
 
 } // namespace wge::editor

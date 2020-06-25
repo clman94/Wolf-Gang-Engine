@@ -14,8 +14,10 @@ public:
 private:
 	void show_asset_directory_tree(core::asset::ptr& pCurrent_folder, const core::asset::ptr& pAsset = {});
 	void asset_tile(const core::asset::ptr& pAsset, const math::vec2& pSize);
+	void folder_dragdrop_target(const core::asset::ptr& pAsset);
 
 private:
+	core::asset::ptr mCurrent_folder;
 	context& mContext;
 	core::asset_manager& mAsset_manager;
 	core::asset::ptr mSelected_asset;
