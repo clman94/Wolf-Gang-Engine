@@ -123,7 +123,7 @@ void asset_manager::store_asset(const core::asset::ptr& pAsset) const
 
 bool asset_manager::rename_asset(const core::asset::ptr& pAsset, const std::string& pTo)
 {
-	if (has_asset(pTo) || !pAsset->is_primary_asset() || pAsset->get_name() == pTo)
+	if (has_asset(get_asset_path(pAsset).parent() / pTo) || !pAsset->is_primary_asset() || pAsset->get_name() == pTo)
 		return false;
 	pAsset->set_name(pTo);
 	update_directory_structure();
@@ -131,13 +131,31 @@ bool asset_manager::rename_asset(const core::asset::ptr& pAsset, const std::stri
 	return true;
 }
 
+bool asset_manager::move_asset(const core::asset::ptr& pAsset, const core::asset::ptr& pTo)
+{
+	if (has_asset(get_asset_path(pTo) / pAsset->get_name()) || // No name conflicts.
+		!pAsset->is_primary_asset() || // Needs to be primary.
+
+		(pTo != nullptr && // If its not root then...
+			(has_parent(pTo->get_id(), pAsset->get_id()) || // it can't move into its own sub-directory.
+			pAsset->get_id() == pTo->get_id()))) // it can't move into itself.
+		return false;
+	pAsset->set_parent(pTo);
+	update_directory_structure();
+	pAsset->save();
+	return true;
+}
+
 void asset_manager::remove_asset_storage(const core::asset::ptr& pAsset) const
 {
-	auto dir_path = pAsset->get_location()->get_directory();
-	assert(!dir_path.empty());
+	if (pAsset->is_primary_asset())
+	{
+		auto dir_path = pAsset->get_location()->get_directory();
+		assert(!dir_path.empty());
 
-	// Remove the directory.
-	system_fs::remove_all(dir_path);
+		// Remove the directory.
+		system_fs::remove_all(dir_path);
+	}
 }
 
 void asset_manager::update_directory_structure()
@@ -182,6 +200,8 @@ void asset_manager::update_directory_structure()
 			// Reload the asset if it was loaded before.
 			if (res && !res->is_loaded() && was_resource_loaded)
 				res->load();
+
+			i->save();
 		}
 	}
 }
@@ -190,6 +210,15 @@ void asset_manager::save_all_configuration()
 {
 	for (auto& i : mAsset_list)
 		i->save();
+}
+
+bool asset_manager::has_parent(const util::uuid& pTop, const util::uuid& pParent) const
+{
+	core::asset::ptr i = get_asset(pTop);
+	do {
+		i = get_asset(i->get_parent_id());
+	} while (i != nullptr && i->get_id() != pParent);
+	return i != nullptr;
 }
 
 filesystem::path asset_manager::make_relative_to_root(const filesystem::path& pPath) const
@@ -290,6 +319,8 @@ bool asset_manager::remove_asset(const asset::ptr& pAsset)
 
 filesystem::path asset_manager::get_asset_path(const core::asset::ptr& pAsset) const
 {
+	if (!pAsset)
+		return{};
 	filesystem::path result;
 	for (core::asset::ptr i = pAsset; i; i = get_asset(i->get_parent_id()))
 		result.push_front(i->get_name());

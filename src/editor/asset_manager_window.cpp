@@ -100,7 +100,7 @@ void asset_manager_window::on_gui()
 				// TODO: Clicking the last item will open a popup to select a different directory..?
 				auto new_path = current_path;
 				new_path.erase(new_path.begin() + i, new_path.end());
-				auto folder_asset = mAsset_manager.get_asset(new_path);
+				mCurrent_folder = mAsset_manager.get_asset(new_path);
 				break;
 			}
 			ImGui::SameLine();
@@ -141,6 +141,8 @@ void asset_manager_window::on_gui()
 		ImGui::EndChild();
 
 		ImGui::EndGroup();
+
+		remove_queued_assets();
 	}
 	ImGui::End();
 }
@@ -150,22 +152,24 @@ void asset_manager_window::show_asset_directory_tree(core::asset::ptr& pCurrent_
 	const bool is_root = !pAsset;
 	bool open = false;
 
-	const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
+	const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth | 
+		(mSelected_asset == pAsset ? ImGuiTreeNodeFlags_Selected : 0);
 	const char* name = is_root ? "Assets" : pAsset->get_name().c_str();
 	if (pAsset && !mAsset_manager.has_subfolders(pAsset))
 		ImGui::TreeNodeEx(name, flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen);
 	else
 		open = ImGui::TreeNodeEx(name, flags);
 
+	if (pAsset)
+		asset_context_menu();
+
 	folder_dragdrop_target(pAsset);
 
 	// Set the directory
-	if (ImGui::IsItemClicked())
+	if (ImGui::IsItemClicked() || ImGui::IsItemClicked(1))
 	{
-		if (is_root)
-			pCurrent_folder = core::asset::ptr{};
-		else
-			pCurrent_folder = pAsset;
+		pCurrent_folder = pAsset;
+		mSelected_asset = pAsset;
 	}
 
 	if (open)
@@ -181,7 +185,7 @@ void asset_manager_window::show_asset_directory_tree(core::asset::ptr& pCurrent_
 	}
 }
 
-void asset_manager_window::asset_tile(const core::asset::ptr & pAsset, const math::vec2 & pSize)
+void asset_manager_window::asset_tile(const core::asset::ptr& pAsset, const math::vec2& pSize)
 {
 	ImGui::PushID(&*pAsset);
 
@@ -266,7 +270,7 @@ void asset_manager_window::asset_tile(const core::asset::ptr & pAsset, const mat
 	}
 
 	// Select the asset when clicked.
-	if (ImGui::IsItemClicked())
+	if (ImGui::IsItemClicked() || ImGui::IsItemClicked(1))
 		mSelected_asset = pAsset;
 
 	// Open it if its double clicked.
@@ -282,42 +286,7 @@ void asset_manager_window::asset_tile(const core::asset::ptr & pAsset, const mat
 		}
 	}
 
-
-	// Context menu when right clicked
-	if (ImGui::IsItemClicked(1))
-	{
-		// We still want the asset to be selected when we right click it.
-		mSelected_asset = pAsset;
-	}
-	if (ImGui::BeginPopupContextWindow("AssetContextMenu"))
-	{
-		static std::string new_name;
-		if (ImGui::IsWindowAppearing())
-		{
-			new_name = pAsset->get_name();
-		}
-		// Rename asset.
-		ImGui::InputText("Name", &new_name);
-		if (ImGui::IsItemDeactivatedAfterEdit())
-		{
-			if (!mAsset_manager.rename_asset(pAsset, new_name))
-			{
-				new_name = pAsset->get_name();
-				mContext.save_asset(pAsset);
-				log::error("Failed to rename asset from {} to {}", pAsset->get_name(), new_name);
-			}
-		}
-
-		// Delete asset. (Undoable atm)
-		if (ImGui::MenuItem("Delete"))
-		{
-			mContext.close_editor(mSelected_asset);
-			mAsset_manager.remove_asset(mSelected_asset);
-			mSelected_asset.reset();
-		}
-
-		ImGui::EndPopup();
-	}
+	asset_context_menu();
 
 	auto dl = ImGui::GetWindowDrawList();
 
@@ -362,6 +331,41 @@ void asset_manager_window::asset_tile(const core::asset::ptr & pAsset, const mat
 	ImGui::PopID();
 }
 
+void asset_manager_window::asset_context_menu()
+{
+	ImGui::PushID(&*mSelected_asset);
+	if (mSelected_asset && ImGui::BeginPopupContextWindow("AssetContextMenu"))
+	{
+		static std::string new_name;
+		if (ImGui::IsWindowAppearing())
+		{
+			new_name = mSelected_asset->get_name();
+		}
+		// Rename asset.
+		ImGui::InputText("Name", &new_name);
+		if (ImGui::IsItemDeactivatedAfterEdit())
+		{
+			if (!mAsset_manager.rename_asset(mSelected_asset, new_name))
+			{
+				new_name = mSelected_asset->get_name();
+				mContext.save_asset(mSelected_asset);
+				log::error("Failed to rename asset from {} to {}", mSelected_asset->get_name(), new_name);
+			}
+		}
+
+		// Delete asset. (Undoable atm)
+		if (ImGui::MenuItem("Delete"))
+		{
+			mContext.close_editor(mSelected_asset);
+			mRemove_queue.push_back(mSelected_asset);
+			mSelected_asset.reset();
+		}
+
+		ImGui::EndPopup();
+	}
+	ImGui::PopID();
+}
+
 void asset_manager_window::folder_dragdrop_target(const core::asset::ptr& pAsset)
 {
 	if (ImGui::BeginDragDropTarget())
@@ -381,6 +385,13 @@ void asset_manager_window::folder_dragdrop_target(const core::asset::ptr& pAsset
 		}
 		ImGui::EndDragDropTarget();
 	}
+}
+
+void asset_manager_window::remove_queued_assets()
+{
+	for (auto i : mRemove_queue)
+		mAsset_manager.remove_asset(i);
+	mRemove_queue.clear();
 }
 
 } // namespace wge::editor

@@ -94,6 +94,7 @@ public:
 	filesystem::path create_asset_storage(const core::asset::ptr& pAsset) const;
 	void store_asset(const core::asset::ptr& pAsset) const;
 	bool rename_asset(const core::asset::ptr& pAsset, const std::string& pTo);
+	bool move_asset(const core::asset::ptr& pAsset, const core::asset::ptr& pTo);
 	void remove_asset_storage(const core::asset::ptr& pAsset) const;
 
 	void update_directory_structure();
@@ -105,6 +106,7 @@ public:
 	}
 
 private:
+	bool has_parent(const util::uuid& pTop, const util::uuid& pParent) const;
 	// Turn an absolute path into a relative path to the root directory
 	filesystem::path make_relative_to_root(const filesystem::path& pPath) const;
 
