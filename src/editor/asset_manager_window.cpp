@@ -153,7 +153,7 @@ void asset_manager_window::show_asset_directory_tree(core::asset::ptr& pCurrent_
 	bool open = false;
 
 	const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth | 
-		(mSelected_asset == pAsset ? ImGuiTreeNodeFlags_Selected : 0);
+		(is_selected(pAsset) ? ImGuiTreeNodeFlags_Selected : 0);
 	const char* name = is_root ? "Assets" : pAsset->get_name().c_str();
 	if (pAsset && !mAsset_manager.has_subfolders(pAsset))
 		ImGui::TreeNodeEx(name, flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen);
@@ -161,7 +161,13 @@ void asset_manager_window::show_asset_directory_tree(core::asset::ptr& pCurrent_
 		open = ImGui::TreeNodeEx(name, flags);
 
 	if (pAsset)
+	{
+		ImGui::PushID("FolderId");
+		ImGui::PushID(&*pAsset);
 		asset_context_menu();
+		ImGui::PopID();
+		ImGui::PopID();
+	}
 
 	folder_dragdrop_target(pAsset);
 
@@ -169,7 +175,7 @@ void asset_manager_window::show_asset_directory_tree(core::asset::ptr& pCurrent_
 	if (ImGui::IsItemClicked() || ImGui::IsItemClicked(1))
 	{
 		pCurrent_folder = pAsset;
-		mSelected_asset = pAsset;
+		select(pAsset);
 	}
 
 	if (open)
@@ -188,8 +194,6 @@ void asset_manager_window::show_asset_directory_tree(core::asset::ptr& pCurrent_
 void asset_manager_window::asset_tile(const core::asset::ptr& pAsset, const math::vec2& pSize)
 {
 	ImGui::PushID(&*pAsset);
-
-	const bool is_asset_selected = mSelected_asset == pAsset;
 
 	ImGui::BeginGroup();
 
@@ -258,20 +262,35 @@ void asset_manager_window::asset_tile(const core::asset::ptr& pAsset, const math
 	ImGui::SameLine();
 
 	// Allow asset to be dragged.
-	if (ImGui::IsItemActive() && ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+	if (ImGui::IsItemActive())
 	{
-		ImGui::SetDragDropPayload((pAsset->get_type() + "Asset").c_str(), &pAsset->get_id(), sizeof(util::uuid));
-		ImGui::Text("Asset: %s", mAsset_manager.get_asset_path(pAsset).string().c_str());
-		ImGui::EndDragDropSource();
+		if (is_singlular_selection() && ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+		{
+			ImGui::SetDragDropPayload((pAsset->get_type() + "Asset").c_str(), &pAsset->get_id(), sizeof(util::uuid));
+			ImGui::Text("Asset: %s", mAsset_manager.get_asset_path(pAsset).string().c_str());
+			ImGui::EndDragDropSource();
+		}
+		else if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+		{
+			ImGui::SetDragDropPayload("AssetMultiSelect", nullptr, 0);
+			ImGui::Text(fmt::format("{} Asset(s)", mSelected_asset.size()).c_str());
+			ImGui::EndDragDropSource();
+		}
 	}
+
 	if (pAsset->get_type() == "folder")
 	{
 		folder_dragdrop_target(pAsset);
 	}
 
 	// Select the asset when clicked.
-	if (ImGui::IsItemClicked() || ImGui::IsItemClicked(1))
-		mSelected_asset = pAsset;
+	// Doing some trickery here so we dont deselect everything when we want to drag multiple items.
+	{
+		bool clicked = ImGui::IsItemClicked() || ImGui::IsItemClicked(1);
+		bool released = ImGui::IsItemHovered() && ImGui::IsMouseReleased(0);
+		if ((is_multi_selection() && released) || (mSelected_asset.size() <= 1 && clicked))
+			select(pAsset);
+	}
 
 	// Open it if its double clicked.
 	if (ImGui::IsItemClicked() && ImGui::IsMouseDoubleClicked(0))
@@ -282,11 +301,13 @@ void asset_manager_window::asset_tile(const core::asset::ptr& pAsset, const math
 		}
 		else
 		{
-			mContext.open_editor(mSelected_asset);
+			mContext.open_editor(pAsset);
 		}
 	}
 
+	ImGui::PushID(&*pAsset);
 	asset_context_menu();
+	ImGui::PopID();
 
 	auto dl = ImGui::GetWindowDrawList();
 
@@ -322,10 +343,11 @@ void asset_manager_window::asset_tile(const core::asset::ptr& pAsset, const math
 			ImGui::GetColorU32(ImGuiCol_ButtonHovered), ImGui::GetStyle().FrameRounding, ImDrawCornerFlags_All, 2);
 	}
 
-	if (is_asset_selected)
+	if (is_selected(pAsset))
 	{
+
 		dl->AddRect(item_min, item_max,
-			ImGui::GetColorU32(ImGuiCol_ButtonActive), ImGui::GetStyle().FrameRounding, ImDrawCornerFlags_All, 4);
+			ImGui::GetColorU32(ImGui::IsItemActive() ? ImGuiCol_ButtonHovered : ImGuiCol_ButtonActive), ImGui::GetStyle().FrameRounding, ImDrawCornerFlags_All, 4);
 	}
 
 	ImGui::PopID();
@@ -333,34 +355,45 @@ void asset_manager_window::asset_tile(const core::asset::ptr& pAsset, const math
 
 void asset_manager_window::asset_context_menu()
 {
-	ImGui::PushID(&*mSelected_asset);
-	if (mSelected_asset && ImGui::BeginPopupContextWindow("AssetContextMenu"))
+	if (mSelected_asset.empty())
+		return;
+	ImGui::PushID(&*mSelected_asset.back());
+	if (ImGui::BeginPopupContextWindow("AssetContextMenu"))
 	{
-		static std::string new_name;
-		if (ImGui::IsWindowAppearing())
+		if (is_singlular_selection())
 		{
-			new_name = mSelected_asset->get_name();
-		}
-		// Rename asset.
-		ImGui::InputText("Name", &new_name);
-		if (ImGui::IsItemDeactivatedAfterEdit())
-		{
-			if (!mAsset_manager.rename_asset(mSelected_asset, new_name))
+			const core::asset::ptr selection = mSelected_asset.back();
+			static std::string new_name;
+			if (ImGui::IsWindowAppearing())
 			{
-				new_name = mSelected_asset->get_name();
-				mContext.save_asset(mSelected_asset);
-				log::error("Failed to rename asset from {} to {}", mSelected_asset->get_name(), new_name);
+				new_name = selection->get_name();
+			}
+			// Rename asset.
+			ImGui::InputText("Name", &new_name);
+			if (ImGui::IsItemDeactivatedAfterEdit())
+			{
+				if (!mAsset_manager.rename_asset(selection, new_name))
+				{
+					new_name = selection->get_name();
+					mContext.save_asset(selection);
+					log::error("Failed to rename asset from {} to {}", selection->get_name(), new_name);
+				}
+			}
+
+			// Delete asset. (Undoable atm)
+			if (ImGui::MenuItem("Delete"))
+			{
+				delete_selected();
 			}
 		}
-
-		// Delete asset. (Undoable atm)
-		if (ImGui::MenuItem("Delete"))
+		else
 		{
-			mContext.close_editor(mSelected_asset);
-			mRemove_queue.push_back(mSelected_asset);
-			mSelected_asset.reset();
-		}
+			if (ImGui::MenuItem("Delete All"))
+			{
+				delete_selected();
+			}
 
+		}
 		ImGui::EndPopup();
 	}
 	ImGui::PopID();
@@ -370,7 +403,12 @@ void asset_manager_window::folder_dragdrop_target(const core::asset::ptr& pAsset
 {
 	if (ImGui::BeginDragDropTarget())
 	{
-		if (const ImGuiPayload* payload = ImGui::GetDragDropPayload())
+		if (ImGui::AcceptDragDropPayload("AssetMultiSelect"))
+		{
+			for (auto i : mSelected_asset)
+				mAsset_manager.move_asset(i, pAsset);
+		}
+		else if (const ImGuiPayload* payload = ImGui::GetDragDropPayload())
 		{
 			std::string_view datatype(payload->DataType);
 			bool is_asset = datatype.find_first_of("Asset") != static_cast<size_t>(-1);
@@ -390,8 +428,86 @@ void asset_manager_window::folder_dragdrop_target(const core::asset::ptr& pAsset
 void asset_manager_window::remove_queued_assets()
 {
 	for (auto i : mRemove_queue)
+	{
+		mContext.close_editor(i);
 		mAsset_manager.remove_asset(i);
+	}
 	mRemove_queue.clear();
+}
+
+void asset_manager_window::set_selection(const core::asset::ptr& pAsset)
+{
+	mSelected_asset.clear();
+	if (pAsset)
+		mSelected_asset.push_back(pAsset);
+	mMulti_last_select = pAsset;
+}
+
+bool asset_manager_window::is_singlular_selection() const
+{
+	return mSelected_asset.size() == 1;
+}
+
+bool asset_manager_window::is_multi_selection() const
+{
+	return mSelected_asset.size() > 1;
+}
+
+bool asset_manager_window::is_selected(const core::asset::ptr& pAsset) const
+{
+	return std::find(mSelected_asset.begin(), mSelected_asset.end(), pAsset) != mSelected_asset.end();
+}
+
+void asset_manager_window::select(const core::asset::ptr& pAsset)
+{
+	if (ImGui::GetIO().KeyCtrl)
+	{
+		mSelected_asset.push_back(pAsset);
+		mMulti_last_select = pAsset;
+	}
+	else if (ImGui::GetIO().KeyShift && !mSelected_asset.empty())
+	{
+		// Select based on how its displayed.
+		bool selecting = false;
+		mAsset_manager.for_each_child(mCurrent_folder, [&](auto& i)
+		{
+			// Only folders
+			if (i->get_type() == "folder")
+			{
+				if (i == mMulti_last_select || i == pAsset)
+				{
+					selecting = !selecting;
+					mSelected_asset.push_back(i);
+				}
+				else if (selecting)
+					mSelected_asset.push_back(i);
+			}
+		});
+		mAsset_manager.for_each_child(mCurrent_folder, [&](auto& i)
+		{
+			// Skip folders
+			if (i->get_type() != "folder")
+			{
+				if (i == mMulti_last_select || i == pAsset)
+				{
+					selecting = !selecting;
+					mSelected_asset.push_back(i);
+				}
+				else if (selecting)
+					mSelected_asset.push_back(i);
+			}
+		});
+	}
+	else
+		set_selection(pAsset);
+
+
+}
+
+void asset_manager_window::delete_selected()
+{
+	mRemove_queue.insert(mRemove_queue.end(), mSelected_asset.begin(), mSelected_asset.end());
+	mSelected_asset.clear();
 }
 
 } // namespace wge::editor

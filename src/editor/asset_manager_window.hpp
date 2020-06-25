@@ -19,11 +19,19 @@ private:
 
 	void remove_queued_assets();
 
+	void set_selection(const core::asset::ptr& pAsset);
+	bool is_singlular_selection() const;
+	bool is_multi_selection() const;
+	bool is_selected(const core::asset::ptr& pAsset) const;
+	void select(const core::asset::ptr& pAsset);
+	void delete_selected();
+
 private:
 	core::asset::ptr mCurrent_folder;
 	context& mContext;
 	core::asset_manager& mAsset_manager;
-	core::asset::ptr mSelected_asset;
+	core::asset::ptr mMulti_last_select;
+	std::vector<core::asset::ptr> mSelected_asset;
 	std::vector<core::asset::ptr> mRemove_queue;
 };
 
