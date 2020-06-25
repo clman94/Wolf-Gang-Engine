@@ -273,6 +273,20 @@ void asset_manager_window::asset_tile(const core::asset::ptr & pAsset, const mat
 
 	auto dl = ImGui::GetWindowDrawList();
 
+	const char* icon = (const char*)ICON_FA_EXCLAMATION_TRIANGLE;
+	if (pAsset->get_type() == "object")
+		icon = (const char*)ICON_FA_CODE;
+	else if (pAsset->get_type() == "sprite")
+		icon = (const char*)ICON_FA_FILE_IMAGE_O;
+	else if (pAsset->get_type() == "tileset")
+		icon = (const char*)ICON_FA_FILE_IMAGE_O;
+	else if (pAsset->get_type() == "scene")
+		icon = (const char*)ICON_FA_GAMEPAD;
+	dl->AddRectFilled(ImGui::GetItemRectMin(),
+		ImGui::GetItemRectMin() + ImGui::CalcTextSize(icon) + ImGui::GetStyle().ItemInnerSpacing * 2,
+		ImGui::GetColorU32(ImVec4(0, 0, 0, 0.5f)), 5);
+	dl->AddText(ImGui::GetItemRectMin() + ImGui::GetStyle().ItemInnerSpacing, ImGui::GetColorU32(ImGuiCol_Text), icon);
+
 	// Calculate item aabb that includes the item spacing.
 	// We will use these to render the box around the preview and
 	// the text.
@@ -284,13 +298,14 @@ void asset_manager_window::asset_tile(const core::asset::ptr & pAsset, const mat
 	// Draw the background
 	if (ImGui::IsItemHovered())
 	{
-		dl->AddRectFilled(item_min, item_max,
-			ImGui::GetColorU32(ImGuiCol_ButtonHovered), ImGui::GetStyle().FrameRounding);
+		dl->AddRect(item_min, item_max,
+			ImGui::GetColorU32(ImGuiCol_ButtonHovered), ImGui::GetStyle().FrameRounding, ImDrawCornerFlags_All, 2);
 	}
-	else if (is_asset_selected)
+
+	if (is_asset_selected)
 	{
-		dl->AddRectFilled(item_min, item_max,
-			ImGui::GetColorU32(ImGuiCol_ButtonActive), ImGui::GetStyle().FrameRounding);
+		dl->AddRect(item_min, item_max,
+			ImGui::GetColorU32(ImGuiCol_ButtonActive), ImGui::GetStyle().FrameRounding, ImDrawCornerFlags_All, 4);
 	}
 
 	ImGui::PopID();
