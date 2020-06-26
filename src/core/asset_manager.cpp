@@ -153,6 +153,8 @@ void asset_manager::remove_asset_storage(const core::asset::ptr& pAsset) const
 		auto dir_path = pAsset->get_location()->get_directory();
 		assert(!dir_path.empty());
 
+		log::info("Removing folder {}", dir_path.string());
+
 		// Remove the directory.
 		system_fs::remove_all(dir_path);
 	}
@@ -309,6 +311,8 @@ bool asset_manager::remove_asset(const asset::ptr& pAsset)
 
 	remove_asset_storage(pAsset);
 
+	log::info("Removing asset \"{}\" from registery", get_asset_path(pAsset).string());
+
 	// Remove it from the asset manager.
 	auto iter = std::remove(mAsset_list.begin(), mAsset_list.end(), pAsset);
 	assert(iter != mAsset_list.end());
@@ -330,15 +334,6 @@ filesystem::path asset_manager::get_asset_path(const core::asset::ptr& pAsset) c
 void asset_manager::register_resource_factory(const std::string& pType, const resource_factory& pFactory)
 {
 	mResource_factories[pType] = pFactory;
-}
-
-resource* asset_manager::create_resource_for(const asset::ptr& pAsset) const
-{
-	assert(pAsset);
-	auto iter = mResource_factories.find(pAsset->get_type());
-	if (iter != mResource_factories.end())
-		iter->second(pAsset);
-	return pAsset->get_resource();
 }
 
 void asset_manager::set_root_directory(const filesystem::path& pPath)

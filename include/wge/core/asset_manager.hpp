@@ -58,7 +58,15 @@ public:
 	template <typename T>
 	void register_default_resource_factory(const std::string& pType);
 
-	resource* create_resource_for(const asset::ptr& pAsset) const;
+	template <typename Tcast = resource>
+	Tcast* create_resource_for(const asset::ptr& pAsset) const
+	{
+		assert(pAsset);
+		auto iter = mResource_factories.find(pAsset->get_type());
+		if (iter != mResource_factories.end())
+			iter->second(pAsset);
+		return pAsset->get_resource<Tcast>();
+	}
 
 	// Set the root directory to find all assets.
 	// Note: This affects the relative path of all assets.

@@ -350,7 +350,7 @@ public:
 		assert(success);
 
 		// Configure the resource.
-		auto sprite_resource = dynamic_cast<graphics::sprite*>(pAsset_mgr.create_resource_for(sprite_asset));
+		auto sprite_resource = pAsset_mgr.create_resource_for<graphics::sprite>(sprite_asset);
 		sprite_resource->set_location(sprite_asset->get_location());
 		sprite_resource->resize_animation(spritesheet.frame_count);
 		sprite_resource->set_frame_size(spritesheet.frame_size);
@@ -380,6 +380,8 @@ public:
 		sprite_resource->resize_animation(spritesheet.frame_count);
 		sprite_resource->set_frame_size(spritesheet.frame_size);
 		sprite_resource->load();
+
+		asset->save();
 
 		register_link(asset, pPath);
 	}
