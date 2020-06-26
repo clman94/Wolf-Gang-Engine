@@ -26,6 +26,7 @@ public:
 	GLFWwindow* get_window() const;
 
 private:
+	bool mFrame_limited_mode = false;
 	GLFWwindow* mWindow;
 };
 

@@ -4,6 +4,8 @@
 #include <wge/graphics/glfw_backend.hpp>
 #include <wge/logging/log.hpp>
 
+#include <thread>
+
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
@@ -36,6 +38,11 @@ glfw_window_backend::glfw_window_backend()
 		glfw_window_backend* window = static_cast<glfw_window_backend*>(glfwGetWindowUserPointer(pWindow));
 		window->on_file_drop(pCount, pPaths);
 	});
+	glfwSetWindowFocusCallback(mWindow, [](GLFWwindow* pWindow, int pIs_focused)
+	{
+		glfw_window_backend* window = static_cast<glfw_window_backend*>(glfwGetWindowUserPointer(pWindow));
+		window->mLimited_frame_mode = pIs_focused == GLFW_FALSE;
+	});
 }
 
 glfw_window_backend::~glfw_window_backend()
@@ -61,6 +68,8 @@ int glfw_window_backend::get_display_height()
 
 void glfw_window_backend::refresh()
 {
+	if (mLimited_frame_mode)
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	glfwMakeContextCurrent(mWindow);
 	glfwSwapBuffers(mWindow);
 }
