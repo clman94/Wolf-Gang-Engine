@@ -50,23 +50,12 @@ struct message
 	std::string to_string(bool pAnsi_color = false) const;
 };
 
-// Adds "something" as userdata in your message.
-// This is primarily meant for a custom log UI that
-// can display extra information about a message eg
-// stack info in a script.
-// Usage: log::out << log::userdata(234) << "my message" << log::endm;
-struct userdata
-{
-	template <typename T>
-	userdata(T&& pAny) :
-		data(std::forward<T>(pAny))
-	{}
-	userdata_t data;
-};
-
 util::span<const message> get_log();
 void add_message(message&& pMessage);
 void add_message(const message& pMessage);
+
+// Add userdata to the last message.
+void userdata(userdata_t pData);
 
 // Returns true if the file was successfully opened
 bool open_file(const char* pFile);

@@ -80,6 +80,14 @@ void add_message(const message& pMessage)
 	std::cout << gLog.back().to_string(true) << std::endl;
 }
 
+void userdata(userdata_t pData)
+{
+	if (!gLog.empty())
+	{
+		gLog.back().userdata = std::move(pData);
+	}
+}
+
 bool open_file(const char* pFile)
 {
 	gLog_output_file.open(pFile);
@@ -99,6 +107,7 @@ bool soft_assert(bool pExpression, std::string_view pMessage, line_info pLine_in
 	}
 	return pExpression;
 }
+
 
 void line_info::shorten_path()
 {
