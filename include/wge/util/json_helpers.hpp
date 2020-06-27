@@ -78,6 +78,10 @@ class transform;
 void to_json(nlohmann::json&, const transform&);
 void from_json(const nlohmann::json&, transform&);
 
+class aabb;
+void to_json(nlohmann::json&, const aabb&);
+void from_json(const nlohmann::json&, aabb&);
+
 } // namespace wge::math
 
 namespace wge::util

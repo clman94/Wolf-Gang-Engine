@@ -20,6 +20,7 @@ public:
 	static constexpr int padding = 1;
 
 public:
+
 	struct frame_info
 	{
 		std::optional<math::vec2> anchor;
@@ -49,6 +50,10 @@ public:
 			throw std::runtime_error(
 				fmt::format("Could not load image from \"{}\". Possible file corruption or invalid path.", image_filepath));
 		mTexture.set_image(mImage);
+
+		// mAabb_collision was default initialized so we must give it a useful value.
+		if (mAabb_collision.min == mAabb_collision.max)
+			set_aabb_collision_to_image_size();
 	}
 
 	void set_texture_implementation(texture_impl::ptr pImpl)
@@ -169,6 +174,21 @@ public:
 		return mLoop;
 	}
 
+	void set_aabb_collision_to_image_size() noexcept
+	{
+		mAabb_collision = { math::vec2{ 0, 0 }, math::vec2{ mSize } };
+	}
+
+	void set_aabb_collision(const math::aabb& pAabb) noexcept
+	{
+		mAabb_collision = pAabb;
+	}
+
+	const math::aabb& get_aabb_collision() const noexcept
+	{
+		return mAabb_collision;
+	}
+
 private:
 	virtual json serialize_data() const override
 	{
@@ -177,6 +197,7 @@ private:
 		result["frame_size"] = mSize;
 		result["anchor"] = mAnchor;
 		result["loop"] = mLoop;
+		result["aabb_collision_box"] = mAabb_collision;
 		json jframes;
 		for (auto& i : mFrames)
 			jframes.push_back(frame_info::serialize(i));
@@ -190,6 +211,8 @@ private:
 		mSize = pJson["frame_size"];
 		mAnchor = pJson["anchor"];
 		mLoop = pJson["loop"];
+		mAabb_collision = util::json_get_or<math::aabb>(pJson,
+			"aabb_collision_box", math::aabb{ math::fvec2{ 0, 0 }, math::fvec2{ mSize } });
 		for (auto& i : pJson["frames"])
 			mFrames.push_back(frame_info::deserialize(i));
 	}
@@ -201,6 +224,7 @@ private:
 	float mFrame_duration = 0;
 	math::ivec2 mSize;
 	math::vec2 mAnchor;
+	math::aabb mAabb_collision;
 	bool mLoop = false;
 };
 

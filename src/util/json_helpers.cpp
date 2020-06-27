@@ -3,6 +3,7 @@
 #include <Box2D/Common/b2Math.h>
 
 #include <wge/math/math.hpp>
+#include <wge/math/aabb.hpp>
 #include <wge/math/vector.hpp>
 #include <wge/math/rect.hpp>
 #include <wge/math/transform.hpp>
@@ -54,6 +55,18 @@ void wge::math::from_json(const nlohmann::json& pJson, transform& pTransform)
 	pTransform.position = pJson["position"];
 	pTransform.rotation = pJson["rotation"];
 	pTransform.scale = pJson["scale"];
+}
+
+void wge::math::to_json(nlohmann::json& pJson, const aabb& pAabb)
+{
+	pJson["min"] = pAabb.min;
+	pJson["max"] = pAabb.max;
+}
+
+void wge::math::from_json(const nlohmann::json& pJson, aabb& pAabb)
+{
+	pAabb.min = pJson["min"];
+	pAabb.max = pJson["max"];
 }
 
 void to_json(nlohmann::json& pJson, const b2Vec2& pVec)

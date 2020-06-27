@@ -71,6 +71,23 @@ void sprite_editor::on_gui()
 			sprite->set_loop(loop);
 			mark_asset_modified();
 		}
+
+		if (ImGui::CollapsingHeader("Collision"))
+		{
+			math::vec2 min = sprite->get_aabb_collision().min;
+			if (ImGui::DragFloat2("Minimum", min.components().data(), 1, 0, static_cast<float>(sprite->get_frame_size().x)))
+			{
+				sprite->set_aabb_collision({ min , sprite->get_aabb_collision().max });
+				mark_asset_modified();
+			}
+
+			math::vec2 max = sprite->get_aabb_collision().max;
+			if (ImGui::DragFloat2("Maximum", max.components().data(), 1, 0, static_cast<float>(sprite->get_frame_size().y)))
+			{
+				sprite->set_aabb_collision({ sprite->get_aabb_collision().min , max });
+				mark_asset_modified();
+			}
+		}
 	}
 	ImGui::EndChild();
 
@@ -80,8 +97,18 @@ void sprite_editor::on_gui()
 
 	begin_image_editor("Editor", sprite->get_texture(), sprite->get_frame_uv(mController.get_frame()), true);
 
-	math::vec2 anchor = sprite->get_frame_anchor(mController.get_frame());
+	visual_editor::draw_rect(sprite->get_aabb_collision(), { 0.2, 1, 1, 0.7 });
+	visual_editor::box_edit collision_edit(sprite->get_aabb_collision());
+	collision_edit.drag(visual_editor::edit_type::rect);
+	collision_edit.resize(visual_editor::edit_type::rect);
+	if (collision_edit.is_dragging())
+	{
+		sprite->set_aabb_collision(collision_edit.get_rect());
+		mark_asset_modified();
+	}
 
+	// Display anchor.
+	math::vec2 anchor = sprite->get_frame_anchor(mController.get_frame());
 	visual_editor::draw_line(anchor - math::vec2{ 5, 0 }, anchor + math::vec2{ 5, 0 }, { 1, 1, 1, 1 });
 	visual_editor::draw_line(anchor - math::vec2{ 0, 5 }, anchor + math::vec2{ 0, 5 }, { 1, 1, 1, 1 });
 
