@@ -58,10 +58,11 @@ void physics_world::preupdate(core::layer& pLayer, float pSq_pixel_size, float p
 		{
 			// Create the shape around the sprite.
 			const auto sprite = sprite_comp.get_sprite()->get_resource<graphics::sprite>();
-			const math::vec2 box_size = (sprite->get_aabb_collision().max - sprite->get_aabb_collision().min).abs();
+			const math::vec2 box_offset = ((sprite->get_aabb_collision().min * transform_comp.scale) / pSq_pixel_size);
+			const math::vec2 box_size = (sprite->get_aabb_collision().max - sprite->get_aabb_collision().min).abs() * transform_comp.scale / pSq_pixel_size;
+			const math::vec2 box_hsize = box_size / 2;
 			const math::vec2 frame_anchor = (math::vec2(sprite->get_frame_anchor(sprite_comp.get_controller().get_frame())) * transform_comp.scale) / pSq_pixel_size;
-			const math::vec2 box_hsize = ((box_size * transform_comp.scale) / 2) / pSq_pixel_size;
-			const math::vec2 center = box_hsize - frame_anchor + (sprite->get_aabb_collision().min / pSq_pixel_size);
+			const math::vec2 center = box_hsize - frame_anchor + box_offset;
 			b2PolygonShape shape;
 			shape.SetAsBox(box_hsize.x, box_hsize.y, { center.x, center.y }, 0);
 
