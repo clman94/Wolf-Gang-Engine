@@ -1128,8 +1128,8 @@ public:
 			ImGui::BeginChild("Layers", ImVec2(0, layers_height), true);
 
 			ImGui::BeginGroup();
-			for (auto i = mScene.get_layer_container().begin();
-				i != mScene.get_layer_container().end();
+			for (auto i = mScene.get_layer_container().rbegin();
+				i != mScene.get_layer_container().rend();
 				++i)
 			{
 				ImGui::PushID(&*i);
@@ -1139,7 +1139,7 @@ public:
 					select_layer(*i);
 				}
 				ImGui::SameLine();
-				auto preview = mLayer_previews.get_preview_framebuffer(std::distance(mScene.get_layer_container().begin(), i));
+				auto preview = mLayer_previews.get_preview_framebuffer(std::distance(mScene.get_layer_container().begin(), i.base()));
 				if (preview)
 				{
 					ImGui::Image(preview, { 30, 30 });
