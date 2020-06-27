@@ -19,6 +19,7 @@ class sprite_fixture
 {
 private:
 	b2Fixture* mFixture;
+	math::vec2 mLast_scale;
 	friend class physics_world;
 };
 

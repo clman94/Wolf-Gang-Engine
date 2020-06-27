@@ -31,7 +31,7 @@ b2World* physics_world::get_world() const
 	return mWorld.get();
 }
 
-void physics_world::preupdate(core::layer& pLayer, float pDelta)
+void physics_world::preupdate(core::layer& pLayer, float pSq_pixel_size, float pDelta)
 {
 	// Create all the bodies
 	for (auto [id, physics, transform] : pLayer.each<physics_component, math::transform>())
@@ -53,17 +53,17 @@ void physics_world::preupdate(core::layer& pLayer, float pDelta)
 	for (auto [id, sprite_col_comp, physics_comp, sprite_comp, transform_comp] :
 		pLayer.each<sprite_fixture, physics_component, graphics::sprite_component, math::transform>())
 	{
-		if ((!sprite_col_comp.mFixture || sprite_comp.get_controller().is_new_frame())
+		if ((!sprite_col_comp.mFixture || sprite_col_comp.mLast_scale != transform_comp.scale)
 			&& physics_comp.mBody && sprite_comp.get_sprite())
 		{
 			// Create the shape around the sprite.
 			const auto sprite = sprite_comp.get_sprite()->get_resource<graphics::sprite>();
-			const math::vec2 frame_size = math::vec2(sprite->get_frame_size());
-			const math::vec2 frame_anchor = (math::vec2(sprite->get_frame_anchor(sprite_comp.get_controller().get_frame())) * transform_comp.scale) / 100;
-			const math::vec2 sprite_hsize = ((frame_size * transform_comp.scale) / 2) / 100;
-			const math::vec2 center = sprite_hsize - frame_anchor;
+			const math::vec2 box_size = (sprite->get_aabb_collision().max - sprite->get_aabb_collision().min).abs();
+			const math::vec2 frame_anchor = (math::vec2(sprite->get_frame_anchor(sprite_comp.get_controller().get_frame())) * transform_comp.scale) / pSq_pixel_size;
+			const math::vec2 box_hsize = ((box_size * transform_comp.scale) / 2) / pSq_pixel_size;
+			const math::vec2 center = box_hsize - frame_anchor + (sprite->get_aabb_collision().min / pSq_pixel_size);
 			b2PolygonShape shape;
-			shape.SetAsBox(sprite_hsize.x, sprite_hsize.y, { center.x, center.y }, 0);
+			shape.SetAsBox(box_hsize.x, box_hsize.y, { center.x, center.y }, 0);
 
 			// Setup the fixture settings.
 			b2FixtureDef fixture_def;
@@ -77,6 +77,7 @@ void physics_world::preupdate(core::layer& pLayer, float pDelta)
 
 			// Create the new fixture.
 			sprite_col_comp.mFixture = physics_comp.mBody->CreateFixture(&fixture_def);
+			sprite_col_comp.mLast_scale = transform_comp.scale;
 		}
 	}
 

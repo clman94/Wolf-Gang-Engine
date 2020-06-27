@@ -84,10 +84,7 @@ void instance::from(const object& pObject)
 void instance::generate(core::object pObject, const core::asset_manager& pAsset_mgr) const
 {
 	auto asset = pAsset_mgr.get_asset(asset_id);
-
 	pObject.set_name(name);
-
-	// Generate the object
 	pObject.set_asset(asset);
 
 	if (asset->get_type() == "object")
@@ -95,6 +92,9 @@ void instance::generate(core::object pObject, const core::asset_manager& pAsset_
 		// Generate the object using the resources generator.
 		auto object_resource = asset->get_resource<core::object_resource>();
 		object_resource->generate_object(pObject, pAsset_mgr);
+		// Setup the transform.
+		if (auto t = pObject.get_component<math::transform>())
+			*t = transform;
 	}
 	else if (asset->get_type() == "sprite")
 	{
@@ -103,10 +103,6 @@ void instance::generate(core::object pObject, const core::asset_manager& pAsset_
 		pObject.add_component(physics::physics_component{});
 		pObject.add_component(physics::sprite_fixture{});
 	}
-
-	// Setup the transform.
-	if (auto t = pObject.get_component<math::transform>())
-		*t = transform;
 }
 
 json instance::serialize(const instance& pData)

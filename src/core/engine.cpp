@@ -93,7 +93,7 @@ void engine::step()
 	float delta = 1.f / 60.f;
 
 	for (auto& i : mScene.get_layer_container())
-		mPhysics.preupdate(i, delta);
+		mPhysics.preupdate(i, 100, delta);
 
 	for (auto& i : mScene.get_layer_container())
 		mLua_engine.update_layer(i, delta);

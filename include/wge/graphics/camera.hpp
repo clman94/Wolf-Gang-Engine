@@ -28,7 +28,6 @@ public:
 	math::vec2 get_focus() const { return mFocus; }
 	void move_focus(const math::vec2& pAmount) { mFocus += pAmount; }
 
-
 	math::aabb get_view() const noexcept
 	{
 		const float zoom_scale = std::pow(2.f, mZoom);

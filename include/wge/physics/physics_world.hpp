@@ -155,7 +155,7 @@ public:
 
 	b2World* get_world() const;
 
-	void preupdate(core::layer& pLayer, float pDelta);
+	void preupdate(core::layer& pLayer, float pSq_pixel_size, float pDelta);
 	void postupdate(core::layer& pLayer, float pDelta);
 private:
 	void update_object_transforms(core::layer& pLayer);
