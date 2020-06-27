@@ -1,5 +1,6 @@
 #include <wge/graphics/sprite_component.hpp>
 #include <wge/graphics/renderer.hpp>
+#include <wge/graphics/graphics.hpp>
 #include <wge/core/asset_manager.hpp>
 #include <wge/core/object.hpp>
 
@@ -40,7 +41,7 @@ void sprite_component::create_batch(math::transform& pTransform, renderer& pRend
 	for (int i = 0; i < 4; i++)
 	{
 		verts[i].position += mOffset - anchor;
-		verts[i].position *= pRenderer.get_pixel_size();
+		verts[i].position *= pRenderer.get_pixel_scale();
 		
 		// Calc aabb of sprite before transform
 		if (i == 0)

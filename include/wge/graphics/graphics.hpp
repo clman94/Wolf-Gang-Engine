@@ -26,7 +26,19 @@ public:
 		return mGraphics_backend;
 	}
 
+	void set_pixels_per_unit_sq(float pPixels) noexcept
+	{
+		mPixels_per_unit_sq = pPixels;
+	}
+
+	float get_pixels_per_unit_sq() const noexcept
+	{
+		return mPixels_per_unit_sq;
+	}
+
 private:
+	float mPixels_per_unit_sq = 1;
+
 	window_backend::ptr mWindow_backend;
 	graphics_backend::ptr mGraphics_backend;
 };

@@ -91,7 +91,7 @@ math::vec2 renderer::screen_to_world(const math::vec2& pVec) const noexcept
 	return (pVec * get_render_view_scale()) + mRender_view.min;
 }
 
-void renderer::render_sprites(core::layer& pLayer, graphics& pGraphics)
+void renderer::render_sprites(core::layer& pLayer)
 {
 	for (auto [id, sprite, transform] :
 		pLayer.each<sprite_component, math::transform>())
@@ -103,11 +103,11 @@ void renderer::render_sprites(core::layer& pLayer, graphics& pGraphics)
 	sort_batches();
 
 	for (const auto& i : mBatches)
-		pGraphics.get_graphics_backend()->render_batch(mFramebuffer, mProjection_matrix, i);
+		mGraphics->get_graphics_backend()->render_batch(mFramebuffer, mProjection_matrix, i);
 	mBatches.clear();
 }
 
-void renderer::render_tilemap(core::layer& pLayer, graphics& pGraphics)
+void renderer::render_tilemap(core::layer& pLayer)
 {
 	core::tilemap_info* info = pLayer.layer_components.get<core::tilemap_info>();
 	if (!info || !info->tileset.is_valid())
@@ -133,21 +133,34 @@ void renderer::render_tilemap(core::layer& pLayer, graphics& pGraphics)
 	{
 		batch.indexes_indirect = util::span{ &idx_raw[0].corners[0], idx_raw.size() * 6 };
 		batch.vertices_indirect = util::span{ &verts_raw[0].corners[0], verts_raw.size() * 4 };
-		pGraphics.get_graphics_backend()->render_batch(mFramebuffer, mProjection_matrix, batch);
+		mGraphics->get_graphics_backend()->render_batch(mFramebuffer, mProjection_matrix, batch);
 	}
 }
 
-void renderer::render_layer(core::layer& pLayer, graphics& pGraphics)
+void renderer::render_layer(core::layer& pLayer)
 {
 	mProjection_matrix = math::ortho(mRender_view);
-	render_sprites(pLayer, pGraphics);
-	render_tilemap(pLayer, pGraphics);
+	render_sprites(pLayer);
+	render_tilemap(pLayer);
 }
 
-void renderer::render_scene(core::scene& pScene, graphics& pGraphics)
+void renderer::render_scene(core::scene& pScene)
 {
 	for (auto& i : pScene)
-		render_layer(i, pGraphics);
+		render_layer(i);
+}
+
+float renderer::get_pixel_per_unit_sq() const noexcept
+{
+	return mGraphics->get_pixels_per_unit_sq();
+}
+
+float renderer::get_pixel_scale() const noexcept
+{
+	float ppusq = get_pixel_per_unit_sq();
+	if (ppusq <= 0)
+		return 0;
+	return 1.f / ppusq;
 }
 
 void renderer::sort_batches()

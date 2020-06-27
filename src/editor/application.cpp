@@ -627,11 +627,6 @@ public:
 class layer_previews
 {
 public:
-	void set_graphics(graphics::graphics& pGraphics)
-	{
-		mGraphics = &pGraphics;
-	}
-	
 	// Set the interval in which to rerender previews.
 	// Default: 60 frames
 	void set_render_interval(std::size_t pFrames)
@@ -642,7 +637,7 @@ public:
 
 	void render_previews(core::scene& pScene, graphics::renderer& pRenderer, const math::ivec2& pSize)
 	{
-		assert(mGraphics);
+		assert(pRenderer.get_graphics());
 
 		mFramebuffers.resize(pScene.get_layer_container().size());
 		++mFrame_clock;
@@ -655,7 +650,7 @@ public:
 			{
 				auto& framebuffer = mFramebuffers[framebuffer_idx];
 				if (framebuffer == nullptr)
-					framebuffer = mGraphics->get_graphics_backend()->create_framebuffer();
+					framebuffer = pRenderer.get_graphics()->get_graphics_backend()->create_framebuffer();
 				if (framebuffer->get_size() != pSize)
 					framebuffer->resize(pSize.x, pSize.y);
 
@@ -664,7 +659,7 @@ public:
 				pRenderer.set_framebuffer(framebuffer);
 				// If we are using the same renderer from the viewport,
 				// this should use the same render view.
-				pRenderer.render_layer(i, *mGraphics);
+				pRenderer.render_layer(i);
 				++framebuffer_idx;
 			}
 			pRenderer.set_framebuffer(last_fb);
@@ -681,7 +676,6 @@ public:
 private:
 	std::size_t mRender_interval = 60;
 	std::size_t mFrame_clock = 0;
-	graphics::graphics* mGraphics = nullptr;
 	std::vector<graphics::framebuffer::ptr> mFramebuffers;
 };
 
@@ -1087,18 +1081,15 @@ public:
 
 	scene_editor(context& pContext, const core::asset::ptr& pAsset, const on_game_run_callback& pRun_callback) noexcept :
 		asset_editor(pContext, pAsset),
-		mOn_game_run_callback(pRun_callback)
+		mOn_game_run_callback(pRun_callback),
+		mRenderer(pContext.get_engine().get_graphics())
 	{
 		log::info("Opening Scene Editor...");
-		mLayer_previews.set_graphics(pContext.get_engine().get_graphics());
-
 		log::info("Creating Scene Editor Framebuffer...");
 		// Create a framebuffer for the scene to be rendered to.
 		auto& graphics = pContext.get_engine().get_graphics();
 		mViewport_framebuffer = graphics.get_graphics_backend()->create_framebuffer();
 		mRenderer.set_framebuffer(mViewport_framebuffer);
-		mRenderer.set_pixel_size(0.01f);
-
 		mScene_resource = get_asset()->get_resource<core::scene_resource>();
 
 		// Generate the layer.
@@ -1415,7 +1406,7 @@ public:
 		mViewport_framebuffer->clear({ 0, 0, 0, 1 });
 
 		// Render all the layers.
-		mRenderer.render_scene(mScene, engine.get_graphics());
+		mRenderer.render_scene(mScene);
 	}
 
 
@@ -1572,7 +1563,8 @@ class game_viewport
 {
 public:
 	game_viewport(core::engine& pEngine) :
-		mEngine(&pEngine)
+		mEngine(&pEngine),
+		mRenderer(pEngine.get_graphics())
 	{}
 
 	void open_scene(core::resource_handle<core::scene_resource> pScene)
@@ -1608,7 +1600,6 @@ public:
 		mViewport_framebuffer = g.get_graphics_backend()->create_framebuffer();
 		mViewport_framebuffer->resize(500, 500);
 		mRenderer.set_framebuffer(mViewport_framebuffer);
-		mRenderer.set_pixel_size(0.01f);
 	}
 
 	void register_input()
@@ -1704,7 +1695,7 @@ public:
 
 		// Render all the layers.
 		mRenderer.set_view(mEngine->get_default_camera().get_view());
-		mRenderer.render_scene(mEngine->get_scene(), mEngine->get_graphics());
+		mRenderer.render_scene(mEngine->get_scene());
 	}
 
 	void on_gui()

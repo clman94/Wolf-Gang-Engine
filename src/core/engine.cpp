@@ -45,6 +45,7 @@ engine::engine()
 	mAsset_manager.register_default_resource_factory<scripting::script>("script");
 
 	mDefault_camera.set_size({ 10, 7 });
+	mGraphics.set_pixels_per_unit_sq(100);
 }
 
 engine::~engine()
@@ -93,7 +94,7 @@ void engine::step()
 	float delta = 1.f / 60.f;
 
 	for (auto& i : mScene.get_layer_container())
-		mPhysics.preupdate(i, 100, delta);
+		mPhysics.preupdate(i, mGraphics.get_pixels_per_unit_sq(), delta);
 
 	for (auto& i : mScene.get_layer_container())
 		mLua_engine.update_layer(i, delta);

@@ -49,6 +49,10 @@ class graphics;
 class renderer
 {
 public:
+	renderer() = default;
+	renderer(graphics& pGraphics) :
+		mGraphics(&pGraphics)
+	{}
 
 	// Add a batch to be rendered
 	void push_batch(const render_batch_2d& pBatch)
@@ -67,10 +71,10 @@ public:
 	// Convert screen coordinates to world coordinates
 	[[nodiscard]] math::vec2 screen_to_world(const math::vec2& pVec) const noexcept;
 
-	void render_sprites(core::layer& pLayer, graphics& pGraphics);
-	void render_tilemap(core::layer& pLayer, graphics& pGraphics);
-	void render_layer(core::layer& pLayer, graphics& pGraphics);
-	void render_scene(core::scene& pScene, graphics& pGraphics);
+	void render_sprites(core::layer& pLayer);
+	void render_tilemap(core::layer& pLayer);
+	void render_layer(core::layer& pLayer);
+	void render_scene(core::scene& pScene);
 
 	// Set the current frame buffer to render to
 	void set_framebuffer(const framebuffer::ptr& pFramebuffer) noexcept
@@ -82,18 +86,18 @@ public:
 		return mFramebuffer;
 	}
 
-	// Setting the pixel size allows you to adjust sprites
-	// to any unit system you want. This is very helpful 
-	// when you want to use physics which works with meters
-	// per unit. Default: 1
-	void set_pixel_size(float pSize) noexcept
+	void set_graphics(graphics& pGraphics) noexcept
 	{
-		mPixel_size = pSize;
+		mGraphics = &pGraphics;
 	}
-	float get_pixel_size() const noexcept
+
+	graphics* get_graphics() const noexcept
 	{
-		return mPixel_size;
+		return mGraphics;
 	}
+
+	float get_pixel_per_unit_sq() const noexcept;
+	float get_pixel_scale() const noexcept;
 
 private:
 	// Sort the batches so then the ones with greater depth are
@@ -102,11 +106,10 @@ private:
 	void sort_batches();
 
 private:
+	graphics* mGraphics = nullptr;
 	math::aabb mRender_view;
 	framebuffer::ptr mFramebuffer;
 	math::mat44 mProjection_matrix;
-	float mPixel_size{ 1 };
-
 	std::vector<render_batch_2d> mBatches;
 };
 
