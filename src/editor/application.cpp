@@ -1583,6 +1583,7 @@ public:
 		pScene->generate_scene(mEngine->get_scene(), mEngine->get_asset_manager());
 		mIs_loaded = true;
 		mScene = pScene;
+		mFocus_window = true;
 		log::info("Ready");
 	}
 
@@ -1700,6 +1701,11 @@ public:
 
 	void on_gui()
 	{
+		if (mFocus_window)
+		{
+			mFocus_window = false;
+			ImGui::SetNextWindowFocus();
+		}
 		if (ImGui::Begin("Game##GameViewport"))
 		{
 			// Play/pause button.
@@ -1786,6 +1792,7 @@ public:
 	}
 
 private:
+	bool mFocus_window = false;
 	bool mIs_running = false;
 	bool mIs_loaded = false;
 	bool mCan_take_input = false;
