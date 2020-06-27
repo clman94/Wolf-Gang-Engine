@@ -1269,11 +1269,11 @@ public:
 			auto& layers = mScene.get_layer_container();
 			if (layers.size() <= 1)
 				return;
-			for (auto i = std::next(layers.begin()); i != layers.end(); i++)
+			for (auto i = layers.begin(); i != std::prev(layers.end()); i++)
 			{
 				if (mSelected_layer == &*i)
 				{
-					layers.splice(std::prev(i), layers, i);
+					layers.splice(std::next(i, 2), layers, i);
 					mark_asset_modified();
 					return;
 				}
@@ -1288,11 +1288,11 @@ public:
 			auto& layers = mScene.get_layer_container();
 			if (layers.size() <= 1)
 				return;
-			for (auto i = layers.begin(); i != std::prev(layers.end()); i++)
+			for (auto i = std::next(layers.begin()); i != layers.end(); i++)
 			{
 				if (mSelected_layer == &*i)
 				{
-					layers.splice(std::next(i, 2), layers, i);
+					layers.splice(std::prev(i), layers, i);
 					mark_asset_modified();
 					return;
 				}
