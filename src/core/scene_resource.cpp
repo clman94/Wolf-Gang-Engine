@@ -4,6 +4,7 @@
 #include <wge/graphics/renderer.hpp>
 #include <wge/scripting/script_engine.hpp>
 #include <wge/physics/physics_world.hpp>
+#include <wge/physics/physics_component.hpp>
 
 namespace wge::core
 {
@@ -99,6 +100,8 @@ void instance::generate(core::object pObject, const core::asset_manager& pAsset_
 	{
 		pObject.add_component(transform);
 		pObject.add_component(graphics::sprite_component{ asset });
+		pObject.add_component(physics::physics_component{});
+		pObject.add_component(physics::sprite_fixture{});
 	}
 
 	// Setup the transform.
