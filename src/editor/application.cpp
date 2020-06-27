@@ -793,6 +793,14 @@ public:
 	{
 		update_aabbs();
 
+		core::asset::ptr sprite_dropdropasset = asset_drag_drop_target("sprite", mMain_editor->get_asset_manager());
+		core::asset::ptr object_dropdropasset = asset_drag_drop_target("object", mMain_editor->get_asset_manager());
+		if (sprite_dropdropasset || object_dropdropasset)
+		{
+			new_instance(sprite_dropdropasset ? sprite_dropdropasset : object_dropdropasset,
+				visual_editor::get_mouse_position());
+		}
+
 		// True when the selected object is being edited.
 		// We don't want to select objects behind it on accident.
 		bool is_currently_editing = false;
@@ -856,6 +864,23 @@ public:
 			else
 				mSelected_object = core::invalid_object;
 		}
+	}
+
+	// Generate a new instance from an object asset.
+	core::object new_instance(const core::asset::ptr& pAsset, const math::vec2& pPosition)
+	{
+		assert(pAsset);
+
+		core::instance inst;
+		inst.transform.position = pPosition;
+		inst.asset_id = pAsset->get_id();
+
+		// Generate the object
+		core::object obj = mSelected_layer->add_object();
+		inst.generate(obj, mMain_editor->get_asset_manager());
+
+		mMain_editor->mark_asset_modified();
+		return obj;
 	}
 
 	virtual math::aabb get_aabb() override
@@ -1373,15 +1398,6 @@ public:
 
 		visual_editor::begin("_SceneEditor", { cursor.x, cursor.y }, mRenderer.get_render_view().min, 1.f / mRenderer.get_render_view_scale());
 		{
-			core::asset::ptr dropdropasset = asset_drag_drop_target("object", get_asset_manager());
-			if (dropdropasset && mSelected_layer)
-			{
-				auto obj = new_instance(dropdropasset);
-
-				// Set the transform to the position it was dropped at.
-				if (auto transform = obj.get_component<math::transform>())
-					transform->position = visual_editor::get_mouse_position();
-			}
 
 			if (is_grid_enabled)
 				visual_editor::draw_grid(grid_color, get_grid_step());
@@ -1401,22 +1417,6 @@ public:
 		mRenderer.render_scene(mScene, engine.get_graphics());
 	}
 
-	// Generate a new instance from an object asset.
-	core::object new_instance(const core::asset::ptr& pAsset)
-	{
-		assert(pAsset);
-		core::engine& engine = get_context().get_engine();
-		auto object_resource = pAsset->get_resource<core::object_resource>();
-
-		// Generate the object
-		core::object obj = mSelected_layer->add_object();
-		object_resource->generate_object(obj, get_asset_manager());
-		obj.set_asset(pAsset);
-
-		mark_asset_modified();
-
-		return obj;
-	}
 
 	scene_editor_mode* get_layer_editor(core::layer& pLayer)
 	{

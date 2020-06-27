@@ -89,9 +89,18 @@ void instance::generate(core::object pObject, const core::asset_manager& pAsset_
 	// Generate the object
 	pObject.set_asset(asset);
 
-	// Generate the object using the resources generator.
-	auto object_resource = asset->get_resource<core::object_resource>();
-	object_resource->generate_object(pObject, pAsset_mgr);
+	if (asset->get_type() == "object")
+	{
+		// Generate the object using the resources generator.
+		auto object_resource = asset->get_resource<core::object_resource>();
+		object_resource->generate_object(pObject, pAsset_mgr);
+	}
+	else if (asset->get_type() == "sprite")
+	{
+		pObject.add_component(transform);
+		pObject.add_component(graphics::sprite_component{ asset });
+	}
+
 	// Setup the transform.
 	if (auto t = pObject.get_component<math::transform>())
 		*t = transform;
