@@ -912,6 +912,7 @@ private:
 			{
 				mSelected_object.destroy();
 				mSelected_object = core::invalid_object;
+				mMain_editor->mark_asset_modified();
 			}
 			ImGui::EndPopup();
 			return true;
