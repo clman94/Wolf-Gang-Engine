@@ -1712,6 +1712,14 @@ public:
 			if (ImGui::Button((const char*)(mIs_running ? ICON_FA_PAUSE u8" Pause" : ICON_FA_PLAY u8"Play")))
 			{
 				mIs_running = !mIs_running;
+				if (mIs_running && mOld_camera.has_value())
+				{
+					mEngine->get_default_camera() = mOld_camera.value();
+				}
+				else if (!mIs_running)
+				{
+					mOld_camera = mEngine->get_default_camera();
+				}
 			}
 
 			// Restart button.
@@ -1754,9 +1762,33 @@ public:
 				auto cursor = ImGui::GetCursorScreenPos();
 				ImGui::Image(mViewport_framebuffer, ImGui::FillWithFramebuffer(mViewport_framebuffer));
 
+				// Draw yellow rectangle when paused.
+				if (!mIs_running)
+					ImGui::GetWindowDrawList()->AddRect(
+						ImGui::GetItemRectMin(),
+						ImGui::GetItemRectMax(),
+						ImGui::GetColorU32({ 1, 1, 0, 0.4 }), 0, 15, 4);
+
 				visual_editor::begin("_SceneEditor", cursor, mRenderer.get_render_view().min, 1.f / mRenderer.get_render_view_scale());
 				
-				mEngine->get_physics().imgui_debug(1.f / 60.f);
+				float delta = 1.f / 60.f;
+				if (!mIs_running)
+					delta = 0; // Pause all debugging. Makes the raycasts stay visible.
+				mEngine->get_physics().imgui_debug(delta);
+
+				if (!mIs_running && ImGui::IsItemHovered())
+				{
+					if (ImGui::IsMouseDown(2))
+					{
+						auto mouse_delta = -math::vec2(ImGui::GetIO().MouseDelta) * mRenderer.get_render_view_scale();
+						mEngine->get_default_camera().move_focus(mouse_delta);
+					}
+
+					if (ImGui::GetIO().KeyCtrl)
+					{
+						mEngine->get_default_camera().zoom(-ImGui::GetIO().MouseWheel * 0.2f);
+					}
+				}
 
 				visual_editor::end();
 
@@ -1798,6 +1830,7 @@ private:
 	bool mCan_take_input = false;
 	graphics::framebuffer::ptr mViewport_framebuffer;
 	graphics::renderer mRenderer;
+	std::optional<graphics::camera> mOld_camera;
 
 	core::resource_handle<core::scene_resource> mScene;
 	core::engine* mEngine;
