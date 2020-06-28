@@ -75,6 +75,7 @@ public:
 	void render_tilemap(core::layer& pLayer);
 	void render_layer(core::layer& pLayer);
 	void render_scene(core::scene& pScene);
+	void update_animations(core::scene& pScene, float pDelta);
 
 	// Set the current frame buffer to render to
 	void set_framebuffer(const framebuffer::ptr& pFramebuffer) noexcept

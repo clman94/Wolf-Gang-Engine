@@ -96,7 +96,6 @@ void renderer::render_sprites(core::layer& pLayer)
 	for (auto [id, sprite, transform] :
 		pLayer.each<sprite_component, math::transform>())
 	{
-		sprite.get_controller().update(1.f / 60.f);
 		sprite.create_batch(transform, *this);
 	}
 
@@ -148,6 +147,18 @@ void renderer::render_scene(core::scene& pScene)
 {
 	for (auto& i : pScene)
 		render_layer(i);
+}
+
+void renderer::update_animations(core::scene& pScene, float pDelta)
+{
+	for (auto& i : pScene)
+	{
+		for (auto [id, sprite, transform] :
+			i.each<sprite_component, math::transform>())
+		{
+			sprite.get_controller().update(pDelta);
+		}
+	}
 }
 
 float renderer::get_pixel_per_unit_sq() const noexcept

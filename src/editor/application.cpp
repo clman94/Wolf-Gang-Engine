@@ -1689,6 +1689,7 @@ public:
 		if (mIs_running)
 		{
 			mEngine->step();
+			mRenderer.update_animations(mEngine->get_scene(), 1.f / 60.f);
 		}
 
 		// Clear the framebuffer with black.
@@ -1770,7 +1771,7 @@ public:
 						ImGui::GetColorU32({ 1, 1, 0, 0.4 }), 0, 15, 4);
 
 				visual_editor::begin("_SceneEditor", cursor, mRenderer.get_render_view().min, 1.f / mRenderer.get_render_view_scale());
-				
+
 				float delta = 1.f / 60.f;
 				if (!mIs_running)
 					delta = 0; // Pause all debugging. Makes the raycasts stay visible.
