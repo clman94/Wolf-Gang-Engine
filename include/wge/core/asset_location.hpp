@@ -79,8 +79,7 @@ public:
 		return mDirectory;
 	}
 
-	// Moves the directory and renames the autonamed files.
-	void move_to(const filesystem::path& pDirectory, const std::string& pName)
+	void move_directory(const filesystem::path& pDirectory)
 	{
 		assert(is_valid());
 		assert(!system_fs::exists(pDirectory));
@@ -90,10 +89,13 @@ public:
 		// Move the directory.
 		system_fs::rename(mDirectory, pDirectory);
 		mDirectory = pDirectory;
+	}
 
+	void rename(const std::string& pName)
+	{
 		// Get all autonamed files with the old name.
 		std::vector<filesystem::path> autonamed_files;
-		for (auto i : system_fs::directory_iterator(pDirectory))
+		for (auto i : system_fs::directory_iterator(mDirectory))
 		{
 			if (i.path().stem() == mName)
 				autonamed_files.push_back(i.path());
@@ -108,6 +110,13 @@ public:
 			log::info("Renaming autonamed file from {} to {}...", i.string(), new_path.string());
 			system_fs::rename(i, new_path);
 		}
+	}
+
+	// Moves the directory and renames the autonamed files.
+	void move_to(const filesystem::path& pDirectory, const std::string& pName)
+	{
+		move_directory(pDirectory);
+		rename(pName);
 	}
 
 private:
