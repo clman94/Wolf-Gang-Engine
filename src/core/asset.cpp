@@ -58,7 +58,7 @@ void asset::set_name(const std::string& pName)
 	mName = pName;
 }
 
-const util::uuid& asset::get_id() const noexcept
+const asset_id& asset::get_id() const noexcept
 {
 	return mId;
 }
@@ -131,12 +131,12 @@ void asset::set_resource(resource::uptr pResource) noexcept
 	update_resource_metadata();
 }
 
-const util::uuid& asset::get_parent_id() const noexcept
+const asset_id& asset::get_parent_id() const noexcept
 {
 	return mParent;
 }
 
-void asset::set_parent_id(const util::uuid& pId) noexcept
+void asset::set_parent_id(const asset_id& pId) noexcept
 {
 	mParent = pId;
 }

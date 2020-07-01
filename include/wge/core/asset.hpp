@@ -11,6 +11,8 @@
 namespace wge::core
 {
 
+using asset_id = util::uuid;
+
 // Assets are file-like objects that contain data and resources for a project.
 class asset final
 {
@@ -40,8 +42,8 @@ public:
 	const std::string& get_name() const noexcept;
 	void set_name(const std::string& pName);
 
-	const util::uuid& get_id() const noexcept;
-	void set_id(const util::uuid& pId) noexcept
+	const asset_id& get_id() const noexcept;
+	void set_id(const asset_id& pId) noexcept
 	{
 		mId = pId;
 	}
@@ -65,8 +67,8 @@ public:
 	}
 	void set_resource(resource::uptr pResource) noexcept;
 	
-	const util::uuid& get_parent_id() const noexcept;
-	void set_parent_id(const util::uuid& pId) noexcept;
+	const asset_id& get_parent_id() const noexcept;
+	void set_parent_id(const asset_id& pId) noexcept;
 	void set_parent(const asset::ptr& pAsset) noexcept;
 
 	bool is_primary_asset() const noexcept
@@ -95,7 +97,7 @@ private:
 private:
 	bool mCan_save_configuration = true;
 
-	util::uuid mParent;
+	asset_id mParent;
 
 	// Stores the resource.
 	resource::uptr mResource;
@@ -113,7 +115,7 @@ private:
 	std::string mDescription;
 
 	// The unique id that identifies this asset.
-	util::uuid mId;
+	asset_id mId;
 
 	// Any extra, structured, data that the user may want to store.
 	// This is also used to store serialized data.
@@ -155,7 +157,6 @@ public:
 
 	const util::uuid& get_id() const noexcept
 	{
-		assert(mAsset);
 		return mAsset->get_id();
 	}
 
