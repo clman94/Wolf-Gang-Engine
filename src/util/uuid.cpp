@@ -7,33 +7,11 @@
 namespace wge::util
 {
 
-static std::uint8_t from_hex_char(char pC)
-{
-	if (pC >= '0' && pC <= '9')
-		return static_cast<std::uint8_t>(pC - '0');
-	else if (pC >= 'a' && pC <= 'f')
-		return static_cast<std::uint8_t>(pC - 'a') + 10;
-	else if (pC >= 'A' && pC <= 'F')
-		return static_cast<std::uint8_t>(pC - 'A') + 10;
-	else
-		return 0;
-}
-
-static std::uint8_t from_hex(const char* pSrc)
-{
-	return (from_hex_char(pSrc[0]) << 4) + from_hex_char(pSrc[1]);
-}
-
 static void put_hex(char* pDest, std::uint8_t pVal)
 {
 	constexpr const char* chars = "0123456789abcdef";
 	pDest[0] = chars[pVal >> 4];
 	pDest[1] = chars[pVal & 0x0f];
-}
-
-uuid::uuid(const std::string_view& pStr)
-{
-	parse(pStr);
 }
 
 std::string uuid::to_string() const
@@ -78,35 +56,6 @@ std::string uuid::to_shortened_string() const
 	return result;
 }
 
-bool uuid::parse(const std::string_view& pStr)
-{
-	if (pStr.length() != 36)
-		return false;
-
-	mBytes[0] = from_hex(&pStr[0]);
-	mBytes[1] = from_hex(&pStr[2]);
-	mBytes[2] = from_hex(&pStr[4]);
-	mBytes[3] = from_hex(&pStr[6]);
-
-	mBytes[4] = from_hex(&pStr[9]);
-	mBytes[5] = from_hex(&pStr[11]);
-
-	mBytes[6] = from_hex(&pStr[14]);
-	mBytes[7] = from_hex(&pStr[16]);
-
-	mBytes[8] = from_hex(&pStr[19]);
-	mBytes[9] = from_hex(&pStr[21]);
-
-	mBytes[10] = from_hex(&pStr[24]);
-	mBytes[11] = from_hex(&pStr[26]);
-	mBytes[12] = from_hex(&pStr[28]);
-	mBytes[13] = from_hex(&pStr[30]);
-	mBytes[14] = from_hex(&pStr[32]);
-	mBytes[15] = from_hex(&pStr[34]);
-
-	return true;
-}
-
 json uuid::to_json() const
 {
 	return to_string();
@@ -118,10 +67,6 @@ void uuid::from_json(const json& pJson)
 		parse(pJson);
 	else if (pJson.is_array() && pJson.size() == 16)
 		mBytes = pJson;
-	else
-	{
-		log::error("Could not parse json uuid.");
-	}
 }
 
 uuid generate_uuid()

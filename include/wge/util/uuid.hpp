@@ -15,7 +15,10 @@ class uuid
 {
 public:
 	constexpr uuid() noexcept = default;
-	uuid(const std::string_view& pStr);
+	constexpr uuid(std::string_view pStr) noexcept
+	{
+		parse(pStr);
+	}
 
 	template <typename Titer>
 	constexpr uuid(Titer pBegin, Titer pEnd)
@@ -44,7 +47,7 @@ public:
 	// Outputs only the last 12 digits of the uuid.
 	std::string to_shortened_string() const;
 
-	bool parse(const std::string_view& pStr);
+	constexpr bool parse(std::string_view pStr) noexcept;
 
 	json to_json() const;
 	void from_json(const json& pJson);
@@ -93,6 +96,59 @@ private:
 	std::array<std::uint8_t, 16> mBytes{ { 0 } };
 };
 
+namespace detail
+{
+
+constexpr std::uint8_t from_hex_char(char pC) noexcept
+{
+	if (pC >= '0' && pC <= '9')
+		return static_cast<std::uint8_t>(pC - '0');
+	else if (pC >= 'a' && pC <= 'f')
+		return static_cast<std::uint8_t>(pC - 'a') + 10;
+	else if (pC >= 'A' && pC <= 'F')
+		return static_cast<std::uint8_t>(pC - 'A') + 10;
+	else
+		return 0;
+}
+
+constexpr std::uint8_t from_hex(std::string_view pSrc) noexcept
+{
+	if (pSrc.length() < 2)
+		return 0;
+	return (from_hex_char(pSrc[0]) << 4) + from_hex_char(pSrc[1]);
+}
+
+} // namespace detail
+
+constexpr bool uuid::parse(std::string_view pStr) noexcept
+{
+	if (pStr.length() != 36)
+		return false;
+
+	mBytes[0] = detail::from_hex(pStr.substr(0, 2));
+	mBytes[1] = detail::from_hex(pStr.substr(2, 2));
+	mBytes[2] = detail::from_hex(pStr.substr(4, 2));
+	mBytes[3] = detail::from_hex(pStr.substr(6, 2));
+
+	mBytes[4] = detail::from_hex(pStr.substr(9, 2));
+	mBytes[5] = detail::from_hex(pStr.substr(11, 2));
+
+	mBytes[6] = detail::from_hex(pStr.substr(14, 2));
+	mBytes[7] = detail::from_hex(pStr.substr(16, 2));
+
+	mBytes[8] = detail::from_hex(pStr.substr(19, 2));
+	mBytes[9] = detail::from_hex(pStr.substr(21, 2));
+
+	mBytes[10] = detail::from_hex(pStr.substr(24, 2));
+	mBytes[11] = detail::from_hex(pStr.substr(26, 2));
+	mBytes[12] = detail::from_hex(pStr.substr(28, 2));
+	mBytes[13] = detail::from_hex(pStr.substr(30, 2));
+	mBytes[14] = detail::from_hex(pStr.substr(32, 2));
+	mBytes[15] = detail::from_hex(pStr.substr(34, 2));
+
+	return true;
+}
+
 uuid generate_uuid();
 
 } // namespace wge::util
@@ -105,7 +161,7 @@ template<> struct hash<wge::util::uuid>
 	{
 		if constexpr (sizeof(std::size_t) == 4)
 			return pU.to_hash32();
-		else if constexpr(sizeof(std::size_t) == 8)
+		else if constexpr (sizeof(std::size_t) == 8)
 			return pU.to_hash64();
 	}
 };
