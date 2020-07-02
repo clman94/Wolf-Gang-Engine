@@ -80,23 +80,11 @@ public:
 	{
 		return std::dynamic_pointer_cast<secondary_asset_location>(mLocation) != nullptr;
 	}
-
-	void set_save_configuration(bool pEnable_save) noexcept
-	{
-		mCan_save_configuration = pEnable_save;
-	}
-
-	bool is_save_configuration_enabled() const noexcept
-	{
-		return mCan_save_configuration;
-	}
 	
 private:
 	void update_resource_metadata() const;
 
 private:
-	bool mCan_save_configuration = true;
-
 	asset_id mParent;
 
 	// Stores the resource.
