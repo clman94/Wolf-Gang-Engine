@@ -143,7 +143,7 @@ public:
 		return mAsset;
 	}
 
-	const util::uuid& get_id() const noexcept
+	const asset_id& get_id() const noexcept
 	{
 		return mAsset->get_id();
 	}

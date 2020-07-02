@@ -59,7 +59,7 @@ void object_editor::on_close()
 			get_context().close_editor(i.id);
 }
 
-inline void object_editor::display_sprite_input(core::object_resource* pGenerator)
+void object_editor::display_sprite_input(core::object_resource* pGenerator)
 {
 	core::asset::ptr sprite = get_asset_manager().get_asset(pGenerator->display_sprite);
 	if (sprite = asset_selector("SpriteSelector", "sprite", get_asset_manager(), sprite))
@@ -106,30 +106,13 @@ void object_editor::display_event_list(core::object_resource* pGenerator)
 
 void object_editor::create_event_script(std::size_t pIndex)
 {
-	core::asset_manager& asset_manager = get_context().get_engine().get_asset_manager();
-
 	auto name = core::object_resource::event_typenames[pIndex];
-
-	try {
-		// Generate a file.
-		filesystem::file_stream out;
-		out.open(get_asset()->get_location()->get_file(std::string(name) + ".lua"), filesystem::stream_access::write);
-		out.write(fmt::format("-- Event: {}\n\n", name));
-		out.close();
-	}
-	catch (const filesystem::io_error& e)
-	{
-		log::error("Couldn't generate file for event.");
-		log::error("io_error: {}", e.what());
-		return;
-	}
 
 	// Generate a uuid for this event.
 	auto resource = get_asset()->get_resource<core::object_resource>();
-	resource->events[pIndex].id = util::generate_uuid();
-
-	// Make sure all the assets are created.
-	core::create_object_script_assets(get_asset(), get_asset_manager());
+	auto new_asset = scripting::script::create_secondary_asset(get_asset(), name, fmt::format("-- Event: {}\n\n", name));
+	get_asset_manager().add_asset(new_asset.get_asset());
+	resource->events[pIndex].id = new_asset.get_id();
 }
 
 } // namespace wge::editor

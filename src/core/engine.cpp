@@ -40,7 +40,7 @@ engine::engine()
 	mAsset_manager.register_resource_factory("object", [this](const asset::ptr& pAsset)
 	{
 		pAsset->set_resource(std::make_unique<object_resource>());
-		create_object_script_assets(pAsset, mAsset_manager);
+		object_resource::load_event_scripts(pAsset, mAsset_manager);
 	});
 	mAsset_manager.register_default_resource_factory<scripting::script>("script");
 

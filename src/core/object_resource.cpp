@@ -87,7 +87,7 @@ void object_resource::deserialize_data(const json& pJson)
 	is_collision_enabled = pJson["is_collision_enabled"];
 }
 
-void create_object_script_assets(object_resource::handle pHandle, core::asset_manager& pAsset_mgr)
+void object_resource::load_event_scripts(const object_resource::handle& pHandle, core::asset_manager& pAsset_mgr)
 {
 	const auto primary_location = std::dynamic_pointer_cast<primary_asset_location>(pHandle.get_asset()->get_location());
 	std::size_t event_index = 0;
@@ -96,18 +96,8 @@ void create_object_script_assets(object_resource::handle pHandle, core::asset_ma
 		const auto name = object_resource::event_typenames[event_index];
 		if (i.id.is_valid() && !pAsset_mgr.has_asset(i.id))
 		{
-			const auto new_asset = std::make_shared<asset>();
-			new_asset->set_name(name);
-			new_asset->set_id(i.id);
-			new_asset->set_parent_id(pHandle.get_id());
-			i.handle = new_asset;
-			pAsset_mgr.add_asset(new_asset);
-
-			auto script_resource = std::make_unique<scripting::script>();
-			script_resource->set_location(secondary_asset_location::create(primary_location, name));
-			script_resource->load();
-			new_asset->set_resource(std::move(script_resource));
-		}
+			i.handle = scripting::script::load_secondary_asset(pHandle.get_asset(), name, i.id);
+			pAsset_mgr.add_asset(i.handle.get_asset());
 		++event_index;
 	}
 }

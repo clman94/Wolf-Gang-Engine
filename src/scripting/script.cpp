@@ -60,4 +60,38 @@ void script::save()
 	}
 }
 
+script::handle script::create_secondary_asset(const core::asset::ptr& pParent, const std::string& pName, const std::string& pDefault_text)
+{
+	try {
+		// Generate a file.
+		filesystem::file_stream out;
+		out.open(pParent->get_location()->get_file(std::string(pName) + ".lua"), filesystem::stream_access::write);
+		out.write(pDefault_text);
+		out.close();
+	}
+	catch (const filesystem::io_error& e)
+	{
+		log::error("Couldn't generate file for event.");
+		log::error("io_error: {}", e.what());
+		return nullptr;
+	}
+	return load_secondary_asset(pParent, pName, util::generate_uuid());
+}
+
+script::handle script::load_secondary_asset(const core::asset::ptr& pParent, const std::string& pName, const core::asset_id& pId)
+{
+	const auto new_asset = std::make_shared<core::asset>();
+	new_asset->set_name(pName);
+	new_asset->set_id(pId);
+	new_asset->set_parent_id(pParent->get_id());
+
+	auto script_resource = std::make_unique<scripting::script>();
+	const auto primary_location = std::dynamic_pointer_cast<core::primary_asset_location>(pParent->get_location());
+	script_resource->set_location(core::secondary_asset_location::create(primary_location, pName));
+	script_resource->load();
+	new_asset->set_resource(std::move(script_resource));
+
+	return new_asset;
+}
+
 } // namespace wge::scripting
