@@ -13,8 +13,16 @@ asset_editor::asset_editor(context& pContext, const core::asset::ptr& pAsset) no
 	mContext(&pContext),
 	mAsset(pAsset)
 {
+	assert(pAsset != nullptr);
+	mContext->claim_asset(*this, pAsset->get_id());
 	mWindow_str_id = "###" + mAsset->get_id().to_string();
 }
+
+asset_editor::~asset_editor()
+{
+	mContext->release_asset(mAsset->get_id());
+}
+
 void asset_editor::focus_window() const noexcept
 {
 	ImGui::SetWindowFocus(mWindow_str_id.c_str());
@@ -81,8 +89,8 @@ void context::save_asset(const core::asset::ptr& pAsset)
 
 void context::save_all_assets()
 {
-	for (auto& i : mAsset_editors)
-		i->on_save();
+	for (auto& [id, editor] : mGlobal_editors)
+		editor->on_save();
 	for (auto& i : mUnsaved_assets)
 		i->save();
 	mUnsaved_assets.clear();
@@ -97,6 +105,14 @@ asset_editor* context::open_editor(const core::asset::ptr& pAsset, unsigned int 
 {
 	assert(pAsset);
 
+	// If it's a secondary asset load the parent's asset editor first.
+	if (pAsset->is_secondary_asset())
+	{
+		assert(pAsset->get_parent_id().is_valid());
+		auto parent_asset = mEngine.get_asset_manager().get_asset(pAsset->get_parent_id());
+		open_editor(parent_asset);
+	}
+
 	// If the editor already exists, set the focus on its window.
 	if (auto editor = get_editor(pAsset))
 	{
@@ -104,17 +120,19 @@ asset_editor* context::open_editor(const core::asset::ptr& pAsset, unsigned int 
 		editor->focus_window();
 		return editor;
 	}
-
-	// Create a new editor for this asset.
-	auto iter = mEditor_factories.find(pAsset->get_type());
-	if (iter != mEditor_factories.end())
+	if (pAsset->is_primary_asset())
 	{
-		mAsset_editors.push_back(iter->second(pAsset));
-		return mAsset_editors.back().get();
-	}
-	else
-	{
-		log::error("No editor registered for asset type \"{}\"", pAsset->get_type());
+		// Create a new editor for this asset.
+		auto iter = mEditor_factories.find(pAsset->get_type());
+		if (iter != mEditor_factories.end())
+		{
+			mGlobal_editors[pAsset->get_id()] = iter->second(pAsset);
+			return mGlobal_editors[pAsset->get_id()].get();
+		}
+		else
+		{
+			log::error("No editor registered for asset type \"{}\"", pAsset->get_type());
+		}
 	}
 
 	return nullptr;
@@ -122,39 +140,18 @@ asset_editor* context::open_editor(const core::asset::ptr& pAsset, unsigned int 
 
 void context::close_editor(const core::asset::ptr& pAsset)
 {
-	for (auto iter = mAsset_editors.begin(); iter != mAsset_editors.end(); ++iter)
-	{
-		if (!*iter)
-			continue;
-		asset_editor* editor = iter->get();
-		if (editor->get_asset() == pAsset)
-		{
-			editor->on_close();
-			iter->reset();
-			break;
-		}
-	}
+	close_editor(pAsset->get_id());
 }
 
-void context::close_editor(const util::uuid& pIds)
+void context::close_editor(const core::asset_id& pId)
 {
-	for (auto iter = mAsset_editors.begin(); iter != mAsset_editors.end(); ++iter)
-	{
-		if (!*iter)
-			continue;
-		asset_editor* editor = iter->get();
-		if (editor->get_asset()->get_id() == pIds)
-		{
-			editor->on_close();
-			iter->reset();
-			break;
-		}
-	}
+	mGlobal_editors[pId] = nullptr;
 }
 
 void context::close_all_editors()
 {
-	mAsset_editors.clear();
+	for (auto [id, editor] : mCurrent_editors)
+		editor->hide();
 }
 
 bool context::draw_editor(asset_editor& pEditor)
@@ -197,71 +194,45 @@ bool context::draw_editor(asset_editor& pEditor)
 		pEditor.on_gui();
 	}
 	ImGui::End();
-
-	if (!is_window_open)
-	{
-		if (is_asset_modified(pEditor.get_asset()))
-			pEditor.set_visible(false);
-	}
+	pEditor.set_visible(is_window_open);
 	return is_window_open;
 }
 
 void context::show_editor_guis()
 {
-	for (auto iter = mAsset_editors.begin(); iter != mAsset_editors.end(); ++iter)
+	for (auto& [id, editor] : mGlobal_editors)
 	{
-		if (!*iter)
-			continue;
-		bool is_open = draw_editor(*iter->get());
-		if (!is_open && iter->get()->is_visible())
-			iter->reset();
+		if (editor)
+		{
+			draw_editor(*editor);
+		}
 	}
-	erase_deleted_editors();
 }
 
 bool context::is_editor_open_for(const core::asset::ptr& pAsset) const
 {
-	for (const auto& i : mAsset_editors)
-		if (i && i->get_asset() == pAsset)
-			return true;
-	return false;
+	return is_editor_open_for(pAsset->get_id());
 }
 
-bool context::is_editor_open_for(const util::uuid& pAsset_id) const
+bool context::is_editor_open_for(const core::asset_id& pAsset_id) const
 {
-	for (const auto& i : mAsset_editors)
-		if (i && i->get_asset()->get_id() == pAsset_id &&
-			i->is_visible())
-			return true;
-	return false;
+	return mCurrent_editors.find(pAsset_id) != mCurrent_editors.end();
 }
 
 asset_editor* context::get_editor(const core::asset::ptr& pAsset) const
 {
-	for (const auto& i : mAsset_editors)
-		if (i && i->get_asset() == pAsset)
-			return i.get();
+	for (const auto& [id, editor] : mCurrent_editors)
+		if (pAsset->get_id() == id)
+			return editor;
 	return nullptr;
 }
 
-asset_editor * context::get_editor(const util::uuid& pId) const
+asset_editor* context::get_editor(const core::asset_id& pId) const
 {
-	for (const auto& i : mAsset_editors)
-		if (i && i->get_asset()->get_id() == pId)
-			return i.get();
+	for (const auto& [id, editor] : mCurrent_editors)
+		if (pId == id)
+			return editor;
 	return nullptr;
-}
-
-void context::erase_deleted_editors()
-{
-	auto iter = mAsset_editors.begin();
-	while (iter != mAsset_editors.end())
-	{
-		if (*iter)
-			++iter;
-		else
-			mAsset_editors.erase(iter++);
-	}
 }
 
 } // namespace wge::editor

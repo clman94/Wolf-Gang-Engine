@@ -26,7 +26,7 @@ public:
 	using uptr = std::unique_ptr<asset_editor>;
 
 	asset_editor(context& pContext, const core::asset::ptr& pAsset) noexcept;
-	virtual ~asset_editor() {}
+	virtual ~asset_editor();
 
 	virtual void on_gui() = 0;
 	virtual void on_save() {}
@@ -53,6 +53,8 @@ public:
 
 	bool is_visible() const noexcept { return mIs_visible; }
 	void set_visible(bool pVisible) noexcept { mIs_visible = pVisible; }
+	void show() noexcept { mIs_visible = true; }
+	void hide() noexcept { mIs_visible = false; }
 
 	void set_parent_editor_id(const util::uuid& pAsset_id) noexcept { mParent_editor_asset_id = pAsset_id; }
 	const util::uuid& get_parent_editor_id() const noexcept { return mParent_editor_asset_id; }
@@ -108,14 +110,14 @@ public:
 	void register_editor(const std::string& pAsset_type, Targs&&...);
 	asset_editor* open_editor(const core::asset::ptr& pAsset, unsigned int pDock_id = 0);
 	void close_editor(const core::asset::ptr& pAsset);
-	void close_editor(const util::uuid& pIds);
+	void close_editor(const core::asset_id& pId);
 	void close_all_editors();
 	bool draw_editor(asset_editor& pEditor);
 	void show_editor_guis();
 	bool is_editor_open_for(const core::asset::ptr& pAsset) const;
-	bool is_editor_open_for(const util::uuid& pAsset_id) const;
+	bool is_editor_open_for(const core::asset_id& pId) const;
 	asset_editor* get_editor(const core::asset::ptr& pAsset) const;
-	asset_editor* get_editor(const util::uuid& pId) const;
+	asset_editor* get_editor(const core::asset_id& pId) const;
 
 	void set_default_dock_id(unsigned int pId) noexcept
 	{
@@ -127,8 +129,16 @@ public:
 		return mDefault_dock_id;
 	}
 
-private:
-	void erase_deleted_editors();
+	void claim_asset(asset_editor& pEditor, const core::asset_id& pId)
+	{
+		assert(mCurrent_editors[pId] == nullptr);
+		mCurrent_editors[pId] = &pEditor;
+	}
+
+	void release_asset(const core::asset_id& pId)
+	{
+		mCurrent_editors[pId] = nullptr;
+	}
 
 private:
 	// This is the imgui dock id for the dockspace
@@ -141,10 +151,10 @@ private:
 	modified_assets mUnsaved_assets;
 	std::map<std::string, editor_factory> mEditor_factories;
 
-	// We don't want iterators to be invalidated while we are
-	// adding and removing editors so lets just store the editors
-	// in a linked list.
-	std::list<asset_editor::uptr> mAsset_editors;
+	// Keeps track of all editors and their assets regardless if they are global or not.
+	std::unordered_map<core::asset_id, asset_editor*> mCurrent_editors;
+	// Editors for primary assets.
+	std::unordered_map<core::asset_id, asset_editor::uptr> mGlobal_editors;
 };
 
 template<typename T, typename...Targs>

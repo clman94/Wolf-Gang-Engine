@@ -25,12 +25,11 @@ private:
 
 private:
 	void create_event_script(std::size_t pIndex);
+	void create_script_editors();
 
-	std::map<util::uuid, std::unique_ptr<script_editor>> mScript_editors;
+	std::map<core::asset_id, std::unique_ptr<script_editor>> mScript_editors;
 
 	ImGuiID mScript_editor_dock_id = 0;
 };
 
-
 } // namespace wge::editor
-

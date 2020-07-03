@@ -18,7 +18,9 @@ namespace wge::editor
 
 object_editor::object_editor(context& pContext, const core::asset::ptr& pAsset) noexcept :
 	asset_editor(pContext, pAsset)
-{}
+{
+	create_script_editors();
+}
 
 void object_editor::on_gui()
 {
@@ -46,8 +48,7 @@ void object_editor::on_gui()
 
 	for (auto&& [_, editor] : mScript_editors)
 	{
-		if (editor)
-			editor->set_visible(get_context().draw_editor(*editor));
+		get_context().draw_editor(*editor);
 	}
 }
 
@@ -86,19 +87,8 @@ void object_editor::display_event_list(core::object_resource* pGenerator)
 				create_event_script(type);
 				mark_asset_modified();
 			}
-			if (info.id.is_valid() && info.handle.is_valid())
-			{
-				auto& editor = mScript_editors[info.id];
-				if (!editor)
-					editor = std::make_unique<script_editor>(get_context(), info.handle.get_asset());
-				editor->set_dock_family_id(mScript_editor_dock_id);
-				editor->focus_window();
-				editor->set_visible(true);
-			}
-			else
-			{
-				log::error("Couldn't open editor for event.");
-			}
+			mScript_editors[info.id]->show();
+			mScript_editors[info.id]->focus_window();
 		}
 	}
 	ImGui::EndChild();
@@ -112,7 +102,26 @@ void object_editor::create_event_script(std::size_t pIndex)
 	auto resource = get_asset()->get_resource<core::object_resource>();
 	auto new_asset = scripting::script::create_secondary_asset(get_asset(), name, fmt::format("-- Event: {}\n\n", name));
 	get_asset_manager().add_asset(new_asset.get_asset());
-	resource->events[pIndex].id = new_asset.get_id();
+	auto& event = resource->events[pIndex];
+	event.id = new_asset.get_id();
+	event.handle = new_asset;
+
+	// Make sure a new editor is created for this asset.
+	create_script_editors();
+}
+
+void object_editor::create_script_editors()
+{
+	for (auto& info  : get_asset()->get_resource<core::object_resource>()->events)
+	{
+		if (info.id.is_valid() && info.handle.is_valid() && mScript_editors[info.id] == nullptr)
+		{
+			auto& editor = mScript_editors[info.id];
+			editor = std::make_unique<script_editor>(get_context(), info.handle.get_asset());
+			editor->set_dock_family_id(mScript_editor_dock_id);
+			editor->hide();
+		}
+	}
 }
 
 } // namespace wge::editor
