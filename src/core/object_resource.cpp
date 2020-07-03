@@ -98,6 +98,7 @@ void object_resource::load_event_scripts(const object_resource::handle& pHandle,
 		{
 			i.handle = scripting::script::load_secondary_asset(pHandle.get_asset(), name, i.id);
 			pAsset_mgr.add_asset(i.handle.get_asset());
+		}
 		++event_index;
 	}
 }
