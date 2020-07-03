@@ -28,7 +28,7 @@ public:
 
 	// Scripts are used frequently as secondary assets, so these are utility functions for creating and loading them.
 	// Creates a new script file.
-	static handle create_secondary_asset(const core::asset::ptr& pParent, const std::string& pName, const std::string& pDefault_text);
+	static handle create_secondary_asset(const core::asset::ptr& pParent, const std::string& pName, const std::string& pDefault_text, const core::asset_id& pCustom_id = {});
 	// Loads an existing script file.
 	static handle load_secondary_asset(const core::asset::ptr& pParent, const std::string& pName, const core::asset_id& pId);
 };

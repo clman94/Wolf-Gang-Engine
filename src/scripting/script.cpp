@@ -60,7 +60,7 @@ void script::save()
 	}
 }
 
-script::handle script::create_secondary_asset(const core::asset::ptr& pParent, const std::string& pName, const std::string& pDefault_text)
+script::handle script::create_secondary_asset(const core::asset::ptr& pParent, const std::string& pName, const std::string& pDefault_text, const core::asset_id& pCustom_id)
 {
 	try {
 		// Generate a file.
@@ -75,7 +75,7 @@ script::handle script::create_secondary_asset(const core::asset::ptr& pParent, c
 		log::error("io_error: {}", e.what());
 		return nullptr;
 	}
-	return load_secondary_asset(pParent, pName, util::generate_uuid());
+	return load_secondary_asset(pParent, pName, pCustom_id.is_valid() ? pCustom_id : util::generate_uuid());
 }
 
 script::handle script::load_secondary_asset(const core::asset::ptr& pParent, const std::string& pName, const core::asset_id& pId)
