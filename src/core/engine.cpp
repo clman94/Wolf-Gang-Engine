@@ -89,13 +89,19 @@ void engine::step()
 {
 	float delta = 1.f / 60.f;
 
-	for (auto& i : mScene.get_layer_container())
+	for (auto& i : mScene)
 		mPhysics.preupdate(i, mGraphics.get_pixels_per_unit_sq(), delta);
 
-	for (auto& i : mScene.get_layer_container())
-		mLua_engine.update_layer(i, delta);
+	mLua_engine.update_delta(delta);
 
-	for (auto& i : mScene.get_layer_container())
+	for (auto& i : mScene)
+		mLua_engine.event_create(i);
+	for (auto& i : mScene)
+		mLua_engine.event_unique_create(i);
+	for (auto& i : mScene)
+		mLua_engine.event_update(i);
+
+	for (auto& i : mScene)
 		mPhysics.postupdate(i, delta);
 }
 
