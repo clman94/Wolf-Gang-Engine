@@ -36,26 +36,12 @@ void asset_manager_window::on_gui()
 
 				if (ImGui::MenuItem("Object"))
 				{
-					auto asset = std::make_shared<core::asset>();
-					asset->set_name("New_Object");
-					asset->set_parent(mCurrent_folder);
-					asset->set_type("object");
-					asset->set_resource(std::make_unique<core::object_resource>());
-					mAsset_manager.store_asset(asset);
-					asset->save();
-					mAsset_manager.add_asset(asset);
+					mAsset_manager.create_primary_asset(mAsset_manager.get_asset_path(mCurrent_folder) / "new_object", "object");
 				}
 
 				if (ImGui::MenuItem("Scene"))
 				{
-					auto asset = std::make_shared<core::asset>();
-					asset->set_name("New_Scene");
-					asset->set_parent(mCurrent_folder);
-					asset->set_type("scene");
-					asset->set_resource(std::make_unique<core::scene_resource>());
-					mAsset_manager.store_asset(asset);
-					asset->save();
-					mAsset_manager.add_asset(asset);
+					mAsset_manager.create_primary_asset(mAsset_manager.get_asset_path(mCurrent_folder) / "new_scene", "scene");
 				}
 
 				ImGui::EndMenu();

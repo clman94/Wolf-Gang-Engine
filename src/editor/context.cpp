@@ -16,6 +16,8 @@ asset_editor::asset_editor(context& pContext, const core::asset::ptr& pAsset) no
 	assert(pAsset != nullptr);
 	mContext->claim_asset(*this, pAsset->get_id());
 	mWindow_str_id = "###" + mAsset->get_id().to_string();
+	create_sub_editors();
+	hide_sub_editors();
 }
 
 asset_editor::~asset_editor()
@@ -52,6 +54,35 @@ core::asset_manager& asset_editor::get_asset_manager() const noexcept
 	return mContext->get_engine().get_asset_manager();
 }
 
+void asset_editor::display_sub_editors()
+{
+	for (auto&& [id, e] : mSub_editors)
+	{
+		if (e != nullptr && get_asset_manager().has_asset(id))
+			mContext->draw_editor(*e);
+		else
+			e = nullptr;
+	}
+}
+
+void asset_editor::create_sub_editors()
+{
+	for (auto child : get_asset_manager().each_child(mAsset))
+	{
+		if (child->is_secondary_asset() && mSub_editors[child->get_id()] == nullptr)
+		{
+			mSub_editors[child->get_id()] = mContext->create_editor(child);
+		}
+	}
+}
+
+void asset_editor::hide_sub_editors()
+{
+	for (auto& [id, editor] : mSub_editors)
+		if (editor)
+			editor->hide();
+}
+
 void context::add_modified_asset(const core::asset::ptr& pAsset)
 {
 	if (pAsset && !is_asset_modified(pAsset))
@@ -84,7 +115,7 @@ void context::save_asset(const core::asset::ptr& pAsset)
 		}
 		mUnsaved_assets.erase(iter);
 	}
-	pAsset->save();
+	mEngine.get_asset_manager().save_asset(pAsset);
 }
 
 void context::save_all_assets()
@@ -92,13 +123,28 @@ void context::save_all_assets()
 	for (auto& [id, editor] : mGlobal_editors)
 		editor->on_save();
 	for (auto& i : mUnsaved_assets)
-		i->save();
+		mEngine.get_asset_manager().save_asset(i);
 	mUnsaved_assets.clear();
 }
 
 context::modified_assets& context::get_unsaved_assets() noexcept
 {
 	return mUnsaved_assets;
+}
+
+asset_editor::uptr context::create_editor(const core::asset::ptr& pAsset) const
+{
+	// Create a new editor for this asset.
+	auto iter = mEditor_factories.find(pAsset->get_type());
+	if (iter != mEditor_factories.end())
+	{
+		return iter->second(pAsset);
+	}
+	else
+	{
+		log::error("No editor registered for asset type \"{}\"", pAsset->get_type());
+	}
+	return nullptr;
 }
 
 asset_editor* context::open_editor(const core::asset::ptr& pAsset, unsigned int pDock_id)
@@ -122,17 +168,8 @@ asset_editor* context::open_editor(const core::asset::ptr& pAsset, unsigned int 
 	}
 	if (pAsset->is_primary_asset())
 	{
-		// Create a new editor for this asset.
-		auto iter = mEditor_factories.find(pAsset->get_type());
-		if (iter != mEditor_factories.end())
-		{
-			mGlobal_editors[pAsset->get_id()] = iter->second(pAsset);
-			return mGlobal_editors[pAsset->get_id()].get();
-		}
-		else
-		{
-			log::error("No editor registered for asset type \"{}\"", pAsset->get_type());
-		}
+		mGlobal_editors[pAsset->get_id()] = create_editor(pAsset);
+		return mGlobal_editors[pAsset->get_id()].get();
 	}
 
 	return nullptr;
@@ -167,7 +204,8 @@ bool context::draw_editor(asset_editor& pEditor)
 
 	// Construct a title with the id as the stringified asset id so the name can change freely
 	// without affecting the window.
-	const std::string title = asset->get_name() + "###" + asset->get_id().to_string();
+	const std::string title = pEditor.get_title().empty() ? asset->get_name() : pEditor.get_title();
+	const std::string str_id = asset->get_name() + "###" + asset->get_id().to_string();
 
 	ImGuiWindowFlags flags = (is_asset_modified(asset) ? ImGuiWindowFlags_UnsavedDocument : 0);
 	if (pEditor.is_first_time())

@@ -17,7 +17,6 @@ class object_editor :
 public:
 	object_editor(context& pContext, const core::asset::ptr& pAsset) noexcept;
 	virtual void on_gui() override;
-	virtual void on_close() override;
 
 private:
 	void display_sprite_input(core::object_resource* pGenerator);
@@ -25,9 +24,6 @@ private:
 
 private:
 	void create_event_script(std::size_t pIndex);
-	void create_script_editors();
-
-	std::map<core::asset_id, std::unique_ptr<script_editor>> mScript_editors;
 
 	ImGuiID mScript_editor_dock_id = 0;
 };

@@ -314,35 +314,26 @@ public:
 		graphics::image sprite((mDirectory / pFilepath).string());
 
 		// Create the new asset.
-		auto tileset_asset = std::make_shared<core::asset>();
-		tileset_asset->set_name(pFilepath.stem().string());
-		tileset_asset->set_type("tileset");
-		pAsset_mgr.store_asset(tileset_asset);
+		auto tileset_asset = pAsset_mgr.create_primary_asset(pFilepath.stem().string(), "sprite");
 
 		// Save the image to the asset's location.
 		bool success = sprite.save_png(tileset_asset->get_location()->get_autonamed_file(".png").string());
 		assert(success);
 
 		// Configure the resource.
-		auto tileset_resource = pAsset_mgr.create_resource_for(tileset_asset);
+		auto tileset_resource = tileset_asset->get_resource<graphics::sprite>();
 		tileset_resource->set_location(tileset_asset->get_location());
 		tileset_resource->load();
 
 		// Save the configuration.
-		tileset_asset->save();
-		pAsset_mgr.add_asset(tileset_asset);
+		pAsset_mgr.save_asset(tileset_asset);
 		register_link(tileset_asset, pFilepath.stem().string());
 	}
 
 	void import_sprite(const std::string& pPath, core::asset_manager& pAsset_mgr)
 	{
 		const std::string name = std::filesystem::path(pPath).stem().string();
-
-		// Create the new asset.
-		auto sprite_asset = std::make_shared<core::asset>();
-		sprite_asset->set_name(name);
-		sprite_asset->set_type("sprite");
-		pAsset_mgr.store_asset(sprite_asset);
+		core::asset::ptr sprite_asset = pAsset_mgr.create_primary_asset(name, "sprite");
 
 		// Save the new spritesheet to the asset's location.
 		const spritesheet_data spritesheet = create_spritesheet(mDirectory / pPath);
@@ -350,15 +341,14 @@ public:
 		assert(success);
 
 		// Configure the resource.
-		auto sprite_resource = pAsset_mgr.create_resource_for<graphics::sprite>(sprite_asset);
+		auto sprite_resource = sprite_asset->get_resource<graphics::sprite>();
 		sprite_resource->set_location(sprite_asset->get_location());
 		sprite_resource->resize_animation(spritesheet.frame_count);
 		sprite_resource->set_frame_size(spritesheet.frame_size);
 		sprite_resource->load();
 
 		// Save the configuration.
-		sprite_asset->save();
-		pAsset_mgr.add_asset(sprite_asset);
+		pAsset_mgr.save_asset(sprite_asset);
 		register_link(sprite_asset, pPath);
 	}
 
@@ -381,7 +371,7 @@ public:
 		sprite_resource->set_frame_size(spritesheet.frame_size);
 		sprite_resource->load();
 
-		asset->save();
+		pAsset_mgr.save_asset(asset);
 
 		register_link(asset, pPath);
 	}

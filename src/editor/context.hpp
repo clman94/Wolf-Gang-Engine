@@ -43,7 +43,6 @@ public:
 	}
 
 	void focus_window() const noexcept;
-
 	void mark_asset_modified() const;
 
 	void set_dock_family_id(unsigned int id) { mDock_family_id = id; }
@@ -56,25 +55,27 @@ public:
 	void show() noexcept { mIs_visible = true; }
 	void hide() noexcept { mIs_visible = false; }
 
+	void set_title(const std::string& pTitle) { mTitle = pTitle; }
+	const std::string& get_title() const noexcept { return mTitle; }
+
 	void set_parent_editor_id(const util::uuid& pAsset_id) noexcept { mParent_editor_asset_id = pAsset_id; }
 	const util::uuid& get_parent_editor_id() const noexcept { return mParent_editor_asset_id; }
 
-	void mark_first_time() noexcept
-	{
-		mFirst_time = false;
-	}
-
-	bool is_first_time() const noexcept
-	{
-		return mFirst_time;
-	}
+	void mark_first_time() noexcept { mFirst_time = false; }
+	bool is_first_time() const noexcept { return mFirst_time; }
 
 	core::asset_manager& get_asset_manager() const noexcept;
 
+	void display_sub_editors();
+	void create_sub_editors();
+	void hide_sub_editors();
+
 private:
+	std::unordered_map<core::asset_id, std::unique_ptr<asset_editor>> mSub_editors;
 	std::string mWindow_str_id;
 	context* mContext;
 	core::asset::ptr mAsset;
+	std::string mTitle;
 	bool mIs_visible = true;
 	bool mFirst_time = true;
 	unsigned int mDock_family_id{ 0 };
@@ -108,6 +109,7 @@ public:
 
 	template <typename T, typename...Targs>
 	void register_editor(const std::string& pAsset_type, Targs&&...);
+	asset_editor::uptr create_editor(const core::asset::ptr& pAsset) const;
 	asset_editor* open_editor(const core::asset::ptr& pAsset, unsigned int pDock_id = 0);
 	void close_editor(const core::asset::ptr& pAsset);
 	void close_editor(const core::asset_id& pId);

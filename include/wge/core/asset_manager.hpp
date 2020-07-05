@@ -18,6 +18,97 @@ public:
 	using resource_factory = std::function<void(const asset::ptr&)>;
 	using asset_container = std::vector<asset::ptr>;
 
+	class child_iterator
+	{
+	public:
+		child_iterator() noexcept = default;
+		child_iterator(const std::vector<asset::ptr>& pList, const asset_id& pParent) noexcept :
+			mList(&pList), mParent(pParent)
+		{
+			// Prime the iterator.
+			for (; mIterator < mList->size() &&
+					mList->at(mIterator)->get_parent_id() != mParent;
+				++mIterator);
+		}
+
+		asset::ptr get() const noexcept
+		{
+			if (valid())
+				return mList->at(mIterator);
+			return nullptr;
+		}
+
+		bool valid() const noexcept
+		{
+			return mList != nullptr && mIterator < mList->size();
+		}
+
+		void advance() noexcept
+		{
+			assert(valid());
+			++mIterator;
+			for (; mIterator < mList->size() &&
+				mList->at(mIterator)->get_parent_id() != mParent;
+				++mIterator);
+		}
+
+		child_iterator& operator++() noexcept
+		{
+			advance();
+			return *this;
+		}
+
+		asset::ptr operator*() noexcept
+		{
+			return get();
+		}
+
+		asset::ptr operator->() noexcept
+		{
+			return get();
+		}
+
+		bool operator == (const child_iterator& pOther) const noexcept
+		{
+			return valid() == pOther.valid();
+		}
+
+		bool operator != (const child_iterator& pOther) const noexcept
+		{
+			return !operator==(pOther);
+		}
+
+	private:
+		const std::vector<asset::ptr>* mList = nullptr;
+		asset_id mParent;
+		std::size_t mIterator = 0;
+		friend class child_filter;
+	};
+	
+	class child_filter
+	{
+	private:
+		child_filter(const std::vector<asset::ptr>& pList, const asset_id& pParent) :
+			mList(&pList), mParent(pParent)
+		{}
+
+	public:
+		child_iterator begin() const noexcept
+		{
+			return child_iterator{ *mList, mParent };
+		}
+
+		child_iterator end() const noexcept
+		{
+			return {};
+		}
+
+	private:
+		const std::vector<asset::ptr>* mList = nullptr;
+		asset_id mParent;
+		friend class asset_manager;
+	};
+
 	// TODO: Implement the filesystem_interface as the only means of
 	//   loading assets.
 	void set_filesystem(filesystem::filesystem_interface* pFilesystem);
@@ -64,7 +155,10 @@ public:
 		assert(pAsset);
 		auto iter = mResource_factories.find(pAsset->get_type());
 		if (iter != mResource_factories.end())
+		{
 			iter->second(pAsset);
+			pAsset->get_resource()->set_location(pAsset->get_location());
+		}
 		return pAsset->get_resource<Tcast>();
 	}
 
@@ -80,6 +174,12 @@ public:
 
 	// Create an asset representing a folder.
 	asset::ptr create_folder(const filesystem::path& pPath);
+
+	child_filter each_child(const asset::ptr& pParent) const
+	{
+		assert(pParent);
+		return { mAsset_list, pParent->get_id() };
+	}
 
 	// Calls pCallable for each asset that is a child of pParent.
 	template <typename Tcallable>
@@ -99,8 +199,14 @@ public:
 	// "dir.dir.name-000000000000"
 	std::string generate_asset_directory_name(const asset::ptr& pAsset) const;
 
-	filesystem::path create_asset_storage(const core::asset::ptr& pAsset) const;
-	void store_asset(const core::asset::ptr& pAsset) const;
+	primary_asset_location::ptr create_asset_storage(const core::asset::ptr& pAsset) const;
+	asset::ptr load_asset(const filesystem::path& pPath);
+	void serialize_asset(const core::asset::ptr& pAsset, json& pJson) const;
+	asset::ptr deserialize_asset(const json& pJson, const asset_location::ptr& pLocation);
+	asset::ptr create_primary_asset(const filesystem::path& pPath, const std::string& pType);
+	asset::ptr create_secondary_asset(const asset::ptr& pParent, const std::string& pName, const std::string& pType, const asset_id& pCustom_id = {});
+	void save_asset(const core::asset::ptr& pAsset) const;
+	void store_asset(const core::asset::ptr& pAsset);
 	bool rename_asset(const core::asset::ptr& pAsset, const std::string& pTo);
 	bool move_asset(const core::asset::ptr& pAsset, const core::asset::ptr& pTo);
 	void remove_asset_storage(const core::asset::ptr& pAsset) const;

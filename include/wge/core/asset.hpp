@@ -22,22 +22,19 @@ public:
 
 	asset();
 
-	// Load a file.
-	bool load_file(const filesystem::path& pSystem_path);
-
 	asset_location::ptr get_location() const noexcept
 	{
 		return mLocation;
 	}
-
-	// Save the assets configuration to its source file.
-	void save() const;
-
-	void save_to(const filesystem::path& pDirectory)
+	void set_location(const asset_location::ptr& pLocation) noexcept
 	{
-		mLocation = primary_asset_location::create(pDirectory, mName);
-		save();
+		mLocation = pLocation;
 	}
+
+	// Serializes the settings for this asset.
+	// Use asset_manager::save_asset() to save assets.
+	void serialize(json& pJson) const;
+	void deserialize(const json& pJson);
 
 	const std::string& get_name() const noexcept;
 	void set_name(const std::string& pName);
@@ -53,9 +50,6 @@ public:
 
 	const std::string& get_description() const noexcept;
 	void set_description(const std::string& pDescription);
-
-	const json& get_metadata() const noexcept;
-	void set_metadata(const json& pJson);
 
 	// Returns true if this asset stores resource data.
 	bool is_resource() const noexcept;
@@ -80,7 +74,7 @@ public:
 	{
 		return std::dynamic_pointer_cast<secondary_asset_location>(mLocation) != nullptr;
 	}
-	
+
 private:
 	void update_resource_metadata() const;
 
@@ -92,8 +86,7 @@ private:
 
 	asset_location::ptr mLocation;
 
-	// This is that path that the asset manager uses to
-	// locate assets.
+	// Name of the asset.
 	std::string mName;
 
 	// A string identifying the type of an asset.
@@ -104,12 +97,6 @@ private:
 
 	// The unique id that identifies this asset.
 	asset_id mId;
-
-	// Any extra, structured, data that the user may want to store.
-	// This is also used to store serialized data.
-	// Note: Data specific to resources (such as a texture atlas),
-	//   will be stored in the resource object itself.
-	json mMetadata;
 
 	// Resource-specific metadata is cached here until this asset is assigned a resource object.
 	json mResource_metadata_cache;

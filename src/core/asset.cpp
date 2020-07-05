@@ -10,42 +10,35 @@ asset::asset() :
 	mId(util::generate_uuid())
 {}
 
-bool asset::load_file(const filesystem::path& pSystem_path)
+void asset::serialize(json& pJson) const
 {
-	// Read the file
-	std::ifstream stream(pSystem_path.string().c_str());
-	if (!stream)
-		return false;
-	std::string str(std::istreambuf_iterator<char>(stream), {});
+	pJson["name"] = mName;
+	pJson["type"] = mType;
+	pJson["id"] = mId;
+	pJson["description"] = mDescription;
+	pJson["parent"] = mParent;
+	pJson["data"] = nullptr;
+	if (mResource)
+	{
+		pJson["data"] = mResource->serialize_data();
+	}
+}
 
-	try
+void asset::deserialize(const json& pJson)
+{
+	mName = pJson["name"];
+	mType = pJson["type"];
+	mId = pJson["id"];
+	mDescription = pJson["description"];
+	mParent = pJson["parent"];
+	if (mResource)
 	{
-		// Load all the settings
-		json j = json::parse(str);
-		mName = j["name"];
-		mType = j["type"];
-		mId = j["id"];
-		mDescription = j["description"];
-		mMetadata = j["metadata"];
-		mResource_metadata_cache = j["resource-metadata"];
-		mParent = j["parent"];
-		mLocation = primary_asset_location::create(pSystem_path.parent(), mName);
-
-		update_resource_metadata();
+		mResource->deserialize_data(util::json_alts(pJson, "data", "resource-metadata"));
 	}
-	catch (const json::exception& e)
+	else
 	{
-		log::error("In {}", pSystem_path.string());
-		log::error("Error parsing asset configuration");
-		log::error("{}", e.what());
-		return false;
+		mResource_metadata_cache = util::json_alts(pJson, "data", "resource-metadata");
 	}
-	catch (...)
-	{
-		log::error("In {}", pSystem_path.string());
-		log::error("Unknown error while parsing asset configuration");
-	}
-	return true;
 }
 
 const std::string& asset::get_name() const noexcept
@@ -73,33 +66,6 @@ void asset::set_type(const std::string& pType)
 	mType = pType;
 }
 
-void asset::save() const
-{
-	if (!mLocation && mResource)
-	{
-		mResource->save();
-	}
-	else
-	{
-		json j;
-		j["name"] = mName;
-		j["type"] = mType;
-		j["id"] = mId;
-		j["description"] = mDescription;
-		j["metadata"] = mMetadata;
-		if (mResource)
-		{
-			j["resource-metadata"] = mResource->serialize_data();
-			mResource->save();
-		}
-		j["parent"] = mParent;
-
-		filesystem::file_stream out;
-		out.open(mLocation->get_autonamed_file(".wga"), filesystem::stream_access::write);
-		out.write(j.dump(2));
-	}
-}
-
 const std::string& asset::get_description() const noexcept
 {
 	return mDescription;
@@ -110,15 +76,6 @@ void asset::set_description(const std::string& pDescription)
 	mDescription = pDescription;
 }
 
-const json& asset::get_metadata() const noexcept
-{
-	return mMetadata;
-}
-
-void asset::set_metadata(const json& pJson)
-{
-	mMetadata = pJson;
-}
 
 bool asset::is_resource() const noexcept
 {

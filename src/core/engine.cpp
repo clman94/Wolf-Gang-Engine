@@ -36,12 +36,8 @@ engine::engine()
 		res->set_texture_implementation(mGraphics.get_graphics_backend()->create_texture_impl());
 		pAsset->set_resource(std::move(res));
 	});
-	mAsset_manager.register_default_resource_factory<core::scene_resource>("scene");
-	mAsset_manager.register_resource_factory("object", [this](const asset::ptr& pAsset)
-	{
-		pAsset->set_resource(std::make_unique<object_resource>());
-		object_resource::load_event_scripts(pAsset, mAsset_manager);
-	});
+	mAsset_manager.register_default_resource_factory<scene_resource>("scene");
+	mAsset_manager.register_default_resource_factory<object_resource>("object");
 	mAsset_manager.register_default_resource_factory<scripting::script>("script");
 
 	mDefault_camera.set_size({ 10, 7 });

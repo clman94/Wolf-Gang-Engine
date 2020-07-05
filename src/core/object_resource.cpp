@@ -87,20 +87,4 @@ void object_resource::deserialize_data(const json& pJson)
 	is_collision_enabled = pJson["is_collision_enabled"];
 }
 
-void object_resource::load_event_scripts(const object_resource::handle& pHandle, core::asset_manager& pAsset_mgr)
-{
-	const auto primary_location = std::dynamic_pointer_cast<primary_asset_location>(pHandle.get_asset()->get_location());
-	std::size_t event_index = 0;
-	for (auto& i : pHandle->events)
-	{
-		const auto name = object_resource::event_typenames[event_index];
-		if (i.id.is_valid() && !pAsset_mgr.has_asset(i.id))
-		{
-			i.handle = scripting::script::load_secondary_asset(pHandle.get_asset(), name, i.id);
-			pAsset_mgr.add_asset(i.handle.get_asset());
-		}
-		++event_index;
-	}
-}
-
 } // namespace wge::core

@@ -2,6 +2,7 @@
 
 #include <wge/core/asset_manager.hpp>
 #include <wge/logging/log.hpp>
+#include <wge/filesystem/file_input_stream.hpp>
 #include <filesystem>
 
 namespace wge::core
@@ -108,17 +109,156 @@ std::string asset_manager::generate_asset_directory_name(const asset::ptr& pAsse
 	return path.string('.');
 }
 
-filesystem::path asset_manager::create_asset_storage(const core::asset::ptr& pAsset) const
+primary_asset_location::ptr asset_manager::create_asset_storage(const core::asset::ptr& pAsset) const
 {
 	auto directory = mRoot_dir / generate_asset_directory_name(pAsset);
 	system_fs::create_directory(directory);
-	return directory;
+	return primary_asset_location::create(directory, pAsset->get_name());
 }
 
-void asset_manager::store_asset(const core::asset::ptr& pAsset) const
+asset::ptr asset_manager::load_asset(const filesystem::path& pPath)
 {
-	auto directory = create_asset_storage(pAsset);
-	pAsset->save_to(directory);
+	assert(pPath.extension() == ".wga");
+	auto location = primary_asset_location::create(pPath.parent(), pPath.stem());
+
+	try {
+		// Read the file
+		std::string str;
+		{
+			std::ifstream stream(pPath.string().c_str());
+			if (!stream)
+			{
+				log::error("Could not open file '{}'", pPath.string());
+				return nullptr;
+			}
+			str = std::string{ std::istreambuf_iterator<char>(stream), {} };
+		}
+		return deserialize_asset(json::parse(str), location);
+	}
+	catch (const json::exception& e)
+	{
+		log::error("In {}", pPath.string());
+		log::error("Error parsing asset configuration");
+		log::error("{}", e.what());
+	}
+	catch (...)
+	{
+		log::error("In {}", pPath.string());
+		log::error("Unknown error while parsing asset configuration");
+	}
+	return nullptr;
+}
+
+void asset_manager::serialize_asset(const core::asset::ptr& pAsset, json& pJson) const
+{
+	pAsset->serialize(pJson);
+	pJson["secondary_assets"] = json::array();
+	for_each_child(pAsset, [&](const core::asset::ptr& pChild)
+	{
+		if (pChild->is_secondary_asset())
+		{
+			json j;
+			serialize_asset(pChild, j);
+			pJson["secondary_assets"].push_back(std::move(j));
+		}
+	});
+}
+
+asset::ptr asset_manager::deserialize_asset(const json& pJson, const asset_location::ptr& pLocation)
+{
+	asset::ptr new_asset = std::make_shared<asset>();
+	new_asset->set_location(pLocation);
+	new_asset->deserialize(pJson);
+	create_resource_for(new_asset);
+	if (pJson.count("secondary_assets") != 0)
+	{
+		for (auto& i : pJson["secondary_assets"])
+		{
+			std::string name = i["name"].get<std::string>();
+			deserialize_asset(i,
+				secondary_asset_location::create(
+					std::dynamic_pointer_cast<primary_asset_location>(pLocation), name));
+		}
+	}
+	add_asset(new_asset);
+	return new_asset;
+}
+
+asset::ptr asset_manager::create_primary_asset(const filesystem::path& pPath, const std::string& pType)
+{
+	// Setup some of the config for the asset.
+	auto new_asset = std::make_shared<asset>();
+	new_asset->set_name(pPath.filename());
+	new_asset->set_type(pType);
+	if (auto parent_asset = get_asset(pPath.parent()))
+		new_asset->set_parent(parent_asset);
+	// Generate a new storage location.
+	store_asset(new_asset);
+	// Create the resource object.
+	// Note: The resource is not loaded yet. Gotta make this function
+	//   useful for imports.
+	create_resource_for(new_asset);
+	// Save it for good measure.
+	save_asset(new_asset);
+	return new_asset;
+}
+
+asset::ptr asset_manager::create_secondary_asset(const asset::ptr& pParent, const std::string& pName, const std::string& pType, const asset_id& pCustom_id)
+{
+	// Parent is required.
+	assert(pParent);
+	assert(pParent->get_location());
+	// Setup some of the config for the asset.
+	auto new_asset = std::make_shared<asset>();
+	if (pCustom_id.is_valid())
+		new_asset->set_id(pCustom_id);
+	new_asset->set_name(pName);
+	new_asset->set_type(pType);
+	new_asset->set_parent(pParent);
+	new_asset->set_location(
+		secondary_asset_location::create(
+			std::dynamic_pointer_cast<primary_asset_location>(pParent->get_location()),
+			pName));
+	// Because we aren't using store_asset in this, we must add the asset manually.
+	add_asset(new_asset);
+	// Create the resource object.
+	// Note: The resource is not loaded yet. Gotta make this function
+	//   useful for imports.
+	create_resource_for(new_asset);
+	// Save it for good measure.
+	save_asset(new_asset);
+	return new_asset;
+}
+
+void asset_manager::save_asset(const core::asset::ptr& pAsset) const
+{
+	assert(pAsset);
+	if (auto resource = pAsset->get_resource())
+	{
+		resource->save();
+	}
+	if (pAsset->is_primary_asset())
+	{
+		json j;
+		serialize_asset(pAsset, j);
+		filesystem::file_stream out;
+		out.open(pAsset->get_location()->get_autonamed_file(".wga"), filesystem::stream_access::write);
+		out.write(j.dump(2));
+	}
+	else if (pAsset->get_parent_id().is_valid())
+	{
+		// Secondary assets are stored in the parent asset so
+		// the parent asset must be saved instead.
+		save_asset(get_asset(pAsset->get_parent_id()));
+	}
+}
+
+void asset_manager::store_asset(const core::asset::ptr& pAsset)
+{
+	auto location = create_asset_storage(pAsset);
+	pAsset->set_location(location);
+	save_asset(pAsset);
+	add_asset(pAsset);
 }
 
 bool asset_manager::rename_asset(const core::asset::ptr& pAsset, const std::string& pTo)
@@ -127,7 +267,7 @@ bool asset_manager::rename_asset(const core::asset::ptr& pAsset, const std::stri
 		return false;
 	pAsset->set_name(pTo);
 	update_directory_structure();
-	pAsset->save();
+	save_asset(pAsset);
 	return true;
 }
 
@@ -142,7 +282,7 @@ bool asset_manager::move_asset(const core::asset::ptr& pAsset, const core::asset
 		return false;
 	pAsset->set_parent(pTo);
 	update_directory_structure();
-	pAsset->save();
+	save_asset(pAsset);
 	return true;
 }
 
@@ -203,7 +343,7 @@ void asset_manager::update_directory_structure()
 			if (res && !res->is_loaded() && was_resource_loaded)
 				res->load();
 
-			i->save();
+			save_asset(i);
 		}
 	}
 }
@@ -211,7 +351,7 @@ void asset_manager::update_directory_structure()
 void asset_manager::save_all_configuration()
 {
 	for (auto& i : mAsset_list)
-		i->save();
+		save_asset(i);
 }
 
 bool asset_manager::has_parent(const util::uuid& pTop, const util::uuid& pParent) const
@@ -354,32 +494,10 @@ void asset_manager::load_assets()
 	{
 		if (i.extension() == ".wga")
 		{
-			// Create and load the new asset.
-			auto ptr = std::make_shared<asset>();
-			if (!ptr->load_file(i))
+			if (auto new_asset = load_asset(i))
 			{
 				log::warning("Skipping asset \"{}\"", i.string());
 				continue;
-			}
-
-			try
-			{
-				// Create the resource if it can.
-				auto factory_iter = mResource_factories.find(ptr->get_type());
-				if (auto res = create_resource_for(ptr))
-				{
-					res->load(ptr->get_location());
-				}
-				add_asset(ptr);
-			}
-			catch (const std::exception& e)
-			{
-				log::info("For asset: {} [{}]", ptr->get_name(), ptr->get_id().to_string());
-				log::error("Failed to load resource: {}", e.what());
-			}
-			catch (...)
-			{
-				log::error("Unknown error while loading resource for {}", i.string());
 			}
 		}
 	}

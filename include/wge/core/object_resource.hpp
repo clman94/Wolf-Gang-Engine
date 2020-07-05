@@ -46,8 +46,6 @@ public:
 
 	virtual json serialize_data() const override;
 	virtual void deserialize_data(const json& pJson) override;
-
-	static void load_event_scripts(const object_resource::handle& pHandle, core::asset_manager& pAsset_mgr);
 };
 
 } // namespace wge::core
