@@ -1,15 +1,15 @@
 # Wolf-Gang Engine
 
-This is 2d engine that is meant to provide a simple platform for creating your own 2d games quick and easy. It features the ECS pattern as the framework for objects in a scene.
+This is 2d engine that is meant to provide a simple platform for creating your own 2d games quick and easy. It takes a lot of inspiration from Yoyo's GameMaker.
 
 It is still under heavy development so there isn't much to show here but here's a list of goals in mind:
-- Versatile and easy to use editor with satisfying visual feedback.
-- Plenty of tools and templates for many different styles of game eg. platformer, top-down, physics-based, pixel art, and etcetera. So you can get a prototype of your game up and running with a few clicks.
-- Flexible scripting to achieve the aforementioned point.
+- Versatile and easy to use editor.
+- Project files that work nice with git.
+- Flexible scripting using Lua.
 
 ### Building
 ___
-Building _should_ be quite simple. It uses modern C++17 features so **you are required to use the latest GCC 7, Clang 7, and VS 2017 15.7 compilers in order to compile this project correctly.** C++17 helped simplify some code that would otherwise be distasteful workarounds <cl><font size="1">(well... most of the script system code is riddled with distasteful workarounds but not as much as it could be *OK?*)</font></cl>.
+Building _should_ be quite simple. It uses modern C++17 features so **you are required to use the latest GCC 7, Clang 7, and VS 2017 15.7 compilers in order to compile this project correctly.**.
 3rdparty libraries are compiled as part of this project's source to ensure you have the correct version.
 
 Dependencies:
