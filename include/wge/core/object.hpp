@@ -24,9 +24,6 @@ struct object_info
 	// This will be null if this object isn't an instance of
 	// an asset.
 	asset::ptr source_asset;
-	// For easy inspection of an object's components,
-	// this list holds the types of components this object has.
-	std::vector<component_type> components;
 };
 
 class layer;
@@ -71,8 +68,6 @@ public:
 		return get_layer().add_component(get_id(), std::forward<T>(pComponent), pBucket);
 	}
 
-	// Get the amount of components assigned to this object.
-	std::size_t get_component_count() const;
 	// Get first component by type
 	template <class T>
 	auto* get_component(bucket pBucket = default_bucket) const;

@@ -19,14 +19,7 @@ object::object(layer& pLayer, const handle<object_info>& pInfo) noexcept :
 bool object::has_component(const component_type& pType) const
 {
 	assert_valid_reference();
-	auto& components = mInfo->components;
-	return std::find(components.begin(), components.end(), pType) != components.end();
-}
-
-std::size_t object::get_component_count() const
-{
-	assert_valid_reference();
-	return mInfo->components.size();
+	return mLayer->has_component(mInfo.get_object_id(), pType);
 }
 
 const std::string& object::get_name() const

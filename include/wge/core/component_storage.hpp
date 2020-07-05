@@ -291,6 +291,7 @@ class component_storage_base
 {
 public:
 	virtual ~component_storage_base() {}
+	virtual bool has_object(const object_id& pId) const noexcept = 0;
 	virtual std::size_t size() const noexcept = 0;
 	virtual void remove(const object_id& pObject_id) = 0;
 };
@@ -302,13 +303,18 @@ class component_storage :
 {
 public:
 	using sparse_set<T>::operator[];
+
+	virtual bool has_object(const object_id& pId) const noexcept override
+	{
+		return sparse_set<T>::has(pId);
+	}
 	
-	virtual std::size_t size() const noexcept
+	virtual std::size_t size() const noexcept override
 	{
 		return sparse_set<T>::size();
 	}
 
-	virtual void remove(const object_id& pObject_id)
+	virtual void remove(const object_id& pObject_id) override
 	{
 		sparse_set<T>::remove(pObject_id);
 	}

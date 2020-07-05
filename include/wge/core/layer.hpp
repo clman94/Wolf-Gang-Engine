@@ -141,6 +141,21 @@ public:
 		return mComponent_manager.get_component<T>(pObject_id, pBucket);
 	}
 
+	bool has_component(object_id pObject_id, const component_type& pType) const
+	{
+		if (auto storage = mComponent_manager.get_storage(pType))
+		{
+			return storage->has_object(pObject_id);
+		}
+		return false;
+	}
+
+	template <typename T>
+	bool has_component(object_id pObject_id, bucket pBucket = default_bucket) const
+	{
+		return has_component(pObject_id, component_type::from<T>(pBucket));
+	}
+
 	template <typename T>
 	bool remove_component(object_id pObject_id, bucket pBucket = default_bucket)
 	{

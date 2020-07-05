@@ -73,7 +73,7 @@ public:
 		return get_container_impl<T>(pBucket);
 	}
 
-	component_storage_base* get_storage(const component_type& pType)
+	component_storage_base* get_storage(const component_type& pType) const
 	{
 		auto iter = mContainers.find(pType);
 		if (iter == mContainers.end())
