@@ -59,8 +59,10 @@ public:
 	void register_math_api();
 	void register_physics_api(physics::physics_world& pPhysics, core::scene& pScene);
 
-	void update_layer(core::layer& pLayer, float pDelta);
-	void draw_layer(core::layer& pLayer, float pDelta);
+	void event_create(core::layer& pLayer);
+	void event_unique_create(core::layer& pLayer);
+	void event_update(core::layer& pLayer);
+	void event_draw(core::layer& pLayer, float pDelta);
 
 	const error_info* get_script_error(const util::uuid& pId) const
 	{

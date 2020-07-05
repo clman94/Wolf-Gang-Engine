@@ -684,6 +684,7 @@ public:
 	virtual void on_side_bar() {}
 	virtual void on_tool_bar() {}
 	virtual void on_bottom_bar() {}
+	virtual void on_gui() {}
 	// Return true to select the current layer.
 	virtual bool on_layer_display() { return false; }
 	virtual math::aabb get_aabb() = 0;
@@ -767,7 +768,10 @@ public:
 			if (ImGui::IsItemDeactivatedAfterEdit())
 				mMain_editor->mark_asset_modified();
 
-			ImGui::Button("Creation Code");
+			if (ImGui::Button("Creation Code"))
+			{
+				open_unique_creation_script(mSelected_object);
+			}
 
 			ImGui::TreePop();
 		}
@@ -850,6 +854,11 @@ public:
 		}
 	}
 
+	virtual void on_gui() override
+	{
+		mMain_editor->display_sub_editors();
+	}
+
 	// Generate a new instance from an object asset.
 	core::object new_instance(const core::asset::ptr& pAsset, const math::vec2& pPosition)
 	{
@@ -865,6 +874,31 @@ public:
 
 		mMain_editor->mark_asset_modified();
 		return obj;
+	}
+
+	void create_unique_creation_script(core::object pObj)
+	{
+		core::asset_id id = util::generate_uuid();
+		auto new_asset = mMain_editor->get_asset_manager().create_secondary_asset(mMain_editor->get_asset(), id.to_shortened_string(), "script", id);
+		scripting::event_component event;
+		event.source_script = new_asset;
+		pObj.add_component(std::move(event), scripting::event_selector::unique_create::bucket);
+		mMain_editor->create_sub_editors();
+	}
+
+	void open_unique_creation_script(core::object pObj)
+	{
+		if (pObj.get_asset()->get_type() == "object")
+		{
+			if (!pObj.has_component<scripting::event_selector::unique_create>())
+			{
+				create_unique_creation_script(pObj);
+			}
+			if (auto comp = pObj.get_component<scripting::event_selector::unique_create>())
+			{
+				mMain_editor->get_context().open_editor(comp->source_script.get_asset());
+			}
+		}
 	}
 
 	virtual math::aabb get_aabb() override
@@ -932,6 +966,7 @@ private:
 		}
 	}
 
+private:
 	math::aabb mAabb;
 	core::layer* mSelected_layer = nullptr;
 	core::object mSelected_object;
@@ -1244,6 +1279,9 @@ public:
 		ImGui::TextUnformatted(fmt::format("Coord: {}", mRenderer.screen_to_world(screen_mouse_pos).to_string()).c_str());
 
 		ImGui::EndGroup();
+
+		if (mCurrent_editor)
+			mCurrent_editor->on_gui();
 	}
 
 	void update_asset_data()

@@ -340,12 +340,9 @@ void script_engine::register_physics_api(physics::physics_world& pPhysics, core:
 	};
 }
 
-void script_engine::update_layer(core::layer& pLayer, float pDelta)
+void script_engine::event_create(core::layer& pLayer)
 {
-	update_delta(pDelta);
-
 	// Setup the environments if needed
-
 	for (auto& [id, state] : pLayer.each<event_state_component>())
 	{
 		if (!state.environment.valid())
@@ -358,7 +355,7 @@ void script_engine::update_layer(core::layer& pLayer, float pDelta)
 	for (auto& [id, on_create, state] :
 		pLayer.each<event_selector::create, event_state_component>())
 	{
-		auto created = state.environment["created"];
+		auto created = state.environment["_created"];
 		if (created == false)
 		{
 			created = true;
@@ -366,7 +363,26 @@ void script_engine::update_layer(core::layer& pLayer, float pDelta)
 		}
 	}
 	pLayer.destroy_queued_components();
+}
 
+void script_engine::event_unique_create(core::layer& pLayer)
+{
+	// Event: Unique Create
+	for (auto& [id, on_create, state] :
+		pLayer.each<event_selector::unique_create, event_state_component>())
+	{
+		auto created = state.environment["_unique_created"];
+		if (created == false)
+		{
+			created = true;
+			run_script(on_create.source_script, state.environment, "Unique Create", id);
+		}
+	}
+	pLayer.destroy_queued_components();
+}
+
+void script_engine::event_update(core::layer& pLayer)
+{
 	// Event: Update
 	for (auto& [id, on_update, state] :
 		pLayer.each<event_selector::update, event_state_component>())
@@ -376,7 +392,7 @@ void script_engine::update_layer(core::layer& pLayer, float pDelta)
 	pLayer.destroy_queued_components();
 }
 
-void script_engine::draw_layer(core::layer& pLayer, float pDelta)
+void script_engine::event_draw(core::layer& pLayer, float pDelta)
 {
 	// Event: Draw
 	for (auto& [id, on_create, state] :

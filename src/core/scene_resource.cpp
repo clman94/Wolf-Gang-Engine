@@ -5,13 +5,15 @@
 #include <wge/scripting/script_engine.hpp>
 #include <wge/physics/physics_world.hpp>
 #include <wge/physics/physics_component.hpp>
+#include <wge/scripting/events.hpp>
 
 namespace wge::core
 {
 
 json scene_resource::serialize_data() const
 {
-	json layer_list;
+	json result;
+	auto& layer_list = result["layers"];
 	for (auto& i : layers)
 	{
 		json this_layer;
@@ -27,13 +29,24 @@ json scene_resource::serialize_data() const
 		}
 		layer_list.push_back(std::move(this_layer));
 	}
-	return layer_list;
+	return result;
 }
 
 void scene_resource::deserialize_data(const json& pJson)
 {
 	layers.clear();
-	for (auto& i : pJson)
+
+	json sanitized;
+	if (pJson.is_array())
+	{
+		sanitized["layers"] = pJson;
+	}
+	else
+	{
+		sanitized = pJson;
+	}
+
+	for (auto& i : sanitized["layers"])
 	{
 		if (i["type"] == "tilemap")
 			layers.push_back(tilemap_layer::deserialize(i));
@@ -77,6 +90,8 @@ void instance::from(const object& pObject)
 {
 	name = pObject.get_name();
 	asset_id = pObject.get_asset()->get_id();
+	if (auto creation_script = pObject.get_component<scripting::event_selector::unique_create>())
+		create_script_id = creation_script->source_script.get_id();
 	if (auto t = pObject.get_component<math::transform>())
 		transform = *t;
 }
@@ -92,6 +107,14 @@ void instance::generate(core::object pObject, const core::asset_manager& pAsset_
 		// Generate the object using the resources generator.
 		auto object_resource = asset->get_resource<core::object_resource>();
 		object_resource->generate_object(pObject, pAsset_mgr);
+
+		// Add the creation script.
+		if (auto unique_create_script = pAsset_mgr.get_asset(create_script_id))
+		{
+			auto unique_create = pObject.add_component<scripting::event_selector::unique_create>();
+			unique_create->source_script = unique_create_script;
+		}
+
 		// Setup the transform.
 		if (auto t = pObject.get_component<math::transform>())
 			*t = transform;
@@ -111,6 +134,7 @@ json instance::serialize(const instance& pData)
 	result["name"] = pData.name;
 	result["transform"] = pData.transform;
 	result["asset_id"] = pData.asset_id;
+	result["creation_script_id"] = pData.create_script_id;
 	return result;
 }
 
@@ -120,6 +144,7 @@ instance instance::deserialize(const json& pJson)
 	inst.name = pJson["name"];
 	inst.transform = pJson["transform"];
 	inst.asset_id = pJson["asset_id"];
+	inst.create_script_id = pJson["creation_script_id"];
 	return inst;
 }
 

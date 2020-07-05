@@ -9,6 +9,7 @@
 #include <wge/core/tilemap.hpp>
 
 #include <vector>
+#include <unordered_set>
 #include <variant>
 
 namespace wge::core
@@ -20,6 +21,7 @@ public:
 	std::string name;
 	math::transform transform;
 	util::uuid asset_id;
+	util::uuid create_script_id;
 
 	void from(const object& pObject);
 	void generate(core::object pObject, const core::asset_manager& pAsset_mgr) const;
@@ -62,6 +64,7 @@ class scene_resource :
 	public resource
 {
 public:
+	using handle = core::resource_handle<scene_resource>;
 	using layer_variant = std::variant<instance_layer, tilemap_layer>;
 	std::vector<layer_variant> layers;
 
