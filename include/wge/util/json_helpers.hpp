@@ -42,6 +42,40 @@ inline T json_get_or_safe(const json& pJson, const Tkey& pKey, Tdefault&& pDefau
 	}
 }
 
+template <typename Tkey, typename...Talts>
+inline decltype(auto) json_alts_impl(const json& pJson, const Tkey& pKey, const Talts&...pAlts)
+{
+	const auto iter = pJson.find(pKey);
+	if (iter != pJson.end())
+		return *iter;
+	if constexpr (sizeof...(Talts) != 0)
+	{
+		return json_alts(pJson, pAlts...);
+	}
+	else
+	{
+		throw std::runtime_error("");
+	}
+}
+
+template <typename Tkey, typename...Talts>
+inline decltype(auto) json_alts(const json& pJson, const Tkey& pKey, const Talts&...pAlts)
+{
+	try {
+		return json_alts_impl(pJson, pKey, pAlts...);
+	}
+	catch (...)
+	{
+		if constexpr (sizeof...(pAlts) == 0)
+			throw json::out_of_range::create(403, "Key '" + std::string(pKey) + "' Was not found");
+		else
+			throw json::out_of_range::create(403, "Key '" + std::string(pKey) +
+				"' nor its alternatives " +
+				(("'" + std::string(pAlts) + "' ") + ...) + "Were found");
+	}
+
+}
+
 } // namespace wge::util
 
 // To keep things small, we are going to use
