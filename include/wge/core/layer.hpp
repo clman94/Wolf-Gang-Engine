@@ -12,6 +12,7 @@
 #include <vector>
 #include <memory>
 #include <functional>
+#include <utility>
 
 namespace wge::core
 {
@@ -284,7 +285,7 @@ public:
 
 		auto get() const noexcept
 		{
-			return value_type{ mIter->first, mIter->second, *std::get<Tdeps*>(mDeps)... };
+			return get_impl(std::index_sequence_for<Tdeps...>{});
 		}
 
 		auto operator->() const noexcept
@@ -328,16 +329,26 @@ public:
 		}
 
 	private:
+		template <std::size_t...I>
+		auto get_impl(std::index_sequence<I...>) const
+		{
+			return value_type{ mIter->first, mIter->second, *std::get<I>(mDeps)... };
+		}
+
+		template <std::size_t...I>
+		bool find_dependencies_impl(std::index_sequence<I...>)
+		{
+			const object_id& id = mIter->first;
+			mDeps = { std::get<I>(mDeps_storage)->get(id)... };
+			return (std::get<I>(mDeps) && ...);
+		}
+
 		bool find_dependencies() noexcept
 		{
 			if constexpr (sizeof...(Tdeps) != 0)
-			{
-				const object_id& id = mIter->first;
-				mDeps = { std::get<component_storage<Tdeps>*>(mDeps_storage)->get(id)... };
-				if (!(std::get<Tdeps*>(mDeps) && ...))
-					return false;
-			}
-			return true;
+				return find_dependencies_impl(std::index_sequence_for<Tdeps...>{});
+			else
+				return true;
 		}
 
 		std::tuple<Tdeps*...> mDeps;
