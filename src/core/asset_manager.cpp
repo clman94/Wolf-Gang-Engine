@@ -494,10 +494,9 @@ void asset_manager::load_assets()
 	{
 		if (i.extension() == ".wga")
 		{
-			if (auto new_asset = load_asset(i))
+			if (!load_asset(i))
 			{
-				log::warning("Skipping asset \"{}\"", i.string());
-				continue;
+				log::warning("Skipping asset \"{}\" due to an error", i.string());
 			}
 		}
 	}
