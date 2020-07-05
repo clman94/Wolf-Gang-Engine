@@ -196,23 +196,6 @@ public:
 		return iterator{ *this, get_storage<object_info>().end() };
 	}
 
-	// Calls pCallable for each component specified by the first parameter.
-	// Each component parameter should be a non-const reference and derive from
-	// the component class.
-	// Example:
-	//    // This will iterate over each sprite component in the layer.
-	//    layer.for_each([&](sprite_component& pTarget) {});
-	//    
-	//    // This will iterate over each sprite component and will collect
-	//    // the first transform component of the owning object.
-	//    layer.for_each([&](sprite_component& pTarget, transform_component& pTransform) {});
-	//    
-	//    // You can also get the current game object by adding a `game_object` parameter at the start.
-	//    layer.for_each([&](object pObject, sprite_component& pTarget) {});
-	//
-	template <typename T>
-	void for_each(T&& pCallable);
-
 	// Set whether or not this layer will recieve updates.
 	// Note: This does not affect the update methods in this class
 	//   so they are still callable.
@@ -391,19 +374,6 @@ template<typename T, typename...Tdeps>
 inline auto layer::each()
 {
 	return filter{ get_storage<T>(), get_storage<Tdeps>()... };
-}
-
-template <typename T, typename...Tdeps>
-inline void layer::for_each_impl(const std::function<void(object_id, T, Tdeps...)>& pCallable)
-{
-	for (auto i : each<T, Tdeps...>())
-		std::apply(pCallable, i);
-}
-
-template<typename T>
-inline void layer::for_each(T&& pCallable)
-{
-	for_each(std::function{ pCallable });
 }
 
 } // namespace wge::core
