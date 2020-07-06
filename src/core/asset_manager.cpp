@@ -66,6 +66,15 @@ asset::ptr asset_manager::find_child(const asset::ptr& pParent, const std::strin
 	return{};
 }
 
+std::string asset_manager::get_unique_name(const filesystem::path& pPath) const
+{
+	int index = 0;
+	filesystem::path new_path = pPath;
+	while (has_asset(new_path))
+		new_path = pPath.parent() / (pPath.filename() + std::to_string(++index));
+	return new_path.filename();
+}
+
 asset::ptr asset_manager::create_folder(const filesystem::path& pPath)
 {
 	// Check if there is already an asset with this name.
@@ -189,7 +198,7 @@ asset::ptr asset_manager::create_primary_asset(const filesystem::path& pPath, co
 {
 	// Setup some of the config for the asset.
 	auto new_asset = std::make_shared<asset>();
-	new_asset->set_name(pPath.filename());
+	new_asset->set_name(get_unique_name(pPath));
 	new_asset->set_type(pType);
 	if (auto parent_asset = get_asset(pPath.parent()))
 		new_asset->set_parent(parent_asset);
@@ -213,7 +222,7 @@ asset::ptr asset_manager::create_secondary_asset(const asset::ptr& pParent, cons
 	auto new_asset = std::make_shared<asset>();
 	if (pCustom_id.is_valid())
 		new_asset->set_id(pCustom_id);
-	new_asset->set_name(pName);
+	new_asset->set_name(get_unique_name(pName));
 	new_asset->set_type(pType);
 	new_asset->set_parent(pParent);
 	new_asset->set_location(
@@ -438,6 +447,15 @@ bool asset_manager::has_asset(const asset::ptr& pAsset) const noexcept
 		if (pAsset == i)
 			return true;
 	return false;
+}
+
+bool asset_manager::is_valid_path(const filesystem::path& pPath) const noexcept
+{
+	// Yes, empty paths are valid because they refer to the "root"
+	if (pPath.empty())
+		return true;
+	// Everything else needs to be a valid asset.
+	return has_asset(pPath);
 }
 
 bool asset_manager::remove_asset(const asset::ptr& pAsset)

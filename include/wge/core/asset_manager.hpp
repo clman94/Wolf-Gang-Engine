@@ -127,6 +127,11 @@ public:
 	bool has_asset(const util::uuid& pUID) const noexcept;
 	bool has_asset(const asset::ptr& pAsset) const noexcept;
 
+	// Checks if the given path is valid.
+	// This differs from has_asset because this path may not return an asset pointer
+	// in get_asset if this function returns true.
+	bool is_valid_path(const filesystem::path& pPath) const noexcept;
+
 	bool remove_asset(const asset::ptr& pAsset);
 
 	filesystem::path get_asset_path(const core::asset::ptr& pAsset) const;
@@ -194,6 +199,8 @@ public:
 	std::vector<asset::ptr> get_children(const asset::ptr& pParent) const;
 	std::vector<asset::ptr> get_children_recursive(const asset::ptr& pParent) const;
 	asset::ptr find_child(const asset::ptr& pParent, const std::string_view& pName) const;
+
+	std::string get_unique_name(const filesystem::path& pPath) const;
 
 	// Generates the name of the directory used to store an asset.
 	// "dir.dir.name-000000000000"
