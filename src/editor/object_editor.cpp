@@ -73,7 +73,13 @@ void object_editor::display_event_list(core::object_resource* pGenerator)
 				create_event_script(type);
 				mark_asset_modified();
 			}
-			get_context().open_editor(get_asset_manager().get_asset(info.id));
+			if (auto editor = get_context().get_editor(info.id))
+			{
+				editor->set_dock_family_id(mScript_editor_dock_id);
+				editor->show();
+				editor->focus_window();
+
+			}
 		}
 	}
 	ImGui::EndChild();
