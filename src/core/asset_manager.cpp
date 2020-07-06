@@ -222,7 +222,7 @@ asset::ptr asset_manager::create_secondary_asset(const asset::ptr& pParent, cons
 	auto new_asset = std::make_shared<asset>();
 	if (pCustom_id.is_valid())
 		new_asset->set_id(pCustom_id);
-	new_asset->set_name(get_unique_name(pName));
+	new_asset->set_name(get_unique_name(get_asset_path(pParent) / pName));
 	new_asset->set_type(pType);
 	new_asset->set_parent(pParent);
 	new_asset->set_location(
