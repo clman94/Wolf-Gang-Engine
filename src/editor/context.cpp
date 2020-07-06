@@ -217,7 +217,7 @@ bool context::draw_editor(asset_editor& pEditor)
 		ImGui::SetNextWindowSize({ 400, 400 });
 		pEditor.mark_first_time();
 	}
-	if (ImGui::Begin(title.c_str(), &is_window_open, flags))
+	if (ImGui::Begin(str_id.c_str(), &is_window_open, flags))
 	{
 		if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
 		{
