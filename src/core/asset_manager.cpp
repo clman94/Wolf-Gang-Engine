@@ -77,13 +77,9 @@ std::string asset_manager::get_unique_name(const filesystem::path& pPath) const
 
 asset::ptr asset_manager::create_folder(const filesystem::path& pPath)
 {
-	// Check if there is already an asset with this name.
-	if (has_asset(pPath))
-		return{};
-
 	// Create the asset
 	auto folder = std::make_shared<asset>();
-	folder->set_name(pPath.filename());
+	folder->set_name(get_unique_name(pPath));
 	folder->set_type("folder");
 
 	// This path specify a parent directory?
@@ -104,10 +100,7 @@ asset::ptr asset_manager::create_folder(const filesystem::path& pPath)
 		// Link to this directory.
 		folder->set_parent(parent);
 	}
-
 	store_asset(folder);
-	add_asset(folder);
-
 	return folder;
 }
 
