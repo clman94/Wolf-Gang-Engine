@@ -169,7 +169,8 @@ asset::ptr asset_manager::deserialize_asset(const json& pJson, const asset_locat
 	asset::ptr new_asset = std::make_shared<asset>();
 	new_asset->set_location(pLocation);
 	new_asset->deserialize(pJson);
-	create_resource_for(new_asset);
+	if (auto res = create_resource_for(new_asset))
+		res->load();
 	if (pJson.count("secondary_assets") != 0)
 	{
 		for (auto& i : pJson["secondary_assets"])
