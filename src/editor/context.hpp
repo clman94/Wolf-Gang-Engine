@@ -58,9 +58,6 @@ public:
 	void set_title(const std::string& pTitle) { mTitle = pTitle; }
 	const std::string& get_title() const noexcept { return mTitle; }
 
-	void set_parent_editor_id(const util::uuid& pAsset_id) noexcept { mParent_editor_asset_id = pAsset_id; }
-	const util::uuid& get_parent_editor_id() const noexcept { return mParent_editor_asset_id; }
-
 	void mark_first_time() noexcept { mFirst_time = false; }
 	bool is_first_time() const noexcept { return mFirst_time; }
 
@@ -79,8 +76,6 @@ private:
 	bool mIs_visible = true;
 	bool mFirst_time = true;
 	unsigned int mDock_family_id{ 0 };
-
-	util::uuid mParent_editor_asset_id;
 };
 
 class context
