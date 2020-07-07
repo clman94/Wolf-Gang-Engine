@@ -866,7 +866,7 @@ public:
 
 		core::instance inst;
 		inst.transform.position = pPosition;
-		inst.asset_id = pAsset->get_id();
+		inst.id = pAsset->get_id();
 
 		// Generate the object
 		core::object obj = mSelected_layer->add_object();
