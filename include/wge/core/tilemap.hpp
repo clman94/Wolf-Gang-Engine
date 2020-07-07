@@ -67,7 +67,7 @@ public:
 		return false;
 	}
 
-	bool clear_tile(math::ivec2 pPosition, queue_destruction_flag)
+	bool clear_tile(queue_destruction_flag, math::ivec2 pPosition)
 	{
 		if (object tile = find_tile(pPosition))
 		{
