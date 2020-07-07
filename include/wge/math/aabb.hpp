@@ -27,6 +27,18 @@ public:
 		max(pRect.position + pRect.size)
 	{}
 
+	constexpr math::vec2 point(std::size_t pIndex) const noexcept
+	{
+		switch (pIndex % 4)
+		{
+		case 0: return min;
+		case 1: return math::vec2(max.x, min.y);
+		case 2: return max;
+		case 3: return math::vec2(min.x, max.y);
+		default: return min; // Should not happen.
+		}
+	}
+
 	constexpr bool intersect(const math::vec2& pVec) const noexcept
 	{
 		return min.x <= pVec.x && min.y <= pVec.y

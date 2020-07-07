@@ -909,10 +909,10 @@ public:
 		{
 			const math::aabb& local_aabb = editor_object_info.local_aabb;
 			aabb.merge(transform.position);
-			aabb.merge(transform.apply_to(local_aabb.min));
-			aabb.merge(transform.apply_to(local_aabb.min + math::vec2{ local_aabb.max.x, 0 }));
-			aabb.merge(transform.apply_to(local_aabb.min + local_aabb.max));
-			aabb.merge(transform.apply_to(local_aabb.min + math::vec2{ 0, local_aabb.max.y }));
+			aabb.merge(transform.apply_to(local_aabb.point(0)));
+			aabb.merge(transform.apply_to(local_aabb.point(1)));
+			aabb.merge(transform.apply_to(local_aabb.point(2)));
+			aabb.merge(transform.apply_to(local_aabb.point(3)));
 		}
 		return aabb;
 	}
