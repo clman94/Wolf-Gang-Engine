@@ -205,7 +205,7 @@ bool context::draw_editor(asset_editor& pEditor)
 	// Construct a title with the id as the stringified asset id so the name can change freely
 	// without affecting the window.
 	const std::string title = pEditor.get_title().empty() ? asset->get_name() : pEditor.get_title();
-	const std::string str_id = asset->get_name() + "###" + asset->get_id().to_string();
+	const std::string str_id = title + "###" + asset->get_id().to_string();
 
 	ImGuiWindowFlags flags = (is_asset_modified(asset) ? ImGuiWindowFlags_UnsavedDocument : 0);
 	if (pEditor.is_first_time())
