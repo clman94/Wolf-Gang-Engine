@@ -114,6 +114,7 @@ std::string asset_manager::generate_asset_directory_name(const asset::ptr& pAsse
 primary_asset_location::ptr asset_manager::create_asset_storage(const core::asset::ptr& pAsset) const
 {
 	auto directory = mRoot_dir / generate_asset_directory_name(pAsset);
+	log::info("Creating new asset storage location at '{}'", directory.string());
 	system_fs::create_directory(directory);
 	return primary_asset_location::create(directory, pAsset->get_name());
 }
@@ -189,9 +190,14 @@ asset::ptr asset_manager::deserialize_asset(const json& pJson, const asset_locat
 
 asset::ptr asset_manager::create_primary_asset(const filesystem::path& pPath, const std::string& pType)
 {
+	log::info("Creating new asset at path '{}' with type '{}'", pPath.string(), pType);
+
 	// Setup some of the config for the asset.
 	auto new_asset = std::make_shared<asset>();
 	new_asset->set_name(get_unique_name(pPath));
+	if (new_asset->get_name() != pPath.filename())
+		log::info("Conflicting name '{}', renaming to '{}'", pPath.filename(), new_asset->get_name());
+
 	new_asset->set_type(pType);
 	if (auto parent_asset = get_asset(pPath.parent()))
 		new_asset->set_parent(parent_asset);
@@ -211,11 +217,17 @@ asset::ptr asset_manager::create_secondary_asset(const asset::ptr& pParent, cons
 	// Parent is required.
 	assert(pParent);
 	assert(pParent->get_location());
+
+	log::info("Creating new secondary asset at path '{}' with type '{}'", (get_asset_path(pParent) / pName).string(), pType);
+
 	// Setup some of the config for the asset.
 	auto new_asset = std::make_shared<asset>();
 	if (pCustom_id.is_valid())
 		new_asset->set_id(pCustom_id);
 	new_asset->set_name(get_unique_name(get_asset_path(pParent) / pName));
+	if (new_asset->get_name() != pName)
+		log::info("Conflicting name '{}', renaming to '{}'", pName, new_asset->get_name());
+
 	new_asset->set_type(pType);
 	new_asset->set_parent(pParent);
 	new_asset->set_location(
