@@ -261,37 +261,37 @@ using lvec2 = basic_vec2<long>;
 using vec2 = basic_vec2<float>; // Default vec2
 
 template <typename T>
-inline constexpr basic_vec2<T> operator + (T pVal, const math::basic_vec2<T>& pVec) noexcept
+constexpr basic_vec2<T> operator + (T pVal, const math::basic_vec2<T>& pVec) noexcept
 {
 	return{ pVal + pVec.x , pVal + pVec.y };
 }
 
 template <typename T>
-inline constexpr basic_vec2<T> operator - (T pVal, const math::basic_vec2<T>& pVec) noexcept
+constexpr basic_vec2<T> operator - (T pVal, const math::basic_vec2<T>& pVec) noexcept
 {
 	return{ pVal - pVec.x , pVal - pVec.y };
 }
 
 template <typename T>
-inline constexpr basic_vec2<T> operator * (T pVal, const math::basic_vec2<T>& pVec) noexcept
+constexpr basic_vec2<T> operator * (T pVal, const math::basic_vec2<T>& pVec) noexcept
 {
 	return{ pVal * pVec.x , pVal * pVec.y };
 }
 
 template <typename T>
-inline constexpr basic_vec2<T> operator / (T pVal, const math::basic_vec2<T>& pVec) noexcept
+constexpr basic_vec2<T> operator / (T pVal, const math::basic_vec2<T>& pVec) noexcept
 {
 	return{ pVal / pVec.x , pVal / pVec.y };
 }
 
 template<typename T>
-inline constexpr basic_vec2<T> swap_xy(const basic_vec2<T>& a) noexcept
+constexpr basic_vec2<T> swap_xy(const basic_vec2<T>& a) noexcept
 {
 	return basic_vec2<T>(a).swap_xy();
 }
 
 template<typename T>
-inline constexpr T dot(const basic_vec2<T>& pA, const basic_vec2<T>& pB) noexcept
+constexpr T dot(const basic_vec2<T>& pA, const basic_vec2<T>& pB) noexcept
 {
 	return pA.x * pB.x + pA.y * pB.y;
 }
