@@ -82,20 +82,20 @@ public:
 		const std::vector<asset::ptr>* mList = nullptr;
 		asset_id mParent;
 		std::size_t mIterator = 0;
-		friend class child_filter;
+		friend class asset_manager;
 	};
 	
 	class child_filter
 	{
 	private:
-		child_filter(const std::vector<asset::ptr>& pList, const asset_id& pParent) :
-			mList(&pList), mParent(pParent)
+		child_filter(const child_iterator& pBegin) :
+			mBegin(pBegin)
 		{}
 
 	public:
 		child_iterator begin() const noexcept
 		{
-			return child_iterator{ *mList, mParent };
+			return mBegin;
 		}
 
 		child_iterator end() const noexcept
@@ -104,8 +104,7 @@ public:
 		}
 
 	private:
-		const std::vector<asset::ptr>* mList = nullptr;
-		asset_id mParent;
+		child_iterator mBegin;
 		friend class asset_manager;
 	};
 
@@ -183,7 +182,7 @@ public:
 	child_filter each_child(const asset::ptr& pParent) const
 	{
 		assert(pParent);
-		return { mAsset_list, pParent->get_id() };
+		return child_iterator{ mAsset_list, pParent->get_id() };
 	}
 
 	// Calls pCallable for each asset that is a child of pParent.
