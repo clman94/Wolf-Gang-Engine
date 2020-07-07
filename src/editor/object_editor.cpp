@@ -75,10 +75,10 @@ void object_editor::display_event_list(core::object_resource* pGenerator)
 			}
 			if (auto editor = get_context().get_editor(info.id))
 			{
+				editor->set_title(fmt::format("{}: {}", get_asset()->get_name(), event_name));
 				editor->set_dock_family_id(mScript_editor_dock_id);
 				editor->show();
 				editor->focus_window();
-
 			}
 		}
 	}
