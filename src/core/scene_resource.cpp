@@ -89,7 +89,7 @@ void scene_resource::update_data(scene& pScene)
 void instance::from(const object& pObject)
 {
 	name = pObject.get_name();
-	asset_id = pObject.get_asset()->get_id();
+	id = pObject.get_asset()->get_id();
 	if (auto creation_script = pObject.get_component<scripting::event_selector::unique_create>())
 		create_script_id = creation_script->source_script.get_id();
 	if (auto t = pObject.get_component<math::transform>())
@@ -98,7 +98,7 @@ void instance::from(const object& pObject)
 
 void instance::generate(core::object pObject, const core::asset_manager& pAsset_mgr) const
 {
-	auto asset = pAsset_mgr.get_asset(asset_id);
+	auto asset = pAsset_mgr.get_asset(id);
 	pObject.set_name(name);
 	pObject.set_asset(asset);
 
@@ -133,7 +133,7 @@ json instance::serialize(const instance& pData)
 	json result;
 	result["name"] = pData.name;
 	result["transform"] = pData.transform;
-	result["asset_id"] = pData.asset_id;
+	result["asset_id"] = pData.id;
 	result["creation_script_id"] = pData.create_script_id;
 	return result;
 }
@@ -143,7 +143,7 @@ instance instance::deserialize(const json& pJson)
 	instance inst;
 	inst.name = pJson["name"];
 	inst.transform = pJson["transform"];
-	inst.asset_id = pJson["asset_id"];
+	inst.id = pJson["asset_id"];
 	inst.create_script_id = pJson["creation_script_id"];
 	return inst;
 }
@@ -199,7 +199,7 @@ void tilemap_layer::from(core::layer& pLayer)
 	tilemap_info const* info = pLayer.layer_components.get<tilemap_info>();
 
 	// Read the tileset id.
-	tileset_id = info->tileset ? info->tileset.get_asset()->get_id() : util::uuid{};
+	tileset_id = info->tileset ? info->tileset.get_asset()->get_id() : asset_id{};
 
 	// Read the tiles.
 	for (auto& [id, tile] : pLayer.each<tile>())

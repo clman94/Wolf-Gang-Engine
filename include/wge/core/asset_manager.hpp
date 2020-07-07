@@ -120,10 +120,10 @@ public:
 	asset::ptr get_asset(const filesystem::path& pPath) const noexcept;
 	// Find an asset by its uid.
 	// Returns empty when it it not found.
-	asset::ptr get_asset(const util::uuid& pUID) const noexcept;
+	asset::ptr get_asset(const asset_id& pUID) const noexcept;
 
 	bool has_asset(const filesystem::path& pPath) const noexcept;
-	bool has_asset(const util::uuid& pUID) const noexcept;
+	bool has_asset(const asset_id& pUID) const noexcept;
 	bool has_asset(const asset::ptr& pAsset) const noexcept;
 
 	// Checks if the given path is valid.
@@ -144,7 +144,7 @@ public:
 	}
 
 	template <typename T = resource>
-	resource_handle<T> get_resource(const util::uuid& pId) const
+	resource_handle<T> get_resource(const asset_id& pId) const
 	{
 		return{ get_asset(pId) };
 	}
@@ -226,7 +226,7 @@ public:
 	}
 
 private:
-	bool has_parent(const util::uuid& pTop, const util::uuid& pParent) const;
+	bool has_parent(const asset_id& pTop, const asset_id& pParent) const;
 	// Turn an absolute path into a relative path to the root directory
 	filesystem::path make_relative_to_root(const filesystem::path& pPath) const;
 

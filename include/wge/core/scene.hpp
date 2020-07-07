@@ -11,11 +11,6 @@ namespace wge::core
 class scene
 {
 public:
-	// You may be thinking "wouldn't vector be fine here?"
-	// Unfortunately, that is not "always" the case.
-	// Layer is a pretty heavy object to move
-	// around and combine that with the fact that vector
-	// doesn't always move on some platforms and compilers.
 	using layers = std::list<layer>;
 
 	// Get a layer by index

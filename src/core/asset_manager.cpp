@@ -369,7 +369,7 @@ void asset_manager::save_all_configuration()
 		save_asset(i);
 }
 
-bool asset_manager::has_parent(const util::uuid& pTop, const util::uuid& pParent) const
+bool asset_manager::has_parent(const asset_id& pTop, const asset_id& pParent) const
 {
 	core::asset::ptr i = get_asset(pTop);
 	do {
@@ -421,7 +421,7 @@ asset::ptr asset_manager::get_asset(const filesystem::path& pPath) const noexcep
 	return ptr;
 }
 
-asset::ptr asset_manager::get_asset(const util::uuid& pUID) const noexcept
+asset::ptr asset_manager::get_asset(const asset_id& pUID) const noexcept
 {
 	if (!pUID.is_valid())
 		return{};
@@ -436,7 +436,7 @@ bool asset_manager::has_asset(const filesystem::path& pPath) const noexcept
 	return (bool)get_asset(pPath);
 }
 
-bool asset_manager::has_asset(const util::uuid& pUID) const noexcept
+bool asset_manager::has_asset(const asset_id& pUID) const noexcept
 {
 	for (auto& i : mAsset_list)
 		if (i->get_id() == pUID)

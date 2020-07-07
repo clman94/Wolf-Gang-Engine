@@ -20,8 +20,8 @@ class instance
 public:
 	std::string name;
 	math::transform transform;
-	util::uuid asset_id;
-	util::uuid create_script_id;
+	asset_id id;
+	asset_id create_script_id;
 
 	void from(const object& pObject);
 	void generate(core::object pObject, const core::asset_manager& pAsset_mgr) const;
@@ -49,7 +49,7 @@ struct tilemap_layer
 	std::string name;
 	std::vector<tile> tiles;
 	math::vec2 tile_size;
-	util::uuid tileset_id;
+	asset_id tileset_id;
 
 	static constexpr const char* strtype = "tilemap";
 

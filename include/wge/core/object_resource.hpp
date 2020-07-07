@@ -25,7 +25,7 @@ public:
 
 	struct event_info
 	{
-		util::uuid id;
+		asset_id id;
 		scripting::script::handle handle;
 	};
 
@@ -33,7 +33,7 @@ public:
 	static constexpr std::array<const char*, 3> event_typenames = { "create", "update", "draw" };
 
 	// Asset id for the default sprite.
-	util::uuid display_sprite;
+	asset_id display_sprite;
 
 	std::array<event_info, static_cast<unsigned>(event_type::count)> events;
 
