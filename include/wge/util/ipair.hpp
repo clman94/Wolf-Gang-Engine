@@ -146,6 +146,7 @@ template <typename T>
 struct enumerate :
 	basic_enumerate<T, pair_mapping_policy>
 {
+	template <typename T>
 	constexpr enumerate(T&& pContainer) :
 		basic_enumerate(std::forward<T>(pContainer))
 	{}

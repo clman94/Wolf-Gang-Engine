@@ -7,12 +7,6 @@
 
 #include <array>
 
-static const std::array event_display_name = {
-		(const char*)(ICON_FA_PLUS u8" Create"),
-		(const char*)(ICON_FA_STEP_FORWARD u8" Update"),
-		(const char*)(ICON_FA_PENCIL u8" Draw")
-};
-
 namespace wge::editor
 {
 
@@ -62,10 +56,12 @@ void object_editor::display_event_list(core::object_resource* pGenerator)
 	ImGui::BeginChild("Events", ImVec2(0, 0), true);
 	for (auto&& [type, info] : util::enumerate{ pGenerator->events })
 	{
-		const char* event_name = event_display_name[type];
+		const std::string event_name = fmt::format("{} {}",
+			scripting::event_descriptors[type].icon,
+			scripting::event_descriptors[type].display_name);
 		const bool script_exists = info.id.is_valid();
 		ImGuiSelectableFlags flags = ImGuiSelectableFlags_AllowDoubleClick;
-		if (ImGui::Selectable(event_name, script_exists, flags, { 0, 0 }))
+		if (ImGui::Selectable(event_name.c_str(), script_exists, flags, { 0, 0 }))
 		{
 			if (!script_exists)
 			{
@@ -87,7 +83,7 @@ void object_editor::display_event_list(core::object_resource* pGenerator)
 
 void object_editor::create_event_script(std::size_t pIndex)
 {
-	auto name = core::object_resource::event_typenames[pIndex];
+	auto name = scripting::event_descriptors[pIndex].serialize_name;
 	auto new_asset = get_asset_manager().create_secondary_asset(get_asset(), name, "script");
 	get_asset()->get_resource<core::object_resource>()->events[pIndex].id = new_asset->get_id();
 	get_asset_manager().save_asset(new_asset);

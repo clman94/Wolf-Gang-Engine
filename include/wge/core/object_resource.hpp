@@ -4,6 +4,7 @@
 #include <wge/core/asset_manager.hpp>
 #include <wge/core/object.hpp>
 #include <wge/scripting/script.hpp>
+#include <Wge/scripting/events.hpp>
 #include <array>
 
 namespace wge::core
@@ -15,27 +16,16 @@ class object_resource :
 public:
 	using handle = core::resource_handle<object_resource>;
 
-	enum class event_type
-	{
-		create,
-		update,
-		draw,
-		count,
-	};
-
 	struct event_info
 	{
 		asset_id id;
 		scripting::script::handle handle;
 	};
 
-	// event_type as strings.
-	static constexpr std::array<const char*, 3> event_typenames = { "create", "update", "draw" };
-
 	// Asset id for the default sprite.
 	asset_id display_sprite;
 
-	std::array<event_info, static_cast<unsigned>(event_type::count)> events;
+	std::array<event_info, scripting::event_count> events;
 
 	bool is_collision_enabled = false;
 

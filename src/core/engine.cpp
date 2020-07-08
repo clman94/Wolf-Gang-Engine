@@ -99,7 +99,11 @@ void engine::step()
 	for (auto& i : mScene)
 		mLua_engine.event_unique_create(i);
 	for (auto& i : mScene)
+		mLua_engine.event_preupdate(i);
+	for (auto& i : mScene)
 		mLua_engine.event_update(i);
+	for (auto& i : mScene)
+		mLua_engine.event_postupdate(i);
 
 	for (auto& i : mScene)
 		mPhysics.postupdate(i, delta);
