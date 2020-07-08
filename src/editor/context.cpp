@@ -182,7 +182,8 @@ void context::close_editor(const core::asset::ptr& pAsset)
 
 void context::close_editor(const core::asset_id& pId)
 {
-	mGlobal_editors[pId] = nullptr;
+	if (auto& editor = mCurrent_editors[pId])
+		editor->hide();
 }
 
 void context::close_all_editors()
