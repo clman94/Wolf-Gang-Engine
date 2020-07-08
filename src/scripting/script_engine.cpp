@@ -381,6 +381,17 @@ void script_engine::event_unique_create(core::layer& pLayer)
 	pLayer.destroy_queued_components();
 }
 
+void script_engine::event_preupdate(core::layer& pLayer)
+{
+	// Event: Update
+	for (auto& [id, on_update, state] :
+		pLayer.each<event_selector::preupdate, event_state_component>())
+	{
+		run_script(on_update.source_script, state.environment, "Preupdate", id);
+	}
+	pLayer.destroy_queued_components();
+}
+
 void script_engine::event_update(core::layer& pLayer)
 {
 	// Event: Update
@@ -388,6 +399,17 @@ void script_engine::event_update(core::layer& pLayer)
 		pLayer.each<event_selector::update, event_state_component>())
 	{
 		run_script(on_update.source_script, state.environment, "Update", id);
+	}
+	pLayer.destroy_queued_components();
+}
+
+void script_engine::event_postupdate(core::layer& pLayer)
+{
+	// Event: Update
+	for (auto& [id, on_update, state] :
+		pLayer.each<event_selector::postupdate, event_state_component>())
+	{
+		run_script(on_update.source_script, state.environment, "Postupdate", id);
 	}
 	pLayer.destroy_queued_components();
 }
