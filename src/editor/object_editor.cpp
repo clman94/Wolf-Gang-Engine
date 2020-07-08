@@ -188,6 +188,8 @@ void object_editor::create_event_script(std::size_t pIndex)
 	else
 	{
 		auto new_asset = get_asset_manager().create_secondary_asset(get_asset(), name, "script");
+		new_asset->get_resource<scripting::script>()->source =
+			fmt::format("-- Event: {}\n\n", scripting::event_descriptors[pIndex].display_name);
 		resource->events[pIndex].id = new_asset->get_id();
 		get_asset_manager().save_asset(new_asset);
 		create_sub_editors();
