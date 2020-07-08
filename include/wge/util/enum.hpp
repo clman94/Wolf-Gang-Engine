@@ -20,7 +20,7 @@
 	{                                                                           \
 		using type = std::underlying_type_t<A>;                                 \
 		return (static_cast<type>(pL) ^ static_cast<type>(pR)) != 0;            \
-	}
+	}                                                                           
 
 namespace wge::util
 {

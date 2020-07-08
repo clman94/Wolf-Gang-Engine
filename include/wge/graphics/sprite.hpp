@@ -325,13 +325,27 @@ public:
 		return mIs_new_frame;
 	}
 
+	bool is_beginning_animation() const noexcept
+	{
+		return mIs_beginning_animation;
+	}
+
+	bool is_ending_animation() const noexcept
+	{
+		return mIs_ending_animation;
+	}
+
 	void update(float pDelta) noexcept
 	{
 		if (!mSprite)
 			return;
 		mIs_new_frame = false;
+		mIs_beginning_animation = false;
+		mIs_ending_animation = false;
 		if (mPlaying)
 		{
+			if (is_first_frame() && mTimer == 0)
+				mIs_beginning_animation = true;
 			if (mTimer >= mSprite->get_frame_duration(mFrame_index))
 			{
 				mIs_new_frame = true;
@@ -366,6 +380,7 @@ private:
 			{
 				--mFrame_index;
 				mPlaying = false;
+				mIs_ending_animation = true;
 			}
 		}
 	}
@@ -377,6 +392,8 @@ private:
 	std::size_t mFrame_index = 0;
 	bool mPlaying = false;
 	bool mIs_new_frame = true;
+	bool mIs_beginning_animation = false;
+	bool mIs_ending_animation = false;
 };
 
 } // namespace wge::graphics
