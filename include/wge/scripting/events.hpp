@@ -35,23 +35,29 @@ public:
 namespace event_selector
 {
 
-using create = core::bselect<event_component, 0>;
-using preupdate = core::bselect<event_component, 1>;
-using update = core::bselect<event_component, 2>;
-using postupdate = core::bselect<event_component, 3>;
-using draw = core::bselect<event_component, 4>;
+template <std::size_t Tbucket>
+using bselect = core::bselect<event_component, Tbucket>;
 
-using unique_create = core::bselect<event_component, 5>;
+using create = bselect<0>;
+using preupdate = bselect<1>;
+using update = bselect<2>;
+using postupdate = bselect<3>;
+using draw = bselect<4>;
 
-using alarm_1 = core::bselect<event_component, 6>;
-using alarm_2 = core::bselect<event_component, 7>;
-using alarm_3 = core::bselect<event_component, 8>;
-using alarm_4 = core::bselect<event_component, 9>;
-using alarm_5 = core::bselect<event_component, 10>;
-using alarm_6 = core::bselect<event_component, 11>;
-using alarm_7 = core::bselect<event_component, 12>;
-using alarm_8 = core::bselect<event_component, 13>;
-constexpr core::bucket bucket_count = 14;
+using unique_create = bselect<5>;
+
+using alarm_1 = bselect<6>;
+using alarm_2 = bselect<7>;
+using alarm_3 = bselect<8>;
+using alarm_4 = bselect<9>;
+using alarm_5 = bselect<10>;
+using alarm_6 = bselect<11>;
+using alarm_7 = bselect<12>;
+using alarm_8 = bselect<13>;
+
+using begin_scene = bselect<14>;
+
+constexpr core::bucket bucket_count = 15;
 
 } // namespace event_selectors
 
