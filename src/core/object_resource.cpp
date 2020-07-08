@@ -28,23 +28,11 @@ void object_resource::generate_object(core::object& pObj, const asset_manager& p
 
 		for (auto[type, info] : util::enumerate{ events })
 		{
-			if (info.handle.is_valid())
+			if (info.id.is_valid() && pAsset_mgr.has_asset(info.id))
 			{
-				scripting::event_component* comp = nullptr;
-				switch (static_cast<event_type>(type))
-				{
-				case event_type::create:
-					comp = pObj.add_component<scripting::event_selector::create>();
-					break;
-				case event_type::update:
-					comp = pObj.add_component<scripting::event_selector::update>();
-					break;
-				case event_type::draw:
-					comp = pObj.add_component<scripting::event_selector::draw>();
-					break;
-				}
-				assert(comp);
-				comp->source_script = info.handle;
+				pObj.add_component(
+					scripting::event_component{ pAsset_mgr.get_asset(info.id) },
+					scripting::event_descriptors[type].bucket);
 			}
 		}
 	}
@@ -54,13 +42,12 @@ json object_resource::serialize_data() const
 {
 	json j;
 	json& jevents = j["events"];
-	for (auto[type, info] : util::enumerate{ events })
+	for (auto&& [type, info] : util::enumerate{ events })
 	{
-		json jevent;
-		const char* event_name = event_typenames[type];
-		jevent["type"] = event_name;
-		jevent["id"] = info.id;
-		jevents.push_back(jevent);
+		if (info.id.is_valid())
+		{
+			jevents[scripting::event_descriptors[type].serialize_name] = info.id;
+		}
 	}
 	j["sprite"] = display_sprite;
 	j["is_collision_enabled"] = is_collision_enabled;
@@ -70,19 +57,16 @@ json object_resource::serialize_data() const
 void object_resource::deserialize_data(const json& pJson)
 {
 	const json& jevents = pJson["events"];
-	for (const auto& i : jevents)
+
+	for (auto&& [index, info] : util::enumerate{ events })
 	{
-		// Find the index for this event name.
-		for (auto[index, name] : util::enumerate{ event_typenames })
+		auto iter = jevents.find(scripting::event_descriptors[index].serialize_name);
+		if (iter != jevents.end())
 		{
-			if (name == i["type"])
-			{
-				// Assign the id to that index.
-				events[index].id = i["id"];
-				break;
-			}
+			info.id = iter->get<asset_id>();
 		}
 	}
+
 	display_sprite = pJson["sprite"];
 	is_collision_enabled = pJson["is_collision_enabled"];
 }

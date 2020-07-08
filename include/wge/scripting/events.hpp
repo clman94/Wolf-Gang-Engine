@@ -83,24 +83,29 @@ constexpr std::array event_descriptors =
 	event_descriptor{ "alarm_8",       "Alarm 8",       u8"\uf017",  event_selector::alarm_8::bucket }
 };
 
-template <std::size_t Tbucket>
-constexpr std::size_t get_event_descriptor_index(core::bselect<event_component, Tbucket>) noexcept
+constexpr std::size_t get_event_descriptor_index(std::size_t pBucket) noexcept
 {
-	static_assert(Tbucket >= event_selector::bucket_count, "No descriptor for this bucket type");
 	std::size_t index = 0;
 	for (auto& i : event_descriptors)
 	{
-		if (i.bucket == Tbucket)
+		if (i.bucket == pBucket)
 			return index;
 		++index;
 	}
-	return 0; // Should not happen.
+	return 0;
 }
 
 template <std::size_t Tbucket>
-constexpr auto* get_event_descriptor(core::bselect<event_component, Tbucket>) noexcept
+constexpr std::size_t get_event_descriptor_index(core::bselect<event_component, Tbucket>) noexcept
 {
-	static_assert(Tbucket >= event_selector::bucket_count, "No descriptor for this bucket type");
+	static_assert(Tbucket < event_selector::bucket_count, "No descriptor for this bucket type");
+	return get_event_descriptor_index(Tbucket);
+}
+
+template <std::size_t Tbucket>
+constexpr const event_descriptor* get_event_descriptor(core::bselect<event_component, Tbucket>) noexcept
+{
+	static_assert(Tbucket < event_selector::bucket_count, "No descriptor for this bucket type");
 	for (auto& i : event_descriptors)
 		if (i.bucket == Tbucket)
 			return &i;
