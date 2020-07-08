@@ -7,8 +7,8 @@
 namespace wge::util::hash
 {
 
-typedef std::uint32_t hash32_t;
-typedef std::uint64_t hash64_t;
+using hash32_t = std::uint32_t;
+using hash64_t = std::uint64_t;
 
 // FNV1a implementation
 // Hashes an array of bytes.
