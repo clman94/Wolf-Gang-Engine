@@ -79,6 +79,7 @@ void object_editor::display_event_list(core::object_resource* pGenerator)
 			ImGuiSelectableFlags flags = ImGuiSelectableFlags_AllowDoubleClick;
 			if (ImGui::Selectable(event_name.c_str(), get_context().is_editor_open_for(info.id), flags, { 0, 0 }))
 				open_script_editor(info.id);
+			event_tooltop(type);
 			if (ImGui::BeginPopupContextItem())
 			{
 				if (ImGui::MenuItem("Delete"))
@@ -102,6 +103,7 @@ void object_editor::display_event_list(core::object_resource* pGenerator)
 			constexpr auto descriptor = scripting::get_event_descriptor(pEvent_type);
 			if (ImGui::MenuItem(descriptor->display_name, nullptr, false, !pGenerator->events[descriptor_index].id.is_valid()))
 				create_event_script(descriptor_index);
+			event_tooltop(descriptor_index);
 		};
 
 		using namespace scripting::event_selector;
@@ -152,6 +154,18 @@ void object_editor::update_editor_titles()
 						get_asset()->get_name()));
 			}
 		}
+	}
+}
+
+void object_editor::event_tooltop(std::size_t pIndex) const
+{
+	if (ImGui::IsItemHovered())
+	{
+		ImGui::BeginTooltip();
+		ImGui::PushTextWrapPos(400);
+		ImGui::TextWrapped(scripting::event_descriptors[pIndex].tip);
+		ImGui::PopTextWrapPos();
+		ImGui::EndTooltip();
 	}
 }
 

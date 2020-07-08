@@ -51,7 +51,6 @@ using alarm_5 = core::bselect<event_component, 10>;
 using alarm_6 = core::bselect<event_component, 11>;
 using alarm_7 = core::bselect<event_component, 12>;
 using alarm_8 = core::bselect<event_component, 13>;
-
 constexpr core::bucket bucket_count = 14;
 
 } // namespace event_selectors
@@ -62,25 +61,26 @@ struct event_descriptor
 	const char* display_name;
 	const char* icon;
 	core::bucket bucket;
+	const char* tip;
 };
 
 constexpr std::array event_descriptors =
 {
-	event_descriptor{ "create",        "Create",        u8"\uf067",  event_selector::create::bucket },
-	event_descriptor{ "unique_create", "Unique Create", "",          event_selector::unique_create::bucket },
-	event_descriptor{ "preupdate",     "Pre-Update",    u8"\uf051",  event_selector::preupdate::bucket },
-	event_descriptor{ "update",        "Update",        u8"\uf051",  event_selector::update::bucket },
-	event_descriptor{ "postupdate",    "Post-Update",   u8"\uf051",  event_selector::postupdate::bucket },
-	event_descriptor{ "draw",          "Draw",          u8"\uf040",  event_selector::draw::bucket },
+	event_descriptor{ "create",        "Create",        u8"\uf067",  event_selector::create::bucket, "Triggered only once at the the beginning of the frame after the object has been created." },
+	event_descriptor{ "unique_create", "Unique Create", "",          event_selector::unique_create::bucket, "" },
+	event_descriptor{ "preupdate",     "Pre-Update",    u8"\uf051",  event_selector::preupdate::bucket, "Event that precedes the Update event. Only use if you require some setup before all Update events are triggered."},
+	event_descriptor{ "update",        "Update",        u8"\uf051",  event_selector::update::bucket, "Triggered every frame. Normal game logic should go here." },
+	event_descriptor{ "postupdate",    "Post-Update",   u8"\uf051",  event_selector::postupdate::bucket, "Event that follows the Update event. Only use if you require some logic after all Update events are triggered." },
+	event_descriptor{ "draw",          "Draw",          u8"\uf040",  event_selector::draw::bucket, "Custom rendering."},
 
-	event_descriptor{ "alarm_1",       "Alarm 1",       u8"\uf017",  event_selector::alarm_1::bucket },
-	event_descriptor{ "alarm_2",       "Alarm 2",       u8"\uf017",  event_selector::alarm_2::bucket },
-	event_descriptor{ "alarm_3",       "Alarm 3",       u8"\uf017",  event_selector::alarm_3::bucket },
-	event_descriptor{ "alarm_4",       "Alarm 4",       u8"\uf017",  event_selector::alarm_4::bucket },
-	event_descriptor{ "alarm_5",       "Alarm 5",       u8"\uf017",  event_selector::alarm_5::bucket },
-	event_descriptor{ "alarm_6",       "Alarm 6",       u8"\uf017",  event_selector::alarm_6::bucket },
-	event_descriptor{ "alarm_7",       "Alarm 7",       u8"\uf017",  event_selector::alarm_7::bucket },
-	event_descriptor{ "alarm_8",       "Alarm 8",       u8"\uf017",  event_selector::alarm_8::bucket }
+	event_descriptor{ "alarm_1",       "Alarm 1",       u8"\uf017",  event_selector::alarm_1::bucket, "Triggered when the variable 'alarm[1]' is equal or below 0." },
+	event_descriptor{ "alarm_2",       "Alarm 2",       u8"\uf017",  event_selector::alarm_2::bucket, "Triggered when the variable 'alarm[2]' is equal or below 0." },
+	event_descriptor{ "alarm_3",       "Alarm 3",       u8"\uf017",  event_selector::alarm_3::bucket, "Triggered when the variable 'alarm[3]' is equal or below 0." },
+	event_descriptor{ "alarm_4",       "Alarm 4",       u8"\uf017",  event_selector::alarm_4::bucket, "Triggered when the variable 'alarm[4]' is equal or below 0." },
+	event_descriptor{ "alarm_5",       "Alarm 5",       u8"\uf017",  event_selector::alarm_5::bucket, "Triggered when the variable 'alarm[5]' is equal or below 0." },
+	event_descriptor{ "alarm_6",       "Alarm 6",       u8"\uf017",  event_selector::alarm_6::bucket, "Triggered when the variable 'alarm[6]' is equal or below 0." },
+	event_descriptor{ "alarm_7",       "Alarm 7",       u8"\uf017",  event_selector::alarm_7::bucket, "Triggered when the variable 'alarm[7]' is equal or below 0." },
+	event_descriptor{ "alarm_8",       "Alarm 8",       u8"\uf017",  event_selector::alarm_8::bucket, "Triggered when the variable 'alarm[8]' is equal or below 0." }
 };
 
 constexpr std::size_t get_event_descriptor_index(std::size_t pBucket) noexcept
