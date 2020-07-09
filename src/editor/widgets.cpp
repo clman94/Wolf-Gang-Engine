@@ -6,19 +6,20 @@ namespace wge::editor
 
 bool asset_item(const core::asset::ptr& pAsset, const core::asset_manager& pAsset_manager, ImVec2 pPreview_size)
 {
-	if (!pAsset)
-		return false;
 	ImGui::PushID(&*pAsset);
 	ImGui::BeginGroup();
-	if (pAsset->get_type() == "texture")
+	if (pPreview_size.x <= 0 || pPreview_size.y <= 0)
 	{
-		ImGui::ImageButton(pAsset, pPreview_size);
+		if (pAsset->get_type() == "texture")
+		{
+			ImGui::ImageButton(pAsset, pPreview_size);
+		}
+		else
+		{
+			ImGui::Button("", pPreview_size);
+		}
+		ImGui::SameLine();
 	}
-	else
-	{
-		ImGui::Button("", pPreview_size);
-	}
-	ImGui::SameLine();
 	ImGui::BeginGroup();
 	ImGui::TextColored({ 0, 1, 1, 1 }, pAsset->get_name().c_str());
 	ImGui::TextColored({ 0.5f, 0.5f, 0.5f, 0 }, pAsset_manager.get_asset_path(pAsset).parent().string().c_str());
@@ -108,20 +109,22 @@ core::asset::ptr asset_drag_drop_target(const std::string& pType, const core::as
 	return result;
 }
 
-core::asset::ptr asset_selector(const char* pStr_id, const std::string& pType, const core::asset_manager& pAsset_manager, core::asset::ptr pCurrent_asset)
+core::asset::ptr asset_selector(const char* pStr_id, const std::string& pType, const core::asset_manager& pAsset_manager, core::asset::ptr pCurrent_asset, const math::vec2& pPreview_size)
 {
-	const ImVec2 preview_size = { 50, 50 };
-
 	core::asset::ptr asset = nullptr;
 	ImGui::BeginGroup();
 
 	if (pCurrent_asset)
 	{
-		asset_item(pCurrent_asset, pAsset_manager, preview_size);
+		asset_item(pCurrent_asset, pAsset_manager, pPreview_size);
+	}
+	else if (pPreview_size.x <= 0 || pPreview_size.y <= 0)
+	{
+		ImGui::Button("Select/Drop asset");
 	}
 	else
 	{
-		ImGui::Button("", preview_size);
+		ImGui::Button("", pPreview_size);
 		ImGui::SameLine();
 		ImGui::Text("Select/Drop asset");
 	}
@@ -129,7 +132,7 @@ core::asset::ptr asset_selector(const char* pStr_id, const std::string& pType, c
 	ImGui::EndGroup();
 	if (auto dropped_asset = asset_drag_drop_target(pType, pAsset_manager))
 		asset = dropped_asset;
-	if (ImGui::BeginPopupContextWindow("AssetSelectorWindow"))
+	if (ImGui::BeginPopupContextItem("AssetSelectorWindow", 0))
 	{
 		ImGui::Text((const char*)ICON_FA_SEARCH);
 		ImGui::SameLine();
@@ -143,7 +146,7 @@ core::asset::ptr asset_selector(const char* pStr_id, const std::string& pType, c
 				name.size() >= search_str.size() &&
 				name.substr(0, search_str.size()) == search_str)
 			{
-				if (asset_item(i, pAsset_manager, preview_size))
+				if (asset_item(i, pAsset_manager, pPreview_size))
 				{
 					asset = i;
 					ImGui::CloseCurrentPopup();

@@ -1600,17 +1600,26 @@ public:
 			log::error("No asset to generate scene with.");
 			return;
 		}
-		log::info("Resetting script vm...");
-		mEngine->get_script_engine().cleanup();
 
-		log::info("Opening Scene in Player Viewport...");
-		mEngine->get_physics().clear_all();
-		mEngine->get_scene().clear();
+		close_scene();
+
 		pScene->generate_scene(mEngine->get_scene(), mEngine->get_asset_manager());
 		mIs_loaded = true;
 		mScene = pScene;
 		mFocus_window = true;
 		log::info("Ready");
+	}
+
+	void close_scene()
+	{
+		log::info("Resetting script vm...");
+		mEngine->get_script_engine().cleanup();
+		log::info("Resetting physics...");
+		mEngine->get_physics().clear_all();
+		log::info("Clearing scene...");
+		mEngine->get_scene().clear();
+		mIs_loaded = false;
+		mScene = nullptr;
 	}
 
 	void restart()
@@ -1733,58 +1742,71 @@ public:
 			mFocus_window = false;
 			ImGui::SetNextWindowFocus();
 		}
-		if (ImGui::Begin("Game##GameViewport"))
+		if (ImGui::Begin("Game##GameViewport", nullptr, ImGuiWindowFlags_MenuBar))
 		{
-			// Play/pause button.
-			if (ImGui::Button((const char*)(mIs_running ? ICON_FA_PAUSE u8" Pause" : ICON_FA_PLAY u8"Play")))
+			if (ImGui::BeginMenuBar())
 			{
-				mIs_running = !mIs_running;
-				if (mIs_running && mOld_camera.has_value())
+				if (ImGui::BeginMenu("Engine", mScene.is_valid()))
 				{
-					mEngine->get_default_camera() = mOld_camera.value();
+					if (ImGui::MenuItem("Reset erroneous objects"))
+						reset_erroneous_objects();
+					ImGui::EndMenu();
 				}
-				else if (!mIs_running)
+				if (ImGui::BeginMenu("View", mScene.is_valid()))
 				{
-					mOld_camera = mEngine->get_default_camera();
+					bool collision_debug = mEngine->get_physics().get_collision_debug_enabled();
+					if (ImGui::Checkbox("Show Collision", &collision_debug))
+						mEngine->get_physics().set_collision_debug_enabled(collision_debug);
+					bool raycast_debug = mEngine->get_physics().get_raycast_debug_enabled();
+					if (ImGui::Checkbox("Show Raycasts", &raycast_debug))
+						mEngine->get_physics().set_raycast_debug_enabled(raycast_debug);
+					ImGui::EndMenu();
 				}
-			}
-
-			// Restart button.
-			ImGui::SameLine();
-			if (ImGui::Button((const char*)(ICON_FA_UNDO u8" Restart")))
-			{
-				restart();
-			}
-			ImGui::SameLine();
-			if (auto new_asset = asset_selector("Scene", "scene", mEngine->get_asset_manager(), mScene.get_asset()))
-			{
-				open_scene(new_asset);
+				ImGui::Dummy({ math::max(0.f, (ImGui::GetWindowWidth() / 2) - ImGui::GetCursorPosX() - 100), 0 });
+				if (ImGui::MenuItem((const char*)(mIs_running ? ICON_FA_PAUSE : ICON_FA_PLAY)))
+				{
+					if (mScene)
+					{
+						mIs_running = !mIs_running;
+						if (mIs_running && mOld_camera.has_value())
+						{
+							mEngine->get_default_camera() = mOld_camera.value();
+						}
+						else if (!mIs_running)
+						{
+							mOld_camera = mEngine->get_default_camera();
+						}
+					}
+				}
+				if (ImGui::MenuItem((const char*)(ICON_FA_BACKWARD)))
+				{
+					restart();
+				}
+				if (auto new_asset = asset_selector("Scene", "scene", mEngine->get_asset_manager(), mScene.get_asset(), { 0, 0 }))
+				{
+					open_scene(new_asset);
+				}
+				if (mScene.is_valid())
+				{
+					if (mScene.is_valid() && ImGui::MenuItem("X"))
+					{
+						close_scene();
+					}
+					if (ImGui::IsItemHovered())
+					{
+						ImGui::BeginTooltip();
+						ImGui::TextUnformatted("Close this scene.");
+						ImGui::EndTooltip();
+					}
+				}
+				ImGui::EndMenuBar();
 			}
 
 			mCan_take_input = ImGui::IsWindowFocused();
 			if (mIs_loaded)
 			{
-				ImGui::BeginChild("viewport", {0, 0}, true, ImGuiWindowFlags_MenuBar);
-				if (ImGui::BeginMenuBar())
-				{
-					if (ImGui::BeginMenu("Engine"))
-					{
-						if (ImGui::MenuItem("Reset erroneous objects"))
-							reset_erroneous_objects();
-						ImGui::EndMenu();
-					}
-					if (ImGui::BeginMenu("View"))
-					{
-						bool collision_debug = mEngine->get_physics().get_collision_debug_enabled();
-						if (ImGui::Checkbox("Show Collision", &collision_debug))
-							mEngine->get_physics().set_collision_debug_enabled(collision_debug);
-						bool raycast_debug = mEngine->get_physics().get_raycast_debug_enabled();
-						if (ImGui::Checkbox("Show Raycasts", &raycast_debug))
-							mEngine->get_physics().set_raycast_debug_enabled(raycast_debug);
-						ImGui::EndMenu();
-					}
-					ImGui::EndMenuBar();
-				}
+				ImGui::BeginChild("viewport");
+
 				mCan_take_input |= ImGui::IsWindowFocused();
 				auto cursor = ImGui::GetCursorScreenPos();
 				ImGui::Image(mViewport_framebuffer, ImGui::FillWithFramebuffer(mViewport_framebuffer));
