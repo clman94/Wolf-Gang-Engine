@@ -111,6 +111,7 @@ core::asset::ptr asset_drag_drop_target(const std::string& pType, const core::as
 
 core::asset::ptr asset_selector(const char* pStr_id, const std::string& pType, const core::asset_manager& pAsset_manager, core::asset::ptr pCurrent_asset, const math::vec2& pPreview_size)
 {
+	ImGui::PushID(pStr_id);
 	core::asset::ptr asset = nullptr;
 	ImGui::BeginGroup();
 
@@ -156,6 +157,7 @@ core::asset::ptr asset_selector(const char* pStr_id, const std::string& pType, c
 		ImGui::EndChild();
 		ImGui::EndPopup();
 	}
+	ImGui::PopID();
 	return asset;
 }
 
