@@ -20,7 +20,7 @@ void object_editor::on_gui()
 {
 	mScript_editor_dock_id = ImGui::GetID("EditorDock");
 
-	ImGui::BeginChild("LeftPanel", ImVec2(300, 0));
+	ImGui::BeginChild("LeftPanel", ImVec2(mLeft_panel_width, 0));
 
 	auto res = get_asset()->get_resource<core::object_resource>();
 	ImGui::Dummy({ 0, 10 });
@@ -33,6 +33,8 @@ void object_editor::on_gui()
 
 	ImGui::EndChild();
 
+	ImGui::SameLine();
+	ImGui::VerticalSplitter("LeftPanelAndDockSpace", &mLeft_panel_width);
 	ImGui::SameLine();
 
 	// Event script editors are given a dedicated dockspace where they spawn. This helps
@@ -108,7 +110,12 @@ void object_editor::display_event_list(core::object_resource* pGenerator)
 
 		using namespace scripting::event_selector;
 
-		event_menu_item(create{});
+		if (ImGui::BeginMenu("Creation"))
+		{
+			event_menu_item(create{});
+			event_menu_item(destroy{});
+			ImGui::EndMenu();
+		}
 
 		if (ImGui::BeginMenu("Update"))
 		{

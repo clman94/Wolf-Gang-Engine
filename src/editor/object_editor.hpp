@@ -28,6 +28,7 @@ private:
 private:
 	void create_event_script(std::size_t pIndex);
 
+	float mLeft_panel_width = 300;
 	ImGuiID mScript_editor_dock_id = 0;
 };
 
