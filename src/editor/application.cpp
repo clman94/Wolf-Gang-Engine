@@ -880,9 +880,7 @@ public:
 	{
 		core::asset_id id = util::generate_uuid();
 		auto new_asset = mMain_editor->get_asset_manager().create_secondary_asset(mMain_editor->get_asset(), id.to_shortened_string(), "script", id);
-		scripting::event_component event;
-		event.source_script = new_asset;
-		pObj.add_component(std::move(event), scripting::event_selector::unique_create::bucket);
+		pObj.add_component(scripting::event_component{ new_asset }, scripting::event_selector::unique_create::bucket);
 		mMain_editor->create_sub_editors();
 	}
 
