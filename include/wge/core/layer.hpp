@@ -17,6 +17,60 @@
 namespace wge::core
 {
 
+template <typename T>
+struct bucket_select
+{
+	using type = T;
+	bucket bucket;
+};
+
+template <typename...T>
+class bucket_array
+{
+public:
+	constexpr bucket_array() noexcept
+	{
+		for (auto& i : buckets)
+			i = default_bucket;
+	}
+
+	template <typename...Tselectors>
+	constexpr bucket_array(const bucket_select<Tselectors>&...pSelect) noexcept
+	{
+		for (auto& i : buckets)
+			i = default_bucket;
+		(set(pSelect), ...);
+	}
+
+	template <typename Ttype>
+	constexpr const bucket& get() const noexcept
+	{
+		return buckets[get_index<Ttype>()];
+	}
+
+private:
+	template <typename Ttype>
+	constexpr void set(const bucket_select<Ttype>& pSelect) noexcept
+	{
+		buckets[get_index<Ttype>()] = pSelect.bucket;
+	}
+
+	template <typename Ttype>
+	constexpr static std::size_t get_index() noexcept
+	{
+		return get_index_impl<Ttype>(std::index_sequence_for<T...>{});
+	}
+
+	template <typename Ttype, std::size_t...I>
+	constexpr static std::size_t get_index_impl(std::index_sequence<I...>) noexcept
+	{
+		return ((std::is_same_v<T, Ttype> ? I : 0) + ...);
+	}
+
+private:
+	std::array<bucket, sizeof...(T)> buckets;
+};
+
 // A layer is a container of objects and their components.
 //
 class layer final
@@ -184,7 +238,7 @@ public:
 	}
 
 	template <typename T, typename...Tdeps>
-	auto each();
+	auto each(const bucket_array<T, Tdeps...>& pBuckets = {});
 
 	auto begin()
 	{
@@ -371,9 +425,9 @@ inline auto* layer::add_component(const object_id& pObject_id, bucket pBucket)
 }
 
 template<typename T, typename...Tdeps>
-inline auto layer::each()
+inline auto layer::each(const bucket_array<T, Tdeps...>& pBuckets)
 {
-	return filter{ get_storage<T>(), get_storage<Tdeps>()... };
+	return filter{ get_storage<T>(pBuckets.get<T>()), get_storage<Tdeps>(pBuckets.get<Tdeps>())... };
 }
 
 } // namespace wge::core
