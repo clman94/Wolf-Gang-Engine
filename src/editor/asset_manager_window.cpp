@@ -348,6 +348,11 @@ void asset_manager_window::asset_context_menu()
 	{
 		if (is_singlular_selection())
 		{
+			if (ImGui::MenuItem("Open Editor"))
+			{
+				mContext.open_editor(mSelected_asset.back());
+			}
+
 			const core::asset::ptr selection = mSelected_asset.back();
 			static std::string new_name;
 			if (ImGui::IsWindowAppearing())
@@ -374,6 +379,11 @@ void asset_manager_window::asset_context_menu()
 		}
 		else
 		{
+			if (ImGui::MenuItem("Open All Editors"))
+			{
+				for (auto& i : mSelected_asset)
+					mContext.open_editor(i);
+			}
 			if (ImGui::MenuItem("Delete All"))
 			{
 				delete_selected();
