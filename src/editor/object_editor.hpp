@@ -23,7 +23,7 @@ private:
 	void display_sprite_input(core::object_resource* pGenerator);
 	void display_event_list(core::object_resource* pGenerator);
 	void update_editor_titles();
-	void event_tooltop(std::size_t pIndex) const;
+	void event_tooltip(std::size_t pIndex) const;
 
 private:
 	void create_event_script(std::size_t pIndex);
