@@ -22,18 +22,15 @@ void object_resource::generate_object(core::object& pObj, const asset_manager& p
 		pObj.add_component(physics::sprite_fixture{});
 	}
 
-	if (!events.empty())
-	{
-		pObj.add_component(scripting::event_state_component{});
+	pObj.add_component(scripting::event_state_component{});
 
-		for (auto[type, info] : util::enumerate{ events })
+	for (auto[type, info] : util::enumerate{ events })
+	{
+		if (info.id.is_valid() && pAsset_mgr.has_asset(info.id))
 		{
-			if (info.id.is_valid() && pAsset_mgr.has_asset(info.id))
-			{
-				pObj.add_component(
-					scripting::event_component{ pAsset_mgr.get_asset(info.id) },
-					scripting::event_descriptors[type].bucket);
-			}
+			pObj.add_component(
+				scripting::event_component{ pAsset_mgr.get_asset(info.id) },
+				scripting::event_descriptors[type].bucket);
 		}
 	}
 }

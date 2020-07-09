@@ -41,7 +41,19 @@ sol::environment script_engine::create_object_environment(core::object pObj, sol
 	if (!pObj.get_name().empty())
 		state["obj"][pObj.get_name()] = env;
 
-	env["created"] = false;
+	env["alarm"] = state.create_table_with(
+		1, 0,
+		2, 0,
+		3, 0,
+		4, 0,
+		5, 0,
+		6, 0,
+		7, 0,
+		8, 0
+	);
+
+	env["_created"] = false;
+	env["_unique_created"] = false;
 
 	env["is_valid"] = [pObj]() -> bool
 	{
@@ -383,11 +395,42 @@ void script_engine::event_unique_create(core::layer& pLayer)
 
 void script_engine::event_preupdate(core::layer& pLayer)
 {
-	// Event: Update
-	for (auto& [id, on_update, state] :
+	// Event: Pre-Update
+	for (auto& [id, on_preupdate, state] :
 		pLayer.each<event_selector::preupdate, event_state_component>())
 	{
-		run_script(on_update.source_script, state.environment, "Preupdate", id);
+		run_script(on_preupdate.source_script, state.environment, "Preupdate", id);
+	}
+	pLayer.destroy_queued_components();
+}
+
+void script_engine::event_alarms(core::layer& pLayer, std::size_t pIndex)
+{
+	assert(pIndex < 8);
+	const std::size_t lua_index = pIndex;
+	const auto delta = state["delta"].get<float>();
+
+	// Event: Alarm {}
+	for (auto& [id, on_alarm, state] :
+		pLayer.each<event_component, event_state_component>({
+			core::bucket_select<event_component>{ event_selector::alarm_1::bucket + pIndex } }))
+	{
+		auto alarm_list = state.environment["alarm"];
+		auto alarm = alarm_list[lua_index];
+		float alarm_timer = alarm.get<float>();
+		if (alarm_timer > 0)
+		{
+			alarm_timer -= delta;
+			if (alarm_timer <= 0)
+			{
+				alarm = 0;
+				run_script(on_alarm.source_script, state.environment, fmt::format("Alarm {}", lua_index), id);
+			}
+			else
+			{
+				alarm = alarm_timer;
+			}
+		}
 	}
 	pLayer.destroy_queued_components();
 }
@@ -405,11 +448,11 @@ void script_engine::event_update(core::layer& pLayer)
 
 void script_engine::event_postupdate(core::layer& pLayer)
 {
-	// Event: Update
-	for (auto& [id, on_update, state] :
+	// Event: Post-Update
+	for (auto& [id, on_postupdate, state] :
 		pLayer.each<event_selector::postupdate, event_state_component>())
 	{
-		run_script(on_update.source_script, state.environment, "Postupdate", id);
+		run_script(on_postupdate.source_script, state.environment, "Postupdate", id);
 	}
 	pLayer.destroy_queued_components();
 }

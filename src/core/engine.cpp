@@ -100,6 +100,9 @@ void engine::step()
 		mLua_engine.event_unique_create(i);
 	for (auto& i : mScene)
 		mLua_engine.event_preupdate(i);
+	for (std::size_t alarm_index = 0; alarm_index < 8; alarm_index++)
+		for (auto& i : mScene)
+			mLua_engine.event_alarms(i, alarm_index);
 	for (auto& i : mScene)
 		mLua_engine.event_update(i);
 	for (auto& i : mScene)

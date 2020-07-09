@@ -62,6 +62,7 @@ public:
 	void event_create(core::layer& pLayer);
 	void event_unique_create(core::layer& pLayer);
 	void event_preupdate(core::layer& pLayer);
+	void event_alarms(core::layer& pLayer, std::size_t pIndex);
 	void event_update(core::layer& pLayer);
 	void event_postupdate(core::layer& pLayer);
 	void event_draw(core::layer& pLayer, float pDelta);
