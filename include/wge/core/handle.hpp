@@ -21,6 +21,7 @@ public:
 		mId(pId),
 		mStorage(&pStorage)
 	{}
+	constexpr handle(std::nullptr_t) noexcept {}
 
 	object_id get_object_id() const noexcept
 	{

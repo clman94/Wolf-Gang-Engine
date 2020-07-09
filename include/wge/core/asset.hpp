@@ -112,6 +112,7 @@ public:
 	resource_handle(const core::asset::ptr& pAsset) :
 		mAsset(pAsset)
 	{}
+	constexpr resource_handle(std::nullptr_t) noexcept {}
 
 	T& operator*() const noexcept
 	{
