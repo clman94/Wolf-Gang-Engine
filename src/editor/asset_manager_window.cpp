@@ -274,7 +274,8 @@ void asset_manager_window::asset_tile(const core::asset::ptr& pAsset, const math
 	// Select the asset when clicked.
 	// Doing some trickery here so we dont deselect everything when we want to drag multiple items.
 	{
-		if (ImGui::IsItemHovered() && (ImGui::IsMouseReleased(0) || ImGui::IsMouseReleased(1) && !is_selected(pAsset)))
+		if (ImGui::IsItemHovered() && (ImGui::IsMouseReleased(0) || ImGui::IsMouseReleased(1) && !is_selected(pAsset)) ||
+			ImGui::IsItemHovered() && ImGui::IsMouseDragging(0, 1.f) && !is_selected(pAsset))
 			select(pAsset);
 	}
 
