@@ -39,23 +39,34 @@ template <std::size_t Tbucket>
 using bselect = core::bselect<event_component, Tbucket>;
 
 using create = bselect<0>;
-using preupdate = bselect<1>;
-using update = bselect<2>;
-using postupdate = bselect<3>;
-using draw = bselect<4>;
+using destroy = bselect<1>;
+using preupdate = bselect<2>;
+using update = bselect<3>;
+using postupdate = bselect<4>;
+using draw = bselect<5>;
 
-using unique_create = bselect<5>;
+using unique_create = bselect<6>;
 
-using alarm_1 = bselect<6>;
-using alarm_2 = bselect<7>;
-using alarm_3 = bselect<8>;
-using alarm_4 = bselect<9>;
-using alarm_5 = bselect<10>;
-using alarm_6 = bselect<11>;
-using alarm_7 = bselect<12>;
-using alarm_8 = bselect<13>;
+using alarm_1 = bselect<7>;
+using alarm_2 = bselect<8>;
+using alarm_3 = bselect<9>;
+using alarm_4 = bselect<10>;
+using alarm_5 = bselect<11>;
+using alarm_6 = bselect<12>;
+using alarm_7 = bselect<13>;
+using alarm_8 = bselect<14>;
 
-using begin_scene = bselect<14>;
+// Planned events
+
+// Physics Events:
+// Start collision
+// Continued Collision
+// End Collision
+
+// Sprite Events:
+// New Frame
+// Begin Animation
+// End Animation
 
 constexpr core::bucket bucket_count = 15;
 
@@ -73,6 +84,7 @@ struct event_descriptor
 constexpr std::array event_descriptors =
 {
 	event_descriptor{ "create",        "Create",        u8"\uf067",  event_selector::create::bucket, "Triggered only once at the the beginning of the frame after the object has been created." },
+	event_descriptor{ "destroy",       "Destroy",       u8"\uf067",  event_selector::destroy::bucket, "Triggered before the object is deleted from the scene." },
 	event_descriptor{ "unique_create", "Unique Create", "",          event_selector::unique_create::bucket, "" },
 	event_descriptor{ "preupdate",     "Pre-Update",    u8"\uf051",  event_selector::preupdate::bucket, "Event that precedes the Update event. Only use if you require some setup before all Update events are triggered."},
 	event_descriptor{ "update",        "Update",        u8"\uf051",  event_selector::update::bucket, "Triggered every frame. Normal game logic should go here." },
@@ -86,7 +98,7 @@ constexpr std::array event_descriptors =
 	event_descriptor{ "alarm_5",       "Alarm 5",       u8"\uf017",  event_selector::alarm_5::bucket, "Triggered when the variable 'alarm[5]' is equal or below 0." },
 	event_descriptor{ "alarm_6",       "Alarm 6",       u8"\uf017",  event_selector::alarm_6::bucket, "Triggered when the variable 'alarm[6]' is equal or below 0." },
 	event_descriptor{ "alarm_7",       "Alarm 7",       u8"\uf017",  event_selector::alarm_7::bucket, "Triggered when the variable 'alarm[7]' is equal or below 0." },
-	event_descriptor{ "alarm_8",       "Alarm 8",       u8"\uf017",  event_selector::alarm_8::bucket, "Triggered when the variable 'alarm[8]' is equal or below 0." }
+	event_descriptor{ "alarm_8",       "Alarm 8",       u8"\uf017",  event_selector::alarm_8::bucket, "Triggered when the variable 'alarm[8]' is equal or below 0." },
 };
 
 constexpr std::size_t get_event_descriptor_index(std::size_t pBucket) noexcept
