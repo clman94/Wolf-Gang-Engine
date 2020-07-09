@@ -344,7 +344,7 @@ void asset_manager_window::asset_context_menu()
 	if (mSelected_asset.empty())
 		return;
 	ImGui::PushID(&*mSelected_asset.back());
-	if (ImGui::BeginPopupContextWindow("AssetContextMenu"))
+	if (ImGui::BeginPopupContextItem("AssetContextMenu"))
 	{
 		if (is_singlular_selection())
 		{
