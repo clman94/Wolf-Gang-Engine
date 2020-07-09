@@ -1746,13 +1746,13 @@ public:
 		{
 			if (ImGui::BeginMenuBar())
 			{
-				if (ImGui::BeginMenu("Engine", mScene.is_valid()))
+				if (ImGui::BeginMenu("Engine"))
 				{
 					if (ImGui::MenuItem("Reset erroneous objects"))
 						reset_erroneous_objects();
 					ImGui::EndMenu();
 				}
-				if (ImGui::BeginMenu("View", mScene.is_valid()))
+				if (ImGui::BeginMenu("View"))
 				{
 					bool collision_debug = mEngine->get_physics().get_collision_debug_enabled();
 					if (ImGui::Checkbox("Show Collision", &collision_debug))
