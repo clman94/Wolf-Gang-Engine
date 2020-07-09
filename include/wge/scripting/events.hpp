@@ -68,6 +68,13 @@ using alarm_8 = bselect<14>;
 // Begin Animation
 // End Animation
 
+// Editor/Debug Events:
+// Debug Gui
+
+// Load/Save:
+// Load
+// Save
+
 constexpr core::bucket bucket_count = 15;
 
 } // namespace event_selectors
