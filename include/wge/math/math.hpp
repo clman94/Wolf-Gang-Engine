@@ -155,11 +155,7 @@ inline constexpr T almost_equal(const T& pL, const T& pR) noexcept
 // Template for normalizing a value.
 // Specialization is required.
 template <typename T>
-inline T normal(const T& a) noexcept
-{
-	static_assert(false, "Invalid normalize() instantiation");
-	return a;
-}
+inline T normal(const T& a) noexcept;
 
 template <typename T>
 inline bool is_nan(const T& a) noexcept
