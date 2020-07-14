@@ -1,5 +1,3 @@
-#pragma once
-
 #include <wge/graphics/graphics_backend.hpp>
 #include <wge/graphics/glfw_backend.hpp>
 #include <wge/logging/log.hpp>
