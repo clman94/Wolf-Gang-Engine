@@ -44,6 +44,7 @@ template <typename T>
 class span
 {
 public:
+	using type = T;
 	using pointer = T*;
 	using const_pointer = const T*;
 	using reference = T&;
@@ -85,19 +86,18 @@ public:
 	{}
 
 	template <typename Tcontainer,
-		typename = std::enable_if_t<detail::is_container<Tcontainer>::value>>
+		typename = std::enable_if_t<detail::is_container<Tcontainer>::value ||
+			// This allows us to reuse this overload for converting
+			// non-const spans into const spans.
+			(detail::is_span<Tcontainer>::value &&
+				!std::is_const_v<typename Tcontainer::type> &&
+				std::is_const_v<T>)>>
 	constexpr span(const Tcontainer& pContainer) noexcept :
 		mPtr(std::data(pContainer)),
 		mSize(std::size(pContainer))
 	{}
 
 	constexpr span(const span&) noexcept = default;
-
-	template <typename = std::enable_if_t<std::is_const_v<T>>>
-	constexpr span(const span<std::remove_const_t<T>> & pTo_const) noexcept :
-		mPtr(std::data(pTo_const)),
-		mSize(std::size(pTo_const))
-	{}
 
 	constexpr iterator begin() const noexcept
 	{
