@@ -1,5 +1,6 @@
 #pragma once
 
+#include <type_traits>
 #include <wge/math/math.hpp>
 #include <wge/math/vector.hpp>
 
@@ -12,10 +13,9 @@ namespace math
 // multiplied.
 template<std::size_t C, std::size_t R,
 	std::size_t C1, std::size_t R1>
-	struct can_multiply :
+using can_multiply =
 	// Columns of left matrix = Rows of right matrix
-	std::enable_if<C == R1>
-{};
+	std::enable_if_t<C == R1>;
 
 // Templated matrix class
 template<std::size_t C, std::size_t R>
@@ -33,7 +33,7 @@ public:
 	}
 
 	// Construct a matrix as an identity.
-	template<typename = std::enable_if<is_square>::type>
+	template<typename = std::enable_if_t<is_square>>
 	mat(const float& pIdentity_scalar) noexcept
 	{
 		identity(pIdentity_scalar);
@@ -47,47 +47,47 @@ public:
 	}
 
 	// Set to the identity
-	template<typename = std::enable_if<is_square>::type>
+	template<typename = std::enable_if_t<is_square>>
 	mat& identity() noexcept;
 
 	// Set as an identity with a scalar.
-	template<typename = std::enable_if<is_square>::type>
+	template<typename = std::enable_if_t<is_square>>
 	mat& identity(float pScalar) noexcept;
 
 	// Translate x and y with a vec2
-	template<typename = std::enable_if<C >= 3 && R >= 2>::type>
+	template<typename = std::enable_if_t<C >= 3 && R >= 2>>
 	mat& translate(const vec2& pVec2) noexcept;
 	// Translate x and y
-	template<typename = std::enable_if<C >= 3 && R >= 2>::type>
+	template<typename = std::enable_if_t<C >= 3 && R >= 2>>
 	mat& translate(float p_x, float p_y) noexcept;
 	// Translate x, y, and z
-	template<typename = std::enable_if<C >= 4 && R >= 3>::type>
+	template<typename = std::enable_if_t<C >= 4 && R >= 3>>
 	mat& translate(float p_x, float p_y, float p_z) noexcept;
 
 	// Rotate along the Z-axis
-	template<typename = std::enable_if<C >= 2 && R >= 2>::type>
+	template<typename = std::enable_if_t<C >= 2 && R >= 2>>
 	mat& rotate(const radians& pRadians) noexcept;
 
 	// Scale matrix
 	mat& scale(const float& pScalar) noexcept;
 	// Scale matrix by a 2d vector
-	template<typename = std::enable_if<R >= 2>::type>
+	template<typename = std::enable_if_t<R >= 2>>
 	mat& scale(const vec2& pVec2) noexcept;
 
-	template<typename = std::enable_if<C >= 2 && R >= 2>::type>
+	template<typename = std::enable_if_t<C >= 2 && R >= 2>>
 	mat& shear(const vec2& pVec) noexcept;
 
-	template<typename = std::enable_if<is_square>::type>
+	template<typename = std::enable_if_t<is_square>>
 	mat& transpose() noexcept;
 
-	template<typename = std::enable_if<is_square>::type>
+	template<typename = std::enable_if_t<is_square>>
 	float determinant() const noexcept;
 
-	template<typename = std::enable_if<is_square>::type>
+	template<typename = std::enable_if_t<is_square>>
 	mat& invert() noexcept;
 
 	// Check if the (C-1, R-1) component is 1
-	template<typename = std::enable_if<is_square>::type>
+	template<typename = std::enable_if_t<is_square>>
 	bool is_affine() const noexcept;
 
 	// Set all components to a value
@@ -95,22 +95,22 @@ public:
 
 	// Multiply a matrix by another matrix
 	template<std::size_t C1, std::size_t R1,
-		typename = can_multiply<C, R, C1, R1>::type>
+		typename = can_multiply<C, R, C1, R1>>
 	mat<C1, R> multiply(const mat<C1, R1>& pMat) const noexcept;
 	// Multiply a vec2 by this matrix resulting in a new vec2.
 	template<typename =
-		std::enable_if<is_square && C >= 2>>
+		std::enable_if_t<is_square && C >= 2>>
 	vec2 multiply(const vec2& pVec2) const noexcept;
 
 	template<std::size_t C1, std::size_t R1,
-		typename = can_multiply<C, R, C1, R1>::type>
+		typename = can_multiply<C, R, C1, R1>>
 	mat<C1, R> operator * (const mat<C1, R1>& pMat) noexcept
 	{
 		return multiply(pMat);
 	}
 
 	template<typename =
-		std::enable_if<is_square && C >= 2>::type>
+		std::enable_if_t<is_square && C >= 2>>
 	vec2 operator * (const vec2& pVec2) const noexcept
 	{
 		return multiply(pVec2);
@@ -187,8 +187,8 @@ template<std::size_t C, std::size_t R>
 template<typename>
 inline mat<C, R>& mat<C, R>::rotate(const radians& pRadians) noexcept
 {
-	float s = std::sinf(pRadians);
-	float c = std::cosf(pRadians);
+	float s = std::sin(pRadians);
+	float c = std::cos(pRadians);
 	mat<C, R> temp{ 1 };
 	temp.m[0][0] = c; temp.m[1][0] = -s;
 	temp.m[0][1] = s; temp.m[1][1] = c;
