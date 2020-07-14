@@ -46,13 +46,37 @@ struct message
 
 	userdata_t userdata;
 
+	message& with_userdata(userdata_t pUserdata)
+	{
+		userdata = std::move(pUserdata);
+		return *this;
+	}
+
+	message& in_file(std::string_view pFile)
+	{
+		line_info.file = pFile;
+		return *this;
+	}
+
+	message& at_line(int pLine) noexcept
+	{
+		line_info.line = pLine;
+		return *this;
+	}
+
+	message& at_column(int pCol) noexcept
+	{
+		line_info.column = pCol;
+		return *this;
+	}
+
 	void stamp_time();
 	std::string to_string(bool pAnsi_color = false) const;
 };
 
 util::span<const message> get_log();
-void add_message(message&& pMessage);
-void add_message(const message& pMessage);
+message& add_message(message&& pMessage);
+message& add_message(const message& pMessage);
 
 // Add userdata to the last message.
 void userdata(userdata_t pData);
@@ -64,37 +88,37 @@ bool open_file(const char* pFile);
 bool soft_assert(bool pExpression, std::string_view pMessage, line_info);
 
 template <typename Tformat, typename...Targs>
-inline void print(level pLevel, const Tformat& pFormat, Targs&&...pArgs)
+inline message& print(level pLevel, const Tformat& pFormat, Targs&&...pArgs)
 {
 	message msg;
 	msg.severity_level = pLevel;
 	msg.string = fmt::format(pFormat, std::forward<Targs>(pArgs)...);
 	msg.stamp_time();
-	add_message(std::move(msg));
+	return add_message(std::move(msg));
 }
 
 template <typename Tformat, typename...Targs>
-inline void info(const Tformat& pFormat, Targs&&...pArgs)
+inline message& info(const Tformat& pFormat, Targs&&...pArgs)
 {
-	print(level::info, pFormat, std::forward<Targs>(pArgs)...);
+	return print(level::info, pFormat, std::forward<Targs>(pArgs)...);
 }
 
 template <typename Tformat, typename...Targs>
-inline void debug(const Tformat& pFormat, Targs&&...pArgs)
+inline message& debug(const Tformat& pFormat, Targs&&...pArgs)
 {
-	print(level::debug, pFormat, std::forward<Targs>(pArgs)...);
+	return print(level::debug, pFormat, std::forward<Targs>(pArgs)...);
 }
 
 template <typename Tformat, typename...Targs>
-inline void warning(const Tformat& pFormat, Targs&&...pArgs)
+inline message& warning(const Tformat& pFormat, Targs&&...pArgs)
 {
-	print(level::warning, pFormat, std::forward<Targs>(pArgs)...);
+	return print(level::warning, pFormat, std::forward<Targs>(pArgs)...);
 }
 
 template <typename Tformat, typename...Targs>
-inline void error(const Tformat& pFormat, Targs&&...pArgs)
+inline message& error(const Tformat& pFormat, Targs&&...pArgs)
 {
-	print(level::error, pFormat, std::forward<Targs>(pArgs)...);
+	return print(level::error, pFormat, std::forward<Targs>(pArgs)...);
 }
 
 } // namespace wge::log

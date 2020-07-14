@@ -68,16 +68,18 @@ util::span<const message> get_log()
 	return gLog;
 }
 
-void add_message(message&& pMessage)
+message& add_message(message&& pMessage)
 {
 	gLog.emplace_back(std::forward<message>(pMessage));
 	std::cout << gLog.back().to_string(true) << std::endl;
+	return gLog.back();
 }
 
-void add_message(const message& pMessage)
+message& add_message(const message& pMessage)
 {
 	gLog.push_back(pMessage);
 	std::cout << gLog.back().to_string(true) << std::endl;
+	return gLog.back();
 }
 
 void userdata(userdata_t pData)
