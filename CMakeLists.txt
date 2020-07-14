@@ -9,10 +9,6 @@ set(WGE_3RDPARTY_DIR "${CMAKE_SOURCE_DIR}/3rdparty")
 # Use C++17
 set(CMAKE_CXX_STANDARD 17)
 
-# Use the angelscript namespace
-# Disabled for now because of some minor errors
-# add_definitions(-DAS_USE_NAMESPACE)
-
 # Tell ImGui that we are using GLEW
 add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLEW)
 
@@ -149,23 +145,6 @@ set(STB_SOURCES
 source_group("STB Headers" FILES ${STB_HEADERS})
 source_group("STB Sources" FILES ${STB_SOURCES})
 
-# AngelScript Add-ons
-set(ANGELSCRIPT_ADDONS
-	"${WGE_3RDPARTY_DIR}/AngelScript/sdk/add_on/scriptbuilder/scriptbuilder.h"
-	"${WGE_3RDPARTY_DIR}/AngelScript/sdk/add_on/scriptbuilder/scriptbuilder.cpp"
-	"${WGE_3RDPARTY_DIR}/AngelScript/sdk/add_on/scripthandle/scripthandle.h"
-	"${WGE_3RDPARTY_DIR}/AngelScript/sdk/add_on/scripthandle/scripthandle.cpp"
-	"${WGE_3RDPARTY_DIR}/AngelScript/sdk/add_on/scriptstdstring/scriptstdstring.h"
-	"${WGE_3RDPARTY_DIR}/AngelScript/sdk/add_on/scriptstdstring/scriptstdstring.cpp"
-	"${WGE_3RDPARTY_DIR}/AngelScript/sdk/add_on/scriptstdstring/scriptstdstring_utils.cpp"
-	"${WGE_3RDPARTY_DIR}/AngelScript/sdk/add_on/scriptarray/scriptarray.h"
-	"${WGE_3RDPARTY_DIR}/AngelScript/sdk/add_on/scriptarray/scriptarray.cpp"
-	"${WGE_3RDPARTY_DIR}/AngelScript/sdk/add_on/contextmgr/contextmgr.h"
-	"${WGE_3RDPARTY_DIR}/AngelScript/sdk/add_on/contextmgr/contextmgr.cpp"
-	)
-include_directories("${WGE_3RDPARTY_DIR}/AngelScript/sdk/add_on")
-source_group("AngelScript Addons" FILES ${ANGELSCRIPT_ADDONS})
-
 # Box2D
 file(GLOB_RECURSE BOX2D_SOURCES "${WGE_3RDPARTY_DIR}/box2d/Box2D/*.cpp")
 file(GLOB_RECURSE BOX2D_HEADERS "${WGE_3RDPARTY_DIR}/box2d/Box2D/*.h")
@@ -202,7 +181,6 @@ set(ALL_SOURCES
 	${SOL_HEADERS}
 	${FMT_SOURCES}
 	${FMT_HEADERS}
-	${ANGELSCRIPT_ADDONS}
 	${WGE_ALL_HEADERS}
 	${WGE_ALL_SOURCES}
 	)
@@ -229,11 +207,6 @@ set(GLFW_BUILD_DOCS OFF)
 add_subdirectory("${WGE_3RDPARTY_DIR}/glfw")
 include_directories("${WGE_3RDPARTY_DIR}/glfw/include")
 target_link_libraries(WolfGangEngine glfw ${GLFW_LIBRARIES})
-
-# AngelScript
-add_subdirectory("${WGE_3RDPARTY_DIR}/angelscript/sdk/angelscript/projects/cmake")
-include_directories("${WGE_3RDPARTY_DIR}/angelscript/sdk/angelscript/include")
-target_link_libraries(WolfGangEngine ${ANGELSCRIPT_LIBRARY_NAME})
 
 # OpenGL
 find_package(OpenGL)
