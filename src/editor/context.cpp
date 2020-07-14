@@ -175,6 +175,11 @@ asset_editor* context::open_editor(const core::asset::ptr& pAsset, unsigned int 
 	return nullptr;
 }
 
+asset_editor* context::open_editor(const core::asset_id& pAsset_id)
+{
+	return open_editor(mEngine.get_asset_manager().get_asset(pAsset_id));
+}
+
 void context::close_editor(const core::asset::ptr& pAsset)
 {
 	close_editor(pAsset->get_id());

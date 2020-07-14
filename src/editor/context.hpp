@@ -106,6 +106,7 @@ public:
 	void register_editor(const std::string& pAsset_type, Targs&&...);
 	asset_editor::uptr create_editor(const core::asset::ptr& pAsset) const;
 	asset_editor* open_editor(const core::asset::ptr& pAsset, unsigned int pDock_id = 0);
+	asset_editor* open_editor(const core::asset_id& pAsset_id);
 	void close_editor(const core::asset::ptr& pAsset);
 	void close_editor(const core::asset_id& pId);
 	void close_all_editors();

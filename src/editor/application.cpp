@@ -1585,6 +1585,7 @@ static bool texture_asset_input(core::asset::ptr& pAsset, context& pContext, con
 	}
 	return asset_dropped;
 }
+
 class game_viewport
 {
 public:
@@ -1888,6 +1889,10 @@ private:
 class log_window
 {
 public:
+	log_window(context& pContext) :
+		mContext(&pContext)
+	{}
+
 	void on_gui()
 	{
 		const std::size_t log_limit = 256;
@@ -1930,7 +1935,29 @@ public:
 				ImGui::NextColumn();
 
 				// The actual message. Has the same color as the message type.
-				ImGui::TextUnformatted(i.string.c_str());
+				if (i.line_info.file.empty())
+				{
+					ImGui::TextUnformatted(i.string.c_str());
+				}
+				else
+				{
+					ImGui::PushStyleColor(ImGuiCol_Button, { 0, 0, 0, 0 });
+					if (ImGui::SmallButton(i.string.c_str()))
+					{
+						if (auto id = std::any_cast<const core::asset_id>(&i.userdata))
+							mContext->open_editor(*id);
+					}
+					ImGui::PopStyleColor();
+
+					if (ImGui::IsItemHovered())
+					{
+						ImGui::BeginTooltip();
+						ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_Text]);
+						ImGui::TextUnformatted("Open Editor");
+						ImGui::PopStyleColor();
+						ImGui::EndTooltip();
+					}
+				}
 				ImGui::PopStyleColor();
 
 				ImGui::NextColumn();
@@ -1946,6 +1973,7 @@ public:
 	}
 
 private:
+	context* mContext = nullptr;
 	size_t last_log_size = 0;
 };
 
@@ -2374,7 +2402,7 @@ private:
 
 	context mContext;
 
-	log_window mLog_window;
+	log_window mLog_window{ mContext };
 
 	// Reference the game engine for convenience.
 	core::engine& mEngine{ mContext.get_engine() };

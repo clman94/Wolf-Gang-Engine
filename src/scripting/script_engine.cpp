@@ -10,26 +10,85 @@
 namespace wge::scripting
 {
 
+static std::string_view parse_lua_string_source(std::string_view pStr)
+{
+	const std::regex grammer("\\[string\\s\"(.*)\"\\]");
+	std::match_results<std::string_view::const_iterator> results;
+	if (std::regex_match(pStr.begin(), pStr.end(), results, grammer))
+		return std::string_view(&*results[1].first, results[1].second - results[1].first);
+	return pStr;
+}
+
+static std::pair<std::string_view, std::string_view> parse_source_id(std::string_view pStr)
+{
+	auto begin = std::find(pStr.begin(), pStr.end(), '[') + 1; // +1 to skip '['
+	if (begin == pStr.end())
+		return { pStr, {} };
+	auto end = std::find(begin, pStr.end(), ']');
+	if (end == pStr.end())
+		return { pStr, {} };
+	if (std::distance(begin, end) != 36)
+		return { pStr, {} };
+	return { std::string_view(&*pStr.begin(), (begin - 1) - pStr.begin()),
+		std::string_view(&*begin, end - begin) };
+}
+
 static error_info parse_lua_error(std::string_view pStr)
 {
 	error_info result;
 	const std::regex message_rule("(.*):(\\d+):\\s*([\\s\\S]*)");
-	const std::regex source_rule("\\[string\\s\"(.*)\"\\]");
-	std::match_results<std::string_view::const_iterator> pieces, source_pieces;
-	if (std::regex_match(pStr.begin(), pStr.end(), pieces, message_rule))
+	std::match_results<std::string_view::const_iterator> results;
+	if (std::regex_match(pStr.begin(), pStr.end(), results, message_rule))
 	{
 		// Extract the string from "[string "{}"]"
-		if (std::regex_match(pieces[1].first, pieces[1].second, source_pieces, source_rule))
-			result.source = source_pieces[1].str();
-		else
-			result.source = pieces[1].str();
+		result.source = parse_lua_string_source(results[1].str());
 		// Convert the line number.
-		result.line = std::atoi(pieces[2].str().c_str());
+		result.line = std::atoi(results[2].str().c_str());
 		// Get the message.
-		result.message = pieces[3].str();
+		result.message = results[3].str();
 	}
 	else
 		result.message = pStr;
+	return result;
+}
+
+static stack_entry parse_lua_stack_entry(std::string_view pStr)
+{
+	const std::regex line_parse("\\s*([\\s\\S]*?):(\\d+):\\sin\\s([\\s\\S]*)");
+	std::match_results<std::string_view::const_iterator> results;
+	if (std::regex_search(pStr.begin(), pStr.end(), results, line_parse))
+	{
+		stack_entry entry;
+		entry.source = parse_lua_string_source(results[1].str());
+		entry.line = std::stoi(results[2].str().c_str());
+		entry.main_chunk = entry.source == "main chunk";
+		entry.what = results[3].str();
+		return entry;
+	}
+	return {};
+}
+
+static runtime_error_info parse_lua_runtime_error(std::string_view pStr)
+{
+	runtime_error_info result;
+	const std::regex stacktrace_parse("\\nstack\\straceback:\\n");
+	std::match_results<std::string_view::const_iterator> results;
+	if (std::regex_search(pStr.begin(), pStr.end(), results, stacktrace_parse))
+	{
+		// Everything before "stack traceback:" is a normal lua error.
+		static_cast<error_info&>(result) = parse_lua_error(results.prefix().str());
+
+		// Split lines for each stack entry.
+		auto begin = results[0].second;
+		auto end = begin;
+		do {
+			begin = end;
+			end = std::find(begin + 1, pStr.end(), '\n');
+			result.stack.push_back(parse_lua_stack_entry(std::string_view{ &*begin, static_cast<std::size_t>(end - begin) }));
+		} while (end != pStr.end());
+	}
+	else
+		log::info("nomatch");
 	return result;
 }
 
@@ -135,7 +194,7 @@ bool script_engine::compile_script(const script::handle& pScript, const std::str
 	auto& source = *pScript;
 	if (!source.function.valid())
 	{
-		sol::load_result lr = state.load(source.source, pName);
+		sol::load_result lr = state.load(source.source, fmt::format("{} [{}]", pName, pScript.get_id().to_string()));
 		if (lr.valid())
 		{
 			source.function = lr;
@@ -511,7 +570,18 @@ void script_engine::run_script(script::handle& pSource, const sol::environment& 
 				runtime_error.asset_id = pSource.get_id();
 				static_cast<error_info&>(runtime_error) = parse_lua_error(err.what());
 				mObject_errors.insert(pId);
-				log::error("Runtime error: {}", err.what());
+				//log::error("Runtime error: {}", err.what());
+				auto error_info = parse_lua_runtime_error(err.what());
+				log::error("Runtime Error: {}", error_info.message);
+				log::error("Stacktrace:");
+				for (auto& i : error_info.stack)
+				{
+					auto source_info = parse_source_id(i.source);
+					log::error("'{}' : {} : in {}", source_info.first, i.line, i.what)
+						.in_file(i.source)
+						.at_line(i.line)
+						.with_userdata(util::uuid{ source_info.second });
+				}
 				return;
 			}
 		}
