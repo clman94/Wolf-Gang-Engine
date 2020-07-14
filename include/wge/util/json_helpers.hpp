@@ -34,7 +34,7 @@ template <typename T, typename Tjson, typename Tkey, typename Tdefault>
 inline T json_get_or_safe(const json& pJson, const Tkey& pKey, Tdefault&& pDefault)
 {
 	try {
-		return json_get_or<T>(pJson, pKey, std:forward<Tdefault>(pDefault));
+		return json_get_or<T>(pJson, pKey, std::forward<Tdefault>(pDefault));
 	}
 	catch (const json::exception& e)
 	{
