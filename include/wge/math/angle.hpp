@@ -1,6 +1,7 @@
 #pragma once
 
 #include <wge/util/span.hpp>
+#include <cmath>
 
 namespace wge::math
 {
@@ -111,12 +112,12 @@ radians degrees_to_radians(float pDegrees) noexcept;
 
 inline float sin(const radians& pRadians) noexcept
 {
-	return std::sinf(pRadians);
+	return std::sin(pRadians);
 }
 
 inline float cos(const radians& pRadians) noexcept
 {
-	return std::cosf(pRadians);
+	return std::cos(pRadians);
 }
 
 } // namespace wge::math
@@ -126,7 +127,7 @@ inline wge::math::degrees operator""_deg(long double pDegrees) noexcept
 	return static_cast<float>(pDegrees);
 }
 
-inline wge::math::degrees operator""_deg(std::uintmax_t pDegrees) noexcept
+inline wge::math::degrees operator""_deg(unsigned long long pDegrees) noexcept
 {
 	return static_cast<float>(pDegrees);
 }
@@ -136,7 +137,7 @@ inline wge::math::radians operator""_rad(long double pRadians) noexcept
 	return static_cast<float>(pRadians);
 }
 
-inline wge::math::radians operator""_rad(std::uintmax_t pRadians) noexcept
+inline wge::math::radians operator""_rad(unsigned long long pRadians) noexcept
 {
 	return static_cast<float>(pRadians);
 }
