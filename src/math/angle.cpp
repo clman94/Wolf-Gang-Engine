@@ -16,12 +16,12 @@ radians terminal_angle(const radians& pRadians) noexcept
 	return pRadians % rad_max;
 }
 
-degrees wge::math::radians_to_degrees(float pRadians) noexcept
+degrees radians_to_degrees(float pRadians) noexcept
 {
 	return{ radians{ pRadians } };
 }
 
-radians wge::math::degrees_to_radians(float pDegrees) noexcept
+radians degrees_to_radians(float pDegrees) noexcept
 {
 	return{ degrees{ pDegrees } };
 }
