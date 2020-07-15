@@ -300,12 +300,12 @@ void script_engine::register_math_api()
 		math::vec2(float, float)>(),
 		"x", &math::vec2::x,
 		"y", &math::vec2::y,
-		"normalize", &math::vec2::normalize<>,
-		"normal_to", &math::vec2::normal_to<>,
-		"abs", &math::vec2::abs<>,
+		"normalize", &math::vec2::normalize,
+		"normal_to", &math::vec2::normal_to,
+		"abs", &math::vec2::abs,
 		"clone", [](const math::vec2& pVec) -> math::vec2 { return pVec; },
 		"dot", &math::vec2::dot,
-		"distance", &math::vec2::distance<>,
+		"distance", &math::vec2::distance,
 		"rotate", [](math::vec2& pVec, float pDeg) -> math::vec2 { return pVec.rotate(math::degrees(pDeg)); },
 		"rotate_around", [](math::vec2& pVec, float pDeg, const math::vec2& pOther) -> math::vec2 { return pVec.rotate_around(math::degrees(pDeg), pOther); },
 		"angle", [](const math::vec2& pVec) -> float { return math::degrees(pVec.angle()).value(); },
@@ -317,27 +317,27 @@ void script_engine::register_math_api()
 		"swap_xy", &math::vec2::swap_xy,
 		"is_nan", &math::vec2::is_nan,
 		"is_zero", &math::vec2::is_zero,
-		"magnitude", &math::vec2::magnitude<>,
+		"magnitude", &math::vec2::magnitude,
 		"project", &math::vec2::project,
 		"reflect", &math::vec2::reflect,
 		sol::meta_function::addition, sol::overload(
-			static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator+),
-			static_cast<math::vec2(math::vec2::*)(float) const>(&math::vec2::operator+)
+			static_cast<math::vec2(*)(const math::vec2&, const math::vec2&)>(math::operator+),
+			static_cast<math::vec2(*)(const math::vec2&, float)>(&math::operator+)
 		),
 		sol::meta_function::subtraction, sol::overload(
-			static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator-),
-			static_cast<math::vec2(math::vec2::*)(float) const>(&math::vec2::operator-)
+			static_cast<math::vec2(*)(const math::vec2&, const math::vec2&)>(math::operator-),
+			static_cast<math::vec2(*)(const math::vec2&, float)>(&math::operator-)
 		),
 		sol::meta_function::multiplication, sol::overload(
-			static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator*),
-			static_cast<math::vec2(math::vec2::*)(float) const>(&math::vec2::operator*)
+			static_cast<math::vec2(*)(const math::vec2&, const math::vec2&)>(math::operator*),
+			static_cast<math::vec2(*)(const math::vec2&, float)>(&math::operator*)
 		),
 		sol::meta_function::division, sol::overload(
-			static_cast<math::vec2(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator/),
-			static_cast<math::vec2(math::vec2::*)(float) const>(&math::vec2::operator/)
+			static_cast<math::vec2(*)(const math::vec2&, const math::vec2&)>(math::operator/),
+			static_cast<math::vec2(*)(const math::vec2&, float)>(&math::operator/)
 		),
-		sol::meta_function::equal_to, static_cast<bool(math::vec2::*)(const math::vec2&) const>(&math::vec2::operator==),
-		sol::meta_function::unary_minus, static_cast<math::vec2(math::vec2::*)() const>(&math::vec2::operator-),
+		sol::meta_function::equal_to, static_cast<bool(*)(const math::vec2&, const math::vec2&)>(&math::operator==),
+		sol::meta_function::unary_minus, static_cast<math::vec2(*)(const math::vec2&)>(&math::operator-),
 		sol::meta_function::to_string, &math::vec2::to_string
 		);
 	t["dot"] = &math::dot<float>;

@@ -31,7 +31,7 @@ public:
 	math::aabb get_view() const noexcept
 	{
 		const float zoom_scale = std::pow(2.f, mZoom);
-		const math::vec2 hsize = (mSize / 2) * zoom_scale;
+		const math::vec2 hsize = (mSize / 2.f) * zoom_scale;
 		math::aabb view;
 		view.min = mFocus - hsize * zoom_scale;
 		view.max = mFocus + hsize * zoom_scale;
