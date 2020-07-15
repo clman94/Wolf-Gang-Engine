@@ -80,8 +80,8 @@ void box_collider_component::update_shape(const math::vec2& pScale, b2PolygonSha
 	assert(pShape);
 
 	math::vec2 skin_size(pShape->m_radius, pShape->m_radius);
-	math::vec2 offset = mSize / 2 + mOffset + skin_size + mSize * mAnchor;
-	math::vec2 h_size = (mSize - skin_size * 2) / 2;
+	math::vec2 offset = mSize / 2.f + mOffset + skin_size + mSize * mAnchor;
+	math::vec2 h_size = (mSize - skin_size * 2.f) / 2.f;
 	pShape->SetAsBox(h_size.x, h_size.y, b2Vec2(offset.x, offset.y), mRotation);
 	for (int i = 0; i < 4; i++)
 	{

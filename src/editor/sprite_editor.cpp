@@ -97,7 +97,7 @@ void sprite_editor::on_gui()
 
 	begin_image_editor("Editor", sprite->get_texture(), sprite->get_frame_uv(mController.get_frame()), true);
 
-	visual_editor::draw_rect(sprite->get_aabb_collision(), { 0.2, 1, 1, 0.7 });
+	visual_editor::draw_rect(sprite->get_aabb_collision(), { 0.2f, 1, 1, 0.7f });
 	visual_editor::box_edit collision_edit(sprite->get_aabb_collision());
 	collision_edit.drag(visual_editor::edit_type::rect);
 	collision_edit.resize(visual_editor::edit_type::rect);

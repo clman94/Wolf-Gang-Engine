@@ -52,9 +52,10 @@ void renderer::set_view(const math::aabb& pView) noexcept
 		math::min(view_size.y * fb_aspect_ratio, view_size.x),
 		math::min(view_size.x / fb_aspect_ratio, view_size.y)
 	};
+
 	math::aabb view;
 	// Center the view.
-	view.min = pView.min + ((view_size - scaled_size) / 2);
+	view.min = pView.min + ((view_size - scaled_size) / 2.f);
 	// Apply the new size.
 	view.max = view.min + scaled_size;
 	mRender_view = view;
