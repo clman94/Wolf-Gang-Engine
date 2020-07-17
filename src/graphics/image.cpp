@@ -18,11 +18,15 @@ bool image::load_file(const std::string& pPath)
 	int width = 0, height = 0;
 	stbi_uc* data = stbi_load(&pPath[0], &mSize.x, &mSize.y, nullptr, 4);
 	if (data == nullptr)
+	{
+		mError_msg = stbi_failure_reason();
 		return false;
+	}
 	const std::size_t length = static_cast<std::size_t>(mSize.x) * static_cast<std::size_t>(mSize.y) * channel_count;
 	mData.resize(length);
 	std::copy(data, data + length, mData.begin());
 	stbi_image_free(data);
+	mError_msg = "";
 	return true;
 }
 

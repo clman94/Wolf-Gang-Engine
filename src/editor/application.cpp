@@ -335,21 +335,28 @@ public:
 		const std::string name = std::filesystem::path(pPath).stem().string();
 		core::asset::ptr sprite_asset = pAsset_mgr.create_primary_asset(name, "sprite");
 
-		// Save the new spritesheet to the asset's location.
-		const spritesheet_data spritesheet = create_spritesheet(mDirectory / pPath);
-		bool success = spritesheet.image.save_png(sprite_asset->get_location()->get_autonamed_file(".png").string());
-		assert(success);
+		try {
+			// Save the new spritesheet to the asset's location.
+			const spritesheet_data spritesheet = create_spritesheet(mDirectory / pPath);
+			bool success = spritesheet.image.save_png(sprite_asset->get_location()->get_autonamed_file(".png").string());
+			assert(success);
+			// Configure the resource.
+			auto sprite_resource = sprite_asset->get_resource<graphics::sprite>();
+			sprite_resource->set_location(sprite_asset->get_location());
+			sprite_resource->resize_animation(spritesheet.frame_count);
+			sprite_resource->set_frame_size(spritesheet.frame_size);
+			sprite_resource->load();
 
-		// Configure the resource.
-		auto sprite_resource = sprite_asset->get_resource<graphics::sprite>();
-		sprite_resource->set_location(sprite_asset->get_location());
-		sprite_resource->resize_animation(spritesheet.frame_count);
-		sprite_resource->set_frame_size(spritesheet.frame_size);
-		sprite_resource->load();
-
-		// Save the configuration.
-		pAsset_mgr.save_asset(sprite_asset);
-		register_link(sprite_asset, pPath);
+			// Save the configuration.
+			pAsset_mgr.save_asset(sprite_asset);
+			register_link(sprite_asset, pPath);
+		}
+		catch (const std::exception& e)
+		{
+			log::error("Failed to import from path '{}'.", pPath);
+			log::error(e.what());
+			pAsset_mgr.remove_asset(sprite_asset);
+		}
 	}
 
 	void reimport_sprite(const std::string& pPath, const core::asset_manager& pAsset_mgr)
@@ -360,20 +367,27 @@ public:
 		core::asset::ptr asset = pAsset_mgr.get_asset(link->asset);
 		assert(asset != nullptr);
 
-		// Save the new spritesheet to the asset's location.
-		const spritesheet_data spritesheet = create_spritesheet(mDirectory / pPath);
-		bool success = spritesheet.image.save_png(asset->get_location()->get_autonamed_file(".png").string());
-		assert(success);
+		try {
+			// Save the new spritesheet to the asset's location.
+			const spritesheet_data spritesheet = create_spritesheet(mDirectory / pPath);
+			bool success = spritesheet.image.save_png(asset->get_location()->get_autonamed_file(".png").string());
+			assert(success);
 
-		// Update the sprite info.
-		auto sprite_resource = asset->get_resource<graphics::sprite>();
-		sprite_resource->resize_animation(spritesheet.frame_count);
-		sprite_resource->set_frame_size(spritesheet.frame_size);
-		sprite_resource->load();
+			// Update the sprite info.
+			auto sprite_resource = asset->get_resource<graphics::sprite>();
+			sprite_resource->resize_animation(spritesheet.frame_count);
+			sprite_resource->set_frame_size(spritesheet.frame_size);
+			sprite_resource->load();
 
-		pAsset_mgr.save_asset(asset);
+			pAsset_mgr.save_asset(asset);
 
-		register_link(asset, pPath);
+			register_link(asset, pPath);
+		}
+		catch (const std::exception& e)
+		{
+			log::error("Failed to import from path '{}'.", pPath);
+			log::error(e.what());
+		}
 	}
 
 	static bool is_valid_animated_sprite(const std::filesystem::path& pDirectory)

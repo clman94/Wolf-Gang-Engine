@@ -20,7 +20,7 @@ public:
 	image(const std::string& pFilepath)
 	{
 		if (!load_file(pFilepath))
-			throw std::runtime_error(fmt::format("Could not load file from \"{}\"", pFilepath));
+			throw std::runtime_error(fmt::format("Could not load file from \"{}\". {}", pFilepath, mError_msg));
 	}
 	image(const math::ivec2& pSize, const color8& pColor = { 0, 0, 0, 0 }) :
 		mSize(pSize)
@@ -122,6 +122,11 @@ public:
 		return util::span{ mData };
 	}
 
+	const char* get_error() const noexcept
+	{
+		return mError_msg;
+	}
+
 private:
 	std::size_t pixel_index(const math::ivec2& pPos) const noexcept
 	{
@@ -134,7 +139,7 @@ private:
 private:
 	math::ivec2 mSize;
 	std::vector<color8::type> mData;
-
+	const char* mError_msg = "";
 };
 
 } // namespace wge::graphics

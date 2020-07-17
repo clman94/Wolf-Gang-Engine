@@ -308,10 +308,13 @@ void asset_manager::remove_asset_storage(const core::asset::ptr& pAsset) const
 		auto dir_path = pAsset->get_location()->get_directory();
 		assert(!dir_path.empty());
 
-		log::info("Removing folder {}", dir_path.string());
+		if (system_fs::exists(dir_path))
+		{
+			log::info("Removing folder {}", dir_path.string());
 
-		// Remove the directory.
-		system_fs::remove_all(dir_path);
+			// Remove the directory.
+			system_fs::remove_all(dir_path);
+		}
 	}
 }
 
@@ -475,7 +478,7 @@ bool asset_manager::remove_asset(const asset::ptr& pAsset)
 
 	remove_asset_storage(pAsset);
 
-	log::info("Removing asset \"{}\" from registery", get_asset_path(pAsset).string());
+	log::info("Removing asset \"{}\" from registry", get_asset_path(pAsset).string());
 
 	// Remove it from the asset manager.
 	auto iter = std::remove(mAsset_list.begin(), mAsset_list.end(), pAsset);
