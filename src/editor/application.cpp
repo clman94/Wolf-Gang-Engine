@@ -1176,7 +1176,8 @@ public:
 					select_layer(*i);
 				}
 				ImGui::SameLine();
-				auto preview = mLayer_previews.get_preview_framebuffer(std::distance(mScene.get_layer_container().begin(), i.base()));
+				auto preview_index = std::distance(mScene.get_layer_container().begin(), i.base()) - 1;
+				auto preview = mLayer_previews.get_preview_framebuffer(preview_index);
 				if (preview)
 				{
 					ImGui::Image(preview, { 30, 30 });
