@@ -48,7 +48,8 @@ public:
 		auto image_filepath = get_location()->get_autonamed_file(".png").string();
 		if (!mImage.load_file(image_filepath))
 			throw std::runtime_error(
-				fmt::format("Could not load image from \"{}\". {}", image_filepath, mImage.get_error()));
+				fmt::format("Could not load image from \"{}\". {}",
+					image_filepath, mImage.get_error()));
 		mTexture.set_image(mImage);
 
 		// mAabb_collision was default initialized so we must give it a useful value.
