@@ -144,7 +144,7 @@ instance instance::deserialize(const json& pJson)
 	inst.name = pJson["name"];
 	inst.transform = pJson["transform"];
 	inst.id = pJson["asset_id"];
-	inst.create_script_id = pJson["creation_script_id"];
+	inst.create_script_id = util::json_get_or<util::uuid>(pJson, "creation_script_id", util::uuid{});
 	return inst;
 }
 
