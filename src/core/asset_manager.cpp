@@ -368,6 +368,7 @@ void asset_manager::update_directory_structure()
 
 void asset_manager::save_all_configuration()
 {
+	log::info("Saving all configuration");
 	for (auto& i : mAsset_list)
 		save_asset(i);
 }

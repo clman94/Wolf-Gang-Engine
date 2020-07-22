@@ -58,6 +58,10 @@ void asset_manager_window::on_gui()
 
 			if (ImGui::BeginMenu("Tools"))
 			{
+				if (ImGui::MenuItem("Save All Assets"))
+				{
+					mAsset_manager.save_all_configuration();
+				}
 				if (ImGui::MenuItem("Update Asset Directory"))
 				{
 					mAsset_manager.update_directory_structure();
