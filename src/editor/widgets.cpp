@@ -1,5 +1,6 @@
 #include "widgets.hpp"
 #include "imgui_editor_tools.hpp"
+#include <wge/graphics/sprite.hpp>
 
 namespace wge::editor
 {
@@ -8,11 +9,12 @@ bool asset_item(const core::asset::ptr& pAsset, const core::asset_manager& pAsse
 {
 	ImGui::PushID(&*pAsset);
 	ImGui::BeginGroup();
-	if (pPreview_size.x <= 0 || pPreview_size.y <= 0)
+	if (pPreview_size.x > 0 || pPreview_size.y > 0)
 	{
-		if (pAsset->get_type() == "texture")
+		if (pAsset->get_type() == "sprite")
 		{
-			ImGui::ImageButton(pAsset, pPreview_size);
+			auto tex = pAsset->get_resource<graphics::sprite>();
+			preview_image("Preview", tex->get_texture(), pPreview_size);
 		}
 		else
 		{
