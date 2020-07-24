@@ -141,7 +141,7 @@ core::asset::ptr asset_selector(const char* pStr_id, const std::string& pType, c
 		ImGui::SameLine();
 		static std::string search_str;
 		ImGui::InputText("##Search", &search_str);
-		ImGui::BeginChild("AssetList", ImVec2(170, 400));
+		ImGui::BeginChild("AssetList", ImVec2(0, 400));
 		for (const auto& i : pAsset_manager.get_asset_list())
 		{
 			std::string_view name{ i->get_name() };
