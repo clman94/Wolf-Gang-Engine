@@ -581,25 +581,6 @@ inline void main_viewport_dock(ImGuiID pDock_id)
 	ImGui::End();
 }
 
-inline bool collapsing_arrow(const char* pStr_id, bool* pOpen = nullptr, bool pDefault_open = false)
-{
-	ImGui::PushID(pStr_id);
-
-	// Use internal instead
-	if (!pOpen)
-		pOpen = ImGui::GetStateStorage()->GetBoolRef(ImGui::GetID("IsOpen"), pDefault_open);;
-
-	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
-	ImGui::PushStyleColor(ImGuiCol_BorderShadow, ImVec4(0, 0, 0, 0));
-	if (ImGui::ArrowButton("Arrow", *pOpen ? ImGuiDir_Down : ImGuiDir_Right))
-		*pOpen = !*pOpen; // Toggle open flag
-	ImGui::PopStyleColor(3);
-
-	ImGui::PopID();
-	return *pOpen;
-}
-
 class tileset_editor :
 	public asset_editor
 {
@@ -1562,44 +1543,6 @@ private:
 
 	on_game_run_callback mOn_game_run_callback;
 };
-
-static bool texture_asset_input(core::asset::ptr& pAsset, context& pContext, const core::asset_manager& pAsset_manager)
-{
-	std::string inputtext = pAsset ? pAsset_manager.get_asset_path(pAsset).string().c_str() : "None";
-	ImGui::BeginGroup();
-	if (pAsset)
-	{
-		const bool is_selected = ImGui::ImageButton(pAsset, { 100, 100 });
-		ImGui::QuickToolTip("Open Sprite Editor");
-		if (is_selected)
-			pContext.open_editor(pAsset);
-		ImGui::SameLine();
-		ImGui::BeginGroup();
-		auto res = pAsset->get_resource<graphics::sprite>();
-		ImGui::Text("Size: %i, %i", res->get_frame_width(), res->get_frame_height());
-		ImGui::EndGroup();
-		ImGui::InputText("Sprite", &inputtext, ImGuiInputTextFlags_ReadOnly);
-	}
-	else
-	{
-		ImGui::Button("Drop a texture asset here", ImVec2(-1, 100));
-	}
-	ImGui::EndGroup();
-
-	bool asset_dropped = false;
-
-	if (ImGui::BeginDragDropTarget())
-	{
-		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("spriteAsset"))
-		{
-			const util::uuid& id = *(const util::uuid*)payload->Data;
-			pAsset = pAsset_manager.get_asset(id);
-			asset_dropped = true;
-		}
-		ImGui::EndDragDropTarget();
-	}
-	return asset_dropped;
-}
 
 class game_viewport
 {
