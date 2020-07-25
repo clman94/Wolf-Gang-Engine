@@ -101,8 +101,8 @@ void object_editor::display_event_list(core::object_resource* pGenerator)
 	{
 		const auto event_menu_item = [&](auto pEvent_type)
 		{
-			constexpr auto descriptor_index = scripting::get_event_descriptor_index(pEvent_type);
-			constexpr auto descriptor = scripting::get_event_descriptor(pEvent_type);
+			const auto descriptor_index = scripting::get_event_descriptor_index(pEvent_type);
+			const auto descriptor = scripting::get_event_descriptor(pEvent_type);
 			if (ImGui::MenuItem(descriptor->display_name, nullptr, false, !pGenerator->events[descriptor_index].id.is_valid()))
 				create_event_script(descriptor_index);
 			event_tooltip(descriptor_index);
