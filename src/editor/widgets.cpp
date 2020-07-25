@@ -1,6 +1,8 @@
 #include "widgets.hpp"
 #include "imgui_editor_tools.hpp"
 #include <wge/graphics/sprite.hpp>
+#include <wge/graphics/tileset.hpp>
+#include <wge/core/object_resource.hpp>
 
 namespace wge::editor
 {
@@ -11,15 +13,7 @@ bool asset_item(const core::asset::ptr& pAsset, const core::asset_manager& pAsse
 	ImGui::BeginGroup();
 	if (pPreview_size.x > 0 || pPreview_size.y > 0)
 	{
-		if (pAsset->get_type() == "sprite")
-		{
-			auto tex = pAsset->get_resource<graphics::sprite>();
-			preview_image("Preview", tex->get_texture(), pPreview_size);
-		}
-		else
-		{
-			ImGui::Button("", pPreview_size);
-		}
+		asset_preview("Preview", pAsset, pAsset_manager, pPreview_size);
 		ImGui::SameLine();
 	}
 	ImGui::BeginGroup();
@@ -51,6 +45,41 @@ bool asset_item(const core::asset::ptr& pAsset, const core::asset_manager& pAsse
 	return clicked;
 }
 
+void asset_preview(const char* pStr_id, const core::asset::ptr& pAsset, const core::asset_manager& pAsset_manager, const math::vec2& pSize)
+{
+	if (pAsset->get_type() == "sprite")
+	{
+		auto sprite = pAsset->get_resource<graphics::sprite>();
+		preview_image(pStr_id, sprite->get_texture(), pSize, sprite->get_frame_uv(0));
+	}
+	else if (pAsset->get_type() == "object")
+	{
+		auto obj = pAsset->get_resource<core::object_resource>();
+		auto sprite = pAsset_manager.get_resource<graphics::sprite>(obj->display_sprite);
+		if (sprite)
+		{
+			preview_image(pStr_id, sprite->get_texture(), pSize, sprite->get_frame_uv(0));
+		}
+		else
+		{
+			ImGui::PushID(pStr_id);
+			ImGui::Button("No Preview", pSize);
+			ImGui::PopID();
+		}
+	}
+	else if (pAsset->get_type() == "tileset")
+	{
+		auto tileset = pAsset->get_resource<graphics::tileset>();
+		assert(tileset);
+		preview_image(pStr_id, tileset->get_texture(), pSize);
+	}
+	else
+	{
+		ImGui::PushID(pStr_id);
+		ImGui::Button("No Preview", pSize);
+		ImGui::PopID();
+	}
+}
 
 void preview_image(const char* pStr_id, const graphics::texture& pTexture, const math::vec2& pSize, const math::aabb& pFrame_uv)
 {
