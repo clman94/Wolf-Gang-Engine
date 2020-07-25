@@ -294,6 +294,7 @@ void script_engine::register_math_api()
 	t["log2"] = &math::log2<float>;
 	t["log10"] = &math::log10<float>;
 	t["is_nan"] = &math::is_nan<float>;
+	t["sign"] = &math::sign<float>;
 	t.new_usertype<math::vec2>("vec2",
 		sol::call_constructor, sol::constructors<math::vec2(),
 		math::vec2(const math::vec2&),

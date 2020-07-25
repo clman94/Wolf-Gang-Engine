@@ -176,9 +176,24 @@ inline T positive_modulus(const T& a, const T& b) noexcept
 }
 
 template <typename T>
-inline T midpoint(const T& a, const T& b) noexcept
+constexpr T midpoint(const T& a, const T& b) noexcept
 {
 	return (a + b) / 2;
+}
+
+template <typename T>
+constexpr T sign_impl(const T& x, std::false_type is_signed) {
+	return static_cast<T>(T(0) < x);
+}
+
+template <typename T>
+constexpr T sign_impl(const T& x, std::true_type is_signed) {
+	return static_cast<T>((T(0) < x) - (x < T(0)));
+}
+
+template <typename T>
+constexpr T sign(const T& x) {
+	return sign_impl(x, std::is_signed<T>());
 }
 
 } // namespace wge::math
