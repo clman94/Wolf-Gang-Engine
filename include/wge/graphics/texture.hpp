@@ -1,16 +1,8 @@
 #pragma once
 
 #include <memory>
-#include <string>
-#include <iostream>
-#include <optional>
 
-#include <wge/util/json_helpers.hpp>
-#include <wge/util/uuid.hpp>
-#include <wge/math/rect.hpp>
-#include <wge/math/aabb.hpp>
 #include <wge/core/asset.hpp>
-#include <wge/filesystem/filesystem_interface.hpp>
 #include <wge/graphics/image.hpp>
 
 namespace wge::graphics

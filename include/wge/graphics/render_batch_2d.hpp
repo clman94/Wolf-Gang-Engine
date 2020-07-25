@@ -3,6 +3,8 @@
 #include <wge/math/vector.hpp>
 #include <wge/graphics/color.hpp>
 #include <wge/graphics/texture.hpp>
+#include <wge/math/rect.hpp>
+#include <wge/graphics/color.hpp>
 
 #include <vector>
 
