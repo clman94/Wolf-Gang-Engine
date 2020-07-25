@@ -52,14 +52,17 @@ bool asset_item(const core::asset::ptr& pAsset, const core::asset_manager& pAsse
 }
 
 
-void preview_image(const char* pStr_id, const graphics::texture& pTexture, const math::vec2& pSize, const math::rect& pFrame_rect)
+void preview_image(const char* pStr_id, const graphics::texture& pTexture, const math::vec2& pSize, const math::aabb& pFrame_uv)
 {
 	if (pSize.x <= 0 || pSize.y <= 0)
 		return;
 
 	// Scale the size of the image to preserve the aspect ratio but still fit in the
 	// specified area.
-	const float aspect_ratio = pFrame_rect.size.x / pFrame_rect.size.y;
+	const math::vec2 uv_size = pFrame_uv.max - pFrame_uv.min;
+	const float aspect_ratio = 
+		static_cast<float>(pTexture.get_width() * uv_size.x) /
+		static_cast<float>(pTexture.get_height() * uv_size.y);
 	math::vec2 scaled_size =
 	{
 		math::min(pSize.y * aspect_ratio, pSize.x),
@@ -73,26 +76,13 @@ void preview_image(const char* pStr_id, const graphics::texture& pTexture, const
 	// Draw the checkered background
 	ImGui::DrawAlphaCheckerBoard(pos, scaled_size, 10);
 
-	// Convert to UV coord
-	math::aabb uv(pFrame_rect);
-	uv.min /= math::vec2(pTexture.get_size());
-	uv.max /= math::vec2(pTexture.get_size());
-
 	// Draw the image
 	const auto impl = std::dynamic_pointer_cast<graphics::opengl_texture_impl>(pTexture.get_implementation());
 	auto dl = ImGui::GetWindowDrawList();
-	dl->AddImage(reinterpret_cast<void*>(static_cast<std::uintptr_t>(impl->get_gl_texture())), pos, pos + scaled_size, uv.min, uv.max);
+	dl->AddImage(reinterpret_cast<void*>(static_cast<std::uintptr_t>(impl->get_gl_texture())), pos, pos + scaled_size, pFrame_uv.min, pFrame_uv.max);
 
 	// Add an invisible button so we can interact with this image
 	ImGui::InvisibleButton(pStr_id, pSize);
-}
-
-void preview_image(const char* pStr_id, const graphics::texture& pTexture, const math::vec2& pSize)
-{
-	preview_image(pStr_id, pTexture, pSize, math::rect{
-		math::vec2{0, 0},
-		math::vec2{ pTexture.get_size() }
-		});
 }
 
 core::asset::ptr asset_drag_drop_target(const std::string& pType, const core::asset_manager& pAsset_manager)

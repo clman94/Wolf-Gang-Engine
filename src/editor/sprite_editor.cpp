@@ -40,7 +40,7 @@ void sprite_editor::on_gui()
 			ImGui::PushStyleColor(ImGuiCol_ChildBg, { 0.2f, 0.7f, 0.2f, 0.7f });
 		ImGui::BeginChild("Frame", { 100, 0 }, true);
 		ImGui::Text(std::to_string(i + 1).c_str());
-		preview_image("Preview", sprite->get_texture(), ImGui::GetContentRegionAvail(), sprite->get_frame_aabb(i));
+		preview_image("Preview", sprite->get_texture(), ImGui::GetContentRegionAvail(), sprite->get_frame_uv(i));
 		ImGui::EndChild();
 		if (mController.get_frame() == i)
 			ImGui::PopStyleColor();
