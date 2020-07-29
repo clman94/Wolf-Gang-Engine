@@ -68,7 +68,7 @@ private:
 	core::scene mScene;
 	graphics::graphics mGraphics;
 	graphics::camera mDefault_camera;
-	scripting::script_engine mLua_engine;
+	scripting::script_engine mLua_engine{ mAsset_manager };
 	physics::physics_world mPhysics;
 
 	bool mLoaded{ false };

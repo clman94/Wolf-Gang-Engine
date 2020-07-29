@@ -173,9 +173,18 @@ sol::environment script_engine::create_object_environment(core::object pObj, sol
 			comp->get_controller().stop();
 	};
 
-	env["set_sprite"] = [pObj](const std::string& pName)
+	env["set_sprite"] = [this, pObj](const std::string& pPath)
 	{
+		if (auto comp = pObj.get_component<graphics::sprite_component>())
+			if (auto asset = mAsset_manager->get_asset(pPath))
+				comp->set_sprite(asset);
+	};
 
+	env["get_sprite"] = [this, pObj]() -> sol::object
+	{
+		if (auto comp = pObj.get_component<graphics::sprite_component>())
+			return sol::make_object(state, mAsset_manager->get_asset_path(comp->get_sprite()).string());
+		return sol::make_object(state, sol::lua_nil);
 	};
 
 	env["this_layer"] = std::ref(pObj.get_layer());

@@ -13,6 +13,7 @@
 #include <wge/math/vector.hpp>
 #include <wge/graphics/renderer.hpp>
 #include <wge/graphics/camera.hpp>
+#include <wge/core/forwards.hpp>
 
 #include <wge/scripting/script.hpp>
 #include <wge/scripting/error.hpp>
@@ -40,6 +41,10 @@ namespace wge::scripting
 class script_engine
 {
 public:
+	script_engine(core::asset_manager& pAsset_manager) :
+		mAsset_manager(&pAsset_manager)
+	{}
+
 	// Create a new environment for individual objects.
 	sol::environment create_object_environment(core::object pObj, sol::environment pExisting = {});
 	// Update the delta. Do this before each layer.
@@ -126,6 +131,8 @@ private:
 	// Run-time errors have an association with an object and may fail multiple times
 	// depending on the amount of objects in the scene that run the script.
 	std::map<core::object_id, runtime_error_info> mRuntime_errors;
+
+	core::asset_manager* mAsset_manager = nullptr;
 
 private:
 	void run_script(script::handle& pSource, const sol::environment& pEnv, const std::string& pEvent_name, const core::object_id& pId);
