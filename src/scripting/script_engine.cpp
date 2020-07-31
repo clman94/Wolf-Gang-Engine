@@ -21,6 +21,8 @@ static std::string_view parse_lua_string_source(std::string_view pStr)
 
 static std::pair<std::string_view, std::string_view> parse_source_id(std::string_view pStr)
 {
+	if (pStr.empty())
+		return { pStr, {} };
 	auto begin = std::find(pStr.begin(), pStr.end(), '[') + 1; // +1 to skip '['
 	if (begin == pStr.end())
 		return { pStr, {} };
