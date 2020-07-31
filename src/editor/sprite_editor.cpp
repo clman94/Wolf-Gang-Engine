@@ -88,6 +88,16 @@ void sprite_editor::on_gui()
 				mark_asset_modified();
 			}
 		}
+
+		if (ImGui::CollapsingHeader("Info"))
+		{
+			ImGui::TextUnformatted(fmt::format("Frame Width: {}\nFrame Height: {}\nTexture Width: {}\nTexture Height: {}\nMemory Usage: {} bytes",
+				sprite->get_frame_width(),
+				sprite->get_frame_height(),
+				sprite->get_texture().get_width(),
+				sprite->get_texture().get_height(),
+				sprite->get_texture().get_width() * sprite->get_texture().get_height() * 4).c_str());
+;		}
 	}
 	ImGui::EndChild();
 
