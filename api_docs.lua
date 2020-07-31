@@ -35,9 +35,9 @@ set_scale(vec2)
 -- Get the scale of the sprite.
 get_scale() -> vec2
 
--- Set the rotation of the sprite.
-set_rotation(vec2)
--- Get the rotation of the sprite.
+-- Set the rotation (in degrees) of the sprite.
+set_rotation(float)
+-- Get the rotation (in degrees) of the sprite.
 get_rotation() -> float
 
 -- Play sprite animation.
