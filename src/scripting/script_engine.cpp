@@ -483,7 +483,7 @@ void script_engine::event_preupdate(core::layer& pLayer)
 void script_engine::event_alarms(core::layer& pLayer, std::size_t pIndex)
 {
 	assert(pIndex < 8);
-	const std::size_t lua_index = pIndex;
+	const std::size_t lua_index = pIndex + 1;
 	const auto delta = state["delta"].get<float>();
 
 	// Event: Alarm {}
@@ -491,21 +491,31 @@ void script_engine::event_alarms(core::layer& pLayer, std::size_t pIndex)
 		pLayer.each<event_component, event_state_component>({
 			core::bucket_select<event_component>{ event_selector::alarm_1::bucket + pIndex } }))
 	{
-		auto alarm_list = state.environment["alarm"];
-		auto alarm = alarm_list[lua_index];
-		float alarm_timer = alarm.get<float>();
-		if (alarm_timer > 0)
+		try {
+			auto alarm_list = state.environment["alarm"];
+			auto alarm = alarm_list[lua_index];
+			float alarm_timer = alarm.get<float>();
+			if (alarm_timer > 0)
+			{
+				alarm_timer -= delta;
+				if (alarm_timer <= 0)
+				{
+					alarm = 0;
+					run_script(on_alarm.source_script, state.environment, fmt::format("Alarm {}", lua_index), id);
+				}
+				else
+				{
+					alarm = alarm_timer;
+				}
+			}
+		}
+		catch (sol::error& e)
 		{
-			alarm_timer -= delta;
-			if (alarm_timer <= 0)
-			{
-				alarm = 0;
-				run_script(on_alarm.source_script, state.environment, fmt::format("Alarm {}", lua_index), id);
-			}
-			else
-			{
-				alarm = alarm_timer;
-			}
+			auto obj_asset = pLayer.get_object(id).get_asset();
+			log::info("While executing event 'Alarm {}' for object [{} id:{}]", pIndex + 1, obj_asset ? obj_asset->get_name().c_str() : "", id);
+			log::error("Error executing alarm event: {}", e.what());
+			log::info("Attempting to reset the timer...");
+			state.environment["alarm"][lua_index] = 0.0f;
 		}
 	}
 	pLayer.destroy_queued_components();
