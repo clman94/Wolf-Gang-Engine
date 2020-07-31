@@ -3,6 +3,7 @@
 --------
 
 -- Spawn a new object into a layer.
+-- Optional name so it can be accessed through 'obj'
 create_instance(layer, path [, name]) -> object
 
 -- Get the current delta of the frame.
