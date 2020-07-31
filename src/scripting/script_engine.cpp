@@ -259,7 +259,7 @@ void script_engine::register_asset_api(core::asset_manager& pAsset_manager)
 
 void script_engine::register_layer_api(core::asset_manager& pAsset_manager)
 {
-	state["create_instance"] = [this, &pAsset_manager](core::layer& pLayer, std::string_view pStr) -> sol::table
+	state["create_instance"] = [this, &pAsset_manager](core::layer& pLayer, std::string_view pStr, sol::optional<std::string_view> pName) -> sol::table
 	{
 		if (auto asset = pAsset_manager.get_asset(filesystem::path(pStr)))
 		{
@@ -267,6 +267,9 @@ void script_engine::register_layer_api(core::asset_manager& pAsset_manager)
 			if (!res)
 				log::error("Asset is not an instantiable object");
 			auto obj = pLayer.add_object();
+			if (pName)
+				obj.set_name(std::string(pName.value()));
+			obj.set_asset(asset);
 			res->generate_object(obj, pAsset_manager);
 			if (auto comp = obj.get_component<event_state_component>())
 			{
