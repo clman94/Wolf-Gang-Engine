@@ -274,6 +274,12 @@ void script_engine::register_layer_api(core::asset_manager& pAsset_manager)
 			if (auto comp = obj.get_component<event_state_component>())
 			{
 				comp->environment = create_object_environment(obj);
+				// Execute the create script for the new object.
+				if (auto create_comp = obj.get_component<event_selector::create>())
+				{
+					run_script(create_comp->source_script, comp->environment, "Create", obj.get_id());
+					comp->environment["_created"] = true;
+				}
 				return comp->environment;
 			}
 		}
