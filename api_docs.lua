@@ -3,10 +3,10 @@
 --------
 
 -- Spawn a new object into the current layer.
-create_instance(asset_path, position)
+create_instance(layer, path)
 
 -- Get the current delta of the frame.
-delta
+delta -> float
 
 ---------
 -- Object
