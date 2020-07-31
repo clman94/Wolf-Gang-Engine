@@ -2316,7 +2316,7 @@ private:
 					auto path = mContext.get_engine().get_asset_manager().get_asset_path(asset);
 					auto obj = mEngine.get_scene().get_object(id);
 					ImGui::Selectable(fmt::format("{} [{} id:{}] : {} : {} : {}",
-						obj.get_name(), obj.get_asset()->get_name(), obj.get_id(),
+						obj.get_name(), obj.get_asset() ? obj.get_asset()->get_name().c_str() : "", obj.get_id(),
 						path.string(), error_info.line, error_info.message).c_str());
 				}
 				ImGui::PopStyleColor();
