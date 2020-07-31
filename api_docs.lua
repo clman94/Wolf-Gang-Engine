@@ -2,11 +2,18 @@
 -- Scene
 --------
 
--- Spawn a new object into the current layer.
-create_instance(layer, path)
+-- Spawn a new object into a layer.
+create_instance(layer, path [, name]) -> object
 
 -- Get the current delta of the frame.
 delta -> float
+
+-- Get an object by its name.
+-- Example:
+--   obj.player.get_position()
+-- or
+--   obj["player"].get_position()
+obj -> map[name, object]
 
 ---------
 -- Object
@@ -36,6 +43,11 @@ get_rotation() -> float
 animation_play()
 -- Stop sprite animation.
 animation_stop()
+
+-- Returns true if this object still exists.
+-- If this returns false, do not call any other
+-- function or it will throw in error.
+is_valid() -> boolean
 
 -- Current layer of this object.
 this_layer -> layer
