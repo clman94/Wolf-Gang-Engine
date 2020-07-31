@@ -246,6 +246,11 @@ void script_engine::register_core_api()
 		[](const std::string& pVal) { log::debug("{}", pVal); },
 		[](double pVal) { log::debug("{}", pVal); }
 	);
+
+	state["mouse_world_delta"] = 0.0f;
+	state["mouse_world_position"] = 0.0f;
+	state["mouse_screen_delta"] = 0.0f;
+	state["mouse_screen_position"] = 0.0f;
 }
 
 void script_engine::register_asset_api(core::asset_manager& pAsset_manager)

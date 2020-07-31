@@ -1802,11 +1802,10 @@ public:
 
 				// Update mouse inputs.
 				auto& state = mEngine->get_script_engine().state;
-				auto input = state.create_named_table("input");
-				input["mouse_world_delta"] = math::vec2(ImGui::GetIO().MouseDelta) * mRenderer.get_render_view_scale();
-				input["mouse_world_position"] = mRenderer.screen_to_world(ImGui::GetMousePos() - cursor);
-				input["mouse_screen_delta"] = math::vec2(ImGui::GetIO().MouseDelta);
-				input["mouse_screen_position"] = ImGui::GetMousePos() - cursor;
+				state["mouse_world_delta"] = math::vec2(ImGui::GetIO().MouseDelta) * mRenderer.get_render_view_scale();
+				state["mouse_world_position"] = mRenderer.screen_to_world(ImGui::GetMousePos() - cursor);
+				state["mouse_screen_delta"] = math::vec2(ImGui::GetIO().MouseDelta);
+				state["mouse_screen_position"] = ImGui::GetMousePos() - cursor;
 
 				ImGui::EndChild();
 
