@@ -115,6 +115,7 @@ sol::environment script_engine::create_object_environment(core::object pObj, sol
 
 	env["_created"] = false;
 	env["_unique_created"] = false;
+	env["_destroyed"] = false;
 
 	env["is_valid"] = [pObj]() -> bool
 	{
@@ -158,9 +159,21 @@ sol::environment script_engine::create_object_environment(core::object pObj, sol
 		set_position(get_position() + pDirection);
 	};
 
-	env["destroy"] = [pObj]()
+	env["destroy"] = [this, pObj]()
 	{
 		core::object{ pObj }.destroy(core::queue_destruction);
+		if (auto comp = pObj.get_component<event_state_component>())
+		{
+			if (auto destroy_comp = pObj.get_component<event_selector::destroy>())
+			{
+				auto destroyed = comp->environment["_destroyed"];
+				if (destroyed == false)
+				{
+					destroyed = true;
+					run_script(destroy_comp->source_script, comp->environment, "Destroy", pObj.get_id());
+				}
+			}
+		}
 	};
 
 	env["animation_play"] = [pObj]()
