@@ -167,57 +167,16 @@ void asset_manager::serialize_asset(const core::asset::ptr& pAsset, json& pJson)
 	});
 }
 
-static void sanitize(json& pJson)
-{
-	if (pJson.find("resource-metadata") != pJson.end())
-	{
-		log::info("Renaming field 'resource-metadata' to 'data' for asset '{}'", pJson["name"].get<std::string_view>());
-		pJson["data"] = std::move(pJson["resource-metadata"]);
-	}
-	if (pJson["type"].get<std::string_view>() == "object")
-	{
-		log::info("Sanitizing old object asset '{}'", pJson["name"].get<std::string_view>());
-		json new_events;
-		json secondary_asset_list;
-		const auto invalid_uuid_str = util::uuid{}.to_string();
-		for (auto& event : pJson["data"]["events"])
-		{
-			const auto& event_name = event["type"].get_ref<const json::string_t&>();
-			if (event["id"].get_ref<const json::string_t&>() != invalid_uuid_str)
-			{
-				log::info("Adding secondary asset for event '{}'", event_name);
-				new_events[event_name] = event["id"];
-				secondary_asset_list.push_back(json{
-					{ "data", nullptr },
-					{ "id", event["id"].get<std::string_view>() },
-					{ "name", event_name },
-					{ "parent", pJson["id"].get<std::string_view>() },
-					{ "type", "script" },
-					{ "description", "" }
-					});
-			}
-			else
-			{
-				log::info("Ignoring event '{}' because invalid id", event_name);
-			}
-		}
-		pJson["data"]["events"] = std::move(new_events);
-		pJson["secondary_assets"] = std::move(secondary_asset_list);
-	}
-}
-
 asset::ptr asset_manager::deserialize_asset(const json& pJson, const asset_location::ptr& pLocation)
 {
-	json sanit_json = pJson;
-	//sanitize(sanit_json);
 	asset::ptr new_asset = std::make_shared<asset>();
 	new_asset->set_location(pLocation);
-	new_asset->deserialize(sanit_json);
+	new_asset->deserialize(pJson);
 	if (auto res = create_resource_for(new_asset))
 		res->load();
-	if (sanit_json.count("secondary_assets") != 0)
+	if (pJson.count("secondary_assets") != 0)
 	{
-		for (auto& i : sanit_json["secondary_assets"])
+		for (auto& i : pJson["secondary_assets"])
 		{
 			std::string name = i["name"].get<std::string>();
 			deserialize_asset(i,
