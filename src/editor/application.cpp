@@ -1102,17 +1102,36 @@ public:
 		mOn_game_run_callback(pRun_callback),
 		mRenderer(pContext.get_engine().get_graphics())
 	{
+		init();
+	}
+
+	void init()
+	{
 		log::info("Opening Scene Editor...");
 		log::info("Creating Scene Editor Framebuffer...");
 		// Create a framebuffer for the scene to be rendered to.
-		auto& graphics = pContext.get_engine().get_graphics();
+		auto& graphics = get_context().get_engine().get_graphics();
 		mViewport_framebuffer = graphics.get_graphics_backend()->create_framebuffer();
 		mRenderer.set_framebuffer(mViewport_framebuffer);
 		mScene_resource = get_asset()->get_resource<core::scene_resource>();
 
+		load_scene();
+	}
+
+	void clear()
+	{
+		log::info("Clear scene");
+		mLayer_editors.clear();
+		mCurrent_editor = nullptr;
+		mSelected_layer = nullptr;
+		mScene.clear();
+	}
+
+	void load_scene()
+	{
 		// Generate the layer.
 		log::info("Generating Scene...");
-		mScene_resource->generate_scene(mScene, pContext.get_engine().get_asset_manager());
+		mScene_resource->generate_scene(mScene, get_context().get_engine().get_asset_manager());
 		log::info("Layers: {}", mScene.get_layer_container().size());
 
 		mViewport_camera.set_size({ 30, 30 });
@@ -1138,6 +1157,14 @@ public:
 			if (ImGui::Button("Open Scene Script"))
 			{
 
+			}
+
+			if (ImGui::Button("Refresh"))
+			{
+				log::info("Refreshing Scene...");
+				update_asset_data();
+				clear();
+				load_scene();
 			}
 		}
 		if (ImGui::CollapsingHeader("Layers", ImGuiTreeNodeFlags_DefaultOpen))
@@ -1280,6 +1307,7 @@ public:
 
 	void update_asset_data()
 	{
+		log::info("Updating asset data");
 		auto resource = get_asset()->get_resource<core::scene_resource>();
 		resource->update_data(mScene);
 	}
