@@ -305,7 +305,8 @@ void script_engine::register_graphics_api(graphics::camera& pDefault_camera)
 	sol::table t = state.create_named_table("graphics");
 	t.new_usertype<graphics::camera>("camera", 
 		"focus", sol::property(&graphics::camera::get_focus, &graphics::camera::set_focus),
-		"size", sol::property(&graphics::camera::get_size, &graphics::camera::set_size)
+		"size", sol::property(&graphics::camera::get_size, &graphics::camera::set_size),
+		"zoom", sol::property(&graphics::camera::get_zoom, &graphics::camera::set_zoom)
 		);
 	t["main_camera"] = std::ref(pDefault_camera);
 	t.new_usertype<graphics::sprite_controller>("sprite_controller",
