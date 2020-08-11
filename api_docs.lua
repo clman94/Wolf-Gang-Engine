@@ -101,13 +101,13 @@ is_mouse_pressed(button) -> boolean
 is_mouse_released(button) -> boolean
 
 -- Mouse
--- Delta of the mouse is world coordinates.
+-- Delta of the mouse in world coordinates.
 mouse_world_delta -> vec2
--- Position of the mouse is world coordinates.
+-- Position of the mouse in world coordinates.
 mouse_world_position -> vec2
--- Delta of the mouse is screen coordinates.
+-- Delta of the mouse in screen coordinates.
 mouse_screen_delta -> vec2
--- Position of the mouse is screen coordinates.
+-- Position of the mouse in screen coordinates.
 mouse_screen_position -> vec2
 
 -------
@@ -191,7 +191,7 @@ math.vec2:magnitude() -> float
 math.vec2:mirror_x() -> vec2
 -- Negate the y component. (x, -y)
 math.vec2:mirror_y() -> vec2
--- Negate both component. (*x, -y)
+-- Negate both component. (-x, -y)
 math.vec2:mirror_xy() -> vec2
 -- Get the normal vector from this vector to another. Same as "(other - self).normalize()"
 math.vec2:normal_to(vec2) -> vec2
