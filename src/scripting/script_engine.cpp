@@ -308,6 +308,20 @@ void script_engine::register_graphics_api(graphics::camera& pDefault_camera)
 		"size", sol::property(&graphics::camera::get_size, &graphics::camera::set_size)
 		);
 	t["main_camera"] = std::ref(pDefault_camera);
+	t.new_usertype<graphics::sprite_controller>("sprite_controller",
+		"playing", sol::property(&graphics::sprite_controller::is_playing, &graphics::sprite_controller::set_playing),
+		"play", &graphics::sprite_controller::play,
+		"stop", &graphics::sprite_controller::stop,
+		"pause", &graphics::sprite_controller::pause,
+		"toggle", &graphics::sprite_controller::toggle,
+		"restart", &graphics::sprite_controller::restart,
+		"frame", sol::property(&graphics::sprite_controller::get_frame, &graphics::sprite_controller::set_frame),
+		"is_first_frame", sol::property(&graphics::sprite_controller::is_first_frame),
+		"is_last_frame", sol::property(&graphics::sprite_controller::is_last_frame),
+		"is_beginning", sol::property(&graphics::sprite_controller::is_beginning_animation),
+		"is_ending", sol::property(&graphics::sprite_controller::is_ending_animation),
+		"speed", sol::property(&graphics::sprite_controller::get_speed, &graphics::sprite_controller::set_speed),
+		"update", &graphics::sprite_controller::update);
 }
 
 void script_engine::register_math_api()
