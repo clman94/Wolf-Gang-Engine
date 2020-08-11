@@ -17,6 +17,23 @@
 namespace wge::core
 {
 
+template <typename...T>
+struct is_pack_unique
+{
+private:
+	template <typename Ti>
+	static constexpr bool unique()
+	{
+		return (static_cast<std::size_t>(std::is_same_v<T, Ti>) + ...) == 1;
+	}
+
+public:
+	static constexpr bool value = (unique<T>() && ...);
+};
+
+template <typename...T>
+constexpr bool is_pack_unique_v = is_pack_unique<T...>::value;
+
 template <typename T>
 struct bucket_select
 {
@@ -28,6 +45,7 @@ template <typename...T>
 class bucket_array
 {
 public:
+
 	constexpr bucket_array() noexcept
 	{
 		for (auto& i : buckets)
@@ -37,6 +55,7 @@ public:
 	template <typename...Tselectors>
 	constexpr bucket_array(const bucket_select<Tselectors>&...pSelect) noexcept
 	{
+		static_assert(is_pack_unique_v<Tselectors...>, "Bucket Selectors are not unique");
 		for (auto& i : buckets)
 			i = default_bucket;
 		(set(pSelect), ...);
@@ -299,6 +318,8 @@ template <typename T, typename...Tdeps>
 class filter
 {
 public:
+	static_assert(is_pack_unique_v<T, Tdeps...>, "Filter types are not unique");
+
 	class iterator
 	{
 	public:
