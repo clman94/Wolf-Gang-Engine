@@ -349,9 +349,10 @@ void script_engine::register_math_api()
 	t["is_nan"] = &math::is_nan<float>;
 	t["sign"] = &math::sign<float>;
 	t.new_usertype<math::vec2>("vec2",
-		sol::call_constructor, sol::constructors<math::vec2(),
-		math::vec2(const math::vec2&),
-		math::vec2(float, float)>(),
+		sol::call_constructor, sol::constructors<
+			math::vec2(),
+			math::vec2(const math::vec2&),
+			math::vec2(float, float)>(),
 		"x", &math::vec2::x,
 		"y", &math::vec2::y,
 		"normalize", &math::vec2::normalize,
@@ -375,23 +376,23 @@ void script_engine::register_math_api()
 		"project", &math::vec2::project,
 		"reflect", &math::vec2::reflect,
 		sol::meta_function::addition, sol::overload(
-			static_cast<math::vec2(*)(const math::vec2&, const math::vec2&)>(math::operator+),
-			static_cast<math::vec2(*)(const math::vec2&, float)>(&math::operator+)
+			static_cast<math::vec2(*)(const math::vec2&, const math::vec2&) noexcept>(&math::operator+<float>),
+			static_cast<math::vec2(*)(const math::vec2&, float) noexcept>(&math::operator+<float>)
 		),
 		sol::meta_function::subtraction, sol::overload(
-			static_cast<math::vec2(*)(const math::vec2&, const math::vec2&)>(math::operator-),
-			static_cast<math::vec2(*)(const math::vec2&, float)>(&math::operator-)
+			static_cast<math::vec2(*)(const math::vec2&, const math::vec2&) noexcept>(&math::operator-<float>),
+			static_cast<math::vec2(*)(const math::vec2&, float) noexcept>(&math::operator-<float>)
 		),
 		sol::meta_function::multiplication, sol::overload(
-			static_cast<math::vec2(*)(const math::vec2&, const math::vec2&)>(math::operator*),
-			static_cast<math::vec2(*)(const math::vec2&, float)>(&math::operator*)
+			static_cast<math::vec2(*)(const math::vec2&, const math::vec2&) noexcept>(&math::operator*<float>),
+			static_cast<math::vec2(*)(const math::vec2&, float) noexcept>(&math::operator*<float>)
 		),
 		sol::meta_function::division, sol::overload(
-			static_cast<math::vec2(*)(const math::vec2&, const math::vec2&)>(math::operator/),
-			static_cast<math::vec2(*)(const math::vec2&, float)>(&math::operator/)
+			static_cast<math::vec2(*)(const math::vec2&, const math::vec2&) noexcept>(&math::operator/<float>),
+			static_cast<math::vec2(*)(const math::vec2&, float) noexcept>(&math::operator/<float>)
 		),
-		sol::meta_function::equal_to, static_cast<bool(*)(const math::vec2&, const math::vec2&)>(&math::operator==),
-		sol::meta_function::unary_minus, static_cast<math::vec2(*)(const math::vec2&)>(&math::operator-),
+		sol::meta_function::equal_to, static_cast<bool(*)(const math::vec2&, const math::vec2&) noexcept>(&math::operator==<float>),
+		sol::meta_function::unary_minus, static_cast<math::vec2(*)(const math::vec2&) noexcept>(&math::operator-<float>),
 		sol::meta_function::to_string, &math::vec2::to_string
 		);
 	t["dot"] = &math::dot<float>;
