@@ -136,23 +136,6 @@ static void deserialize_scene(const json& pJson, scene& pScene, const core::asse
 
 json scene_resource::serialize_data() const
 {
-	/* result;
-	auto& layer_list = result["layers"];
-	for (auto& i : layers)
-	{
-		json this_layer;
-		if (auto layer = std::get_if<tilemap_layer>(&i))
-		{
-			this_layer = tilemap_layer::serialize(*layer);
-			this_layer["type"] = "tilemap";
-		}
-		else if (auto layer = std::get_if<instance_layer>(&i))
-		{
-			this_layer = instance_layer::serialize(*layer);
-			this_layer["type"] = "instance";
-		}
-		layer_list.push_back(std::move(this_layer));
-	}*/
 	return scene_data;
 }
 
