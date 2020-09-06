@@ -22,6 +22,7 @@
 #include <wge/core/object_resource.hpp>
 #include <wge/core/scene_resource.hpp>
 #include <wge/graphics/sprite.hpp>
+#include <wge/core/instance.hpp>
 
 #include "editor.hpp"
 #include "script_editor.hpp"

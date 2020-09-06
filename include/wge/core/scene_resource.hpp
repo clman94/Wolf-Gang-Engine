@@ -17,17 +17,6 @@
 namespace wge::core
 {
 
-struct instantiation_options
-{
-	std::string name;
-	math::transform transform;
-	asset_id instantiable_asset_id;
-	asset_id creation_script_id;
-};
-
-void instantiate_asset(const instantiation_options& pOptions,
-	object pObject, const core::asset_manager& pAsset_mgr);
-
 class scene_resource :
 	public resource
 {
