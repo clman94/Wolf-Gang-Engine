@@ -263,6 +263,7 @@ template <typename T> constexpr basic_vec2<T> operator - (T pVal, const math::ba
 template <typename T> constexpr basic_vec2<T> operator * (T pVal, const math::basic_vec2<T>& pVec) noexcept { return{ pVal * pVec.x , pVal * pVec.y }; }
 template <typename T> constexpr basic_vec2<T> operator / (T pVal, const math::basic_vec2<T>& pVec) noexcept { return{ pVal / pVec.x , pVal / pVec.y }; }
 
+template <typename T> constexpr basic_vec2<T> operator + (const basic_vec2<T>& pVec) noexcept { return pVec; }
 template <typename T> constexpr basic_vec2<T> operator - (const basic_vec2<T>& pVec) noexcept { return{ -pVec.x, -pVec.y }; }
 
 using fvec2 = basic_vec2<float>;
