@@ -1,3 +1,5 @@
+#pragma once
+
 #include <wge/core/asset.hpp>
 #include <wge/core/object.hpp>
 #include <wge/core/asset_manager.hpp>
