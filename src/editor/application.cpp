@@ -859,13 +859,12 @@ public:
 	{
 		assert(pAsset);
 
-		core::instance inst;
-		inst.transform.position = pPosition;
-		inst.id = pAsset->get_id();
-
 		// Generate the object
 		core::object obj = mSelected_layer->add_object();
-		inst.generate(obj, mMain_editor->get_asset_manager());
+		core::instantiation_options inst_opts;
+		inst_opts.transform.position = pPosition;
+		inst_opts.instantiable_asset_id = pAsset->get_id();
+		core::instantiate_asset(inst_opts, obj, mMain_editor->get_asset_manager());
 
 		mMain_editor->mark_asset_modified();
 		return obj;

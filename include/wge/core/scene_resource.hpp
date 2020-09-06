@@ -15,58 +15,27 @@
 namespace wge::core
 {
 
-class instance
+struct instantiation_options
 {
-public:
 	std::string name;
 	math::transform transform;
-	asset_id id;
-	asset_id create_script_id;
-
-	void from(const object& pObject);
-	void generate(core::object pObject, const core::asset_manager& pAsset_mgr) const;
-
-	static json serialize(const instance&);
-	static instance deserialize(const json&);
+	asset_id instantiable_asset_id;
+	asset_id creation_script_id;
 };
 
-struct instance_layer
-{
-	std::string name;
-	std::vector<instance> instances;
-
-	static constexpr const char* strtype = "instance";
-
-	void from(core::layer&);
-	void generate(core::layer& pLayer, const core::asset_manager& pAsset_mgr) const;
-
-	static json serialize(const instance_layer&);
-	static instance_layer deserialize(const json&);
-};
-
-struct tilemap_layer
-{
-	std::string name;
-	std::vector<tile> tiles;
-	math::vec2 tile_size;
-	asset_id tileset_id;
-
-	static constexpr const char* strtype = "tilemap";
-
-	void from(core::layer&);
-	void generate(core::layer& pLayer, const core::asset_manager& pAsset_mgr) const;
-
-	static json serialize(const tilemap_layer&);
-	static tilemap_layer deserialize(const json&);
-};
+void instantiate_asset(const instantiation_options& pOptions,
+	object pObject, const core::asset_manager& pAsset_mgr);
 
 class scene_resource :
 	public resource
 {
 public:
 	using handle = core::resource_handle<scene_resource>;
-	using layer_variant = std::variant<instance_layer, tilemap_layer>;
-	std::vector<layer_variant> layers;
+
+	// Raw scene data. Should not be modified directly under normal circumstances.
+	// Use generate_scene() to create a scene based on this data
+	// then call update_data to convert it back.
+	json scene_data{ { "layers", json::array() } };
 
 public:
 	/* Generates a json with the following format */
@@ -87,6 +56,7 @@ public:
 	*/
 	virtual json serialize_data() const override;
 	virtual void deserialize_data(const json& pJson) override;
+
 
 	void generate_scene(scene& pScene, const asset_manager& pAsset_mgr) const;
 

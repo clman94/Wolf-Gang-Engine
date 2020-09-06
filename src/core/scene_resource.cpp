@@ -10,9 +10,133 @@
 namespace wge::core
 {
 
+void instantiate_asset(const instantiation_options& pOptions,
+	object pObject, const core::asset_manager& pAsset_mgr)
+{
+	assert(pObject.is_valid());
+	assert(pOptions.instantiable_asset_id.is_valid());
+
+	auto src_asset = pAsset_mgr.get_asset(pOptions.instantiable_asset_id);
+	if (!src_asset)
+	{
+		log::error("Could not instantiate asset with id \"{}\"", pOptions.instantiable_asset_id.to_string());
+		return;
+	}
+
+	pObject.set_name(pOptions.name);
+	pObject.set_asset(src_asset);
+
+	if (src_asset->get_type() == "object")
+	{
+		// Generate the object using the resource's generator.
+		auto object_resource = src_asset->get_resource<core::object_resource>();
+		object_resource->generate_object(pObject, pAsset_mgr);
+
+		// Setup the create event.
+		if (auto unique_create_script = pAsset_mgr.get_asset(pOptions.creation_script_id))
+		{
+			auto unique_create = pObject.add_component<scripting::event_selector::unique_create>();
+			unique_create->source_script = unique_create_script;
+		}
+
+		// Setup the transform.
+		if (auto t = pObject.get_component<math::transform>())
+			*t = pOptions.transform;
+	}
+	else if (src_asset->get_type() == "sprite")
+	{
+		// Generate a basic sprite object
+		pObject.add_component(pOptions.transform);
+		pObject.add_component(graphics::sprite_component{ src_asset });
+		pObject.add_component(physics::physics_component{});
+		pObject.add_component(physics::sprite_fixture{});
+	}
+}
+
+static void serialize_scene(json& pJson, scene& pScene)
+{
+	auto& layers = pJson["layers"];
+	for (auto& l : pScene)
+	{
+		json this_layer;
+		this_layer["name"] = l.get_name();
+		if (core::is_tilemap_layer(l))
+		{
+			core::tilemap_manipulator mani(l);
+			this_layer["type"] = "tilemap";
+			this_layer["tile_size"] = mani.get_tilesize();
+			this_layer["tileset"] = mani.get_tileset().get_id();
+			auto& tiles = this_layer["tiles"];
+			for (auto& [id, t] : l.each<tile>())
+				tiles.push_back({
+					{ "position", t.position },
+					{ "uv" , t.uv }
+					});
+		}
+		else
+		{
+			auto& instances = this_layer["instances"];
+			for (auto& obj : l)
+			{
+				if (obj.get_asset())
+				{
+					auto creation_script = obj.get_component<scripting::event_selector::unique_create>();
+					auto transform = obj.get_component<math::transform>();
+					instances.push_back({
+						{ "name", obj.get_name() },
+						{ "id", obj.get_asset()->get_id() },
+						{ "transform", *transform },
+						{ "create_script", creation_script ? asset_id{ creation_script->source_script.get_id() } : asset_id{} }
+						});
+				}
+			}
+		}
+		layers.push_back(std::move(this_layer));
+	}
+}
+
+static void deserialize_scene(const json& pJson, scene& pScene, const core::asset_manager& pAsset_mgr)
+{
+	for (auto& l : pJson["layers"])
+	{
+		auto& dlayer = pScene.add_layer(l["name"].get<std::string>());
+		if (l["type"] == "tileset")
+		{
+			tilemap_manipulator mani(dlayer);
+
+			// Setup the tileset.
+			if (auto tileset = pAsset_mgr.get_asset(l["tileset"].get<asset_id>()))
+				mani.set_tileset(tileset);
+
+			// Set the tiles.
+			for (auto& i : pJson["tiles"])
+			{
+				tile t;
+				t.position = i["position"].get<math::ivec2>();
+				t.uv = i["uv"].get<math::ivec2>();
+				mani.set_tile(t);
+			}
+		}
+		else
+		{
+			auto& instances = l["instances"];
+			for (auto& i : instances)
+			{
+				instantiation_options inst_opt;
+				inst_opt.name = i["name"].get<std::string>();
+				inst_opt.transform = i["transform"].get<math::transform>();
+				inst_opt.instantiable_asset_id = i["asset_id"].get<asset_id>();
+				inst_opt.creation_script_id = util::json_get_or<util::uuid>(pJson, "creation_script_id", util::uuid{});
+				instantiate_asset(inst_opt, dlayer.add_object(), pAsset_mgr);
+			}
+		}
+	}
+}
+
+
 json scene_resource::serialize_data() const
 {
-	json result;
+	/* result;
 	auto& layer_list = result["layers"];
 	for (auto& i : layers)
 	{
@@ -28,239 +152,24 @@ json scene_resource::serialize_data() const
 			this_layer["type"] = "instance";
 		}
 		layer_list.push_back(std::move(this_layer));
-	}
-	return result;
+	}*/
+	return scene_data;
 }
 
 void scene_resource::deserialize_data(const json& pJson)
 {
-	layers.clear();
-
-	json sanitized;
-	if (pJson.is_array())
-	{
-		sanitized["layers"] = pJson;
-	}
-	else
-	{
-		sanitized = pJson;
-	}
-
-	for (auto& i : sanitized["layers"])
-	{
-		if (i["type"] == "tilemap")
-			layers.push_back(tilemap_layer::deserialize(i));
-		else if (i["type"] == "instance")
-			layers.push_back(instance_layer::deserialize(i));
-	}
+	scene_data = pJson;
 }
 
 void scene_resource::generate_scene(scene& pScene, const core::asset_manager& pAsset_mgr) const
 {
-	for (auto& i : layers)
-	{
-		// Generate each new layer.
-		std::visit([&](const auto& v) {
-			v.generate(pScene.add_layer(), pAsset_mgr);
-		}, i);
-	}
+	deserialize_scene(scene_data, pScene, pAsset_mgr);
 }
 
 void scene_resource::update_data(scene& pScene)
 {
-	layers.clear();
-	for (auto& i : pScene)
-	{
-		// Set the data type based on the layers structure.
-		// In this case we are checking if it has any data structures
-		// related to tilemaps.
-		if (core::is_tilemap_layer(i))
-			layers.push_back(tilemap_layer{});
-		else
-			layers.push_back(instance_layer{});
-
-		// Read the layer's data.
-		std::visit([&](auto& v) {
-			v.from(i);
-		}, layers.back());
-	}
-}
-
-void instance::from(const object& pObject)
-{
-	name = pObject.get_name();
-	id = pObject.get_asset()->get_id();
-	if (auto creation_script = pObject.get_component<scripting::event_selector::unique_create>())
-		create_script_id = creation_script->source_script.get_id();
-	if (auto t = pObject.get_component<math::transform>())
-		transform = *t;
-}
-
-void instance::generate(core::object pObject, const core::asset_manager& pAsset_mgr) const
-{
-	auto asset = pAsset_mgr.get_asset(id);
-	pObject.set_name(name);
-	pObject.set_asset(asset);
-
-	if (asset->get_type() == "object")
-	{
-		// Generate the object using the resources generator.
-		auto object_resource = asset->get_resource<core::object_resource>();
-		object_resource->generate_object(pObject, pAsset_mgr);
-
-		// Add the creation script.
-		if (auto unique_create_script = pAsset_mgr.get_asset(create_script_id))
-		{
-			auto unique_create = pObject.add_component<scripting::event_selector::unique_create>();
-			unique_create->source_script = unique_create_script;
-		}
-
-		// Setup the transform.
-		if (auto t = pObject.get_component<math::transform>())
-			*t = transform;
-	}
-	else if (asset->get_type() == "sprite")
-	{
-		pObject.add_component(transform);
-		pObject.add_component(graphics::sprite_component{ asset });
-		pObject.add_component(physics::physics_component{});
-		pObject.add_component(physics::sprite_fixture{});
-	}
-}
-
-json instance::serialize(const instance& pData)
-{
-	json result;
-	result["name"] = pData.name;
-	result["transform"] = pData.transform;
-	result["asset_id"] = pData.id;
-	result["creation_script_id"] = pData.create_script_id;
-	return result;
-}
-
-instance instance::deserialize(const json& pJson)
-{
-	instance inst;
-	inst.name = pJson["name"];
-	inst.transform = pJson["transform"];
-	inst.id = pJson["asset_id"];
-	inst.create_script_id = util::json_get_or<util::uuid>(pJson, "creation_script_id", util::uuid{});
-	return inst;
-}
-
-
-void instance_layer::from(core::layer& pLayer)
-{
-	name = pLayer.get_name();
-	for (auto obj : pLayer)
-	{
-		instances.emplace_back().from(obj);
-	}
-}
- 
-void instance_layer::generate(layer& pLayer, const core::asset_manager& pAsset_mgr) const
-{
-	pLayer.set_name(name);
-	for (auto& i : instances)
-	{
-		i.generate(pLayer.add_object(), pAsset_mgr);
-	}
-}
-
-json instance_layer::serialize(const instance_layer& pData)
-{
-	json instances;
-	for (auto& i : pData.instances)
-	{
-		instances.push_back(instance::serialize(i));
-	}
-	json result;
-	result["name"] = pData.name;
-	result["instances"] = std::move(instances);
-	return result;
-}
-
-instance_layer instance_layer::deserialize(const json& pJson)
-{
-	instance_layer data;
-	for (auto& i : pJson["instances"])
-	{
-		data.instances.push_back(instance::deserialize(i));
-	}
-	data.name = pJson["name"];
-	return data;
-}
-
-void tilemap_layer::from(core::layer& pLayer)
-{
-	name = pLayer.get_name();
-
-	// Let's just handle the raw tilemap data for now.
-	tilemap_info const* info = pLayer.layer_components.get<tilemap_info>();
-
-	// Read the tileset id.
-	tileset_id = info->tileset ? info->tileset.get_asset()->get_id() : asset_id{};
-
-	// Read the tiles.
-	for (auto& [id, tile] : pLayer.each<tile>())
-	{
-		tiles.push_back(tile);
-	}
-}
-
-void tilemap_layer::generate(layer& pLayer, const core::asset_manager& pAsset_mgr) const
-{
-	pLayer.set_name(name);
-
-	// This will automatically generate the needed data structures
-	// that is required for a tilemap.
-	tilemap_manipulator tilemap(pLayer);
-
-	// Setup the tileset.
-	if (tileset_id.is_valid() && pAsset_mgr.has_asset(tileset_id))
-	{
-		auto asset = pAsset_mgr.get_asset(tileset_id);
-		tilemap.set_tileset(asset);
-	}
-	
-	// Apply all the tiles.
-	for (auto& i : tiles)
-	{
-		tilemap.set_tile(i);
-	}
-}
-
-json tilemap_layer::serialize(const tilemap_layer& pData)
-{
-	json tiles;
-	for (auto& i : pData.tiles)
-	{
-		json tile;
-		tile["position"] = i.position;
-		tile["uv"] = i.uv;
-		tiles.push_back(std::move(tile));
-	}
-
-	json result;
-	result["name"] = pData.name;
-	result["tiles"] = std::move(tiles);
-	result["tileset"] = pData.tileset_id;
-	return result;
-}
-
-tilemap_layer tilemap_layer::deserialize(const json& pJson)
-{
-	tilemap_layer data;
-	for (auto& i : pJson["tiles"])
-	{
-		tile this_tile;
-		this_tile.position = i["position"];
-		this_tile.uv = i["uv"];
-		data.tiles.push_back(this_tile);
-	}
-	data.name = pJson["name"];
-	data.tileset_id = pJson["tileset"];
-	return data;
+	scene_data.clear();
+	serialize_scene(scene_data, pScene);
 }
 
 } // namespace wge::core
