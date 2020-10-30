@@ -38,26 +38,26 @@ public:
 			obj.destroy();
 	}
 
-	void remove_object(const object_id& pObject_id, queue_destruction_flag)
+	void remove_object(queue_destruction_flag, const object_id& pObject_id)
 	{
 		if (auto obj = get_object(pObject_id))
 			obj.destroy(queue_destruction);
 	}
 
 	template <typename T>
-	T* get_component(object_id pObject_id, bucket pBucket = default_bucket)
+	auto get_component(object_id pObject_id, bucket pBucket = default_bucket)
 	{
 		if (auto obj = get_object(pObject_id))
 			return obj.get_component<T>(pBucket);
-		return nullptr;
+		return static_cast<typename bselect_adaptor<T>::type*>(nullptr);
 	}
 
 	template <typename T>
-	const T* get_component(object_id pObject_id, bucket pBucket = default_bucket) const
+	auto get_component(object_id pObject_id, bucket pBucket = default_bucket) const
 	{
 		if (auto obj = get_object(pObject_id))
 			return obj.get_component<T>(pBucket);
-		return nullptr;
+		return static_cast<typename bselect_adaptor<T>::type const*>(nullptr);
 	}
 
 	template <typename T>
@@ -69,7 +69,7 @@ public:
 	}
 
 	template <typename T>
-	bool remove_component(object_id pObject_id, queue_destruction_flag)
+	bool remove_component(queue_destruction_flag, object_id pObject_id)
 	{
 		if (auto obj = get_object(pObject_id))
 			return obj.remove_component<T>(queue_destruction);
@@ -77,7 +77,7 @@ public:
 	}
 
 	template <typename T>
-	bool remove_component(object_id pObject_id, bucket pBucket, queue_destruction_flag)
+	bool remove_component(queue_destruction_flag, object_id pObject_id, bucket pBucket)
 	{
 		if (auto obj = get_object(pObject_id))
 			return obj.remove_component<T>(pBucket, queue_destruction);
