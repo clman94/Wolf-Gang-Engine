@@ -51,6 +51,16 @@ public:
 			&& max.x >= pAABB.min.x && max.y >= pAABB.min.y;
 	}
 
+	constexpr float x_diff() const noexcept
+	{
+		return max.x - min.x;
+	}
+
+	constexpr float y_diff() const noexcept
+	{
+		return max.y - min.y;
+	}
+
 	constexpr void merge(const math::vec2& pVec) noexcept
 	{
 		min.x = math::min(min.x, pVec.x);
