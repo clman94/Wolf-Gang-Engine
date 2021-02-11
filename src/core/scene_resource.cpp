@@ -92,7 +92,6 @@ static void deserialize_scene(const json& pJson, scene& pScene, const core::asse
 	}
 }
 
-
 json scene_resource::serialize_data() const
 {
 	return scene_data;

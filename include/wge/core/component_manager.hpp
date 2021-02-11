@@ -4,7 +4,6 @@
 #include <wge/core/component_type.hpp>
 #include <wge/util/ptr.hpp>
 #include <wge/core/object_id.hpp>
-#include <wge/util/ptr.hpp>
 
 #include <map>
 
