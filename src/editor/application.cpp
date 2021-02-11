@@ -1722,6 +1722,29 @@ public:
 		mRenderer.render_scene(mEngine->get_scene());
 	}
 
+	void draw_instance_error_overlays()
+	{
+		auto& script_engine = mEngine->get_script_engine();
+		for (auto& l : mEngine->get_scene())
+		{
+			for (auto& [id, state] : l.each<scripting::event_state_component>())
+			{
+				if (script_engine.has_object_error(id))
+				{
+					if (const auto* transform = l.get_component<math::transform>(id))
+					{
+						ImDrawList* dl = ImGui::GetWindowDrawList();
+						const math::vec2 pos = visual_editor::calc_absolute(transform->position);
+						dl->AddText(pos,
+							ImGui::ColorConvertFloat4ToU32({ 1, 0, 0, 1 }),
+							"(!)");
+
+					}
+				}
+			}
+		}
+	}
+
 	void on_gui()
 	{
 		if (mFocus_window)
@@ -1825,6 +1848,8 @@ public:
 						mEngine->get_default_camera().zoom(-ImGui::GetIO().MouseWheel * 0.2f);
 					}
 				}
+
+				draw_instance_error_overlays();
 
 				visual_editor::end();
 

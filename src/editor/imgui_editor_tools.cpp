@@ -113,6 +113,12 @@ const math::transform& get_transform() noexcept
 	return gCurrent_editor_state->transform.get();
 }
 
+math::vec2 calc_absolute(const math::vec2& pPoint)
+{
+	assert(gCurrent_editor_state);
+	return gCurrent_editor_state->calc_absolute(pPoint);
+}
+
 math::vec2 snap_behavior(const math::vec2& pDelta)
 {
 	assert(gCurrent_editor_state);

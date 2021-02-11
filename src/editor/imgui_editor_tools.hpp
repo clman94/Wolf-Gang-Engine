@@ -20,6 +20,7 @@ void end_snap();
 void push_transform(const math::transform& pTransform);
 void pop_transform(std::size_t pCount = 1);
 const math::transform& get_transform() noexcept;
+math::vec2 calc_absolute(const math::vec2&);
 
 math::vec2 snap_behavior(const math::vec2& pDelta);
 
