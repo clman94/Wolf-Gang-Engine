@@ -1,4 +1,8 @@
-# Wolf-Gang Engine
+This was just a fun learning project. I am not working on it anymore.
+
+---
+
+Wolf-Gang Engine
 
 This is 2d engine that is meant to provide a simple platform for creating your own 2d games quick and easy. It takes a lot of inspiration from Yoyo's GameMaker.
 
